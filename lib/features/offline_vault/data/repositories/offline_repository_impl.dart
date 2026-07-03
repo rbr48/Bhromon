@@ -10,7 +10,7 @@ import '../../../../core/entities/location_pin.dart';
 import '../../../../core/entities/trip_log.dart';
 import '../../../../core/entities/pro_tip.dart';
 import '../../../../core/security/hive_encryption_service.dart';
-import '../../../../core/services/tile_downloader.dart';
+import '../../../../core/services/offline_map_service.dart';
 import '../../../../core/database/app_database.dart';
 import '../datasources/sync_manager.dart';
 import '../../domain/repositories/i_offline_repository.dart';
@@ -48,8 +48,14 @@ class OfflineRepositoryImpl implements IOfflineRepository {
   @override
   Future<Either<Failure, Unit>> downloadBundle(String districtId) async {
     try {
-      // 1. Download real map tiles for the district
-      await TileDownloader.downloadMapTiles(districtId);
+      // 1. Download the offline map region (style + glyphs + sprites + tiles
+      // into MapLibre's native cache). A map failure doesn't abort the bundle:
+      // the pins/logs/tips below are still valuable offline.
+      final mapDownloaded = await OfflineMapService.downloadRegion(districtId);
+      if (!mapDownloaded) {
+        // ignore: avoid_print
+        print('[OfflineRepo] Map region download failed for $districtId; continuing with data bundle');
+      }
 
       final box = await _encryptionService.openEncryptedBox<dynamic>(_bundleBoxName);
       
@@ -160,6 +166,7 @@ class OfflineRepositoryImpl implements IOfflineRepository {
   @override
   Future<Either<Failure, Unit>> deleteBundle(String districtId) async {
     try {
+      await OfflineMapService.deleteRegion(districtId);
       final box = await _encryptionService.openEncryptedBox<dynamic>(_bundleBoxName);
       await box.delete(districtId);
       return const Right(unit);

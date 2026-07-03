@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../../../../core/services/tile_downloader.dart';
+import '../../../../core/services/offline_map_service.dart';
 import '../../../../core/services/routing_service.dart';
 import '../widgets/sos_hub_dialog.dart';
 import '../widgets/pin_detail_sheet.dart';
@@ -33,7 +33,23 @@ extension _MapStyleExt on _MapStyle {
       case _MapStyle.dark:
         return 'https://tiles.basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
       case _MapStyle.satellite:
-        return 'https://api.maptiler.com/maps/hybrid/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL';
+        // Inline raster style — keyless Esri World Imagery (the previous
+        // MapTiler URL used the docs demo key and never loaded).
+        return '''
+{
+  "version": 8,
+  "name": "Satellite",
+  "sources": {
+    "esri-imagery": {
+      "type": "raster",
+      "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+      "tileSize": 256,
+      "maxzoom": 18,
+      "attribution": "Esri, Maxar, Earthstar Geographics"
+    }
+  },
+  "layers": [{"id": "esri-imagery", "type": "raster", "source": "esri-imagery"}]
+}''';
     }
   }
 
@@ -85,6 +101,12 @@ class _MapScreenState extends State<MapScreen> {
   bool _loadingRoute = false;
   bool _justTappedCircle = false;
   double _mapBearing = 0.0;
+  bool _isOffline = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+
+  // Skip redundant circle re-renders on camera idle
+  double? _lastCirclesZoom;
+  int? _lastCirclesHash;
 
   _MapLocationTrackingMode _currentTrackingMode = _MapLocationTrackingMode.moving;
   StreamSubscription<Position>? _positionStreamSubscription;
@@ -100,7 +122,7 @@ class _MapScreenState extends State<MapScreen> {
     _currentStyle = brightness == Brightness.dark ? _MapStyle.dark : _MapStyle.light;
     _mapStyleUrl = _currentStyle.url;
     _determinePosition();
-    _checkConnectivityAndLoadStyle();
+    _watchConnectivity();
     _loadOfflineDistricts();
   }
 
@@ -108,6 +130,7 @@ class _MapScreenState extends State<MapScreen> {
   void dispose() {
     _mapController?.removeListener(_onMapCameraChanged);
     _positionStreamSubscription?.cancel();
+    _connectivitySubscription?.cancel();
     _searchController.dispose();
     _positionNotifier.dispose();
     super.dispose();
@@ -190,46 +213,29 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _loadOfflineDistricts() async {
-    final downloaded = <String>[];
-    for (final district in TileDownloader.districtBounds.keys) {
-      final stylePath = await TileDownloader.getOfflineStylePath(district);
-      if (stylePath != null) downloaded.add(district);
-    }
+    final downloaded = await OfflineMapService.listDownloadedDistricts();
     if (mounted) setState(() => _downloadedOfflineDistricts = downloaded);
     _drawOfflineShadedZones();
   }
 
-  Future<void> _checkConnectivityAndLoadStyle() async {
+  /// Offline rendering is transparent: MapLibre serves downloaded regions
+  /// from its own cache using the normal style URL. This only tracks
+  /// connectivity so the UI can show an offline banner instead of a blank map.
+  Future<void> _watchConnectivity() async {
     try {
       final connectivity = await Connectivity().checkConnectivity();
-      if (connectivity.isNotEmpty &&
-          connectivity.first == ConnectivityResult.none) {
-        // Try current location first if available
-        if (_currentPosition != null) {
-          final currentDistrict = TileDownloader.getDistrictForPosition(
-            _currentPosition!.latitude,
-            _currentPosition!.longitude,
-          );
-          if (currentDistrict != null) {
-            final stylePath = await TileDownloader.getOfflineStylePath(currentDistrict);
-            if (stylePath != null) {
-              if (mounted) setState(() => _mapStyleUrl = stylePath);
-              return;
-            }
-          }
-        }
-
-        // Fallback: Loop over downloaded districts dynamically
-        for (final district in TileDownloader.districtBounds.keys) {
-          if (district == 'default') continue;
-          final stylePath = await TileDownloader.getOfflineStylePath(district);
-          if (stylePath != null) {
-            if (mounted) setState(() => _mapStyleUrl = stylePath);
-            break;
-          }
-        }
-      }
+      _applyConnectivity(connectivity);
+      _connectivitySubscription =
+          Connectivity().onConnectivityChanged.listen(_applyConnectivity);
     } catch (_) {}
+  }
+
+  void _applyConnectivity(List<ConnectivityResult> results) {
+    final offline =
+        results.isNotEmpty && results.first == ConnectivityResult.none;
+    if (offline != _isOffline && mounted) {
+      setState(() => _isOffline = offline);
+    }
   }
 
   Future<void> _determinePosition() async {
@@ -325,7 +331,7 @@ class _MapScreenState extends State<MapScreen> {
       await _mapController!.clearFills();
       final List<FillOptions> optionsList = [];
       for (final district in _downloadedOfflineDistricts) {
-        final bounds = TileDownloader.districtBounds[district];
+        final bounds = OfflineMapService.districtBounds[district];
         if (bounds == null) continue;
         optionsList.add(FillOptions(
           geometry: [
@@ -351,20 +357,34 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   /// Re-draw map circles for the given pin list using smarter clustering.
-  Future<void> _updateMapCircles(List<LocationPin> pins) async {
+  Future<void> _updateMapCircles(List<LocationPin> pins,
+      {bool force = false}) async {
     if (_mapController == null) return;
     try {
+      final double zoom = _mapController!.cameraPosition?.zoom ?? 7.0;
+
+      // Camera idle fires constantly while panning; skip the full
+      // clear-and-redraw when neither the pin set nor the zoom regime changed.
+      final int pinsHash = Object.hashAll(pins.map((p) => p.pinId));
+      final bool sameZoomRegime = _lastCirclesZoom != null &&
+          ((zoom > 10.0 && _lastCirclesZoom! > 10.0) ||
+              (zoom <= 10.0 &&
+                  _lastCirclesZoom! <= 10.0 &&
+                  (zoom - _lastCirclesZoom!).abs() < 0.3));
+      if (!force && pinsHash == _lastCirclesHash && sameZoomRegime) return;
+      _lastCirclesZoom = zoom;
+      _lastCirclesHash = pinsHash;
+
       await _mapController!.clearCircles();
       _circleIdToPin.clear();
       _clusterIdToPins.clear();
 
-      final double zoom = _mapController!.cameraPosition?.zoom ?? 7.0;
       final bool highZoom = zoom > 10.0;
 
       if (highZoom) {
         final optionsList = pins.map((pin) {
           final Color color = AppColors.forTier(pin.trustTier);
-          final String hex = '#${color.value.toRadixString(16).substring(2).padLeft(6, '0')}';
+          final String hex = '#${color.toARGB32().toRadixString(16).substring(2).padLeft(6, '0')}';
           return CircleOptions(
             geometry: LatLng(pin.lat, pin.lng),
             circleColor: hex,
@@ -412,7 +432,7 @@ class _MapScreenState extends State<MapScreen> {
         if (list.length == 1) {
           final pin = list.first;
           final Color color = AppColors.forTier(pin.trustTier);
-          final String hex = '#${color.value.toRadixString(16).substring(2).padLeft(6, '0')}';
+          final String hex = '#${color.toARGB32().toRadixString(16).substring(2).padLeft(6, '0')}';
           optionsList.add(CircleOptions(
             geometry: LatLng(pin.lat, pin.lng),
             circleColor: hex,
@@ -571,7 +591,7 @@ class _MapScreenState extends State<MapScreen> {
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         context.go('/feed');
       },
@@ -607,6 +627,10 @@ class _MapScreenState extends State<MapScreen> {
                         trackCameraPosition: true,
                         onMapCreated: (controller) {
                           _mapController = controller;
+                          // New platform view (e.g. after style switch): the
+                          // previous circles are gone, so reset the guard.
+                          _lastCirclesHash = null;
+                          _lastCirclesZoom = null;
                           _mapController!.onCircleTapped.add(_onCircleTapped);
                           _mapController!.addListener(_onMapCameraChanged);
                           if (_currentPosition != null) {
@@ -620,7 +644,7 @@ class _MapScreenState extends State<MapScreen> {
                           }
                         },
                         onStyleLoadedCallback: () {
-                          _updateMapCircles(_filteredPins);
+                          _updateMapCircles(_filteredPins, force: true);
                           _drawOfflineShadedZones();
                         },
                         onCameraIdle: () {
@@ -643,6 +667,49 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ),
 
+              // ── 1b. Offline banner ──────────────────────────────────────
+              if (_isOffline)
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 78,
+                  left: 16,
+                  right: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.75),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: AppColors.mintGreen.withValues(alpha: 0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.cloud_off_rounded,
+                            color: AppColors.mintGreen, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _downloadedOfflineDistricts.isNotEmpty
+                                ? 'Offline mode — showing downloaded maps (${_downloadedOfflineDistricts.join(', ')})'
+                                : 'You are offline. Download maps from the Offline Vault to explore without internet.',
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 12),
+                          ),
+                        ),
+                        if (_downloadedOfflineDistricts.isEmpty)
+                          TextButton(
+                            onPressed: () => context.push('/vault'),
+                            child: const Text('VAULT',
+                                style: TextStyle(
+                                    color: AppColors.mintGreen,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
               // ── 2. Top Explorer Hub Bar ─────────────────────────────────
               Positioned(
                 top: MediaQuery.of(context).padding.top + 8,
@@ -654,10 +721,10 @@ class _MapScreenState extends State<MapScreen> {
                     filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.55),
+                        color: Colors.black.withValues(alpha: 0.55),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           width: 1.5,
                         ),
                       ),
@@ -685,7 +752,7 @@ class _MapScreenState extends State<MapScreen> {
                                 Text(
                                   '${explorerTier.displayName} • $explorerScore pts',
                                   style: TextStyle(
-                                      color: AppColors.mintGreen.withOpacity(0.9),
+                                      color: AppColors.mintGreen.withValues(alpha: 0.9),
                                       fontWeight: FontWeight.w500,
                                       fontSize: 11),
                                 ),
@@ -695,10 +762,10 @@ class _MapScreenState extends State<MapScreen> {
                           // SOS
                           Container(
                             decoration: BoxDecoration(
-                              color: Colors.redAccent.withOpacity(0.2),
+                              color: Colors.redAccent.withValues(alpha: 0.2),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.redAccent.withOpacity(0.4),
+                                color: Colors.redAccent.withValues(alpha: 0.4),
                                 width: 1,
                               ),
                             ),
@@ -731,10 +798,10 @@ class _MapScreenState extends State<MapScreen> {
                     child: Container(
                       height: 46,
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.55),
+                        color: Colors.black.withValues(alpha: 0.55),
                         borderRadius: BorderRadius.circular(23),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           width: 1.5,
                         ),
                       ),
@@ -753,7 +820,7 @@ class _MapScreenState extends State<MapScreen> {
                         decoration: InputDecoration(
                           hintText: 'Search — Sajek, Cox\'s Bazar, waterfall…',
                           hintStyle:
-                              TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                              TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
                           prefixIcon: const Icon(Icons.search,
                               color: AppColors.mintGreen, size: 20),
                           suffixIcon: _searchController.text.isNotEmpty
@@ -806,13 +873,13 @@ class _MapScreenState extends State<MapScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: sel 
-                                      ? AppColors.mintGreen.withOpacity(0.9) 
-                                      : Colors.black.withOpacity(0.55),
+                                      ? AppColors.mintGreen.withValues(alpha: 0.9) 
+                                      : Colors.black.withValues(alpha: 0.55),
                                   borderRadius: BorderRadius.circular(18),
                                   border: Border.all(
                                     color: sel 
                                         ? AppColors.mintGreen 
-                                        : Colors.white.withOpacity(0.15),
+                                        : Colors.white.withValues(alpha: 0.15),
                                     width: 1.5,
                                   ),
                                 ),
@@ -849,7 +916,7 @@ class _MapScreenState extends State<MapScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
+                            color: Colors.black.withValues(alpha: 0.15),
                             blurRadius: 12,
                             offset: const Offset(0, 4)),
                       ],
@@ -911,7 +978,7 @@ class _MapScreenState extends State<MapScreen> {
                       borderRadius: BorderRadius.circular(14),
                       child: Container(
                         width: 112,
-                        color: Colors.black.withOpacity(0.86),
+                        color: Colors.black.withValues(alpha: 0.86),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 10),
                         child: Column(
@@ -971,55 +1038,28 @@ class _MapScreenState extends State<MapScreen> {
                     }),
                     const SizedBox(height: 8),
 
-                    // Offline toggle
+                    // Offline maps status — rendering is automatic: MapLibre
+                    // serves downloaded regions from cache when offline.
                     _mapFab(
                       'offline',
                       Icons.cloud_off_rounded,
-                      _mapStyleUrl.contains('offline_maps')
+                      _downloadedOfflineDistricts.isNotEmpty
                           ? Colors.black
                           : AppColors.mintGreen,
-                      () async {
-                        if (_mapStyleUrl.contains('offline_maps')) {
-                          setState(() {
-                            _mapStyleUrl = _currentStyle.url;
-                            _showSnack('Switched to Online Maps');
-                          });
-                          return;
-                        }
-
-                        // Try finding local style matching current location first
-                        String? offlinePath;
-                        if (_currentPosition != null) {
-                          final currentDistrict = TileDownloader.getDistrictForPosition(
-                            _currentPosition!.latitude,
-                            _currentPosition!.longitude,
-                          );
-                          if (currentDistrict != null) {
-                            offlinePath = await TileDownloader.getOfflineStylePath(currentDistrict);
-                          }
-                        }
-
-                        // Fallback: search all available bounds keys
-                        if (offlinePath == null) {
-                          for (final d in TileDownloader.districtBounds.keys) {
-                            if (d == 'default') continue;
-                            offlinePath = await TileDownloader.getOfflineStylePath(d);
-                            if (offlinePath != null) break;
-                          }
-                        }
-
-                        if (offlinePath != null) {
-                          setState(() {
-                            _mapStyleUrl = offlinePath!;
-                            _showSnack('Offline map loaded');
-                          });
+                      () {
+                        if (_downloadedOfflineDistricts.isEmpty) {
+                          _showSnack(
+                              'No offline maps yet. Download districts from the Offline Vault.');
+                          context.push('/vault');
                         } else {
-                          _showSnack('No offline tiles. Download from Offline Vault first.');
+                          _showSnack(
+                              'Offline maps ready: ${_downloadedOfflineDistricts.join(', ')}. '
+                              'The map keeps working here without internet.');
                         }
                       },
-                      bgColor: _mapStyleUrl.contains('offline_maps')
+                      bgColor: _downloadedOfflineDistricts.isNotEmpty
                           ? AppColors.mintGreen
-                          : Colors.black.withOpacity(0.85),
+                          : Colors.black.withValues(alpha: 0.85),
                     ),
                     const SizedBox(height: 8),
 
@@ -1037,7 +1077,7 @@ class _MapScreenState extends State<MapScreen> {
                       },
                       bgColor: _routePlanningMode
                           ? AppColors.mintGreen
-                          : Colors.black.withOpacity(0.85),
+                          : Colors.black.withValues(alpha: 0.85),
                     ),
                   ],
                 ),
@@ -1088,7 +1128,7 @@ class _MapScreenState extends State<MapScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.85),
+                        color: Colors.black.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Row(
@@ -1135,7 +1175,7 @@ class _MapScreenState extends State<MapScreen> {
     return FloatingActionButton(
       mini: true,
       heroTag: tag,
-      backgroundColor: bgColor ?? Colors.black.withOpacity(0.85),
+      backgroundColor: bgColor ?? Colors.black.withValues(alpha: 0.85),
       onPressed: onTap,
       child: Icon(icon, color: iconColor, size: 20),
     );
@@ -1145,7 +1185,7 @@ class _MapScreenState extends State<MapScreen> {
     return FloatingActionButton(
       mini: true,
       heroTag: 'map_compass_fab',
-      backgroundColor: Colors.black.withOpacity(0.85),
+      backgroundColor: Colors.black.withValues(alpha: 0.85),
       onPressed: () {
         _mapController?.animateCamera(
           CameraUpdate.bearingTo(0.0),
@@ -1341,7 +1381,7 @@ class _MapScreenState extends State<MapScreen> {
                         decoration: BoxDecoration(
                           color: sel
                               ? AppColors.mintGreen
-                              : Colors.white.withOpacity(0.07),
+                              : Colors.white.withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                               color: sel
@@ -1539,7 +1579,7 @@ class _MapScreenState extends State<MapScreen> {
                     final pin = pins[index];
                     final Color tierColor = AppColors.forTier(pin.trustTier);
                     return Card(
-                      color: Colors.white.withOpacity(0.04),
+                      color: Colors.white.withValues(alpha: 0.04),
                       elevation: 0,
                       margin: const EdgeInsets.only(bottom: 10),
                       shape: RoundedRectangleBorder(
@@ -1590,7 +1630,7 @@ class _MapScreenState extends State<MapScreen> {
 
   void _checkAndSuggestOfflineDownload(Position pos) {
     String? currentDistrict;
-    for (final entry in TileDownloader.districtBounds.entries) {
+    for (final entry in OfflineMapService.districtBounds.entries) {
       if (entry.key == 'default') continue;
       final bounds = entry.value;
       if (pos.latitude >= bounds['minLat']! &&

@@ -4,6 +4,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/value_objects/trust_tier.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
+import '../../../../core/theme/theme_context.dart';
 
 class GuideCreateScreen extends StatelessWidget {
   const GuideCreateScreen({super.key});
@@ -44,9 +45,9 @@ class GuideCreateScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

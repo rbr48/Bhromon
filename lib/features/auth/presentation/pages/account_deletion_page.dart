@@ -190,7 +190,7 @@ class _WarningStep extends StatelessWidget {
             decoration: BoxDecoration(
               color: _kCardBg,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: _kRed.withOpacity(.4)),
+              border: Border.all(color: _kRed.withValues(alpha: .4)),
             ),
             child: const Text(
               'This cannot be undone. Your username may become available to '
@@ -282,7 +282,7 @@ class _ConfirmStep extends StatelessWidget {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: _kRed.withOpacity(.8)),
+                borderSide: BorderSide(color: _kRed.withValues(alpha: .8)),
               ),
               errorText: errorMessage,
               errorStyle: const TextStyle(color: _kRed),

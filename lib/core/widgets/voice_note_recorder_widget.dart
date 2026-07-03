@@ -121,8 +121,8 @@ class _VoiceNoteRecorderWidgetState extends State<VoiceNoteRecorderWidget>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _isRecording
-              ? AppColors.amber.withOpacity(0.6)
-              : AppColors.mintGreen.withOpacity(0.3),
+              ? AppColors.amber.withValues(alpha: 0.6)
+              : AppColors.mintGreen.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -180,7 +180,7 @@ class _VoiceNoteRecorderWidgetState extends State<VoiceNoteRecorderWidget>
                       shape: BoxShape.circle,
                       color: _isRecording
                           ? AppColors.amber
-                          : AppColors.mintGreen.withOpacity(0.15),
+                          : AppColors.mintGreen.withValues(alpha: 0.15),
                       border: Border.all(
                         color: _isRecording ? AppColors.amber : AppColors.mintGreen,
                         width: 2,
@@ -204,7 +204,7 @@ class _VoiceNoteRecorderWidgetState extends State<VoiceNoteRecorderWidget>
                     height: 48,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.05),
+                      color: Colors.white.withValues(alpha: 0.05),
                       border: Border.all(color: Colors.white24),
                     ),
                     child: Icon(

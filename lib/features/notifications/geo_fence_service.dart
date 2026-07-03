@@ -135,7 +135,7 @@ class _GeoFenceNotificationBannerState
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                  color: AppColors.mintGreen.withOpacity(0.3),
+                  color: AppColors.mintGreen.withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4))
             ],
@@ -146,7 +146,7 @@ class _GeoFenceNotificationBannerState
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.mintGreen.withOpacity(0.2),
+                  color: AppColors.mintGreen.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.location_on,

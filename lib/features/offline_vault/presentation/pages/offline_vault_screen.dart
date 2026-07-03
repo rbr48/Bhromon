@@ -73,7 +73,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
     if (!_isAuthenticated) {
       return PopScope(
         canPop: false,
-        onPopInvoked: (didPop) {
+        onPopInvokedWithResult: (didPop, result) {
           if (didPop) return;
           context.go('/feed');
         },
@@ -145,7 +145,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         context.go('/feed');
       },
@@ -455,7 +455,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                         decoration: BoxDecoration(
                           color: Colors.black26,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.midGreen.withOpacity(0.5)),
+                          border: Border.all(color: AppColors.midGreen.withValues(alpha: 0.5)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -502,7 +502,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                         decoration: BoxDecoration(
                           color: Colors.black26,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.gold.withOpacity(0.5)),
+                          border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,

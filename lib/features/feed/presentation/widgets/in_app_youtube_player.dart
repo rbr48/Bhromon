@@ -169,7 +169,7 @@ class _InAppYoutubePlayerState extends State<InAppYoutubePlayer> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.75),
+                      color: Colors.black.withValues(alpha: 0.75),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
@@ -203,7 +203,7 @@ class _InAppYoutubePlayerState extends State<InAppYoutubePlayer> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.65),
+                    color: Colors.black.withValues(alpha: 0.65),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.play_arrow_rounded,
@@ -385,7 +385,7 @@ class _YoutubeWebPlayerState extends State<_YoutubeWebPlayer> {
                     data: _embedHtml,
                     mimeType: 'text/html',
                     encoding: 'utf-8',
-                    baseUrl: Uri.parse('https://app.bhromon.fun'),
+                    baseUrl: WebUri('https://app.bhromon.fun'),
                   ),
                   gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
                     Factory<TapGestureRecognizer>(
@@ -395,30 +395,24 @@ class _YoutubeWebPlayerState extends State<_YoutubeWebPlayer> {
                       () => HorizontalDragGestureRecognizer(),
                     ),
                   },
-                  initialOptions: InAppWebViewGroupOptions(
-                    crossPlatform: InAppWebViewOptions(
-                      javaScriptEnabled: true,
-                      mediaPlaybackRequiresUserGesture: false,
-                      supportZoom: false,
-                      userAgent: 'Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36',
-                    ),
-                    ios: IOSInAppWebViewOptions(
-                      allowsInlineMediaPlayback: true,
-                    ),
-                    android: AndroidInAppWebViewOptions(
-                      useHybridComposition: false,
-                      mixedContentMode: AndroidMixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
-                      builtInZoomControls: false,
-                      displayZoomControls: false,
-                      domStorageEnabled: true,
-                    ),
+                  initialSettings: InAppWebViewSettings(
+                    javaScriptEnabled: true,
+                    mediaPlaybackRequiresUserGesture: false,
+                    supportZoom: false,
+                    userAgent: 'Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36',
+                    allowsInlineMediaPlayback: true,
+                    useHybridComposition: false,
+                    mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+                    builtInZoomControls: false,
+                    displayZoomControls: false,
+                    domStorageEnabled: true,
                   ),
                   onLoadStop: (controller, url) {
                     if (mounted) {
                       setState(() => _isLoading = false);
                     }
                   },
-                  onLoadError: (controller, url, code, message) {
+                  onReceivedError: (controller, request, error) {
                     if (mounted) {
                       setState(() => _isLoading = false);
                     }

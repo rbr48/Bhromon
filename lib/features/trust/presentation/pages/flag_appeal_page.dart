@@ -79,7 +79,7 @@ class _FlagAppealPageState extends State<FlagAppealPage> {
                   content: const Text(
                     '✅ Appeal submitted. Our team will review it within 48 hours.',
                   ),
-                  backgroundColor: _kGreen.withOpacity(.9),
+                  backgroundColor: _kGreen.withValues(alpha: .9),
                   duration: const Duration(seconds: 5),
                 ),
               );
@@ -196,7 +196,7 @@ class _FlagAppealPageState extends State<FlagAppealPage> {
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide:
-                            BorderSide(color: Colors.redAccent.withOpacity(.7)),
+                            BorderSide(color: Colors.redAccent.withValues(alpha: .7)),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),

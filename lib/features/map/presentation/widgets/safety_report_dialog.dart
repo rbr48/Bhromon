@@ -65,12 +65,12 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
           const Text('Reason:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: _selectedReason,
+            initialValue: _selectedReason,
             dropdownColor: const Color(0xFF2A2A3E),
             style: const TextStyle(color: Colors.white, fontSize: 13),
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white.withOpacity(0.06),
+              fillColor: Colors.white.withValues(alpha: 0.06),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
@@ -89,7 +89,7 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
               hintText: 'Describe the safety issue...',
               hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.06),
+              fillColor: Colors.white.withValues(alpha: 0.06),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               counterStyle: const TextStyle(color: Colors.white38, fontSize: 9),
               contentPadding: const EdgeInsets.all(12),

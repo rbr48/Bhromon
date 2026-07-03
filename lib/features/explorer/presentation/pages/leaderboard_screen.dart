@@ -90,15 +90,15 @@ class LeaderboardScreen extends StatelessWidget {
               if (rank == 1) {
                 rankWidget = const Text('🏆', style: TextStyle(fontSize: 22));
                 itemBg = const Color(0xFF1B3825);
-                itemBorder = Border.all(color: const Color(0xFFF4A261).withOpacity(0.5), width: 1.5);
+                itemBorder = Border.all(color: const Color(0xFFF4A261).withValues(alpha: 0.5), width: 1.5);
               } else if (rank == 2) {
                 rankWidget = const Text('🥈', style: TextStyle(fontSize: 20));
                 itemBg = const Color(0xFF14291B);
-                itemBorder = Border.all(color: Colors.grey.withOpacity(0.4), width: 1.2);
+                itemBorder = Border.all(color: Colors.grey.withValues(alpha: 0.4), width: 1.2);
               } else if (rank == 3) {
                 rankWidget = const Text('🥉', style: TextStyle(fontSize: 18));
                 itemBg = const Color(0xFF102116);
-                itemBorder = Border.all(color: const Color(0xFFCD7F32).withOpacity(0.4), width: 1);
+                itemBorder = Border.all(color: const Color(0xFFCD7F32).withValues(alpha: 0.4), width: 1);
               } else {
                 rankWidget = CircleAvatar(
                   radius: 12,
@@ -120,7 +120,7 @@ class LeaderboardScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: itemBg,
                   borderRadius: BorderRadius.circular(16),
-                  border: itemBorder ?? Border.all(color: const Color(0xFF1E3A26).withOpacity(0.5)),
+                  border: itemBorder ?? Border.all(color: const Color(0xFF1E3A26).withValues(alpha: 0.5)),
                   boxShadow: const [
                     BoxShadow(
                       color: Colors.black26,
@@ -151,7 +151,7 @@ class LeaderboardScreen extends StatelessWidget {
                   title: Text(
                     name,
                     style: TextStyle(
-                      color: rank <= 3 ? Colors.white : Colors.white.withOpacity(0.9),
+                      color: rank <= 3 ? Colors.white : Colors.white.withValues(alpha: 0.9),
                       fontWeight: rank <= 3 ? FontWeight.w900 : FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -162,7 +162,7 @@ class LeaderboardScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE76F51).withOpacity(0.2),
+                            color: const Color(0xFFE76F51).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(

@@ -6,7 +6,7 @@ import '../../domain/usecases/download_vault_usecase.dart';
 import '../../domain/usecases/delete_vault_usecase.dart';
 import '../../domain/usecases/sync_outbox_usecase.dart';
 import '../../domain/usecases/get_vault_status_usecase.dart';
-import '../../../../core/services/tile_downloader.dart' show TileDownloader, MapProgress;
+import '../../../../core/services/offline_map_service.dart' show OfflineMapService, MapProgress;
 import '../../../../core/database/app_database.dart';
 import '../../../../core/entities/outbox_entry.dart';
 import 'vault_state.dart';
@@ -29,7 +29,7 @@ class VaultCubit extends Cubit<VaultState> {
     this._database,
   ) : super(const VaultState()) {
     _refreshStatus();
-    _downloadSubscription = TileDownloader.progressStream.listen((event) {
+    _downloadSubscription = OfflineMapService.progressStream.listen((event) {
       if (state.downloadProgress.containsKey(event.districtId)) {
         final updatedProgress = Map<String, double>.from(state.downloadProgress)
           ..[event.districtId] = event.progress;

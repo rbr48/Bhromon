@@ -31,6 +31,7 @@ For more architectural decisions, see the [ADRs](file:///e:/Projects/Bhromon/doc
 - [ADR 003: Clean Architecture](file:///e:/Projects/Bhromon/docs/adr/003_clean_architecture.md)
 - [ADR 004: Firebase Region Gating](file:///e:/Projects/Bhromon/docs/adr/004_firebase_region_gating.md)
 - [ADR 005: Security Hardening](file:///e:/Projects/Bhromon/docs/adr/005_security_hardening.md)
+- [ADR 006: Offline Maps via MapLibre Regions](file:///e:/Projects/Bhromon/docs/adr/006_offline_maps_via_maplibre_regions.md)
 
 ---
 

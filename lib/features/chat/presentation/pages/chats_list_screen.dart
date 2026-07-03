@@ -24,7 +24,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         context.go('/feed');
       },
@@ -165,7 +165,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.chat_bubble_outline, size: 64, color: Colors.white.withOpacity(0.08)),
+                              Icon(Icons.chat_bubble_outline, size: 64, color: Colors.white.withValues(alpha: 0.08)),
                               const SizedBox(height: 16),
                               const Text(
                                 'No conversations here yet.',
@@ -240,7 +240,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           color: isSelected ? const Color(0xFF005C4B) : const Color(0xFF1F2C34),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF00A884).withOpacity(0.3) : Colors.transparent,
+            color: isSelected ? const Color(0xFF00A884).withValues(alpha: 0.3) : Colors.transparent,
             width: 1,
           ),
         ),

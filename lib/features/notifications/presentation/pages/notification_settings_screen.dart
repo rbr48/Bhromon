@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
+import '../../../../core/theme/theme_context.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -23,7 +24,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         if (context.canPop()) {
           context.pop();
@@ -89,9 +90,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF111111),
+                    color: context.surfacePanel,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.04)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
                   ),
                   child: Column(
                     children: [
@@ -145,11 +146,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(12),
       ),
       child: SwitchListTile(
-        activeColor: AppColors.mintGreen,
+        activeThumbColor: AppColors.mintGreen,
         title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
         subtitle: Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12)),
         value: val,
@@ -163,10 +164,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF111111),
+        backgroundColor: context.surfacePanel,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.mintGreen.withOpacity(0.2)),
+          side: BorderSide(color: AppColors.mintGreen.withValues(alpha: 0.2)),
         ),
         title: const Text(
           'SET NEW PASSWORD',
@@ -188,7 +189,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               decoration: InputDecoration(
                 hintText: 'Minimum 6 characters',
                 hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                fillColor: Colors.white.withOpacity(0.05),
+                fillColor: Colors.white.withValues(alpha: 0.05),
                 filled: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
@@ -256,7 +257,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          backgroundColor: const Color(0xFF111111),
+          backgroundColor: context.surfacePanel,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: Colors.redAccent, width: 0.8),
@@ -293,7 +294,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 decoration: InputDecoration(
                   hintText: 'DELETE',
                   hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
-                  fillColor: Colors.white.withOpacity(0.05),
+                  fillColor: Colors.white.withValues(alpha: 0.05),
                   filled: true,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   enabledBorder: OutlineInputBorder(

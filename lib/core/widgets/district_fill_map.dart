@@ -111,18 +111,18 @@ class DistrictFillMapWidget extends StatelessWidget {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 400),
                   decoration: BoxDecoration(
-                    color: isVisited ? baseColor : Colors.white.withOpacity(0.07),
+                    color: isVisited ? baseColor : Colors.white.withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(3),
                     border: Border.all(
                       color: isVisited
-                          ? baseColor.withOpacity(0.5)
+                          ? baseColor.withValues(alpha: 0.5)
                           : Colors.white10,
                       width: 0.5,
                     ),
                     boxShadow: isVisited
                         ? [
                             BoxShadow(
-                              color: baseColor.withOpacity(0.4),
+                              color: baseColor.withValues(alpha: 0.4),
                               blurRadius: 4,
                             )
                           ]

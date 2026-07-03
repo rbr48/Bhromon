@@ -30,6 +30,8 @@ import '../../../notifications/data/fcm_service.dart';
 import '../../../../core/widgets/entry_reactions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/widgets/brand_logo_text.dart';
+import '../../../../core/theme/theme_context.dart';
+import '../../../../core/widgets/skeleton.dart';
 
 
 class HomeFeedScreen extends StatefulWidget {
@@ -145,6 +147,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
 
     // Setup active notifications listener based on AuthCubit state
     _authSubscription = context.read<AuthCubit>().stream.listen((state) {
+      if (!mounted) return;
       if (state is Authenticated) {
         _setupNotificationsListener(state.profile.uid);
         getIt<FcmService>().init(state.profile.uid, context);
@@ -377,12 +380,13 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               final String body = (data['body'] as String?) ?? '';
               final String action = (data['action'] as String?) ?? '';
               final String? notifUid = data['uid'] as String?;
-              
+
+              if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  backgroundColor: AppColors.cardDark.withOpacity(0.95),
+                  backgroundColor: AppColors.cardDark.withValues(alpha: 0.95),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -567,7 +571,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          const Color(0xFF74C69D).withOpacity(0.15),
+                          const Color(0xFF74C69D).withValues(alpha: 0.15),
                           Colors.transparent,
                         ],
                       ),
@@ -585,7 +589,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        const Color(0xFF52B788).withOpacity(0.12),
+                        const Color(0xFF52B788).withValues(alpha: 0.12),
                         Colors.transparent,
                       ],
                     ),
@@ -623,9 +627,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                 height: 36,
                                 margin: const EdgeInsets.symmetric(horizontal: 10),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.12),
+                                  color: Colors.white.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.white.withOpacity(0.18)),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
                                 ),
                                 child: TextField(
                                   controller: _searchController,
@@ -633,7 +637,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                   style: const TextStyle(color: Colors.white, fontSize: 13.5),
                                   decoration: InputDecoration(
                                     hintText: 'Search travel logs...',
-                                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12.5),
+                                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12.5),
                                     border: InputBorder.none,
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   ),
@@ -716,7 +720,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                               Text(
                                 '${_getGreeting()} · ${_getDayOfWeek()} · ${_getTemp()}° ${_getWeatherCondition()}',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.45),
+                                  color: Colors.white.withValues(alpha: 0.45),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -864,7 +868,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                               children: [
                                 CircleAvatar(
                                   radius: 16,
-                                  backgroundColor: AppColors.mintGreen.withOpacity(0.2),
+                                  backgroundColor: AppColors.mintGreen.withValues(alpha: 0.2),
                                   child: Text(
                                     authorName.isNotEmpty ? authorName[0].toUpperCase() : '?',
                                     style: const TextStyle(
@@ -1031,8 +1035,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.08),
-          border: Border.all(color: Colors.white.withOpacity(0.12)),
+          color: Colors.white.withValues(alpha: 0.08),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: Colors.white, size: 18),
@@ -1050,8 +1054,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
-              border: Border.all(color: Colors.white.withOpacity(0.12)),
+              color: Colors.white.withValues(alpha: 0.08),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: Colors.white, size: 18),
@@ -1069,7 +1073,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   border: Border.all(color: Colors.transparent, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFF4A261).withOpacity(0.5),
+                      color: const Color(0xFFF4A261).withValues(alpha: 0.5),
                       blurRadius: 4,
                       spreadRadius: 1,
                     )
@@ -1122,7 +1126,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF1B4332).withOpacity(0.3),
+                            color: const Color(0xFF1B4332).withValues(alpha: 0.3),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           )
@@ -1166,7 +1170,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         border: Border.all(color: const Color(0xFFECEAE4)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1237,11 +1241,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
       bloc: _feedCubit,
       builder: (context, state) {
         if (state is FeedLoading || state is FeedInitial) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(40.0),
-              child: CircularProgressIndicator(color: Color(0xFF74C69D)),
-            ),
+          return const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: FeedListSkeleton(count: 3),
           );
         }
 
@@ -1428,7 +1430,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         border: Border.all(color: const Color(0xFFECEAE4)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -1768,10 +1770,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   colors: [Color(0xFF1B4332), Color(0xFF2D6A4F)],
                 ),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF74C69D).withOpacity(0.15)),
+                border: Border.all(color: const Color(0xFF74C69D).withValues(alpha: 0.15)),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1B4332).withOpacity(0.3),
+                    color: const Color(0xFF1B4332).withValues(alpha: 0.3),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -1886,7 +1888,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             bloc: _feedCubit,
             builder: (context, state) {
               if (state is FeedLoading || state is FeedInitial) {
-                return const Center(child: CircularProgressIndicator(color: Color(0xFF74C69D)));
+                return const HorizontalCardsSkeleton(cardWidth: 240, cardHeight: 200);
               }
 
               if (state is FeedError) {
@@ -2070,13 +2072,13 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     Color tierBg;
     Color tierText;
     if (tierClass == 'pioneer') {
-      tierBg = const Color(0xFFE76F51).withOpacity(0.92);
+      tierBg = const Color(0xFFE76F51).withValues(alpha: 0.92);
       tierText = Colors.white;
     } else if (tierClass == 'verified') {
-      tierBg = const Color(0xFFFFD166).withOpacity(0.92);
+      tierBg = const Color(0xFFFFD166).withValues(alpha: 0.92);
       tierText = const Color(0xFF4A1B0C);
     } else {
-      tierBg = const Color(0xFF1D9E75).withOpacity(0.92);
+      tierBg = const Color(0xFF1D9E75).withValues(alpha: 0.92);
       tierText = Colors.white;
     }
 
@@ -2091,7 +2093,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.black.withOpacity(0.04)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x26000000),
@@ -2137,9 +2139,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withOpacity(0.05),
+                          Colors.black.withValues(alpha: 0.05),
                           Colors.transparent,
-                          Colors.black.withOpacity(0.55),
+                          Colors.black.withValues(alpha: 0.55),
                         ],
                         stops: const [0.0, 0.4, 1.0],
                       ),
@@ -2189,8 +2191,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.42),
-                      border: Border.all(color: Colors.white.withOpacity(0.12)),
+                      color: Colors.black.withValues(alpha: 0.42),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -2231,7 +2233,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFD166).withOpacity(0.88),
+                      color: const Color(0xFFFFD166).withValues(alpha: 0.88),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
@@ -2475,10 +2477,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   decoration: BoxDecoration(
                     color: const Color(0xFF0D1A12),
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                    border: Border.all(color: const Color(0xFF74C69D).withOpacity(0.12)),
+                    border: Border.all(color: const Color(0xFF74C69D).withValues(alpha: 0.12)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.5),
+                        color: Colors.black.withValues(alpha: 0.5),
                         blurRadius: 24,
                         offset: const Offset(0, -4),
                       ),
@@ -2540,7 +2542,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                               selected: isSelected,
                               checkmarkColor: Colors.black,
                               selectedColor: const Color(0xFF74C69D),
-                              backgroundColor: Colors.white.withOpacity(0.06),
+                              backgroundColor: Colors.white.withValues(alpha: 0.06),
                               labelStyle: TextStyle(
                                 color: isSelected ? Colors.black : Colors.white70,
                                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -2588,7 +2590,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                               selected: isSelected,
                               checkmarkColor: Colors.black,
                               selectedColor: const Color(0xFF74C69D),
-                              backgroundColor: Colors.white.withOpacity(0.06),
+                              backgroundColor: Colors.white.withValues(alpha: 0.06),
                               labelStyle: TextStyle(
                                 color: isSelected ? Colors.black : Colors.white70,
                                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -2623,7 +2625,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                               borderRadius: BorderRadius.circular(14),
                             ),
                             elevation: 8,
-                            shadowColor: const Color(0xFF40916C).withOpacity(0.4),
+                            shadowColor: const Color(0xFF40916C).withValues(alpha: 0.4),
                           ),
                           onPressed: () {
                             Navigator.pop(ctx);
@@ -2769,7 +2771,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: isPremium ? const Color(0xFFE76F51).withOpacity(0.1) : const Color(0xFF1D9E75).withOpacity(0.1),
+                                          color: isPremium ? const Color(0xFFE76F51).withValues(alpha: 0.1) : const Color(0xFF1D9E75).withValues(alpha: 0.1),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Text(
@@ -2843,9 +2845,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -3134,7 +3136,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   Text(
                     'Top Explorers',
                     style: TextStyle(
-                      color: Colors.black.withOpacity(0.85),
+                      color: Colors.black.withValues(alpha: 0.85),
                       fontSize: 14.5,
                       fontWeight: FontWeight.bold,
                     ),
@@ -3187,7 +3189,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             bloc: _feedCubit,
             builder: (context, state) {
               if (state is FeedLoading) {
-                return const Center(child: CircularProgressIndicator(color: Color(0xFF74C69D)));
+                return const HorizontalCardsSkeleton(cardWidth: 150, cardHeight: 170);
               }
 
               List<ExplorerProfile> explorersList = [];
@@ -3349,7 +3351,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         bloc: _feedCubit,
         builder: (context, state) {
           if (state is FeedLoading) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF74C69D)));
+            return const HorizontalCardsSkeleton(cardWidth: 220, cardHeight: 150);
           }
 
           List<ProTip> tipsList = [];
@@ -3493,8 +3495,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                         margin: const EdgeInsets.only(bottom: 7),
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE24B4A).withOpacity(0.07),
-                          border: Border.all(color: const Color(0xFFE24B4A).withOpacity(0.2)),
+                          color: const Color(0xFFE24B4A).withValues(alpha: 0.07),
+                          border: Border.all(color: const Color(0xFFE24B4A).withValues(alpha: 0.2)),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: const Row(
@@ -3535,18 +3537,18 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                         Text(
                           timeAgoStr,
                           style: TextStyle(
-                            color: Colors.black.withOpacity(0.4),
+                            color: Colors.black.withValues(alpha: 0.4),
                             fontSize: 8,
                           ),
                         ),
                         Row(
                           children: [
-                            Icon(Icons.thumb_up_alt_outlined, size: 9, color: Colors.black.withOpacity(0.4)),
+                            Icon(Icons.thumb_up_alt_outlined, size: 9, color: Colors.black.withValues(alpha: 0.4)),
                             const SizedBox(width: 3),
                             Text(
                               '${tip.helpfulVotes}',
                               style: TextStyle(
-                                color: Colors.black.withOpacity(0.4),
+                                color: Colors.black.withValues(alpha: 0.4),
                                 fontSize: 8.5,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -3737,16 +3739,16 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     return Container(
       height: navHeight,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.96),
+        color: Colors.white.withValues(alpha: 0.96),
         border: Border(
           top: BorderSide(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             width: 0.5,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             blurRadius: 40,
             offset: const Offset(0, -16),
           ),
@@ -3823,10 +3825,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
           decoration: BoxDecoration(
             color: const Color(0xFF0D1A12),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border.all(color: const Color(0xFF74C69D).withOpacity(0.12)),
+            border: Border.all(color: const Color(0xFF74C69D).withValues(alpha: 0.12)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 blurRadius: 24,
                 offset: const Offset(0, -4),
               ),
@@ -3947,9 +3949,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
+          color: Colors.white.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.15)),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4115,7 +4117,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10),
+                BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10),
               ],
             ),
             child: Column(
@@ -4183,7 +4185,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10),
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10),
                     ],
                   ),
                   child: const Column(
@@ -4223,9 +4225,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -4290,7 +4292,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10),
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10),
                     ],
                   ),
                   child: const Column(
@@ -4380,7 +4382,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                       color: isSelected ? const Color(0xFF40916C) : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6),
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6),
                       ],
                       border: Border.all(
                         color: isSelected ? Colors.transparent : const Color(0xFFECEAE4),
@@ -4425,7 +4427,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             bloc: _feedCubit,
             builder: (context, state) {
               if (state is FeedLoading || state is FeedInitial) {
-                return const Center(child: CircularProgressIndicator(color: Color(0xFF74C69D)));
+                return const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: FeedListSkeleton(count: 2));
               }
               if (state is FeedLoaded) {
                 final activeLogs = state.logs.where((l) => !l.isArchived).toList();
@@ -4485,7 +4487,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             bloc: _feedCubit,
             builder: (context, state) {
               if (state is FeedLoading || state is FeedInitial) {
-                return const Center(child: CircularProgressIndicator(color: Color(0xFF74C69D)));
+                return const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: FeedListSkeleton(count: 2));
               }
               if (state is FeedLoaded) {
                 final activeLogs = state.logs.where((l) => !l.isArchived).toList();
@@ -4523,7 +4525,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: context.surfacePanel,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -4652,14 +4654,14 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: iconColor.withOpacity(0.15),
+          backgroundColor: iconColor.withValues(alpha: 0.15),
           child: Icon(icon, color: iconColor, size: 20),
         ),
         title: Row(
@@ -4764,11 +4766,11 @@ class _SyncPulseOrbState extends State<_SyncPulseOrb> with SingleTickerProviderS
           height: 32,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFF74C69D).withOpacity(0.15),
-            border: Border.all(color: const Color(0xFF74C69D).withOpacity(0.35), width: 1.5),
+            color: const Color(0xFF74C69D).withValues(alpha: 0.15),
+            border: Border.all(color: const Color(0xFF74C69D).withValues(alpha: 0.35), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF74C69D).withOpacity(0.35 * (1.0 - _controller.value)),
+                color: const Color(0xFF74C69D).withValues(alpha: 0.35 * (1.0 - _controller.value)),
                 blurRadius: 10 * _controller.value,
                 spreadRadius: 6 * _controller.value,
               )

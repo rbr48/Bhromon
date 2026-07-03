@@ -19,7 +19,7 @@ class PrivacyToggleWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white12),
       ),
@@ -61,10 +61,10 @@ class _Segment extends StatelessWidget {
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? _selectedColor.withOpacity(0.18) : Colors.transparent,
+          color: isSelected ? _selectedColor.withValues(alpha: 0.18) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: isSelected
-              ? Border.all(color: _selectedColor.withOpacity(0.5))
+              ? Border.all(color: _selectedColor.withValues(alpha: 0.5))
               : null,
         ),
         child: Row(

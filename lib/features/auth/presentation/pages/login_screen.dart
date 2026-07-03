@@ -72,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen>
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         context.go('/feed');
       },
@@ -109,19 +109,19 @@ class _LoginScreenState extends State<LoginScreen>
                 top: -180,
                 right: -120,
                 size: 360,
-                color: _kGreen.withOpacity(.13),
+                color: _kGreen.withValues(alpha: .13),
               ),
               _aurora(
                 bottom: -220,
                 left: -160,
                 size: 440,
-                color: _kGold.withOpacity(.07),
+                color: _kGold.withValues(alpha: .07),
               ),
               _aurora(
                 top: 200,
                 left: -80,
                 size: 200,
-                color: _kGreenDark.withOpacity(.18),
+                color: _kGreenDark.withValues(alpha: .18),
               ),
 
               // ── Content ─────────────────────────────────────────────────────────
@@ -207,12 +207,12 @@ class _LoginScreenState extends State<LoginScreen>
         border: Border.all(color: _kBorder, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(.5),
+            color: Colors.black.withValues(alpha: .5),
             blurRadius: 32,
             offset: const Offset(0, 12),
           ),
           BoxShadow(
-            color: _kGreen.withOpacity(.04),
+            color: _kGreen.withValues(alpha: .04),
             blurRadius: 16,
           ),
         ],
@@ -246,7 +246,7 @@ class _BrandHeader extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: _kGreen.withOpacity(.25),
+                color: _kGreen.withValues(alpha: .25),
                 blurRadius: 40,
                 spreadRadius: 8,
               ),
@@ -258,7 +258,7 @@ class _BrandHeader extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: _kCardBg,
-              border: Border.all(color: _kGreen.withOpacity(.35), width: 2),
+              border: Border.all(color: _kGreen.withValues(alpha: .35), width: 2),
             ),
             child: ClipOval(
               child: Image.asset(
@@ -336,7 +336,7 @@ class _DotLine extends StatelessWidget {
       height: 1,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.transparent, _kGreen.withOpacity(.6)],
+          colors: [Colors.transparent, _kGreen.withValues(alpha: .6)],
         ),
       ),
     );
@@ -823,7 +823,7 @@ class _GreenButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: _kGreen.withOpacity(.35),
+              color: _kGreen.withValues(alpha: .35),
               blurRadius: 18,
               offset: const Offset(0, 6),
             ),

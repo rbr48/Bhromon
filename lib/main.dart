@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 import 'package:path_provider/path_provider.dart';
@@ -37,7 +38,15 @@ import 'features/notifications/geo_fence_service.dart' show registerGeoFenceWork
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
-    
+
+    // Edge-to-edge: Android 15 (targetSdk 35) enforces it; opting in here
+    // keeps the look identical on older Android versions.
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+    ));
+
     // Optimize ImageCache to hold up to 300 images & 250MB to prevent constant lazy-loading and jank on feeds
     PaintingBinding.instance.imageCache.maximumSizeBytes = 250 * 1024 * 1024; // 250 MB
     PaintingBinding.instance.imageCache.maximumSize = 300; // 300 images
@@ -88,7 +97,7 @@ void main() {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
+                      color: Colors.white.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -164,12 +173,12 @@ void main() {
         await FirebaseAppCheck.instance.activate(
           // Use playIntegrity on Android (requires Play Store-signed build)
           // Falls back gracefully to debug provider in non-release builds.
-          androidProvider: kReleaseMode
-              ? AndroidProvider.playIntegrity
-              : AndroidProvider.debug,
-          appleProvider: kReleaseMode
-              ? AppleProvider.deviceCheck
-              : AppleProvider.debug,
+          providerAndroid: kReleaseMode
+              ? const AndroidPlayIntegrityProvider()
+              : const AndroidDebugProvider(),
+          providerApple: kReleaseMode
+              ? const AppleDeviceCheckProvider()
+              : const AppleDebugProvider(),
         );
         logInfo('[AppCheck] Firebase App Check activated successfully');
       } catch (e, stack) {
