@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy | Bhromon — পথ যেখানে গল্প বলে</title>
+    <meta name="description" content="Privacy Policy for Bhromon App and website. Read about how we collect, use, and protect your location and personal data.">
+    <link rel="stylesheet" href="css/style.css?v=1.2.3">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <style>
+        :root {
+            --toc-width: 280px;
+        }
+
+        .policy-container {
+            display: flex;
+            gap: 2.5rem;
+            max-width: 1300px;
+            margin: 120px auto 5rem;
+            padding: 0 5%;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Sidebar / TOC styling */
+        .policy-sidebar {
+            width: var(--toc-width);
+            flex-shrink: 0;
+            position: sticky;
+            top: 100px;
+            height: fit-content;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+            padding: 1.5rem;
+            border-radius: 16px;
+        }
+
+        .policy-sidebar h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1.25rem;
+            color: var(--color-primary-light);
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 0.5rem;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .toc-item a {
+            font-size: 0.88rem;
+            color: var(--color-text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .toc-item a:hover, .toc-item.active a {
+            color: var(--color-text-primary);
+            background: rgba(16, 185, 129, 0.08);
+            padding-left: 12px;
+        }
+
+        .toc-item.active a {
+            border-left: 2px solid var(--color-primary);
+            font-weight: 600;
+        }
+
+        /* Main content area */
+        .policy-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            min-width: 0; /* Prevents overflow in flex items */
+        }
+
+        .policy-header-card {
+            padding: 2.5rem;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .policy-header-card h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .version-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--color-border);
+            border-radius: 50px;
+            font-size: 0.8rem;
+            color: var(--color-text-secondary);
+            margin-top: 1rem;
+        }
+
+        .policy-section-card {
+            padding: 2.5rem;
+            border-radius: 20px;
+            scroll-margin-top: 100px;
+        }
+
+        .policy-section-card h2 {
+            font-size: 1.6rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 0.75rem;
+        }
+
+        .policy-section-card h2 i {
+            color: var(--color-primary-light);
+            font-size: 1.3rem;
+        }
+
+        .policy-section-card h3 {
+            font-size: 1.15rem;
+            margin: 1.5rem 0 0.75rem;
+            color: var(--color-text-primary);
+        }
+
+        .policy-section-card p {
+            color: var(--color-text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        .policy-section-card ul, .policy-section-card ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--color-text-secondary);
+        }
+
+        .policy-section-card li {
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .policy-section-card strong {
+            color: var(--color-text-primary);
+        }
+
+        /* Alert/Callout box inside policy */
+        .policy-alert {
+            background: rgba(16, 185, 129, 0.04);
+            border-left: 4px solid var(--color-primary);
+            padding: 1.25rem;
+            border-radius: 0 12px 12px 0;
+            margin: 1.5rem 0;
+        }
+
+        .policy-alert-warning {
+            background: rgba(245, 158, 11, 0.04);
+            border-left: 4px solid var(--color-accent);
+        }
+
+        .policy-alert h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .policy-alert-warning h4 {
+            color: var(--color-accent-light);
+        }
+
+        .policy-alert p {
+            margin-bottom: 0;
+            font-size: 0.9rem;
+        }
+
+        /* Info Table */
+        .info-table-wrapper {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            border-radius: 12px;
+            border: 1px solid var(--color-border);
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .info-table th {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--color-text-primary);
+            font-weight: 600;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .info-table td {
+            color: var(--color-text-secondary);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .info-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .info-table tr:hover td {
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        /* Mobile adaptation */
+        @media (max-width: 992px) {
+            .policy-container {
+                flex-direction: column;
+                margin-top: 100px;
+            }
+
+            .policy-sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+                max-height: none;
+                margin-bottom: 1.5rem;
+            }
+
+            .toc-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Animated Background Auroras -->
+    <div class="aurora-container">
+        <div class="aurora-blob blob-1"></div>
+        <div class="aurora-blob blob-2"></div>
+        <div class="aurora-blob blob-3"></div>
+    </div>
+    <div class="bg-grid"></div>
+
+    <!-- Sticky Nav -->
+    <nav class="glass scrolled">
+        <a href="index.html" class="brand">
+            <div class="brand-row">
+                <img src="images/logo.png" alt="Bhromon Logo" class="brand-logo-img"> Bhromon
+            </div>
+            <div class="brand-tags">
+                <span class="brand-tag-pill">Community</span>
+                <span class="brand-tag-pill">Trust</span>
+                <span class="brand-tag-pill">Explore</span>
+            </div>
+        </a>
+        <div class="nav-links">
+            <a href="index.html"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <div class="policy-container">
+        
+        <!-- Table of Contents Sidebar -->
+        <aside class="policy-sidebar glass">
+            <h3>Table of Contents</h3>
+            <ul class="toc-list">
+                <li class="toc-item active"><a href="#introduction"><i class="fa-solid fa-circle-info"></i> 1. Introduction</a></li>
+                <li class="toc-item"><a href="#info-collect"><i class="fa-solid fa-database"></i> 2. Information We Collect</a></li>
+                <li class="toc-item"><a href="#location-usage"><i class="fa-solid fa-location-crosshairs"></i> 3. Location Data Details</a></li>
+                <li class="toc-item"><a href="#info-use"><i class="fa-solid fa-gears"></i> 4. How We Use Information</a></li>
+                <li class="toc-item"><a href="#third-party"><i class="fa-solid fa-network-wired"></i> 5. Third-Party Services</a></li>
+                <li class="toc-item"><a href="#data-security"><i class="fa-solid fa-shield-halved"></i> 6. Data Security Measures</a></li>
+                <li class="toc-item"><a href="#retention-deletion"><i class="fa-solid fa-trash-can"></i> 7. Retention & Deletion</a></li>
+                <li class="toc-item"><a href="#children"><i class="fa-solid fa-child-reaching"></i> 8. Children's Privacy</a></li>
+                <li class="toc-item"><a href="#user-rights"><i class="fa-solid fa-user-shield"></i> 9. Your Rights</a></li>
+                <li class="toc-item"><a href="#cookies"><i class="fa-solid fa-cookie-bite"></i> 10. Cookies & Tracking</a></li>
+                <li class="toc-item"><a href="#contact"><i class="fa-solid fa-envelope"></i> 11. Contact Info</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Text Column -->
+        <main class="policy-main">
+            
+            <!-- Document Header -->
+            <div class="policy-header-card glass">
+                <span class="badge-primary">Legal Document</span>
+                <h1>Privacy Policy</h1>
+                <p>Learn how Bhromon processes, secures, and respects your personal and travel logs data.</p>
+                <div class="version-badge">
+                    <i class="fa-solid fa-code-branch"></i> Version 2.0.1 | <i class="fa-solid fa-clock"></i> Last Updated: June 23, 2026
+                </div>
+            </div>
+
+            <!-- Section 1: Introduction -->
+            <section id="introduction" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-circle-info"></i> 1. Introduction</h2>
+                <p>Welcome to <strong>Bhromon</strong> (the "App"), a community-based travel companion and logging journal. Bhromon is owned and operated by <strong>Izhaan Intellect</strong> ("we," "our," or "us").</p>
+                <p>We are dedicated to safeguarding the privacy and integrity of your personal information and travel journals. This Privacy Policy is designed to inform you about how we collect, store, secure, use, and share your data when you access our mobile application, visit our website (<strong>https://bhromon.fun</strong>), or utilize our web portal (<strong>https://app.bhromon.fun</strong>).</p>
+                <p>By installing, signing up for, or using Bhromon, you agree to the collection, storage, and processing of your details as described in this Policy. If you do not agree, please do not use our services.</p>
+            </section>
+
+            <!-- Section 2: Information We Collect -->
+            <section id="info-collect" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-database"></i> 2. Information We Collect</h2>
+                <p>We collect data to provide, optimize, and secure our travel directory. This includes information you directly provide, data recorded automatically by the device, and permissions required for core offline features.</p>
+                
+                <h3>A. Information You Provide</h3>
+                <ul>
+                    <li><strong>Account & Registration Profile:</strong> When you create an account, we collect your email address, display name, profile photo, and password credentials.</li>
+                    <li><strong>Social Authentication:</strong> If you register using Google Sign-In, we obtain your email, name, and profile photo from Google as permitted by your privacy configurations.</li>
+                    <li><strong>Contributions:</strong> Any travel logs, ratings, destination coordinates, safety reports, tips, and comments you publish to the community.</li>
+                </ul>
+
+                <h3>B. Device Permissions & Automatically Collected Data</h3>
+                <p>To enable the App's offline-first capabilities, we request specific hardware permissions. These are never accessed without your explicit consent:</p>
+                
+                <div class="info-table-wrapper">
+                    <table class="info-table">
+                        <thead>
+                            <tr>
+                                <th>Permission Type</th>
+                                <th>Why it is Required</th>
+                                <th>When it is Accessed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Location (GPS)</strong></td>
+                                <td>Show current location on map, fetch closest Location Pins, and calculate movement speed.</td>
+                                <td>Foreground when app is open; background only when a Live Trip is active.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Storage & Photos</strong></td>
+                                <td>Allow selection of images and videos to attach to travel logs and drafts.</td>
+                                <td>When editing logs or attaching media.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Microphone (Audio)</strong></td>
+                                <td>Create "Audio Note Blocks" (voice entries) inside the TripLog editor.</td>
+                                <td>When recording voice journals.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Network State</strong></td>
+                                <td>Monitor active connection to trigger SyncManager to upload offline outbox.</td>
+                                <td>Continuously in the background.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Device Integrity</strong></td>
+                                <td>Evaluate system safety parameters (jailbreak/root checks) to prevent exploit risks.</td>
+                                <td>During application startup.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section 3: Location Data Details -->
+            <section id="location-usage" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-location-crosshairs"></i> 3. Location Data Details</h2>
+                <p>Because Bhromon is a navigation and travel logging application, location data is core to our system. We treat your location with strict privacy standards.</p>
+                
+                <div class="policy-alert">
+                    <h4><i class="fa-solid fa-circle-check"></i> Foreground Location Tracking</h4>
+                    <p>We access your fine (precise) and coarse (network) location to center the map, show your direction, locate nearby tourist attractions, and fetch community proximity pins.</p>
+                </div>
+
+                <div class="policy-alert policy-alert-warning">
+                    <h4><i class="fa-solid fa-circle-exclamation"></i> Background Location Tracking (Speed Profiles)</h4>
+                    <p>To support the "Live Route Sharing" feature and adapt GPS tracking parameters to conserve battery, Bhromon accesses background location. This background stream translates coordinate intervals into travel speeds to adjust tracking granularity (e.g., lower frequency when resting, higher accuracy when moving rapidly). <strong>This tracking operates only when you explicitly start a Live Trip and terminates immediately when you tap "End Trip".</strong></p>
+                </div>
+
+                <p><strong>Consent and Controls:</strong> You can grant or revoke location permissions at any time through your operating system settings. If revoked, mapping and navigation functionalities will be unavailable.</p>
+            </section>
+
+            <!-- Section 4: How We Use Your Information -->
+            <section id="info-use" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-gears"></i> 4. How We Use Information</h2>
+                <p>We use the data we collect for the following operational purposes:</p>
+                <ul>
+                    <li><strong>Offline Directory Maintenance:</strong> Local caches of your drafts, logs, and point-of-interest data are saved securely on your device in an SQLite database (powered by Drift) for offline access.</li>
+                    <li><strong>SyncManager Coordination:</strong> Synced outbox items are queued locally and automatically published to our server database when a connection is established.</li>
+                    <li><strong>Trust Index Calculation:</strong> Calculating gamified "Explorer Scores" based on community contributions, verified visits, and positive user interactions.</li>
+                    <li><strong>Communication & Alerts:</strong> Sending system update warnings, notifications about your contributions, or live chat alerts from other travelers.</li>
+                    <li><strong>Security Auditing:</strong> Verifying local device signatures to ensure database encryption safety.</li>
+                </ul>
+            </section>
+
+            <!-- Section 5: Third-Party Services -->
+            <section id="third-party" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-network-wired"></i> 5. Third-Party Services</h2>
+                <p>We integrate several trusted third-party APIs and SDKs to support map rendering, cloud storage, routing, and media utilities:</p>
+                <ul>
+                    <li><strong>Google Firebase (Auth, Firestore, Cloud Messaging, Storage):</strong> Houses active cloud profiles, public posts, chat channels, and sync pipelines. Stored on secure Google Cloud servers (Asia-South1 region). Refer to Google's privacy policies.</li>
+                    <li><strong>OpenStreetMap (OSM) Tiles:</strong> Used to render map grids and topographic visuals. No personally identifying profiles are sent to OSM.</li>
+                    <li><strong>Open-Meteo & OSRM APIs:</strong> Provide real-time local weather forecasts and routing routes. Location data sent is transient and never logged by these services.</li>
+                    <li><strong>YouTube API:</strong> Used to render verified video guides linked to destinations.</li>
+                </ul>
+            </section>
+
+            <!-- Section 6: Data Security Measures -->
+            <section id="data-security" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-shield-halved"></i> 6. Data Security Measures</h2>
+                <p>Your security is our priority. We employ industry-standard protocols to safeguard your travel logs and profiles:</p>
+                <ul>
+                    <li><strong>SSL Pinning:</strong> All network requests made by the mobile client go through secure HTTPS calls validated by SSL Pinning to prevent man-in-the-middle (MITM) interceptions.</li>
+                    <li><strong>Local Database Encryption:</strong> On-device SQLite databases containing confidential vault data are encrypted using secure storage hardware key wrappers.</li>
+                    <li><strong>Firestore Access Control:</strong> Strict backend rules prevent users from modifying or accessing private chats and journals belonging to other accounts.</li>
+                </ul>
+            </section>
+
+            <!-- Section 7: Retention & Deletion -->
+            <section id="retention-deletion" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-trash-can"></i> 7. Retention & Deletion</h2>
+                <p>We retain your profile data as long as your account exists. You have complete control over your content lifecycle.</p>
+                <p><strong>Account Deletion:</strong> You can trigger a permanent account deletion request from the Settings section of the App. Upon deletion, your profile metadata, personal info, private chats, and drafts are permanently deleted from our servers.</p>
+                <p><strong>Community Contribution Preservation:</strong> To keep our travel directory intact, public travel logs, coordinates, and pins you voluntarily contributed are anonymized (owner field set to "Anonymous Explorer") rather than deleted, unless you explicitly contact us to remove them.</p>
+            </section>
+
+            <!-- Section 8: Children's Privacy -->
+            <section id="children" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-child-reaching"></i> 8. Children's Privacy</h2>
+                <p>Bhromon is not intended for use by individuals under the age of <strong>13</strong>. We do not knowingly collect personal profiles or background location logs from children. If we discover that a user under 13 has registered, we will delete their profile immediately from our cloud directories.</p>
+            </section>
+
+            <!-- Section 9: Your Rights -->
+            <section id="user-rights" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-user-shield"></i> 9. Your Rights</h2>
+                <p>Depending on your location, you may have specific data protection rights, including GDPR and CCPA benefits:</p>
+                <ul>
+                    <li><strong>Right of Access:</strong> Request a copy of all personal data we store about you.</li>
+                    <li><strong>Right of Correction:</strong> Update outdated profile names or incorrect information.</li>
+                    <li><strong>Right to Object/Restrict:</strong> Opt-out of non-essential tracking or background logs.</li>
+                    <li><strong>Right to Deletion:</strong> Erase your user profile and private files completely from our cloud database.</li>
+                </ul>
+                <p>To exercise any of these rights, please email us at <strong>mybhromon@gmail.com</strong>.</p>
+            </section>
+
+            <!-- Section 10: Cookies & Tracking -->
+            <section id="cookies" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-cookie-bite"></i> 10. Cookies & Tracking</h2>
+                <p>Our website (https://bhromon.fun) uses basic cookies and session identifiers to save your language selection (English/Bengali) and remember if you have dismissed our waitlist popups. We do not use advertising tracking cookies or sell your browsing history to advertisers.</p>
+            </section>
+
+            <!-- Section 11: Contact Info -->
+            <section id="contact" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-envelope"></i> 11. Contact Info</h2>
+                <p>If you have any questions, concerns, or requests regarding this Privacy Policy, please reach out to us:</p>
+                <p><strong>Developer:</strong> Izhaan Intellect</p>
+                <p><strong>Support Email:</strong> <a href="mailto:mybhromon@gmail.com">mybhromon@gmail.com</a></p>
+                <p><strong>Website:</strong> <a href="https://bhromon.fun">https://bhromon.fun</a></p>
+                <p><strong>Web Portal:</strong> <a href="https://app.bhromon.fun">https://app.bhromon.fun</a></p>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-col">
+                <h4><img src="images/logo.png" alt="Bhromon Logo"> Bhromon</h4>
+                <p style="color: var(--color-text-secondary); max-width: 300px; margin-bottom: 1rem; font-size: 0.9rem;">
+                    পথ যেখানে গল্প বলে।
+                </p>
+            </div>
+            <div class="footer-col">
+                <h4>Explore</h4>
+                <a href="index.html#features">Features</a>
+                <a href="index.html#interactive-demo">Live Map</a>
+                <a href="index.html#faq">FAQ</a>
+            </div>
+            <div class="footer-col">
+                <h4>Contact Us</h4>
+                <a href="mailto:mybhromon@gmail.com"><i class="fa-solid fa-envelope"></i> mybhromon@gmail.com</a>
+                <a href="https://wa.me/8801762033445" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i> 01762033445</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 Bhromon Technologies Ltd. All rights reserved. Built with pride for Bangladesh.
+        </div>
+    </footer>
+
+    <!-- JavaScript to handle active class in Table of Contents -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('section[id]');
+            const tocItems = document.querySelectorAll('.toc-item');
+
+            window.addEventListener('scroll', () => {
+                let currentId = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    const sectionHeight = section.clientHeight;
+                    if (pageYOffset >= (sectionTop - 150)) {
+                        currentId = section.getAttribute('id');
+                    }
+                });
+
+                if (currentId) {
+                    tocItems.forEach(item => {
+                        item.classList.remove('active');
+                        const link = item.querySelector('a');
+                        if (link && link.getAttribute('href') === `#${currentId}`) {
+                            item.classList.add('active');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

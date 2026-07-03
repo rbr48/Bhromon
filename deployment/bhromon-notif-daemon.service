@@ -1,0 +1,29 @@
+[Unit]
+Description=Bhromon Push Notification Daemon
+Documentation=https://github.com/bhromon/bhromon
+After=network-online.target
+Wants=network-online.target
+
+# WARNING: Do NOT enable this service while Firebase Cloud Functions
+# (sendBroadcastNotification / sendGeneralNotification) are deployed.
+# Both systems listen to the same Firestore paths; running both causes
+# every notification to be delivered TWICE.
+# Recommended: use Cloud Functions only and keep this service disabled.
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/bhromon-deploy/notif-daemon
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=10
+# Ensure service-account.json is present before starting
+ExecStartPre=/bin/test -f /root/bhromon-deploy/notif-daemon/service-account.json
+
+# Capture stdout/stderr to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bhromon-notif-daemon
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,52 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+
+subprojects { subproject ->
+    if (subproject.state.executed) {
+        configureNamespace(subproject)
+    } else {
+        subproject.afterEvaluate {
+            configureNamespace(subproject)
+        }
+    }
+    
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs.remove("-Werror")
+        options.compilerArgs.add("-Xlint:-options")
+    }
+}
+
+void configureNamespace(Project subproject) {
+    if (subproject.hasProperty('android')) {
+        subproject.android {
+            if (namespace == null) {
+                namespace subproject.group
+            }
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+        }
+    }
+    subproject.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = "17"
+        }
+    }
+}

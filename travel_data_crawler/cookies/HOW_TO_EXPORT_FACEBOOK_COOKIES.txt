@@ -1,0 +1,34 @@
+# HOW TO EXPORT YOUR FACEBOOK COOKIES
+# =====================================
+# 
+# Step 1: Install "Cookie-Editor" extension for Chrome/Firefox:
+#         Chrome:  https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm
+#         Firefox: https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/
+#
+# Step 2: Open Facebook (www.facebook.com) and log in normally
+#
+# Step 3: Click the Cookie-Editor extension icon in your browser toolbar
+#
+# Step 4: Click "Export" → "Export as JSON"
+#
+# Step 5: Copy the JSON and paste it into THIS file:
+#         travel_data_crawler/cookies/facebook_cookies.json
+#
+# Step 6: Save the file and run:
+#         python main.py --facebook
+#
+# IMPORTANT NOTES:
+# ─────────────────
+# - Cookies expire. If crawling fails, re-export fresh cookies.
+# - The most important cookies are: c_user, xs, fr, datr
+# - Never share this file with anyone — it gives access to your account.
+# - The crawler only READS public page posts. It never posts or changes anything.
+# - Only public Facebook pages are targeted (not private profiles).
+#
+# EXAMPLE FORMAT (facebook_cookies.json):
+# ─────────────────────────────────────────
+# [
+#   {"name": "c_user", "value": "YOUR_USER_ID", "domain": ".facebook.com"},
+#   {"name": "xs",     "value": "YOUR_XS_VALUE", "domain": ".facebook.com"},
+#   ...more cookies...
+# ]
