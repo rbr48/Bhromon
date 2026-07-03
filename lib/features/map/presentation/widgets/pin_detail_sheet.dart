@@ -255,7 +255,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                               begin: Alignment.bottomCenter,
                               end: Alignment.topCenter,
                               colors: [
-                                Colors.black.withOpacity(0.85),
+                                Colors.black.withValues(alpha: 0.85),
                                 Colors.transparent,
                               ],
                             ),
@@ -271,7 +271,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: catColor.withOpacity(0.9),
+                            color: catColor.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
@@ -302,7 +302,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: color.withOpacity(0.9),
+                            color: color.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -345,7 +345,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                             Text(
                               '${pin.district}, ${pin.division}',
                               style: TextStyle(
-                                  color: Colors.white.withOpacity(0.85),
+                                  color: Colors.white.withValues(alpha: 0.85),
                                   fontSize: 12),
                             ),
                           ],
@@ -392,7 +392,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.06),
+                        color: Colors.white.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.white12),
                       ),
@@ -456,7 +456,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
         child: Icon(
           _categoryIcon(widget.pin.category),
           size: 52,
-          color: Colors.white.withOpacity(0.25),
+          color: Colors.white.withValues(alpha: 0.25),
         ),
       ),
     );
@@ -466,9 +466,9 @@ class _PinDetailSheetState extends State<PinDetailSheet>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -493,12 +493,12 @@ class _PinDetailSheetState extends State<PinDetailSheet>
             const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color:
-              selected ? AppColors.mintGreen : Colors.white.withOpacity(0.06),
+              selected ? AppColors.mintGreen : Colors.white.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
               color: selected
                   ? AppColors.mintGreen
-                  : Colors.white.withOpacity(0.12)),
+                  : Colors.white.withValues(alpha: 0.12)),
         ),
         child: Text(
           label,
@@ -546,7 +546,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
+                color: Colors.white.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.white12),
               ),
@@ -574,7 +574,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
               margin: const EdgeInsets.only(bottom: 16),
               height: 60,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.04),
+                color: Colors.white.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Center(
@@ -597,7 +597,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                 ),
                 borderRadius: BorderRadius.circular(14),
                 border:
-                    Border.all(color: Colors.white.withOpacity(0.08)),
+                    Border.all(color: Colors.white.withValues(alpha: 0.08)),
               ),
               child: Row(
                 children: [
@@ -628,8 +628,8 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                         horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: _weather!.isSafeToVisit
-                          ? Colors.green.withOpacity(0.2)
-                          : Colors.red.withOpacity(0.2),
+                          ? Colors.green.withValues(alpha: 0.2)
+                          : Colors.red.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -654,9 +654,9 @@ class _PinDetailSheetState extends State<PinDetailSheet>
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
+              color: Colors.white.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -818,9 +818,9 @@ class _PinDetailSheetState extends State<PinDetailSheet>
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Row(
           children: [
@@ -831,7 +831,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
               child: Container(
                 width: 80,
                 height: 80,
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
                 child: thumbUrl != null
                     ? CachedNetworkImage(
                         imageUrl: thumbUrl,
@@ -913,12 +913,12 @@ class _PinDetailSheetState extends State<PinDetailSheet>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
+        color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isGem
-              ? const Color(0xFF52B788).withOpacity(0.4)
-              : Colors.white.withOpacity(0.08),
+              ? const Color(0xFF52B788).withValues(alpha: 0.4)
+              : Colors.white.withValues(alpha: 0.08),
         ),
       ),
       child: Row(
@@ -965,10 +965,10 @@ class _PinDetailSheetState extends State<PinDetailSheet>
 
   Widget _thumbnailFallback(Color color) {
     return Container(
-      color: color.withOpacity(0.15),
+      color: color.withValues(alpha: 0.15),
       child: Center(
         child: Icon(Icons.image_outlined,
-            color: color.withOpacity(0.5), size: 28),
+            color: color.withValues(alpha: 0.5), size: 28),
       ),
     );
   }
@@ -1029,10 +1029,10 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
+                      color: Colors.white.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: Colors.white.withOpacity(0.06)),
+                          color: Colors.white.withValues(alpha: 0.06)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1064,7 +1064,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 5, vertical: 1),
                                   decoration: BoxDecoration(
-                                    color: tipColor.withOpacity(0.12),
+                                    color: tipColor.withValues(alpha: 0.12),
                                     borderRadius:
                                         BorderRadius.circular(4),
                                   ),
@@ -1111,7 +1111,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                 child: Container(
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
+                    color: Colors.white.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.white24),
                   ),
@@ -1176,7 +1176,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
       padding: EdgeInsets.fromLTRB(16, 8, 16, 12 + bottomPad),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A2E),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.06))),
+        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
       ),
       child: Row(
         children: [
@@ -1265,7 +1265,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
           decoration: filled
               ? null
               : BoxDecoration(
-                  border: Border.all(color: color.withOpacity(0.4)),
+                  border: Border.all(color: color.withValues(alpha: 0.4)),
                   borderRadius: BorderRadius.circular(12),
                 ),
           child: Column(
@@ -1362,9 +1362,9 @@ class _PinDetailSheetState extends State<PinDetailSheet>
         return Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1441,9 +1441,9 @@ class _PinDetailSheetState extends State<PinDetailSheet>
         return Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1485,9 +1485,9 @@ class _PinDetailSheetState extends State<PinDetailSheet>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

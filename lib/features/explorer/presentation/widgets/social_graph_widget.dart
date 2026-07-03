@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/theme/theme_context.dart';
 
 class SocialGraphWidget extends StatefulWidget {
   final String uid;
@@ -126,9 +127,9 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
         height: 220,
         margin: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF111111),
+          color: context.surfacePanel,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: const Center(
           child: CircularProgressIndicator(color: AppColors.mintGreen),
@@ -146,9 +147,9 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,7 +176,7 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppColors.gold.withOpacity(0.15),
+                    color: AppColors.gold.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
@@ -263,7 +264,7 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
         border: Border.all(color: themeColor, width: node.isCenter ? 3 : 2),
         boxShadow: [
           BoxShadow(
-            color: themeColor.withOpacity(0.3),
+            color: themeColor.withValues(alpha: 0.3),
             blurRadius: node.isCenter ? 12 : 6,
             spreadRadius: 1,
           ),
@@ -329,12 +330,12 @@ class _SocialConnectionPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.mintGreen.withOpacity(0.3)
+      ..color = AppColors.mintGreen.withValues(alpha: 0.3)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
     final glowPaint = Paint()
-      ..color = AppColors.mintGreen.withOpacity(0.08)
+      ..color = AppColors.mintGreen.withValues(alpha: 0.08)
       ..strokeWidth = 5.0
       ..style = PaintingStyle.stroke;
 

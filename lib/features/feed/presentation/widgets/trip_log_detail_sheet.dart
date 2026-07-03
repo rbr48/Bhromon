@@ -34,30 +34,81 @@ class TripLogDetailSheet extends StatefulWidget {
           .update({'views': FieldValue.increment(1)});
     } catch (_) {}
 
-    showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.92,
-          minChildSize: 0.5,
-          maxChildSize: 1.0,
-          expand: false,
-          builder: (ctx, scrollController) {
-            return TripLogDetailSheet(
-              log: log,
-              scrollController: scrollController,
-            );
-          },
+    // Transparent page route (not a modal sheet): Hero images fly from the
+    // feed card into the sheet during this push. Drag below the min extent or
+    // tap the dimmed area to dismiss, matching the old bottom-sheet behavior.
+    Navigator.of(context).push(PageRouteBuilder<void>(
+      opaque: false,
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 340),
+      reverseTransitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (ctx, animation, secondaryAnimation) =>
+          _TripLogDetailPage(log: log),
+      transitionsBuilder: (ctx, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.15),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
         );
       },
-    );
+    ));
   }
 
   @override
   State<TripLogDetailSheet> createState() => _TripLogDetailSheetState();
+}
+
+class _TripLogDetailPage extends StatelessWidget {
+  final TripLog log;
+  const _TripLogDetailPage({required this.log});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Tapping the dimmed area above the sheet dismisses, like a modal.
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).maybePop(),
+              child: const SizedBox.expand(),
+            ),
+          ),
+          NotificationListener<DraggableScrollableNotification>(
+            onNotification: (notification) {
+              if (notification.extent <= notification.minExtent + 0.005) {
+                Navigator.of(context).maybePop();
+              }
+              return false;
+            },
+            child: DraggableScrollableSheet(
+              initialChildSize: 0.92,
+              minChildSize: 0.45,
+              maxChildSize: 1.0,
+              builder: (ctx, scrollController) {
+                return TripLogDetailSheet(
+                  log: log,
+                  scrollController: scrollController,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
@@ -69,7 +120,14 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
   void initState() {
     super.initState();
     _authorProfileFuture = _fetchAuthorProfile(widget.log.authorId);
-    _cachedBlocks = widget.log.blocks.map((block) => _buildTripBlockWidget(block)).toList();
+    final blocks = <Widget>[];
+    bool firstImageSeen = false;
+    for (final block in widget.log.blocks) {
+      final bool isFirstImage = !firstImageSeen && block is ImageBlock;
+      if (isFirstImage) firstImageSeen = true;
+      blocks.add(_buildTripBlockWidget(block, isFirstImage: isFirstImage));
+    }
+    _cachedBlocks = blocks;
   }
 
   Future<Map<String, String>> _fetchAuthorProfile(String authorId) async {
@@ -109,9 +167,9 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -198,7 +256,7 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
     );
   }
 
-  Widget _buildTripBlockWidget(TripBlock block) {
+  Widget _buildTripBlockWidget(TripBlock block, {bool isFirstImage = false}) {
     switch (block) {
       case TextBlock textBlock:
         return Padding(
@@ -227,7 +285,11 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
             imageBlock.localPath != null &&
             imageBlock.localPath!.isNotEmpty &&
             File(imageBlock.localPath!).existsSync();
-        final String heroTag = 'sheet_${widget.log.tripId}_${imageBlock.storageUrl}';
+        // The first image shares the feed card's tag so it hero-flies from
+        // the card into this sheet; the rest keep sheet-local tags.
+        final String heroTag = isFirstImage
+            ? 'feed_${widget.log.tripId}_${imageBlock.storageUrl}'
+            : 'sheet_${widget.log.tripId}_${imageBlock.storageUrl}';
         return Padding(
           padding: const EdgeInsets.only(bottom: 8.0),
           child: Column(
@@ -533,7 +595,7 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                                 children: [
                                   CircleAvatar(
                                     radius: 16,
-                                    backgroundColor: AppColors.mintGreen.withOpacity(0.2),
+                                    backgroundColor: AppColors.mintGreen.withValues(alpha: 0.2),
                                     child: Text(
                                       authorName.isNotEmpty ? authorName[0].toUpperCase() : '?',
                                       style: const TextStyle(
@@ -1002,12 +1064,12 @@ class _TravelLogReportDialogState extends State<TravelLogReportDialog> {
           const Text('Reason:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: _selectedReason,
+            initialValue: _selectedReason,
             dropdownColor: const Color(0xFF2A2A3E),
             style: const TextStyle(color: Colors.white, fontSize: 13),
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white.withOpacity(0.06),
+              fillColor: Colors.white.withValues(alpha: 0.06),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
@@ -1026,7 +1088,7 @@ class _TravelLogReportDialogState extends State<TravelLogReportDialog> {
               hintText: 'Describe why you are reporting this log...',
               hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.06),
+              fillColor: Colors.white.withValues(alpha: 0.06),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               counterStyle: const TextStyle(color: Colors.white38, fontSize: 9),
               contentPadding: const EdgeInsets.all(12),

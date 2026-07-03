@@ -247,11 +247,11 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
         final challenge = _challenges[index];
         final double progress = (challenge.currentCount / challenge.requiredCount).clamp(0.0, 1.0);
         return Card(
-          color: Colors.white.withOpacity(0.04),
+          color: Colors.white.withValues(alpha: 0.04),
           margin: const EdgeInsets.only(bottom: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: progress >= 1.0 ? Colors.amber.withOpacity(0.4) : Colors.white10),
+            side: BorderSide(color: progress >= 1.0 ? Colors.amber.withValues(alpha: 0.4) : Colors.white10),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -264,9 +264,9 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.1),
+                        color: Colors.amber.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                       ),
                       child: Center(
                         child: Text(challenge.rewardBadge, style: const TextStyle(fontSize: 24)),
@@ -340,10 +340,10 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
           decoration: BoxDecoration(
             color: const Color(0xFF1B1B36),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.3), width: 1.2),
+            border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.3), width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFD4AF37).withOpacity(0.08),
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.08),
                 blurRadius: 10,
                 spreadRadius: 2,
               )

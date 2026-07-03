@@ -128,17 +128,15 @@ class _WebTab extends StatelessWidget {
     return Stack(
       children: [
         InAppWebView(
-          initialUrlRequest: URLRequest(url: Uri.parse(url)),
-          initialOptions: InAppWebViewGroupOptions(
-            crossPlatform: InAppWebViewOptions(
-              useShouldOverrideUrlLoading: true,
-              mediaPlaybackRequiresUserGesture: false,
-              transparentBackground: true,
-            ),
+          initialUrlRequest: URLRequest(url: WebUri(url)),
+          initialSettings: InAppWebViewSettings(
+            useShouldOverrideUrlLoading: true,
+            mediaPlaybackRequiresUserGesture: false,
+            transparentBackground: true,
           ),
           onLoadStart: (controller, url) => onLoadStart(),
           onLoadStop: (controller, url) => onLoadStop(),
-          onLoadError: (controller, url, code, message) => onLoadStop(),
+          onReceivedError: (controller, request, error) => onLoadStop(),
         ),
         if (isLoading)
           const Center(

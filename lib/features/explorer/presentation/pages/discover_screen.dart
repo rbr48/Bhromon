@@ -374,9 +374,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.mintGreen.withOpacity(0.2),
+                          color: AppColors.mintGreen.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.mintGreen.withOpacity(0.4)),
+                          border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.4)),
                         ),
                         child: Text(
                           '💎 ${DiscoveryScoreService.compute(pin).toInt()}',
@@ -463,9 +463,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         width: 56,
         height: 56,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           shape: BoxShape.circle,
-          border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
         ),
         child: Icon(icon, color: color, size: 24),
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
+import '../../core/theme/theme_context.dart';
 
 class BlurHashImage extends StatelessWidget {
   final String imageUrl;
@@ -33,13 +34,13 @@ class BlurHashImage extends StatelessWidget {
               imageFit: fit,
             )
           : Container(
-              color: const Color(0xFF1E1E1E),
+              color: context.surfaceElevated,
               child: const Center(
                 child: Icon(Icons.image_outlined, color: Colors.white10, size: 24),
               ),
             ),
       errorWidget: (context, url, error) => Container(
-        color: const Color(0xFF1E1E1E),
+        color: context.surfaceElevated,
         child: const Center(
           child: Icon(Icons.image_not_supported_outlined, color: Colors.white24, size: 28),
         ),

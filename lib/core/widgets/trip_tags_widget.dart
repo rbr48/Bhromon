@@ -134,7 +134,7 @@ class _MoodChip extends StatelessWidget {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.mintGreen.withOpacity(0.2) : Colors.white.withOpacity(0.05),
+          color: selected ? AppColors.mintGreen.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: selected ? AppColors.mintGreen : Colors.white12,
@@ -174,10 +174,10 @@ class _TagChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? AppColors.gold.withOpacity(0.15) : Colors.white.withOpacity(0.04),
+          color: selected ? AppColors.gold.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? AppColors.gold.withOpacity(0.6) : Colors.white10,
+            color: selected ? AppColors.gold.withValues(alpha: 0.6) : Colors.white10,
           ),
         ),
         child: Text(

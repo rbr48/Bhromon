@@ -8,6 +8,7 @@ import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../../core/services/media_upload_service.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/theme/theme_context.dart';
 
 class VoiceBioWidget extends StatefulWidget {
   final String uid;
@@ -185,9 +186,9 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,13 +221,13 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
                         decoration: BoxDecoration(
                           color: _isRecording
                               ? Colors.redAccent
-                                  .withOpacity(0.1 + _pulseController.value * 0.1)
-                              : AppColors.mintGreen.withOpacity(0.1),
+                                  .withValues(alpha: 0.1 + _pulseController.value * 0.1)
+                              : AppColors.mintGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: _isRecording
-                                ? Colors.redAccent.withOpacity(0.5)
-                                : AppColors.mintGreen.withOpacity(0.3),
+                                ? Colors.redAccent.withValues(alpha: 0.5)
+                                : AppColors.mintGreen.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -275,9 +276,9 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.02),
+                color: Colors.white.withValues(alpha: 0.02),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
               ),
               child: Row(
                 children: [
@@ -308,9 +309,9 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
           height: 56,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.redAccent.withOpacity(0.05),
+            color: Colors.redAccent.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.redAccent.withOpacity(0.2)),
+            border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
           ),
           child: Row(
             children: [
@@ -335,7 +336,7 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
                   height: height,
                   margin: const EdgeInsets.only(right: 2),
                   decoration: BoxDecoration(
-                    color: Colors.redAccent.withOpacity(0.5 + 0.5 * sin(_waveController.value * 2 * pi + phase).abs()),
+                    color: Colors.redAccent.withValues(alpha: 0.5 + 0.5 * sin(_waveController.value * 2 * pi + phase).abs()),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 );
@@ -359,9 +360,9 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
@@ -371,9 +372,9 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.mintGreen.withOpacity(0.15),
+                color: AppColors.mintGreen.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.mintGreen.withOpacity(0.4)),
+                border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.4)),
               ),
               child: Icon(
                 _isPlaying ? Icons.pause : Icons.play_arrow,
@@ -391,7 +392,7 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
-                    backgroundColor: Colors.white.withOpacity(0.05),
+                    backgroundColor: Colors.white.withValues(alpha: 0.05),
                     valueColor: const AlwaysStoppedAnimation<Color>(
                         AppColors.mintGreen),
                     minHeight: 4,
@@ -430,7 +431,7 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
               height: heights[i % heights.length],
               margin: const EdgeInsets.only(right: 2),
               decoration: BoxDecoration(
-                color: AppColors.mintGreen.withOpacity(_isPlaying ? 0.6 : 0.2),
+                color: AppColors.mintGreen.withValues(alpha: _isPlaying ? 0.6 : 0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             );

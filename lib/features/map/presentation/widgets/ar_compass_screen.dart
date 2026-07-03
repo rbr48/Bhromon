@@ -159,9 +159,9 @@ class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProv
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isGem ? AppColors.mintGreen.withOpacity(0.85) : Colors.black.withOpacity(0.75),
+                      color: isGem ? AppColors.mintGreen.withValues(alpha: 0.85) : Colors.black.withValues(alpha: 0.75),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.mintGreen.withOpacity(0.5)),
+                      border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.5)),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -181,7 +181,7 @@ class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProv
                   ),
                   Container(
                     width: 1, height: 10,
-                    color: AppColors.mintGreen.withOpacity(0.5),
+                    color: AppColors.mintGreen.withValues(alpha: 0.5),
                   ),
                 ],
               ),
@@ -193,7 +193,7 @@ class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProv
             bottom: 0, left: 0, right: 0,
             child: Container(
               padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(context).padding.bottom),
-              color: Colors.black.withOpacity(0.85),
+              color: Colors.black.withValues(alpha: 0.85),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -239,15 +239,15 @@ class _CompassPainter extends CustomPainter {
     // Inner ring
     canvas.drawCircle(
       center, radius * 0.7,
-      Paint()..color = const Color(0xFF52B788).withOpacity(0.15)..style = PaintingStyle.fill,
+      Paint()..color = const Color(0xFF52B788).withValues(alpha: 0.15)..style = PaintingStyle.fill,
     );
     canvas.drawCircle(
       center, radius * 0.7,
-      Paint()..color = const Color(0xFF52B788).withOpacity(0.4)..style = PaintingStyle.stroke..strokeWidth = 1,
+      Paint()..color = const Color(0xFF52B788).withValues(alpha: 0.4)..style = PaintingStyle.stroke..strokeWidth = 1,
     );
 
     // Tick marks every 30 degrees
-    final tickPaint = Paint()..color = const Color(0xFF52B788).withOpacity(0.5)..strokeWidth = 1;
+    final tickPaint = Paint()..color = const Color(0xFF52B788).withValues(alpha: 0.5)..strokeWidth = 1;
     for (int i = 0; i < 12; i++) {
       final angle = i * 30 * pi / 180;
       final outerPt = Offset(

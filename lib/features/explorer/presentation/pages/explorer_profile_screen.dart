@@ -30,6 +30,8 @@ import '../../../../core/widgets/journey_timeline.dart';
 import '../../../../core/widgets/district_fill_map.dart';
 import '../../../../core/services/diary_badges_service.dart';
 import '../widgets/saved_diaries_widget.dart';
+import '../../../../core/theme/theme_context.dart';
+import '../../../../core/widgets/skeleton.dart';
 
 class ExplorerProfileScreen extends StatefulWidget {
   final String uid;
@@ -419,10 +421,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
           return Container(
             margin: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 24),
-            decoration: const BoxDecoration(
-              color: Color(0xFF111111),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border(
+            decoration: BoxDecoration(
+              color: context.surfacePanel,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              border: const Border(
                 top: BorderSide(color: Colors.white12, width: 1),
               ),
             ),
@@ -498,7 +500,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                       width: double.infinity,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                                       ),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(16),
@@ -542,14 +544,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                               ),
                                             // Semi-transparent overlay with text/icon
                                             Container(
-                                              color: Colors.black.withOpacity(0.3),
+                                              color: Colors.black.withValues(alpha: 0.3),
                                               alignment: Alignment.center,
                                               child: Column(
                                                 mainAxisAlignment: MainAxisAlignment.center,
                                                 children: [
                                                   CircleAvatar(
                                                     radius: 18,
-                                                    backgroundColor: Colors.black.withOpacity(0.6),
+                                                    backgroundColor: Colors.black.withValues(alpha: 0.6),
                                                     child: const Icon(Icons.camera_alt_outlined, size: 18, color: Colors.white),
                                                   ),
                                                   const SizedBox(height: 6),
@@ -585,7 +587,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                               border: Border.all(color: tierColor, width: 3),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: tierColor.withOpacity(0.3),
+                                                  color: tierColor.withValues(alpha: 0.3),
                                                   blurRadius: 10,
                                                   spreadRadius: 2,
                                                 ),
@@ -679,7 +681,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 enabled: !isSaving,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: InputDecoration(
-                                  fillColor: Colors.white.withOpacity(0.04),
+                                  fillColor: Colors.white.withValues(alpha: 0.04),
                                   filled: true,
                                   hintText: 'Enter your name',
                                   hintStyle: const TextStyle(color: Colors.white30),
@@ -704,7 +706,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 style: const TextStyle(color: Colors.white),
                                 maxLines: 3,
                                 decoration: InputDecoration(
-                                  fillColor: Colors.white.withOpacity(0.04),
+                                  fillColor: Colors.white.withValues(alpha: 0.04),
                                   filled: true,
                                   hintText: 'Describe your journeys...',
                                   hintStyle: const TextStyle(color: Colors.white30),
@@ -729,7 +731,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 style: const TextStyle(color: Colors.white),
                                 maxLines: 3,
                                 decoration: InputDecoration(
-                                  fillColor: Colors.white.withOpacity(0.04),
+                                  fillColor: Colors.white.withValues(alpha: 0.04),
                                   filled: true,
                                   hintText: 'আপনার ভ্রমণ নিয়ে কিছু বলুন...',
                                   hintStyle: const TextStyle(color: Colors.white30),
@@ -749,11 +751,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               const Text('DIVISION', style: TextStyle(color: Colors.white30, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                               const SizedBox(height: 6),
                               DropdownButtonFormField<String>(
-                                value: selectedDivision,
-                                dropdownColor: const Color(0xFF111111),
+                                initialValue: selectedDivision,
+                                dropdownColor: context.surfacePanel,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: InputDecoration(
-                                  fillColor: Colors.white.withOpacity(0.04),
+                                  fillColor: Colors.white.withValues(alpha: 0.04),
                                   filled: true,
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                   enabledBorder: OutlineInputBorder(
@@ -910,7 +912,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withValues(alpha: 0.7),
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                       ),
                       child: Center(
@@ -950,7 +952,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         context.go('/feed');
       },
@@ -1055,9 +1057,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF13131E).withOpacity(0.8),
+              color: const Color(0xFF13131E).withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             ),
             child: const Column(
               children: [
@@ -1148,7 +1150,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lock_outline, size: 64, color: Colors.white.withOpacity(0.15)),
+            Icon(Icons.lock_outline, size: 64, color: Colors.white.withValues(alpha: 0.15)),
             const SizedBox(height: 16),
             const Text(
               'This profile is unavailable.',
@@ -1166,7 +1168,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.block, size: 64, color: Colors.redAccent.withOpacity(0.4)),
+            Icon(Icons.block, size: 64, color: Colors.redAccent.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             const Text(
               'You have blocked this explorer.',
@@ -1262,7 +1264,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.black.withOpacity(0.1), Colors.black.withOpacity(0.6)],
+                          colors: [Colors.black.withValues(alpha: 0.1), Colors.black.withValues(alpha: 0.6)],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),
@@ -1275,7 +1277,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.75),
+                            color: Colors.black.withValues(alpha: 0.75),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: Colors.white24, width: 1),
                           ),
@@ -1320,7 +1322,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           border: Border.all(color: Colors.white, width: 4),
                           boxShadow: [
                             BoxShadow(
-                              color: tierColor.withOpacity(0.4),
+                              color: tierColor.withValues(alpha: 0.4),
                               blurRadius: 20,
                               spreadRadius: 2,
                             ),
@@ -1356,7 +1358,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             border: Border.all(color: Colors.grey.shade300, width: 1.5),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withValues(alpha: 0.2),
                                 blurRadius: 4,
                                 spreadRadius: 1,
                               ),
@@ -1454,7 +1456,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const SizedBox(height: 24),
 
               // Divider
-              Container(height: 0.8, color: Colors.white.withOpacity(0.08)),
+              Container(height: 0.8, color: Colors.white.withValues(alpha: 0.08)),
               const SizedBox(height: 20),
 
               // Facebook-style Intro Section
@@ -1605,7 +1607,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   showDialog<void>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      backgroundColor: const Color(0xFF111111),
+                      backgroundColor: context.surfacePanel,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                         side: const BorderSide(color: AppColors.mintGreen, width: 0.8),
@@ -1658,7 +1660,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF13131E),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.06)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1690,9 +1692,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.mintGreen.withOpacity(0.15) : Colors.transparent,
+          color: isActive ? AppColors.mintGreen.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: isActive ? AppColors.mintGreen.withOpacity(0.4) : Colors.white24, width: 0.8),
+          border: Border.all(color: isActive ? AppColors.mintGreen.withValues(alpha: 0.4) : Colors.white24, width: 0.8),
         ),
         child: Text(
           label,
@@ -1734,12 +1736,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             child: ElevatedButton.icon(
               onPressed: () => _showEditProfileBottomSheet(profile),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.08),
+                backgroundColor: Colors.white.withValues(alpha: 0.08),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
               ),
               icon: const Icon(Icons.edit, size: 16),
               label: Text(
@@ -1751,9 +1753,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           const SizedBox(width: 8),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
+              color: Colors.white.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: IconButton(
               onPressed: () => context.push('/settings'),
@@ -1779,12 +1781,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               child: ElevatedButton.icon(
                 onPressed: () => _toggleFollow(currentUid, profile.uid, isFollowing),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isFollowing ? Colors.white.withOpacity(0.08) : AppColors.mintGreen,
+                  backgroundColor: isFollowing ? Colors.white.withValues(alpha: 0.08) : AppColors.mintGreen,
                   foregroundColor: isFollowing ? Colors.white : Colors.black,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  side: isFollowing ? BorderSide(color: Colors.white.withOpacity(0.08)) : null,
+                  side: isFollowing ? BorderSide(color: Colors.white.withValues(alpha: 0.08)) : null,
                 ),
                 icon: Icon(isFollowing ? Icons.check : Icons.person_add, size: 16),
                 label: Text(
@@ -1804,12 +1806,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   context.push('/chat/$chatId', extra: {'otherUid': profile.uid});
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.08),
+                  backgroundColor: Colors.white.withValues(alpha: 0.08),
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 icon: const Icon(Icons.chat_bubble_outline, size: 16),
                 label: Text(
@@ -1821,9 +1823,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             const SizedBox(width: 8),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
               ),
               child: PopupMenuButton<String>(
                 icon: const Icon(Icons.more_horiz, color: Colors.white, size: 20),
@@ -2003,7 +2005,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Colors.white.withOpacity(0.08), width: 1),
+          bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 1),
         ),
       ),
       child: Row(
@@ -2192,12 +2194,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: tierColor.withOpacity(0.2)),
+        border: Border.all(color: tierColor.withValues(alpha: 0.2)),
         gradient: LinearGradient(
           colors: [
-            tierColor.withOpacity(0.05),
+            tierColor.withValues(alpha: 0.05),
             Colors.transparent,
           ],
           begin: Alignment.topLeft,
@@ -2236,7 +2238,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: Colors.white.withOpacity(0.05),
+              backgroundColor: Colors.white.withValues(alpha: 0.05),
               valueColor: AlwaysStoppedAnimation<Color>(tierColor),
               minHeight: 8,
             ),
@@ -2342,9 +2344,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF111111),
+          color: context.surfacePanel,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: const Row(
           children: [
@@ -2385,7 +2387,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: percentage,
-                backgroundColor: Colors.white.withOpacity(0.05),
+                backgroundColor: Colors.white.withValues(alpha: 0.05),
                 valueColor: AlwaysStoppedAnimation<Color>(color),
                 minHeight: 8,
               ),
@@ -2399,9 +2401,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2506,11 +2508,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             return GestureDetector(
               onTap: () => TripLogDetailSheet.show(context, log),
               child: Card(
-                color: const Color(0xFF111111),
+                color: context.surfacePanel,
                 margin: const EdgeInsets.symmetric(vertical: 8.0),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -2586,7 +2588,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF13131E),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         children: [
@@ -2610,9 +2612,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
+                      color: Colors.white.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.06)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
                     ),
                     child: Text(
                       isBn ? 'ভ্রমণের নতুন গল্প লিখুন...' : "What's on your mind?",
@@ -2624,7 +2626,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          Container(height: 0.8, color: Colors.white.withOpacity(0.06)),
+          Container(height: 0.8, color: Colors.white.withValues(alpha: 0.06)),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -2659,10 +2661,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF111111),
+        backgroundColor: context.surfacePanel,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withOpacity(0.08)),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
         title: const Text('DELETE TRAVEL LOG', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         content: Text('Are you sure you want to delete "${log.title}"? This action cannot be undone.', style: const TextStyle(color: Colors.white70)),
@@ -2702,9 +2704,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -2738,9 +2740,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   Widget _buildProfileTabBar() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
@@ -2852,9 +2854,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2925,7 +2927,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          backgroundColor: const Color(0xFF111111),
+          backgroundColor: context.surfacePanel,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: Colors.redAccent, width: 0.8),
@@ -2962,7 +2964,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 decoration: InputDecoration(
                   hintText: 'DELETE',
                   hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
-                  fillColor: Colors.white.withOpacity(0.05),
+                  fillColor: Colors.white.withValues(alpha: 0.05),
                   filled: true,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   enabledBorder: OutlineInputBorder(
@@ -3080,10 +3082,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF111111),
+        backgroundColor: context.surfacePanel,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.mintGreen.withOpacity(0.2)),
+          side: BorderSide(color: AppColors.mintGreen.withValues(alpha: 0.2)),
         ),
         title: const Text(
           'SET NEW PASSWORD',
@@ -3105,7 +3107,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               decoration: InputDecoration(
                 hintText: 'Minimum 6 characters',
                 hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                fillColor: Colors.white.withOpacity(0.05),
+                fillColor: Colors.white.withValues(alpha: 0.05),
                 filled: true,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
@@ -3208,9 +3210,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3242,7 +3244,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: overallPercentage,
-              backgroundColor: Colors.white.withOpacity(0.05),
+              backgroundColor: Colors.white.withValues(alpha: 0.05),
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
               minHeight: 10,
             ),
@@ -3291,9 +3293,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       borderRadius: BorderRadius.circular(2),
                       child: LinearProgressIndicator(
                         value: percent,
-                        backgroundColor: Colors.white.withOpacity(0.03),
+                        backgroundColor: Colors.white.withValues(alpha: 0.03),
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          visitedInDiv.length == districts.length ? AppColors.mintGreen : const Color(0xFF52B788).withOpacity(0.6)
+                          visitedInDiv.length == districts.length ? AppColors.mintGreen : const Color(0xFF52B788).withValues(alpha: 0.6)
                         ),
                         minHeight: 4,
                       ),
@@ -3310,10 +3312,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           return Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: isVisited ? AppColors.mintGreen.withOpacity(0.12) : Colors.white.withOpacity(0.02),
+                              color: isVisited ? AppColors.mintGreen.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.02),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isVisited ? AppColors.mintGreen.withOpacity(0.4) : Colors.white.withOpacity(0.05),
+                                color: isVisited ? AppColors.mintGreen.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.05),
                                 width: 1,
                               ),
                             ),
@@ -3396,7 +3398,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator(color: AppColors.mintGreen));
+                      return const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: FeedListSkeleton(count: 2));
                     }
                     final docs = snapshot.data?.docs ?? [];
                     if (docs.isEmpty) {
@@ -3452,9 +3454,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         margin: const EdgeInsets.only(bottom: 24),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.02),
+          color: Colors.white.withValues(alpha: 0.02),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Row(
           children: [
@@ -3513,10 +3515,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLive ? AppColors.mintGreen.withOpacity(0.3) : Colors.white.withOpacity(0.08),
+          color: isLive ? AppColors.mintGreen.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.08),
         ),
       ),
       child: Row(
@@ -3592,10 +3594,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF111111),
+        backgroundColor: context.surfacePanel,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.mintGreen.withOpacity(0.2)),
+          side: BorderSide(color: AppColors.mintGreen.withValues(alpha: 0.2)),
         ),
         title: Row(
           children: [
@@ -3679,7 +3681,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       height: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.mintGreen.withOpacity(0.4), width: 2),
+        border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.4), width: 2),
       ),
     );
   }
@@ -3764,9 +3766,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3786,7 +3788,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.mintGreen.withOpacity(0.1),
+                  color: AppColors.mintGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -3841,9 +3843,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3941,9 +3943,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3970,10 +3972,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     showDialog<void>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        backgroundColor: const Color(0xFF111111),
+                        backgroundColor: context.surfacePanel,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: trophy.unlocked ? AppColors.mintGreen.withOpacity(0.2) : Colors.white10),
+                          side: BorderSide(color: trophy.unlocked ? AppColors.mintGreen.withValues(alpha: 0.2) : Colors.white10),
                         ),
                         title: Row(
                           children: [
@@ -4005,10 +4007,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     width: 72,
                     margin: const EdgeInsets.only(right: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.02),
+                      color: Colors.white.withValues(alpha: 0.02),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: trophy.unlocked ? AppColors.mintGreen.withOpacity(0.2) : Colors.transparent,
+                        color: trophy.unlocked ? AppColors.mintGreen.withValues(alpha: 0.2) : Colors.transparent,
                       ),
                     ),
                     child: Column(
@@ -4062,12 +4064,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold.withOpacity(0.2)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
         gradient: LinearGradient(
           colors: [
-            AppColors.gold.withOpacity(0.05),
+            AppColors.gold.withValues(alpha: 0.05),
             Colors.transparent,
           ],
           begin: Alignment.topLeft,
@@ -4094,7 +4096,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withOpacity(0.1),
+                  color: AppColors.gold.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
@@ -4171,9 +4173,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -4241,9 +4243,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
-              border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+              border: Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
             ),
             child: Icon(icon, color: color, size: 22),
           ),
@@ -4267,21 +4269,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final topDocs = _topExplorers;
 
     if (rank == null || total == null || topDocs == null) {
-      return Container(
-        margin: const EdgeInsets.symmetric(vertical: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF111111),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
-        ),
-        child: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: CircularProgressIndicator(color: AppColors.mintGreen),
-          ),
-        ),
-      );
+      return const PanelSkeleton(height: 120);
     }
 
     final percentile = total > 0 ? (rank / total) * 100 : 100.0;
@@ -4293,9 +4281,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           margin: const EdgeInsets.symmetric(vertical: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF111111),
+            color: context.surfacePanel,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -4331,7 +4319,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isTopTen ? AppColors.gold.withOpacity(0.15) : AppColors.mintGreen.withOpacity(0.15),
+                        color: isTopTen ? AppColors.gold.withValues(alpha: 0.15) : AppColors.mintGreen.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -4393,12 +4381,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: isCurrentUser
-                              ? AppColors.mintGreen.withOpacity(0.08)
-                              : Colors.white.withOpacity(0.02),
+                              ? AppColors.mintGreen.withValues(alpha: 0.08)
+                              : Colors.white.withValues(alpha: 0.02),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isCurrentUser
-                                ? AppColors.mintGreen.withOpacity(0.2)
+                                ? AppColors.mintGreen.withValues(alpha: 0.2)
                                 : Colors.transparent,
                           ),
                         ),
@@ -4409,8 +4397,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               height: 24,
                               decoration: BoxDecoration(
                                 color: index == 0
-                                    ? AppColors.gold.withOpacity(0.2)
-                                    : Colors.white.withOpacity(0.05),
+                                    ? AppColors.gold.withValues(alpha: 0.2)
+                                    : Colors.white.withValues(alpha: 0.05),
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
@@ -4540,9 +4528,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           margin: const EdgeInsets.symmetric(vertical: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF111111),
+            color: context.surfacePanel,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -4600,7 +4588,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: progress,
-                    backgroundColor: Colors.white.withOpacity(0.05),
+                    backgroundColor: Colors.white.withValues(alpha: 0.05),
                     valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
                     minHeight: 6,
                   ),
@@ -4622,7 +4610,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.02),
+                        color: Colors.white.withValues(alpha: 0.02),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -4695,10 +4683,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          backgroundColor: const Color(0xFF111111),
+          backgroundColor: context.surfacePanel,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: AppColors.mintGreen.withOpacity(0.2)),
+            side: BorderSide(color: AppColors.mintGreen.withValues(alpha: 0.2)),
           ),
           title: const Text('ADD TO BUCKET LIST', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
           content: Column(
@@ -4708,11 +4696,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const Text('Division', style: TextStyle(color: Colors.white70, fontSize: 12)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                value: selectedDivision,
-                dropdownColor: const Color(0xFF111111),
+                initialValue: selectedDivision,
+                dropdownColor: context.surfacePanel,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  fillColor: Colors.white.withOpacity(0.05),
+                  fillColor: Colors.white.withValues(alpha: 0.05),
                   filled: true,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -4733,11 +4721,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const Text('District', style: TextStyle(color: Colors.white70, fontSize: 12)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                value: selectedDistrict,
-                dropdownColor: const Color(0xFF111111),
+                initialValue: selectedDistrict,
+                dropdownColor: context.surfacePanel,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  fillColor: Colors.white.withOpacity(0.05),
+                  fillColor: Colors.white.withValues(alpha: 0.05),
                   filled: true,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -4804,9 +4792,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         margin: const EdgeInsets.symmetric(vertical: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF111111),
+          color: context.surfacePanel,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Row(
           children: [
@@ -4827,9 +4815,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4874,7 +4862,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     imageUrl: url,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
-                      color: Colors.white.withOpacity(0.05),
+                      color: Colors.white.withValues(alpha: 0.05),
                       child: const Center(
                         child: SizedBox(
                           width: 20,
@@ -4884,7 +4872,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       ),
                     ),
                     errorWidget: (context, url, error) => Container(
-                      color: Colors.white.withOpacity(0.05),
+                      color: Colors.white.withValues(alpha: 0.05),
                       child: const Icon(Icons.broken_image_outlined, color: Colors.white24),
                     ),
                   ),
@@ -4998,9 +4986,9 @@ class _UserSocialTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: color.withOpacity(0.5), width: 0.5),
+                  border: Border.all(color: color.withValues(alpha: 0.5), width: 0.5),
                 ),
                 child: Text(
                   tier.displayName.toUpperCase(),
@@ -5048,12 +5036,12 @@ class RadarChartPainter extends CustomPainter {
     final radius = size.width / 2 * 0.8;
 
     final paintLine = Paint()
-      ..color = Colors.white.withOpacity(0.15)
+      ..color = Colors.white.withValues(alpha: 0.15)
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
     final paintFill = Paint()
-      ..color = accentColor.withOpacity(0.15)
+      ..color = accentColor.withValues(alpha: 0.15)
       ..style = PaintingStyle.fill;
 
     final paintStroke = Paint()
@@ -5169,7 +5157,7 @@ class BangladeshHeatmapPainter extends CustomPainter {
     };
 
     final linkPaint = Paint()
-      ..color = Colors.white.withOpacity(0.08)
+      ..color = Colors.white.withValues(alpha: 0.08)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
@@ -5192,17 +5180,17 @@ class BangladeshHeatmapPainter extends CustomPainter {
     positions.forEach((name, pos) {
       final progress = divisionProgress[name] ?? 0.0;
       final nodeColor = Color.lerp(
-        Colors.white.withOpacity(0.05),
+        Colors.white.withValues(alpha: 0.05),
         AppColors.mintGreen,
         progress,
       )!;
 
       final fillPaint = Paint()
-        ..color = nodeColor.withOpacity(progress > 0.0 ? 0.25 : 0.05)
+        ..color = nodeColor.withValues(alpha: progress > 0.0 ? 0.25 : 0.05)
         ..style = PaintingStyle.fill;
 
       final borderPaint = Paint()
-        ..color = progress > 0.0 ? nodeColor.withOpacity(0.8) : Colors.white.withOpacity(0.1)
+        ..color = progress > 0.0 ? nodeColor.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.1)
         ..strokeWidth = 1.5
         ..style = PaintingStyle.stroke;
 

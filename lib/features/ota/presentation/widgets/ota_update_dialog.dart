@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../../core/theme/colors.dart';
 import '../cubit/ota_cubit.dart';
 import '../cubit/ota_state.dart';
+import '../../../../core/theme/theme_context.dart';
 
 class OtaUpdateDialog extends StatelessWidget {
   const OtaUpdateDialog({super.key});
@@ -20,10 +21,10 @@ class OtaUpdateDialog extends StatelessWidget {
             // Prevent back-dismiss when mandatory or while downloading
             canPop: !info.isMandatory && !state.isDownloading && state.downloadProgress < 1.0,
             child: AlertDialog(
-              backgroundColor: const Color(0xFF111111),
+              backgroundColor: context.surfacePanel,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: AppColors.mintGreen.withOpacity(0.2)),
+                side: BorderSide(color: AppColors.mintGreen.withValues(alpha: 0.2)),
               ),
               title: const Row(
                 children: [
@@ -146,7 +147,7 @@ class OtaUpdateDialog extends StatelessWidget {
                         final tempDir = await getTemporaryDirectory();
                         final tempFile = File('${tempDir.path}/bhromon-update.apk');
                         if (await tempFile.exists()) {
-                          final result = await OpenFile.open(
+                          final result = await OpenFilex.open(
                             tempFile.path,
                             type: 'application/vnd.android.package-archive',
                           );

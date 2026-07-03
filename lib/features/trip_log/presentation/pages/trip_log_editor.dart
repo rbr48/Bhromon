@@ -117,7 +117,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.07),
+                      color: Colors.white.withValues(alpha: 0.07),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.white12),
                     ),
@@ -208,7 +208,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
                             decoration: BoxDecoration(
                               color: AppColors.cardDark,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.mintGreen.withOpacity(0.3)),
+                              border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.3)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,8 +298,8 @@ class _TripLogEditorState extends State<TripLogEditor> {
                                 )
                               : ReorderableListView.builder(
                                   padding: const EdgeInsets.only(bottom: 80),
-                                  onReorder: (oldIndex, newIndex) {
-                                    if (newIndex > oldIndex) newIndex--;
+                                  onReorderItem: (oldIndex, newIndex) {
+                                    // onReorderItem pre-adjusts newIndex for the removed item.
                                     final updated = List<TripBlock>.from(state.blocks);
                                     final item = updated.removeAt(oldIndex);
                                     updated.insert(newIndex, item);
@@ -320,10 +320,10 @@ class _TripLogEditorState extends State<TripLogEditor> {
                           decoration: BoxDecoration(
                             color: AppColors.cardDark,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withOpacity(0.08)),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
+                                color: Colors.black.withValues(alpha: 0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -583,9 +583,9 @@ class _TripLogEditorState extends State<TripLogEditor> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.03)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -655,7 +655,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: TextStyle(color: color.withOpacity(0.8), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          style: TextStyle(color: color.withValues(alpha: 0.8), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
         ),
       ],
     );
@@ -687,7 +687,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
       decoration: BoxDecoration(
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.04)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -849,9 +849,9 @@ class _TripLogEditorState extends State<TripLogEditor> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.orangeAccent.withOpacity(0.08),
+            color: Colors.orangeAccent.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.orangeAccent.withOpacity(0.3)),
+            border: Border.all(color: Colors.orangeAccent.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
@@ -1226,7 +1226,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
                 hintText: 'https://www.youtube.com/watch?v=...',
                 hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.05),
+                fillColor: Colors.white.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
@@ -1537,9 +1537,9 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
         if (widget.items.isNotEmpty) ...[
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.02),
+              color: Colors.white.withValues(alpha: 0.02),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.04)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
             ),
             child: Column(
               children: [
@@ -1611,7 +1611,7 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.04),
+                  fillColor: Colors.white.withValues(alpha: 0.04),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -1631,7 +1631,7 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.04),
+                  fillColor: Colors.white.withValues(alpha: 0.04),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -1704,13 +1704,13 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
     Color accentColor;
 
     if (_selectedLevel == 'danger') {
-      cardColor = Colors.redAccent.withOpacity(0.05);
+      cardColor = Colors.redAccent.withValues(alpha: 0.05);
       accentColor = Colors.redAccent;
     } else if (_selectedLevel == 'warning') {
-      cardColor = AppColors.amber.withOpacity(0.05);
+      cardColor = AppColors.amber.withValues(alpha: 0.05);
       accentColor = AppColors.amber;
     } else {
-      cardColor = Colors.blueAccent.withOpacity(0.05);
+      cardColor = Colors.blueAccent.withValues(alpha: 0.05);
       accentColor = Colors.blueAccent;
     }
 
@@ -1719,7 +1719,7 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accentColor.withOpacity(0.15)),
+        border: Border.all(color: accentColor.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1752,7 +1752,7 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isSelected ? levelColor : Colors.white.withOpacity(0.05),
+                        color: isSelected ? levelColor : Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -1896,7 +1896,7 @@ class _RouteBlockEditorState extends State<RouteBlockEditor> {
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                           filled: true,
-                          fillColor: Colors.white.withOpacity(0.04),
+                          fillColor: Colors.white.withValues(alpha: 0.04),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,

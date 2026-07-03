@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/theme/theme_context.dart';
 
 class TravelHeatmapWidget extends StatelessWidget {
   final List<QueryDocumentSnapshot> docs;
@@ -52,10 +53,10 @@ class TravelHeatmapWidget extends StatelessWidget {
       if (dt == null) return Colors.transparent;
       final key = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
       final count = activityMap[key] ?? 0;
-      if (count == 0) return Colors.white.withOpacity(0.05);
+      if (count == 0) return Colors.white.withValues(alpha: 0.05);
       final intensity = maxVal > 0 ? count / maxVal : 0.0;
       return Color.lerp(
-        AppColors.mintGreen.withOpacity(0.2),
+        AppColors.mintGreen.withValues(alpha: 0.2),
         AppColors.mintGreen,
         intensity,
       )!;
@@ -83,9 +84,9 @@ class TravelHeatmapWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,8 +201,8 @@ class TravelHeatmapWidget extends StatelessWidget {
                   margin: const EdgeInsets.only(right: 2),
                   decoration: BoxDecoration(
                     color: i == 0
-                        ? Colors.white.withOpacity(0.05)
-                        : AppColors.mintGreen.withOpacity(0.2 * i),
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : AppColors.mintGreen.withValues(alpha: 0.2 * i),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 );

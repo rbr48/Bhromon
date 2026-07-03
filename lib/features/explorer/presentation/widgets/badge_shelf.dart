@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/services/diary_badges_service.dart';
+import '../../../../core/theme/theme_context.dart';
 
 class BadgeShelf extends StatelessWidget {
   final List<String> badges;
@@ -62,7 +63,7 @@ class BadgeShelf extends StatelessWidget {
             showDialog<void>(
               context: context,
               builder: (context) => AlertDialog(
-                backgroundColor: const Color(0xFF111111),
+                backgroundColor: context.surfacePanel,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: const BorderSide(color: AppColors.mintGreen, width: 0.8),
@@ -109,7 +110,7 @@ class BadgeShelf extends StatelessWidget {
             );
           },
           child: Chip(
-            backgroundColor: AppColors.darkGreen.withOpacity(0.4),
+            backgroundColor: AppColors.darkGreen.withValues(alpha: 0.4),
             side: const BorderSide(color: AppColors.mintGreen, width: 0.8),
             avatar: Text(emoji, style: const TextStyle(fontSize: 12)),
             label: Text(

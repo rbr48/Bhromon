@@ -217,7 +217,7 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                       barWidth: 3,
                       belowBarData: BarAreaData(
                         show: true,
-                        color: AppColors.mintGreen.withOpacity(0.15),
+                        color: AppColors.mintGreen.withValues(alpha: 0.15),
                       ),
                     ),
                   ],
@@ -239,7 +239,7 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                     runSpacing: 8,
                     children: _categoriesCount.entries.map((entry) {
                       return Chip(
-                        backgroundColor: Colors.white.withOpacity(0.05),
+                        backgroundColor: Colors.white.withValues(alpha: 0.05),
                         side: const BorderSide(color: Colors.white10),
                         label: Text(
                           '${entry.key} (${entry.value})',
@@ -271,9 +271,9 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                     width: double.infinity,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.02),
+                      color: Colors.white.withValues(alpha: 0.02),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.05)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
                     ),
                     child: const Text(
                       'No badges earned yet. Start exploring to unlock!',
@@ -291,7 +291,7 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                           margin: const EdgeInsets.only(right: 12),
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.04),
+                            color: Colors.white.withValues(alpha: 0.04),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.white10),
                           ),
@@ -324,7 +324,7 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
               itemBuilder: (context, index) {
                 final pin = _undiscoveredPins[index];
                 return Card(
-                  color: Colors.white.withOpacity(0.04),
+                  color: Colors.white.withValues(alpha: 0.04),
                   margin: const EdgeInsets.only(bottom: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

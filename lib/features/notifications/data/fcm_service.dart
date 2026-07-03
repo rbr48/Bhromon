@@ -82,7 +82,7 @@ class FcmService {
     // Instead we resolve the context lazily via the global navigator key.
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       final ctx = AppRouter.navigatorKey.currentContext;
-      if (ctx != null) _handleTap(message, ctx);
+      if (ctx != null && ctx.mounted) _handleTap(message, ctx);
     });
     final initial = await _messaging.getInitialMessage();
     if (initial != null) {

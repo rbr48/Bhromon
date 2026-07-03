@@ -68,8 +68,8 @@ class AchievementsScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.cardDark,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10)],
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10)],
               ),
               child: Row(
                 children: [
@@ -92,9 +92,9 @@ class AchievementsScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: tierColor.withOpacity(0.15),
+                            color: tierColor.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: tierColor.withOpacity(0.4), width: 0.8),
+                            border: Border.all(color: tierColor.withValues(alpha: 0.4), width: 0.8),
                           ),
                           child: Text(
                             explorerTier.displayName,
@@ -120,7 +120,7 @@ class AchievementsScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.cardDark,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
               ),
               child: Row(
                 children: [
@@ -210,7 +210,7 @@ class AchievementsScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.cardDark,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
               ),
               child: Column(
                 children: [
@@ -235,7 +235,7 @@ class AchievementsScreen extends StatelessWidget {
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isUnlocked ? color.withOpacity(0.3) : Colors.white10,
+          color: isUnlocked ? color.withValues(alpha: 0.3) : Colors.white10,
           width: 1,
         ),
       ),
@@ -245,7 +245,7 @@ class AchievementsScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircleAvatar(
-              backgroundColor: isUnlocked ? color.withOpacity(0.1) : Colors.white10,
+              backgroundColor: isUnlocked ? color.withValues(alpha: 0.1) : Colors.white10,
               child: Icon(icon, color: isUnlocked ? color : Colors.white30),
             ),
             const SizedBox(height: 8),
@@ -277,7 +277,7 @@ class AchievementsScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: isCurrentUser ? AppColors.mintGreen.withOpacity(0.08) : Colors.transparent,
+        color: isCurrentUser ? AppColors.mintGreen.withValues(alpha: 0.08) : Colors.transparent,
         border: const Border(bottom: BorderSide(color: Colors.white10, width: 0.5)),
       ),
       child: Row(

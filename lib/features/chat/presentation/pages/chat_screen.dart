@@ -1109,7 +1109,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         ? Container(
                             width: double.infinity,
                             padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
-                            color: Colors.redAccent.withOpacity(0.08),
+                            color: Colors.redAccent.withValues(alpha: 0.08),
                             child: const Center(
                               child: Text(
                                 'Messaging is disabled because one of you has blocked the other.',
@@ -1324,7 +1324,7 @@ class WhatsappWallpaperPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.015)
+      ..color = Colors.white.withValues(alpha: 0.015)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
