@@ -1,0 +1,56 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "nodejs20",
+      "predeploy": [
+        "npm --prefix functions run build"
+      ]
+    }
+  ],
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bhromon-ff801",
+          "appId": "1:919602851188:android:89360212aea9ece4f61021",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "bhromon-ff801",
+          "configurations": {
+            "android": "1:919602851188:android:89360212aea9ece4f61021",
+            "ios": "1:919602851188:ios:72729bbd674b544df61021",
+            "macos": "1:919602851188:ios:72729bbd674b544df61021",
+            "web": "1:919602851188:web:2068356a638e28caf61021",
+            "windows": "1:919602851188:web:21211574c3af1c8af61021"
+          }
+        }
+      }
+    }
+  }
+}

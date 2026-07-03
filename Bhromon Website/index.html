@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bhromon | পথ যেখানে গল্প বলে</title>
+    <meta name="description" content="Discover Bangladesh like a local. Bhromon is Bangladesh's First Community Based Travel Directory, offering offline-first travel logs, verified local insights, safety index, and live route sharing.">
+    <!-- OpenGraph Metadata -->
+    <meta property="og:title" content="Bhromon | পথ যেখানে গল্প বলে">
+    <meta property="og:description" content="Discover Bangladesh like a local. Bhromon is Bangladesh's First Community Based Travel Directory, offering offline-first travel logs, verified local insights, safety index, and live route sharing.">
+    <meta property="og:image" content="images/logo.png">
+    <meta property="og:type" content="website">
+    <link rel="stylesheet" href="css/style.css?v=1.2.3">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="images/logo.png">
+</head>
+<body>
+
+    <!-- Animated Background Auroras -->
+    <div class="aurora-container">
+        <div class="aurora-blob blob-1"></div>
+        <div class="aurora-blob blob-2"></div>
+        <div class="aurora-blob blob-3"></div>
+    </div>
+    <div class="bg-grid"></div>
+
+    <!-- Floating canvas for ambient slow-moving dust particles -->
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- Sticky CTA Bar -->
+    <div id="sticky-cta" class="sticky-cta">
+        <span class="lang-text" data-en="🚀 Bhromon is coming soon — Reserve your explorer name now!" data-bn="🚀 ভ্রমণ আসছে — এখনই আপনার এক্সপ্লোরার নাম সিকিউর করুন!">🚀 Bhromon is coming soon — Reserve your explorer name now!</span>
+        <button class="btn-primary open-modal lang-text" data-en="Claim My Spot" data-bn="সিট নিন" style="padding: 0.5rem 1.2rem; font-size: 0.9rem;">Claim My Spot</button>
+    </div>
+
+    <!-- Image Lightbox -->
+    <div id="lightbox" class="lightbox-overlay">
+        <button class="lightbox-close"><i class="fa-solid fa-xmark"></i></button>
+        <button class="lightbox-prev"><i class="fa-solid fa-chevron-left"></i></button>
+        <div class="lightbox-img-wrap">
+            <img id="lightbox-img" src="" alt="Full size">
+        </div>
+        <button class="lightbox-next"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+
+    <!-- Waitlist Modal -->
+    <div id="waitlist-modal" class="modal-overlay">
+        <div class="modal-content glass">
+            <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+            <h2 class="lang-text" data-en="Join the Exclusive Beta" data-bn="এক্সক্লুসিভ বেটাতে যোগ দিন">Join the Exclusive Beta</h2>
+            <p class="lang-text" data-en="Be the first to experience Bangladesh's first community based travel directory." data-bn="বাংলাদেশের প্রথম কমিউনিটি ভিত্তিক ট্রাভেল ডিরেক্টরির অভিজ্ঞতা নিন সবার আগে।">Be the first to experience Bangladesh's first community based travel directory.</p>
+            <form id="waitlist-form">
+                <!-- FormSubmit.co hidden config -->
+                <input type="hidden" name="_subject" value="🚀 New Bhromon Beta Reservation!">
+                <input type="hidden" name="_captcha" value="false">
+                <input type="hidden" name="_template" value="table">
+                <input type="text" id="name" name="name" placeholder="Name / নাম" required>
+                <input type="text" id="contact" name="contact" placeholder="Email or WhatsApp / ইমেইল বা হোয়াটসঅ্যাপ" required>
+                <button type="submit" class="btn-primary lang-text" data-en="Reserve My Spot" data-bn="আমার সিট কনফার্ম করুন" style="width: 100%;">Reserve My Spot</button>
+            </form>
+            <div id="success-msg" style="display: none; color: var(--color-primary-light); margin-top: 1rem; text-align: center; font-weight: 600;">
+                <i class="fa-solid fa-circle-check"></i> <span class="lang-text" data-en="You're on the list! We'll contact you soon." data-bn="আপনার রিকোয়েস্ট সেভ হয়েছে! আমরা দ্রুত যোগাযোগ করব।">You're on the list! We'll contact you soon.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sticky Nav -->
+    <nav class="glass">
+        <a href="#" class="brand" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">
+            <div class="brand-row">
+                <img src="images/logo.png" alt="Bhromon Logo" class="brand-logo-img"> Bhromon
+            </div>
+            <div class="brand-tags">
+                <span class="brand-tag-pill lang-text" data-en="Community" data-bn="কমিউনিটি">Community</span>
+                <span class="brand-tag-pill lang-text" data-en="Trust" data-bn="বিশ্বাস">Trust</span>
+                <span class="brand-tag-pill lang-text" data-en="Explore" data-bn="অন্বেষণ">Explore</span>
+            </div>
+        </a>
+        <div class="nav-links">
+            <a href="#features" class="lang-text" data-en="Features" data-bn="ফিচারস">Features</a>
+            <a href="#interactive-demo" class="lang-text" data-en="Live Map" data-bn="লাইভ ম্যাপ">Live Map</a>
+            <a href="#tiers" class="lang-text" data-en="Tiers" data-bn="লেভেলসমূহ">Tiers</a>
+            <a href="#faq" class="lang-text" data-en="FAQ" data-bn="প্রশ্নোত্তর">FAQ</a>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <button id="lang-toggle" class="lang-btn">বাং</button>
+            <button class="btn-primary open-modal lang-text" data-en="Join Beta" data-bn="বেটাতে যোগ দিন" style="padding: 0.6rem 1.4rem; font-size: 0.85rem;">Join Beta</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-content fade-in-up">
+            <span class="hero-tag lang-text" data-en="Bangladesh's First Community Based Travel Directory" data-bn="পথ যেখানে গল্প বলে">Bangladesh's First Community Based Travel Directory</span>
+            <h1 class="lang-text text-gradient" data-en="&quot;Where to next, Explorer?&quot;" data-bn="&quot;পরবর্তী গন্তব্য কোথায়, এক্সপ্লোরার?&quot;">"Where to next, Explorer?"</h1>
+            <h2 class="lang-text" data-en="Stop searching across 10 different Facebook groups and YouTube vlogs." data-bn="&quot;ভাই, সাজেক যেতে টোটাল কত খরচ হবে? কোন রিসোর্টটা ভালো?&quot; 🤔" style="font-size: 1.5rem; color: var(--color-primary-light); margin-bottom: 1.5rem; font-family: var(--font-body); font-weight: 500;">
+                Stop searching across 10 different Facebook groups and YouTube vlogs.
+            </h2>
+            <p class="lang-text" data-en="Welcome to Bhromon. Bangladesh's first community-driven travel directory where verified crowdsourced insights meet offline-first vector navigation. Join us to build a better open travel ecosystem." data-bn="ভ্রমণে যাওয়ার আগে ফেসবুক গ্রুপ আর ইউটিউব ঘেঁটে ক্লান্ত? Welcome to Bhromon. বাংলাদেশের প্রথম কমিউনিটি ভিত্তিক ট্রাভেল ডিরেক্টরি যেখানে ভেরিফাইড তথ্যের সাথে পাচ্ছেন অফলাইন ম্যাপ ও গাইড।">
+                Welcome to Bhromon. Bangladesh's first community-driven travel directory where verified crowdsourced insights meet offline-first vector navigation. Join us to build a better open travel ecosystem.
+            </p>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <a href="app-release.apk" download class="btn-primary lang-text" data-en="Download APK (Beta)" data-bn="এপিকে ডাউনলোড করুন (বেটা)" style="font-size: 1.05rem; padding: 0.95rem 2rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">Download APK (Beta) <i class="fa-solid fa-download"></i></a>
+                <a href="#interactive-demo" class="btn-secondary lang-text" data-en="Try Interactive Map" data-bn="ইন্টারেক্টিভ ম্যাপ দেখুন" style="font-size: 1.05rem; padding: 0.95rem 2rem;">Try Interactive Map</a>
+            </div>
+
+            <!-- Social Proof Avatar Stack -->
+            <div class="social-proof">
+                <div class="avatar-stack">
+                    <img src="images/1.jpeg" alt="Explorer Avatar">
+                    <img src="images/2.jpeg" alt="Explorer Avatar">
+                    <img src="images/3.jpeg" alt="Explorer Avatar">
+                    <img src="images/4.jpeg" alt="Explorer Avatar">
+                </div>
+                <div class="social-proof-text lang-text" data-en="Join <strong>15,400+ explorers</strong> sharing verified routes" data-bn="যোগ দিন <strong>১৫,৪০০+ এক্সপ্লোরারের</strong> সাথে যারা শেয়ার করছেন ভেরিফাইড রুট">
+                    Join <strong>15,400+ explorers</strong> sharing verified routes
+                </div>
+            </div>
+        </div>
+        <div class="hero-image fade-in-up">
+            <div class="mockup-3d">
+                <div class="mockup-3d-screen"></div>
+                <div class="mockup-3d-reflection"></div>
+                <div class="mockup-3d-notch"></div>
+            </div>
+            <div class="hero-floating-card card-helpful-votes">
+                <div class="floating-stat-num" data-count="2155">2155 +</div>
+                <div class="floating-stat-label lang-text" data-en="Helpful Votes" data-bn="হেল্পফুল ভোট">Helpful Votes</div>
+            </div>
+            <div class="hero-floating-card card-explorer-level">
+                <div class="floating-stat-num" style="color: var(--color-primary-light);" data-count="89" data-suffix=" XP">89 XP</div>
+                <div class="floating-stat-label lang-text" data-en="Explorer Level" data-bn="এক্সপ্লোরার লেভেল">Explorer Level</div>
+            </div>
+        </div>
+    </header>
+    
+<!-- How It Works -->
+    <section class="section hiw-section">
+        <div class="section-header fade-in-up">
+            <span class="section-subtitle lang-text" data-en="How It Works" data-bn="কার্যপ্রণালী">How It Works</span>
+            <h2 class="lang-text" data-en="Three Steps to Seamless Exploring" data-bn="ভ্রমণ কীভাবে কাজ করে">Three Steps to Seamless Exploring</h2>
+            <p class="lang-text" data-en="We bring structure, verification, and offline reliability to your travels." data-bn="আপনার ভ্রমণে আমরা নিয়ে আসছি নির্ভরযোগ্য ডাটা, সত্যতা যাচাইয়ের সুবিধা এবং অফলাইন ট্র্যাকিং।">We bring structure, verification, and offline reliability to your travels.</p>
+        </div>
+        <div class="hiw-grid fade-in-up">
+            <div class="hiw-step-card">
+                <div class="hiw-num-glow">01</div>
+                <div class="hiw-icon-circle"><i class="fa-solid fa-magnifying-glass"></i></div>
+                <h3 class="lang-text" data-en="Discover Verified Insights" data-bn="ভেরিফাইড তথ্য খুঁজুন">Discover Verified Insights</h3>
+                <p class="lang-text" data-en="Filter TripLogs and budget guides by division or activity. Say goodbye to outdated spam posts." data-bn="বিভাগ বা বাজেট দিয়ে ফিল্টার করে খুঁজুন আসল ট্রাভেলারদের লেখা রিয়েল ট্রিপলগ।">Filter TripLogs and budget guides by division or activity. Say goodbye to outdated spam posts.</p>
+            </div>
+            <div class="hiw-grid-connector"><i class="fa-solid fa-arrow-right"></i></div>
+            <div class="hiw-step-card">
+                <div class="hiw-num-glow">02</div>
+                <div class="hiw-icon-circle"><i class="fa-solid fa-map-location-dot"></i></div>
+                <h3 class="lang-text" data-en="Plan & Cache Offline" data-bn="প্ল্যান ও অফলাইন সেভ">Plan & Cache Offline</h3>
+                <p class="lang-text" data-en="Generate route timelines, check detailed budgets, and download offline vector guides in one click." data-bn="ট্যুর রুটপ্ল্যান তৈরি করুন, বাজেট হিসেব করুন এবং এক ক্লিকে সম্পূর্ণ অফলাইন গাইড ডাউনলোড করুন।">Generate route timelines, check detailed budgets, and download offline vector guides in one click.</p>
+            </div>
+            <div class="hiw-grid-connector"><i class="fa-solid fa-arrow-right"></i></div>
+            <div class="hiw-step-card">
+                <div class="hiw-num-glow">03</div>
+                <div class="hiw-icon-circle"><i class="fa-solid fa-share-nodes"></i></div>
+                <h3 class="lang-text" data-en="Navigate & Earn XP" data-bn="ভ্রমণ করুন ও XP লাভ করুন">Navigate & Earn XP</h3>
+                <p class="lang-text" data-en="Navigate remote spots safely. Help fellow explorers by voting, level up your tier, and build trust." data-bn="নিরাপদে ঘুরুন, ম্যাপে রুট আঁকুন, মতামত শেয়ার করে XP আয় করুন এবং আপনার ট্রাস্ট লেভেল বাড়ান।">Navigate remote spots safely. Help fellow explorers by voting, level up your tier, and build trust.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bento Grid Features Section -->
+    <section id="features" class="section">
+        <div class="section-header fade-in-up">
+            <span class="section-subtitle lang-text" data-en="App Features" data-bn="অ্যাপের বৈশিষ্ট্যসমূহ">App Features</span>
+            <h2 class="lang-text" data-en="Unmatched Mobile Capabilities" data-bn="অসাধারণ মোবাইল ফিচারসমূহ">Unmatched Mobile Capabilities</h2>
+            <p class="lang-text" data-en="Explore the key pillars of the Bhromon mobile application built for Bangladesh's terrains." data-bn="বাংলাদেশের ভৌগোলিক প্রেক্ষাপট ও নেটওয়ার্কের সীমাবদ্ধতা মাথায় রেখে তৈরি বিশেষ ফিচারসমূহ।">Explore the key pillars of the Bhromon mobile application built for Bangladesh's terrains.</p>
+        </div>
+        <div class="features-bento-grid">
+            <!-- Card 1: Social Feed & TripLogs (Large Bento Box) -->
+            <div class="bento-card glass glass-glow fade-in-up bento-large-1">
+                <div class="bento-card-visual">
+                    <div class="mock-triplog-box glass">
+                        <div class="mock-triplog-header">
+                            <div class="mock-author-profile">
+                                <div class="mock-author-avatar-initials">SR</div>
+                                <div class="mock-author-info">
+                                    <span class="mock-author-name">S. Rana</span>
+                                    <span class="mock-author-tier"><i class="fa-solid fa-award"></i> Pioneer</span>
+                                </div>
+                            </div>
+                            <span class="badge-primary" style="font-size: 0.6rem; padding: 2px 8px;">TripLog</span>
+                        </div>
+                        <p class="mock-triplog-body"><strong>Sajek road-trip:</strong> Chander Gari ride was bumpy but views from Konglak hill were breath-taking...</p>
+                        <div class="mock-triplog-map-preview">
+                            <div class="mock-route-line">
+                                <div class="mock-route-dot" style="left: 10%;"></div>
+                                <div class="mock-route-dot" style="left: 50%;"></div>
+                                <div class="mock-route-dot" style="left: 90%;"></div>
+                            </div>
+                            <span style="position: absolute; bottom: 4px; right: 8px; font-size: 0.55rem; color: var(--color-text-secondary);"><i class="fa-solid fa-map"></i> Mapped Route</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bento-card-body">
+                    <div class="bento-card-icon"><i class="fa-solid fa-route"></i></div>
+                    <h3 class="lang-text" data-en="Social Feed & TripLogs" data-bn="সোশ্যাল ফিড ও ট্রিপলগ">Social Feed & TripLogs</h3>
+                    <p class="lang-text" data-en="Share details about your tours. Features state restoration (HydratedBloc) so draft diaries are never lost, full bilingual support, and BlurHash performance placeholders for smooth remote image loading." data-bn="আপনার ডায়েরি ড্রাফটগুলো এখন সম্পূর্ণ সুরক্ষিত (HydratedBloc); এডিটর বন্ধ হলেও লেখা হারাবে না। সাথে থাকছে সম্পূর্ণ দ্বিভাষিক ফিচার ও দ্রুত ইমেজ লোডিংয়ের জন্য BlurHash টেকনোলজি।">Share details about your tours. Features state restoration (HydratedBloc) so draft diaries are never lost, full bilingual support, and BlurHash performance placeholders for smooth remote image loading.</p>
+                </div>
+            </div>
+
+            <!-- Card 2: Smart Budget Tracker (Small Bento Box) -->
+            <div class="bento-card glass glass-glow fade-in-up bento-small-1">
+                <div class="bento-card-visual">
+                    <div class="mock-budget-box glass">
+                        <div class="mock-budget-row">
+                            <div class="mock-budget-info">
+                                <span class="lang-text" data-en="Hotel Stay" data-bn="হোটেল খরচ">Hotel Stay</span>
+                                <span>৳2,500</span>
+                            </div>
+                            <div class="mock-progress-track">
+                                <div class="mock-progress-bar" style="width: 40%; background: var(--color-primary);"></div>
+                            </div>
+                        </div>
+                        <div class="mock-budget-row">
+                            <div class="mock-budget-info">
+                                <span class="lang-text" data-en="Transport" data-bn="যাতায়াত">Transport</span>
+                                <span>৳1,800</span>
+                            </div>
+                            <div class="mock-progress-track">
+                                <div class="mock-progress-bar" style="width: 30%; background: var(--color-accent);"></div>
+                            </div>
+                        </div>
+                        <div class="mock-budget-row">
+                            <div class="mock-budget-info">
+                                <span class="lang-text" data-en="Food & Fuel" data-bn="খাবার ও ফুয়েল">Food & Fuel</span>
+                                <span>৳1,200</span>
+                            </div>
+                            <div class="mock-progress-track">
+                                <div class="mock-progress-bar" style="width: 20%; background: #6366f1;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bento-card-body">
+                    <div class="bento-card-icon"><i class="fa-solid fa-wallet"></i></div>
+                    <h3 class="lang-text" data-en="Smart Budget Tracker" data-bn="স্মার্ট বাজেট ট্র্যাকার">Smart Budget Tracker</h3>
+                    <p class="lang-text" data-en="Browse crowd-sourced, itemized cost breakdowns (hotels, transport, food) voted and approved by fellow travelers." data-bn="হোটেল, যাতায়াত ও খাবার খরচের আইটেমাইজড ব্রেকডাউন যা অন্য ব্যাকপ্যাকারদের ভোটে ভেরিফাইড এবং রিয়েল-টাইম আপডেটেড।">Browse crowd-sourced, itemized cost breakdowns (hotels, transport, food) voted and approved by fellow travelers.</p>
+                </div>
+            </div>
+
+            <!-- Card 3: Offline Vault & SOS (Small Bento Box) -->
+            <div class="bento-card glass glass-glow fade-in-up bento-small-2">
+                <div class="bento-card-visual">
+                    <div class="mock-offline-vault glass">
+                        <div class="mock-vault-toggle-container">
+                            <span class="mock-vault-status-label lang-text" data-en="Online" data-bn="অনলাইন">Online</span>
+                            <div class="mock-toggle-switch">
+                                <div class="mock-toggle-knob"></div>
+                            </div>
+                            <span class="mock-vault-status-label active lang-text" data-en="Offline" data-bn="অফলাইন">Offline</span>
+                        </div>
+                        <button class="mock-sos-button"><i class="fa-solid fa-circle-exclamation"></i> SOS Rescue Active</button>
+                    </div>
+                </div>
+                <div class="bento-card-body">
+                    <div class="bento-card-icon"><i class="fa-solid fa-shield-heart"></i></div>
+                    <h3 class="lang-text" data-en="Offline Vault & SOS" data-bn="অফলাইন ভল্ট ও এসওএস">Offline Vault & SOS</h3>
+                    <p class="lang-text" data-en="Download vector maps (MapLibre) and directory data. Includes SQLite/Drift-backed offline sync outbox (WAL) which automatically queues posts and syncs when connection is restored." data-bn="অফলাইন ভেক্টর ম্যাপ ও এসওএস সাপোর্টের সাথে পাবেন SQLite/Drift ভিত্তিক আউটবক্স সিঙ্ক প্রযুক্তি; অফলাইনে করা ডায়েরি পোস্টগুলো নেটওয়ার্ক ফিরে এলে স্বয়ংক্রিয়ভাবে আপলোড হবে।">Download vector maps (MapLibre) and directory data. Includes SQLite/Drift-backed offline sync outbox (WAL) which automatically queues posts and syncs when connection is restored.</p>
+                </div>
+            </div>
+
+            <!-- Card 4: Direct Chats (Large Bento Box) -->
+            <div class="bento-card glass glass-glow fade-in-up bento-large-2">
+                <div class="bento-card-visual">
+                    <div class="mock-chat-box glass">
+                        <div class="mock-chat-bubble chat-left">
+                            <strong>Local Guide (Izhaan):</strong> Sajek trails are dry and safe now. I can lead your group.
+                        </div>
+                        <div class="mock-chat-bubble chat-right">
+                            <strong>You:</strong> Sounds good! Is Teletalk network active at Konglak hill?
+                        </div>
+                        <div class="mock-chat-bubble chat-left">
+                            <strong>Local Guide (Izhaan):</strong> Teletalk has limited signal, Robi is better there.
+                        </div>
+                    </div>
+                </div>
+                <div class="bento-card-body">
+                    <div class="bento-card-icon"><i class="fa-solid fa-comments"></i></div>
+                    <h3 class="lang-text" data-en="Direct Group Chats" data-bn="ডিরেক্ট ও গ্রুপ চ্যাট">Direct Group Chats</h3>
+                    <p class="lang-text" data-en="Message verified local guides, host cottage managers, and other backpackers planning tours in the same division." data-bn="একই এলাকায় ঘুরতে যাওয়া ট্রাভেলার, স্থানীয় কটেজ মালিক এবং ভেরিফাইড গাইডদের সাথে সরাসরি কোনো চার্জ ছাড়াই গ্রুপে চ্যাট করুন।">Message verified local guides, host cottage managers, and other backpackers planning tours in the same division.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Explore Divisions Section -->
+    <section class="section divisions-section">
+        <div class="section-header fade-in-up">
+            <span class="section-subtitle lang-text" data-en="Comprehensive Coverage" data-bn="দেশব্যাপী নেটওয়ার্ক">Comprehensive Coverage</span>
+            <h2 class="lang-text" data-en="Explore All 8 Divisions" data-bn="৮টি বিভাগ এক্সপ্লোর করুন">Explore All 8 Divisions</h2>
+            <p class="lang-text" data-en="From the swamp forests of Sylhet to the deep hills of Chattogram — every corner of Bangladesh, covered." data-bn="খুলনার সুন্দরবন থেকে রাঙ্গামাটির পাহাড় — ভ্রমণ অ্যাপে পেয়ে যাবেন বাংলাদেশের প্রতিটি কোনার গাইড।">From the swamp forests of Sylhet to the deep hills of Chattogram — every corner of Bangladesh, covered.</p>
+        </div>
+        <div class="divisions-grid fade-in-up">
+            <div class="division-chip"><span>🌿</span> Dhaka</div>
+            <div class="division-chip"><span>🌊</span> Chattogram</div>
+            <div class="division-chip"><span>🌾</span> Rajshahi</div>
+            <div class="division-chip"><span>🌲</span> Khulna</div>
+            <div class="division-chip"><span>⛵</span> Barishal</div>
+            <div class="division-chip"><span>🍵</span> Sylhet</div>
+            <div class="division-chip"><span>🏞️</span> Mymensingh</div>
+            <div class="division-chip"><span>🌾</span> Rangpur</div>
+        </div>
+    </section>
+
+    <!-- Interactive Explorer Map Section -->
+    <section id="interactive-demo" class="section demo-section">
+        <div class="section-header fade-in-up">
+            <span class="section-subtitle lang-text" data-en="Interactive Sandbox" data-bn="ইন্টারেক্টিভ ডেমো">Interactive Sandbox</span>
+            <h2 class="lang-text" data-en="Experience the Interactive Map" data-bn="ইন্টারেক্টিভ ম্যাপ এক্সপেরিয়েন্স">Experience the Interactive Map</h2>
+            <p class="lang-text" data-en="Click on the hotspots in the mock screen to view verified budgets, offline coverage, and safety details. Adjust the slider to see budget changes." data-bn="নিচের ম্যাপের হটস্পটগুলোতে ক্লিক করে ভেরিফাইড বাজেট ও তথ্য দেখুন। দিন সংখ্যা বাড়িয়ে বা কমিয়ে দেখুন বাজেট ক্যালকুলেশন।">Click on the hotspots in the mock screen to view verified budgets, offline coverage, and safety details. Adjust the slider to see budget changes.</p>
+        </div>
+        <div class="demo-container fade-in-up">
+            <!-- Left: Mock Phone Map UI -->
+            <div class="mock-phone-wrapper">
+                <div class="mock-phone-container">
+                    <div class="mock-phone-screen">
+                        <!-- Top status bar -->
+                        <div class="phone-status-bar">
+                            <span class="phone-time">12:30</span>
+                            <div class="phone-status-icons">
+                                <i class="fa-solid fa-signal"></i>
+                                <i class="fa-solid fa-wifi-slash signal-offline-alert" style="color: #ef4444;"></i>
+                                <i class="fa-solid fa-battery-three-quarters"></i>
+                            </div>
+                        </div>
+                        <!-- Mock Map Area -->
+                        <div class="mock-map-area">
+                            <!-- Hotspot 1: Sajek -->
+                            <button class="map-hotspot active" id="hotspot-sajek" style="top: 35%; left: 75%;" data-loc="sajek">
+                                <span class="pulse-ring"></span>
+                                <i class="fa-solid fa-location-dot"></i>
+                            </button>
+                            <!-- Hotspot 2: Sundarbans -->
+                            <button class="map-hotspot" id="hotspot-sundarbans" style="top: 80%; left: 32%;" data-loc="sundarbans">
+                                <span class="pulse-ring"></span>
+                                <i class="fa-solid fa-location-dot"></i>
+                            </button>
+                            <!-- Hotspot 3: Sreemangal -->
+                            <button class="map-hotspot" id="hotspot-sreemangal" style="top: 45%; left: 65%;" data-loc="sreemangal">
+                                <span class="pulse-ring"></span>
+                                <i class="fa-solid fa-location-dot"></i>
+                            </button>
+                            
+                            <!-- Custom SVG stylized map of Bangladesh paths / outline -->
+                            <svg class="map-svg-bg" viewBox="0 0 200 300">
+                                <path d="M70,30 Q90,20 110,35 T140,25 T150,60 T130,90 T145,120 T115,150 T120,180 T100,210 T110,240 T90,265 T70,285 T55,270 T40,240 T50,210 T30,190 T45,150 T50,110 T35,80 T60,60 Z" fill="rgba(16, 185, 129, 0.06)" stroke="rgba(16, 185, 129, 0.25)" stroke-width="1.5"/>
+                            </svg>
+                            <span class="map-label-bg" style="top: 25%; left: 38%;">Dhaka</span>
+                            <span class="map-label-bg" style="top: 65%; left: 65%;">Chattogram</span>
+                        </div>
+                        <!-- Bottom Nav bar mockup -->
+                        <div class="phone-nav-bar">
+                            <i class="fa-solid fa-compass active"></i>
+                            <i class="fa-solid fa-route"></i>
+                            <i class="fa-solid fa-circle-plus"></i>
+                            <i class="fa-solid fa-message"></i>
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right: Dynamic Details card -->
+            <div class="demo-details-card glass">
+                <div id="demo-details-content">
+                    <!-- Default: Sajek Valley -->
+                    <div class="details-header">
+                        <span id="loc-badge" class="badge-primary"><i class="fa-solid fa-shield-halved"></i> Offline Verified</span>
+                        <h3 id="loc-name">Sajek Valley</h3>
+                        <span id="loc-div" class="loc-division">Rangamati, Chattogram</span>
+                    </div>
+                    
+                    <!-- Interactive Days Slider -->
+                    <div class="details-slider-section">
+                        <div class="slider-header">
+                            <span id="slider-label" class="slider-label">Trip Duration</span>
+                            <span id="slider-days" class="slider-value">3 Days</span>
+                        </div>
+                        <input type="range" id="day-slider" class="day-slider" min="1" max="5" value="3">
+                    </div>
+
+                    <div class="details-metrics">
+                        <div class="metric-box">
+                            <span id="loc-budget-label" class="metric-label">Estimated Budget</span>
+                            <span id="loc-budget" class="metric-val">৳4,500 - ৳6,000</span>
+                        </div>
+                        <div class="metric-box">
+                            <span id="loc-reliability-label" class="metric-label">Reliability Index</span>
+                            <span id="loc-reliability" class="metric-val text-glow-green">96%</span>
+                        </div>
+                    </div>
+                    <div class="details-info-section">
+                        <h4 id="loc-insights-header">Key Insights</h4>
+                        <ul id="loc-insights">
+                            <li><strong>Offline Vault:</strong> Offline-first vector maps are 100% available without internet coverage.</li>
+                            <li><strong>Best Stay:</strong> Chander Gari transport combined with local cottages offers best value.</li>
+                            <li><strong>Network:</strong> Teletalk and Robi provide limited 3G signal; GPS is active.</li>
+                        </ul>
+                    </div>
+                    <div class="details-safety">
+                        <div class="safety-indicator">
+                            <span id="loc-sos-label" class="safety-label">SOS Rescue Hub Coverage:</span>
+                            <span id="loc-sos" class="safety-status active"><i class="fa-solid fa-circle-check"></i> High Coverage (Army Help Desk)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Explorer Tiers Showcase Section -->
+    <section id="tiers" class="section tiers-section">
+        <div class="section-header fade-in-up">
+            <span class="section-subtitle lang-text" data-en="Gamification System" data-bn="লেভেলআপ পদ্ধতি">Gamification System</span>
+            <h2 class="lang-text" data-en="Explorer Tiers & Trust Score" data-bn="এক্সপ্লোরার লেভেল ও ট্রাস্ট স্কোর">Explorer Tiers & Trust Score</h2>
+            <p class="lang-text" data-en="Bhromon maintains quality through a peer-reviewed trust score system. Level up by contributing accurate guides." data-bn="ভ্রমণের তথ্যের নির্ভরযোগ্যতা বজায় রাখতে আমাদের রয়েছে ৫-স্তরের ট্রাস্ট পদ্ধতি। অবদান রেখে আপনার লেভেল বাড়িয়ে নিন।">Bhromon maintains quality through a peer-reviewed trust score system. Level up by contributing accurate guides.</p>
+        </div>
+        <div class="tiers-container fade-in-up">
+            <!-- Tabs -->
+            <div class="tiers-tabs">
+                <button class="tier-tab-btn active" data-tier="unverified">Unverified</button>
+                <button class="tier-tab-btn" data-tier="explorer">Explorer</button>
+                <button class="tier-tab-btn" data-tier="trusted">Trusted Explorer</button>
+                <button class="tier-tab-btn" data-tier="pioneer">Pioneer</button>
+                <button class="tier-tab-btn" data-tier="expert">Region Expert</button>
+            </div>
+            <!-- Showcase Card -->
+            <div class="tier-showcase-card glass" id="tier-showcase-card">
+                <div class="tier-showcase-badge">
+                    <div class="tier-badge-container" id="tier-badge" style="color: #64748b; border-color: #64748b; box-shadow: 0 0 20px rgba(100, 116, 139, 0.1);">
+                        <i class="fa-solid fa-user-xmark" id="tier-badge-icon"></i>
+                        <span class="tier-badge-title" id="tier-badge-name">Unverified</span>
+                        <span class="tier-badge-xp" id="tier-badge-xp">0 XP</span>
+                    </div>
+                </div>
+                <div class="tier-showcase-info">
+                    <div class="tier-title-row">
+                        <h3 id="tier-title">Unverified Explorer</h3>
+                        <span id="tier-xp-label" class="tier-req-xp" style="background: rgba(100, 116, 139, 0.15); color: #94a3b8;">0 XP Required</span>
+                    </div>
+                    <p class="tier-desc" id="tier-description">The starting tier for all newly registered travelers. Users can read guides, but their contributions require community review before appearing on the directory.</p>
+                    <div class="tier-benefits-box">
+                        <h4 class="tier-benefits-header" id="tier-benefits-title">Capabilities & Restrictions</h4>
+                        <ul class="tier-benefits-list" id="tier-benefits-list">
+                            <li><i class="fa-solid fa-circle-check"></i> Read community TripLogs</li>
+                            <li><i class="fa-solid fa-circle-check"></i> Save maps offline</li>
+                            <li><i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i> Write unverified logs</li>
+                            <li><i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i> Decay protection inactive</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         AI TRIP PLANNER SIMULATOR SECTION
+         ============================================================ -->
+    <section id="ai-planner" class="section planner-section">
+        <div class="section-header fade-in-up">
+            <span class="section-subtitle lang-text" data-en="✨ Roadmap Feature" data-bn="✨ আসন্ন ফিচার">✨ Roadmap Feature</span>
+            <h2 class="lang-text" data-en="AI Trip Planner Simulator" data-bn="এআই ট্রিপ প্ল্যানার সিমুলেটর">AI Trip Planner Simulator</h2>
+            <p class="lang-text" data-en="Select a destination, group size and budget tier — then watch our AI draft a full itinerary in real-time. Coming to Bhromon v2." data-bn="গন্তব্য, গ্রুপ সাইজ ও বাজেট টায়ার বেছে নিন — তারপর দেখুন আমাদের এআই রিয়েল-টাইমে পূর্ণ ট্রিপ প্ল্যান তৈরি করছে। ভ্রমণ v2-এ আসছে।">Select a destination, group size and budget tier — then watch our AI draft a full itinerary in real-time. Coming to Bhromon v2.</p>
+        </div>
+
+        <div class="planner-container fade-in-up">
+            <!-- Left: Planner Controls -->
+            <div class="planner-controls glass">
+                <div class="planner-control-group">
+                    <label class="planner-label lang-text" data-en="📍 Destination" data-bn="📍 গন্তব্য">📍 Destination</label>
+                    <select id="planner-destination" class="planner-select">
+                        <option value="dhaka" data-en="Dhaka Heritage Tour (Dhaka)" data-bn="ঢাকা হেরিটেজ ট্যুর (ঢাকা)">Dhaka Heritage Tour (Dhaka)</option>
+                        <option value="sajek" data-en="Sajek Valley (Chattogram)" data-bn="সাজেক ভ্যালি (চট্টগ্রাম)" selected>Sajek Valley (Chattogram)</option>
+                        <option value="sundarbans" data-en="Sundarbans Eco Tour (Khulna)" data-bn="সুন্দরবন ইকো ট্যুর (খুলনা)">Sundarbans Eco Tour (Khulna)</option>
+                        <option value="sreemangal" data-en="Sreemangal Tea Gardens (Sylhet)" data-bn="শ্রীমঙ্গল চা বাগান (সিলেট)">Sreemangal Tea Gardens (Sylhet)</option>
+                        <option value="bandarban" data-en="Bandarban Hills Trek (Chattogram)" data-bn="বান্দরবান পাহাড় ট্রেক (চট্টগ্রাম)">Bandarban Hills Trek (Chattogram)</option>
+                        <option value="paharpur" data-en="Somapura Mahavihara (Rajshahi)" data-bn="সোমপুর মহাবিহার (রাজশাহী)">Somapura Mahavihara (Rajshahi)</option>
+                        <option value="kuakata" data-en="Kuakata Sea Beach (Barishal)" data-bn="কুয়াকাটা সমুদ্র সৈকত (বরিশাল)">Kuakata Sea Beach (Barishal)</option>
+                        <option value="kantajew" data-en="Kantajew Temple (Rangpur)" data-bn="কান্তজিউ মন্দির (রংপুর)">Kantajew Temple (Rangpur)</option>
+                        <option value="birishiri" data-en="Birishiri Clay Hills (Mymensingh)" data-bn="বিরিশিরি চীনামাটির পাহাড় (ময়মনসিংহ)">Birishiri Clay Hills (Mymensingh)</option>
+                    </select>
+                </div>
+                <div class="planner-control-group">
+                    <label class="planner-label lang-text" data-en="👥 Group Size" data-bn="👥 গ্রুপ সাইজ">👥 Group Size</label>
+                    <select id="planner-group" class="planner-select">
+                        <option value="solo" data-en="Solo Traveler" data-bn="একা ভ্রমণকারী">Solo Traveler</option>
+                        <option value="couple" data-en="Couple (2 persons)" data-bn="কাপল (২ জন)">Couple (2 persons)</option>
+                        <option value="small" data-en="Small Group (3–5)" data-bn="ছোট গ্রুপ (৩–৫ জন)" selected>Small Group (3–5)</option>
+                        <option value="large" data-en="Large Group (6–12)" data-bn="বড় গ্রুপ (৬–১২ জন)">Large Group (6–12)</option>
+                    </select>
+                </div>
+                <div class="planner-control-group">
+                    <label class="planner-label lang-text" data-en="💰 Budget Tier" data-bn="💰 বাজেট টায়ার">💰 Budget Tier</label>
+                    <select id="planner-budget" class="planner-select">
+                        <option value="budget" data-en="Budget (Backpacker)" data-bn="বাজেট (ব্যাকপ্যাকার)">Budget (Backpacker)</option>
+                        <option value="mid" data-en="Mid-range (Comfort)" data-bn="মিড-রেঞ্জ (কমফোর্ট)" selected>Mid-range (Comfort)</option>
+                        <option value="premium" data-en="Premium (Luxury)" data-bn="প্রিমিয়াম (লাক্সারি)">Premium (Luxury)</option>
+                    </select>
+                </div>
+                <button id="generate-plan-btn" class="btn-primary planner-generate-btn">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span class="lang-text" data-en="Generate Itinerary" data-bn="ইটিনেরারি তৈরি করুন">Generate Itinerary</span>
+                </button>
+                <div class="planner-hint lang-text" data-en="⚡ AI generates your plan in seconds using community-verified data." data-bn="⚡ কমিউনিটি-ভেরিফাইড ডাটা ব্যবহার করে এআই মুহূর্তেই আপনার প্ল্যান তৈরি করে।">⚡ AI generates your plan in seconds using community-verified data.</div>
+            </div>
+
+            <!-- Right: Generated Itinerary Output -->
+            <div class="planner-output glass" id="planner-output">
+                <div class="planner-output-idle" id="planner-idle">
+                    <div class="planner-idle-icon"><i class="fa-solid fa-robot"></i></div>
+                    <p class="lang-text" data-en="Select your preferences and hit Generate Itinerary to see your AI-powered trip plan appear here." data-bn="আপনার পছন্দ বাছাই করুন এবং ইটিনেরারি তৈরি করুন বোতামে ক্লিক করুন — এআই-পাওয়ার্ড ট্রিপ প্ল্যান এখানে দেখা যাবে।">Select your preferences and hit Generate Itinerary to see your AI-powered trip plan appear here.</p>
+                </div>
+                <div class="planner-output-result" id="planner-result" style="display:none;">
+                    <div class="planner-result-header">
+                        <div>
+                            <div class="planner-result-title" id="planner-title">Sajek Valley — 3-Day Trip</div>
+                            <div class="planner-result-meta" id="planner-meta">Small Group · Mid-range · ৳12,000 – ৳18,000 total</div>
+                        </div>
+                        <span class="badge-primary planner-ai-badge"><i class="fa-solid fa-robot"></i> AI Draft</span>
+                    </div>
+                    <div class="planner-typewriter-area" id="planner-typewriter"></div>
+                    <div class="planner-disclaimer lang-text" data-en="⚠ AI-generated preview. Actual costs may vary. Always cross-check with community TripLogs." data-bn="⚠ এআই-জেনারেটেড প্রিভিউ। প্রকৃত খরচ ভিন্ন হতে পারে। সর্বদা কমিউনিটি ট্রিপলগের সাথে মিলিয়ে নিন।">⚠ AI-generated preview. Actual costs may vary. Always cross-check with community TripLogs.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         EXPLORER XP CHALLENGE TRACKER
+         ============================================================ -->
+    <section id="xp-challenges" class="section challenges-section">
+        <div class="section-header fade-in-up">
+            <span class="section-subtitle lang-text" data-en="🎮 Gamification" data-bn="🎮 গেমিফিকেশন">🎮 Gamification</span>
+            <h2 class="lang-text" data-en="Explorer Challenge Tracker" data-bn="এক্সপ্লোরার চ্যালেঞ্জ ট্র্যাকার">Explorer Challenge Tracker</h2>
+            <p class="lang-text" data-en="Complete real travel actions to earn XP and level up your Explorer Tier. Check tasks as you complete them." data-bn="বাস্তব ভ্রমণ অ্যাকশন সম্পন্ন করে XP অর্জন করুন এবং আপনার এক্সপ্লোরার টায়ার আপগ্রেড করুন।">Complete real travel actions to earn XP and level up your Explorer Tier. Check tasks as you complete them.</p>
+        </div>
+
+        <div class="challenges-container fade-in-up">
+            <!-- XP Progress Panel -->
+            <div class="xp-panel glass">
+                <div class="xp-badge-display" id="xp-badge-display">
+                    <div class="xp-tier-icon" id="xp-tier-icon"><i class="fa-solid fa-user-xmark"></i></div>
+                    <div>
+                        <div class="xp-tier-name" id="xp-tier-name">Unverified</div>
+                        <div class="xp-tier-sub lang-text" data-en="Current Tier" data-bn="বর্তমান টায়ার">Current Tier</div>
+                    </div>
+                </div>
+
+                <div class="xp-bar-section">
+                    <div class="xp-bar-header">
+                        <span class="xp-bar-label lang-text" data-en="XP Progress" data-bn="XP অগ্রগতি">XP Progress</span>
+                        <span class="xp-bar-value" id="xp-bar-value">0 / 50 XP</span>
+                    </div>
+                    <div class="xp-bar-track">
+                        <div class="xp-bar-fill" id="xp-bar-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="xp-next-label lang-text" id="xp-next-label" data-en="Complete challenges to unlock Explorer tier!" data-bn="চ্যালেঞ্জ সম্পন্ন করুন এবং এক্সপ্লোরার টায়ার আনলক করুন!">Complete challenges to unlock Explorer tier!</div>
+                </div>
+
+                <div class="xp-milestones">
+                    <div class="xp-milestone" id="milestone-explorer">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>Explorer</span>
+                        <small>50 XP</small>
+                    </div>
+                    <div class="xp-milestone" id="milestone-trusted">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>Trusted</span>
+                        <small>150 XP</small>
+                    </div>
+                    <div class="xp-milestone" id="milestone-pioneer">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>Pioneer</span>
+                        <small>300 XP</small>
+                    </div>
+                </div>
+
+                <button class="xp-reset-btn" id="xp-reset-btn">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span class="lang-text" data-en="Reset Demo" data-bn="রিসেট করুন">Reset Demo</span>
+                </button>
+            </div>
+
+            <!-- Challenge Checklist -->
+            <div class="challenges-list">
+                <!-- Category: Contribution -->
+                <div class="challenge-category-label lang-text" data-en="📝 Contribution Challenges" data-bn="📝 কন্ট্রিবিউশন চ্যালেঞ্জ">📝 Contribution Challenges</div>
+                <label class="challenge-item glass" data-xp="15">
+                    <input type="checkbox" class="challenge-checkbox" id="ch-triplog">
+                    <div class="challenge-check-visual"><i class="fa-solid fa-check"></i></div>
+                    <div class="challenge-info">
+                        <div class="challenge-name lang-text" data-en="Publish your first verified TripLog" data-bn="প্রথম ভেরিফাইড ট্রিপলগ পোস্ট করুন">Publish your first verified TripLog</div>
+                        <div class="challenge-desc lang-text" data-en="Include a drawn route on the map + budget breakdown." data-bn="ম্যাপে আঁকা রুট এবং বাজেট ব্রেকডাউন অন্তর্ভুক্ত করুন।">Include a drawn route on the map + budget breakdown.</div>
+                    </div>
+                    <div class="challenge-xp-badge">+15 XP</div>
+                </label>
+                <label class="challenge-item glass" data-xp="10">
+                    <input type="checkbox" class="challenge-checkbox" id="ch-budget-vote">
+                    <div class="challenge-check-visual"><i class="fa-solid fa-check"></i></div>
+                    <div class="challenge-info">
+                        <div class="challenge-name lang-text" data-en="Vote on 5 budget breakdowns" data-bn="৫টি বাজেট ব্রেকডাউনে ভোট দিন">Vote on 5 budget breakdowns</div>
+                        <div class="challenge-desc lang-text" data-en="Mark costs as Accurate or Outdated to help the community." data-bn="খরচ সঠিক বা পুরনো হিসেবে চিহ্নিত করে কমিউনিটিকে সাহায্য করুন।">Mark costs as Accurate or Outdated to help the community.</div>
+                    </div>
+                    <div class="challenge-xp-badge">+10 XP</div>
+                </label>
+                <label class="challenge-item glass" data-xp="20">
+                    <input type="checkbox" class="challenge-checkbox" id="ch-safety">
+                    <div class="challenge-check-visual"><i class="fa-solid fa-check"></i></div>
+                    <div class="challenge-info">
+                        <div class="challenge-name lang-text" data-en="Verify an emergency contact / SOS point" data-bn="একটি জরুরি যোগাযোগ / SOS পয়েন্ট ভেরিফাই করুন">Verify an emergency contact / SOS point</div>
+                        <div class="challenge-desc lang-text" data-en="Call and confirm an army, police, or local rescue contact." data-bn="সেনাবাহিনী, পুলিশ বা স্থানীয় উদ্ধার কেন্দ্রের নম্বর যাচাই করুন।">Call and confirm an army, police, or local rescue contact.</div>
+                    </div>
+                    <div class="challenge-xp-badge">+20 XP</div>
+                </label>
+
+                <!-- Category: Exploration -->
+                <div class="challenge-category-label lang-text" data-en="🗺️ Exploration Challenges" data-bn="🗺️ এক্সপ্লোরেশন চ্যালেঞ্জ">🗺️ Exploration Challenges</div>
+                <label class="challenge-item glass" data-xp="12">
+                    <input type="checkbox" class="challenge-checkbox" id="ch-offline">
+                    <div class="challenge-check-visual"><i class="fa-solid fa-check"></i></div>
+                    <div class="challenge-info">
+                        <div class="challenge-name lang-text" data-en="Download and use an offline district map" data-bn="একটি অফলাইন জেলা ম্যাপ ডাউনলোড করে ব্যবহার করুন">Download and use an offline district map</div>
+                        <div class="challenge-desc lang-text" data-en="Navigate to a waypoint using GPS while offline." data-bn="অফলাইনে GPS ব্যবহার করে একটি গন্তব্যে পথ খুঁজুন।">Navigate to a waypoint using GPS while offline.</div>
+                    </div>
+                    <div class="challenge-xp-badge">+12 XP</div>
+                </label>
+                <label class="challenge-item glass" data-xp="8">
+                    <input type="checkbox" class="challenge-checkbox" id="ch-division">
+                    <div class="challenge-check-visual"><i class="fa-solid fa-check"></i></div>
+                    <div class="challenge-info">
+                        <div class="challenge-name lang-text" data-en="Explore 3 different divisions" data-bn="৩টি ভিন্ন বিভাগ ভ্রমণ করুন">Explore 3 different divisions</div>
+                        <div class="challenge-desc lang-text" data-en="Log verified TripLogs from at least 3 different divisions." data-bn="অন্তত ৩টি ভিন্ন বিভাগ থেকে ভেরিফাইড ট্রিপলগ পোস্ট করুন।">Log verified TripLogs from at least 3 different divisions.</div>
+                    </div>
+                    <div class="challenge-xp-badge">+8 XP</div>
+                </label>
+
+                <!-- Category: Community -->
+                <div class="challenge-category-label lang-text" data-en="🤝 Community Challenges" data-bn="🤝 কমিউনিটি চ্যালেঞ্জ">🤝 Community Challenges</div>
+                <label class="challenge-item glass" data-xp="5">
+                    <input type="checkbox" class="challenge-checkbox" id="ch-helpful">
+                    <div class="challenge-check-visual"><i class="fa-solid fa-check"></i></div>
+                    <div class="challenge-info">
+                        <div class="challenge-name lang-text" data-en="Receive 10 Helpful Votes" data-bn="১০টি হেল্পফুল ভোট পান">Receive 10 Helpful Votes</div>
+                        <div class="challenge-desc lang-text" data-en="Your TripLogs have been marked helpful by the community." data-bn="আপনার ট্রিপলগগুলো কমিউনিটি দ্বারা সহায়ক হিসেবে চিহ্নিত হয়েছে।">Your TripLogs have been marked helpful by the community.</div>
+                    </div>
+                    <div class="challenge-xp-badge">+5 XP</div>
+                </label>
+                <label class="challenge-item glass" data-xp="10">
+                    <input type="checkbox" class="challenge-checkbox" id="ch-guide-connect">
+                    <div class="challenge-check-visual"><i class="fa-solid fa-check"></i></div>
+                    <div class="challenge-info">
+                        <div class="challenge-name lang-text" data-en="Connect with a verified local guide" data-bn="একজন ভেরিফাইড স্থানীয় গাইডের সাথে সংযোগ করুন">Connect with a verified local guide</div>
+                        <div class="challenge-desc lang-text" data-en="Book or message a Pioneer-tier local guide for your trip." data-bn="আপনার ট্রিপের জন্য পায়োনিয়ার-টায়ার স্থানীয় গাইডকে বুক বা মেসেজ করুন।">Book or message a Pioneer-tier local guide for your trip.</div>
+                    </div>
+                    <div class="challenge-xp-badge">+10 XP</div>
+                </label>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         PREMIUM GUIDE MARKETPLACE
+         ============================================================ -->
+    <section id="marketplace" class="section marketplace-section">
+        <div class="section-header fade-in-up">
+            <span class="section-subtitle lang-text" data-en="🛒 Roadmap Feature" data-bn="🛒 আসন্ন ফিচার">🛒 Roadmap Feature</span>
+            <h2 class="lang-text" data-en="Premium Guide Marketplace" data-bn="প্রিমিয়াম গাইড মার্কেটপ্লেস">Premium Guide Marketplace</h2>
+            <p class="lang-text" data-en="Buy expert-curated travel guides authored by Pioneer and Region Expert tier travelers. Every guide is verified, rated, and refundable." data-bn="পায়োনিয়ার ও রিজিয়ন এক্সপার্ট টায়ারের ট্রাভেলারদের তৈরি বিশেষজ্ঞ-কিউরেটেড ট্রাভেল গাইড কিনুন। প্রতিটি গাইড ভেরিফাইড, রেটেড এবং রিফান্ডযোগ্য।">Buy expert-curated travel guides authored by Pioneer and Region Expert tier travelers. Every guide is verified, rated, and refundable.</p>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="marketplace-filters fade-in-up">
+            <button class="mkt-filter-btn active" data-filter="all">
+                <span class="lang-text" data-en="All Guides" data-bn="সব গাইড">All Guides</span>
+            </button>
+            <button class="mkt-filter-btn" data-filter="hills">
+                <span class="lang-text" data-en="🏔 Hill Treks" data-bn="🏔 পাহাড় ট্রেক">🏔 Hill Treks</span>
+            </button>
+            <button class="mkt-filter-btn" data-filter="forest">
+                <span class="lang-text" data-en="🌿 Forests" data-bn="🌿 অরণ্য">🌿 Forests</span>
+            </button>
+            <button class="mkt-filter-btn" data-filter="coastal">
+                <span class="lang-text" data-en="🌊 Coastal" data-bn="🌊 উপকূল">🌊 Coastal</span>
+            </button>
+            <button class="mkt-filter-btn" data-filter="budget">
+                <span class="lang-text" data-en="💸 Budget Picks" data-bn="💸 বাজেট পিকস">💸 Budget Picks</span>
+            </button>
+        </div>
+
+        <div class="marketplace-grid fade-in-up" id="marketplace-grid">
+            <!-- Guide Card 1 -->
+            <div class="guide-card glass" data-tags="hills">
+                <div class="guide-card-img" style="background: linear-gradient(135deg, #1e3a5f, #10b981 120%);">
+                    <div class="guide-card-category-badge">🏔 Hill Trek</div>
+                    <div class="guide-card-premium-stamp lang-text" data-en="Pioneer Verified" data-bn="পায়োনিয়ার ভেরিফাইড">Pioneer Verified</div>
+                    <div class="guide-card-img-text">Sajek</div>
+                </div>
+                <div class="guide-card-body">
+                    <h4 class="lang-text" data-en="The Complete Sajek 3-Day Handbook" data-bn="সম্পূর্ণ সাজেক ৩-দিনের হ্যান্ডবুক">The Complete Sajek 3-Day Handbook</h4>
+                    <p class="guide-card-desc lang-text" data-en="Chander Gari bookings, resort reviews, Konglak sunrise guide, and full offline map download code." data-bn="চাঁদের গাড়ি বুকিং, রিসোর্ট রিভিউ, কংলাক সানরাইজ গাইড এবং সম্পূর্ণ অফলাইন ম্যাপ ডাউনলোড কোড সহ।">Chander Gari bookings, resort reviews, Konglak sunrise guide, and full offline map download code.</p>
+                    <div class="guide-card-meta">
+                        <div class="guide-card-author">
+                            <div class="guide-author-avatar">SR</div>
+                            <div>
+                                <div class="guide-author-name">S. Rana</div>
+                                <div class="guide-author-tier"><i class="fa-solid fa-award"></i> Pioneer</div>
+                            </div>
+                        </div>
+                        <div class="guide-card-stats">
+                            <span><i class="fa-solid fa-star" style="color:#f59e0b;"></i> 4.9</span>
+                            <span><i class="fa-solid fa-download"></i> 1.2k</span>
+                        </div>
+                    </div>
+                    <div class="guide-card-footer">
+                        <div class="guide-card-price">৳ 149</div>
+                        <button class="guide-card-buy-btn open-modal lang-text" data-en="Get Guide" data-bn="গাইড নিন">Get Guide</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guide Card 2 -->
+            <div class="guide-card glass" data-tags="forest">
+                <div class="guide-card-img" style="background: linear-gradient(135deg, #064e3b, #6ee7b7 130%);">
+                    <div class="guide-card-category-badge">🌿 Forest</div>
+                    <div class="guide-card-premium-stamp lang-text" data-en="Expert Verified" data-bn="এক্সপার্ট ভেরিফাইড">Expert Verified</div>
+                    <div class="guide-card-img-text">Sundarbans</div>
+                </div>
+                <div class="guide-card-body">
+                    <h4 class="lang-text" data-en="Sundarbans Safari: Permits, Safety & Wildlife" data-bn="সুন্দরবন সাফারি: অনুমতি, নিরাপত্তা ও বন্যপ্রাণ">Sundarbans Safari: Permits, Safety & Wildlife</h4>
+                    <p class="guide-card-desc lang-text" data-en="Forest permit checklists, vetted boat operators, tiger safety protocol, and offline waterway maps." data-bn="বন বিভাগের অনুমতির চেকলিস্ট, ভেটেড বোট অপারেটর, বাঘ নিরাপত্তা প্রোটোকল এবং অফলাইন জলপথ ম্যাপ সহ।">Forest permit checklists, vetted boat operators, tiger safety protocol, and offline waterway maps.</p>
+                    <div class="guide-card-meta">
+                        <div class="guide-card-author">
+                            <div class="guide-author-avatar">KH</div>
+                            <div>
+                                <div class="guide-author-name">Kabir H.</div>
+                                <div class="guide-author-tier"><i class="fa-solid fa-crown"></i> Region Expert</div>
+                            </div>
+                        </div>
+                        <div class="guide-card-stats">
+                            <span><i class="fa-solid fa-star" style="color:#f59e0b;"></i> 5.0</span>
+                            <span><i class="fa-solid fa-download"></i> 876</span>
+                        </div>
+                    </div>
+                    <div class="guide-card-footer">
+                        <div class="guide-card-price">৳ 199</div>
+                        <button class="guide-card-buy-btn open-modal lang-text" data-en="Get Guide" data-bn="গাইড নিন">Get Guide</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guide Card 3 -->
+            <div class="guide-card glass" data-tags="hills budget">
+                <div class="guide-card-img" style="background: linear-gradient(135deg, #1e1b4b, #818cf8 130%);">
+                    <div class="guide-card-category-badge">🏔 Hill Trek</div>
+                    <div class="guide-card-premium-stamp guide-card-budget-stamp lang-text" data-en="Budget Pick" data-bn="বাজেট পিক">Budget Pick</div>
+                    <div class="guide-card-img-text">Bandarban</div>
+                </div>
+                <div class="guide-card-body">
+                    <h4 class="lang-text" data-en="Bandarban on ৳2,000/day — Backpacker Edition" data-bn="দিনে ২,০০০ টাকায় বান্দরবান — ব্যাকপ্যাকার এডিশন">Bandarban on ৳2,000/day — Backpacker Edition</h4>
+                    <p class="guide-card-desc lang-text" data-en="Nilgiri, Nafakhum, and Boga Lake routes on an ultra-budget, with dorm hostels and local jeep share tips." data-bn="নীলগিরি, নাফাখুম ও বগা লেক রুট অতি-বাজেটে, ডর্ম হোস্টেল ও লোকাল জিপ শেয়ার টিপস সহ।">Nilgiri, Nafakhum, and Boga Lake routes on an ultra-budget, with dorm hostels and local jeep share tips.</p>
+                    <div class="guide-card-meta">
+                        <div class="guide-card-author">
+                            <div class="guide-author-avatar">NA</div>
+                            <div>
+                                <div class="guide-author-name">Nafis A.</div>
+                                <div class="guide-author-tier"><i class="fa-solid fa-award"></i> Pioneer</div>
+                            </div>
+                        </div>
+                        <div class="guide-card-stats">
+                            <span><i class="fa-solid fa-star" style="color:#f59e0b;"></i> 4.8</span>
+                            <span><i class="fa-solid fa-download"></i> 2.1k</span>
+                        </div>
+                    </div>
+                    <div class="guide-card-footer">
+                        <div class="guide-card-price">৳ 79</div>
+                        <button class="guide-card-buy-btn open-modal lang-text" data-en="Get Guide" data-bn="গাইড নিন">Get Guide</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guide Card 4 -->
+            <div class="guide-card glass" data-tags="coastal">
+                <div class="guide-card-img" style="background: linear-gradient(135deg, #0c4a6e, #38bdf8 130%);">
+                    <div class="guide-card-category-badge">🌊 Coastal</div>
+                    <div class="guide-card-premium-stamp lang-text" data-en="Pioneer Verified" data-bn="পায়োনিয়ার ভেরিফাইড">Pioneer Verified</div>
+                    <div class="guide-card-img-text">Cox's Bazar</div>
+                </div>
+                <div class="guide-card-body">
+                    <h4 class="lang-text" data-en="Cox's Bazar Beyond the Beach" data-bn="কক্সবাজার — সমুদ্র সৈকতের ওপারে">Cox's Bazar Beyond the Beach</h4>
+                    <p class="guide-card-desc lang-text" data-en="Inani to Himchori, boat rides to Maheshkhali, and how to avoid tourist traps with local pricing sheets." data-bn="ইনানী থেকে হিমছড়ি, মহেশখালীতে নৌকা ভ্রমণ এবং স্থানীয় মূল্য তালিকা দিয়ে পর্যটক ফাঁদ এড়ানোর উপায়।">Inani to Himchori, boat rides to Maheshkhali, and how to avoid tourist traps with local pricing sheets.</p>
+                    <div class="guide-card-meta">
+                        <div class="guide-card-author">
+                            <div class="guide-author-avatar">RS</div>
+                            <div>
+                                <div class="guide-author-name">Riya S.</div>
+                                <div class="guide-author-tier"><i class="fa-solid fa-award"></i> Pioneer</div>
+                            </div>
+                        </div>
+                        <div class="guide-card-stats">
+                            <span><i class="fa-solid fa-star" style="color:#f59e0b;"></i> 4.7</span>
+                            <span><i class="fa-solid fa-download"></i> 3.4k</span>
+                        </div>
+                    </div>
+                    <div class="guide-card-footer">
+                        <div class="guide-card-price">৳ 129</div>
+                        <button class="guide-card-buy-btn open-modal lang-text" data-en="Get Guide" data-bn="গাইড নিন">Get Guide</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guide Card 5 -->
+            <div class="guide-card glass" data-tags="forest budget">
+                <div class="guide-card-img" style="background: linear-gradient(135deg, #14532d, #bbf7d0 130%);">
+                    <div class="guide-card-category-badge">🌿 Forest</div>
+                    <div class="guide-card-premium-stamp guide-card-budget-stamp lang-text" data-en="Budget Pick" data-bn="বাজেট পিক">Budget Pick</div>
+                    <div class="guide-card-img-text">Sreemangal</div>
+                </div>
+                <div class="guide-card-body">
+                    <h4 class="lang-text" data-en="Sreemangal: Tea Trails & Lawachara Birding" data-bn="শ্রীমঙ্গল: চা বাগান ট্রেইল ও লাউয়াছড়া পাখি দেখা">Sreemangal: Tea Trails & Lawachara Birding</h4>
+                    <p class="guide-card-desc lang-text" data-en="Day-trip itineraries, best CNG routes, Nilkantha 7-layer tea stop, and Lawachara early morning bird walk guide." data-bn="দিনের আইটিনেরারি, সেরা সিএনজি রুট, নীলকণ্ঠ ৭-লেয়ার চায়ের ঠেক এবং লাউয়াছড়ার ভোরবেলার পাখি দেখার গাইড।">Day-trip itineraries, best CNG routes, Nilkantha 7-layer tea stop, and Lawachara early morning bird walk guide.</p>
+                    <div class="guide-card-meta">
+                        <div class="guide-card-author">
+                            <div class="guide-author-avatar">II</div>
+                            <div>
+                                <div class="guide-author-name">Izhaan I.</div>
+                                <div class="guide-author-tier"><i class="fa-solid fa-crown"></i> Region Expert</div>
+                            </div>
+                        </div>
+                        <div class="guide-card-stats">
+                            <span><i class="fa-solid fa-star" style="color:#f59e0b;"></i> 4.9</span>
+                            <span><i class="fa-solid fa-download"></i> 988</span>
+                        </div>
+                    </div>
+                    <div class="guide-card-footer">
+                        <div class="guide-card-price">৳ 99</div>
+                        <button class="guide-card-buy-btn open-modal lang-text" data-en="Get Guide" data-bn="গাইড নিন">Get Guide</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guide Card 6 -->
+            <div class="guide-card glass" data-tags="coastal hills">
+                <div class="guide-card-img" style="background: linear-gradient(135deg, #312e81, #f472b6 130%);">
+                    <div class="guide-card-category-badge">🌅 Mixed</div>
+                    <div class="guide-card-premium-stamp lang-text" data-en="Expert Verified" data-bn="এক্সপার্ট ভেরিফাইড">Expert Verified</div>
+                    <div class="guide-card-img-text">St. Martin</div>
+                </div>
+                <div class="guide-card-body">
+                    <h4 class="lang-text" data-en="Saint Martin Island: The Full Diver's Guide" data-bn="সেন্ট মার্টিন দ্বীপ: সম্পূর্ণ ডাইভার্স গাইড">Saint Martin Island: The Full Diver's Guide</h4>
+                    <p class="guide-card-desc lang-text" data-en="Coral snorkelling maps, ferry schedules from Teknaf, chera dwip hiking, and seasonal weather windows." data-bn="কোরাল স্নোরকেলিং ম্যাপ, টেকনাফ থেকে ফেরির সময়সূচী, চেরা দ্বীপ হাইকিং এবং মৌসুমী আবহাওয়া উইন্ডো।">Coral snorkelling maps, ferry schedules from Teknaf, chera dwip hiking, and seasonal weather windows.</p>
+                    <div class="guide-card-meta">
+                        <div class="guide-card-author">
+                            <div class="guide-author-avatar">KH</div>
+                            <div>
+                                <div class="guide-author-name">Kabir H.</div>
+                                <div class="guide-author-tier"><i class="fa-solid fa-crown"></i> Region Expert</div>
+                            </div>
+                        </div>
+                        <div class="guide-card-stats">
+                            <span><i class="fa-solid fa-star" style="color:#f59e0b;"></i> 4.9</span>
+                            <span><i class="fa-solid fa-download"></i> 1.8k</span>
+                        </div>
+                    </div>
+                    <div class="guide-card-footer">
+                        <div class="guide-card-price">৳ 179</div>
+                        <button class="guide-card-buy-btn open-modal lang-text" data-en="Get Guide" data-bn="গাইড নিন">Get Guide</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="marketplace-cta fade-in-up">
+            <p class="lang-text" data-en="Want to sell your own expert travel guide? Apply for Pioneer or Region Expert tier." data-bn="নিজের ট্রাভেল গাইড বিক্রি করতে চান? পায়োনিয়ার বা রিজিয়ন এক্সপার্ট টায়ারের জন্য আবেদন করুন।">Want to sell your own expert travel guide? Apply for Pioneer or Region Expert tier.</p>
+            <button class="btn-primary open-modal lang-text" data-en="Become a Guide Author" data-bn="গাইড অথর হোন" style="padding:0.8rem 2rem;">Become a Guide Author</button>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="section">
+        <div class="section-header fade-in-up">
+            <span class="section-subtitle lang-text" data-en="Social Proof" data-bn="ইউজার রিভিউ">Social Proof</span>
+            <h2 class="lang-text" data-en="What Explorers Are Saying" data-bn="ট্রাভেলাররা কী বলছেন">What Explorers Are Saying</h2>
+        </div>
+        <div class="features-bento-grid">
+            <div class="testimonial-card glass fade-in-up">
+                <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                <p class="lang-text" data-en="&quot;The budget tracker completely changed how I plan my weekend trips. No more guessing resort fees or fuel costs!&quot;" data-bn="&quot;বাজেট ট্র্যাকারটি আমার উইকেন্ড ট্রিপ প্ল্যানিং একদম সহজ করে দিয়েছে। স্প্যামিং বা মিথ্যা তথ্যের কোনো সুযোগ নেই এখানে।&quot;">"The budget tracker completely changed how I plan my weekend trips. No more guessing resort fees or fuel costs!"</p>
+                <div class="author">- Nafis A. (Backpacker)</div>
+            </div>
+            <div class="testimonial-card glass fade-in-up" style="transition-delay: 0.1s;">
+                <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                <p class="lang-text" data-en="&quot;I love sharing my YouTube vlogs directly with mapped routes in the app. My channel gained real organic views.&quot;" data-bn="&quot;অ্যাপে সরাসরি ভ্লগ শেয়ার করে আমার ইউটিউব চ্যানেলে অনেক রিয়েল ট্রাভেলার অডিয়েন্স পেয়েছি। চমৎকার প্ল্যাটফর্ম!&quot;">"I love sharing my YouTube vlogs directly with mapped routes in the app. My channel gained real organic views."</p>
+                <div class="author">- Riya S. (Content Creator)</div>
+            </div>
+            <div class="testimonial-card glass fade-in-up" style="transition-delay: 0.2s;">
+                <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                <p class="lang-text" data-en="&quot;The offline vector map saved us when we lost cell signal in Bandarban hills. Highly recommended for remote treks.&quot;" data-bn="&quot;বান্দরবানের পাহাড়ে জিপিএস নেটওয়ার্ক না থাকলেও অফলাইন ভল্ট আমাদের সঠিক পথে ফিরতে সাহায্য করেছে। প্রয়োজনীয় অ্যাপ।&quot;">"The offline vector map saved us when we lost cell signal in Bandarban hills. Highly recommended for remote treks."</p>
+                <div class="author">- Kabir H. (Local Guide)</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="section">
+        <div class="section-header fade-in-up">
+            <span class="section-subtitle lang-text" data-en="FAQ" data-bn="প্রশ্নোত্তর">FAQ</span>
+            <h2 class="lang-text" data-en="Frequently Asked Questions" data-bn="সাধারণ জিজ্ঞাসা (FAQ)">Frequently Asked Questions</h2>
+        </div>
+        <div class="faq-container fade-in-up">
+            <div class="faq-item">
+                <div class="faq-question">
+                    <h3 class="lang-text" data-en="How does the Offline Vault work?" data-bn="অфলাইন ভল্ট কীভাবে কাজ করে?">How does the Offline Vault work?</h3>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p class="lang-text" data-en="You can download entire district vector maps, guides, and contact directories while connected to Wi-Fi. The maps use local storage and offline GPS to track your position even without internet coverage." data-bn="ইন্টারনেট থাকা অবস্থায় আপনি পুরো জেলার ম্যাপ এবং গাইড ডাউনলোড করতে পারবেন। এটি সম্পূর্ণ লোকালি স্টোর থাকে তাই অফলাইন জিপিএস দিয়ে পাহাড়েও কাজ করে।">You can download entire district vector maps, guides, and contact directories while connected to Wi-Fi. The maps use local storage and offline GPS to track your position even without internet coverage.</p>
+                </div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question">
+                    <h3 class="lang-text" data-en="Can I really trust the Total Budget estimates?" data-bn="বাজেট অনুমান কি আসলেই নির্ভরযোগ্য?">Can I really trust the Total Budget estimates?</h3>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p class="lang-text" data-en="Yes! Budgets are verified through community Helpful Votes. Only highly rated logs by experienced users (Pioneer and above) are featured on top, and older budgets decay automatically as prices change." data-bn="হ্যাঁ! বাজেটের নির্ভরযোগ্যতা যাচাই করতে ব্যাকপ্যাকারদের ভোট নেওয়া হয়। অভিজ্ঞদের লেখা গাইডগুলো উপরে থাকে এবং সময়ের সাথে সাথে প্রাচীন বাজেটগুলো স্বয়ংক্রিয়ভাবে আপডেট বা রিমুভ করা হয়।">Yes! Budgets are verified through community Helpful Votes. Only highly rated logs by experienced users (Pioneer and above) are featured on top, and older budgets decay automatically as prices change.</p>
+                </div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question">
+                    <h3 class="lang-text" data-en="How do I earn XP and level up my Explorer Tier?" data-bn="আমি কীভাবে এক্সপি (XP) পাবো এবং লেভেল আপ করবো?">How do I earn XP and level up my Explorer Tier?</h3>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <p class="lang-text" data-en="By sharing accurate TripLogs with drawn routes, reporting incorrect pricing, verifying offline safety contacts, and receiving Helpful Votes from other travelers, you earn XP to advance through the tiers." data-bn="আঁকা রুট সহ সঠিক ট্রিপলগ পোস্ট করে, ভুল বাজেট সংশোধন করে, আর্মি/পুলিশ স্টেশন কন্টাক্ট ভেরিফাই করে এবং অন্য ভ্রমণকারীদের কাছ থেকে ভোট পেয়ে আপনি আপনার লেভেল বাড়াতে পারবেন।">By sharing accurate TripLogs with drawn routes, reporting incorrect pricing, verifying offline safety contacts, and receiving Helpful Votes from other travelers, you earn XP to advance through the tiers.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Company Details Section -->
+    <section id="company" class="section">
+        <div class="section-header fade-in-up">
+            <span class="section-subtitle lang-text" data-en="Corporate Governance" data-bn="কর্পোরেট পরিচালনা">Corporate Governance</span>
+            <h2 class="lang-text" data-en="About Bhromon Technologies" data-bn="ভ্রমণ টেকনোলজিস সম্পর্কে">About Bhromon Technologies</h2>
+            <p class="lang-text" data-en="Our mission, corporate profiles, and our commitment to sustainable travel." data-bn="আমাদের লক্ষ্য, প্রধান কর্মকর্তা এবং উন্মুক্ত ট্রাভেল ডাটাবেজের প্রতি আমাদের প্রতিশ্রুতি।">Our mission, corporate profiles, and our commitment to sustainable travel.</p>
+        </div>
+        <div class="features-bento-grid fade-in-up" style="margin-top: 3rem;">
+            <div class="bento-card glass bento-small-1" style="padding: 2.25rem;">
+                <div class="bento-card-icon"><i class="fa-solid fa-building"></i></div>
+                <h3 class="lang-text" data-en="Corporate Profile" data-bn="কর্পোরেট প্রোফাইল">Corporate Profile</h3>
+                <p class="lang-text" data-en="Bhromon is operated by <strong>Bhromon Technologies Ltd.</strong>, a travel-technology company in Dhaka, Bangladesh. We are focused on empowering local communities through open travel data." data-bn="ভ্রমণ পরিচালিত হচ্ছে <strong>ভ্রমণ টেকনোলজিস লিমিটেড</strong>-এর অধীনে, যা ঢাকা, বাংলাদেশে অবস্থিত একটি ট্রাভেল-টেক কোম্পানি। আমরা উন্মুক্ত ট্রাভেল ডেটার মাধ্যমে স্থানীয় পর্যটনকে সমৃদ্ধ করতে কাজ করছি।">Bhromon is operated by <strong>Bhromon Technologies Ltd.</strong>, a travel-technology company in Dhaka, Bangladesh. We are focused on empowering local communities through open travel data.</p>
+            </div>
+            <div class="bento-card glass bento-small-1" style="padding: 2.25rem;">
+                <div class="bento-card-icon"><i class="fa-solid fa-user-tie"></i></div>
+                <h3 class="lang-text" data-en="Key Personnel" data-bn="প্রধান কর্মকর্তা">Key Personnel</h3>
+                <p style="color: var(--color-text-secondary); line-height: 1.8;">
+                    <span class="lang-text" data-en="<strong>CEO & Founder:</strong> M S Rana" data-bn="<strong>সিইও এবং প্রতিষ্ঠাতা:</strong> এম এস রানা"><strong>CEO & Founder:</strong> M S Rana</span><br>
+                    <span class="lang-text" data-en="<strong>CTO:</strong> Izhaan Intellect" data-bn="<strong>সিটিও:</strong> ইজহান ইনটেলেক্ট"><strong>CTO:</strong> Izhaan Intellect</span>
+                </p>
+            </div>
+            <div class="bento-card glass bento-small-1" style="padding: 2.25rem;">
+                <div class="bento-card-icon"><i class="fa-solid fa-bullseye"></i></div>
+                <h3 class="lang-text" data-en="Our Mission" data-bn="আমাদের লক্ষ্য">Our Mission</h3>
+                <p class="lang-text" data-en="To build Bangladesh's most reliable, peer-reviewed travel directory. We aim to remove intermediaries, connect explorers directly with local guides, and provide accurate safety ratings." data-bn="বাংলাদেশের প্রথম পিয়ার-রিভিউড ট্রাভেল ডিরেক্টরি গড়ে তোলা। আমাদের উদ্দেশ্য মধ্যস্বত্বভোগীদের অবসান ঘটিয়ে ট্রাভেলার ও গাইডদের সরাসরি কানেক্ট করা এবং সঠিক নিরাপত্তা রেটিং প্রদান করা।">To build Bangladesh's most reliable, peer-reviewed travel directory. We aim to remove intermediaries, connect explorers directly with local guides, and provide accurate safety ratings.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- App Download Section -->
+    <section class="section download-section fade-in-up">
+        <div class="download-inner glass">
+            <div class="download-content">
+                <img src="images/logo.png" alt="Bhromon Logo" class="download-logo">
+                <h2 class="lang-text" data-en="Bhromon is Coming to Google Play" data-bn="ভ্রমণ আসছে গুগল প্লেতে">Bhromon is Coming to Google Play</h2>
+                <p class="lang-text" data-en="Join thousands of explorers on the waitlist. We'll notify you the moment the Android APK is published." data-bn="হাজারো ট্রাভেলারের সাথে ওয়েটলিস্টে যোগ দিন। নতুন সংস্করণ বা প্লে স্টোর লিংক পাবলিশ হওয়া মাত্রই আপনাকে জানানো হবে।">Join thousands of explorers on the waitlist. We'll notify you the moment the Android APK is published.</p>
+                <div class="download-actions">
+                    <button class="store-btn open-modal">
+                        <i class="fa-brands fa-google-play"></i>
+                        <div>
+                            <small class="lang-text" data-en="Coming Soon on" data-bn="শীঘ্রই আসছে">Coming Soon on</small>
+                            <strong>Google Play</strong>
+                        </div>
+                    </button>
+                    <a href="app-release.apk" download class="btn-primary lang-text" data-en="Download Beta APK" data-bn="বেটা এপিকে ডাউনলোড" style="padding: 1rem 2.25rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">Download Beta APK <i class="fa-solid fa-download"></i></a>
+                </div>
+            </div>
+            <div class="download-preview">
+                <img src="images/hero_mockup.png" alt="App preview" class="download-mockup">
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-col">
+                <h4><img src="images/logo.png" alt="Bhromon Logo"> Bhromon</h4>
+                <p style="color: var(--color-text-secondary); max-width: 300px; margin-bottom: 1rem; font-size: 0.9rem;" class="lang-text" data-en="Bangladesh's First Community Based Travel Directory." data-bn="পথ যেখানে গল্প বলে।">Bangladesh's First Community Based Travel Directory.</p>
+            </div>
+            <div class="footer-col">
+                <h4 class="lang-text" data-en="Explore" data-bn="এক্সপ্লোর">Explore</h4>
+                <a href="#features" class="lang-text" data-en="Features" data-bn="ফিচারস">Features</a>
+                <a href="#interactive-demo" class="lang-text" data-en="Live Map" data-bn="লাইভ ম্যাপ">Live Map</a>
+                <a href="#faq" class="lang-text" data-en="FAQ" data-bn="প্রশ্নোত্তর">FAQ</a>
+                <a href="privacy-policy.html" class="lang-text" data-en="Privacy Policy" data-bn="গোপনীয়তা নীতি">Privacy Policy</a>
+            </div>
+            <div class="footer-col">
+                <h4 class="lang-text" data-en="Contact Us" data-bn="যোগাযোগ">Contact Us</h4>
+                <a href="mailto:info@bhromon.fun"><i class="fa-solid fa-envelope"></i> info@bhromon.fun</a>
+                <a href="mailto:mybhromon@gmail.com"><i class="fa-solid fa-circle-info"></i> mybhromon@gmail.com</a>
+                <a href="https://wa.me/8801762033445" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i> 01762033445</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 Bhromon Technologies Ltd. All rights reserved. Built with pride for Bangladesh.
+        </div>
+    </footer>
+
+    <!-- Cookie Consent Banner -->
+    <div id="cookie-banner" class="cookie-banner glass">
+        <div class="cookie-content">
+            <i class="fa-solid fa-cookie-bite cookie-icon"></i>
+            <p class="lang-text" data-en="We use cookies to improve your travel planning experience on Bhromon." data-bn="আপনার ভ্রমণ পরিকল্পনার অভিজ্ঞতা উন্নত করতে আমরা কুকিজ ব্যবহার করি।">We use cookies to improve your travel planning experience on Bhromon.</p>
+        </div>
+        <button id="accept-cookies-btn" class="btn-primary lang-text" data-en="Accept" data-bn="স্বীকার করুন" style="padding: 0.55rem 1.2rem; font-size: 0.85rem;">Accept</button>
+    </div>
+
+    <script src="js/main.js?v=1.2.2"></script>
+</body>
+</html>

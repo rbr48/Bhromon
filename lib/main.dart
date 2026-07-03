@@ -1,0 +1,357 @@
+import 'dart:async';
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hydrated_bloc/hydrated_bloc.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'core/localization/app_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart';
+import 'app/di/injection.dart';
+import 'app/di/environments.dart';
+import 'core/sync/sync_worker.dart';
+import 'core/utils/app_logger.dart';
+import 'app/router.dart';
+import 'core/theme/theme.dart';
+import 'features/auth/presentation/cubit/auth_cubit.dart';
+import 'features/map/presentation/bloc/map_bloc.dart';
+import 'features/trust/presentation/bloc/trust_bloc.dart';
+import 'features/auth/domain/repositories/i_auth_repository.dart';
+import 'features/auth/data/repositories/mock_offline_auth_repository.dart';
+import 'features/trip_log/domain/repositories/i_trip_log_repository.dart';
+import 'features/trip_log/data/repositories/mock_offline_trip_log_repository.dart';
+import 'features/ota/presentation/cubit/ota_cubit.dart';
+import 'features/ota/presentation/cubit/ota_state.dart';
+import 'features/ota/presentation/widgets/ota_update_dialog.dart';
+import 'features/feed/presentation/bloc/feed_cubit.dart';
+import 'core/security/device_integrity_service.dart';
+import 'core/database/app_database.dart';
+import 'features/notifications/geo_fence_service.dart' show registerGeoFenceWork;
+
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    // Optimize ImageCache to hold up to 300 images & 250MB to prevent constant lazy-loading and jank on feeds
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 250 * 1024 * 1024; // 250 MB
+    PaintingBinding.instance.imageCache.maximumSize = 300; // 300 images
+
+    HydratedBloc.storage = await HydratedStorage.build(
+      storageDirectory: await getApplicationDocumentsDirectory(),
+    );
+
+    // Global Sync/Layout Error Boundaries
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      logError('[GlobalError] Synchronous error caught', details.exception, details.stack);
+      appLogger.handle(details.exception, details.stack);
+    };
+
+    PlatformDispatcher.instance.onError = (error, stack) {
+      logError('[GlobalError] Asynchronous error caught', error, stack);
+      appLogger.handle(error, stack);
+      return true; // Mark as handled to prevent native crash
+    };
+
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: const Color(0xFF121212),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 64),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Application Error',
+                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'An unexpected error occurred in the layout interface. Please restart the application if the issue persists.',
+                    style: TextStyle(color: Colors.white60, fontSize: 14, height: 1.4),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      details.exceptionAsString(),
+                      style: const TextStyle(color: Colors.redAccent, fontFamily: 'monospace', fontSize: 11),
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    };
+    
+    final bool isCompromised = await DeviceIntegrityService.isDeviceCompromised();
+    if (isCompromised) {
+      runApp(const SecurityCompromisedApp());
+      return;
+    }
+    
+    await Hive.initFlutter();
+
+    bool firebaseAvailable = true;
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (e, stack) {
+      firebaseAvailable = false;
+      logWarning('Firebase initialization failed (likely blocked by client adblocker)', e, stack);
+    }
+    
+    if (!firebaseAvailable) {
+      if (kReleaseMode) {
+        // Enforce production dependencies and raise a warning rather than serving dummy mock data
+        configureDependencies(environment: Env.prod);
+        logError('Firebase initialization failed in release build. Proceeding with production environment config.');
+      } else {
+        configureDependencies(environment: Env.offline);
+        // Register offline mock repositories for auth and trip logs in debug/profile builds
+        getIt.registerLazySingleton<IAuthRepository>(
+          () => MockOfflineAuthRepository(getIt<AppDatabase>()),
+        );
+        getIt.registerLazySingleton<ITripLogRepository>(
+          () => MockOfflineTripLogRepository(getIt<AppDatabase>()),
+        );
+      }
+    } else {
+      configureDependencies(environment: Env.prod);
+      
+      // Wire up Firebase Crashlytics error handlers
+      FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+      
+      final originalOnError = FlutterError.onError;
+      FlutterError.onError = (FlutterErrorDetails details) {
+        if (originalOnError != null) originalOnError(details);
+        FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+      };
+
+      PlatformDispatcher.instance.onError = (error, stack) {
+        logError('[GlobalError] Asynchronous error caught', error, stack);
+        appLogger.handle(error, stack);
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true; // Mark as handled to prevent native crash
+      };
+
+      // ── Firebase App Check — blocks non-genuine app instances ──────────
+      try {
+        await FirebaseAppCheck.instance.activate(
+          // Use playIntegrity on Android (requires Play Store-signed build)
+          // Falls back gracefully to debug provider in non-release builds.
+          androidProvider: kReleaseMode
+              ? AndroidProvider.playIntegrity
+              : AndroidProvider.debug,
+          appleProvider: kReleaseMode
+              ? AppleProvider.deviceCheck
+              : AppleProvider.debug,
+        );
+        logInfo('[AppCheck] Firebase App Check activated successfully');
+      } catch (e, stack) {
+        logWarning('[AppCheck] Failed to activate App Check', e, stack);
+      }
+
+      // ── Firestore offline persistence (one-time setting) ─────────────────
+      // Allows Firestore streams to serve from local cache when offline.
+      try {
+        FirebaseFirestore.instance.settings = const Settings(
+          persistenceEnabled: true,
+          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+        );
+        logInfo('[Firestore] Offline persistence enabled');
+      } catch (e, stack) {
+        logWarning('[Firestore] Could not enable offline persistence', e, stack);
+      }
+
+      try {
+        // SyncWorker.initialize() calls Workmanager().initialize() internally
+        // with the single unified callbackDispatcher that handles both sync
+        // and geo-fence tasks.
+        SyncWorker.initialize();
+        SyncWorker.registerPeriodicSync();
+        await registerGeoFenceWork();
+      } catch (e, stack) {
+        logWarning('[SyncWorker] Failed to initialize background sync', e, stack);
+      }
+    }
+
+    runApp(const MyApp());
+  }, (error, stack) {
+    logError('[GlobalError] Asynchronous error caught in runZonedGuarded zone', error, stack);
+    appLogger.handle(error, stack);
+    try {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    } catch (_) {}
+  });
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<AuthCubit>(
+          create: (context) => getIt<AuthCubit>()..checkAuthStatus(),
+        ),
+        BlocProvider<MapBloc>(
+          create: (context) => getIt<MapBloc>(),
+        ),
+        BlocProvider<TrustBloc>(
+          create: (context) => getIt<TrustBloc>(),
+        ),
+        BlocProvider<OtaCubit>(
+          create: (context) => getIt<OtaCubit>()..triggerCheck(),
+        ),
+        BlocProvider<FeedCubit>(
+          create: (context) => getIt<FeedCubit>(),
+        ),
+      ],
+      child: MaterialApp.router(
+        title: 'Bhromon',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.dark,
+        routerConfig: AppRouter.router,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('bn', ''),
+          Locale('en', ''),
+        ],
+        locale: const Locale('bn', ''), // Default to Bengali
+        builder: (context, child) {
+          return OtaListenerWrapper(child: child ?? const SizedBox());
+        },
+      ),
+    );
+  }
+}
+
+class OtaListenerWrapper extends StatefulWidget {
+  final Widget child;
+  const OtaListenerWrapper({super.key, required this.child});
+
+  @override
+  State<OtaListenerWrapper> createState() => _OtaListenerWrapperState();
+}
+
+class _OtaListenerWrapperState extends State<OtaListenerWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final state = context.read<OtaCubit>().state;
+      if (state is OtaUpdateAvailable) {
+        _showUpdateDialog(state);
+      }
+    });
+  }
+
+  void _showUpdateDialog(OtaUpdateAvailable state) {
+    final navContext = AppRouter.navigatorKey.currentContext;
+    if (navContext != null) {
+      showDialog<void>(
+        context: navContext,
+        barrierDismissible: !state.info.isMandatory,
+        builder: (context) => const OtaUpdateDialog(),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<OtaCubit, OtaState>(
+      listenWhen: (previous, current) =>
+          previous is! OtaUpdateAvailable && current is OtaUpdateAvailable,
+      listener: (context, state) {
+        if (state is OtaUpdateAvailable) {
+          _showUpdateDialog(state);
+        }
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class SecurityCompromisedApp extends StatelessWidget {
+  const SecurityCompromisedApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: Color(0xFF121212),
+        body: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.security_update_warning_rounded,
+                  color: Colors.redAccent,
+                  size: 80,
+                ),
+                SizedBox(height: 24),
+                Text(
+                  'Security Violation',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Bhromon cannot run on rooted or jailbroken devices because it processes secure transactions and user data. Please use a secure, non-compromised device to continue.',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

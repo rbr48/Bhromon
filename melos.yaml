@@ -1,0 +1,38 @@
+name: bhromon_workspace
+
+packages:
+  - .
+  - packages/**
+
+scripts:
+  analyze:
+    run: flutter analyze .
+    description: Run static analysis for the whole workspace.
+
+  test:
+    run: flutter test --coverage
+    description: Run all Flutter unit tests with coverage.
+
+  build:
+    run: flutter build appbundle --release --obfuscate --split-debug-info=build/debug-info
+    description: Build production release Android app bundle.
+
+  build_runner:
+    run: flutter pub run build_runner build --delete-conflicting-outputs
+    description: Run code generation.
+
+  clean:
+    run: flutter clean
+    description: Clean build cache.
+
+  functions_build:
+    run: cd functions && npm run build
+    description: Compile Cloud Functions TypeScript code.
+
+  functions_test:
+    run: cd functions && npm test
+    description: Run Cloud Functions unit tests.
+
+  check_all:
+    run: melos run analyze && melos run test && melos run functions_build && melos run functions_test
+    description: Run all static analysis, Flutter tests, and functions tests/compilation.
