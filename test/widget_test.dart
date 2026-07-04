@@ -34,7 +34,8 @@ class FakeAuthRepository implements IAuthRepository {
   }
 
   @override
-  Future<Either<Failure, ExplorerProfile>> updateProfile(ExplorerProfile profile) async {
+  Future<Either<Failure, ExplorerProfile>> updateProfile(
+      ExplorerProfile profile) async {
     throw UnimplementedError();
   }
 

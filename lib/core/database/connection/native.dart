@@ -10,7 +10,7 @@ QueryExecutor openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'bhromon_drift.db'));
-    
+
     // Retrieve or generate a secure database key from secure storage
     const secureStorage = FlutterSecureStorage();
     const keyName = 'drift_encryption_key';

@@ -203,11 +203,13 @@ describe('Push Notifications Cloud Functions', () => {
           title: 'New message from John Doe',
           body: 'Are we still going to Sajek tomorrow?',
         },
-        data: {
+        // data gained chatId/messageType when chat deep-links were added
+        data: expect.objectContaining({
           action: 'chat',
           uid: 'sender_789',
           itemId: 'chat_123',
-        },
+          chatId: 'chat_123',
+        }),
       }));
     });
   });

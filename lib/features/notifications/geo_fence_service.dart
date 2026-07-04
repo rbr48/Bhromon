@@ -50,15 +50,13 @@ Future<void> _checkGeoFences() async {
       final lng = (data['lng'] as num?)?.toDouble();
       if (lat == null || lng == null) continue;
 
-      final dist = Geolocator.distanceBetween(
-          pos.latitude, pos.longitude, lat, lng);
+      final dist =
+          Geolocator.distanceBetween(pos.latitude, pos.longitude, lat, lng);
 
       if (dist < 5000) {
         // Within 5km — would normally send FCM notification via Cloud Function
         // Here we just log it; actual notification is sent by Cloud Function
-        await FirebaseFirestore.instance
-            .collection('geo_fence_triggers')
-            .add({
+        await FirebaseFirestore.instance.collection('geo_fence_triggers').add({
           'pinId': doc.id,
           'pinName': data['name'] ?? 'Unknown',
           'distanceM': dist.toInt(),
@@ -94,8 +92,7 @@ class GeoFenceNotificationBanner extends StatefulWidget {
       _GeoFenceNotificationBannerState();
 }
 
-class _GeoFenceNotificationBannerState
-    extends State<GeoFenceNotificationBanner>
+class _GeoFenceNotificationBannerState extends State<GeoFenceNotificationBanner>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<Offset> _slide;
@@ -135,7 +132,7 @@ class _GeoFenceNotificationBannerState
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                  color: AppColors.mintGreen.withOpacity(0.3),
+                  color: AppColors.mintGreen.withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4))
             ],
@@ -146,7 +143,7 @@ class _GeoFenceNotificationBannerState
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.mintGreen.withOpacity(0.2),
+                  color: AppColors.mintGreen.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.location_on,
@@ -166,8 +163,8 @@ class _GeoFenceNotificationBannerState
                     ),
                     Text(
                       'Tap to explore  •  ${widget.district}',
-                      style: const TextStyle(
-                          color: Colors.white60, fontSize: 11),
+                      style:
+                          const TextStyle(color: Colors.white60, fontSize: 11),
                     ),
                   ],
                 ),

@@ -11,9 +11,9 @@ enum FlagType {
   safety;
 
   String get displayName => switch (this) {
-    FlagType.outdated => 'Outdated Info',
-    FlagType.inaccurate => 'Inaccurate',
-    FlagType.spam => 'Spam',
-    FlagType.safety => 'Safety Hazard',
-  };
+        FlagType.outdated => 'Outdated Info',
+        FlagType.inaccurate => 'Inaccurate',
+        FlagType.spam => 'Spam',
+        FlagType.safety => 'Safety Hazard',
+      };
 }

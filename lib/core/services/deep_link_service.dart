@@ -22,7 +22,8 @@ class DeepLinkService {
         '${pin.description != null ? '${pin.description!.substring(0, pin.description!.length.clamp(0, 100))}...\n' : ''}'
         '\n$url\n\n'
         'Download Bhromon: $_baseUrl/downloads/bhromon-latest.apk';
-    await Share.share(message, subject: 'Explore ${pin.name} on Bhromon');
+    await SharePlus.instance.share(
+        ShareParams(text: message, subject: 'Explore ${pin.name} on Bhromon'));
   }
 
   /// Share a trip log
@@ -36,7 +37,7 @@ class DeepLinkService {
     final message = '📖 Travel Log: "$title"\n'
         '📍 $pinName, $district\n\n'
         'Read it on Bhromon: $url';
-    await Share.share(message, subject: title);
+    await SharePlus.instance.share(ShareParams(text: message, subject: title));
   }
 
   /// Parse a deep link and extract pin ID

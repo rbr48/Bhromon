@@ -29,24 +29,30 @@ class PremiumGuidePurchaseScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Icon(Icons.payment_outlined, size: 64, color: AppColors.mintGreen),
+            const Icon(Icons.payment_outlined,
+                size: 64, color: AppColors.mintGreen),
             const SizedBox(height: 24),
             const Text(
               'Purchase Guide Access',
-              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             const Text(
               'Curated expert guides are compensated directly. Pay safely using mobile banking APIs (bKash/Nagad) to unlock permanent offline cache.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+              style:
+                  TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
             ),
             const SizedBox(height: 40),
             ElevatedButton(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Successfully purchased premium guide access!'),
+                    content:
+                        Text('Successfully purchased premium guide access!'),
                     backgroundColor: AppColors.mintGreen,
                   ),
                 );
@@ -56,7 +62,8 @@ class PremiumGuidePurchaseScreen extends StatelessWidget {
                 backgroundColor: AppColors.mintGreen,
                 foregroundColor: Colors.black,
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
               child: const Text('Pay with bKash / Nagad'),
             ),

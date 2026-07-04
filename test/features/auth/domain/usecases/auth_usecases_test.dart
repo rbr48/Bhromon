@@ -123,7 +123,8 @@ void main() {
 
     setUp(() => useCase = SignInGoogleUseCase(mockRepo));
 
-    test('happy path: returns Right(ExplorerProfile) when Google sign-in succeeds',
+    test(
+        'happy path: returns Right(ExplorerProfile) when Google sign-in succeeds',
         () async {
       when(mockRepo.signInWithGoogle())
           .thenAnswer((_) async => Right(tProfile));
@@ -156,8 +157,7 @@ void main() {
     setUp(() => useCase = SignOutUseCase(mockRepo));
 
     test('happy path: returns Right(unit) when sign-out succeeds', () async {
-      when(mockRepo.signOut())
-          .thenAnswer((_) async => const Right(unit));
+      when(mockRepo.signOut()).thenAnswer((_) async => const Right(unit));
 
       final result = await useCase();
 
@@ -198,8 +198,7 @@ void main() {
       verifyNoMoreInteractions(mockRepo);
     });
 
-    test('happy path: returns Right(null) when no user is signed in',
-        () async {
+    test('happy path: returns Right(null) when no user is signed in', () async {
       when(mockRepo.getCurrentProfile())
           .thenAnswer((_) async => const Right(null));
 
@@ -241,8 +240,7 @@ void main() {
       verifyNoMoreInteractions(mockRepo);
     });
 
-    test('failure path: returns Left(AuthFailure) when update fails',
-        () async {
+    test('failure path: returns Left(AuthFailure) when update fails', () async {
       when(mockRepo.updateProfile(tProfile))
           .thenAnswer((_) async => const Left(tAuthFailure));
 

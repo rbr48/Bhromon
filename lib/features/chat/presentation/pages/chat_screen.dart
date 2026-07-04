@@ -54,8 +54,8 @@ class _ChatScreenState extends State<ChatScreen> {
   // ── Pagination state ────────────────────────────────────────────────────────
   static const int _pageSize = 30;
   DocumentSnapshot? _oldestLoadedDoc; // cursor for the next page
-  bool _hasMoreMessages = true;       // false once all pages loaded
-  bool _isLoadingMore = false;        // prevents duplicate fetches
+  bool _hasMoreMessages = true; // false once all pages loaded
+  bool _isLoadingMore = false; // prevents duplicate fetches
   final List<QueryDocumentSnapshot> _allMessages = [];
   StreamSubscription<QuerySnapshot>? _messagesSub;
 
@@ -76,7 +76,9 @@ class _ChatScreenState extends State<ChatScreen> {
       await trace.start();
       // Stop the trace after first messages arrive or 30s timeout — whichever is first
       Future.delayed(const Duration(seconds: 30), () async {
-        try { await trace.stop(); } catch (_) {}
+        try {
+          await trace.stop();
+        } catch (_) {}
       });
     } catch (_) {}
   }
@@ -181,10 +183,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _checkBlockStatus() async {
     final authState = context.read<AuthCubit>().state;
-    final currentUid = authState is Authenticated ? authState.profile.uid : 'explorer_user';
+    final currentUid =
+        authState is Authenticated ? authState.profile.uid : 'explorer_user';
     final resolvedOtherUid = _resolveOtherUid(currentUid);
-    
-    if (currentUid.isNotEmpty && resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
+
+    if (currentUid.isNotEmpty &&
+        resolvedOtherUid != null &&
+        resolvedOtherUid.isNotEmpty) {
       try {
         final blockedOtherDoc = await FirebaseFirestore.instance
             .collection('explorer_profiles')
@@ -192,14 +197,14 @@ class _ChatScreenState extends State<ChatScreen> {
             .collection('blocked_users')
             .doc(resolvedOtherUid)
             .get();
-            
+
         final blockedByOtherDoc = await FirebaseFirestore.instance
             .collection('explorer_profiles')
             .doc(resolvedOtherUid)
             .collection('blocked_users')
             .doc(currentUid)
             .get();
-            
+
         if (mounted) {
           setState(() {
             _isBlocked = blockedOtherDoc.exists || blockedByOtherDoc.exists;
@@ -273,7 +278,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'type': 'text',
       'text': text,
       'seen': false,
-      'status': 'sent',     // delivery states: sent → delivered → read
+      'status': 'sent', // delivery states: sent → delivered → read
       'timestamp': FieldValue.serverTimestamp(),
     });
 
@@ -282,12 +287,15 @@ class _ChatScreenState extends State<ChatScreen> {
     // Update chat meta
     final chatRef =
         FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-    batch.set(chatRef, {
-      'lastMessage': text,
-      'lastMessageTime': FieldValue.serverTimestamp(),
-      'participants':
-          FieldValue.arrayUnion([currentUid, resolvedOtherUid ?? 'guest']),
-    }, SetOptions(merge: true));
+    batch.set(
+        chatRef,
+        {
+          'lastMessage': text,
+          'lastMessageTime': FieldValue.serverTimestamp(),
+          'participants':
+              FieldValue.arrayUnion([currentUid, resolvedOtherUid ?? 'guest']),
+        },
+        SetOptions(merge: true));
 
     // Write in-app notification for the recipient
     if (resolvedOtherUid != null &&
@@ -344,7 +352,10 @@ class _ChatScreenState extends State<ChatScreen> {
       'timestamp': FieldValue.serverTimestamp(),
     });
 
-    await FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({
+    await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .set({
       'lastMessage': responseText,
       'lastMessageTime': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
@@ -361,7 +372,9 @@ class _ChatScreenState extends State<ChatScreen> {
     if (query.contains('cox') || query.contains('beach')) {
       return "Cox's Bazar Beach is the world's longest natural sandy beach (120km). Make sure to visit Himchari waterfalls and take a drive on the Marine Drive!";
     }
-    if (query.contains('st. martin') || query.contains('martin') || query.contains('coral')) {
+    if (query.contains('st. martin') ||
+        query.contains('martin') ||
+        query.contains('coral')) {
       return "St. Martin's Island is the only coral island in Bangladesh. Take a ferry from Teknaf, visit Chera Dwip, and enjoy fresh coconut water.";
     }
     if (query.contains('jaflong')) {
@@ -376,7 +389,9 @@ class _ChatScreenState extends State<ChatScreen> {
     if (query.contains('lalbagh') || query.contains('fort')) {
       return "Lalbagh Fort is an incomplete 17th-century Mughal fort complex that stands as a majestic monument of history in Old Dhaka.";
     }
-    if (query.contains('ahsan') || query.contains('palace') || query.contains('manzil')) {
+    if (query.contains('ahsan') ||
+        query.contains('palace') ||
+        query.contains('manzil')) {
       return "Ahsan Manzil (the Pink Palace) was formerly the official residential palace of the Nawab of Dhaka, sitting on the Buriganga River.";
     }
     if (query.contains('kuakata')) {
@@ -397,7 +412,9 @@ class _ChatScreenState extends State<ChatScreen> {
     if (query.contains('paharpur') || query.contains('monastery')) {
       return "Somapura Mahavihara (Paharpur) is a UNESCO World Heritage site and one of the most famous Buddhist monasteries in South Asia.";
     }
-    if (query.contains('sixty') || query.contains('dome') || query.contains('mosque')) {
+    if (query.contains('sixty') ||
+        query.contains('dome') ||
+        query.contains('mosque')) {
       return "Sixty Dome Mosque is a UNESCO World Heritage site and a historic Mughal-era mosque located in Bagerhat, built by Khan Jahan Ali.";
     }
     if (query.contains('bisnakandi')) {
@@ -409,7 +426,11 @@ class _ChatScreenState extends State<ChatScreen> {
     if (query.contains('weather')) {
       return "I can fetch current weather and forecasts for you! Let me know which spot you are visiting (e.g. Sajek weather or Cox's Bazar weather).";
     }
-    if (query.contains('hello') || query.contains('hi') || query.contains('hey') || query.contains('help') || query.contains('guide')) {
+    if (query.contains('hello') ||
+        query.contains('hi') ||
+        query.contains('hey') ||
+        query.contains('help') ||
+        query.contains('guide')) {
       return "Hello traveler! I am your Bhromon AI Travel Guide. Ask me about travel spots in Bangladesh (like Sajek, Cox's Bazar, St. Martin's, Sylhet, Sundarbans, or Lalbagh Fort)!";
     }
 
@@ -472,8 +493,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
       uploadTask.snapshotEvents.listen((snap) {
         if (!mounted) return;
-        final progress = snap.bytesTransferred /
-            (snap.totalBytes > 0 ? snap.totalBytes : 1);
+        final progress =
+            snap.bytesTransferred / (snap.totalBytes > 0 ? snap.totalBytes : 1);
         setState(() => pending.progress = progress);
       });
 
@@ -496,19 +517,22 @@ class _ChatScreenState extends State<ChatScreen> {
         'text': '',
         'mediaUrl': downloadUrl,
         'seen': false,
-        'status': 'sent',     // delivery states: sent → delivered → read
+        'status': 'sent', // delivery states: sent → delivered → read
         'timestamp': FieldValue.serverTimestamp(),
       });
 
       final lastMsg = type == 'image' ? '📷 Photo' : '🎬 Video';
       final chatRef =
           FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-      batch.set(chatRef, {
-        'lastMessage': lastMsg,
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'participants':
-            FieldValue.arrayUnion([currentUid, resolvedOtherUid ?? 'guest']),
-      }, SetOptions(merge: true));
+      batch.set(
+          chatRef,
+          {
+            'lastMessage': lastMsg,
+            'lastMessageTime': FieldValue.serverTimestamp(),
+            'participants': FieldValue.arrayUnion(
+                [currentUid, resolvedOtherUid ?? 'guest']),
+          },
+          SetOptions(merge: true));
 
       if (resolvedOtherUid != null &&
           resolvedOtherUid != 'guest' &&
@@ -540,7 +564,9 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } finally {
       // Stop the performance trace
-      try { await uploadTrace?.stop(); } catch (_) {}
+      try {
+        await uploadTrace?.stop();
+      } catch (_) {}
       if (mounted) {
         setState(() => _pendingUploads.removeWhere((p) => p.id == uploadId));
       }
@@ -548,8 +574,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Opens the media picker bottom sheet and starts an upload if the user picks media.
-  Future<void> _openMediaPicker(
-      String currentUid, String currentName) async {
+  Future<void> _openMediaPicker(String currentUid, String currentName) async {
     final result = await showChatMediaPicker(context);
     if (result == null || !mounted) return;
     await _sendMediaMessage(result.file, result.type, currentUid, currentName);
@@ -609,7 +634,11 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1F2C34),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Message?', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text('Delete Message?',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
         content: const Text(
           'Do you want to delete this message?',
           style: TextStyle(color: Colors.white70, fontSize: 13),
@@ -617,7 +646,8 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('CANCEL', style: TextStyle(color: Color(0xFF00A884))),
+            child: const Text('CANCEL',
+                style: TextStyle(color: Color(0xFF00A884))),
           ),
           TextButton(
             onPressed: () async {
@@ -638,7 +668,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 debugPrint('Error deleting for me: $e');
               }
             },
-            child: const Text('DELETE FOR ME', style: TextStyle(color: Colors.redAccent)),
+            child: const Text('DELETE FOR ME',
+                style: TextStyle(color: Colors.redAccent)),
           ),
           if (isMe)
             TextButton(
@@ -658,7 +689,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   debugPrint('Error deleting for everyone: $e');
                 }
               },
-              child: const Text('DELETE FOR EVERYONE', style: TextStyle(color: Colors.redAccent)),
+              child: const Text('DELETE FOR EVERYONE',
+                  style: TextStyle(color: Colors.redAccent)),
             ),
         ],
       ),
@@ -668,8 +700,10 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
-    final currentUid = authState is Authenticated ? authState.profile.uid : 'explorer_user';
-    final currentName = authState is Authenticated ? authState.profile.displayName : 'Explorer';
+    final currentUid =
+        authState is Authenticated ? authState.profile.uid : 'explorer_user';
+    final currentName =
+        authState is Authenticated ? authState.profile.displayName : 'Explorer';
     final resolvedOtherUid = _resolveOtherUid(currentUid) ?? 'guest';
 
     // ── Stream: Retrieve profile of the other explorer ──
@@ -684,12 +718,20 @@ class _ChatScreenState extends State<ChatScreen> {
         final profileData = profileSnap.data?.data() as Map<String, dynamic>?;
         final String otherName = resolvedOtherUid == 'bhromon_ai_advisor'
             ? 'Bhromon AI Guide'
-            : (profileData?['displayName'] as String? ?? 'Traveler ${resolvedOtherUid.substring(0, math.min(resolvedOtherUid.length, 6))}');
-        final String? avatarUrl = resolvedOtherUid == 'bhromon_ai_advisor' ? null : (profileData?['avatarUrl'] as String?);
-        final initials = resolvedOtherUid == 'bhromon_ai_advisor' ? 'AI' : (otherName.length > 2 ? otherName.substring(0, 2).toUpperCase() : 'TR');
+            : (profileData?['displayName'] as String? ??
+                'Traveler ${resolvedOtherUid.substring(0, math.min(resolvedOtherUid.length, 6))}');
+        final String? avatarUrl = resolvedOtherUid == 'bhromon_ai_advisor'
+            ? null
+            : (profileData?['avatarUrl'] as String?);
+        final initials = resolvedOtherUid == 'bhromon_ai_advisor'
+            ? 'AI'
+            : (otherName.length > 2
+                ? otherName.substring(0, 2).toUpperCase()
+                : 'TR');
 
         return Scaffold(
-          backgroundColor: const Color(0xFF0B141A), // WhatsApp wallpaper base color
+          backgroundColor:
+              const Color(0xFF0B141A), // WhatsApp wallpaper base color
           appBar: AppBar(
             backgroundColor: const Color(0xFF1F2C34), // WhatsApp slate dark
             elevation: 1.5,
@@ -710,7 +752,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       ? NetworkImage(avatarUrl)
                       : null,
                   child: (avatarUrl == null || avatarUrl.isEmpty)
-                      ? Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))
+                      ? Text(initials,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11))
                       : null,
                 ),
               ],
@@ -731,16 +777,23 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(height: 2),
                 // Typing / Online status stream
                 StreamBuilder<DocumentSnapshot>(
-                  stream: FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),
+                  stream: FirebaseFirestore.instance
+                      .collection('chats')
+                      .doc(widget.chatId)
+                      .snapshots(),
                   builder: (context, chatSnap) {
                     final data = chatSnap.data?.data() as Map<String, dynamic>?;
-                    final bool isOtherTyping = (data?['typing_$resolvedOtherUid'] as bool?) ?? false;
+                    final bool isOtherTyping =
+                        (data?['typing_$resolvedOtherUid'] as bool?) ?? false;
                     return Text(
                       isOtherTyping ? 'typing...' : 'online',
                       style: TextStyle(
-                        color: isOtherTyping ? const Color(0xFF00A884) : Colors.white54,
+                        color: isOtherTyping
+                            ? const Color(0xFF00A884)
+                            : Colors.white54,
                         fontSize: 10,
-                        fontWeight: isOtherTyping ? FontWeight.bold : FontWeight.normal,
+                        fontWeight:
+                            isOtherTyping ? FontWeight.bold : FontWeight.normal,
                       ),
                     );
                   },
@@ -749,7 +802,8 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.more_vert, color: Colors.white, size: 20),
+                icon:
+                    const Icon(Icons.more_vert, color: Colors.white, size: 20),
                 onPressed: () {},
               ),
             ],
@@ -797,8 +851,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             (_isLoadingMore ? 1 : 0),
                         itemBuilder: (context, index) {
                           // ── Loading more indicator at the bottom ────────
-                          if (index ==
-                              docs.length + _pendingUploads.length) {
+                          if (index == docs.length + _pendingUploads.length) {
                             return const Padding(
                               padding: EdgeInsets.symmetric(vertical: 16),
                               child: Center(
@@ -839,24 +892,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
                           // ── Real Firestore messages ─────────────────────
                           final realIndex = index - _pendingUploads.length;
-                          final data = docs[realIndex].data()
-                              as Map<String, dynamic>;
+                          final data =
+                              docs[realIndex].data() as Map<String, dynamic>;
                           final String msgType =
                               (data['type'] as String?) ?? 'text';
-                          final String text =
-                              (data['text'] as String?) ?? '';
+                          final String text = (data['text'] as String?) ?? '';
                           final String mediaUrl =
                               (data['mediaUrl'] as String?) ?? '';
                           final senderId = data['senderId'] ?? '';
                           final isMe = senderId == currentUid;
-                          final bool seen =
-                              data['seen'] as bool? ?? false;
+                          final bool seen = data['seen'] as bool? ?? false;
                           // Delivery status: 'sent' | 'delivered' | 'read'
-                          final String status =
-                              (data['status'] as String?) ??
-                                  (seen ? 'read' : 'sent');
-                          final timestamp =
-                              data['timestamp'] as Timestamp?;
+                          final String status = (data['status'] as String?) ??
+                              (seen ? 'read' : 'sent');
+                          final timestamp = data['timestamp'] as Timestamp?;
 
                           // Locale-aware time string
                           String timeStr = '';
@@ -874,8 +923,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           Widget deliveryIcon() {
                             if (status == 'read' || seen) {
                               return const Icon(Icons.done_all,
-                                  size: 13,
-                                  color: Color(0xFF53BDEB)); // blue
+                                  size: 13, color: Color(0xFF53BDEB)); // blue
                             } else if (status == 'delivered') {
                               return const Icon(Icons.done_all,
                                   size: 13, color: Colors.white30); // grey
@@ -905,7 +953,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                     right: isMe ? 0 : 48,
                                   ),
                                   child: GestureDetector(
-                                    onLongPress: () => _showDeleteMessageDialog(docs[realIndex], isMe),
+                                    onLongPress: () => _showDeleteMessageDialog(
+                                        docs[realIndex], isMe),
                                     child: Column(
                                       crossAxisAlignment: isMe
                                           ? CrossAxisAlignment.end
@@ -962,22 +1011,20 @@ class _ChatScreenState extends State<ChatScreen> {
                                   margin: const EdgeInsets.only(
                                       bottom: 8, left: 48),
                                   child: GestureDetector(
-                                    onLongPress: () => _showDeleteMessageDialog(docs[realIndex], true),
+                                    onLongPress: () => _showDeleteMessageDialog(
+                                        docs[realIndex], true),
                                     child: PhysicalShape(
                                       clipper: SenderBubbleClipper(),
                                       color: const Color(0xFF005C4B),
                                       elevation: 1,
                                       child: Padding(
-                                        padding:
-                                            const EdgeInsets.fromLTRB(
-                                                10, 6, 16, 6),
+                                        padding: const EdgeInsets.fromLTRB(
+                                            10, 6, 16, 6),
                                         child: Stack(
                                           children: [
                                             Padding(
-                                              padding:
-                                                  const EdgeInsets.only(
-                                                      bottom: 12,
-                                                      right: 46),
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 12, right: 46),
                                               child: Text(
                                                 text,
                                                 style: const TextStyle(
@@ -989,8 +1036,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                               bottom: 0,
                                               right: 0,
                                               child: Row(
-                                                mainAxisSize:
-                                                    MainAxisSize.min,
+                                                mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Text(
                                                     timeStr,
@@ -1020,22 +1066,20 @@ class _ChatScreenState extends State<ChatScreen> {
                                   margin: const EdgeInsets.only(
                                       bottom: 8, right: 48),
                                   child: GestureDetector(
-                                    onLongPress: () => _showDeleteMessageDialog(docs[realIndex], false),
+                                    onLongPress: () => _showDeleteMessageDialog(
+                                        docs[realIndex], false),
                                     child: PhysicalShape(
                                       clipper: ReceiverBubbleClipper(),
                                       color: const Color(0xFF202C33),
                                       elevation: 1,
                                       child: Padding(
-                                        padding:
-                                            const EdgeInsets.fromLTRB(
-                                                16, 6, 10, 6),
+                                        padding: const EdgeInsets.fromLTRB(
+                                            16, 6, 10, 6),
                                         child: Stack(
                                           children: [
                                             Padding(
-                                              padding:
-                                                  const EdgeInsets.only(
-                                                      bottom: 12,
-                                                      right: 38),
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 12, right: 38),
                                               child: Text(
                                                 text,
                                                 style: const TextStyle(
@@ -1068,20 +1112,24 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
 
-                
                 // Typing indicator message overlay
                 StreamBuilder<DocumentSnapshot>(
-                  stream: FirebaseFirestore.instance.collection('chats').doc(widget.chatId).snapshots(),
+                  stream: FirebaseFirestore.instance
+                      .collection('chats')
+                      .doc(widget.chatId)
+                      .snapshots(),
                   builder: (context, chatSnap) {
                     final data = chatSnap.data?.data() as Map<String, dynamic>?;
-                    final bool isOtherTyping = (data?['typing_$resolvedOtherUid'] as bool?) ?? false;
-                    
+                    final bool isOtherTyping =
+                        (data?['typing_$resolvedOtherUid'] as bool?) ?? false;
+
                     if (isOtherTyping) {
                       return Align(
                         alignment: Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.only(left: 20, bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
                             color: const Color(0xFF202C33),
                             borderRadius: BorderRadius.circular(10),
@@ -1108,8 +1156,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     : _isBlocked
                         ? Container(
                             width: double.infinity,
-                            padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
-                            color: Colors.redAccent.withOpacity(0.08),
+                            padding: EdgeInsets.fromLTRB(16, 16, 16,
+                                16 + MediaQuery.of(context).padding.bottom),
+                            color: Colors.redAccent.withValues(alpha: 0.08),
                             child: const Center(
                               child: Text(
                                 'Messaging is disabled because one of you has blocked the other.',
@@ -1122,7 +1171,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             ),
                           )
                         : Container(
-                            padding: EdgeInsets.fromLTRB(8, 6, 8, 8 + MediaQuery.of(context).padding.bottom),
+                            padding: EdgeInsets.fromLTRB(8, 6, 8,
+                                8 + MediaQuery.of(context).padding.bottom),
                             color: Colors.transparent, // Floating look
                             child: Row(
                               children: [
@@ -1133,7 +1183,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                       color: const Color(0xFF202C33),
                                       borderRadius: BorderRadius.circular(24),
                                     ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
                                     child: Row(
                                       children: [
                                         Semantics(
@@ -1144,7 +1195,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                             height: 48,
                                             child: IconButton(
                                               icon: const Icon(
-                                                  Icons.sentiment_satisfied_alt_outlined,
+                                                  Icons
+                                                      .sentiment_satisfied_alt_outlined,
                                                   color: Color(0xFF8696A0)),
                                               onPressed: () {},
                                             ),
@@ -1156,10 +1208,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                             style: const TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 14),
-                                            decoration:
-                                                InputDecoration(
-                                              hintText: context.l10n
-                                                  .translate('chat_message_placeholder'),
+                                            decoration: InputDecoration(
+                                              hintText: context.l10n.translate(
+                                                  'chat_message_placeholder'),
                                               hintStyle: const TextStyle(
                                                   color: Color(0xFF8696A0),
                                                   fontSize: 14),
@@ -1182,9 +1233,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                               icon: const Icon(
                                                   Icons.attach_file,
                                                   color: Color(0xFF8696A0)),
-                                              onPressed: () =>
-                                                  _openMediaPicker(
-                                                      currentUid, currentName),
+                                              onPressed: () => _openMediaPicker(
+                                                  currentUid, currentName),
                                             ),
                                           ),
                                         ),
@@ -1198,9 +1248,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                               icon: const Icon(
                                                   Icons.camera_alt_outlined,
                                                   color: Color(0xFF8696A0)),
-                                              onPressed: () =>
-                                                  _openMediaPicker(
-                                                      currentUid, currentName),
+                                              onPressed: () => _openMediaPicker(
+                                                  currentUid, currentName),
                                             ),
                                           ),
                                         ),
@@ -1219,17 +1268,21 @@ class _ChatScreenState extends State<ChatScreen> {
                                         if (hasText) {
                                           _sendMessage(currentUid, currentName);
                                         } else {
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             const SnackBar(
-                                              content: Text('Hold button to record voice note (mock mode).'),
-                                              duration: Duration(milliseconds: 1500),
+                                              content: Text(
+                                                  'Hold button to record voice note (mock mode).'),
+                                              duration:
+                                                  Duration(milliseconds: 1500),
                                             ),
                                           );
                                         }
                                       },
                                       child: CircleAvatar(
                                         radius: 22,
-                                        backgroundColor: const Color(0xFF00A884),
+                                        backgroundColor:
+                                            const Color(0xFF00A884),
                                         child: Icon(
                                           hasText ? Icons.send : Icons.mic,
                                           color: Colors.white,
@@ -1242,15 +1295,14 @@ class _ChatScreenState extends State<ChatScreen> {
                               ],
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-        } // build
-      } // _ChatScreenState
-
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  } // build
+} // _ChatScreenState
 
 // ── CUSTOM CLIPPERS & BACKGROUND WALLPAPER ───────────────────────────────────
 
@@ -1264,7 +1316,8 @@ class SenderBubbleClipper extends CustomClipper<Path> {
     path.lineTo(size.width, 0);
     path.lineTo(size.width - 6, 8);
     path.lineTo(size.width - 6, size.height - 12);
-    path.quadraticBezierTo(size.width - 6, size.height, size.width - 18, size.height);
+    path.quadraticBezierTo(
+        size.width - 6, size.height, size.width - 18, size.height);
     path.lineTo(12, size.height);
     path.quadraticBezierTo(0, size.height, 0, size.height - 12);
     path.lineTo(0, 12);
@@ -1288,7 +1341,8 @@ class ReceiverBubbleClipper extends CustomClipper<Path> {
     path.lineTo(6, size.height - 12);
     path.quadraticBezierTo(6, size.height, 18, size.height);
     path.lineTo(size.width - 12, size.height);
-    path.quadraticBezierTo(size.width, size.height, size.width, size.height - 12);
+    path.quadraticBezierTo(
+        size.width, size.height, size.width, size.height - 12);
     path.lineTo(size.width, 12);
     path.quadraticBezierTo(size.width, 0, size.width - 12, 0);
     return path;
@@ -1324,7 +1378,7 @@ class WhatsappWallpaperPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.015)
+      ..color = Colors.white.withValues(alpha: 0.015)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
@@ -1419,4 +1473,3 @@ class WhatsappWallpaperPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

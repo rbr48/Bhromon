@@ -30,6 +30,8 @@ import '../../../../core/widgets/journey_timeline.dart';
 import '../../../../core/widgets/district_fill_map.dart';
 import '../../../../core/services/diary_badges_service.dart';
 import '../widgets/saved_diaries_widget.dart';
+import '../../../../core/theme/theme_context.dart';
+import '../../../../core/widgets/skeleton.dart';
 
 class ExplorerProfileScreen extends StatefulWidget {
   final String uid;
@@ -74,7 +76,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   void _initStreams() {
-    final targetUid = (widget.uid == 'guest' || widget.uid.isEmpty || widget.uid == 'explorer_user')
+    final targetUid = (widget.uid == 'guest' ||
+            widget.uid.isEmpty ||
+            widget.uid == 'explorer_user')
         ? 'explorer_user'
         : widget.uid;
 
@@ -161,7 +165,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
       for (final doc in bucketSnap.docs) {
         final data = doc.data();
-        final district = (data['district'] ?? '').toString().toLowerCase().trim();
+        final district =
+            (data['district'] ?? '').toString().toLowerCase().trim();
         final bool completed = data['completed'] as bool? ?? false;
 
         if (visitedDistricts.contains(district) && !completed) {
@@ -198,7 +203,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   Future<void> _loadProfile() async {
     final authState = context.read<AuthCubit>().state;
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
-    final targetUid = (widget.uid == 'guest' || widget.uid.isEmpty || widget.uid == 'explorer_user')
+    final targetUid = (widget.uid == 'guest' ||
+            widget.uid.isEmpty ||
+            widget.uid == 'explorer_user')
         ? (currentUid.isNotEmpty ? currentUid : 'explorer_user')
         : widget.uid;
 
@@ -207,7 +214,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         _profile = ExplorerProfile(
           uid: 'explorer_user',
           displayName: 'Guest Explorer',
-          explorerScore: const ExplorerScore(value: 0, tier: TrustTier.unverified),
+          explorerScore:
+              const ExplorerScore(value: 0, tier: TrustTier.unverified),
           tier: TrustTier.unverified,
           badges: const [],
           division: 'Dhaka',
@@ -231,7 +239,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       final either = await _getExplorerProfile(targetUid);
       final profile = either.fold(
         (failure) {
-          if (authState is Authenticated && authState.profile.uid == targetUid) {
+          if (authState is Authenticated &&
+              authState.profile.uid == targetUid) {
             return authState.profile;
           }
           throw Exception(failure.message);
@@ -270,7 +279,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       }
 
       // Fetch the raw document to get bioBangla/bioEnglish
-      final doc = await FirebaseFirestore.instance.collection('explorer_profiles').doc(profile.uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('explorer_profiles')
+          .doc(profile.uid)
+          .get();
 
       // Check and award badges dynamically
       List<String> dynamicBadges = [];
@@ -283,7 +295,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               .collection('explorer_profiles')
               .doc(profile.uid)
               .update({'badges': updatedBadges});
-          
+
           if (mounted) {
             for (final badgeId in newBadges) {
               final badgeDef = DiaryBadgesService.getBadge(badgeId);
@@ -293,14 +305,17 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     backgroundColor: AppColors.darkGreen,
                     content: Row(
                       children: [
-                        Text(badgeDef.emoji, style: const TextStyle(fontSize: 24)),
+                        Text(badgeDef.emoji,
+                            style: const TextStyle(fontSize: 24)),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             doc.data()?['bioBangla'] != null
                                 ? 'অভিনন্দন! আপনি নতুন ব্যাজ "${badgeDef.titleBn}" অর্জন করেছেন!'
                                 : 'Congratulations! You earned a new badge: "${badgeDef.titleEn}"!',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -347,9 +362,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             _error = e.toString();
           }
         });
+      }
     }
   }
-}
 
   Future<void> _toggleBlockStatus(String currentUid, String targetUid) async {
     setState(() => _isLoading = true);
@@ -364,7 +379,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         await docRef.delete();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('🔓 Explorer unblocked successfully.')),
+            const SnackBar(
+                content: Text('🔓 Explorer unblocked successfully.')),
           );
         }
       } else {
@@ -396,10 +412,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final rawBn = rawData?['bioBangla'] as String? ?? '';
     final rawEn = rawData?['bioEnglish'] as String? ?? '';
     final bioBanglaController = TextEditingController(text: rawBn);
-    final bioEnglishController = TextEditingController(text: rawEn.isNotEmpty ? rawEn : (profile.bio ?? ''));
+    final bioEnglishController = TextEditingController(
+        text: rawEn.isNotEmpty ? rawEn : (profile.bio ?? ''));
 
     String selectedDivision = profile.division;
-    const divisions = ['Dhaka', 'Sylhet', 'Chittagong', 'Khulna', 'Barishal', 'Rajshahi', 'Rangpur', 'Mymensingh'];
+    const divisions = [
+      'Dhaka',
+      'Sylhet',
+      'Chittagong',
+      'Khulna',
+      'Barishal',
+      'Rajshahi',
+      'Rangpur',
+      'Mymensingh'
+    ];
 
     XFile? dialogAvatarFile;
     XFile? dialogCoverFile;
@@ -418,11 +444,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           final tierColor = AppColors.forTier(profile.tier);
 
           return Container(
-            margin: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 24),
-            decoration: const BoxDecoration(
-              color: Color(0xFF111111),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border(
+            margin:
+                EdgeInsets.only(top: MediaQuery.of(context).padding.top + 24),
+            decoration: BoxDecoration(
+              color: context.surfacePanel,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
+              border: const Border(
                 top: BorderSide(color: Colors.white12, width: 1),
               ),
             ),
@@ -430,7 +458,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               children: [
                 Padding(
                   padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 24,
+                    bottom: MediaQuery.of(context).viewInsets.bottom +
+                        MediaQuery.of(context).padding.bottom +
+                        24,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -465,8 +495,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.close, color: Colors.white54, size: 20),
-                              onPressed: isSaving ? null : () => Navigator.pop(bottomSheetContext),
+                              icon: const Icon(Icons.close,
+                                  color: Colors.white54, size: 20),
+                              onPressed: isSaving
+                                  ? null
+                                  : () => Navigator.pop(bottomSheetContext),
                             ),
                           ],
                         ),
@@ -485,20 +518,27 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 alignment: Alignment.center,
                                 children: [
                                   GestureDetector(
-                                    onTap: isSaving ? null : () async {
-                                      final file = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
-                                      if (file != null) {
-                                        setDialogState(() {
-                                          dialogCoverFile = file;
-                                        });
-                                      }
-                                    },
+                                    onTap: isSaving
+                                        ? null
+                                        : () async {
+                                            final file = await ImagePicker()
+                                                .pickImage(
+                                                    source: ImageSource.gallery,
+                                                    imageQuality: 80);
+                                            if (file != null) {
+                                              setDialogState(() {
+                                                dialogCoverFile = file;
+                                              });
+                                            }
+                                          },
                                     child: Container(
                                       height: coverHeight,
                                       width: double.infinity,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                        border: Border.all(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.08)),
                                       ),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(16),
@@ -509,7 +549,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                             Container(
                                               decoration: const BoxDecoration(
                                                 gradient: LinearGradient(
-                                                  colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+                                                  colors: [
+                                                    Color(0xFF0F2027),
+                                                    Color(0xFF203A43),
+                                                    Color(0xFF2C5364)
+                                                  ],
                                                   begin: Alignment.topLeft,
                                                   end: Alignment.bottomRight,
                                                 ),
@@ -521,41 +565,61 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                   ? Image.network(
                                                       dialogCoverFile!.path,
                                                       fit: BoxFit.cover,
-                                                      errorBuilder: (context, error, stackTrace) {
-                                                        return const SizedBox.shrink();
+                                                      errorBuilder: (context,
+                                                          error, stackTrace) {
+                                                        return const SizedBox
+                                                            .shrink();
                                                       },
                                                     )
                                                   : Image.file(
-                                                      File(dialogCoverFile!.path),
+                                                      File(dialogCoverFile!
+                                                          .path),
                                                       fit: BoxFit.cover,
-                                                      errorBuilder: (context, error, stackTrace) {
-                                                        return const SizedBox.shrink();
+                                                      errorBuilder: (context,
+                                                          error, stackTrace) {
+                                                        return const SizedBox
+                                                            .shrink();
                                                       },
                                                     ))
                                             else if (profile.coverUrl != null)
                                               CachedNetworkImage(
                                                 imageUrl: profile.coverUrl!,
                                                 fit: BoxFit.cover,
-                                                errorWidget: (context, url, error) {
-                                                  return const SizedBox.shrink();
+                                                errorWidget:
+                                                    (context, url, error) {
+                                                  return const SizedBox
+                                                      .shrink();
                                                 },
                                               ),
                                             // Semi-transparent overlay with text/icon
                                             Container(
-                                              color: Colors.black.withOpacity(0.3),
+                                              color: Colors.black
+                                                  .withValues(alpha: 0.3),
                                               alignment: Alignment.center,
                                               child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
                                                 children: [
                                                   CircleAvatar(
                                                     radius: 18,
-                                                    backgroundColor: Colors.black.withOpacity(0.6),
-                                                    child: const Icon(Icons.camera_alt_outlined, size: 18, color: Colors.white),
+                                                    backgroundColor: Colors
+                                                        .black
+                                                        .withValues(alpha: 0.6),
+                                                    child: const Icon(
+                                                        Icons
+                                                            .camera_alt_outlined,
+                                                        size: 18,
+                                                        color: Colors.white),
                                                   ),
                                                   const SizedBox(height: 6),
                                                   const Text(
                                                     'TAP TO CHANGE COVER PHOTO',
-                                                    style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                                                    style: TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        letterSpacing: 1.0),
                                                   ),
                                                 ],
                                               ),
@@ -568,24 +632,32 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   Positioned(
                                     bottom: -40,
                                     child: GestureDetector(
-                                      onTap: isSaving ? null : () async {
-                                        final file = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
-                                        if (file != null) {
-                                          setDialogState(() {
-                                            dialogAvatarFile = file;
-                                          });
-                                        }
-                                      },
+                                      onTap: isSaving
+                                          ? null
+                                          : () async {
+                                              final file = await ImagePicker()
+                                                  .pickImage(
+                                                      source:
+                                                          ImageSource.gallery,
+                                                      imageQuality: 80);
+                                              if (file != null) {
+                                                setDialogState(() {
+                                                  dialogAvatarFile = file;
+                                                });
+                                              }
+                                            },
                                       child: Stack(
                                         alignment: Alignment.bottomRight,
                                         children: [
                                           Container(
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              border: Border.all(color: tierColor, width: 3),
+                                              border: Border.all(
+                                                  color: tierColor, width: 3),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: tierColor.withOpacity(0.3),
+                                                  color: tierColor.withValues(
+                                                      alpha: 0.3),
                                                   blurRadius: 10,
                                                   spreadRadius: 2,
                                                 ),
@@ -598,62 +670,137 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                 child: dialogAvatarFile != null
                                                     ? (kIsWeb
                                                         ? Image.network(
-                                                            dialogAvatarFile!.path,
+                                                            dialogAvatarFile!
+                                                                .path,
                                                             fit: BoxFit.cover,
-                                                            errorBuilder: (context, error, stackTrace) {
+                                                            errorBuilder:
+                                                                (context, error,
+                                                                    stackTrace) {
                                                               return Container(
-                                                                color: AppColors.darkGreen,
-                                                                alignment: Alignment.center,
+                                                                color: AppColors
+                                                                    .darkGreen,
+                                                                alignment:
+                                                                    Alignment
+                                                                        .center,
                                                                 child: Text(
-                                                                  profile.displayName.isNotEmpty ? profile.displayName[0] : 'E',
-                                                                  style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                                                                  profile.displayName
+                                                                          .isNotEmpty
+                                                                      ? profile
+                                                                          .displayName[0]
+                                                                      : 'E',
+                                                                  style: const TextStyle(
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontSize:
+                                                                          28,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold),
                                                                 ),
                                                               );
                                                             },
                                                           )
                                                         : Image.file(
-                                                            File(dialogAvatarFile!.path),
+                                                            File(
+                                                                dialogAvatarFile!
+                                                                    .path),
                                                             fit: BoxFit.cover,
-                                                            errorBuilder: (context, error, stackTrace) {
+                                                            errorBuilder:
+                                                                (context, error,
+                                                                    stackTrace) {
                                                               return Container(
-                                                                color: AppColors.darkGreen,
-                                                                alignment: Alignment.center,
+                                                                color: AppColors
+                                                                    .darkGreen,
+                                                                alignment:
+                                                                    Alignment
+                                                                        .center,
                                                                 child: Text(
-                                                                  profile.displayName.isNotEmpty ? profile.displayName[0] : 'E',
-                                                                  style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                                                                  profile.displayName
+                                                                          .isNotEmpty
+                                                                      ? profile
+                                                                          .displayName[0]
+                                                                      : 'E',
+                                                                  style: const TextStyle(
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontSize:
+                                                                          28,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold),
                                                                 ),
                                                               );
                                                             },
                                                           ))
                                                     : (profile.avatarUrl != null
                                                         ? CachedNetworkImage(
-                                                            imageUrl: profile.avatarUrl!,
+                                                            imageUrl: profile
+                                                                .avatarUrl!,
                                                             fit: BoxFit.cover,
-                                                            placeholder: (context, url) => Container(
-                                                              color: AppColors.darkGreen,
-                                                              alignment: Alignment.center,
-                                                              child: const CircularProgressIndicator(
+                                                            placeholder:
+                                                                (context,
+                                                                        url) =>
+                                                                    Container(
+                                                              color: AppColors
+                                                                  .darkGreen,
+                                                              alignment:
+                                                                  Alignment
+                                                                      .center,
+                                                              child:
+                                                                  const CircularProgressIndicator(
                                                                 strokeWidth: 2,
-                                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                                valueColor:
+                                                                    AlwaysStoppedAnimation<
+                                                                            Color>(
+                                                                        Colors
+                                                                            .white),
                                                               ),
                                                             ),
-                                                            errorWidget: (context, url, error) {
+                                                            errorWidget:
+                                                                (context, url,
+                                                                    error) {
                                                               return Container(
-                                                                color: AppColors.darkGreen,
-                                                                alignment: Alignment.center,
+                                                                color: AppColors
+                                                                    .darkGreen,
+                                                                alignment:
+                                                                    Alignment
+                                                                        .center,
                                                                 child: Text(
-                                                                  profile.displayName.isNotEmpty ? profile.displayName[0] : 'E',
-                                                                  style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                                                                  profile.displayName
+                                                                          .isNotEmpty
+                                                                      ? profile
+                                                                          .displayName[0]
+                                                                      : 'E',
+                                                                  style: const TextStyle(
+                                                                      color: Colors
+                                                                          .white,
+                                                                      fontSize:
+                                                                          28,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold),
                                                                 ),
                                                               );
                                                             },
                                                           )
                                                         : Container(
-                                                            color: AppColors.darkGreen,
-                                                            alignment: Alignment.center,
+                                                            color: AppColors
+                                                                .darkGreen,
+                                                            alignment: Alignment
+                                                                .center,
                                                             child: Text(
-                                                              profile.displayName.isNotEmpty ? profile.displayName[0] : 'E',
-                                                              style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                                                              profile.displayName
+                                                                      .isNotEmpty
+                                                                  ? profile
+                                                                      .displayName[0]
+                                                                  : 'E',
+                                                              style: const TextStyle(
+                                                                  color: Colors
+                                                                      .white,
+                                                                  fontSize: 28,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold),
                                                             ),
                                                           )),
                                               ),
@@ -661,8 +808,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                           ),
                                           const CircleAvatar(
                                             radius: 13,
-                                            backgroundColor: AppColors.mintGreen,
-                                            child: Icon(Icons.camera_alt, size: 13, color: Colors.black),
+                                            backgroundColor:
+                                                AppColors.mintGreen,
+                                            child: Icon(Icons.camera_alt,
+                                                size: 13, color: Colors.black),
                                           ),
                                         ],
                                       ),
@@ -672,31 +821,46 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               ),
                               const SizedBox(height: 56),
                               // Display Name
-                              const Text('DISPLAY NAME', style: TextStyle(color: Colors.white30, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                              const Text('DISPLAY NAME',
+                                  style: TextStyle(
+                                      color: Colors.white30,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.0)),
                               const SizedBox(height: 6),
                               TextField(
                                 controller: nameController,
                                 enabled: !isSaving,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: InputDecoration(
-                                  fillColor: Colors.white.withOpacity(0.04),
+                                  fillColor:
+                                      Colors.white.withValues(alpha: 0.04),
                                   filled: true,
                                   hintText: 'Enter your name',
-                                  hintStyle: const TextStyle(color: Colors.white30),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  hintStyle:
+                                      const TextStyle(color: Colors.white30),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: Colors.white10),
+                                    borderSide:
+                                        const BorderSide(color: Colors.white10),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: AppColors.mintGreen),
+                                    borderSide: const BorderSide(
+                                        color: AppColors.mintGreen),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 20),
                               // Bio English
-                              const Text('BIO (ENGLISH)', style: TextStyle(color: Colors.white30, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                              const Text('BIO (ENGLISH)',
+                                  style: TextStyle(
+                                      color: Colors.white30,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.0)),
                               const SizedBox(height: 6),
                               TextField(
                                 controller: bioEnglishController,
@@ -704,24 +868,34 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 style: const TextStyle(color: Colors.white),
                                 maxLines: 3,
                                 decoration: InputDecoration(
-                                  fillColor: Colors.white.withOpacity(0.04),
+                                  fillColor:
+                                      Colors.white.withValues(alpha: 0.04),
                                   filled: true,
                                   hintText: 'Describe your journeys...',
-                                  hintStyle: const TextStyle(color: Colors.white30),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  hintStyle:
+                                      const TextStyle(color: Colors.white30),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: Colors.white10),
+                                    borderSide:
+                                        const BorderSide(color: Colors.white10),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: AppColors.mintGreen),
+                                    borderSide: const BorderSide(
+                                        color: AppColors.mintGreen),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 20),
                               // Bio Bangla
-                              const Text('BIO (BANGLA / বাংলা)', style: TextStyle(color: Colors.white30, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                              const Text('BIO (BANGLA / বাংলা)',
+                                  style: TextStyle(
+                                      color: Colors.white30,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.0)),
                               const SizedBox(height: 6),
                               TextField(
                                 controller: bioBanglaController,
@@ -729,53 +903,71 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 style: const TextStyle(color: Colors.white),
                                 maxLines: 3,
                                 decoration: InputDecoration(
-                                  fillColor: Colors.white.withOpacity(0.04),
+                                  fillColor:
+                                      Colors.white.withValues(alpha: 0.04),
                                   filled: true,
                                   hintText: 'আপনার ভ্রমণ নিয়ে কিছু বলুন...',
-                                  hintStyle: const TextStyle(color: Colors.white30),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  hintStyle:
+                                      const TextStyle(color: Colors.white30),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: Colors.white10),
+                                    borderSide:
+                                        const BorderSide(color: Colors.white10),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: AppColors.mintGreen),
+                                    borderSide: const BorderSide(
+                                        color: AppColors.mintGreen),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 20),
                               // Division
-                              const Text('DIVISION', style: TextStyle(color: Colors.white30, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                              const Text('DIVISION',
+                                  style: TextStyle(
+                                      color: Colors.white30,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.0)),
                               const SizedBox(height: 6),
                               DropdownButtonFormField<String>(
-                                value: selectedDivision,
-                                dropdownColor: const Color(0xFF111111),
+                                initialValue: selectedDivision,
+                                dropdownColor: context.surfacePanel,
                                 style: const TextStyle(color: Colors.white),
                                 decoration: InputDecoration(
-                                  fillColor: Colors.white.withOpacity(0.04),
+                                  fillColor:
+                                      Colors.white.withValues(alpha: 0.04),
                                   filled: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 14),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: Colors.white10),
+                                    borderSide:
+                                        const BorderSide(color: Colors.white10),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(color: AppColors.mintGreen),
+                                    borderSide: const BorderSide(
+                                        color: AppColors.mintGreen),
                                   ),
                                 ),
-                                items: divisions.map((div) => DropdownMenuItem(
-                                  value: div,
-                                  child: Text(div),
-                                )).toList(),
-                                onChanged: isSaving ? null : (val) {
-                                  if (val != null) {
-                                    setDialogState(() {
-                                      selectedDivision = val;
-                                    });
-                                  }
-                                },
+                                items: divisions
+                                    .map((div) => DropdownMenuItem(
+                                          value: div,
+                                          child: Text(div),
+                                        ))
+                                    .toList(),
+                                onChanged: isSaving
+                                    ? null
+                                    : (val) {
+                                        if (val != null) {
+                                          setDialogState(() {
+                                            selectedDivision = val;
+                                          });
+                                        }
+                                      },
                               ),
                               const SizedBox(height: 32),
                               // Action Buttons
@@ -785,12 +977,21 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                     child: OutlinedButton(
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: Colors.white70,
-                                        side: const BorderSide(color: Colors.white10),
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        side: const BorderSide(
+                                            color: Colors.white10),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 14),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12)),
                                       ),
-                                      onPressed: isSaving ? null : () => Navigator.pop(bottomSheetContext),
-                                      child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+                                      onPressed: isSaving
+                                          ? null
+                                          : () =>
+                                              Navigator.pop(bottomSheetContext),
+                                      child: const Text('Cancel',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold)),
                                     ),
                                   ),
                                   const SizedBox(width: 16),
@@ -799,101 +1000,162 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppColors.mintGreen,
                                         foregroundColor: Colors.black,
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 14),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12)),
                                       ),
-                                      onPressed: isSaving ? null : () async {
-                                        setDialogState(() {
-                                          isSaving = true;
-                                        });
+                                      onPressed: isSaving
+                                          ? null
+                                          : () async {
+                                              setDialogState(() {
+                                                isSaving = true;
+                                              });
 
-                                        try {
-                                          String? finalAvatarUrl = profile.avatarUrl;
-                                          String? finalCoverUrl = profile.coverUrl;
+                                              try {
+                                                String? finalAvatarUrl =
+                                                    profile.avatarUrl;
+                                                String? finalCoverUrl =
+                                                    profile.coverUrl;
 
-                                          if (dialogAvatarFile != null) {
-                                            setDialogState(() {
-                                              savingStatus = 'Uploading avatar...';
-                                            });
-                                            final timestamp = DateTime.now().millisecondsSinceEpoch;
-                                            if (kIsWeb) {
-                                              final bytes = await dialogAvatarFile!.readAsBytes();
-                                              finalAvatarUrl = await MediaUploadService.uploadBytes(
-                                                bytes: bytes,
-                                                path: 'explorer_avatars/${profile.uid}_$timestamp.jpg',
-                                                contentType: 'image/jpeg',
-                                              );
-                                            } else {
-                                              finalAvatarUrl = await MediaUploadService.uploadFile(
-                                                file: File(dialogAvatarFile!.path),
-                                                path: 'explorer_avatars/${profile.uid}_$timestamp.jpg',
-                                              );
-                                            }
-                                          }
+                                                if (dialogAvatarFile != null) {
+                                                  setDialogState(() {
+                                                    savingStatus =
+                                                        'Uploading avatar...';
+                                                  });
+                                                  final timestamp = DateTime
+                                                          .now()
+                                                      .millisecondsSinceEpoch;
+                                                  if (kIsWeb) {
+                                                    final bytes =
+                                                        await dialogAvatarFile!
+                                                            .readAsBytes();
+                                                    finalAvatarUrl =
+                                                        await MediaUploadService
+                                                            .uploadBytes(
+                                                      bytes: bytes,
+                                                      path:
+                                                          'explorer_avatars/${profile.uid}_$timestamp.jpg',
+                                                      contentType: 'image/jpeg',
+                                                    );
+                                                  } else {
+                                                    finalAvatarUrl =
+                                                        await MediaUploadService
+                                                            .uploadFile(
+                                                      file: File(
+                                                          dialogAvatarFile!
+                                                              .path),
+                                                      path:
+                                                          'explorer_avatars/${profile.uid}_$timestamp.jpg',
+                                                    );
+                                                  }
+                                                }
 
-                                          if (dialogCoverFile != null) {
-                                            setDialogState(() {
-                                              savingStatus = 'Uploading cover...';
-                                            });
-                                            final timestamp = DateTime.now().millisecondsSinceEpoch;
-                                            if (kIsWeb) {
-                                              final bytes = await dialogCoverFile!.readAsBytes();
-                                              finalCoverUrl = await MediaUploadService.uploadBytes(
-                                                bytes: bytes,
-                                                path: 'explorer_covers/${profile.uid}_$timestamp.jpg',
-                                                contentType: 'image/jpeg',
-                                              );
-                                            } else {
-                                              finalCoverUrl = await MediaUploadService.uploadFile(
-                                                file: File(dialogCoverFile!.path),
-                                                path: 'explorer_covers/${profile.uid}_$timestamp.jpg',
-                                              );
-                                            }
-                                          }
+                                                if (dialogCoverFile != null) {
+                                                  setDialogState(() {
+                                                    savingStatus =
+                                                        'Uploading cover...';
+                                                  });
+                                                  final timestamp = DateTime
+                                                          .now()
+                                                      .millisecondsSinceEpoch;
+                                                  if (kIsWeb) {
+                                                    final bytes =
+                                                        await dialogCoverFile!
+                                                            .readAsBytes();
+                                                    finalCoverUrl =
+                                                        await MediaUploadService
+                                                            .uploadBytes(
+                                                      bytes: bytes,
+                                                      path:
+                                                          'explorer_covers/${profile.uid}_$timestamp.jpg',
+                                                      contentType: 'image/jpeg',
+                                                    );
+                                                  } else {
+                                                    finalCoverUrl =
+                                                        await MediaUploadService
+                                                            .uploadFile(
+                                                      file: File(
+                                                          dialogCoverFile!
+                                                              .path),
+                                                      path:
+                                                          'explorer_covers/${profile.uid}_$timestamp.jpg',
+                                                    );
+                                                  }
+                                                }
 
-                                          setDialogState(() {
-                                            savingStatus = 'Saving profile...';
-                                          });
+                                                setDialogState(() {
+                                                  savingStatus =
+                                                      'Saving profile...';
+                                                });
 
-                                          final updated = profile.copyWith(
-                                            displayName: nameController.text.trim(),
-                                            bio: bioEnglishController.text.trim().isNotEmpty
-                                                ? bioEnglishController.text.trim()
-                                                : bioController.text.trim(),
-                                            division: selectedDivision,
-                                            avatarUrl: finalAvatarUrl,
-                                            coverUrl: finalCoverUrl,
-                                          );
+                                                final updated =
+                                                    profile.copyWith(
+                                                  displayName: nameController
+                                                      .text
+                                                      .trim(),
+                                                  bio: bioEnglishController.text
+                                                          .trim()
+                                                          .isNotEmpty
+                                                      ? bioEnglishController
+                                                          .text
+                                                          .trim()
+                                                      : bioController.text
+                                                          .trim(),
+                                                  division: selectedDivision,
+                                                  avatarUrl: finalAvatarUrl,
+                                                  coverUrl: finalCoverUrl,
+                                                );
 
-                                          if (!context.mounted) return;
-                                          final authCubit = context.read<AuthCubit>();
-                                          await authCubit.updateProfile(updated);
+                                                if (!context.mounted) return;
+                                                final authCubit =
+                                                    context.read<AuthCubit>();
+                                                await authCubit
+                                                    .updateProfile(updated);
 
-                                          await FirebaseFirestore.instance
-                                              .collection('explorer_profiles')
-                                              .doc(profile.uid)
-                                              .set({
-                                            'bioBangla': bioBanglaController.text.trim(),
-                                            'bioEnglish': bioEnglishController.text.trim(),
-                                          }, SetOptions(merge: true));
+                                                await FirebaseFirestore.instance
+                                                    .collection(
+                                                        'explorer_profiles')
+                                                    .doc(profile.uid)
+                                                    .set({
+                                                  'bioBangla':
+                                                      bioBanglaController.text
+                                                          .trim(),
+                                                  'bioEnglish':
+                                                      bioEnglishController.text
+                                                          .trim(),
+                                                }, SetOptions(merge: true));
 
-                                          if (mounted) {
-                                            _loadProfile();
-                                          }
-                                          if (bottomSheetContext.mounted) Navigator.pop(bottomSheetContext);
-                                        } catch (e) {
-                                          debugPrint('Error saving profile: $e');
-                                          setDialogState(() {
-                                            isSaving = false;
-                                          });
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('Failed to save profile: $e'), backgroundColor: Colors.redAccent),
-                                            );
-                                          }
-                                        }
-                                      },
-                                      child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+                                                if (mounted) {
+                                                  _loadProfile();
+                                                }
+                                                if (bottomSheetContext
+                                                    .mounted) {
+                                                  Navigator.pop(
+                                                      bottomSheetContext);
+                                                }
+                                              } catch (e) {
+                                                debugPrint(
+                                                    'Error saving profile: $e');
+                                                setDialogState(() {
+                                                  isSaving = false;
+                                                });
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(
+                                                    SnackBar(
+                                                        content: Text(
+                                                            'Failed to save profile: $e'),
+                                                        backgroundColor:
+                                                            Colors.redAccent),
+                                                  );
+                                                }
+                                              }
+                                            },
+                                      child: const Text('Save Changes',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold)),
                                     ),
                                   ),
                                 ],
@@ -910,18 +1172,23 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                        color: Colors.black.withValues(alpha: 0.7),
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(24)),
                       ),
                       child: Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const CircularProgressIndicator(color: AppColors.mintGreen),
+                            const CircularProgressIndicator(
+                                color: AppColors.mintGreen),
                             const SizedBox(height: 16),
                             Text(
                               savingStatus,
-                              style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -946,11 +1213,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final authState = context.watch<AuthCubit>().state;
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
     final isOwnProfile = (widget.uid == currentUid && currentUid.isNotEmpty) ||
-        ((widget.uid == 'guest' || widget.uid == 'explorer_user' || widget.uid.isEmpty) && currentUid.isEmpty);
+        ((widget.uid == 'guest' ||
+                widget.uid == 'explorer_user' ||
+                widget.uid.isEmpty) &&
+            currentUid.isEmpty);
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         context.go('/feed');
       },
@@ -971,7 +1241,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           actions: isOwnProfile
               ? [
                   IconButton(
-                    icon: const Icon(Icons.settings, color: AppColors.mintGreen),
+                    icon:
+                        const Icon(Icons.settings, color: AppColors.mintGreen),
                     onPressed: () => context.push('/settings'),
                   ),
                   IconButton(
@@ -997,8 +1268,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         PopupMenuItem<String>(
                           value: 'block',
                           child: Text(
-                            _blockedOther ? 'Unblock Explorer' : 'Block Explorer',
-                            style: TextStyle(color: _blockedOther ? Colors.green : Colors.redAccent),
+                            _blockedOther
+                                ? 'Unblock Explorer'
+                                : 'Block Explorer',
+                            style: TextStyle(
+                                color: _blockedOther
+                                    ? Colors.green
+                                    : Colors.redAccent),
                           ),
                         ),
                       ],
@@ -1055,9 +1331,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF13131E).withOpacity(0.8),
+              color: const Color(0xFF13131E).withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             ),
             child: const Column(
               children: [
@@ -1068,13 +1344,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ShimmerLoadingWidget(width: 40, height: 22, borderRadius: 6),
+                    ShimmerLoadingWidget(
+                        width: 40, height: 22, borderRadius: 6),
                     SizedBox(width: 8),
-                    ShimmerLoadingWidget(width: 60, height: 22, borderRadius: 6),
+                    ShimmerLoadingWidget(
+                        width: 60, height: 22, borderRadius: 6),
                   ],
                 ),
                 SizedBox(height: 16),
-                ShimmerLoadingWidget(width: double.infinity, height: 44, borderRadius: 10),
+                ShimmerLoadingWidget(
+                    width: double.infinity, height: 44, borderRadius: 10),
               ],
             ),
           ),
@@ -1084,11 +1363,17 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                Expanded(child: ShimmerLoadingWidget(width: double.infinity, height: 40, borderRadius: 10)),
+                Expanded(
+                    child: ShimmerLoadingWidget(
+                        width: double.infinity, height: 40, borderRadius: 10)),
                 SizedBox(width: 8),
-                Expanded(child: ShimmerLoadingWidget(width: double.infinity, height: 40, borderRadius: 10)),
+                Expanded(
+                    child: ShimmerLoadingWidget(
+                        width: double.infinity, height: 40, borderRadius: 10)),
                 SizedBox(width: 8),
-                Expanded(child: ShimmerLoadingWidget(width: double.infinity, height: 40, borderRadius: 10)),
+                Expanded(
+                    child: ShimmerLoadingWidget(
+                        width: double.infinity, height: 40, borderRadius: 10)),
               ],
             ),
           ),
@@ -1098,11 +1383,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                ShimmerLoadingWidget(width: double.infinity, height: 72, borderRadius: 16),
+                ShimmerLoadingWidget(
+                    width: double.infinity, height: 72, borderRadius: 16),
                 SizedBox(height: 16),
-                ShimmerLoadingWidget(width: double.infinity, height: 120, borderRadius: 16),
+                ShimmerLoadingWidget(
+                    width: double.infinity, height: 120, borderRadius: 16),
                 SizedBox(height: 16),
-                ShimmerLoadingWidget(width: double.infinity, height: 160, borderRadius: 16),
+                ShimmerLoadingWidget(
+                    width: double.infinity, height: 160, borderRadius: 16),
               ],
             ),
           ),
@@ -1129,7 +1417,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadProfile,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.mintGreen),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.mintGreen),
               child: const Text('Retry'),
             ),
           ],
@@ -1148,7 +1437,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lock_outline, size: 64, color: Colors.white.withOpacity(0.15)),
+            Icon(Icons.lock_outline,
+                size: 64, color: Colors.white.withValues(alpha: 0.15)),
             const SizedBox(height: 16),
             const Text(
               'This profile is unavailable.',
@@ -1161,16 +1451,21 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
     if (_blockedOther) {
       final authState = context.read<AuthCubit>().state;
-      final currentUid = authState is Authenticated ? authState.profile.uid : '';
+      final currentUid =
+          authState is Authenticated ? authState.profile.uid : '';
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.block, size: 64, color: Colors.redAccent.withOpacity(0.4)),
+            Icon(Icons.block,
+                size: 64, color: Colors.redAccent.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             const Text(
               'You have blocked this explorer.',
-              style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -1183,7 +1478,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
               child: const Text('Unblock Explorer'),
             ),
@@ -1202,24 +1498,72 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       );
     }
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: logsStream,
-      builder: (context, tripLogsSnap) {
-        final docs = tripLogsSnap.data?.docs ?? [];
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.only(bottom: bottomInset + 80),
-          child: _buildProfileContent(profile, docs),
+    final authState = context.read<AuthCubit>().state;
+    final currentProfile =
+        authState is Authenticated ? authState.profile : null;
+    final currentUid = currentProfile?.uid ?? '';
+    final targetUid = (widget.uid == 'guest' ||
+            widget.uid == 'explorer_user' ||
+            widget.uid.isEmpty)
+        ? 'explorer_user'
+        : widget.uid;
+    final isOwnProfile = targetUid == currentUid || currentUid.isEmpty;
+
+    if (isOwnProfile) {
+      return StreamBuilder<QuerySnapshot>(
+        stream: logsStream,
+        builder: (context, tripLogsSnap) {
+          final docs = tripLogsSnap.data?.docs ?? [];
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.only(bottom: bottomInset + 80),
+            child: _buildProfileContent(profile, docs),
+          );
+        },
+      );
+    }
+
+    final docId = '${currentUid}_$targetUid';
+    final followStatusSt = _followStatusStream ??
+        FirebaseFirestore.instance.collection('follows').doc(docId).snapshots();
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: followStatusSt,
+      builder: (context, followSnap) {
+        final isFollowing = followSnap.data?.exists ?? false;
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: logsStream,
+          builder: (context, tripLogsSnap) {
+            final rawDocs = tripLogsSnap.data?.docs ?? [];
+            final filteredDocs = rawDocs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final visibility = data['visibility']?.toString() ?? 'community';
+              if (visibility == 'private') return false;
+              if (visibility == 'friends') return isFollowing;
+              return true;
+            }).toList();
+
+            return SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.only(bottom: bottomInset + 80),
+              child: _buildProfileContent(profile, filteredDocs),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildProfileContent(ExplorerProfile profile, List<QueryDocumentSnapshot> docs) {
+  Widget _buildProfileContent(
+      ExplorerProfile profile, List<QueryDocumentSnapshot> docs) {
     final authState = context.watch<AuthCubit>().state;
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
     final isOwnProfile = (widget.uid == currentUid && currentUid.isNotEmpty) ||
-        ((widget.uid == 'guest' || widget.uid == 'explorer_user' || widget.uid.isEmpty) && currentUid.isEmpty);
+        ((widget.uid == 'guest' ||
+                widget.uid == 'explorer_user' ||
+                widget.uid.isEmpty) &&
+            currentUid.isEmpty);
 
     final tierColor = AppColors.forTier(profile.tier);
     final isBn = _bioLanguage == 'bn';
@@ -1245,13 +1589,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 decoration: BoxDecoration(
                   image: profile.coverUrl != null
                       ? DecorationImage(
-                          image: CachedNetworkImageProvider(profile.coverUrl!),
+                          image: CachedNetworkImageProvider(
+                            profile.coverUrl!,
+                            errorListener: (dynamic error) {},
+                          ),
                           fit: BoxFit.cover,
                         )
                       : null,
                   gradient: profile.coverUrl == null
                       ? const LinearGradient(
-                          colors: [Color(0xFF0D1B2A), Color(0xFF1B263B), Color(0xFF415A77)],
+                          colors: [
+                            Color(0xFF0D1B2A),
+                            Color(0xFF1B263B),
+                            Color(0xFF415A77)
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         )
@@ -1262,7 +1613,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.black.withOpacity(0.1), Colors.black.withOpacity(0.6)],
+                          colors: [
+                            Colors.black.withValues(alpha: 0.1),
+                            Colors.black.withValues(alpha: 0.6)
+                          ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),
@@ -1273,20 +1627,25 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         bottom: 12,
                         right: 12,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.75),
+                            color: Colors.black.withValues(alpha: 0.75),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: Colors.white24, width: 1),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                              const Icon(Icons.camera_alt,
+                                  color: Colors.white, size: 14),
                               const SizedBox(width: 6),
                               Text(
                                 isBn ? 'কভার পরিবর্তন' : 'Edit Cover',
-                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -1320,7 +1679,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           border: Border.all(color: Colors.white, width: 4),
                           boxShadow: [
                             BoxShadow(
-                              color: tierColor.withOpacity(0.4),
+                              color: tierColor.withValues(alpha: 0.4),
                               blurRadius: 20,
                               spreadRadius: 2,
                             ),
@@ -1332,12 +1691,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             radius: 50,
                             backgroundColor: AppColors.darkGreen,
                             backgroundImage: profile.avatarUrl != null
-                                ? CachedNetworkImageProvider(profile.avatarUrl!)
+                                ? CachedNetworkImageProvider(
+                                    profile.avatarUrl!,
+                                    errorListener: (dynamic error) {},
+                                  )
                                 : null,
                             child: profile.avatarUrl == null
                                 ? Text(
-                                    profile.displayName.isNotEmpty ? profile.displayName[0] : 'E',
-                                    style: const TextStyle(color: Colors.white, fontSize: 40, fontWeight: FontWeight.bold),
+                                    profile.displayName.isNotEmpty
+                                        ? profile.displayName[0]
+                                        : 'E',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 40,
+                                        fontWeight: FontWeight.bold),
                                   )
                                 : null,
                           ),
@@ -1353,16 +1720,18 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.grey.shade300, width: 1.5),
+                            border: Border.all(
+                                color: Colors.grey.shade300, width: 1.5),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withValues(alpha: 0.2),
                                 blurRadius: 4,
                                 spreadRadius: 1,
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.camera_alt, color: Colors.black, size: 16),
+                          child: const Icon(Icons.camera_alt,
+                              color: Colors.black, size: 16),
                         ),
                       ),
                   ],
@@ -1399,7 +1768,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     child: Text(
                       _getDisplayBio(profile),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4, fontStyle: FontStyle.italic),
+                      style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                          height: 1.4,
+                          fontStyle: FontStyle.italic),
                     ),
                   ),
                 ),
@@ -1410,7 +1783,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       onTap: () => _showEditProfileBottomSheet(profile),
                       child: Text(
                         isBn ? 'বায়ো পরিবর্তন করুন' : 'Edit Bio',
-                        style: const TextStyle(color: AppColors.mintGreen, fontSize: 13, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            color: AppColors.mintGreen,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -1420,14 +1796,18 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     onPressed: () => _showEditProfileBottomSheet(profile),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.mintGreen,
-                      side: const BorderSide(color: AppColors.mintGreen, width: 0.8),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      side: const BorderSide(
+                          color: AppColors.mintGreen, width: 0.8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
                     ),
                     icon: const Icon(Icons.add, size: 14),
                     label: Text(
                       isBn ? 'বায়ো যুক্ত করুন' : 'Add Bio',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -1454,20 +1834,40 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const SizedBox(height: 24),
 
               // Divider
-              Container(height: 0.8, color: Colors.white.withOpacity(0.08)),
+              Container(
+                  height: 0.8, color: Colors.white.withValues(alpha: 0.08)),
               const SizedBox(height: 20),
 
               // Facebook-style Intro Section
               Text(
                 isBn ? 'পরিচিতি' : 'Intro',
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 12),
-              _buildIntroItem(Icons.workspace_premium_outlined, isBn ? 'পদবী: ${profile.tier.displayNameBn}' : 'Tier: ${profile.tier.displayName}'),
-              _buildIntroItem(Icons.home_outlined, isBn ? 'বিভাগ: ${_translateDivision(profile.division)}' : 'Lives in ${_translateDivision(profile.division)} Division'),
-              _buildIntroItem(Icons.explore_outlined, isBn ? 'অভিযান সম্পন্ন: ${profile.districtsCount} টি জেলা' : 'Explored ${profile.districtsCount} districts in Bangladesh'),
-              _buildIntroItem(Icons.calendar_today_outlined, isBn ? 'যোগদান করেছেন: ${_formatJoinDate(profile.createdAt)}' : 'Joined Bhromon in ${_formatJoinDate(profile.createdAt)}'),
-              
+              _buildIntroItem(
+                  Icons.workspace_premium_outlined,
+                  isBn
+                      ? 'পদবী: ${profile.tier.displayNameBn}'
+                      : 'Tier: ${profile.tier.displayName}'),
+              _buildIntroItem(
+                  Icons.home_outlined,
+                  isBn
+                      ? 'বিভাগ: ${_translateDivision(profile.division)}'
+                      : 'Lives in ${_translateDivision(profile.division)} Division'),
+              _buildIntroItem(
+                  Icons.explore_outlined,
+                  isBn
+                      ? 'অভিযান সম্পন্ন: ${profile.districtsCount} টি জেলা'
+                      : 'Explored ${profile.districtsCount} districts in Bangladesh'),
+              _buildIntroItem(
+                  Icons.calendar_today_outlined,
+                  isBn
+                      ? 'যোগদান করেছেন: ${_formatJoinDate(profile.createdAt)}'
+                      : 'Joined Bhromon in ${_formatJoinDate(profile.createdAt)}'),
+
               // Follow stats inside Intro
               _buildFacebookFollowStatsRow(profile.uid),
 
@@ -1515,9 +1915,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       builder: (context, followersSnap) {
         final docs = followersSnap.data?.docs ?? [];
         if (docs.isEmpty) return const SizedBox.shrink();
-        
+
         final followerIds = docs
-            .map((d) => (d.data() as Map<String, dynamic>)['followerId'] as String? ?? '')
+            .map((d) =>
+                (d.data() as Map<String, dynamic>)['followerId'] as String? ??
+                '')
             .where((id) => id.isNotEmpty)
             .toList();
 
@@ -1553,10 +1955,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               GestureDetector(
                 onTap: () => _showSocialSheet(context, uid, true),
                 child: Text(
-                  isBn 
-                      ? 'আপনাকে অনেকে অনুসরণ করছেন' 
+                  isBn
+                      ? 'আপনাকে অনেকে অনুসরণ করছেন'
                       : '${followerIds.length} mutual connections / followers',
-                  style: const TextStyle(color: Colors.white54, fontSize: 12, decoration: TextDecoration.underline),
+                  style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                      decoration: TextDecoration.underline),
                 ),
               ),
             ],
@@ -1576,7 +1981,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         const SizedBox(height: 20),
         Text(
           isBn ? 'ফিচারড ব্যাজ' : 'Featured Badges',
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+          style: const TextStyle(
+              color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 12),
         SizedBox(
@@ -1588,7 +1994,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               final badgeId = profile.badges[index];
               final key = badgeId.toLowerCase().trim();
               final badgeDef = DiaryBadgesService.getBadge(key);
-              
+
               final String emoji = badgeDef?.emoji ?? '🏅';
               final String title = badgeDef != null
                   ? (isBn ? badgeDef.titleBn : badgeDef.titleEn)
@@ -1596,8 +2002,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               final String desc = badgeDef != null
                   ? (isBn ? badgeDef.descBn : badgeDef.titleEn)
                   : 'A unique exploration achievement milestone for Bhromon.';
-              final String next = isBn 
-                  ? 'ভ্রমণ অব্যাহত রাখুন এবং এক্সপি অর্জন করুন!' 
+              final String next = isBn
+                  ? 'ভ্রমণ অব্যাহত রাখুন এবং এক্সপি অর্জন করুন!'
                   : 'Keep exploring and sharing logs to level up!';
 
               return GestureDetector(
@@ -1605,10 +2011,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   showDialog<void>(
                     context: context,
                     builder: (context) => AlertDialog(
-                      backgroundColor: const Color(0xFF111111),
+                      backgroundColor: context.surfacePanel,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: AppColors.mintGreen, width: 0.8),
+                        side: const BorderSide(
+                            color: AppColors.mintGreen, width: 0.8),
                       ),
                       title: Row(
                         children: [
@@ -1617,7 +2024,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           Expanded(
                             child: Text(
                               title,
-                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -1628,23 +2038,31 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         children: [
                           Text(
                             desc,
-                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             isBn ? 'পরবর্তী মাইলস্টোন' : 'NEXT MILESTONE',
-                            style: const TextStyle(color: AppColors.mintGreen, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                            style: const TextStyle(
+                                color: AppColors.mintGreen,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             next,
-                            style: const TextStyle(color: Colors.white54, fontSize: 12),
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 12),
                           ),
                         ],
                       ),
                       actions: [
                         TextButton(
-                          child: Text(isBn ? 'অসাধারণ' : 'Awesome', style: const TextStyle(color: AppColors.mintGreen)),
+                          child: Text(isBn ? 'অসাধারণ' : 'Awesome',
+                              style:
+                                  const TextStyle(color: AppColors.mintGreen)),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
@@ -1658,7 +2076,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF13131E),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.06)),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.06)),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1670,7 +2089,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -1690,9 +2112,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.mintGreen.withOpacity(0.15) : Colors.transparent,
+          color: isActive
+              ? AppColors.mintGreen.withValues(alpha: 0.15)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: isActive ? AppColors.mintGreen.withOpacity(0.4) : Colors.white24, width: 0.8),
+          border: Border.all(
+              color: isActive
+                  ? AppColors.mintGreen.withValues(alpha: 0.4)
+                  : Colors.white24,
+              width: 0.8),
         ),
         child: Text(
           label,
@@ -1706,9 +2134,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     );
   }
 
-  Widget _buildFacebookActionButtons(ExplorerProfile profile, bool isOwnProfile, String currentUid) {
+  Widget _buildFacebookActionButtons(
+      ExplorerProfile profile, bool isOwnProfile, String currentUid) {
     final isBn = _bioLanguage == 'bn';
-    
+
     if (isOwnProfile) {
       return Row(
         children: [
@@ -1720,12 +2149,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 foregroundColor: Colors.black,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               icon: const Icon(Icons.add, size: 18),
               label: Text(
                 isBn ? 'ডায়েরি যুক্ত করুন' : 'Add Log',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
           ),
@@ -1734,26 +2165,28 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             child: ElevatedButton.icon(
               onPressed: () => _showEditProfileBottomSheet(profile),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.08),
+                backgroundColor: Colors.white.withValues(alpha: 0.08),
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
               ),
               icon: const Icon(Icons.edit, size: 16),
               label: Text(
                 isBn ? 'প্রোফাইল পরিবর্তন' : 'Edit Profile',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
           ),
           const SizedBox(width: 8),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
+              color: Colors.white.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: IconButton(
               onPressed: () => context.push('/settings'),
@@ -1765,7 +2198,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     }
 
     final docId = '${currentUid}_${profile.uid}';
-    final followStatusSt = _followStatusStream ?? 
+    final followStatusSt = _followStatusStream ??
         FirebaseFirestore.instance.collection('follows').doc(docId).snapshots();
 
     return StreamBuilder<DocumentSnapshot>(
@@ -1777,21 +2210,29 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           children: [
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () => _toggleFollow(currentUid, profile.uid, isFollowing),
+                onPressed: () =>
+                    _toggleFollow(currentUid, profile.uid, isFollowing),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isFollowing ? Colors.white.withOpacity(0.08) : AppColors.mintGreen,
+                  backgroundColor: isFollowing
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : AppColors.mintGreen,
                   foregroundColor: isFollowing ? Colors.white : Colors.black,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  side: isFollowing ? BorderSide(color: Colors.white.withOpacity(0.08)) : null,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  side: isFollowing
+                      ? BorderSide(color: Colors.white.withValues(alpha: 0.08))
+                      : null,
                 ),
-                icon: Icon(isFollowing ? Icons.check : Icons.person_add, size: 16),
+                icon: Icon(isFollowing ? Icons.check : Icons.person_add,
+                    size: 16),
                 label: Text(
-                  isFollowing 
-                      ? (isBn ? 'ফলো করছেন' : 'Following') 
+                  isFollowing
+                      ? (isBn ? 'ফলো করছেন' : 'Following')
                       : (isBn ? 'ফলো করুন' : 'Follow'),
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ),
             ),
@@ -1801,32 +2242,36 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 onPressed: () {
                   final uids = [currentUid, profile.uid]..sort();
                   final chatId = uids.join('_');
-                  context.push('/chat/$chatId', extra: {'otherUid': profile.uid});
+                  context
+                      .push('/chat/$chatId', extra: {'otherUid': profile.uid});
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.08),
+                  backgroundColor: Colors.white.withValues(alpha: 0.08),
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 icon: const Icon(Icons.chat_bubble_outline, size: 16),
                 label: Text(
                   isBn ? 'মেসেজ' : 'Message',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ),
             ),
             const SizedBox(width: 8),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
               ),
               child: PopupMenuButton<String>(
-                icon: const Icon(Icons.more_horiz, color: Colors.white, size: 20),
+                icon:
+                    const Icon(Icons.more_horiz, color: Colors.white, size: 20),
                 color: const Color(0xFF1E1E2E),
                 onSelected: (value) {
                   if (value == 'block') {
@@ -1837,8 +2282,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   PopupMenuItem<String>(
                     value: 'block',
                     child: Text(
-                      _blockedOther ? (isBn ? 'আনব্লক করুন' : 'Unblock') : (isBn ? 'ব্লক করুন' : 'Block'),
-                      style: TextStyle(color: _blockedOther ? Colors.green : Colors.redAccent),
+                      _blockedOther
+                          ? (isBn ? 'আনব্লক করুন' : 'Unblock')
+                          : (isBn ? 'ব্লক করুন' : 'Block'),
+                      style: TextStyle(
+                          color:
+                              _blockedOther ? Colors.green : Colors.redAccent),
                     ),
                   ),
                 ],
@@ -1850,10 +2299,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     );
   }
 
-  Future<void> _toggleFollow(String currentUid, String followedId, bool isFollowing) async {
+  Future<void> _toggleFollow(
+      String currentUid, String followedId, bool isFollowing) async {
     final docId = '${currentUid}_$followedId';
     final ref = FirebaseFirestore.instance.collection('follows').doc(docId);
-    
+
     if (isFollowing) {
       await ref.delete();
     } else {
@@ -1862,10 +2312,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         'followedId': followedId,
         'timestamp': FieldValue.serverTimestamp(),
       });
-      
+
       if (!mounted) return;
       final authState = context.read<AuthCubit>().state;
-      final currentProfile = authState is Authenticated ? authState.profile : null;
+      final currentProfile =
+          authState is Authenticated ? authState.profile : null;
       final currentName = currentProfile?.displayName ?? 'An explorer';
       await FirebaseFirestore.instance
           .collection('users')
@@ -1901,16 +2352,36 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   String _formatJoinDate(DateTime date) {
     const monthsEn = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     const monthsBn = [
-      'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-      'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+      'জানুয়ারি',
+      'ফেব্রুয়ারি',
+      'মার্চ',
+      'এপ্রিল',
+      'মে',
+      'জুন',
+      'জুলাই',
+      'আগস্ট',
+      'সেপ্টেম্বর',
+      'অক্টোবর',
+      'নভেম্বর',
+      'ডিসেম্বর'
     ];
     final month = date.month;
     final year = date.year;
-    
+
     if (_bioLanguage == 'bn') {
       return '${monthsBn[month - 1]} $year';
     }
@@ -1918,15 +2389,17 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   Widget _buildFacebookFollowStatsRow(String uid) {
-    final followersSt = _followersStream ?? FirebaseFirestore.instance
-        .collection('follows')
-        .where('followedId', isEqualTo: uid)
-        .snapshots();
+    final followersSt = _followersStream ??
+        FirebaseFirestore.instance
+            .collection('follows')
+            .where('followedId', isEqualTo: uid)
+            .snapshots();
 
-    final followingSt = _followingStream ?? FirebaseFirestore.instance
-        .collection('follows')
-        .where('followerId', isEqualTo: uid)
-        .snapshots();
+    final followingSt = _followingStream ??
+        FirebaseFirestore.instance
+            .collection('follows')
+            .where('followerId', isEqualTo: uid)
+            .snapshots();
 
     return StreamBuilder<QuerySnapshot>(
       stream: followersSt,
@@ -1937,7 +2410,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           builder: (context, followingSnap) {
             final followingCount = followingSnap.data?.docs.length ?? 0;
             final isBn = _bioLanguage == 'bn';
-            
+
             return Column(
               children: [
                 GestureDetector(
@@ -1946,16 +2419,21 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
                       children: [
-                        const Icon(Icons.people_outline, color: Colors.white54, size: 20),
+                        const Icon(Icons.people_outline,
+                            color: Colors.white54, size: 20),
                         const SizedBox(width: 12),
                         RichText(
                           text: TextSpan(
-                            style: const TextStyle(color: Colors.white70, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 14),
                             children: [
-                              TextSpan(text: isBn ? 'ফলোয়ার: ' : 'Followed by '),
+                              TextSpan(
+                                  text: isBn ? 'ফলোয়ার: ' : 'Followed by '),
                               TextSpan(
                                 text: '$followersCount',
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white),
                               ),
                               TextSpan(text: isBn ? ' জন' : ' people'),
                             ],
@@ -1971,16 +2449,21 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
                       children: [
-                        const Icon(Icons.person_add_alt_1_outlined, color: Colors.white54, size: 20),
+                        const Icon(Icons.person_add_alt_1_outlined,
+                            color: Colors.white54, size: 20),
                         const SizedBox(width: 12),
                         RichText(
                           text: TextSpan(
-                            style: const TextStyle(color: Colors.white70, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 14),
                             children: [
-                              TextSpan(text: isBn ? 'ফলো করছেন: ' : 'Following '),
+                              TextSpan(
+                                  text: isBn ? 'ফলো করছেন: ' : 'Following '),
                               TextSpan(
                                 text: '$followingCount',
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white),
                               ),
                               TextSpan(text: isBn ? ' জনকে' : ' people'),
                             ],
@@ -2003,7 +2486,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Colors.white.withOpacity(0.08), width: 1),
+          bottom:
+              BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 1),
         ),
       ),
       child: Row(
@@ -2016,7 +2500,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     );
   }
 
-  Widget _buildDashboardTabButton(String tabKey, String emoji, String fallbackLabel) {
+  Widget _buildDashboardTabButton(
+      String tabKey, String emoji, String fallbackLabel) {
     final isActive = _activeTab == tabKey;
     final isBn = _bioLanguage == 'bn';
     String label = fallbackLabel;
@@ -2057,7 +2542,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     );
   }
 
-  Widget _buildDashboardActiveTab(ExplorerProfile profile, List<QueryDocumentSnapshot> docs, bool isOwnProfile) {
+  Widget _buildDashboardActiveTab(ExplorerProfile profile,
+      List<QueryDocumentSnapshot> docs, bool isOwnProfile) {
     switch (_activeTab) {
       case 'analytics':
         return Column(
@@ -2106,7 +2592,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               alignment: Alignment.centerLeft,
               child: Text(
                 _t('BADGES'),
-                style: const TextStyle(color: Colors.white30, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
+                style: const TextStyle(
+                    color: Colors.white30,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1),
               ),
             ),
             const SizedBox(height: 12),
@@ -2136,8 +2626,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 14)),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(label,
+              style: const TextStyle(color: Colors.white54, fontSize: 14)),
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -2146,11 +2641,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   Widget _buildTierProgressCard(ExplorerProfile profile) {
     final score = profile.explorerScore.value;
     final currentTier = profile.tier;
-    
+
     String nextTierName = '';
     int currentMin = 0;
     int nextThreshold = 0;
-    
+
     switch (currentTier) {
       case TrustTier.unverified:
         nextTierName = 'Community Explorer';
@@ -2178,26 +2673,26 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         nextThreshold = 4000;
         break;
     }
-    
+
     final pointsInCurrentRange = score - currentMin;
     final rangeSize = nextThreshold - currentMin;
-    final progress = rangeSize > 0 
-        ? (pointsInCurrentRange / rangeSize).clamp(0.0, 1.0) 
+    final progress = rangeSize > 0
+        ? (pointsInCurrentRange / rangeSize).clamp(0.0, 1.0)
         : 1.0;
-        
+
     final tierColor = AppColors.forTier(currentTier);
     final pointsNeeded = nextThreshold - score;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: tierColor.withOpacity(0.2)),
+        border: Border.all(color: tierColor.withValues(alpha: 0.2)),
         gradient: LinearGradient(
           colors: [
-            tierColor.withOpacity(0.05),
+            tierColor.withValues(alpha: 0.05),
             Colors.transparent,
           ],
           begin: Alignment.topLeft,
@@ -2236,7 +2731,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: Colors.white.withOpacity(0.05),
+              backgroundColor: Colors.white.withValues(alpha: 0.05),
               valueColor: AlwaysStoppedAnimation<Color>(tierColor),
               minHeight: 8,
             ),
@@ -2250,13 +2745,17 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 style: const TextStyle(color: Colors.white54, fontSize: 11),
               ),
               Text(
-                currentTier == TrustTier.pioneer 
-                    ? (_bioLanguage == 'bn' ? 'সর্বোচ্চ স্তর অর্জিত' : 'PIONEER MAXED') 
-                    : (_bioLanguage == 'bn' 
-                        ? 'পরবর্তী: ${_t(nextTierName)} ($pointsNeeded ${_t('pts')} বাকি)' 
+                currentTier == TrustTier.pioneer
+                    ? (_bioLanguage == 'bn'
+                        ? 'সর্বোচ্চ স্তর অর্জিত'
+                        : 'PIONEER MAXED')
+                    : (_bioLanguage == 'bn'
+                        ? 'পরবর্তী: ${_t(nextTierName)} ($pointsNeeded ${_t('pts')} বাকি)'
                         : 'Next: $nextTierName ($pointsNeeded pts left)'),
                 style: TextStyle(
-                  color: currentTier == TrustTier.pioneer ? tierColor : Colors.white30, 
+                  color: currentTier == TrustTier.pioneer
+                      ? tierColor
+                      : Colors.white30,
                   fontSize: 11,
                 ),
               ),
@@ -2276,8 +2775,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           ),
           const SizedBox(height: 8),
           _buildScoreTipRow(_t('Publish a travel log'), '+50 ${_t('pts')}'),
-          _buildScoreTipRow(_t('Receive helpful vote on log'), '+10 ${_t('pts')}'),
-          _buildScoreTipRow(_t('Visit a new district in Bangladesh'), '+100 ${_t('pts')}'),
+          _buildScoreTipRow(
+              _t('Receive helpful vote on log'), '+10 ${_t('pts')}'),
+          _buildScoreTipRow(
+              _t('Visit a new district in Bangladesh'), '+100 ${_t('pts')}'),
         ],
       ),
     );
@@ -2295,7 +2796,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           ),
           Text(
             points,
-            style: const TextStyle(color: AppColors.mintGreen, fontSize: 11, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: AppColors.mintGreen,
+                fontSize: 11,
+                fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -2317,18 +2821,25 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       final costItemsList = data['costItems'] as List<dynamic>? ?? [];
       for (final item in costItemsList) {
         if (item is Map<String, dynamic>) {
-          final category = (item['category'] ?? '').toString().toLowerCase().trim();
+          final category =
+              (item['category'] ?? '').toString().toLowerCase().trim();
           final amount = (item['amountBDT'] ?? 0) as int;
           grandTotal += amount;
           if (category.contains('transport')) {
             totalTransport += amount;
-          } else if (category.contains('lodg') || category.contains('hotel') || category.contains('stay')) {
+          } else if (category.contains('lodg') ||
+              category.contains('hotel') ||
+              category.contains('stay')) {
             totalLodging += amount;
-          } else if (category.contains('food') || category.contains('eat') || category.contains('restaurant')) {
+          } else if (category.contains('food') ||
+              category.contains('eat') ||
+              category.contains('restaurant')) {
             totalFood += amount;
           } else if (category.contains('shop')) {
             totalShopping += amount;
-          } else if (category.contains('activit') || category.contains('ticket') || category.contains('entert')) {
+          } else if (category.contains('activit') ||
+              category.contains('ticket') ||
+              category.contains('entert')) {
             totalActivities += amount;
           } else {
             totalOthers += amount;
@@ -2342,9 +2853,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF111111),
+          color: context.surfacePanel,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: const Row(
           children: [
@@ -2359,7 +2870,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       );
     }
 
-    Widget buildCategoryProgress(String name, int amount, Color color, IconData icon) {
+    Widget buildCategoryProgress(
+        String name, int amount, Color color, IconData icon) {
       final percentage = grandTotal > 0 ? (amount / grandTotal) : 0.0;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -2371,12 +2883,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 const SizedBox(width: 8),
                 Text(
                   name,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 Text(
                   'BDT $amount (${(percentage * 100).toStringAsFixed(1)}%)',
-                  style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: color, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -2385,7 +2901,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: percentage,
-                backgroundColor: Colors.white.withOpacity(0.05),
+                backgroundColor: Colors.white.withValues(alpha: 0.05),
                 valueColor: AlwaysStoppedAnimation<Color>(color),
                 minHeight: 8,
               ),
@@ -2399,9 +2915,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2430,23 +2946,30 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           ),
           const SizedBox(height: 8),
           if (totalTransport > 0)
-            buildCategoryProgress('Transport', totalTransport, const Color(0xFF4EA8DE), Icons.directions_bus),
+            buildCategoryProgress('Transport', totalTransport,
+                const Color(0xFF4EA8DE), Icons.directions_bus),
           if (totalLodging > 0)
-            buildCategoryProgress('Lodging', totalLodging, const Color(0xFF70E000), Icons.hotel),
+            buildCategoryProgress(
+                'Lodging', totalLodging, const Color(0xFF70E000), Icons.hotel),
           if (totalFood > 0)
-            buildCategoryProgress('Food & Dining', totalFood, const Color(0xFFFFB703), Icons.fastfood),
+            buildCategoryProgress('Food & Dining', totalFood,
+                const Color(0xFFFFB703), Icons.fastfood),
           if (totalShopping > 0)
-            buildCategoryProgress('Shopping', totalShopping, const Color(0xFF9D4EDD), Icons.shopping_bag),
+            buildCategoryProgress('Shopping', totalShopping,
+                const Color(0xFF9D4EDD), Icons.shopping_bag),
           if (totalActivities > 0)
-            buildCategoryProgress('Activities & Tickets', totalActivities, const Color(0xFFF15BB5), Icons.local_activity),
+            buildCategoryProgress('Activities & Tickets', totalActivities,
+                const Color(0xFFF15BB5), Icons.local_activity),
           if (totalOthers > 0)
-            buildCategoryProgress('Others', totalOthers, Colors.white60, Icons.more_horiz),
+            buildCategoryProgress(
+                'Others', totalOthers, Colors.white60, Icons.more_horiz),
         ],
       ),
     );
   }
 
-  Widget _buildMyTripLogsSection(BuildContext context, String uid, bool isOwnProfile, List<QueryDocumentSnapshot> docs) {
+  Widget _buildMyTripLogsSection(BuildContext context, String uid,
+      bool isOwnProfile, List<QueryDocumentSnapshot> docs) {
     final authState = context.read<AuthCubit>().state;
     final profile = authState is Authenticated ? authState.profile : null;
 
@@ -2490,7 +3013,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>;
             final viewsCount = data['views'] as int? ?? 0;
-            
+
             TripLog log;
             try {
               log = TripLog.fromJson(data);
@@ -2499,18 +3022,18 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               return const SizedBox.shrink();
             }
 
-            final dateStr = log.publishedAt != null 
+            final dateStr = log.publishedAt != null
                 ? '${log.publishedAt!.day}/${log.publishedAt!.month}/${log.publishedAt!.year}'
                 : '${log.lastConfirmed.day}/${log.lastConfirmed.month}/${log.lastConfirmed.year}';
 
             return GestureDetector(
               onTap: () => TripLogDetailSheet.show(context, log),
               child: Card(
-                color: const Color(0xFF111111),
+                color: context.surfacePanel,
                 margin: const EdgeInsets.symmetric(vertical: 8.0),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -2532,14 +3055,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           ),
                           Text(
                             dateStr,
-                            style: const TextStyle(color: Colors.white38, fontSize: 11),
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 11),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Text(
                         '${log.division} · ${log.district} · ${log.blocks.length} blocks · ${log.helpfulVotes} helpful votes · $viewsCount views',
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12),
                       ),
                       if (isOwnProfile) ...[
                         const Divider(color: Colors.white10, height: 20),
@@ -2547,7 +3072,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             TextButton.icon(
-                              style: TextButton.styleFrom(foregroundColor: AppColors.mintGreen),
+                              style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.mintGreen),
                               onPressed: () {
                                 context.push('/editor', extra: {
                                   'tripLog': log,
@@ -2555,14 +3081,21 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 });
                               },
                               icon: const Icon(Icons.edit, size: 16),
-                              label: const Text('Edit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              label: const Text('Edit',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold)),
                             ),
                             const SizedBox(width: 8),
                             TextButton.icon(
-                              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                              style: TextButton.styleFrom(
+                                  foregroundColor: Colors.redAccent),
                               onPressed: () => _showDeleteConfirmation(log),
                               icon: const Icon(Icons.delete_outline, size: 16),
-                              label: const Text('Delete', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              label: const Text('Delete',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
@@ -2586,7 +3119,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF13131E),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         children: [
@@ -2595,11 +3128,21 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: AppColors.darkGreen,
-                backgroundImage: profile.avatarUrl != null ? CachedNetworkImageProvider(profile.avatarUrl!) : null,
+                backgroundImage: profile.avatarUrl != null
+                    ? CachedNetworkImageProvider(
+                        profile.avatarUrl!,
+                        errorListener: (dynamic error) {},
+                      )
+                    : null,
                 child: profile.avatarUrl == null
                     ? Text(
-                        profile.displayName.isNotEmpty ? profile.displayName[0] : 'E',
-                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                        profile.displayName.isNotEmpty
+                            ? profile.displayName[0]
+                            : 'E',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold),
                       )
                     : null,
               ),
@@ -2608,15 +3151,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 child: GestureDetector(
                   onTap: () => context.push('/editor'),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
+                      color: Colors.white.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withOpacity(0.06)),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.06)),
                     ),
                     child: Text(
-                      isBn ? 'ভ্রমণের নতুন গল্প লিখুন...' : "What's on your mind?",
-                      style: const TextStyle(color: Colors.white38, fontSize: 13),
+                      isBn
+                          ? 'ভ্রমণের নতুন গল্প লিখুন...'
+                          : "What's on your mind?",
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 13),
                     ),
                   ),
                 ),
@@ -2624,14 +3172,17 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          Container(height: 0.8, color: Colors.white.withOpacity(0.06)),
+          Container(height: 0.8, color: Colors.white.withValues(alpha: 0.06)),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildComposerAction(Icons.photo_library, Colors.greenAccent, isBn ? 'ছবি/ভিডিও' : 'Photo', () => context.push('/editor')),
-              _buildComposerAction(Icons.location_on, Colors.redAccent, isBn ? 'চেক-ইন' : 'Check In', () => context.push('/editor')),
-              _buildComposerAction(Icons.local_offer, Colors.blueAccent, isBn ? 'ট্যাগ' : 'Tag', () => context.push('/editor')),
+              _buildComposerAction(Icons.photo_library, Colors.greenAccent,
+                  isBn ? 'ছবি/ভিডিও' : 'Photo', () => context.push('/editor')),
+              _buildComposerAction(Icons.location_on, Colors.redAccent,
+                  isBn ? 'চেক-ইন' : 'Check In', () => context.push('/editor')),
+              _buildComposerAction(Icons.local_offer, Colors.blueAccent,
+                  isBn ? 'ট্যাগ' : 'Tag', () => context.push('/editor')),
             ],
           ),
         ],
@@ -2639,7 +3190,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     );
   }
 
-  Widget _buildComposerAction(IconData icon, Color color, String label, VoidCallback onTap) {
+  Widget _buildComposerAction(
+      IconData icon, Color color, String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Row(
@@ -2648,7 +3200,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -2659,38 +3214,53 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF111111),
+        backgroundColor: context.surfacePanel,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withOpacity(0.08)),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
-        title: const Text('DELETE TRAVEL LOG', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Text('Are you sure you want to delete "${log.title}"? This action cannot be undone.', style: const TextStyle(color: Colors.white70)),
+        title: const Text('DELETE TRAVEL LOG',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
+        content: Text(
+            'Are you sure you want to delete "${log.title}"? This action cannot be undone.',
+            style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+            child:
+                const Text('Cancel', style: TextStyle(color: Colors.white38)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () async {
               Navigator.pop(dialogContext);
               try {
-                await FirebaseFirestore.instance.collection('trip_logs').doc(log.tripId).delete();
+                await FirebaseFirestore.instance
+                    .collection('trip_logs')
+                    .doc(log.tripId)
+                    .delete();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Travel log deleted successfully.')),
+                    const SnackBar(
+                        content: Text('Travel log deleted successfully.')),
                   );
                 }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to delete log: $e'), backgroundColor: AppColors.amber),
+                    SnackBar(
+                        content: Text('Failed to delete log: $e'),
+                        backgroundColor: AppColors.amber),
                   );
                 }
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text('Delete',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -2702,16 +3272,23 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatColumn('districts_logged', '${profile.districtsDiaryLogged.length} districts', Icons.map_outlined),
-          _buildStatColumn('total_trip_days', '${profile.totalTripDays} days', Icons.calendar_today_outlined),
-          _buildStatColumn('total_spent', '৳${profile.totalSpentBDT.toStringAsFixed(0)}', Icons.payments_outlined),
+          _buildStatColumn(
+              'districts_logged',
+              '${profile.districtsDiaryLogged.length} districts',
+              Icons.map_outlined),
+          _buildStatColumn('total_trip_days', '${profile.totalTripDays} days',
+              Icons.calendar_today_outlined),
+          _buildStatColumn(
+              'total_spent',
+              '৳${profile.totalSpentBDT.toStringAsFixed(0)}',
+              Icons.payments_outlined),
         ],
       ),
     );
@@ -2724,7 +3301,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         const SizedBox(height: 8),
         Text(
           value,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 4),
         Text(
@@ -2738,9 +3316,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   Widget _buildProfileTabBar() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
@@ -2791,7 +3369,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     );
   }
 
-  Widget _buildActiveTabContent(ExplorerProfile profile, List<QueryDocumentSnapshot> docs, bool isOwnProfile) {
+  Widget _buildActiveTabContent(ExplorerProfile profile,
+      List<QueryDocumentSnapshot> docs, bool isOwnProfile) {
     switch (_activeSubTab) {
       case 'timeline':
         final journeyEntries = docs.map((doc) {
@@ -2827,10 +3406,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         return JourneyTimelineWidget(entries: journeyEntries);
 
       case 'map':
-        final visitedDistrictsNormalized = docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>?;
-          return (data?['district'] ?? '').toString().trim();
-        }).where((d) => d.isNotEmpty).toList();
+        final visitedDistrictsNormalized = docs
+            .map((doc) {
+              final data = doc.data() as Map<String, dynamic>?;
+              return (data?['district'] ?? '').toString().trim();
+            })
+            .where((d) => d.isNotEmpty)
+            .toList();
         return DistrictFillMapWidget(
           visitedDistricts: visitedDistrictsNormalized,
           size: MediaQuery.of(context).size.width - 32,
@@ -2844,7 +3426,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
       case 'logs':
       default:
-        return _buildMyTripLogsSection(context, profile.uid, isOwnProfile, docs);
+        return _buildMyTripLogsSection(
+            context, profile.uid, isOwnProfile, docs);
     }
   }
 
@@ -2852,44 +3435,58 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'ACCOUNT ACTIONS',
-            style: TextStyle(color: Colors.white30, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+            style: TextStyle(
+                color: Colors.white30,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5),
           ),
           const SizedBox(height: 12),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.inbox_outlined, color: AppColors.mintGreen),
-            title: const Text('Inbox / Messages', style: TextStyle(color: Colors.white, fontSize: 14)),
-            subtitle: const Text('Access your traveler chats and message history', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            leading:
+                const Icon(Icons.inbox_outlined, color: AppColors.mintGreen),
+            title: const Text('Inbox / Messages',
+                style: TextStyle(color: Colors.white, fontSize: 14)),
+            subtitle: const Text(
+                'Access your traveler chats and message history',
+                style: TextStyle(color: Colors.white38, fontSize: 11)),
             trailing: const Icon(Icons.chevron_right, color: Colors.white30),
             onTap: () => context.push('/chats'),
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.lock_outline, color: AppColors.mintGreen),
-            title: const Text('Change / Set Password', style: TextStyle(color: Colors.white, fontSize: 14)),
-            subtitle: const Text('Add or update password for email sign-in backup', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            title: const Text('Change / Set Password',
+                style: TextStyle(color: Colors.white, fontSize: 14)),
+            subtitle: const Text(
+                'Add or update password for email sign-in backup',
+                style: TextStyle(color: Colors.white38, fontSize: 11)),
             trailing: const Icon(Icons.chevron_right, color: Colors.white30),
             onTap: () => _showChangePasswordDialog(context),
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.workspace_premium, color: AppColors.gold),
-            title: const Text('Milestones & Leaderboards', style: TextStyle(color: Colors.white, fontSize: 14)),
-            subtitle: const Text('View your unlocked badges and explorer ranks', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            title: const Text('Milestones & Leaderboards',
+                style: TextStyle(color: Colors.white, fontSize: 14)),
+            subtitle: const Text('View your unlocked badges and explorer ranks',
+                style: TextStyle(color: Colors.white38, fontSize: 11)),
             trailing: const Icon(Icons.chevron_right, color: Colors.white30),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute<void>(builder: (context) => const AchievementsScreen()),
+                MaterialPageRoute<void>(
+                    builder: (context) => const AchievementsScreen()),
               );
             },
           ),
@@ -2897,8 +3494,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text('Log Out', style: TextStyle(color: Colors.white, fontSize: 14)),
-            subtitle: const Text('Sign out of your active explorer session', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            title: const Text('Log Out',
+                style: TextStyle(color: Colors.white, fontSize: 14)),
+            subtitle: const Text('Sign out of your active explorer session',
+                style: TextStyle(color: Colors.white38, fontSize: 11)),
             trailing: const Icon(Icons.chevron_right, color: Colors.white30),
             onTap: () async {
               context.read<AuthCubit>().signOut();
@@ -2907,8 +3506,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.delete_forever, color: Colors.redAccent),
-            title: const Text('Delete Profile & Account', style: TextStyle(color: Colors.redAccent, fontSize: 14)),
-            subtitle: const Text('Permanently delete your profile and travel logs', style: TextStyle(color: Colors.white38, fontSize: 11)),
+            title: const Text('Delete Profile & Account',
+                style: TextStyle(color: Colors.redAccent, fontSize: 14)),
+            subtitle: const Text(
+                'Permanently delete your profile and travel logs',
+                style: TextStyle(color: Colors.white38, fontSize: 11)),
             trailing: const Icon(Icons.chevron_right, color: Colors.redAccent),
             onTap: () => _showDeleteProfileConfirmation(context),
           ),
@@ -2925,19 +3527,23 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          backgroundColor: const Color(0xFF111111),
+          backgroundColor: context.surfacePanel,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: Colors.redAccent, width: 0.8),
           ),
           title: const Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 24),
+              Icon(Icons.warning_amber_rounded,
+                  color: Colors.redAccent, size: 24),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'DELETE ACCOUNT',
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -2953,7 +3559,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const SizedBox(height: 16),
               const Text(
                 'Type "DELETE" to confirm:',
-                style: TextStyle(color: Colors.white30, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                style: TextStyle(
+                    color: Colors.white30,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -2961,10 +3571,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'DELETE',
-                  hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
-                  fillColor: Colors.white.withOpacity(0.05),
+                  hintStyle:
+                      const TextStyle(color: Colors.white24, fontSize: 13),
+                  fillColor: Colors.white.withValues(alpha: 0.05),
                   filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: const BorderSide(color: Colors.white10),
@@ -2985,7 +3597,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.white38)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -2998,7 +3611,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       Navigator.pop(dialogContext);
                       _deleteProfileAndAccount();
                     },
-              child: const Text('Delete Permanently', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Delete Permanently',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -3049,7 +3663,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Sensitive operation. Please log out and sign back in to delete account.'),
+              content: Text(
+                  'Sensitive operation. Please log out and sign back in to delete account.'),
               backgroundColor: Colors.amber,
               duration: Duration(seconds: 5),
             ),
@@ -3058,14 +3673,17 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${e.message}'), backgroundColor: Colors.redAccent),
+            SnackBar(
+                content: Text('Error: ${e.message}'),
+                backgroundColor: Colors.redAccent),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(
+              content: Text('Error: $e'), backgroundColor: Colors.redAccent),
         );
       }
     } finally {
@@ -3080,14 +3698,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF111111),
+        backgroundColor: context.surfacePanel,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.mintGreen.withOpacity(0.2)),
+          side: BorderSide(color: AppColors.mintGreen.withValues(alpha: 0.2)),
         ),
         title: const Text(
           'SET NEW PASSWORD',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -3105,9 +3724,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               decoration: InputDecoration(
                 hintText: 'Minimum 6 characters',
                 hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                fillColor: Colors.white.withOpacity(0.05),
+                fillColor: Colors.white.withValues(alpha: 0.05),
                 filled: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ],
@@ -3115,19 +3735,22 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+            child:
+                const Text('Cancel', style: TextStyle(color: Colors.white38)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.mintGreen),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.mintGreen),
             onPressed: () async {
               final pwd = passwordController.text.trim();
               if (pwd.length < 6) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Password must be at least 6 characters.')),
+                  const SnackBar(
+                      content: Text('Password must be at least 6 characters.')),
                 );
                 return;
               }
-              
+
               Navigator.pop(dialogContext);
               try {
                 final user = FirebaseAuth.instance.currentUser;
@@ -3135,13 +3758,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   await user.updatePassword(pwd);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Password updated successfully!')),
+                      const SnackBar(
+                          content: Text('Password updated successfully!')),
                     );
                   }
                 } else {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('No authenticated user session found.')),
+                      const SnackBar(
+                          content:
+                              Text('No authenticated user session found.')),
                     );
                   }
                 }
@@ -3162,36 +3788,85 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   static const Map<String, List<String>> _bangladeshDistricts = {
     'Dhaka': [
-      'Dhaka', 'Faridpur', 'Gazipur', 'Gopalganj', 'Kishoreganj',
-      'Madaripur', 'Manikganj', 'Munshiganj', 'Narayanganj',
-      'Narsingdi', 'Rajbari', 'Shariatpur', 'Tangail'
+      'Dhaka',
+      'Faridpur',
+      'Gazipur',
+      'Gopalganj',
+      'Kishoreganj',
+      'Madaripur',
+      'Manikganj',
+      'Munshiganj',
+      'Narayanganj',
+      'Narsingdi',
+      'Rajbari',
+      'Shariatpur',
+      'Tangail'
     ],
     'Sylhet': ['Habiganj', 'Moulvibazar', 'Sunamganj', 'Sylhet'],
     'Chittagong': [
-      'Bandarban', 'Brahmanbaria', 'Chandpur', 'Chittagong', 'Comilla',
-      'Cox\'s Bazar', 'Feni', 'Khagrachhari', 'Lakshmipur', 'Noakhali', 'Rangamati'
+      'Bandarban',
+      'Brahmanbaria',
+      'Chandpur',
+      'Chittagong',
+      'Comilla',
+      'Cox\'s Bazar',
+      'Feni',
+      'Khagrachhari',
+      'Lakshmipur',
+      'Noakhali',
+      'Rangamati'
     ],
-    'Barishal': ['Barguna', 'Barishal', 'Bhola', 'Jhalokati', 'Patuakhali', 'Pirojpur'],
+    'Barishal': [
+      'Barguna',
+      'Barishal',
+      'Bhola',
+      'Jhalokati',
+      'Patuakhali',
+      'Pirojpur'
+    ],
     'Khulna': [
-      'Bagerhat', 'Chuadanga', 'Jessore', 'Jhenaidah', 'Khulna',
-      'Kushtia', 'Magura', 'Meherpur', 'Narail', 'Satkhira'
+      'Bagerhat',
+      'Chuadanga',
+      'Jessore',
+      'Jhenaidah',
+      'Khulna',
+      'Kushtia',
+      'Magura',
+      'Meherpur',
+      'Narail',
+      'Satkhira'
     ],
     'Rajshahi': [
-      'Bogra', 'Joypurhat', 'Naogaon', 'Natore', 'Chapainawabganj',
-      'Pabna', 'Rajshahi', 'Sirajganj'
+      'Bogra',
+      'Joypurhat',
+      'Naogaon',
+      'Natore',
+      'Chapainawabganj',
+      'Pabna',
+      'Rajshahi',
+      'Sirajganj'
     ],
     'Rangpur': [
-      'Dinajpur', 'Gaibandha', 'Kurigram', 'Lalmonirhat', 'Nilphamari',
-      'Panchagarh', 'Rangpur', 'Thakurgaon'
+      'Dinajpur',
+      'Gaibandha',
+      'Kurigram',
+      'Lalmonirhat',
+      'Nilphamari',
+      'Panchagarh',
+      'Rangpur',
+      'Thakurgaon'
     ],
     'Mymensingh': ['Jamalpur', 'Mymensingh', 'Netrokona', 'Sherpur'],
   };
 
   Widget _buildExplorationProgress(List<QueryDocumentSnapshot> docs) {
-    final visitedDistrictsNormalized = docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>?;
-      return (data?['district'] ?? '').toString().trim().toLowerCase();
-    }).where((d) => d.isNotEmpty).toSet();
+    final visitedDistrictsNormalized = docs
+        .map((doc) {
+          final data = doc.data() as Map<String, dynamic>?;
+          return (data?['district'] ?? '').toString().trim().toLowerCase();
+        })
+        .where((d) => d.isNotEmpty)
+        .toSet();
 
     int totalVisited = 0;
     _bangladeshDistricts.forEach((division, districts) {
@@ -3208,9 +3883,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3242,8 +3917,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: overallPercentage,
-              backgroundColor: Colors.white.withOpacity(0.05),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
+              backgroundColor: Colors.white.withValues(alpha: 0.05),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
               minHeight: 10,
             ),
           ),
@@ -3257,9 +3933,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               itemBuilder: (context, index) {
                 final division = _bangladeshDistricts.keys.elementAt(index);
                 final districts = _bangladeshDistricts[division]!;
-                final visitedInDiv = districts.where((d) =>
-                  visitedDistrictsNormalized.contains(d.toLowerCase())
-                ).toList();
+                final visitedInDiv = districts
+                    .where((d) =>
+                        visitedDistrictsNormalized.contains(d.toLowerCase()))
+                    .toList();
 
                 final percent = visitedInDiv.length / districts.length;
 
@@ -3272,13 +3949,19 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       Expanded(
                         child: Text(
                           '$division Division'.toUpperCase(),
-                          style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1),
+                          style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1),
                         ),
                       ),
                       Text(
                         '${visitedInDiv.length} / ${districts.length}',
                         style: TextStyle(
-                          color: visitedInDiv.isNotEmpty ? AppColors.mintGreen : Colors.white30,
+                          color: visitedInDiv.isNotEmpty
+                              ? AppColors.mintGreen
+                              : Colors.white30,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -3291,10 +3974,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       borderRadius: BorderRadius.circular(2),
                       child: LinearProgressIndicator(
                         value: percent,
-                        backgroundColor: Colors.white.withOpacity(0.03),
+                        backgroundColor: Colors.white.withValues(alpha: 0.03),
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          visitedInDiv.length == districts.length ? AppColors.mintGreen : const Color(0xFF52B788).withOpacity(0.6)
-                        ),
+                            visitedInDiv.length == districts.length
+                                ? AppColors.mintGreen
+                                : const Color(0xFF52B788)
+                                    .withValues(alpha: 0.6)),
                         minHeight: 4,
                       ),
                     ),
@@ -3306,14 +3991,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         spacing: 8,
                         runSpacing: 8,
                         children: districts.map((district) {
-                          final isVisited = visitedDistrictsNormalized.contains(district.toLowerCase());
+                          final isVisited = visitedDistrictsNormalized
+                              .contains(district.toLowerCase());
                           return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: isVisited ? AppColors.mintGreen.withOpacity(0.12) : Colors.white.withOpacity(0.02),
+                              color: isVisited
+                                  ? AppColors.mintGreen.withValues(alpha: 0.12)
+                                  : Colors.white.withValues(alpha: 0.02),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: isVisited ? AppColors.mintGreen.withOpacity(0.4) : Colors.white.withOpacity(0.05),
+                                color: isVisited
+                                    ? AppColors.mintGreen.withValues(alpha: 0.4)
+                                    : Colors.white.withValues(alpha: 0.05),
                                 width: 1,
                               ),
                             ),
@@ -3321,15 +4012,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (isVisited) ...[
-                                  const Icon(Icons.check, color: AppColors.mintGreen, size: 12),
+                                  const Icon(Icons.check,
+                                      color: AppColors.mintGreen, size: 12),
                                   const SizedBox(width: 4),
                                 ],
                                 Text(
                                   district,
                                   style: TextStyle(
-                                    color: isVisited ? Colors.white : Colors.white38,
+                                    color: isVisited
+                                        ? Colors.white
+                                        : Colors.white38,
                                     fontSize: 11,
-                                    fontWeight: isVisited ? FontWeight.bold : FontWeight.normal,
+                                    fontWeight: isVisited
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
                                   ),
                                 ),
                               ],
@@ -3396,7 +4092,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator(color: AppColors.mintGreen));
+                      return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: FeedListSkeleton(count: 2));
                     }
                     final docs = snapshot.data?.docs ?? [];
                     if (docs.isEmpty) {
@@ -3405,7 +4103,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         child: Center(
                           child: Text(
                             'No connections found here.',
-                            style: TextStyle(color: Colors.white30, fontSize: 13),
+                            style:
+                                TextStyle(color: Colors.white30, fontSize: 13),
                           ),
                         ),
                       );
@@ -3418,7 +4117,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         final targetUserId = isFollowers
                             ? (data['followerId'] ?? '') as String
                             : (data['followedId'] ?? '') as String;
-                        if (targetUserId.isEmpty) return const SizedBox.shrink();
+                        if (targetUserId.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
                         return _UserSocialTile(
                           userId: targetUserId,
                           currentUid: currentUid,
@@ -3452,9 +4153,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         margin: const EdgeInsets.only(bottom: 24),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.02),
+          color: Colors.white.withValues(alpha: 0.02),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Row(
           children: [
@@ -3462,12 +4163,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                isBn ? 'স্ট্যাটাস: অভিযানের জন্য প্রস্তুত' : 'Status: Ready for adventure',
+                isBn
+                    ? 'স্ট্যাটাস: অভিযানের জন্য প্রস্তুত'
+                    : 'Status: Ready for adventure',
                 style: const TextStyle(color: Colors.white54, fontSize: 13),
               ),
             ),
             if (isOwnProfile)
-              const Icon(Icons.edit_location_alt_outlined, color: AppColors.mintGreen, size: 18),
+              const Icon(Icons.edit_location_alt_outlined,
+                  color: AppColors.mintGreen, size: 18),
           ],
         ),
       );
@@ -3513,10 +4217,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLive ? AppColors.mintGreen.withOpacity(0.3) : Colors.white.withOpacity(0.08),
+          color: isLive
+              ? AppColors.mintGreen.withValues(alpha: 0.3)
+              : Colors.white.withValues(alpha: 0.08),
         ),
       ),
       child: Row(
@@ -3532,8 +4238,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   color: isLive ? AppColors.mintGreen : Colors.amber,
                 ),
               ),
-              if (isLive)
-                _expeditionPulseEffect(),
+              if (isLive) _expeditionPulseEffect(),
             ],
           ),
           const SizedBox(width: 16),
@@ -3542,8 +4247,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isLive 
-                      ? (isBn ? 'লাইভ অভিযান' : 'LIVE EXPEDITION') 
+                  isLive
+                      ? (isBn ? 'লাইভ অভিযান' : 'LIVE EXPEDITION')
                       : (isBn ? 'বেস ক্যাম্প স্ট্যাটাস' : 'BASE CAMP STATUS'),
                   style: TextStyle(
                     color: isLive ? AppColors.mintGreen : Colors.amber,
@@ -3554,9 +4259,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  isLive 
-                      ? (isBn ? 'অনুসন্ধান করছেন: $district' : 'Exploring: $district')
-                      : (isBn ? 'ফিরে এসেছেন: $district থেকে' : 'Back from: $district'),
+                  isLive
+                      ? (isBn
+                          ? 'অনুসন্ধান করছেন: $district'
+                          : 'Exploring: $district')
+                      : (isBn
+                          ? 'ফিরে এসেছেন: $district থেকে'
+                          : 'Back from: $district'),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -3568,7 +4277,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           ),
           if (isOwnProfile) ...[
             const SizedBox(width: 8),
-            const Icon(Icons.edit_location_alt, color: AppColors.mintGreen, size: 18),
+            const Icon(Icons.edit_location_alt,
+                color: AppColors.mintGreen, size: 18),
           ],
         ],
       ),
@@ -3592,18 +4302,23 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF111111),
+        backgroundColor: context.surfacePanel,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.mintGreen.withOpacity(0.2)),
+          side: BorderSide(color: AppColors.mintGreen.withValues(alpha: 0.2)),
         ),
         title: Row(
           children: [
             const Icon(Icons.explore, color: AppColors.mintGreen, size: 20),
             const SizedBox(width: 8),
             Text(
-              _bioLanguage == 'bn' ? 'লাইভ অভিযান নির্বাচন' : 'SELECT LIVE EXPEDITION',
-              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+              _bioLanguage == 'bn'
+                  ? 'লাইভ অভিযান নির্বাচন'
+                  : 'SELECT LIVE EXPEDITION',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -3613,8 +4328,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _bioLanguage == 'bn' 
-                    ? 'আপনার বর্তমান অভিযানের স্থানটি নির্বাচন করুন:' 
+                _bioLanguage == 'bn'
+                    ? 'আপনার বর্তমান অভিযানের স্থানটি নির্বাচন করুন:'
                     : 'Select your current live travel destination:',
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
@@ -3627,8 +4342,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     if (index == 0) {
                       return ListTile(
                         title: Text(
-                          _bioLanguage == 'bn' ? '❌ ক্লিয়ার করুন (অভিযান নেই)' : '❌ Clear Current Expedition',
-                          style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold),
+                          _bioLanguage == 'bn'
+                              ? '❌ ক্লিয়ার করুন (অভিযান নেই)'
+                              : '❌ Clear Current Expedition',
+                          style: const TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold),
                         ),
                         onTap: () async {
                           Navigator.pop(dialogContext);
@@ -3636,7 +4356,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             await FirebaseFirestore.instance
                                 .collection('explorer_profiles')
                                 .doc(widget.uid)
-                                .update({'liveExpedition': FieldValue.delete()});
+                                .update(
+                                    {'liveExpedition': FieldValue.delete()});
                             _loadProfile(); // Refresh screen state
                           } catch (_) {}
                         },
@@ -3646,9 +4367,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     return ListTile(
                       title: Text(
                         dist,
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
                       ),
-                      trailing: const Icon(Icons.chevron_right, color: Colors.white24, size: 16),
+                      trailing: const Icon(Icons.chevron_right,
+                          color: Colors.white24, size: 16),
                       onTap: () async {
                         Navigator.pop(dialogContext);
                         try {
@@ -3679,7 +4402,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       height: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.mintGreen.withOpacity(0.4), width: 2),
+        border: Border.all(
+            color: AppColors.mintGreen.withValues(alpha: 0.4), width: 2),
       ),
     );
   }
@@ -3699,32 +4423,60 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       final data = doc.data() as Map<String, dynamic>?;
       if (data == null) continue;
       final title = (data['title'] ?? '').toString().toLowerCase();
-      
+
       final blocks = data['blocks'] as List<dynamic>? ?? [];
       String textContent = '';
       for (final block in blocks) {
         if (block is Map<String, dynamic>) {
           if (block['runtimeType'] == 'text' || block['type'] == 'text') {
-            textContent += ' ${(block['content'] ?? '').toString().toLowerCase()}';
+            textContent +=
+                ' ${(block['content'] ?? '').toString().toLowerCase()}';
           }
         }
       }
       final combined = '$title $textContent';
 
       bool classified = false;
-      if (combined.contains('trek') || combined.contains('hill') || combined.contains('climb') || combined.contains('camp') || combined.contains('hike') || combined.contains('adventure')) {
+      if (combined.contains('trek') ||
+          combined.contains('hill') ||
+          combined.contains('climb') ||
+          combined.contains('camp') ||
+          combined.contains('hike') ||
+          combined.contains('adventure')) {
         adventureCount++;
         classified = true;
       }
-      if (combined.contains('beach') || combined.contains('lake') || combined.contains('forest') || combined.contains('waterfall') || combined.contains('river') || combined.contains('sea') || combined.contains('nature') || combined.contains('sundarban') || combined.contains('island')) {
+      if (combined.contains('beach') ||
+          combined.contains('lake') ||
+          combined.contains('forest') ||
+          combined.contains('waterfall') ||
+          combined.contains('river') ||
+          combined.contains('sea') ||
+          combined.contains('nature') ||
+          combined.contains('sundarban') ||
+          combined.contains('island')) {
         natureCount++;
         classified = true;
       }
-      if (combined.contains('history') || combined.contains('mosque') || combined.contains('temple') || combined.contains('fort') || combined.contains('palace') || combined.contains('museum') || combined.contains('heritage') || combined.contains('ruin') || combined.contains('historical')) {
+      if (combined.contains('history') ||
+          combined.contains('mosque') ||
+          combined.contains('temple') ||
+          combined.contains('fort') ||
+          combined.contains('palace') ||
+          combined.contains('museum') ||
+          combined.contains('heritage') ||
+          combined.contains('ruin') ||
+          combined.contains('historical')) {
         heritageCount++;
         classified = true;
       }
-      if (combined.contains('food') || combined.contains('eat') || combined.contains('cafe') || combined.contains('restaurant') || combined.contains('dining') || combined.contains('biryani') || combined.contains('tea')) {
+      if (combined.contains('food') ||
+          combined.contains('eat') ||
+          combined.contains('cafe') ||
+          combined.contains('restaurant') ||
+          combined.contains('dining') ||
+          combined.contains('biryani') ||
+          combined.contains('tea')) {
         culinaryCount++;
         classified = true;
       }
@@ -3733,10 +4485,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       }
     }
 
-    final total = natureCount + adventureCount + heritageCount + culinaryCount + offbeatCount;
+    final total = natureCount +
+        adventureCount +
+        heritageCount +
+        culinaryCount +
+        offbeatCount;
     if (total == 0) return const SizedBox.shrink();
 
-    final categories = ['Nature', 'Adventure', 'Heritage', 'Culinary', 'Offbeat'];
+    final categories = [
+      'Nature',
+      'Adventure',
+      'Heritage',
+      'Culinary',
+      'Offbeat'
+    ];
     final Map<String, double> scores = {
       'Nature': natureCount / total,
       'Adventure': adventureCount / total,
@@ -3764,9 +4526,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3786,7 +4548,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.mintGreen.withOpacity(0.1),
+                  color: AppColors.mintGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -3821,10 +4583,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   Widget _buildBangladeshHeatmap(List<QueryDocumentSnapshot> docs) {
-    final visitedDistrictsNormalized = docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>?;
-      return (data?['district'] ?? '').toString().trim().toLowerCase();
-    }).where((d) => d.isNotEmpty).toSet();
+    final visitedDistrictsNormalized = docs
+        .map((doc) {
+          final data = doc.data() as Map<String, dynamic>?;
+          return (data?['district'] ?? '').toString().trim().toLowerCase();
+        })
+        .where((d) => d.isNotEmpty)
+        .toSet();
 
     final Map<String, double> divisionProgress = {};
     _bangladeshDistricts.forEach((division, districts) {
@@ -3841,9 +4606,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3872,16 +4637,21 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   Widget _buildTrophyShelf(List<QueryDocumentSnapshot> docs) {
-    final visitedDistrictsNormalized = docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>?;
-      return (data?['district'] ?? '').toString().trim().toLowerCase();
-    }).where((d) => d.isNotEmpty).toSet();
+    final visitedDistrictsNormalized = docs
+        .map((doc) {
+          final data = doc.data() as Map<String, dynamic>?;
+          return (data?['district'] ?? '').toString().trim().toLowerCase();
+        })
+        .where((d) => d.isNotEmpty)
+        .toSet();
 
     final dhakaDistricts = _bangladeshDistricts['Dhaka'] ?? [];
-    final hasDhaka = dhakaDistricts.any((d) => visitedDistrictsNormalized.contains(d.toLowerCase()));
+    final hasDhaka = dhakaDistricts
+        .any((d) => visitedDistrictsNormalized.contains(d.toLowerCase()));
 
     final sylhetDistricts = _bangladeshDistricts['Sylhet'] ?? [];
-    final hasSylhetAll = sylhetDistricts.every((d) => visitedDistrictsNormalized.contains(d.toLowerCase()));
+    final hasSylhetAll = sylhetDistricts
+        .every((d) => visitedDistrictsNormalized.contains(d.toLowerCase()));
 
     final hasWanderlust = visitedDistrictsNormalized.length >= 5;
 
@@ -3941,9 +4711,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3970,32 +4740,42 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     showDialog<void>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        backgroundColor: const Color(0xFF111111),
+                        backgroundColor: context.surfacePanel,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: trophy.unlocked ? AppColors.mintGreen.withOpacity(0.2) : Colors.white10),
+                          side: BorderSide(
+                              color: trophy.unlocked
+                                  ? AppColors.mintGreen.withValues(alpha: 0.2)
+                                  : Colors.white10),
                         ),
                         title: Row(
                           children: [
                             Icon(
                               trophy.icon,
-                              color: trophy.unlocked ? AppColors.mintGreen : Colors.white24,
+                              color: trophy.unlocked
+                                  ? AppColors.mintGreen
+                                  : Colors.white24,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               trophy.title.toUpperCase(),
-                              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
                         content: Text(
                           '${trophy.desc}\n\nStatus: ${trophy.unlocked ? 'Unlocked 🎉' : 'Locked 🔒'}',
-                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('OK', style: TextStyle(color: AppColors.mintGreen)),
+                            child: const Text('OK',
+                                style: TextStyle(color: AppColors.mintGreen)),
                           ),
                         ],
                       ),
@@ -4005,10 +4785,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     width: 72,
                     margin: const EdgeInsets.only(right: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.02),
+                      color: Colors.white.withValues(alpha: 0.02),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: trophy.unlocked ? AppColors.mintGreen.withOpacity(0.2) : Colors.transparent,
+                        color: trophy.unlocked
+                            ? AppColors.mintGreen.withValues(alpha: 0.2)
+                            : Colors.transparent,
                       ),
                     ),
                     child: Column(
@@ -4016,7 +4798,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       children: [
                         Icon(
                           trophy.icon,
-                          color: trophy.unlocked ? AppColors.mintGreen : Colors.white24,
+                          color: trophy.unlocked
+                              ? AppColors.mintGreen
+                              : Colors.white24,
                           size: 32,
                         ),
                         const SizedBox(height: 6),
@@ -4026,7 +4810,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             trophy.title,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: trophy.unlocked ? Colors.white70 : Colors.white24,
+                              color: trophy.unlocked
+                                  ? Colors.white70
+                                  : Colors.white24,
                               fontSize: 8,
                               fontWeight: FontWeight.bold,
                             ),
@@ -4046,7 +4832,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     );
   }
 
-  Widget _buildCreatorDashboard(ExplorerProfile profile, List<QueryDocumentSnapshot> docs) {
+  Widget _buildCreatorDashboard(
+      ExplorerProfile profile, List<QueryDocumentSnapshot> docs) {
     final isVerified = profile.tier.isVerifiedOrAbove;
     if (!isVerified) return const SizedBox.shrink();
 
@@ -4062,12 +4849,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold.withOpacity(0.2)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
         gradient: LinearGradient(
           colors: [
-            AppColors.gold.withOpacity(0.05),
+            AppColors.gold.withValues(alpha: 0.05),
             Colors.transparent,
           ],
           begin: Alignment.topLeft,
@@ -4079,7 +4866,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.analytics_outlined, color: AppColors.gold, size: 24),
+              const Icon(Icons.analytics_outlined,
+                  color: AppColors.gold, size: 24),
               const SizedBox(width: 8),
               const Text(
                 'CREATOR HUB & ANALYTICS',
@@ -4094,12 +4882,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withOpacity(0.1),
+                  color: AppColors.gold.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
                   'ACTIVE',
-                  style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold, fontSize: 8),
+                  style: TextStyle(
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 8),
                 ),
               ),
             ],
@@ -4138,7 +4929,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       children: [
         Text(
           value,
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+              color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
         Text(
@@ -4171,16 +4963,17 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              const Icon(Icons.navigation_outlined, color: AppColors.mintGreen, size: 20),
+              const Icon(Icons.navigation_outlined,
+                  color: AppColors.mintGreen, size: 20),
               const SizedBox(width: 8),
               Text(
                 isBn ? 'কুইক নেভিগেশন' : 'QUICK NAVIGATION',
@@ -4241,9 +5034,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
-              border: Border.all(color: color.withOpacity(0.2), width: 1.5),
+              border:
+                  Border.all(color: color.withValues(alpha: 0.2), width: 1.5),
             ),
             child: Icon(icon, color: color, size: 22),
           ),
@@ -4267,21 +5061,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final topDocs = _topExplorers;
 
     if (rank == null || total == null || topDocs == null) {
-      return Container(
-        margin: const EdgeInsets.symmetric(vertical: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF111111),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
-        ),
-        child: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: CircularProgressIndicator(color: AppColors.mintGreen),
-          ),
-        ),
-      );
+      return const PanelSkeleton(height: 120);
     }
 
     final percentile = total > 0 ? (rank / total) * 100 : 100.0;
@@ -4293,9 +5073,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           margin: const EdgeInsets.symmetric(vertical: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF111111),
+            color: context.surfacePanel,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: Theme(
             data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -4306,7 +5086,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               collapsedIconColor: Colors.white54,
               title: Row(
                 children: [
-                  const Icon(Icons.leaderboard, color: AppColors.mintGreen, size: 20),
+                  const Icon(Icons.leaderboard,
+                      color: AppColors.mintGreen, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     _t('GLOBAL RANK & LEADERBOARD'),
@@ -4325,21 +5106,34 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _bioLanguage == 'bn' ? 'র‍্যাংক: #$rank, মোট: $total' : 'Rank: #$rank of $total',
-                      style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+                      _bioLanguage == 'bn'
+                          ? 'র‍্যাংক: #$rank, মোট: $total'
+                          : 'Rank: #$rank of $total',
+                      style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isTopTen ? AppColors.gold.withOpacity(0.15) : AppColors.mintGreen.withOpacity(0.15),
+                        color: isTopTen
+                            ? AppColors.gold.withValues(alpha: 0.15)
+                            : AppColors.mintGreen.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         isTopTen
-                            ? (_bioLanguage == 'bn' ? 'সেরা ${percentile.toStringAsFixed(1)}%' : 'TOP ${percentile.toStringAsFixed(1)}%')
-                            : (_bioLanguage == 'bn' ? 'সেরা ${percentile.toStringAsFixed(0)}%' : 'TOP ${percentile.toStringAsFixed(0)}%'),
+                            ? (_bioLanguage == 'bn'
+                                ? 'সেরা ${percentile.toStringAsFixed(1)}%'
+                                : 'TOP ${percentile.toStringAsFixed(1)}%')
+                            : (_bioLanguage == 'bn'
+                                ? 'সেরা ${percentile.toStringAsFixed(0)}%'
+                                : 'TOP ${percentile.toStringAsFixed(0)}%'),
                         style: TextStyle(
-                          color: isTopTen ? AppColors.gold : AppColors.mintGreen,
+                          color:
+                              isTopTen ? AppColors.gold : AppColors.mintGreen,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -4355,7 +5149,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    _bioLanguage == 'bn' ? 'সেরা ৫ অভিযাত্রী' : 'TOP 5 LEADERBOARD',
+                    _bioLanguage == 'bn'
+                        ? 'সেরা ৫ অভিযাত্রী'
+                        : 'TOP 5 LEADERBOARD',
                     style: const TextStyle(
                       color: Colors.white30,
                       fontSize: 10,
@@ -4372,7 +5168,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   itemBuilder: (context, index) {
                     final doc = topDocs[index];
                     final data = doc.data() as Map<String, dynamic>;
-                    final String name = (data['displayName'] as String?) ?? 'Explorer';
+                    final String name =
+                        (data['displayName'] as String?) ?? 'Explorer';
                     final avatar = data['avatarUrl'] as String?;
                     final scoreVal = data['explorerScore']?['value'] ?? 0;
                     final tierStr = data['tier'] ?? 'unverified';
@@ -4393,12 +5190,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: isCurrentUser
-                              ? AppColors.mintGreen.withOpacity(0.08)
-                              : Colors.white.withOpacity(0.02),
+                              ? AppColors.mintGreen.withValues(alpha: 0.08)
+                              : Colors.white.withValues(alpha: 0.02),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isCurrentUser
-                                ? AppColors.mintGreen.withOpacity(0.2)
+                                ? AppColors.mintGreen.withValues(alpha: 0.2)
                                 : Colors.transparent,
                           ),
                         ),
@@ -4409,15 +5206,17 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               height: 24,
                               decoration: BoxDecoration(
                                 color: index == 0
-                                    ? AppColors.gold.withOpacity(0.2)
-                                    : Colors.white.withOpacity(0.05),
+                                    ? AppColors.gold.withValues(alpha: 0.2)
+                                    : Colors.white.withValues(alpha: 0.05),
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
                                 child: Text(
                                   '${index + 1}',
                                   style: TextStyle(
-                                    color: index == 0 ? AppColors.gold : Colors.white70,
+                                    color: index == 0
+                                        ? AppColors.gold
+                                        : Colors.white70,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 11,
                                   ),
@@ -4428,11 +5227,19 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             CircleAvatar(
                               radius: 14,
                               backgroundColor: AppColors.darkGreen,
-                              backgroundImage: avatar != null ? CachedNetworkImageProvider(avatar) : null,
+                              backgroundImage: avatar != null
+                                  ? CachedNetworkImageProvider(
+                                      avatar,
+                                      errorListener: (dynamic error) {},
+                                    )
+                                  : null,
                               child: avatar == null
                                   ? Text(
                                       name.isNotEmpty ? name[0] : 'E',
-                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold),
                                     )
                                   : null,
                             ),
@@ -4445,13 +5252,18 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                     name,
                                     style: TextStyle(
                                       color: Colors.white,
-                                      fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.normal,
+                                      fontWeight: isCurrentUser
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                       fontSize: 13,
                                     ),
                                   ),
                                   Text(
                                     _t(displayName).toUpperCase(),
-                                    style: const TextStyle(color: Colors.white30, fontSize: 8, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                        color: Colors.white30,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -4485,7 +5297,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Icon(Icons.arrow_forward, color: AppColors.mintGreen, size: 14),
+                      const Icon(Icons.arrow_forward,
+                          color: AppColors.mintGreen, size: 14),
                     ],
                   ),
                 ),
@@ -4497,7 +5310,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     );
   }
 
-  Widget _buildBucketList(String uid, bool isOwnProfile, List<QueryDocumentSnapshot> docs) {
+  Widget _buildBucketList(
+      String uid, bool isOwnProfile, List<QueryDocumentSnapshot> docs) {
     final Set<String> visitedDistricts = {};
     for (final doc in docs) {
       final data = doc.data() as Map<String, dynamic>?;
@@ -4509,12 +5323,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: _bucketListStream ?? FirebaseFirestore.instance
-          .collection('explorer_profiles')
-          .doc(uid)
-          .collection('bucket_list')
-          .orderBy('addedAt', descending: true)
-          .snapshots(),
+      stream: _bucketListStream ??
+          FirebaseFirestore.instance
+              .collection('explorer_profiles')
+              .doc(uid)
+              .collection('bucket_list')
+              .orderBy('addedAt', descending: true)
+              .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const SizedBox.shrink();
@@ -4525,7 +5340,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
         for (final item in items) {
           final data = item.data() as Map<String, dynamic>;
-          final district = (data['district'] ?? '').toString().toLowerCase().trim();
+          final district =
+              (data['district'] ?? '').toString().toLowerCase().trim();
           final bool completed = data['completed'] as bool? ?? false;
           final isDone = completed || visitedDistricts.contains(district);
 
@@ -4534,15 +5350,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           }
         }
 
-        final double progress = items.isEmpty ? 0.0 : completedCount / items.length;
+        final double progress =
+            items.isEmpty ? 0.0 : completedCount / items.length;
 
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF111111),
+            color: context.surfacePanel,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -4552,7 +5369,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.bookmark_outline, color: AppColors.mintGreen, size: 20),
+                      Icon(Icons.bookmark_outline,
+                          color: AppColors.mintGreen, size: 20),
                       SizedBox(width: 8),
                       Text(
                         'EXPLORATION BUCKET LIST',
@@ -4567,7 +5385,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   ),
                   if (isOwnProfile)
                     IconButton(
-                      icon: const Icon(Icons.add_circle_outline, color: AppColors.mintGreen, size: 20),
+                      icon: const Icon(Icons.add_circle_outline,
+                          color: AppColors.mintGreen, size: 20),
                       onPressed: () => _showAddToBucketListDialog(uid),
                     ),
                 ],
@@ -4587,11 +5406,17 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   children: [
                     Text(
                       '$completedCount of ${items.length} completed',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
                     ),
                     Text(
                       '${(progress * 100).toStringAsFixed(0)}%',
-                      style: const TextStyle(color: AppColors.mintGreen, fontSize: 12, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: AppColors.mintGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -4600,8 +5425,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: progress,
-                    backgroundColor: Colors.white.withOpacity(0.05),
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
+                    backgroundColor: Colors.white.withValues(alpha: 0.05),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.mintGreen),
                     minHeight: 6,
                   ),
                 ),
@@ -4613,23 +5439,29 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   itemBuilder: (context, index) {
                     final doc = items[index];
                     final data = doc.data() as Map<String, dynamic>;
-                    final String district = (data['district'] as String?) ?? 'Unknown';
-                    final String division = (data['division'] as String?) ?? 'Unknown';
+                    final String district =
+                        (data['district'] as String?) ?? 'Unknown';
+                    final String division =
+                        (data['division'] as String?) ?? 'Unknown';
                     final bool completed = data['completed'] as bool? ?? false;
-                    final isDone = completed || visitedDistricts.contains(district.toString().toLowerCase().trim());
+                    final isDone = completed ||
+                        visitedDistricts
+                            .contains(district.toString().toLowerCase().trim());
 
                     return Container(
                       margin: const EdgeInsets.symmetric(vertical: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.02),
+                        color: Colors.white.withValues(alpha: 0.02),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
                           Icon(
                             isDone ? Icons.check_circle : Icons.circle_outlined,
-                            color: isDone ? AppColors.mintGreen : Colors.white24,
+                            color:
+                                isDone ? AppColors.mintGreen : Colors.white24,
                             size: 18,
                           ),
                           const SizedBox(width: 12),
@@ -4641,21 +5473,25 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   district,
                                   style: TextStyle(
                                     color: Colors.white,
-                                    decoration: isDone ? TextDecoration.lineThrough : null,
+                                    decoration: isDone
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 Text(
                                   division,
-                                  style: const TextStyle(color: Colors.white30, fontSize: 10),
+                                  style: const TextStyle(
+                                      color: Colors.white30, fontSize: 10),
                                 ),
                               ],
                             ),
                           ),
                           if (isOwnProfile)
                             IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.white30, size: 18),
+                              icon: const Icon(Icons.delete_outline,
+                                  color: Colors.white30, size: 18),
                               onPressed: () => FirebaseFirestore.instance
                                   .collection('explorer_profiles')
                                   .doc(uid)
@@ -4681,8 +5517,26 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     String selectedDistrict = 'Dhaka';
 
     final Map<String, List<String>> divDistricts = {
-      'Dhaka': ['Dhaka', 'Gazipur', 'Narayanganj', 'Munshiganj', 'Manikganj', 'Faridpur', 'Madaripur', 'Gopalganj'],
-      'Chittagong': ['Cox\'s Bazar', 'Bandarban', 'Rangamati', 'Khagrachhari', 'Chittagong', 'Feni', 'Cumilla', 'Noakhali'],
+      'Dhaka': [
+        'Dhaka',
+        'Gazipur',
+        'Narayanganj',
+        'Munshiganj',
+        'Manikganj',
+        'Faridpur',
+        'Madaripur',
+        'Gopalganj'
+      ],
+      'Chittagong': [
+        'Cox\'s Bazar',
+        'Bandarban',
+        'Rangamati',
+        'Khagrachhari',
+        'Chittagong',
+        'Feni',
+        'Cumilla',
+        'Noakhali'
+      ],
       'Sylhet': ['Sylhet', 'Moulvibazar', 'Sunamganj', 'Habiganj'],
       'Khulna': ['Khulna', 'Jessore', 'Bagerhat', 'Satkhira', 'Kushtia'],
       'Rajshahi': ['Rajshahi', 'Bogura', 'Natore', 'Pabna', 'Naogaon'],
@@ -4695,31 +5549,39 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          backgroundColor: const Color(0xFF111111),
+          backgroundColor: context.surfacePanel,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: AppColors.mintGreen.withOpacity(0.2)),
+            side: BorderSide(color: AppColors.mintGreen.withValues(alpha: 0.2)),
           ),
-          title: const Text('ADD TO BUCKET LIST', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          title: const Text('ADD TO BUCKET LIST',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Division', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              const Text('Division',
+                  style: TextStyle(color: Colors.white70, fontSize: 12)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                value: selectedDivision,
-                dropdownColor: const Color(0xFF111111),
+                initialValue: selectedDivision,
+                dropdownColor: context.surfacePanel,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  fillColor: Colors.white.withOpacity(0.05),
+                  fillColor: Colors.white.withValues(alpha: 0.05),
                   filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                items: divDistricts.keys.map((div) => DropdownMenuItem(
-                  value: div,
-                  child: Text(div),
-                )).toList(),
+                items: divDistricts.keys
+                    .map((div) => DropdownMenuItem(
+                          value: div,
+                          child: Text(div),
+                        ))
+                    .toList(),
                 onChanged: (val) {
                   if (val != null) {
                     setState(() {
@@ -4730,21 +5592,25 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              const Text('District', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              const Text('District',
+                  style: TextStyle(color: Colors.white70, fontSize: 12)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                value: selectedDistrict,
-                dropdownColor: const Color(0xFF111111),
+                initialValue: selectedDistrict,
+                dropdownColor: context.surfacePanel,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  fillColor: Colors.white.withOpacity(0.05),
+                  fillColor: Colors.white.withValues(alpha: 0.05),
                   filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                items: divDistricts[selectedDivision]!.map((dist) => DropdownMenuItem(
-                  value: dist,
-                  child: Text(dist),
-                )).toList(),
+                items: divDistricts[selectedDivision]!
+                    .map((dist) => DropdownMenuItem(
+                          value: dist,
+                          child: Text(dist),
+                        ))
+                    .toList(),
                 onChanged: (val) {
                   if (val != null) {
                     setState(() {
@@ -4758,10 +5624,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.white38)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.mintGreen),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.mintGreen),
               onPressed: () async {
                 Navigator.pop(dialogContext);
                 await FirebaseFirestore.instance
@@ -4775,7 +5643,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   'completed': false,
                 });
               },
-              child: const Text('Add', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: const Text('Add',
+                  style: TextStyle(
+                      color: Colors.black, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -4792,7 +5662,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       for (final block in blocks) {
         if (block is Map<String, dynamic>) {
           final type = block['runtimeType'] ?? block['type'];
-          if (type == 'image' && block['storageUrl'] != null && block['storageUrl'].toString().isNotEmpty) {
+          if (type == 'image' &&
+              block['storageUrl'] != null &&
+              block['storageUrl'].toString().isNotEmpty) {
             imageUrls.add(block['storageUrl'].toString());
           }
         }
@@ -4804,13 +5676,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         margin: const EdgeInsets.symmetric(vertical: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF111111),
+          color: context.surfacePanel,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.photo_library_outlined, color: Colors.white38, size: 24),
+            const Icon(Icons.photo_library_outlined,
+                color: Colors.white38, size: 24),
             const SizedBox(width: 12),
             Text(
               _t('No memories found. Add images to trip logs!'),
@@ -4821,22 +5694,24 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       );
     }
 
-    final displayedImages = _showAllMedia ? imageUrls : imageUrls.take(9).toList();
+    final displayedImages =
+        _showAllMedia ? imageUrls : imageUrls.take(9).toList();
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.photo_library_outlined, color: AppColors.mintGreen, size: 20),
+              const Icon(Icons.photo_library_outlined,
+                  color: AppColors.mintGreen, size: 20),
               const SizedBox(width: 8),
               Text(
                 _t('TRAVEL MEMORY COLLAGE'),
@@ -4849,7 +5724,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               ),
               const Spacer(),
               Text(
-                _bioLanguage == 'bn' ? '${imageUrls.length}${_t('photos')}' : '${imageUrls.length} photos',
+                _bioLanguage == 'bn'
+                    ? '${imageUrls.length}${_t('photos')}'
+                    : '${imageUrls.length} photos',
                 style: const TextStyle(color: Colors.white38, fontSize: 11),
               ),
             ],
@@ -4874,18 +5751,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     imageUrl: url,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
-                      color: Colors.white.withOpacity(0.05),
+                      color: Colors.white.withValues(alpha: 0.05),
                       child: const Center(
                         child: SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.mintGreen),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.mintGreen),
                         ),
                       ),
                     ),
                     errorWidget: (context, url, error) => Container(
-                      color: Colors.white.withOpacity(0.05),
-                      child: const Icon(Icons.broken_image_outlined, color: Colors.white24),
+                      color: Colors.white.withValues(alpha: 0.05),
+                      child: const Icon(Icons.broken_image_outlined,
+                          color: Colors.white24),
                     ),
                   ),
                 ),
@@ -4902,7 +5781,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   });
                 },
                 icon: Icon(
-                  _showAllMedia ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  _showAllMedia
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
                   color: AppColors.mintGreen,
                   size: 18,
                 ),
@@ -4959,21 +5840,26 @@ class _UserSocialTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('explorer_profiles').doc(userId).get(),
+      future: FirebaseFirestore.instance
+          .collection('explorer_profiles')
+          .doc(userId)
+          .get(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const ListTile(
             title: SizedBox(
               width: 100,
               height: 12,
-              child: LinearProgressIndicator(color: AppColors.mintGreen, backgroundColor: Colors.white10),
+              child: LinearProgressIndicator(
+                  color: AppColors.mintGreen, backgroundColor: Colors.white10),
             ),
           );
         }
         final data = snapshot.data!.data() as Map<String, dynamic>?;
         if (data == null) return const SizedBox.shrink();
 
-        final String displayName = (data['displayName'] as String?) ?? 'Explorer';
+        final String displayName =
+            (data['displayName'] as String?) ?? 'Explorer';
         final avatarUrl = data['avatarUrl'] as String?;
         final tierName = data['tier'] ?? 'unverified';
         final tier = TrustTier.values.firstWhere(
@@ -4983,28 +5869,42 @@ class _UserSocialTile extends StatelessWidget {
         final color = AppColors.forTier(tier);
 
         return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           leading: CircleAvatar(
             backgroundColor: AppColors.darkGreen,
-            backgroundImage: avatarUrl != null ? CachedNetworkImageProvider(avatarUrl) : null,
+            backgroundImage: avatarUrl != null
+                ? CachedNetworkImageProvider(
+                    avatarUrl,
+                    errorListener: (dynamic error) {},
+                  )
+                : null,
             child: avatarUrl == null
-                ? Text(displayName.isNotEmpty ? displayName[0].toUpperCase() : 'E', style: const TextStyle(color: Colors.white))
+                ? Text(
+                    displayName.isNotEmpty ? displayName[0].toUpperCase() : 'E',
+                    style: const TextStyle(color: Colors.white))
                 : null,
           ),
           title: Row(
             children: [
-              Text(displayName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+              Text(displayName,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14)),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: color.withOpacity(0.5), width: 0.5),
+                  border: Border.all(
+                      color: color.withValues(alpha: 0.5), width: 0.5),
                 ),
                 child: Text(
                   tier.displayName.toUpperCase(),
-                  style: TextStyle(color: color, fontSize: 8, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: color, fontSize: 8, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -5012,7 +5912,8 @@ class _UserSocialTile extends StatelessWidget {
           trailing: userId == currentUid
               ? null
               : IconButton(
-                  icon: const Icon(Icons.chat_bubble_outline, color: AppColors.mintGreen),
+                  icon: const Icon(Icons.chat_bubble_outline,
+                      color: AppColors.mintGreen),
                   onPressed: () {
                     Navigator.pop(context); // close sheet
                     final uids = [currentUid, userId]..sort();
@@ -5048,12 +5949,12 @@ class RadarChartPainter extends CustomPainter {
     final radius = size.width / 2 * 0.8;
 
     final paintLine = Paint()
-      ..color = Colors.white.withOpacity(0.15)
+      ..color = Colors.white.withValues(alpha: 0.15)
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
     final paintFill = Paint()
-      ..color = accentColor.withOpacity(0.15)
+      ..color = accentColor.withValues(alpha: 0.15)
       ..style = PaintingStyle.fill;
 
     final paintStroke = Paint()
@@ -5097,7 +5998,11 @@ class RadarChartPainter extends CustomPainter {
 
       textPainter.text = TextSpan(
         text: label.toUpperCase(),
-        style: const TextStyle(color: Colors.white60, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+        style: const TextStyle(
+            color: Colors.white60,
+            fontSize: 8,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5),
       );
       textPainter.layout();
       textPainter.paint(canvas, Offset(lx - textPainter.width / 2, ly));
@@ -5169,7 +6074,7 @@ class BangladeshHeatmapPainter extends CustomPainter {
     };
 
     final linkPaint = Paint()
-      ..color = Colors.white.withOpacity(0.08)
+      ..color = Colors.white.withValues(alpha: 0.08)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
@@ -5192,17 +6097,19 @@ class BangladeshHeatmapPainter extends CustomPainter {
     positions.forEach((name, pos) {
       final progress = divisionProgress[name] ?? 0.0;
       final nodeColor = Color.lerp(
-        Colors.white.withOpacity(0.05),
+        Colors.white.withValues(alpha: 0.05),
         AppColors.mintGreen,
         progress,
       )!;
 
       final fillPaint = Paint()
-        ..color = nodeColor.withOpacity(progress > 0.0 ? 0.25 : 0.05)
+        ..color = nodeColor.withValues(alpha: progress > 0.0 ? 0.25 : 0.05)
         ..style = PaintingStyle.fill;
 
       final borderPaint = Paint()
-        ..color = progress > 0.0 ? nodeColor.withOpacity(0.8) : Colors.white.withOpacity(0.1)
+        ..color = progress > 0.0
+            ? nodeColor.withValues(alpha: 0.8)
+            : Colors.white.withValues(alpha: 0.1)
         ..strokeWidth = 1.5
         ..style = PaintingStyle.stroke;
 
@@ -5218,7 +6125,8 @@ class BangladeshHeatmapPainter extends CustomPainter {
         ),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(pos.dx - textPainter.width / 2, pos.dy - 10));
+      textPainter.paint(
+          canvas, Offset(pos.dx - textPainter.width / 2, pos.dy - 10));
 
       textPainter.text = TextSpan(
         text: '${(progress * 100).toInt()}%',
@@ -5229,7 +6137,8 @@ class BangladeshHeatmapPainter extends CustomPainter {
         ),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(pos.dx - textPainter.width / 2, pos.dy + 3));
+      textPainter.paint(
+          canvas, Offset(pos.dx - textPainter.width / 2, pos.dy + 3));
     });
   }
 
@@ -5267,7 +6176,8 @@ class ShimmerLoadingWidget extends StatefulWidget {
   State<ShimmerLoadingWidget> createState() => _ShimmerLoadingWidgetState();
 }
 
-class _ShimmerLoadingWidgetState extends State<ShimmerLoadingWidget> with SingleTickerProviderStateMixin {
+class _ShimmerLoadingWidgetState extends State<ShimmerLoadingWidget>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -5327,11 +6237,19 @@ class _MiniAvatarFetcher extends StatelessWidget {
         return CircleAvatar(
           radius: 12,
           backgroundColor: AppColors.darkGreen,
-          backgroundImage: avatarUrl != null ? CachedNetworkImageProvider(avatarUrl) : null,
+          backgroundImage: avatarUrl != null
+              ? CachedNetworkImageProvider(
+                  avatarUrl,
+                  errorListener: (dynamic error) {},
+                )
+              : null,
           child: avatarUrl == null
               ? Text(
                   displayName.isNotEmpty ? displayName[0] : 'E',
-                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold),
                 )
               : null,
         );

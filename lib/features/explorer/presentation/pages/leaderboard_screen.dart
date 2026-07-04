@@ -17,7 +17,8 @@ class LeaderboardScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF0A140D),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70, size: 18),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: Colors.white70, size: 18),
           onPressed: () => context.pop(),
         ),
         title: const Text(
@@ -56,7 +57,8 @@ class LeaderboardScreen extends StatelessWidget {
 
           if (result != null) {
             result.fold(
-              (Object? failure) => debugPrint('Error fetching leaderboard: $failure'),
+              (Object? failure) =>
+                  debugPrint('Error fetching leaderboard: $failure'),
               (Object? list) {
                 if (list is List<ExplorerProfile>) {
                   profiles = list;
@@ -90,29 +92,42 @@ class LeaderboardScreen extends StatelessWidget {
               if (rank == 1) {
                 rankWidget = const Text('🏆', style: TextStyle(fontSize: 22));
                 itemBg = const Color(0xFF1B3825);
-                itemBorder = Border.all(color: const Color(0xFFF4A261).withOpacity(0.5), width: 1.5);
+                itemBorder = Border.all(
+                    color: const Color(0xFFF4A261).withValues(alpha: 0.5),
+                    width: 1.5);
               } else if (rank == 2) {
                 rankWidget = const Text('🥈', style: TextStyle(fontSize: 20));
                 itemBg = const Color(0xFF14291B);
-                itemBorder = Border.all(color: Colors.grey.withOpacity(0.4), width: 1.2);
+                itemBorder = Border.all(
+                    color: Colors.grey.withValues(alpha: 0.4), width: 1.2);
               } else if (rank == 3) {
                 rankWidget = const Text('🥉', style: TextStyle(fontSize: 18));
                 itemBg = const Color(0xFF102116);
-                itemBorder = Border.all(color: const Color(0xFFCD7F32).withOpacity(0.4), width: 1);
+                itemBorder = Border.all(
+                    color: const Color(0xFFCD7F32).withValues(alpha: 0.4),
+                    width: 1);
               } else {
                 rankWidget = CircleAvatar(
                   radius: 12,
                   backgroundColor: const Color(0xFF1E3A26),
                   child: Text(
                     rank.toString(),
-                    style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold),
                   ),
                 );
               }
 
               final name = profile.displayName;
               final initials = name.isNotEmpty
-                  ? name.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+                  ? name
+                      .split(' ')
+                      .map((e) => e.isNotEmpty ? e[0] : '')
+                      .take(2)
+                      .join()
+                      .toUpperCase()
                   : 'EX';
 
               return Container(
@@ -120,7 +135,10 @@ class LeaderboardScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: itemBg,
                   borderRadius: BorderRadius.circular(16),
-                  border: itemBorder ?? Border.all(color: const Color(0xFF1E3A26).withOpacity(0.5)),
+                  border: itemBorder ??
+                      Border.all(
+                          color:
+                              const Color(0xFF1E3A26).withValues(alpha: 0.5)),
                   boxShadow: const [
                     BoxShadow(
                       color: Colors.black26,
@@ -130,7 +148,8 @@ class LeaderboardScreen extends StatelessWidget {
                   ],
                 ),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   leading: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -139,11 +158,20 @@ class LeaderboardScreen extends StatelessWidget {
                       CircleAvatar(
                         radius: 20,
                         backgroundColor: const Color(0xFF40916C),
-                        backgroundImage: profile.avatarUrl != null && profile.avatarUrl!.isNotEmpty
-                            ? CachedNetworkImageProvider(profile.avatarUrl!)
+                        backgroundImage: profile.avatarUrl != null &&
+                                profile.avatarUrl!.isNotEmpty
+                            ? CachedNetworkImageProvider(
+                                profile.avatarUrl!,
+                                errorListener: (dynamic error) {},
+                              )
                             : null,
-                        child: profile.avatarUrl == null || profile.avatarUrl!.isEmpty
-                            ? Text(initials, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))
+                        child: profile.avatarUrl == null ||
+                                profile.avatarUrl!.isEmpty
+                            ? Text(initials,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold))
                             : null,
                       ),
                     ],
@@ -151,7 +179,9 @@ class LeaderboardScreen extends StatelessWidget {
                   title: Text(
                     name,
                     style: TextStyle(
-                      color: rank <= 3 ? Colors.white : Colors.white.withOpacity(0.9),
+                      color: rank <= 3
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.9),
                       fontWeight: rank <= 3 ? FontWeight.w900 : FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -160,21 +190,27 @@ class LeaderboardScreen extends StatelessWidget {
                     children: [
                       if (profile.isRegionExpert) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE76F51).withOpacity(0.2),
+                            color:
+                                const Color(0xFFE76F51).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
                             'Expert',
-                            style: TextStyle(color: Color(0xFFE76F51), fontSize: 9, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                color: Color(0xFFE76F51),
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
                         const SizedBox(width: 6),
                       ],
                       Text(
                         profile.division,
-                        style: const TextStyle(color: Colors.white54, fontSize: 11),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 11),
                       ),
                     ],
                   ),
@@ -191,8 +227,11 @@ class LeaderboardScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        profile.tier.isVerifiedOrAbove ? 'Verified' : 'Community',
-                        style: const TextStyle(color: Colors.white38, fontSize: 9),
+                        profile.tier.isVerifiedOrAbove
+                            ? 'Verified'
+                            : 'Community',
+                        style:
+                            const TextStyle(color: Colors.white38, fontSize: 9),
                       ),
                     ],
                   ),

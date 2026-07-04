@@ -1,4 +1,4 @@
-import 'package:bloc_test/bloc_test.dart';
+import '../../../../helpers/bloc_test_helper.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/annotations.dart';
@@ -212,8 +212,7 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, Unauthenticated] on successful sign-out',
       build: () {
-        when(mockRepo.signOut())
-            .thenAnswer((_) async => const Right(unit));
+        when(mockRepo.signOut()).thenAnswer((_) async => const Right(unit));
         return buildCubit();
       },
       act: (cubit) => cubit.signOut(),

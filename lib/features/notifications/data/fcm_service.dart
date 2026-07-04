@@ -51,9 +51,8 @@ class FcmService {
     );
 
     // ── 3. Create Android notification channel ────────────────────────────
-    final androidPlugin = _localNotif
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin = _localNotif.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
         _kChannelId,
@@ -82,7 +81,7 @@ class FcmService {
     // Instead we resolve the context lazily via the global navigator key.
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       final ctx = AppRouter.navigatorKey.currentContext;
-      if (ctx != null) _handleTap(message, ctx);
+      if (ctx != null && ctx.mounted) _handleTap(message, ctx);
     });
     final initial = await _messaging.getInitialMessage();
     if (initial != null) {
@@ -117,7 +116,8 @@ class FcmService {
 
     // FCM sets imageUrl on the android-specific notification object; also
     // check the data payload for broadcast notifications sent by the admin.
-    final String? imageUrl = n.android?.imageUrl ?? (message.data['imageUrl'] as String?);
+    final String? imageUrl =
+        n.android?.imageUrl ?? (message.data['imageUrl'] as String?);
 
     StyleInformation? style;
 
@@ -194,8 +194,7 @@ class FcmService {
         break;
       case 'chat':
         if (itemId != null) {
-          GoRouter.of(context)
-              .go('/chat/$itemId', extra: {'otherUid': uid});
+          GoRouter.of(context).go('/chat/$itemId', extra: {'otherUid': uid});
         }
         break;
       // Broadcast notifications simply bring the app to focus — no deep link.

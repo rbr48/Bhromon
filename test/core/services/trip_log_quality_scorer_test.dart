@@ -216,27 +216,32 @@ void main() {
 
     group('QualityResult.grade', () {
       test('returns S for 90+', () {
-        const r = QualityResult(score: 95, tips: [], strengths: [], trustBonus: 15);
+        const r =
+            QualityResult(score: 95, tips: [], strengths: [], trustBonus: 15);
         expect(r.grade, 'S');
         expect(r.gradeLabel, 'Outstanding');
       });
       test('returns A for 70-89', () {
-        const r = QualityResult(score: 75, tips: [], strengths: [], trustBonus: 10);
+        const r =
+            QualityResult(score: 75, tips: [], strengths: [], trustBonus: 10);
         expect(r.grade, 'A');
         expect(r.gradeLabel, 'Great');
       });
       test('returns B for 50-69', () {
-        const r = QualityResult(score: 55, tips: [], strengths: [], trustBonus: 5);
+        const r =
+            QualityResult(score: 55, tips: [], strengths: [], trustBonus: 5);
         expect(r.grade, 'B');
         expect(r.gradeLabel, 'Good');
       });
       test('returns C for 30-49', () {
-        const r = QualityResult(score: 35, tips: [], strengths: [], trustBonus: 2);
+        const r =
+            QualityResult(score: 35, tips: [], strengths: [], trustBonus: 2);
         expect(r.grade, 'C');
         expect(r.gradeLabel, 'Basic');
       });
       test('returns D for < 30', () {
-        const r = QualityResult(score: 10, tips: [], strengths: [], trustBonus: 0);
+        const r =
+            QualityResult(score: 10, tips: [], strengths: [], trustBonus: 0);
         expect(r.grade, 'D');
         expect(r.gradeLabel, 'Needs Work');
       });

@@ -48,10 +48,8 @@ class _SavedDiaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('trip_logs')
-          .doc(tripId)
-          .get(),
+      future:
+          FirebaseFirestore.instance.collection('trip_logs').doc(tripId).get(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(
@@ -122,7 +120,7 @@ class _SavedDiaryCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.cardDark,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.06)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(14),
@@ -197,7 +195,7 @@ class _PlaceholderThumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white.withOpacity(0.04),
+      color: Colors.white.withValues(alpha: 0.04),
       child: const Icon(Icons.photo_library_outlined,
           color: Colors.white12, size: 40),
     );

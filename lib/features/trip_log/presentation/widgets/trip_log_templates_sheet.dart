@@ -39,49 +39,111 @@ class TripLogTemplatesSheet extends StatelessWidget {
         name: 'Day Trip',
         emoji: '☀️',
         description: 'A quick one-day escape to a nearby destination',
-        suggestedSections: ['Morning departure', 'Getting there', 'The destination', 'Food & costs', 'Tips for visitors'],
+        suggestedSections: [
+          'Morning departure',
+          'Getting there',
+          'The destination',
+          'Food & costs',
+          'Tips for visitors'
+        ],
         defaultCosts: {'Transport': 300, 'Food': 200, 'Entry': 50},
-        sampleSafetyNote: 'Start early to avoid afternoon heat. Carry enough water.',
+        sampleSafetyNote:
+            'Start early to avoid afternoon heat. Carry enough water.',
       ),
       const TripTemplate(
         name: 'Weekend Escape',
         emoji: '🏕️',
         description: 'A 2-3 day trip with overnight stay',
-        suggestedSections: ['Day 1: Journey', 'Day 1: Arrival & exploration', 'Day 2: Main experience', 'Accommodation review', 'Day 3: Return', 'Total budget breakdown'],
-        defaultCosts: {'Transport': 800, 'Hotel': 1200, 'Food': 600, 'Misc': 200},
-        sampleSafetyNote: 'Book accommodation in advance during peak season. Keep emergency contacts handy.',
+        suggestedSections: [
+          'Day 1: Journey',
+          'Day 1: Arrival & exploration',
+          'Day 2: Main experience',
+          'Accommodation review',
+          'Day 3: Return',
+          'Total budget breakdown'
+        ],
+        defaultCosts: {
+          'Transport': 800,
+          'Hotel': 1200,
+          'Food': 600,
+          'Misc': 200
+        },
+        sampleSafetyNote:
+            'Book accommodation in advance during peak season. Keep emergency contacts handy.',
       ),
       const TripTemplate(
         name: 'Budget Travel',
         emoji: '💰',
         description: 'How to explore on a tight budget',
-        suggestedSections: ['How I kept costs low', 'Budget transport options', 'Cheap eats', 'Free attractions', 'Hidden savings tips'],
+        suggestedSections: [
+          'How I kept costs low',
+          'Budget transport options',
+          'Cheap eats',
+          'Free attractions',
+          'Hidden savings tips'
+        ],
         defaultCosts: {'Total Budget': 1500},
-        sampleSafetyNote: 'Avoid travelling alone at night to save on transport costs.',
+        sampleSafetyNote:
+            'Avoid travelling alone at night to save on transport costs.',
       ),
       const TripTemplate(
         name: 'Trekking / Hiking',
         emoji: '⛰️',
         description: 'Adventure trek or hill station visit',
-        suggestedSections: ['Trail overview', 'Difficulty level', 'What to pack', 'Route waypoints', 'Dangerous sections', 'Viewpoints', 'Return journey'],
+        suggestedSections: [
+          'Trail overview',
+          'Difficulty level',
+          'What to pack',
+          'Route waypoints',
+          'Dangerous sections',
+          'Viewpoints',
+          'Return journey'
+        ],
         defaultCosts: {'Guide fee': 500, 'Transport': 600, 'Food': 300},
-        sampleSafetyNote: 'Inform someone of your trek plan. Carry a first aid kit, torch, and extra water. Do not trek alone.',
+        sampleSafetyNote:
+            'Inform someone of your trek plan. Carry a first aid kit, torch, and extra water. Do not trek alone.',
       ),
       const TripTemplate(
         name: 'Beach Holiday',
         emoji: '🏖️',
         description: 'Sea, sun and sand experience',
-        suggestedSections: ['Getting to the beach', 'Beach overview', 'Water activities', 'Sunset spots', 'Seafood guide', 'Where to stay'],
-        defaultCosts: {'Transport': 1000, 'Hotel': 2000, 'Food': 800, 'Activities': 500},
-        sampleSafetyNote: 'Swim only in designated areas. Watch tide times. Protect against sunburn.',
+        suggestedSections: [
+          'Getting to the beach',
+          'Beach overview',
+          'Water activities',
+          'Sunset spots',
+          'Seafood guide',
+          'Where to stay'
+        ],
+        defaultCosts: {
+          'Transport': 1000,
+          'Hotel': 2000,
+          'Food': 800,
+          'Activities': 500
+        },
+        sampleSafetyNote:
+            'Swim only in designated areas. Watch tide times. Protect against sunburn.',
       ),
       const TripTemplate(
         name: 'Heritage & Culture',
         emoji: '🏛️',
         description: 'Temples, mosques, historical sites',
-        suggestedSections: ['Historical background', 'Getting there', 'What to see', 'Photography spots', 'Local customs', 'Best time to visit'],
-        defaultCosts: {'Transport': 400, 'Entry': 100, 'Guide': 300, 'Food': 200},
-        sampleSafetyNote: 'Dress modestly at religious sites. Remove footwear where required.',
+        suggestedSections: [
+          'Historical background',
+          'Getting there',
+          'What to see',
+          'Photography spots',
+          'Local customs',
+          'Best time to visit'
+        ],
+        defaultCosts: {
+          'Transport': 400,
+          'Entry': 100,
+          'Guide': 300,
+          'Food': 200
+        },
+        sampleSafetyNote:
+            'Dress modestly at religious sites. Remove footwear where required.',
       ),
     ];
 
@@ -94,17 +156,24 @@ class TripLogTemplatesSheet extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: 40, height: 4,
+            width: 40,
+            height: 4,
             margin: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(
+                color: Colors.white24, borderRadius: BorderRadius.circular(2)),
           ),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Row(
               children: [
-                Text('Choose a Template', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                Text('Choose a Template',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold)),
                 SizedBox(width: 8),
-                Text('(optional)', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                Text('(optional)',
+                    style: TextStyle(color: Colors.white38, fontSize: 12)),
               ],
             ),
           ),
@@ -133,7 +202,7 @@ class TripLogTemplatesSheet extends StatelessWidget {
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: Colors.white24),
                       ),
@@ -145,8 +214,14 @@ class TripLogTemplatesSheet extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Start Blank', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                                Text('Write your trip log from scratch', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                                Text('Start Blank',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14)),
+                                Text('Write your trip log from scratch',
+                                    style: TextStyle(
+                                        color: Colors.white54, fontSize: 11)),
                               ],
                             ),
                           ),
@@ -163,7 +238,7 @@ class TripLogTemplatesSheet extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.03),
+                      color: Colors.white.withValues(alpha: 0.03),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: Colors.white10),
                     ),
@@ -175,9 +250,15 @@ class TripLogTemplatesSheet extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(t.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text(t.name,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14)),
                               const SizedBox(height: 2),
-                              Text(t.description, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                              Text(t.description,
+                                  style: const TextStyle(
+                                      color: Colors.white54, fontSize: 11)),
                             ],
                           ),
                         ),

@@ -10,7 +10,7 @@ class XpUtils {
 
     try {
       final firestore = FirebaseFirestore.instance;
-      
+
       // Map amount to standard event types for breakdown visualization
       String type = 'custom_xp_adjustment';
       if (amount == 25) {
@@ -23,7 +23,8 @@ class XpUtils {
         type = 'helpful_vote'; // appeal submission or validation
       }
 
-      final docId = 'event_${DateTime.now().millisecondsSinceEpoch}_${uid.hashCode.remainder(1000)}';
+      final docId =
+          'event_${DateTime.now().millisecondsSinceEpoch}_${uid.hashCode.remainder(1000)}';
       await firestore.collection('trust_events').doc(docId).set({
         'type': type,
         'targetUid': uid,
@@ -32,15 +33,19 @@ class XpUtils {
         'weight': amount,
       });
 
-      debugPrint('[XpUtils] Successfully enqueued trust event for $uid: $type ($amount XP)');
+      debugPrint(
+          '[XpUtils] Successfully enqueued trust event for $uid: $type ($amount XP)');
 
       // Recalculate score immediately via the Callable Cloud Function
       try {
-        final callable = FirebaseFunctions.instanceFor(region: 'asia-south1').httpsCallable('computeExplorerScore');
+        final callable = FirebaseFunctions.instanceFor(region: 'asia-south1')
+            .httpsCallable('computeExplorerScore');
         await callable.call<dynamic>();
-        debugPrint('[XpUtils] Recalculated explorer score successfully via Cloud Function');
+        debugPrint(
+            '[XpUtils] Recalculated explorer score successfully via Cloud Function');
       } catch (e) {
-        debugPrint('[XpUtils] Failed to invoke computeExplorerScore Callable function: $e');
+        debugPrint(
+            '[XpUtils] Failed to invoke computeExplorerScore Callable function: $e');
       }
     } catch (e) {
       debugPrint('[XpUtils] Error awarding XP: $e');
@@ -56,7 +61,8 @@ class XpUtils {
       final firestore = FirebaseFirestore.instance;
 
       // Fetch the current score first
-      final scoreDoc = await firestore.collection('explorer_scores').doc(uid).get();
+      final scoreDoc =
+          await firestore.collection('explorer_scores').doc(uid).get();
       int currentScore = 0;
       if (scoreDoc.exists && scoreDoc.data() != null) {
         currentScore = scoreDoc.data()!['score'] as int? ?? 0;
@@ -66,7 +72,8 @@ class XpUtils {
       if (difference == 0) return;
 
       await awardXp(uid, difference);
-      debugPrint('[XpUtils] Set XP by adjusting difference of $difference for $uid');
+      debugPrint(
+          '[XpUtils] Set XP by adjusting difference of $difference for $uid');
     } catch (e) {
       debugPrint('[XpUtils] Error setting XP: $e');
     }

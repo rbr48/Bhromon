@@ -14,7 +14,8 @@ class CreatePremiumGuideParams {
 }
 
 @injectable
-class CreatePremiumGuideUseCase implements UseCase<TripLog, CreatePremiumGuideParams> {
+class CreatePremiumGuideUseCase
+    implements UseCase<TripLog, CreatePremiumGuideParams> {
   final IGuideRepository _repository;
 
   CreatePremiumGuideUseCase(this._repository);
@@ -22,7 +23,8 @@ class CreatePremiumGuideUseCase implements UseCase<TripLog, CreatePremiumGuidePa
   @override
   Future<Either<Failure, TripLog>> call(CreatePremiumGuideParams params) async {
     if (!params.authorTier.isVerifiedOrAbove) {
-      return const Left(PermissionFailure('Verified tier or above is required to publish premium guides.'));
+      return const Left(PermissionFailure(
+          'Verified tier or above is required to publish premium guides.'));
     }
     return _repository.createPremiumGuide(params.tripLog);
   }

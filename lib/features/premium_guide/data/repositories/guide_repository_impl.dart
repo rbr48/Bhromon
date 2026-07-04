@@ -26,7 +26,8 @@ class GuideRepositoryImpl implements IGuideRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> purchaseGuide(String guideId, String userId) async {
+  Future<Either<Failure, Unit>> purchaseGuide(
+      String guideId, String userId) async {
     try {
       await _firestore
           .collection('explorer_profiles')
@@ -34,9 +35,9 @@ class GuideRepositoryImpl implements IGuideRepository {
           .collection('purchased_guides')
           .doc(guideId)
           .set({
-            'purchasedAt': FieldValue.serverTimestamp(),
-            'guideId': guideId,
-          });
+        'purchasedAt': FieldValue.serverTimestamp(),
+        'guideId': guideId,
+      });
       return const Right(unit);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

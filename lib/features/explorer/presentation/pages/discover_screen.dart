@@ -40,9 +40,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   Future<void> _loadPins() async {
     try {
-      final query = await FirebaseFirestore.instance
-          .collection('location_pins')
-          .get();
+      final query =
+          await FirebaseFirestore.instance.collection('location_pins').get();
 
       if (query.docs.isNotEmpty) {
         final allPins = query.docs.map((doc) {
@@ -77,8 +76,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             createdByUid: 'system',
             category: 'hill',
             visitCount: 154,
-            imageUrl: 'https://images.unsplash.com/photo-1585123334904-845d60e97b29?w=600',
-            description: 'Sajek Valley is an emerging tourist spot in Bangladesh situated among the hills of the Kasalong range.',
+            imageUrl:
+                'https://images.unsplash.com/photo-1585123334904-845d60e97b29?w=600',
+            description:
+                'Sajek Valley is an emerging tourist spot in Bangladesh situated among the hills of the Kasalong range.',
           ),
           LocationPin(
             pinId: 'pin_jaflong',
@@ -95,8 +96,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             createdByUid: 'system',
             category: 'river',
             visitCount: 92,
-            imageUrl: 'https://images.unsplash.com/photo-1626509657682-17183e8fa9f2?w=600',
-            description: 'Jaflong is a hill station and popular tourist destination in Sylhet Division. It is situated at the border of India.',
+            imageUrl:
+                'https://images.unsplash.com/photo-1626509657682-17183e8fa9f2?w=600',
+            description:
+                'Jaflong is a hill station and popular tourist destination in Sylhet Division. It is situated at the border of India.',
           ),
         ];
       }
@@ -131,7 +134,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       final list = <LocationPin>[];
       for (final doc in query.docs) {
         final pinId = doc.id;
-        final pinDoc = await FirebaseFirestore.instance.collection('location_pins').doc(pinId).get();
+        final pinDoc = await FirebaseFirestore.instance
+            .collection('location_pins')
+            .doc(pinId)
+            .get();
         if (pinDoc.exists) {
           final data = pinDoc.data()!;
           data['pinId'] = pinDoc.id;
@@ -219,12 +225,19 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2)),
                 ),
               ),
-              const Text('My Wishlist', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              const Text('My Wishlist',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16)),
               const SizedBox(height: 12),
               Expanded(
                 child: _wishlist.isEmpty
@@ -241,9 +254,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                           final pin = _wishlist[index];
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
-                            title: Text(pin.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                            subtitle: Text('${pin.category} • ${pin.district}', style: const TextStyle(color: Colors.white54, fontSize: 11)),
-                            trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white30, size: 14),
+                            title: Text(pin.name,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14)),
+                            subtitle: Text('${pin.category} • ${pin.district}',
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 11)),
+                            trailing: const Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                color: Colors.white30,
+                                size: 14),
                             onTap: () {
                               Navigator.pop(context);
                               PinDetailSheet.show(context, pin);
@@ -278,14 +300,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         backgroundColor: const Color(0xFF141421),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70, size: 18),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: Colors.white70, size: 18),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Discover Destinations', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text('Discover Destinations',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.bookmark_outline, color: AppColors.mintGreen),
+            icon:
+                const Icon(Icons.bookmark_outline, color: AppColors.mintGreen),
             onPressed: _showWishlistSheet,
           ),
         ],
@@ -302,7 +330,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     onSwipe: _onSwipe,
                     numberOfCardsDisplayed: 3,
                     backCardOffset: const Offset(0, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
                     cardBuilder: (context, index, percentX, percentY) {
                       return _buildCard(_pins[index]);
                     },
@@ -323,7 +352,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         color: const Color(0xFF1F1F3D),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white10),
-        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 4))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 4))
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
@@ -368,19 +399,28 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       Expanded(
                         child: Text(
                           pin.name,
-                          style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.mintGreen.withOpacity(0.2),
+                          color: AppColors.mintGreen.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.mintGreen.withOpacity(0.4)),
+                          border: Border.all(
+                              color:
+                                  AppColors.mintGreen.withValues(alpha: 0.4)),
                         ),
                         child: Text(
                           '💎 ${DiscoveryScoreService.compute(pin).toInt()}',
-                          style: const TextStyle(color: AppColors.mintGreen, fontWeight: FontWeight.bold, fontSize: 11),
+                          style: const TextStyle(
+                              color: AppColors.mintGreen,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11),
                         ),
                       ),
                     ],
@@ -388,15 +428,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   const SizedBox(height: 6),
                   Text(
                     '${pin.category.toUpperCase()} • ${pin.district}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500),
                   ),
-                  if (pin.description != null && pin.description!.isNotEmpty) ...[
+                  if (pin.description != null &&
+                      pin.description!.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text(
                       pin.description!,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.4),
+                      style: const TextStyle(
+                          color: Colors.white54, fontSize: 12, height: 1.4),
                     ),
                   ],
                 ],
@@ -455,7 +500,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
-  Widget _actionButton({required IconData icon, required Color color, required VoidCallback onTap}) {
+  Widget _actionButton(
+      {required IconData icon,
+      required Color color,
+      required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(32),
@@ -463,9 +511,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         width: 56,
         height: 56,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           shape: BoxShape.circle,
-          border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
         ),
         child: Icon(icon, color: color, size: 24),
       ),
@@ -481,7 +529,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           const SizedBox(height: 16),
           const Text(
             "You've explored all destinations!",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -495,7 +544,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               foregroundColor: Colors.black,
             ),
             onPressed: () => context.pop(),
-            child: const Text('Back to Home', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Back to Home',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

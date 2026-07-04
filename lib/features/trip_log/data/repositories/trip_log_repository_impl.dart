@@ -18,13 +18,15 @@ class TripLogRepositoryImpl implements ITripLogRepository {
   final SyncManager _syncManager;
   final String _draftBoxName = 'triplogs_drafts';
 
-  TripLogRepositoryImpl(this._firestore, this._encryptionService, this._syncManager);
+  TripLogRepositoryImpl(
+      this._firestore, this._encryptionService, this._syncManager);
 
   @override
   Future<Either<Failure, List<TripLog>>> getTripLogsForPin(String pinId) async {
     try {
       final connectivity = await Connectivity().checkConnectivity();
-      if (connectivity.isNotEmpty && connectivity.first == ConnectivityResult.none) {
+      if (connectivity.isNotEmpty &&
+          connectivity.first == ConnectivityResult.none) {
         return _getCachedTripLogsForPin(pinId);
       }
 
@@ -64,9 +66,11 @@ class TripLogRepositoryImpl implements ITripLogRepository {
     }
   }
 
-  Future<Either<Failure, List<TripLog>>> _getCachedTripLogsForPin(String pinId) async {
+  Future<Either<Failure, List<TripLog>>> _getCachedTripLogsForPin(
+      String pinId) async {
     try {
-      final box = await _encryptionService.openEncryptedBox<dynamic>('offline_bundles');
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>('offline_bundles');
       final logs = <TripLog>[];
       for (final val in box.values) {
         final bundleJson = Map<String, dynamic>.from(val as Map);
@@ -92,7 +96,8 @@ class TripLogRepositoryImpl implements ITripLogRepository {
   Future<Either<Failure, TripLog>> publishTripLog(TripLog tripLog) async {
     try {
       final connectivity = await Connectivity().checkConnectivity();
-      final isOffline = connectivity.isNotEmpty && connectivity.first == ConnectivityResult.none;
+      final isOffline = connectivity.isNotEmpty &&
+          connectivity.first == ConnectivityResult.none;
 
       final logData = tripLog.toJson();
       if (isOffline) {
@@ -108,17 +113,19 @@ class TripLogRepositoryImpl implements ITripLogRepository {
           status: 'pending',
         );
         await _syncManager.enqueue(outboxEntry);
-        
-        final draftBox = await _encryptionService.openEncryptedBox<dynamic>(_draftBoxName);
+
+        final draftBox =
+            await _encryptionService.openEncryptedBox<dynamic>(_draftBoxName);
         await draftBox.delete(tripLog.locationPinId);
-        
+
         return Right(tripLog);
       }
 
       logData['lastConfirmed'] = FieldValue.serverTimestamp();
       await _firestore.collection('trip_logs').doc(tripLog.tripId).set(logData);
 
-      final box = await _encryptionService.openEncryptedBox<dynamic>(_draftBoxName);
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>(_draftBoxName);
       await box.delete(tripLog.locationPinId);
 
       // Award 25 XP for posting a trip log
@@ -134,7 +141,8 @@ class TripLogRepositoryImpl implements ITripLogRepository {
   @override
   Future<Either<Failure, Unit>> saveDraft(TripLog tripLog) async {
     try {
-      final box = await _encryptionService.openEncryptedBox<dynamic>(_draftBoxName);
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>(_draftBoxName);
       await box.put(tripLog.locationPinId, tripLog.toJson());
       return const Right(unit);
     } catch (e) {
@@ -145,7 +153,8 @@ class TripLogRepositoryImpl implements ITripLogRepository {
   @override
   Future<Either<Failure, TripLog?>> getDraft(String pinId) async {
     try {
-      final box = await _encryptionService.openEncryptedBox<dynamic>(_draftBoxName);
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>(_draftBoxName);
       final data = box.get(pinId);
       if (data != null) {
         final map = Map<String, dynamic>.from(data as Map);
@@ -162,7 +171,8 @@ class TripLogRepositoryImpl implements ITripLogRepository {
   Future<Either<Failure, TripLog>> getById(String id) async {
     try {
       final connectivity = await Connectivity().checkConnectivity();
-      if (connectivity.isNotEmpty && connectivity.first == ConnectivityResult.none) {
+      if (connectivity.isNotEmpty &&
+          connectivity.first == ConnectivityResult.none) {
         return _getCachedById(id);
       }
 
@@ -184,7 +194,8 @@ class TripLogRepositoryImpl implements ITripLogRepository {
 
   Future<Either<Failure, TripLog>> _getCachedById(String id) async {
     try {
-      final box = await _encryptionService.openEncryptedBox<dynamic>('offline_bundles');
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>('offline_bundles');
       for (final val in box.values) {
         final bundleJson = Map<String, dynamic>.from(val as Map);
         if (bundleJson['trips'] is List) {
@@ -198,7 +209,8 @@ class TripLogRepositoryImpl implements ITripLogRepository {
           }
         }
       }
-      return Left(NotFoundFailure('Trip log not found offline', resourceId: id));
+      return Left(
+          NotFoundFailure('Trip log not found offline', resourceId: id));
     } catch (cacheError) {
       return Left(CacheFailure(cacheError.toString()));
     }
@@ -218,8 +230,16 @@ class TripLogRepositoryImpl implements ITripLogRepository {
       for (final rawBlock in rawBlocks) {
         if (rawBlock is Map) {
           final block = Map<String, dynamic>.from(rawBlock);
-          
-          const validTypes = {'text', 'image', 'video', 'costEntry', 'route', 'safetyNote', 'voiceNote'};
+
+          const validTypes = {
+            'text',
+            'image',
+            'video',
+            'costEntry',
+            'route',
+            'safetyNote',
+            'voiceNote'
+          };
           // Firestore docs may use 'type' instead of 'runtimeType' — normalise both
           dynamic rawType = block['runtimeType'];
           if (rawType == null || !validTypes.contains(rawType.toString())) {
@@ -228,9 +248,16 @@ class TripLogRepositoryImpl implements ITripLogRepository {
           if (rawType == null || !validTypes.contains(rawType.toString())) {
             if (block['durationSeconds'] != null) {
               rawType = 'voiceNote';
-            } else if (block['storageUrl'] != null || block['localPath'] != null) {
-              final path = (block['storageUrl'] ?? block['localPath']).toString().toLowerCase();
-              if (path.contains('.mp4') || path.contains('.mov') || path.contains('.avi') || path.contains('.mkv') || path.contains('video')) {
+            } else if (block['storageUrl'] != null ||
+                block['localPath'] != null) {
+              final path = (block['storageUrl'] ?? block['localPath'])
+                  .toString()
+                  .toLowerCase();
+              if (path.contains('.mp4') ||
+                  path.contains('.mov') ||
+                  path.contains('.avi') ||
+                  path.contains('.mkv') ||
+                  path.contains('video')) {
                 rawType = 'video';
               } else {
                 rawType = 'image';
@@ -246,9 +273,9 @@ class TripLogRepositoryImpl implements ITripLogRepository {
             }
           }
           block['runtimeType'] = rawType;
-          
+
           block['id'] ??= 'blk_${DateTime.now().microsecondsSinceEpoch}';
-          
+
           final type = block['runtimeType'];
           if (type == 'text') {
             block['content'] ??= '';
@@ -269,7 +296,7 @@ class TripLogRepositoryImpl implements ITripLogRepository {
             block['storageUrl'] ??= '';
             block['durationSeconds'] ??= 0;
           }
-          
+
           sanitizedBlocks.add(block);
         }
       }
@@ -287,13 +314,15 @@ class TripLogRepositoryImpl implements ITripLogRepository {
     if (data['lastConfirmed'] == null) {
       data['lastConfirmed'] = DateTime.now().toIso8601String();
     } else if (data['lastConfirmed'] is Timestamp) {
-      data['lastConfirmed'] = (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
+      data['lastConfirmed'] =
+          (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
     } else if (data['lastConfirmed'] is! String) {
       data['lastConfirmed'] = DateTime.now().toIso8601String();
     }
 
     if (data['publishedAt'] is Timestamp) {
-      data['publishedAt'] = (data['publishedAt'] as Timestamp).toDate().toIso8601String();
+      data['publishedAt'] =
+          (data['publishedAt'] as Timestamp).toDate().toIso8601String();
     }
   }
 }

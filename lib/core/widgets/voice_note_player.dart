@@ -129,15 +129,16 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget>
 
   @override
   Widget build(BuildContext context) {
-    final themeBg = widget.isDarkTheme
-        ? AppColors.cardDark
-        : const Color(0xFFF4F6F4);
+    final themeBg =
+        widget.isDarkTheme ? AppColors.cardDark : const Color(0xFFF4F6F4);
     final themeBorder = widget.isDarkTheme
-        ? AppColors.mintGreen.withOpacity(0.2)
-        : AppColors.midGreen.withOpacity(0.15);
-    final iconColor = widget.isDarkTheme ? AppColors.mintGreen : AppColors.midGreen;
+        ? AppColors.mintGreen.withValues(alpha: 0.2)
+        : AppColors.midGreen.withValues(alpha: 0.15);
+    final iconColor =
+        widget.isDarkTheme ? AppColors.mintGreen : AppColors.midGreen;
     final textColor = widget.isDarkTheme ? Colors.white : AppColors.darkText;
-    final textMutedColor = widget.isDarkTheme ? Colors.white54 : AppColors.grayText;
+    final textMutedColor =
+        widget.isDarkTheme ? Colors.white54 : AppColors.grayText;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -150,7 +151,7 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget>
             ? []
             : [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 )
@@ -168,7 +169,7 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget>
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.12),
+                    color: iconColor.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -211,10 +212,12 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget>
                       data: SliderThemeData(
                         trackHeight: 3.0,
                         activeTrackColor: iconColor,
-                        inactiveTrackColor: iconColor.withOpacity(0.15),
+                        inactiveTrackColor: iconColor.withValues(alpha: 0.15),
                         thumbColor: iconColor,
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
+                        thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 6.0),
+                        overlayShape:
+                            const RoundSliderOverlayShape(overlayRadius: 12.0),
                       ),
                       child: Slider(
                         min: 0.0,
@@ -228,7 +231,8 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget>
                                   : 100.0,
                             ),
                         onChanged: (val) async {
-                          await _player.seek(Duration(milliseconds: val.toInt()));
+                          await _player
+                              .seek(Duration(milliseconds: val.toInt()));
                         },
                       ),
                     ),
@@ -253,7 +257,7 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget>
                           height: 6 + (val * 14),
                           margin: const EdgeInsets.symmetric(horizontal: 1.5),
                           decoration: BoxDecoration(
-                            color: iconColor.withOpacity(0.8),
+                            color: iconColor.withValues(alpha: 0.8),
                             borderRadius: BorderRadius.circular(1.5),
                           ),
                         );
@@ -270,7 +274,7 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget>
                       height: 6,
                       margin: const EdgeInsets.symmetric(horizontal: 1.5),
                       decoration: BoxDecoration(
-                        color: iconColor.withOpacity(0.3),
+                        color: iconColor.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(1.5),
                       ),
                     );
@@ -285,7 +289,7 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget>
               child: Text(
                 '📝 ${widget.transcript}',
                 style: TextStyle(
-                  color: textColor.withOpacity(0.7),
+                  color: textColor.withValues(alpha: 0.7),
                   fontSize: 12.5,
                   fontStyle: FontStyle.italic,
                 ),

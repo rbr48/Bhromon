@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/theme/theme_context.dart';
 
 class SocialGraphWidget extends StatefulWidget {
   final String uid;
@@ -57,8 +58,10 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
           .where('followedId', isEqualTo: widget.uid)
           .get();
 
-      final followingIds = followingQuery.docs.map((doc) => doc['followedId'] as String).toSet();
-      final followerIds = followersQuery.docs.map((doc) => doc['followerId'] as String).toSet();
+      final followingIds =
+          followingQuery.docs.map((doc) => doc['followedId'] as String).toSet();
+      final followerIds =
+          followersQuery.docs.map((doc) => doc['followerId'] as String).toSet();
 
       // Mutuals are the intersection of following and followers
       final mutualIds = followingIds.intersection(followerIds).toList();
@@ -126,9 +129,9 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
         height: 220,
         margin: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF111111),
+          color: context.surfacePanel,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: const Center(
           child: CircularProgressIndicator(color: AppColors.mintGreen),
@@ -146,9 +149,9 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,10 +161,13 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.hub_outlined, color: AppColors.mintGreen, size: 20),
+                  const Icon(Icons.hub_outlined,
+                      color: AppColors.mintGreen, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    hasSuggested ? 'SUGGESTED EXPLORER NETWORK' : 'MUTUAL EXPLORER GRAPH',
+                    hasSuggested
+                        ? 'SUGGESTED EXPLORER NETWORK'
+                        : 'MUTUAL EXPLORER GRAPH',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
@@ -173,14 +179,18 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
               ),
               if (hasSuggested)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppColors.gold.withOpacity(0.15),
+                    color: AppColors.gold.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
                     'DISCOVER',
-                    style: TextStyle(color: AppColors.gold, fontSize: 8, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
             ],
@@ -253,7 +263,9 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
 
   Widget _buildAvatarCircle(_GraphNode node, double size) {
     final hasAvatar = node.avatarUrl != null && node.avatarUrl!.isNotEmpty;
-    final themeColor = node.isCenter ? AppColors.mintGreen : (node.isSuggested ? AppColors.gold : Colors.cyanAccent);
+    final themeColor = node.isCenter
+        ? AppColors.mintGreen
+        : (node.isSuggested ? AppColors.gold : Colors.cyanAccent);
 
     return Container(
       width: size,
@@ -263,7 +275,7 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
         border: Border.all(color: themeColor, width: node.isCenter ? 3 : 2),
         boxShadow: [
           BoxShadow(
-            color: themeColor.withOpacity(0.3),
+            color: themeColor.withValues(alpha: 0.3),
             blurRadius: node.isCenter ? 12 : 6,
             spreadRadius: 1,
           ),
@@ -277,9 +289,11 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
                   color: Colors.black,
-                  child: const CircularProgressIndicator(strokeWidth: 2, color: AppColors.mintGreen),
+                  child: const CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.mintGreen),
                 ),
-                errorWidget: (context, url, error) => _buildInitialsPlaceholder(node, size),
+                errorWidget: (context, url, error) =>
+                    _buildInitialsPlaceholder(node, size),
               )
             : _buildInitialsPlaceholder(node, size),
       ),
@@ -287,7 +301,8 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
   }
 
   Widget _buildInitialsPlaceholder(_GraphNode node, double size) {
-    final initials = node.name.trim().isNotEmpty ? node.name.trim()[0].toUpperCase() : 'E';
+    final initials =
+        node.name.trim().isNotEmpty ? node.name.trim()[0].toUpperCase() : 'E';
     return Container(
       color: const Color(0xFF222222),
       child: Center(
@@ -329,12 +344,12 @@ class _SocialConnectionPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppColors.mintGreen.withOpacity(0.3)
+      ..color = AppColors.mintGreen.withValues(alpha: 0.3)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
     final glowPaint = Paint()
-      ..color = AppColors.mintGreen.withOpacity(0.08)
+      ..color = AppColors.mintGreen.withValues(alpha: 0.08)
       ..strokeWidth = 5.0
       ..style = PaintingStyle.stroke;
 

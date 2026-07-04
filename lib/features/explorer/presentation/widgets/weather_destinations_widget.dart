@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/theme/theme_context.dart';
 
 class WeatherDestinationsWidget extends StatelessWidget {
   final List<QueryDocumentSnapshot> docs;
@@ -36,16 +37,17 @@ class WeatherDestinationsWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
-              Icon(Icons.wb_sunny_outlined, color: AppColors.mintGreen, size: 20),
+              Icon(Icons.wb_sunny_outlined,
+                  color: AppColors.mintGreen, size: 20),
               SizedBox(width: 8),
               Text(
                 'DESTINATION WEATHER & SEASONAL TRIPS',
@@ -74,15 +76,16 @@ class WeatherDestinationsWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildWeatherCard(BuildContext context, String district, _DistrictWeatherInfo info) {
+  Widget _buildWeatherCard(
+      BuildContext context, String district, _DistrictWeatherInfo info) {
     return Container(
       width: 170,
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,7 +119,7 @@ class WeatherDestinationsWidget extends StatelessWidget {
           Text(
             info.condition,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -127,7 +130,7 @@ class WeatherDestinationsWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.mintGreen.withOpacity(0.1),
+              color: AppColors.mintGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Column(

@@ -139,7 +139,7 @@ class AnalyticsService {
       await _analytics.logEvent(
         name: name,
         parameters: parameters?.map(
-          (k, v) => MapEntry(k, v is bool ? (v ? 1 : 0) : v),
+          (k, v) => MapEntry(k, (v is bool ? (v ? 1 : 0) : v) as Object),
         ),
       );
       logDebug('📊 [Analytics] $name ${parameters ?? ''}');

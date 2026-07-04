@@ -26,10 +26,10 @@ class _EntryReactionsWidgetState extends State<EntryReactionsWidget> {
   String? _myReaction;
 
   static const _reactionDefs = [
-    {'key': 'wantToGo',  'emoji': '🗺️', 'label': 'যেতে চাই'},
-    {'key': 'beenHere',  'emoji': '✅',  'label': 'গিয়েছি'},
-    {'key': 'learned',   'emoji': '💡',  'label': 'শিখেছি'},
-    {'key': 'beautiful', 'emoji': '🙏',  'label': 'সুন্দর'},
+    {'key': 'wantToGo', 'emoji': '🗺️', 'label': 'যেতে চাই'},
+    {'key': 'beenHere', 'emoji': '✅', 'label': 'গিয়েছি'},
+    {'key': 'learned', 'emoji': '💡', 'label': 'শিখেছি'},
+    {'key': 'beautiful', 'emoji': '🙏', 'label': 'সুন্দর'},
   ];
 
   @override
@@ -76,8 +76,8 @@ class _EntryReactionsWidgetState extends State<EntryReactionsWidget> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppColors.mintGreen.withOpacity(0.18)
-                    : Colors.white.withOpacity(0.05),
+                    ? AppColors.mintGreen.withValues(alpha: 0.18)
+                    : Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isSelected ? AppColors.mintGreen : Colors.white12,
@@ -92,7 +92,8 @@ class _EntryReactionsWidgetState extends State<EntryReactionsWidget> {
                     Text(
                       count.toString(),
                       style: TextStyle(
-                        color: isSelected ? AppColors.mintGreen : Colors.white54,
+                        color:
+                            isSelected ? AppColors.mintGreen : Colors.white54,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
