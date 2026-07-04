@@ -10,7 +10,6 @@ import '../../../../core/entities/explorer_profile.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/value_objects/trust_tier.dart';
-import '../../../../core/value_objects/explorer_score.dart';
 import '../../domain/usecases/get_explorer_profile_usecase.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
@@ -67,6 +66,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   int? _totalExplorers;
   List<QueryDocumentSnapshot>? _topExplorers;
 
+  // Signed-out visitor on the own-profile route
+  bool _isGuest = false;
+
   @override
   void initState() {
     super.initState();
@@ -83,7 +85,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         : widget.uid;
 
     if (targetUid == 'explorer_user') return;
+    _initStreamsFor(targetUid);
+  }
 
+  void _initStreamsFor(String targetUid) {
     _tripLogsStream = FirebaseFirestore.instance
         .collection('trip_logs')
         .where('authorId', isEqualTo: targetUid)
@@ -109,16 +114,19 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   Future<void> _loadLeaderboardAndRank(String uid, int userScore) async {
     try {
-      final rankSnap = await FirebaseFirestore.instance
+      // count() aggregates: rank/total without downloading the collection
+      final rankAgg = await FirebaseFirestore.instance
           .collection('explorer_profiles')
           .where('explorerScore.value', isGreaterThan: userScore)
+          .count()
           .get();
-      final rank = rankSnap.size + 1;
+      final rank = (rankAgg.count ?? 0) + 1;
 
-      final totalSnap = await FirebaseFirestore.instance
+      final totalAgg = await FirebaseFirestore.instance
           .collection('explorer_profiles')
+          .count()
           .get();
-      final total = totalSnap.size;
+      final total = totalAgg.count ?? 0;
 
       final topSnap = await FirebaseFirestore.instance
           .collection('explorer_profiles')
@@ -209,24 +217,17 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ? (currentUid.isNotEmpty ? currentUid : 'explorer_user')
         : widget.uid;
 
+    // Signed out: show a real sign-in prompt instead of a fabricated
+    // "Guest Explorer" profile.
     if (targetUid == 'explorer_user') {
       setState(() {
-        _profile = ExplorerProfile(
-          uid: 'explorer_user',
-          displayName: 'Guest Explorer',
-          explorerScore:
-              const ExplorerScore(value: 0, tier: TrustTier.unverified),
-          tier: TrustTier.unverified,
-          badges: const [],
-          division: 'Dhaka',
-          createdAt: DateTime.now(),
-          bio: 'Sign in to sync your exploration log and unlock achievements!',
-        );
+        _isGuest = true;
         _isLoading = false;
         _error = null;
       });
       return;
     }
+    _isGuest = false;
 
     if (_profile == null) {
       setState(() {
@@ -247,6 +248,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         },
         (p) => p,
       );
+
+      // The sentinel own-profile route resolves to the signed-in uid only
+      // here; bind the live streams to it now.
+      if (_tripLogsStream == null) {
+        _initStreamsFor(profile.uid);
+      }
 
       // Load leaderboard and rank
       _loadLeaderboardAndRank(profile.uid, profile.explorerScore.value);
@@ -1212,11 +1219,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
-    final isOwnProfile = (widget.uid == currentUid && currentUid.isNotEmpty) ||
-        ((widget.uid == 'guest' ||
-                widget.uid == 'explorer_user' ||
-                widget.uid.isEmpty) &&
-            currentUid.isEmpty);
+    final isOwnProfile =
+        currentUid.isNotEmpty && (_profile?.uid ?? widget.uid) == currentUid;
 
     return PopScope(
       canPop: false,
@@ -1244,6 +1248,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     icon:
                         const Icon(Icons.settings, color: AppColors.mintGreen),
                     onPressed: () => context.push('/settings'),
+                  ),
+                  IconButton(
+                    tooltip: 'Log out',
+                    icon: const Icon(Icons.logout, color: Colors.redAccent),
+                    onPressed: () => _confirmLogout(context),
                   ),
                   IconButton(
                     icon: const Icon(Icons.edit, color: AppColors.mintGreen),
@@ -1288,6 +1297,76 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildGuestPrompt() {
+    return ListView(
+      // RefreshIndicator needs a scrollable
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        Padding(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).size.height * 0.18,
+            left: 32,
+            right: 32,
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.travel_explore,
+                  size: 72, color: AppColors.mintGreen.withValues(alpha: 0.6)),
+              const SizedBox(height: 24),
+              const Text(
+                'Your explorer profile lives here',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Sign in to track your trips, earn badges, build trust and appear on the leaderboard.',
+                style:
+                    TextStyle(color: Colors.white54, fontSize: 13, height: 1.5),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 28),
+              FilledButton.icon(
+                onPressed: () => context.go('/login'),
+                icon: const Icon(Icons.login),
+                label: const Text('Sign In'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: dialogContext.surfacePanel,
+        title: const Text('Log out?'),
+        content: const Text(
+            'Your offline maps and drafts stay on this device. You can sign back in anytime.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      context.read<AuthCubit>().signOut();
+    }
   }
 
   Widget _buildProfileSkeleton() {
@@ -1400,6 +1479,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   Widget _buildBody() {
+    if (_isGuest) {
+      return _buildGuestPrompt();
+    }
+
     if (_isLoading && _profile == null) {
       return _buildProfileSkeleton();
     }
@@ -1559,11 +1642,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       ExplorerProfile profile, List<QueryDocumentSnapshot> docs) {
     final authState = context.watch<AuthCubit>().state;
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
-    final isOwnProfile = (widget.uid == currentUid && currentUid.isNotEmpty) ||
-        ((widget.uid == 'guest' ||
-                widget.uid == 'explorer_user' ||
-                widget.uid.isEmpty) &&
-            currentUid.isEmpty);
+    final isOwnProfile =
+        currentUid.isNotEmpty && (_profile?.uid ?? widget.uid) == currentUid;
 
     final tierColor = AppColors.forTier(profile.tier);
     final isBn = _bioLanguage == 'bn';
@@ -3499,9 +3579,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             subtitle: const Text('Sign out of your active explorer session',
                 style: TextStyle(color: Colors.white38, fontSize: 11)),
             trailing: const Icon(Icons.chevron_right, color: Colors.white30),
-            onTap: () async {
-              context.read<AuthCubit>().signOut();
-            },
+            onTap: () => _confirmLogout(context),
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,
@@ -3512,185 +3590,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 'Permanently delete your profile and travel logs',
                 style: TextStyle(color: Colors.white38, fontSize: 11)),
             trailing: const Icon(Icons.chevron_right, color: Colors.redAccent),
-            onTap: () => _showDeleteProfileConfirmation(context),
+            onTap: () => context.push('/delete-account'),
           ),
         ],
       ),
     );
-  }
-
-  void _showDeleteProfileConfirmation(BuildContext context) {
-    final confirmationController = TextEditingController();
-    bool canDelete = false;
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setStateDialog) => AlertDialog(
-          backgroundColor: context.surfacePanel,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Colors.redAccent, width: 0.8),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded,
-                  color: Colors.redAccent, size: 24),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'DELETE ACCOUNT',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'This action is irreversible. All your travel logs, profile information, and account details will be permanently deleted.',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Type "DELETE" to confirm:',
-                style: TextStyle(
-                    color: Colors.white30,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: confirmationController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'DELETE',
-                  hintStyle:
-                      const TextStyle(color: Colors.white24, fontSize: 13),
-                  fillColor: Colors.white.withValues(alpha: 0.05),
-                  filled: true,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Colors.white10),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Colors.redAccent),
-                  ),
-                ),
-                onChanged: (val) {
-                  setStateDialog(() {
-                    canDelete = val.trim() == 'DELETE';
-                  });
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child:
-                  const Text('Cancel', style: TextStyle(color: Colors.white38)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: canDelete ? Colors.redAccent : Colors.white10,
-                foregroundColor: canDelete ? Colors.white : Colors.white24,
-              ),
-              onPressed: !canDelete
-                  ? null
-                  : () async {
-                      Navigator.pop(dialogContext);
-                      _deleteProfileAndAccount();
-                    },
-              child: const Text('Delete Permanently',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    ).then((_) => confirmationController.dispose());
-  }
-
-  Future<void> _deleteProfileAndAccount() async {
-    final authState = context.read<AuthCubit>().state;
-    final uid = authState is Authenticated ? authState.profile.uid : '';
-    if (uid.isEmpty) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      // 1. Delete all travel logs
-      final logsQuery = await FirebaseFirestore.instance
-          .collection('trip_logs')
-          .where('authorId', isEqualTo: uid)
-          .get();
-
-      final batch = FirebaseFirestore.instance.batch();
-      for (final doc in logsQuery.docs) {
-        batch.delete(doc.reference);
-      }
-      await batch.commit();
-
-      // 2. Delete explorer profile document
-      await FirebaseFirestore.instance
-          .collection('explorer_profiles')
-          .doc(uid)
-          .delete();
-
-      // 3. Delete Firebase Auth user
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await user.delete();
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account deleted successfully.')),
-        );
-        context.read<AuthCubit>().signOut();
-      }
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'requires-recent-login') {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'Sensitive operation. Please log out and sign back in to delete account.'),
-              backgroundColor: Colors.amber,
-              duration: Duration(seconds: 5),
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Error: ${e.message}'),
-                backgroundColor: Colors.redAccent),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Error: $e'), backgroundColor: Colors.redAccent),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
   }
 
   void _showChangePasswordDialog(BuildContext context) {
