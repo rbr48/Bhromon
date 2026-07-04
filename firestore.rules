@@ -87,10 +87,20 @@ service cloud.firestore {
       allow list: if isAuth();
       allow get:  if canRead();
 
-      allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
+      // Titles are capped at 200 chars (matches the client editor limit)
+      function hasValidTitle() {
+        return !('title' in request.resource.data)
+            || (request.resource.data.title is string
+                && request.resource.data.title.size() <= 200);
+      }
+
+      allow create: if isAuth()
+                    && request.resource.data.authorId == request.auth.uid
+                    && hasValidTitle();
 
       allow update: if (isOwner(resource.data.authorId)
                     && request.resource.data.authorId == resource.data.authorId
+                    && hasValidTitle()
                     && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['hidden', 'hiddenReason', 'tier', 'trustScore'])
                     // Owner can only update visibility within valid values
                     && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['visibility'])

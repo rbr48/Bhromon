@@ -106,8 +106,25 @@ jobs:
           name: functions-lib
           path: functions/lib
 
-      - name: Run unit tests with coverage
-        run: npm test -- --coverage
+      # The Firestore emulator (a Java process) backs the security-rules
+      # tests; firebase emulators:exec runs from the repo root where
+      # firebase.json and firestore.rules live.
+      - name: Set up Java 17 (Firestore emulator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Bounded workers + a larger heap: jest with ts-jest OOMs the default
+      # 2GB Node heap when it spawns a compiling worker per core.
+      - name: Run unit tests with coverage (under Firestore emulator)
+        working-directory: .
+        run: >
+          npx firebase-tools emulators:exec --only firestore
+          --project bhromon-rules-test-project
+          "cd functions && npm test -- --coverage --maxWorkers=2"
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
 
       - name: Upload test coverage
         uses: actions/upload-artifact@v4
