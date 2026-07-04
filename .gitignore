@@ -69,3 +69,4 @@ functions/lib/
 # Local scratch / emulator data
 test_hive/
 firestore-debug.log
+coverage/
