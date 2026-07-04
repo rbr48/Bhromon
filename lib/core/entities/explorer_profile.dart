@@ -49,10 +49,10 @@ extension ExplorerProfileDiaryExt on ExplorerProfile {
   bool get hasExploredBangladesh => districtsCount >= 64;
 
   /// Percentage of Bangladesh explored (0.0 – 1.0)
-  double get bangladeshCompletionRate => (districtsCount / 64.0).clamp(0.0, 1.0);
+  double get bangladeshCompletionRate =>
+      (districtsCount / 64.0).clamp(0.0, 1.0);
 
   /// Display string for stats
   String get statsDisplay =>
       '$districtsCount জেলা · $totalTripDays দিন · ৳${totalSpentBDT.toStringAsFixed(0)}';
 }
-

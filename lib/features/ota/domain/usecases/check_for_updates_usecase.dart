@@ -31,10 +31,14 @@ class CheckForUpdatesUseCase implements NoParamsUseCase<AppVersionInfo?> {
       final cleanLatest = latest.split('+')[0].split('-')[0];
       final cleanCurrent = current.split('+')[0].split('-')[0];
 
-      final latestParts = cleanLatest.split('.').map((e) => int.parse(e.trim())).toList();
-      final currentParts = cleanCurrent.split('.').map((e) => int.parse(e.trim())).toList();
-      
-      final length = latestParts.length > currentParts.length ? latestParts.length : currentParts.length;
+      final latestParts =
+          cleanLatest.split('.').map((e) => int.parse(e.trim())).toList();
+      final currentParts =
+          cleanCurrent.split('.').map((e) => int.parse(e.trim())).toList();
+
+      final length = latestParts.length > currentParts.length
+          ? latestParts.length
+          : currentParts.length;
 
       for (var i = 0; i < length; i++) {
         final l = i < latestParts.length ? latestParts[i] : 0;

@@ -45,7 +45,8 @@ class TipListCubit extends Cubit<TipListState> {
       }).toList();
       emit(TipListLoaded(updatedTips));
 
-      final result = await _voteTip(VoteTipParams(tipId: tipId, voteIncrement: increment));
+      final result =
+          await _voteTip(VoteTipParams(tipId: tipId, voteIncrement: increment));
       result.fold(
         (failure) {
           emit(TipListLoaded(oldTipsList));

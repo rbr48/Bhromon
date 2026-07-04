@@ -35,7 +35,6 @@ class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
   static GlobalKey<NavigatorState> get navigatorKey => _rootNavigatorKey;
 
-
   static final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/feed',
@@ -46,7 +45,7 @@ class AppRouter {
       if (authState is Unauthenticated) {
         return loggingIn ? null : '/login';
       }
-      
+
       if (authState is Authenticated && loggingIn) {
         return '/feed';
       }
@@ -57,15 +56,18 @@ class AppRouter {
     routes: [
       GoRoute(
         path: '/login',
-        pageBuilder: (context, state) => _customPageTransition(state, const LoginScreen()),
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const LoginScreen()),
       ),
       GoRoute(
         path: '/map',
-        pageBuilder: (context, state) => _customPageTransition(state, const MapScreen()),
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const MapScreen()),
       ),
       GoRoute(
         path: '/feed',
-        pageBuilder: (context, state) => _customPageTransition(state, const HomeFeedScreen()),
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const HomeFeedScreen()),
       ),
       GoRoute(
         path: '/vault',
@@ -86,19 +88,23 @@ class AppRouter {
       ),
       GoRoute(
         path: '/leaderboard',
-        pageBuilder: (context, state) => _customPageTransition(state, const LeaderboardScreen()),
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const LeaderboardScreen()),
       ),
       GoRoute(
         path: '/dashboard',
-        pageBuilder: (context, state) => _customPageTransition(state, const ExplorerDashboardScreen()),
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const ExplorerDashboardScreen()),
       ),
       GoRoute(
         path: '/challenges',
-        pageBuilder: (context, state) => _customPageTransition(state, const ChallengesScreen()),
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const ChallengesScreen()),
       ),
       GoRoute(
         path: '/discover',
-        pageBuilder: (context, state) => _customPageTransition(state, const DiscoverScreen()),
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const DiscoverScreen()),
       ),
       GoRoute(
         path: '/ar',
@@ -108,7 +114,8 @@ class AppRouter {
           final currentPosition = extra?['currentPosition'] as Position?;
           return _customPageTransition(
             state,
-            ArCompassScreen(nearbyPins: nearbyPins, currentPosition: currentPosition),
+            ArCompassScreen(
+                nearbyPins: nearbyPins, currentPosition: currentPosition),
           );
         },
       ),
@@ -129,7 +136,8 @@ class AppRouter {
       ),
       GoRoute(
         path: '/guide/create',
-        pageBuilder: (context, state) => _customPageTransition(state, const GuideCreateScreen()),
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const GuideCreateScreen()),
       ),
       GoRoute(
         path: '/guide/:id',
@@ -142,20 +150,24 @@ class AppRouter {
         path: '/guide/purchase',
         pageBuilder: (context, state) {
           final id = state.extra as String? ?? '';
-          return _customPageTransition(state, PremiumGuidePurchaseScreen(id: id));
+          return _customPageTransition(
+              state, PremiumGuidePurchaseScreen(id: id));
         },
       ),
       GoRoute(
         path: '/trust',
-        pageBuilder: (context, state) => _customPageTransition(state, const TrustDashboardScreen()),
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const TrustDashboardScreen()),
       ),
       GoRoute(
         path: '/settings',
-        pageBuilder: (context, state) => _customPageTransition(state, const NotificationSettingsScreen()),
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const NotificationSettingsScreen()),
       ),
       GoRoute(
         path: '/chats',
-        pageBuilder: (context, state) => _customPageTransition(state, const ChatsListScreen()),
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const ChatsListScreen()),
       ),
       GoRoute(
         path: '/chat/:chatId',

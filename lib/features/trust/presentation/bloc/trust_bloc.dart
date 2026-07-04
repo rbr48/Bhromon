@@ -26,7 +26,8 @@ class TrustBloc extends Bloc<TrustEvent, TrustState> {
       await _scoreSubscription?.cancel();
       _scoreSubscription = _getExplorerScore.watch(event.uid).listen((result) {
         result.fold(
-          (failure) => add(const RefreshScoreEvent()), // fallback: try a re-subscribe / refresh
+          (failure) => add(
+              const RefreshScoreEvent()), // fallback: try a re-subscribe / refresh
           (score) => add(UpdateScoreEvent(score)),
         );
       });
@@ -39,7 +40,8 @@ class TrustBloc extends Bloc<TrustEvent, TrustState> {
         await _scoreSubscription?.cancel();
         _scoreSubscription = _getExplorerScore.watch(uid).listen((result) {
           result.fold(
-            (failure) => emit(state.copyWith(status: TrustStatus.error, errorMessage: failure.message)),
+            (failure) => emit(state.copyWith(
+                status: TrustStatus.error, errorMessage: failure.message)),
             (score) => add(UpdateScoreEvent(score)),
           );
         });
@@ -59,7 +61,8 @@ class TrustBloc extends Bloc<TrustEvent, TrustState> {
         reason: event.reason,
       ));
       result.fold(
-        (failure) => emit(state.copyWith(status: TrustStatus.error, errorMessage: failure.message)),
+        (failure) => emit(state.copyWith(
+            status: TrustStatus.error, errorMessage: failure.message)),
         (_) => emit(state.copyWith(status: TrustStatus.loaded)),
       );
     });
@@ -71,7 +74,8 @@ class TrustBloc extends Bloc<TrustEvent, TrustState> {
         justification: event.justification,
       ));
       result.fold(
-        (failure) => emit(state.copyWith(appealStatus: AppealStatus.error, errorMessage: failure.message)),
+        (failure) => emit(state.copyWith(
+            appealStatus: AppealStatus.error, errorMessage: failure.message)),
         (_) => emit(state.copyWith(appealStatus: AppealStatus.success)),
       );
     });

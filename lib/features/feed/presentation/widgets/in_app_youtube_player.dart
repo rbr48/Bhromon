@@ -4,7 +4,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-
 // ─────────────────────────────────────────────────────────────
 // Utility: Extract YouTube video ID from any common URL format
 // ─────────────────────────────────────────────────────────────
@@ -157,7 +156,8 @@ class _InAppYoutubePlayerState extends State<InAppYoutubePlayer> {
                             ),
                           ),
                         ),
-                        errorWidget: (context, url, error) => _buildFallbackThumbnail(),
+                        errorWidget: (context, url, error) =>
+                            _buildFallbackThumbnail(),
                       )
                     : _buildFallbackThumbnail(),
 
@@ -242,7 +242,8 @@ class _InAppYoutubePlayerState extends State<InAppYoutubePlayer> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.play_circle_outline, color: Colors.white38, size: 52),
+          const Icon(Icons.play_circle_outline,
+              color: Colors.white38, size: 52),
           const SizedBox(height: 8),
           Text(
             widget.caption.isNotEmpty ? widget.caption : 'YouTube Video',
@@ -399,10 +400,12 @@ class _YoutubeWebPlayerState extends State<_YoutubeWebPlayer> {
                     javaScriptEnabled: true,
                     mediaPlaybackRequiresUserGesture: false,
                     supportZoom: false,
-                    userAgent: 'Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36',
+                    userAgent:
+                        'Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36',
                     allowsInlineMediaPlayback: true,
                     useHybridComposition: false,
-                    mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+                    mixedContentMode:
+                        MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
                     builtInZoomControls: false,
                     displayZoomControls: false,
                     domStorageEnabled: true,

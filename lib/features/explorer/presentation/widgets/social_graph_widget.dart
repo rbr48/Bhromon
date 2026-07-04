@@ -58,8 +58,10 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
           .where('followedId', isEqualTo: widget.uid)
           .get();
 
-      final followingIds = followingQuery.docs.map((doc) => doc['followedId'] as String).toSet();
-      final followerIds = followersQuery.docs.map((doc) => doc['followerId'] as String).toSet();
+      final followingIds =
+          followingQuery.docs.map((doc) => doc['followedId'] as String).toSet();
+      final followerIds =
+          followersQuery.docs.map((doc) => doc['followerId'] as String).toSet();
 
       // Mutuals are the intersection of following and followers
       final mutualIds = followingIds.intersection(followerIds).toList();
@@ -159,10 +161,13 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.hub_outlined, color: AppColors.mintGreen, size: 20),
+                  const Icon(Icons.hub_outlined,
+                      color: AppColors.mintGreen, size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    hasSuggested ? 'SUGGESTED EXPLORER NETWORK' : 'MUTUAL EXPLORER GRAPH',
+                    hasSuggested
+                        ? 'SUGGESTED EXPLORER NETWORK'
+                        : 'MUTUAL EXPLORER GRAPH',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
@@ -174,14 +179,18 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
               ),
               if (hasSuggested)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.gold.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
                     'DISCOVER',
-                    style: TextStyle(color: AppColors.gold, fontSize: 8, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
             ],
@@ -254,7 +263,9 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
 
   Widget _buildAvatarCircle(_GraphNode node, double size) {
     final hasAvatar = node.avatarUrl != null && node.avatarUrl!.isNotEmpty;
-    final themeColor = node.isCenter ? AppColors.mintGreen : (node.isSuggested ? AppColors.gold : Colors.cyanAccent);
+    final themeColor = node.isCenter
+        ? AppColors.mintGreen
+        : (node.isSuggested ? AppColors.gold : Colors.cyanAccent);
 
     return Container(
       width: size,
@@ -278,9 +289,11 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
                   color: Colors.black,
-                  child: const CircularProgressIndicator(strokeWidth: 2, color: AppColors.mintGreen),
+                  child: const CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.mintGreen),
                 ),
-                errorWidget: (context, url, error) => _buildInitialsPlaceholder(node, size),
+                errorWidget: (context, url, error) =>
+                    _buildInitialsPlaceholder(node, size),
               )
             : _buildInitialsPlaceholder(node, size),
       ),
@@ -288,7 +301,8 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
   }
 
   Widget _buildInitialsPlaceholder(_GraphNode node, double size) {
-    final initials = node.name.trim().isNotEmpty ? node.name.trim()[0].toUpperCase() : 'E';
+    final initials =
+        node.name.trim().isNotEmpty ? node.name.trim()[0].toUpperCase() : 'E';
     return Container(
       color: const Color(0xFF222222),
       child: Center(

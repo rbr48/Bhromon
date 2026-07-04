@@ -21,7 +21,8 @@ void main() {
         ),
         const TripBlock.image(
           id: 'blk_2',
-          storageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e',
+          storageUrl:
+              'https://images.unsplash.com/photo-1507525428034-b723cf961d3e',
           caption: 'Sunset at Sajek',
         )
       ],

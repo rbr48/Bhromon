@@ -45,5 +45,6 @@ extension WeatherSnapshotDisplay on WeatherSnapshot {
   String get shortDisplay => '$emoji ${tempC.toStringAsFixed(0)}°C';
 
   /// Full display string: "☀️ 28°C · Clear sky"
-  String get fullDisplay => '$emoji ${tempC.toStringAsFixed(0)}°C · $description';
+  String get fullDisplay =>
+      '$emoji ${tempC.toStringAsFixed(0)}°C · $description';
 }

@@ -24,7 +24,9 @@ class LocationPin with _$LocationPin {
     // Rich metadata fields (optional, populated by enrichment bot / user edit)
     String? imageUrl,
     String? description,
-    @Default('place') String category, // e.g. waterfall, beach, temple, forest, market, heritage, hill, place
+    @Default('place')
+    String
+        category, // e.g. waterfall, beach, temple, forest, market, heritage, hill, place
     @Default(0.0) double averageRating,
     @Default(0) int visitCount,
     @Default([]) List<String> photos,

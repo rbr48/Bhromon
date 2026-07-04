@@ -3,7 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../app/di/injection.dart';
 import '../../features/offline_vault/data/datasources/sync_manager.dart';
-import '../../features/notifications/geo_fence_service.dart' show kGeoFenceTask, checkGeoFencesBackground;
+import '../../features/notifications/geo_fence_service.dart'
+    show kGeoFenceTask, checkGeoFencesBackground;
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {

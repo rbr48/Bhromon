@@ -11,10 +11,10 @@ class PhoneFormatter {
   /// - `+14155552671` -> `+14155552671` (other international prefixes kept as is)
   static String format(String input) {
     if (input.isEmpty) return '';
-    
+
     // Remove all whitespace, dashes, parentheses, etc. Keep digits and '+'
     String cleaned = input.replaceAll(RegExp(r'[^0-9+]'), '');
-    
+
     if (cleaned.startsWith('+')) {
       if (cleaned.startsWith('+88')) {
         if (!cleaned.startsWith('+880')) {

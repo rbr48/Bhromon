@@ -9,13 +9,15 @@ import 'package:bhromon/core/services/discovery_score_service.dart';
 class ArCompassScreen extends StatefulWidget {
   final List<LocationPin> nearbyPins;
   final Position? currentPosition;
-  const ArCompassScreen({super.key, required this.nearbyPins, this.currentPosition});
+  const ArCompassScreen(
+      {super.key, required this.nearbyPins, this.currentPosition});
 
   @override
   State<ArCompassScreen> createState() => _ArCompassScreenState();
 }
 
-class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProviderStateMixin {
+class _ArCompassScreenState extends State<ArCompassScreen>
+    with SingleTickerProviderStateMixin {
   double _heading = 0;
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
@@ -24,12 +26,13 @@ class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 2))
-      ..repeat(reverse: true);
+    _pulseCtrl =
+        AnimationController(vsync: this, duration: const Duration(seconds: 2))
+          ..repeat(reverse: true);
     _pulseAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
-    
+
     // Listen to magnetometer events
     _magSubscription = magnetometerEventStream().listen((event) {
       if (!mounted) return;
@@ -69,9 +72,12 @@ class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProv
   double _distanceToPin(LocationPin pin) {
     if (widget.currentPosition == null) return 0;
     return Geolocator.distanceBetween(
-      widget.currentPosition!.latitude, widget.currentPosition!.longitude,
-      pin.lat, pin.lng,
-    ) / 1000;
+          widget.currentPosition!.latitude,
+          widget.currentPosition!.longitude,
+          pin.lat,
+          pin.lng,
+        ) /
+        1000;
   }
 
   @override
@@ -87,14 +93,19 @@ class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProv
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: const Text('AR Compass', style: TextStyle(color: AppColors.mintGreen, fontWeight: FontWeight.bold)),
+        title: const Text('AR Compass',
+            style: TextStyle(
+                color: AppColors.mintGreen, fontWeight: FontWeight.bold)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Center(
               child: Text(
                 '${_heading.toStringAsFixed(0)}° ${_bearingLabel(_heading)}',
-                style: const TextStyle(color: AppColors.mintGreen, fontWeight: FontWeight.bold, fontSize: 14),
+                style: const TextStyle(
+                    color: AppColors.mintGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14),
               ),
             ),
           ),
@@ -133,9 +144,14 @@ class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProv
           // N indicator (fixed, always at top)
           const Positioned(
             top: 60,
-            left: 0, right: 0,
+            left: 0,
+            right: 0,
             child: Center(
-              child: Text('N', style: TextStyle(color: Colors.redAccent, fontSize: 24, fontWeight: FontWeight.bold)),
+              child: Text('N',
+                  style: TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold)),
             ),
           ),
 
@@ -157,19 +173,27 @@ class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProv
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isGem ? AppColors.mintGreen.withValues(alpha: 0.85) : Colors.black.withValues(alpha: 0.75),
+                      color: isGem
+                          ? AppColors.mintGreen.withValues(alpha: 0.85)
+                          : Colors.black.withValues(alpha: 0.75),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.5)),
+                      border: Border.all(
+                          color: AppColors.mintGreen.withValues(alpha: 0.5)),
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(pin.name.length > 12 ? '${pin.name.substring(0, 12)}...' : pin.name,
+                        Text(
+                            pin.name.length > 12
+                                ? '${pin.name.substring(0, 12)}...'
+                                : pin.name,
                             style: TextStyle(
                               color: isGem ? Colors.black : Colors.white,
-                              fontSize: 9, fontWeight: FontWeight.bold,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
                             )),
                         Text('${dist.toStringAsFixed(1)} km',
                             style: TextStyle(
@@ -180,7 +204,8 @@ class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProv
                     ),
                   ),
                   Container(
-                    width: 1, height: 10,
+                    width: 1,
+                    height: 10,
                     color: AppColors.mintGreen.withValues(alpha: 0.5),
                   ),
                 ],
@@ -190,14 +215,18 @@ class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProv
 
           // Bottom info panel
           Positioned(
-            bottom: 0, left: 0, right: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
             child: Container(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(context).padding.bottom),
+              padding: EdgeInsets.fromLTRB(
+                  20, 16, 20, 20 + MediaQuery.of(context).padding.bottom),
               color: Colors.black.withValues(alpha: 0.85),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _infoChip('🧭 Heading', '${_heading.toStringAsFixed(0)}° ${_bearingLabel(_heading)}'),
+                  _infoChip('🧭 Heading',
+                      '${_heading.toStringAsFixed(0)}° ${_bearingLabel(_heading)}'),
                   _infoChip('📍 Nearby', '${closePins.length} pins'),
                   if (widget.currentPosition != null)
                     _infoChip('🌍 Location', 'GPS Active')
@@ -218,7 +247,11 @@ class _ArCompassScreenState extends State<ArCompassScreen> with SingleTickerProv
       children: [
         Text(label, style: const TextStyle(color: Colors.white38, fontSize: 9)),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(color: AppColors.mintGreen, fontSize: 12, fontWeight: FontWeight.bold)),
+        Text(value,
+            style: const TextStyle(
+                color: AppColors.mintGreen,
+                fontSize: 12,
+                fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -232,22 +265,35 @@ class _CompassPainter extends CustomPainter {
 
     // Outer ring
     canvas.drawCircle(
-      center, radius,
-      Paint()..color = const Color(0xFF1A3A4A)..style = PaintingStyle.stroke..strokeWidth = 2,
+      center,
+      radius,
+      Paint()
+        ..color = const Color(0xFF1A3A4A)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
     );
 
     // Inner ring
     canvas.drawCircle(
-      center, radius * 0.7,
-      Paint()..color = const Color(0xFF52B788).withValues(alpha: 0.15)..style = PaintingStyle.fill,
+      center,
+      radius * 0.7,
+      Paint()
+        ..color = const Color(0xFF52B788).withValues(alpha: 0.15)
+        ..style = PaintingStyle.fill,
     );
     canvas.drawCircle(
-      center, radius * 0.7,
-      Paint()..color = const Color(0xFF52B788).withValues(alpha: 0.4)..style = PaintingStyle.stroke..strokeWidth = 1,
+      center,
+      radius * 0.7,
+      Paint()
+        ..color = const Color(0xFF52B788).withValues(alpha: 0.4)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
     );
 
     // Tick marks every 30 degrees
-    final tickPaint = Paint()..color = const Color(0xFF52B788).withValues(alpha: 0.5)..strokeWidth = 1;
+    final tickPaint = Paint()
+      ..color = const Color(0xFF52B788).withValues(alpha: 0.5)
+      ..strokeWidth = 1;
     for (int i = 0; i < 12; i++) {
       final angle = i * 30 * pi / 180;
       final outerPt = Offset(
@@ -258,7 +304,8 @@ class _CompassPainter extends CustomPainter {
         center.dx + radius * 0.82 * sin(angle),
         center.dy - radius * 0.82 * cos(angle),
       );
-      canvas.drawLine(outerPt, innerPt, tickPaint..strokeWidth = i % 3 == 0 ? 2 : 1);
+      canvas.drawLine(
+          outerPt, innerPt, tickPaint..strokeWidth = i % 3 == 0 ? 2 : 1);
     }
 
     // North arrow

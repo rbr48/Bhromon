@@ -5,7 +5,8 @@ void main() {
   group('PhoneFormatter Tests', () {
     test('Format: local number with leading zero', () {
       expect(PhoneFormatter.format('01712345678'), equals('+8801712345678'));
-      expect(PhoneFormatter.format(' 017-1234 5678 '), equals('+8801712345678'));
+      expect(
+          PhoneFormatter.format(' 017-1234 5678 '), equals('+8801712345678'));
     });
 
     test('Format: local number without leading zero', () {

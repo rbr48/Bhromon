@@ -11,10 +11,12 @@ class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
 
   @override
-  State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
+  State<NotificationSettingsScreen> createState() =>
+      _NotificationSettingsScreenState();
 }
 
-class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
+class _NotificationSettingsScreenState
+    extends State<NotificationSettingsScreen> {
   bool _syncAlerts = true;
   bool _trustUpgrades = true;
   bool _moderationAlerts = true;
@@ -58,7 +60,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               children: [
                 const Text(
                   'Push Notification Preferences',
-                  style: TextStyle(color: Colors.white60, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5),
                 ),
                 const SizedBox(height: 16),
                 _buildToggle(
@@ -84,7 +90,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 const SizedBox(height: 16),
                 const Text(
                   'Account Security & Session',
-                  style: TextStyle(color: Colors.white60, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5),
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -92,25 +102,44 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   decoration: BoxDecoration(
                     color: context.surfacePanel,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+                    border:
+                        Border.all(color: Colors.white.withValues(alpha: 0.04)),
                   ),
                   child: Column(
                     children: [
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.lock_outline, color: AppColors.mintGreen),
-                        title: const Text('Change / Set Password', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                        subtitle: const Text('Add or update password for email sign-in backup', style: TextStyle(color: Colors.white38, fontSize: 11)),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.white30),
+                        leading: const Icon(Icons.lock_outline,
+                            color: AppColors.mintGreen),
+                        title: const Text('Change / Set Password',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold)),
+                        subtitle: const Text(
+                            'Add or update password for email sign-in backup',
+                            style:
+                                TextStyle(color: Colors.white38, fontSize: 11)),
+                        trailing: const Icon(Icons.chevron_right,
+                            color: Colors.white30),
                         onTap: () => _showChangePasswordDialog(context),
                       ),
                       const Divider(color: Colors.white10),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.logout, color: Colors.redAccent),
-                        title: const Text('Log Out', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                        subtitle: const Text('Sign out of your active explorer session', style: TextStyle(color: Colors.white38, fontSize: 11)),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.white30),
+                        leading:
+                            const Icon(Icons.logout, color: Colors.redAccent),
+                        title: const Text('Log Out',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold)),
+                        subtitle: const Text(
+                            'Sign out of your active explorer session',
+                            style:
+                                TextStyle(color: Colors.white38, fontSize: 11)),
+                        trailing: const Icon(Icons.chevron_right,
+                            color: Colors.white30),
                         onTap: () async {
                           context.read<AuthCubit>().signOut();
                         },
@@ -118,10 +147,19 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                       const Divider(color: Colors.white10),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.delete_forever, color: Colors.redAccent),
-                        title: const Text('Delete Profile & Account', style: TextStyle(color: Colors.redAccent, fontSize: 14, fontWeight: FontWeight.bold)),
-                        subtitle: const Text('Permanently delete your profile and travel logs', style: TextStyle(color: Colors.white38, fontSize: 11)),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.redAccent),
+                        leading: const Icon(Icons.delete_forever,
+                            color: Colors.redAccent),
+                        title: const Text('Delete Profile & Account',
+                            style: TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold)),
+                        subtitle: const Text(
+                            'Permanently delete your profile and travel logs',
+                            style:
+                                TextStyle(color: Colors.white38, fontSize: 11)),
+                        trailing: const Icon(Icons.chevron_right,
+                            color: Colors.redAccent),
                         onTap: () => _showDeleteProfileConfirmation(context),
                       ),
                     ],
@@ -142,7 +180,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
-  Widget _buildToggle(String title, String subtitle, bool val, ValueChanged<bool> onChange) {
+  Widget _buildToggle(
+      String title, String subtitle, bool val, ValueChanged<bool> onChange) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -151,8 +190,13 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       ),
       child: SwitchListTile(
         activeThumbColor: AppColors.mintGreen,
-        title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        title: Text(title,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle,
+            style: const TextStyle(color: Colors.white54, fontSize: 12)),
         value: val,
         onChanged: onChange,
       ),
@@ -171,7 +215,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         ),
         title: const Text(
           'SET NEW PASSWORD',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -191,7 +236,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                 fillColor: Colors.white.withValues(alpha: 0.05),
                 filled: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ],
@@ -199,19 +245,22 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+            child:
+                const Text('Cancel', style: TextStyle(color: Colors.white38)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.mintGreen),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.mintGreen),
             onPressed: () async {
               final pwd = passwordController.text.trim();
               if (pwd.length < 6) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Password must be at least 6 characters.')),
+                  const SnackBar(
+                      content: Text('Password must be at least 6 characters.')),
                 );
                 return;
               }
-              
+
               Navigator.pop(dialogContext);
               setState(() => _isLoading = true);
               try {
@@ -220,13 +269,16 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   await user.updatePassword(pwd);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Password updated successfully!')),
+                      const SnackBar(
+                          content: Text('Password updated successfully!')),
                     );
                   }
                 } else {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('No authenticated user session found.')),
+                      const SnackBar(
+                          content:
+                              Text('No authenticated user session found.')),
                     );
                   }
                 }
@@ -264,12 +316,16 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           ),
           title: const Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 24),
+              Icon(Icons.warning_amber_rounded,
+                  color: Colors.redAccent, size: 24),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'DELETE ACCOUNT',
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -285,7 +341,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               const SizedBox(height: 16),
               const Text(
                 'Type "DELETE" to confirm:',
-                style: TextStyle(color: Colors.white30, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                style: TextStyle(
+                    color: Colors.white30,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -293,10 +353,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'DELETE',
-                  hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                  hintStyle:
+                      const TextStyle(color: Colors.white24, fontSize: 13),
                   fillColor: Colors.white.withValues(alpha: 0.05),
                   filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: const BorderSide(color: Colors.white10),
@@ -317,7 +379,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.white38)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -330,7 +393,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                       Navigator.pop(dialogContext);
                       _deleteProfileAndAccount();
                     },
-              child: const Text('Delete Permanently', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Delete Permanently',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -341,12 +405,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   Future<void> _deleteProfileAndAccount() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
       final batch = FirebaseFirestore.instance.batch();
-      
+
       // 1. Delete all travel logs
       final logsSnap = await FirebaseFirestore.instance
           .collection('trip_logs')
@@ -355,16 +419,18 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       for (final doc in logsSnap.docs) {
         batch.delete(doc.reference);
       }
-      
+
       // 2. Delete explorer profile document
       batch.delete(
-        FirebaseFirestore.instance.collection('explorer_profiles').doc(user.uid),
+        FirebaseFirestore.instance
+            .collection('explorer_profiles')
+            .doc(user.uid),
       );
-      
+
       // 3. Delete Firebase Auth user
       await batch.commit();
       await user.delete();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account deleted successfully.')),

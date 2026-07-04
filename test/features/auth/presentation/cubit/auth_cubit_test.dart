@@ -212,8 +212,7 @@ void main() {
     blocTest<AuthCubit, AuthState>(
       'emits [AuthLoading, Unauthenticated] on successful sign-out',
       build: () {
-        when(mockRepo.signOut())
-            .thenAnswer((_) async => const Right(unit));
+        when(mockRepo.signOut()).thenAnswer((_) async => const Right(unit));
         return buildCubit();
       },
       act: (cubit) => cubit.signOut(),

@@ -87,17 +87,7 @@ service cloud.firestore {
       allow list: if isAuth();
       allow get:  if canRead();
 
-      allow create: if isNotUnverified()
-                    && request.resource.data.authorId == request.auth.uid
-                    && (!('isPremiumGuide' in request.resource.data) || request.resource.data.isPremiumGuide == false || isVerifiedOrAbove())
-                    && validText('title', 3, 200)
-                    && (!('publishedAt' in request.resource.data) || request.resource.data.publishedAt == null)
-                    && (!('hidden' in request.resource.data) || request.resource.data.hidden == false)
-                    && (!('tier' in request.resource.data))
-                    && (!('trustScore' in request.resource.data))
-                    && (!('hiddenReason' in request.resource.data))
-                    // Visibility must be one of the valid values
-                    && (!('visibility' in request.resource.data) || request.resource.data.visibility in ['private', 'friends', 'community']);
+      allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
 
       allow update: if (isOwner(resource.data.authorId)
                     && request.resource.data.authorId == resource.data.authorId
@@ -127,9 +117,7 @@ service cloud.firestore {
     match /archived_trip_logs/{id} {
       allow list: if true;
       allow get:  if !resource.data.hidden || (isAuth() && isOwner(resource.data.authorId));
-      allow create: if isNotUnverified()
-                    && request.resource.data.authorId == request.auth.uid
-                    && (!('isPremiumGuide' in request.resource.data) || request.resource.data.isPremiumGuide == false || isVerifiedOrAbove());
+      allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
       allow update: if isOwner(resource.data.authorId)
                     && request.resource.data.authorId == resource.data.authorId;
       allow delete: if isOwner(resource.data.authorId) || isRegionExpertOrAbove();

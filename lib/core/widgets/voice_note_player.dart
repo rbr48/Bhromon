@@ -129,15 +129,16 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget>
 
   @override
   Widget build(BuildContext context) {
-    final themeBg = widget.isDarkTheme
-        ? AppColors.cardDark
-        : const Color(0xFFF4F6F4);
+    final themeBg =
+        widget.isDarkTheme ? AppColors.cardDark : const Color(0xFFF4F6F4);
     final themeBorder = widget.isDarkTheme
         ? AppColors.mintGreen.withValues(alpha: 0.2)
         : AppColors.midGreen.withValues(alpha: 0.15);
-    final iconColor = widget.isDarkTheme ? AppColors.mintGreen : AppColors.midGreen;
+    final iconColor =
+        widget.isDarkTheme ? AppColors.mintGreen : AppColors.midGreen;
     final textColor = widget.isDarkTheme ? Colors.white : AppColors.darkText;
-    final textMutedColor = widget.isDarkTheme ? Colors.white54 : AppColors.grayText;
+    final textMutedColor =
+        widget.isDarkTheme ? Colors.white54 : AppColors.grayText;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -213,8 +214,10 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget>
                         activeTrackColor: iconColor,
                         inactiveTrackColor: iconColor.withValues(alpha: 0.15),
                         thumbColor: iconColor,
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
+                        thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 6.0),
+                        overlayShape:
+                            const RoundSliderOverlayShape(overlayRadius: 12.0),
                       ),
                       child: Slider(
                         min: 0.0,
@@ -228,7 +231,8 @@ class _VoiceNotePlayerWidgetState extends State<VoiceNotePlayerWidget>
                                   : 100.0,
                             ),
                         onChanged: (val) async {
-                          await _player.seek(Duration(milliseconds: val.toInt()));
+                          await _player
+                              .seek(Duration(milliseconds: val.toInt()));
                         },
                       ),
                     ),

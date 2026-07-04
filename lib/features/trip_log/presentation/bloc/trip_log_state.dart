@@ -47,11 +47,14 @@ class TripLogState extends Equatable {
     if (visibility == DiaryVisibility.private) {
       return true; // Self-posting mode: no requirements
     }
-    return title.isNotEmpty && hasImage && hasSafetyNote && hasCostEntry && hasRoute;
+    return title.isNotEmpty &&
+        hasImage &&
+        hasSafetyNote &&
+        hasCostEntry &&
+        hasRoute;
   }
 
-  bool get hasImage => blocks.any((b) =>
-      b.when(
+  bool get hasImage => blocks.any((b) => b.when(
         text: (_, __, ___) => false,
         image: (_, __, ___, ____) => true,
         video: (_, __, ___, ____) => true,
@@ -61,8 +64,7 @@ class TripLogState extends Equatable {
         voiceNote: (_, __, ___, ____, _____) => false,
       ));
 
-  bool get hasSafetyNote => blocks.any((b) =>
-      b.when(
+  bool get hasSafetyNote => blocks.any((b) => b.when(
         text: (_, __, ___) => false,
         image: (_, __, ___, ____) => false,
         video: (_, __, ___, ____) => false,
@@ -72,8 +74,7 @@ class TripLogState extends Equatable {
         voiceNote: (_, __, ___, ____, _____) => false,
       ));
 
-  bool get hasCostEntry => blocks.any((b) =>
-      b.when(
+  bool get hasCostEntry => blocks.any((b) => b.when(
         text: (_, __, ___) => false,
         image: (_, __, ___, ____) => false,
         video: (_, __, ___, ____) => false,
@@ -83,8 +84,7 @@ class TripLogState extends Equatable {
         voiceNote: (_, __, ___, ____, _____) => false,
       ));
 
-  bool get hasRoute => blocks.any((b) =>
-      b.when(
+  bool get hasRoute => blocks.any((b) => b.when(
         text: (_, __, ___) => false,
         image: (_, __, ___, ____) => false,
         video: (_, __, ___, ____) => false,
@@ -143,7 +143,8 @@ class TripLogState extends Equatable {
       visibility: visibility ?? this.visibility,
       mood: clearMood ? null : (mood ?? this.mood),
       tags: tags ?? this.tags,
-      tripStartDate: clearStartDate ? null : (tripStartDate ?? this.tripStartDate),
+      tripStartDate:
+          clearStartDate ? null : (tripStartDate ?? this.tripStartDate),
       tripEndDate: clearEndDate ? null : (tripEndDate ?? this.tripEndDate),
       weatherSnapshot: weatherSnapshot ?? this.weatherSnapshot,
       qualityResult: qualityResult ?? this.qualityResult,
@@ -196,15 +197,27 @@ class TripLogState extends Equatable {
           ? DateTime.tryParse(json['tripEndDate'] as String)
           : null,
       weatherSnapshot: json['weatherSnapshot'] != null
-          ? WeatherSnapshot.fromJson(json['weatherSnapshot'] as Map<String, dynamic>)
+          ? WeatherSnapshot.fromJson(
+              json['weatherSnapshot'] as Map<String, dynamic>)
           : null,
     );
   }
 
   @override
   List<Object?> get props => [
-        tripId, pinId, title, blocks, status, errorMessage, validationErrors,
-        visibility, mood, tags, tripStartDate, tripEndDate, weatherSnapshot,
+        tripId,
+        pinId,
+        title,
+        blocks,
+        status,
+        errorMessage,
+        validationErrors,
+        visibility,
+        mood,
+        tags,
+        tripStartDate,
+        tripEndDate,
+        weatherSnapshot,
         qualityResult,
       ];
 }

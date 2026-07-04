@@ -20,15 +20,17 @@ class GetSmartFeedUseCase implements UseCase<List<TripLog>, ExplorerProfile> {
   @override
   Future<Either<Failure, List<TripLog>>> call(ExplorerProfile params) async {
     final result = await _repository.getFeedItems(params);
-    
+
     // Load local search history & preferences for personalized ranking
     List<String> searchHistory = [];
     Map<String, dynamic> preferences = {};
     try {
-      final historyBox = await _encryptionService.openEncryptedBox<dynamic>('user_search_history');
+      final historyBox = await _encryptionService
+          .openEncryptedBox<dynamic>('user_search_history');
       searchHistory = historyBox.values.cast<String>().toList();
-      
-      final prefsBox = await _encryptionService.openEncryptedBox<dynamic>('user_preferences');
+
+      final prefsBox = await _encryptionService
+          .openEncryptedBox<dynamic>('user_preferences');
       preferences = Map<String, dynamic>.from(prefsBox.toMap());
     } catch (_) {}
 
@@ -49,21 +51,23 @@ class GetSmartFeedUseCase implements UseCase<List<TripLog>, ExplorerProfile> {
 
     return result.map((logs) {
       final rankedLogs = List<TripLog>.from(logs);
-      
+
       rankedLogs.sort((a, b) {
-        final scoreA = _rankScore(a, params, searchHistory, preferences, followedUids);
-        final scoreB = _rankScore(b, params, searchHistory, preferences, followedUids);
+        final scoreA =
+            _rankScore(a, params, searchHistory, preferences, followedUids);
+        final scoreB =
+            _rankScore(b, params, searchHistory, preferences, followedUids);
         return scoreB.compareTo(scoreA); // Descending order
       });
-      
+
       return rankedLogs;
     });
   }
 
   double _rankScore(
-    TripLog item, 
-    ExplorerProfile viewer, 
-    List<String> searchHistory, 
+    TripLog item,
+    ExplorerProfile viewer,
+    List<String> searchHistory,
     Map<String, dynamic> preferences,
     List<String> followedUids,
   ) {
@@ -74,15 +78,19 @@ class GetSmartFeedUseCase implements UseCase<List<TripLog>, ExplorerProfile> {
 
     // 2. Trust Level Weight
     final trust = item.tier.numericWeight; // 0.5 - 1.3
-    
+
     // 3. Community Engagement (helpfulness ratio)
     final helpfulness = (item.helpfulVotes + 1.0) / (item.helpfulVotes + 10.0);
-    
+
     // 4. Personalized Proximity / Location Check (High boost for same division)
-    double locationBoost = item.division.toLowerCase() == viewer.division.toLowerCase() ? 1.5 : 1.0;
-    
+    double locationBoost =
+        item.division.toLowerCase() == viewer.division.toLowerCase()
+            ? 1.5
+            : 1.0;
+
     final preferredDivisions = preferences['preferred_divisions'];
-    if (preferredDivisions is List && preferredDivisions.contains(item.division)) {
+    if (preferredDivisions is List &&
+        preferredDivisions.contains(item.division)) {
       locationBoost *= 1.5; // Strong boost for explicitly selected division
     }
 
@@ -92,11 +100,11 @@ class GetSmartFeedUseCase implements UseCase<List<TripLog>, ExplorerProfile> {
       final titleLower = item.title.toLowerCase();
       final districtLower = item.district.toLowerCase();
       final divisionLower = item.division.toLowerCase();
-      
+
       for (final keyword in searchHistory) {
         final kwLower = keyword.toLowerCase();
-        if (titleLower.contains(kwLower) || 
-            districtLower.contains(kwLower) || 
+        if (titleLower.contains(kwLower) ||
+            districtLower.contains(kwLower) ||
             divisionLower.contains(kwLower)) {
           searchBoost += 0.25; // Apply cumulative interest boost
         }
@@ -129,7 +137,7 @@ class GetSmartFeedUseCase implements UseCase<List<TripLog>, ExplorerProfile> {
     final authorKey = 'interest_author_${item.authorId}';
     final divClicks = preferences[divisionKey] as num? ?? 0;
     final authorClicks = preferences[authorKey] as num? ?? 0;
-    
+
     engagementBoost += (divClicks * 0.1).clamp(0.0, 1.0);
     engagementBoost += (authorClicks * 0.15).clamp(0.0, 1.0);
 
@@ -142,17 +150,15 @@ class GetSmartFeedUseCase implements UseCase<List<TripLog>, ExplorerProfile> {
     final verifiedBoost = item.tier.isVerifiedOrAbove ? 1.2 : 1.0;
     final safetyPenalty = item.hidden ? 0.0 : 1.0;
 
-    return (freshness * freshness) * 
-           trust * 
-           helpfulness * 
-           locationBoost * 
-           searchBoost * 
-           categoryBoost * 
-           engagementBoost * 
-           followBoost * 
-           verifiedBoost * 
-           safetyPenalty;
+    return (freshness * freshness) *
+        trust *
+        helpfulness *
+        locationBoost *
+        searchBoost *
+        categoryBoost *
+        engagementBoost *
+        followBoost *
+        verifiedBoost *
+        safetyPenalty;
   }
 }
-
-

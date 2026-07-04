@@ -10,17 +10,20 @@ class GetNearbyPinsParams {
   final double lng;
   final double radiusKm;
 
-  GetNearbyPinsParams({required this.lat, required this.lng, required this.radiusKm});
+  GetNearbyPinsParams(
+      {required this.lat, required this.lng, required this.radiusKm});
 }
 
 @injectable
-class GetNearbyPinsUseCase implements UseCase<List<LocationPin>, GetNearbyPinsParams> {
+class GetNearbyPinsUseCase
+    implements UseCase<List<LocationPin>, GetNearbyPinsParams> {
   final IMapRepository _repository;
 
   GetNearbyPinsUseCase(this._repository);
 
   @override
   Future<Either<Failure, List<LocationPin>>> call(GetNearbyPinsParams params) {
-    return _repository.getPinsInProximity(params.lat, params.lng, params.radiusKm);
+    return _repository.getPinsInProximity(
+        params.lat, params.lng, params.radiusKm);
   }
 }

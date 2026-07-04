@@ -10,7 +10,8 @@ import '../theme/colors.dart';
 /// Both packages are already in pubspec.yaml.
 class VoiceNoteRecorderWidget extends StatefulWidget {
   /// Called when recording is finished with the local file path and duration in seconds.
-  final void Function(String localPath, int durationSeconds) onRecordingComplete;
+  final void Function(String localPath, int durationSeconds)
+      onRecordingComplete;
 
   const VoiceNoteRecorderWidget({
     super.key,
@@ -18,7 +19,8 @@ class VoiceNoteRecorderWidget extends StatefulWidget {
   });
 
   @override
-  State<VoiceNoteRecorderWidget> createState() => _VoiceNoteRecorderWidgetState();
+  State<VoiceNoteRecorderWidget> createState() =>
+      _VoiceNoteRecorderWidgetState();
 }
 
 class _VoiceNoteRecorderWidgetState extends State<VoiceNoteRecorderWidget>
@@ -66,7 +68,8 @@ class _VoiceNoteRecorderWidgetState extends State<VoiceNoteRecorderWidget>
     final dir = await getTemporaryDirectory();
     final path = '${dir.path}/voice_${const Uuid().v4()}.m4a';
 
-    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+    await _recorder.start(const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: path);
 
     setState(() {
       _isRecording = true;
@@ -155,7 +158,8 @@ class _VoiceNoteRecorderWidgetState extends State<VoiceNoteRecorderWidget>
               const Spacer(),
               if (_isRecording || _hasRecording)
                 Text(
-                  _formatDuration(_isRecording ? _recordingSeconds : _durationSeconds),
+                  _formatDuration(
+                      _isRecording ? _recordingSeconds : _durationSeconds),
                   style: TextStyle(
                     color: _isRecording ? AppColors.amber : Colors.white54,
                     fontWeight: FontWeight.w600,
@@ -170,7 +174,9 @@ class _VoiceNoteRecorderWidgetState extends State<VoiceNoteRecorderWidget>
             children: [
               // Record / Stop button
               ScaleTransition(
-                scale: _isRecording ? _pulseAnim : const AlwaysStoppedAnimation(1.0),
+                scale: _isRecording
+                    ? _pulseAnim
+                    : const AlwaysStoppedAnimation(1.0),
                 child: GestureDetector(
                   onTap: _isRecording ? _stopRecording : _startRecording,
                   child: Container(
@@ -182,7 +188,9 @@ class _VoiceNoteRecorderWidgetState extends State<VoiceNoteRecorderWidget>
                           ? AppColors.amber
                           : AppColors.mintGreen.withValues(alpha: 0.15),
                       border: Border.all(
-                        color: _isRecording ? AppColors.amber : AppColors.mintGreen,
+                        color: _isRecording
+                            ? AppColors.amber
+                            : AppColors.mintGreen,
                         width: 2,
                       ),
                     ),
@@ -208,7 +216,9 @@ class _VoiceNoteRecorderWidgetState extends State<VoiceNoteRecorderWidget>
                       border: Border.all(color: Colors.white24),
                     ),
                     child: Icon(
-                      _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                      _isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
                       color: Colors.white70,
                       size: 24,
                     ),

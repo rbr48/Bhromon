@@ -14,10 +14,11 @@ class BadgeShelf extends StatelessWidget {
     if (badges.isEmpty) {
       return Text(
         isBangla ? 'এখনও কোনো ব্যাজ অর্জিত হয়নি।' : 'No badges earned yet.',
-        style: const TextStyle(color: Colors.white54, fontSize: 13, fontStyle: FontStyle.italic),
+        style: const TextStyle(
+            color: Colors.white54, fontSize: 13, fontStyle: FontStyle.italic),
       );
     }
-    
+
     final Map<String, Map<String, String>> badgeDetails = {
       'pioneer': {
         'title': 'PIONEER EXPLORER',
@@ -26,7 +27,8 @@ class BadgeShelf extends StatelessWidget {
       },
       'verified': {
         'title': 'VERIFIED CONTRIBUTOR',
-        'desc': 'Assigned to users with over 80% accuracy score in verification tasks.',
+        'desc':
+            'Assigned to users with over 80% accuracy score in verification tasks.',
         'next': 'Perform 5 more freshness audits to level up.',
       },
       'trailblazer': {
@@ -53,10 +55,16 @@ class BadgeShelf extends StatelessWidget {
             ? (isBangla ? badgeDef.titleBn : badgeDef.titleEn)
             : (badgeDetails[key]?['title'] ?? badge.toUpperCase());
         final String desc = badgeDef != null
-            ? (isBangla ? badgeDef.descBn : badgeDef.titleEn) // Use titleEn as English desc if descEn not present
-            : (badgeDetails[key]?['desc'] ?? 'A unique exploration achievement milestone for Bhromon.');
+            ? (isBangla
+                ? badgeDef.descBn
+                : badgeDef
+                    .titleEn) // Use titleEn as English desc if descEn not present
+            : (badgeDetails[key]?['desc'] ??
+                'A unique exploration achievement milestone for Bhromon.');
         final String next = badgeDetails[key]?['next'] ??
-            (isBangla ? 'ভ্রমণ অব্যাহত রাখুন এবং এক্সপি অর্জন করুন!' : 'Keep exploring and sharing logs to level up!');
+            (isBangla
+                ? 'ভ্রমণ অব্যাহত রাখুন এবং এক্সপি অর্জন করুন!'
+                : 'Keep exploring and sharing logs to level up!');
 
         return GestureDetector(
           onTap: () {
@@ -66,7 +74,8 @@ class BadgeShelf extends StatelessWidget {
                 backgroundColor: context.surfacePanel,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: AppColors.mintGreen, width: 0.8),
+                  side:
+                      const BorderSide(color: AppColors.mintGreen, width: 0.8),
                 ),
                 title: Row(
                   children: [
@@ -75,7 +84,10 @@ class BadgeShelf extends StatelessWidget {
                     Expanded(
                       child: Text(
                         title,
-                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -86,23 +98,30 @@ class BadgeShelf extends StatelessWidget {
                   children: [
                     Text(
                       desc,
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       isBangla ? 'পরবর্তী মাইলস্টোন' : 'NEXT MILESTONE',
-                      style: const TextStyle(color: AppColors.mintGreen, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                      style: const TextStyle(
+                          color: AppColors.mintGreen,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       next,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                   ],
                 ),
                 actions: [
                   TextButton(
-                    child: Text(isBangla ? 'অসাধারণ' : 'Awesome', style: const TextStyle(color: AppColors.mintGreen)),
+                    child: Text(isBangla ? 'অসাধারণ' : 'Awesome',
+                        style: const TextStyle(color: AppColors.mintGreen)),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],

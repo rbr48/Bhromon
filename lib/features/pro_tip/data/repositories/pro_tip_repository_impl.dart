@@ -16,13 +16,15 @@ class ProTipRepositoryImpl implements IProTipRepository {
   final HiveEncryptionService _encryptionService;
   final SyncManager _syncManager;
 
-  ProTipRepositoryImpl(this._firestore, this._encryptionService, this._syncManager);
+  ProTipRepositoryImpl(
+      this._firestore, this._encryptionService, this._syncManager);
 
   @override
   Future<Either<Failure, List<ProTip>>> getTipsForPin(String pinId) async {
     try {
       final connectivity = await Connectivity().checkConnectivity();
-      if (connectivity.isNotEmpty && connectivity.first == ConnectivityResult.none) {
+      if (connectivity.isNotEmpty &&
+          connectivity.first == ConnectivityResult.none) {
         return _getCachedTipsForPin(pinId);
       }
 
@@ -44,9 +46,11 @@ class ProTipRepositoryImpl implements IProTipRepository {
     }
   }
 
-  Future<Either<Failure, List<ProTip>>> _getCachedTipsForPin(String pinId) async {
+  Future<Either<Failure, List<ProTip>>> _getCachedTipsForPin(
+      String pinId) async {
     try {
-      final box = await _encryptionService.openEncryptedBox<dynamic>('offline_bundles');
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>('offline_bundles');
       final tips = <ProTip>[];
       for (final val in box.values) {
         final bundleJson = Map<String, dynamic>.from(val as Map);
@@ -68,10 +72,12 @@ class ProTipRepositoryImpl implements IProTipRepository {
   }
 
   @override
-  Future<Either<Failure, ProTip>> voteTip(String tipId, int voteIncrement) async {
+  Future<Either<Failure, ProTip>> voteTip(
+      String tipId, int voteIncrement) async {
     try {
       final connectivity = await Connectivity().checkConnectivity();
-      final isOffline = connectivity.isNotEmpty && connectivity.first == ConnectivityResult.none;
+      final isOffline = connectivity.isNotEmpty &&
+          connectivity.first == ConnectivityResult.none;
 
       if (isOffline) {
         final cachedTip = await _getCachedTipById(tipId);
@@ -79,7 +85,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
           final updatedTip = cachedTip.copyWith(
             helpfulVotes: cachedTip.helpfulVotes + voteIncrement,
           );
-          
+
           final outboxEntry = OutboxEntry(
             id: 'sync_${DateTime.now().microsecondsSinceEpoch}',
             operation: 'update',
@@ -92,7 +98,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
             retryCount: 0,
             status: 'pending',
           );
-          
+
           await _syncManager.enqueue(outboxEntry);
           return Right(updatedTip);
         }
@@ -114,7 +120,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
           final updatedTip = cachedTip.copyWith(
             helpfulVotes: cachedTip.helpfulVotes + voteIncrement,
           );
-          
+
           final outboxEntry = OutboxEntry(
             id: 'sync_${DateTime.now().microsecondsSinceEpoch}',
             operation: 'update',
@@ -127,7 +133,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
             retryCount: 0,
             status: 'pending',
           );
-          
+
           await _syncManager.enqueue(outboxEntry);
           return Right(updatedTip);
         }
@@ -140,7 +146,8 @@ class ProTipRepositoryImpl implements IProTipRepository {
 
   Future<ProTip?> _getCachedTipById(String tipId) async {
     try {
-      final box = await _encryptionService.openEncryptedBox<dynamic>('offline_bundles');
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>('offline_bundles');
       for (final val in box.values) {
         final bundleJson = Map<String, dynamic>.from(val as Map);
         if (bundleJson['tips'] is List) {
@@ -164,7 +171,8 @@ class ProTipRepositoryImpl implements IProTipRepository {
   Future<Either<Failure, ProTip>> addTip(ProTip tip) async {
     try {
       final connectivity = await Connectivity().checkConnectivity();
-      final isOffline = connectivity.isNotEmpty && connectivity.first == ConnectivityResult.none;
+      final isOffline = connectivity.isNotEmpty &&
+          connectivity.first == ConnectivityResult.none;
 
       final json = tip.toJson();
 
@@ -186,10 +194,10 @@ class ProTipRepositoryImpl implements IProTipRepository {
 
       json['lastConfirmed'] = FieldValue.serverTimestamp();
       await _firestore.collection('pro_tips').doc(tip.tipId).set(json);
-      
+
       // Award 10 XP for posting a pro tip
       await XpUtils.awardXp(tip.authorId, 10);
-      
+
       return Right(tip);
     } catch (e) {
       try {
@@ -217,13 +225,12 @@ class ProTipRepositoryImpl implements IProTipRepository {
   Future<Either<Failure, List<ProTip>>> getLatestTips({int? limit}) async {
     try {
       final connectivity = await Connectivity().checkConnectivity();
-      if (connectivity.isNotEmpty && connectivity.first == ConnectivityResult.none) {
+      if (connectivity.isNotEmpty &&
+          connectivity.first == ConnectivityResult.none) {
         return _getCachedLatestTips(limit: limit);
       }
 
-      final snapshot = await _firestore
-          .collection('pro_tips')
-          .get();
+      final snapshot = await _firestore.collection('pro_tips').get();
 
       var tips = snapshot.docs.map((doc) {
         final data = doc.data();
@@ -245,9 +252,11 @@ class ProTipRepositoryImpl implements IProTipRepository {
     }
   }
 
-  Future<Either<Failure, List<ProTip>>> _getCachedLatestTips({int? limit}) async {
+  Future<Either<Failure, List<ProTip>>> _getCachedLatestTips(
+      {int? limit}) async {
     try {
-      final box = await _encryptionService.openEncryptedBox<dynamic>('offline_bundles');
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>('offline_bundles');
       var tips = <ProTip>[];
       for (final val in box.values) {
         final bundleJson = Map<String, dynamic>.from(val as Map);
@@ -272,10 +281,10 @@ class ProTipRepositoryImpl implements IProTipRepository {
     }
   }
 
-
   void _fixTimestamp(Map<String, dynamic> data) {
     if (data['lastConfirmed'] is Timestamp) {
-      data['lastConfirmed'] = (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
+      data['lastConfirmed'] =
+          (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
     }
   }
 }

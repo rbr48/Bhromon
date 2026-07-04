@@ -28,25 +28,25 @@ class MapRepositoryImpl implements IMapRepository {
   ) async {
     try {
       final connectivity = await Connectivity().checkConnectivity();
-      if (connectivity.isNotEmpty && connectivity.first == ConnectivityResult.none) {
+      if (connectivity.isNotEmpty &&
+          connectivity.first == ConnectivityResult.none) {
         return _getCachedPins();
       }
 
-      final snapshot = await _firestore
-          .collection('location_pins')
-          .get();
+      final snapshot = await _firestore.collection('location_pins').get();
 
       final pins = snapshot.docs.map((doc) {
         final data = doc.data();
         data['pinId'] = doc.id;
-        
+
         // Sanitize lastConfirmed field
         if (data['lastConfirmed'] is Timestamp) {
-          data['lastConfirmed'] = (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
+          data['lastConfirmed'] =
+              (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
         } else if (data['lastConfirmed'] == null) {
           data['lastConfirmed'] = DateTime.now().toIso8601String();
         }
-        
+
         return LocationPin.fromJson(data);
       }).toList();
 
@@ -65,7 +65,8 @@ class MapRepositoryImpl implements IMapRepository {
           );
         } catch (dbError) {
           // Non-blocking log
-          debugPrint('[MapRepository] Failed to cache pin ${pin.pinId} in Drift: $dbError');
+          debugPrint(
+              '[MapRepository] Failed to cache pin ${pin.pinId} in Drift: $dbError');
         }
       }
 
@@ -85,7 +86,8 @@ class MapRepositoryImpl implements IMapRepository {
         for (final row in localPois) {
           if (row.jsonData != null) {
             try {
-              pins.add(LocationPin.fromJson(jsonDecode(row.jsonData!) as Map<String, dynamic>));
+              pins.add(LocationPin.fromJson(
+                  jsonDecode(row.jsonData!) as Map<String, dynamic>));
             } catch (_) {
               // Row schema fallback
               pins.add(LocationPin(
@@ -129,13 +131,15 @@ class MapRepositoryImpl implements IMapRepository {
       if (pins.isEmpty) {
         // Old Hive fallback
         final encryptionService = getIt<HiveEncryptionService>();
-        final box = await encryptionService.openEncryptedBox<dynamic>('offline_bundles');
+        final box = await encryptionService
+            .openEncryptedBox<dynamic>('offline_bundles');
         for (final val in box.values) {
           final bundleJson = Map<String, dynamic>.from(val as Map);
           if (bundleJson['pins'] is List) {
             final pinsList = bundleJson['pins'] as List;
             for (final pinJson in pinsList) {
-              pins.add(LocationPin.fromJson(Map<String, dynamic>.from(pinJson as Map)));
+              pins.add(LocationPin.fromJson(
+                  Map<String, dynamic>.from(pinJson as Map)));
             }
           }
         }
@@ -144,7 +148,8 @@ class MapRepositoryImpl implements IMapRepository {
       // If we still have no pins, load the predefined offline travel spots from assets
       if (pins.isEmpty) {
         try {
-          final jsonStr = await rootBundle.loadString('assets/bd_predefined_spots.json');
+          final jsonStr =
+              await rootBundle.loadString('assets/bd_predefined_spots.json');
           final List<dynamic> jsonList = jsonDecode(jsonStr) as List;
           for (final item in jsonList) {
             pins.add(LocationPin.fromJson(item as Map<String, dynamic>));

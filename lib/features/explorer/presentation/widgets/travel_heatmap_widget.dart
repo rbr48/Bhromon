@@ -21,7 +21,8 @@ class TravelHeatmapWidget extends StatelessWidget {
         dt = raw.toDate();
       }
       if (dt == null) continue;
-      final key = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+      final key =
+          '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
       activityMap[key] = (activityMap[key] ?? 0) + 1;
     }
 
@@ -51,7 +52,8 @@ class TravelHeatmapWidget extends StatelessWidget {
 
     Color cellColor(DateTime? dt) {
       if (dt == null) return Colors.transparent;
-      final key = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+      final key =
+          '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
       final count = activityMap[key] ?? 0;
       if (count == 0) return Colors.white.withValues(alpha: 0.05);
       final intensity = maxVal > 0 ? count / maxVal : 0.0;
@@ -221,8 +223,18 @@ class TravelHeatmapWidget extends StatelessWidget {
 
   String _monthAbbr(int month) {
     const abbrs = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return abbrs[month - 1];
   }

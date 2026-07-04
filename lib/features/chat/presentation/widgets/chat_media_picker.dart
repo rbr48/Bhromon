@@ -183,7 +183,8 @@ class _MediaOption extends StatelessWidget {
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.15),
               shape: BoxShape.circle,
-              border: Border.all(color: color.withValues(alpha: 0.5), width: 1.5),
+              border:
+                  Border.all(color: color.withValues(alpha: 0.5), width: 1.5),
             ),
             child: Icon(icon, color: color, size: 28),
           ),

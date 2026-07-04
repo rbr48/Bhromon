@@ -6,7 +6,8 @@ import '../../domain/usecases/download_vault_usecase.dart';
 import '../../domain/usecases/delete_vault_usecase.dart';
 import '../../domain/usecases/sync_outbox_usecase.dart';
 import '../../domain/usecases/get_vault_status_usecase.dart';
-import '../../../../core/services/offline_map_service.dart' show OfflineMapService, MapProgress;
+import '../../../../core/services/offline_map_service.dart'
+    show OfflineMapService, MapProgress;
 import '../../../../core/database/app_database.dart';
 import '../../../../core/entities/outbox_entry.dart';
 import 'vault_state.dart';
@@ -40,7 +41,7 @@ class VaultCubit extends Cubit<VaultState> {
 
   Future<void> _refreshStatus() async {
     emit(state.copyWith(status: VaultStatus.loading));
-    
+
     List<OutboxEntry> conflicts = [];
     try {
       final jsonStrings = await _database.getConflictsOrdered();
@@ -52,13 +53,17 @@ class VaultCubit extends Cubit<VaultState> {
 
     final result = await _getVaultStatus();
     result.fold(
-      (failure) => emit(state.copyWith(status: VaultStatus.error, errorMessage: failure.message, conflicts: conflicts)),
+      (failure) => emit(state.copyWith(
+          status: VaultStatus.error,
+          errorMessage: failure.message,
+          conflicts: conflicts)),
       (bundles) {
         final Map<String, int> downloaded = {};
         for (final bundle in bundles) {
           downloaded[bundle.districtId] = bundle.sizeBytes ~/ (1024 * 1024);
         }
-        final List<String> list = state.districts.isEmpty ? _getDefaultDistricts() : state.districts;
+        final List<String> list =
+            state.districts.isEmpty ? _getDefaultDistricts() : state.districts;
         emit(state.copyWith(
           downloadedDistricts: downloaded,
           districts: list,
@@ -87,19 +92,23 @@ class VaultCubit extends Cubit<VaultState> {
   }
 
   Future<void> downloadDistrict(String district) async {
-    if (state.downloadProgress.containsKey(district) || state.downloadedDistricts.containsKey(district)) {
+    if (state.downloadProgress.containsKey(district) ||
+        state.downloadedDistricts.containsKey(district)) {
       return;
     }
 
     emit(state.copyWith(
-      downloadProgress: Map<String, double>.from(state.downloadProgress)..[district] = 0.0,
+      downloadProgress: Map<String, double>.from(state.downloadProgress)
+        ..[district] = 0.0,
     ));
 
     try {
       final result = await _downloadVault(district);
       result.fold(
         (failure) {
-          final updatedProgress = Map<String, double>.from(state.downloadProgress)..remove(district);
+          final updatedProgress =
+              Map<String, double>.from(state.downloadProgress)
+                ..remove(district);
           emit(state.copyWith(
             downloadProgress: updatedProgress,
             errorMessage: failure.message,
@@ -107,12 +116,15 @@ class VaultCubit extends Cubit<VaultState> {
         },
         (_) async {
           await _refreshStatus();
-          final updatedProgress = Map<String, double>.from(state.downloadProgress)..remove(district);
+          final updatedProgress =
+              Map<String, double>.from(state.downloadProgress)
+                ..remove(district);
           emit(state.copyWith(downloadProgress: updatedProgress));
         },
       );
     } catch (e) {
-      final updatedProgress = Map<String, double>.from(state.downloadProgress)..remove(district);
+      final updatedProgress = Map<String, double>.from(state.downloadProgress)
+        ..remove(district);
       emit(state.copyWith(
         downloadProgress: updatedProgress,
         errorMessage: e.toString(),
@@ -155,12 +167,15 @@ class VaultCubit extends Cubit<VaultState> {
     await _refreshStatus();
   }
 
-  Future<void> resolveConflictMerge(OutboxEntry entry, Map<String, dynamic> mergedPayload) async {
+  Future<void> resolveConflictMerge(
+      OutboxEntry entry, Map<String, dynamic> mergedPayload) async {
     await _database.deleteConflict(entry.id);
     await _database.enqueueOutbox(
       entry.id,
       DateTime.now().millisecondsSinceEpoch,
-      jsonEncode(entry.copyWith(status: 'pending', retryCount: 0, payload: mergedPayload).toJson()),
+      jsonEncode(entry
+          .copyWith(status: 'pending', retryCount: 0, payload: mergedPayload)
+          .toJson()),
       status: 'pending',
     );
     await _refreshStatus();

@@ -46,7 +46,8 @@ class WeatherDestinationsWidget extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.wb_sunny_outlined, color: AppColors.mintGreen, size: 20),
+              Icon(Icons.wb_sunny_outlined,
+                  color: AppColors.mintGreen, size: 20),
               SizedBox(width: 8),
               Text(
                 'DESTINATION WEATHER & SEASONAL TRIPS',
@@ -75,7 +76,8 @@ class WeatherDestinationsWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildWeatherCard(BuildContext context, String district, _DistrictWeatherInfo info) {
+  Widget _buildWeatherCard(
+      BuildContext context, String district, _DistrictWeatherInfo info) {
     return Container(
       width: 170,
       margin: const EdgeInsets.only(right: 12),

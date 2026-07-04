@@ -39,13 +39,13 @@ class TripLogBloc extends HydratedBloc<TripLogEvent, TripLogState> {
     this._loadDraft,
     this._firebaseAuth,
   ) : super(const TripLogState(pinId: '')) {
-
     // ── Core events ───────────────────────────────────────────────────────────
     on<LoadDraftEvent>((event, emit) async {
       emit(state.copyWith(pinId: event.pinId, status: EditorStatus.loading));
       final result = await _loadDraft(event.pinId);
       result.fold(
-        (failure) => emit(state.copyWith(status: EditorStatus.error, errorMessage: failure.message)),
+        (failure) => emit(state.copyWith(
+            status: EditorStatus.error, errorMessage: failure.message)),
         (draft) {
           if (draft != null) {
             emit(state.copyWith(
@@ -58,7 +58,11 @@ class TripLogBloc extends HydratedBloc<TripLogEvent, TripLogState> {
               status: EditorStatus.idle,
             ));
           } else {
-            emit(state.copyWith(pinId: event.pinId, blocks: [], title: '', status: EditorStatus.idle));
+            emit(state.copyWith(
+                pinId: event.pinId,
+                blocks: [],
+                title: '',
+                status: EditorStatus.idle));
           }
         },
       );
@@ -110,7 +114,8 @@ class TripLogBloc extends HydratedBloc<TripLogEvent, TripLogState> {
     });
 
     on<AutoSaveDraftEvent>((event, emit) async {
-      if (state.pinId.isNotEmpty && (state.title.isNotEmpty || state.blocks.isNotEmpty)) {
+      if (state.pinId.isNotEmpty &&
+          (state.title.isNotEmpty || state.blocks.isNotEmpty)) {
         final costItems = _extractCostItems(state.blocks);
         final currentDraft = TripLog(
           tripId: 'draft_${state.pinId}',
@@ -188,7 +193,8 @@ class TripLogBloc extends HydratedBloc<TripLogEvent, TripLogState> {
         authorId: authorId,
       ));
       result.fold(
-        (failure) => emit(state.copyWith(status: EditorStatus.error, errorMessage: failure.message)),
+        (failure) => emit(state.copyWith(
+            status: EditorStatus.error, errorMessage: failure.message)),
         (published) {
           _autoSaveTimer?.cancel();
           _weatherStamped = false;
@@ -253,10 +259,8 @@ class TripLogBloc extends HydratedBloc<TripLogEvent, TripLogState> {
 
   /// Computes quality score in background isolate.
   Future<QualityResult> _computeQuality(List<TripBlock> blocks, String title) {
-    final bodyText = blocks
-        .whereType<TextBlock>()
-        .map((b) => b.content)
-        .join(' ');
+    final bodyText =
+        blocks.whereType<TextBlock>().map((b) => b.content).join(' ');
     final imageCount = blocks.whereType<ImageBlock>().length;
     final videoCount = blocks.whereType<VideoBlock>().length;
     final routePoints = blocks
@@ -333,4 +337,3 @@ class TripLogBloc extends HydratedBloc<TripLogEvent, TripLogState> {
     return super.close();
   }
 }
-

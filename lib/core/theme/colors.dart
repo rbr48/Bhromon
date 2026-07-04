@@ -26,7 +26,7 @@ class AppColors {
   static const Color offWhite = Color(0xFFF8FAFB);
   static const Color darkText = Color(0xFF1A1A2E);
   static const Color grayText = Color(0xFF5C6B73);
-  
+
   static const Color backgroundLight = Color(0xFFF8FAFB);
   static const Color backgroundDark = Color(0xFF121212);
   static const Color cardDark = Color(0xFF1E1E1E);

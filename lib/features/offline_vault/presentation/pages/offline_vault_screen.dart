@@ -124,7 +124,8 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                     icon: const Icon(Icons.fingerprint),
                     label: const Text(
                       'Unlock Vault',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -170,13 +171,16 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
           },
           builder: (context, state) {
             // If still loading initial districts, show a spinner
-            if (state.status == VaultStatus.loading && state.districts.isEmpty) {
+            if (state.status == VaultStatus.loading &&
+                state.districts.isEmpty) {
               return const Center(
                 child: CircularProgressIndicator(color: AppColors.mintGreen),
               );
             }
 
-            final districts = state.districts.isNotEmpty ? state.districts : _getDefaultDistricts();
+            final districts = state.districts.isNotEmpty
+                ? state.districts
+                : _getDefaultDistricts();
             final downloaded = state.downloadedDistricts;
             final progressMap = state.downloadProgress;
 
@@ -199,7 +203,9 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                           children: [
                             Icon(
                               state.isSyncing ? Icons.sync : Icons.cloud_done,
-                              color: state.isSyncing ? AppColors.gold : AppColors.mintGreen,
+                              color: state.isSyncing
+                                  ? AppColors.gold
+                                  : AppColors.mintGreen,
                               size: 32,
                             ),
                             const SizedBox(width: 16),
@@ -208,12 +214,20 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    state.isSyncing ? 'Syncing Outbox...' : 'All changes synced',
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                    state.isSyncing
+                                        ? 'Syncing Outbox...'
+                                        : 'All changes synced',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
                                   ),
                                   Text(
-                                    state.isSyncing ? 'Pushing offline edits to server...' : 'Local client is up to date',
-                                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                    state.isSyncing
+                                        ? 'Pushing offline edits to server...'
+                                        : 'Local client is up to date',
+                                    style: const TextStyle(
+                                        color: Colors.white54, fontSize: 12),
                                   ),
                                 ],
                               ),
@@ -223,9 +237,12 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.mintGreen,
                                   foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
                                 ),
-                                onPressed: () => context.read<VaultCubit>().syncPendingData(),
+                                onPressed: () => context
+                                    .read<VaultCubit>()
+                                    .syncPendingData(),
                                 icon: const Icon(Icons.sync, size: 16),
                                 label: const Text('Sync Now'),
                               ),
@@ -238,7 +255,8 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                       Card(
                         color: const Color(0xFF2C1E1A),
                         shape: RoundedRectangleBorder(
-                          side: const BorderSide(color: Colors.redAccent, width: 1),
+                          side: const BorderSide(
+                              color: Colors.redAccent, width: 1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Padding(
@@ -248,18 +266,24 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                             children: [
                               const Row(
                                 children: [
-                                  Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 20),
+                                  Icon(Icons.warning_amber_rounded,
+                                      color: Colors.redAccent, size: 20),
                                   SizedBox(width: 8),
                                   Text(
                                     'SYNC CONFLICTS DETECTED',
-                                    style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1),
+                                    style: TextStyle(
+                                        color: Colors.redAccent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        letterSpacing: 1),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
                               const Text(
                                 'Some items could not be uploaded due to conflicting edits. Select a conflict below to resolve.',
-                                style: TextStyle(color: Colors.white70, fontSize: 12),
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 12),
                               ),
                               const SizedBox(height: 12),
                               ListView.builder(
@@ -272,22 +296,32 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                                     contentPadding: EdgeInsets.zero,
                                     title: Text(
                                       '${entry.operation.toUpperCase()}: ${entry.collectionPath}/${entry.documentId}',
-                                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold),
                                     ),
                                     subtitle: Text(
                                       'Enqueued: ${DateTime.fromMillisecondsSinceEpoch(entry.enqueuedAt.millisecondsSinceEpoch).toLocal().toString().substring(0, 16)}',
-                                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                                      style: const TextStyle(
+                                          color: Colors.white38, fontSize: 11),
                                     ),
                                     trailing: ElevatedButton(
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppColors.amber,
                                         foregroundColor: Colors.black,
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 4),
                                         minimumSize: Size.zero,
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
                                       ),
-                                      onPressed: () => _showRealConflictDialog(context, entry),
-                                      child: const Text('Resolve', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      onPressed: () => _showRealConflictDialog(
+                                          context, entry),
+                                      child: const Text('Resolve',
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold)),
                                     ),
                                   );
                                 },
@@ -303,19 +337,29 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                       children: [
                         const Text(
                           'OFFLINE DISTRICTS',
-                          style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1),
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1),
                         ),
                         TextButton.icon(
                           onPressed: () {
                             // Sync all districts – download each not yet downloaded
                             for (final district in districts) {
-                              if (!downloaded.containsKey(district) && !progressMap.containsKey(district)) {
-                                context.read<VaultCubit>().downloadDistrict(district);
+                              if (!downloaded.containsKey(district) &&
+                                  !progressMap.containsKey(district)) {
+                                context
+                                    .read<VaultCubit>()
+                                    .downloadDistrict(district);
                               }
                             }
                           },
-                          icon: const Icon(Icons.sync, size: 16, color: AppColors.mintGreen),
-                          label: const Text('Sync All', style: TextStyle(color: AppColors.mintGreen, fontSize: 12)),
+                          icon: const Icon(Icons.sync,
+                              size: 16, color: AppColors.mintGreen),
+                          label: const Text('Sync All',
+                              style: TextStyle(
+                                  color: AppColors.mintGreen, fontSize: 12)),
                         ),
                       ],
                     ),
@@ -327,57 +371,83 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                         itemBuilder: (context, index) {
                           final district = districts[index];
                           final isDownloaded = downloaded.containsKey(district);
-                          final isDownloading = progressMap.containsKey(district);
+                          final isDownloading =
+                              progressMap.containsKey(district);
                           final progress = progressMap[district] ?? 0.0;
 
                           return Card(
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             color: Colors.black26,
                             child: ListTile(
-                              title: Text(district, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              title: Text(district,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold)),
                               subtitle: isDownloading
                                   ? Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         const SizedBox(height: 8),
                                         LinearProgressIndicator(
                                           value: progress,
                                           backgroundColor: Colors.white10,
-                                          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
+                                          valueColor:
+                                              const AlwaysStoppedAnimation<
+                                                  Color>(AppColors.mintGreen),
                                         ),
                                         const SizedBox(height: 4),
-                                        Text('${(progress * 100).toInt()}% downloaded', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                                        Text(
+                                            '${(progress * 100).toInt()}% downloaded',
+                                            style: const TextStyle(
+                                                color: Colors.white54,
+                                                fontSize: 11)),
                                       ],
                                     )
                                   : Text(
                                       isDownloaded
                                           ? 'Downloaded (${downloaded[district]} MB) • OSM Zoom 10-16'
                                           : 'Offline maps, pins, ProTips, and logs.',
-                                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                      style: const TextStyle(
+                                          color: Colors.white54, fontSize: 12),
                                     ),
                               trailing: isDownloading
                                   ? const SizedBox(
                                       width: 24,
                                       height: 24,
-                                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppColors.mintGreen)),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  AppColors.mintGreen)),
                                     )
                                   : isDownloaded
                                       ? IconButton(
-                                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                          icon: const Icon(Icons.delete_outline,
+                                              color: Colors.redAccent),
                                           onPressed: () {
-                                            context.read<VaultCubit>().deleteDistrict(district);
+                                            context
+                                                .read<VaultCubit>()
+                                                .deleteDistrict(district);
                                           },
                                         )
                                       : ElevatedButton.icon(
                                           onPressed: () {
-                                            context.read<VaultCubit>().downloadDistrict(district);
+                                            context
+                                                .read<VaultCubit>()
+                                                .downloadDistrict(district);
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: AppColors.midGreen,
                                             foregroundColor: Colors.white,
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8)),
                                           ),
-                                          icon: const Icon(Icons.download_for_offline_outlined, size: 16),
+                                          icon: const Icon(
+                                              Icons
+                                                  .download_for_offline_outlined,
+                                              size: 16),
                                           label: const Text('Get'),
                                         ),
                             ),
@@ -407,13 +477,11 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
     ];
   }
 
-
-
   void _showRealConflictDialog(BuildContext context, OutboxEntry entry) {
     final localJson = const JsonEncoder.withIndent('  ').convert(entry.payload);
-    
+
     final serverPayload = entry.serverConflictPayload;
-    final serverJson = serverPayload != null 
+    final serverJson = serverPayload != null
         ? const JsonEncoder.withIndent('  ').convert(serverPayload)
         : 'Could not retrieve server version. Check connection or authorization.';
 
@@ -443,7 +511,10 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
             children: [
               Text(
                 'Operation: ${entry.operation.toUpperCase()} on ${entry.collectionPath}',
-                style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               Expanded(
@@ -455,14 +526,19 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                         decoration: BoxDecoration(
                           color: Colors.black26,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.midGreen.withValues(alpha: 0.5)),
+                          border: Border.all(
+                              color: AppColors.midGreen.withValues(alpha: 0.5)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const Text(
                               'LOCAL (YOU)',
-                              style: TextStyle(color: AppColors.midGreen, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1),
+                              style: TextStyle(
+                                  color: AppColors.midGreen,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                  letterSpacing: 1),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
@@ -470,7 +546,10 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                               child: SingleChildScrollView(
                                 child: Text(
                                   localJson,
-                                  style: const TextStyle(color: Colors.white70, fontFamily: 'monospace', fontSize: 10),
+                                  style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontFamily: 'monospace',
+                                      fontSize: 10),
                                 ),
                               ),
                             ),
@@ -479,17 +558,24 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.midGreen,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
                               ),
                               onPressed: () {
                                 Navigator.pop(dialogContext);
-                                context.read<VaultCubit>().resolveConflictKeepLocal(entry);
+                                context
+                                    .read<VaultCubit>()
+                                    .resolveConflictKeepLocal(entry);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Re-queued local changes for syncing.')),
+                                  const SnackBar(
+                                      content: Text(
+                                          'Re-queued local changes for syncing.')),
                                 );
                               },
-                              child: const Text('Keep Local', style: TextStyle(fontSize: 11)),
+                              child: const Text('Keep Local',
+                                  style: TextStyle(fontSize: 11)),
                             ),
                           ],
                         ),
@@ -502,14 +588,19 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                         decoration: BoxDecoration(
                           color: Colors.black26,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.gold.withValues(alpha: 0.5)),
+                          border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.5)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const Text(
                               'SERVER / ERROR',
-                              style: TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1),
+                              style: TextStyle(
+                                  color: AppColors.gold,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                  letterSpacing: 1),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
@@ -517,7 +608,10 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                               child: SingleChildScrollView(
                                 child: Text(
                                   serverJson,
-                                  style: const TextStyle(color: Colors.white70, fontFamily: 'monospace', fontSize: 10),
+                                  style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontFamily: 'monospace',
+                                      fontSize: 10),
                                 ),
                               ),
                             ),
@@ -526,17 +620,24 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.gold,
                                 foregroundColor: Colors.black,
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
                               ),
                               onPressed: () {
                                 Navigator.pop(dialogContext);
-                                context.read<VaultCubit>().resolveConflictKeepServer(entry);
+                                context
+                                    .read<VaultCubit>()
+                                    .resolveConflictKeepServer(entry);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Local changes discarded. Keeping server version.')),
+                                  const SnackBar(
+                                      content: Text(
+                                          'Local changes discarded. Keeping server version.')),
                                 );
                               },
-                              child: const Text('Keep Server', style: TextStyle(fontSize: 11)),
+                              child: const Text('Keep Server',
+                                  style: TextStyle(fontSize: 11)),
                             ),
                           ],
                         ),
@@ -550,7 +651,8 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
         ),
         actions: [
           TextButton(
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child:
+                const Text('Cancel', style: TextStyle(color: Colors.white54)),
             onPressed: () => Navigator.pop(dialogContext),
           ),
         ],

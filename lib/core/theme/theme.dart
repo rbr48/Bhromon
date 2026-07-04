@@ -56,28 +56,82 @@ class AppTheme {
   static ThemeData _build(ColorScheme scheme) {
     final bool isDark = scheme.brightness == Brightness.dark;
     final Color textColor = isDark ? AppColors.offWhite : AppColors.darkText;
-    final Color mutedColor = isDark ? AppColors.tierUnverified : AppColors.grayText;
+    final Color mutedColor =
+        isDark ? AppColors.tierUnverified : AppColors.grayText;
     final Color outlineFaint =
         (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08);
 
     // Bengali script needs slightly taller line boxes than Latin; height 1.4+
     // keeps matras and hasanta from clipping.
     final textTheme = TextTheme(
-      displayLarge: TextStyle(fontSize: 48, fontWeight: FontWeight.w700, letterSpacing: -0.5, height: 1.2, color: textColor),
-      displayMedium: TextStyle(fontSize: 36, fontWeight: FontWeight.w700, letterSpacing: -0.5, height: 1.2, color: textColor),
-      displaySmall: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, letterSpacing: -0.25, height: 1.25, color: textColor),
-      headlineLarge: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -0.25, height: 1.3, color: textColor),
-      headlineMedium: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, height: 1.3, color: textColor),
-      headlineSmall: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, height: 1.3, color: textColor),
-      titleLarge: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, height: 1.35, color: textColor),
-      titleMedium: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.4, color: textColor),
-      titleSmall: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.1, height: 1.4, color: textColor),
+      displayLarge: TextStyle(
+          fontSize: 48,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+          height: 1.2,
+          color: textColor),
+      displayMedium: TextStyle(
+          fontSize: 36,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+          height: 1.2,
+          color: textColor),
+      displaySmall: TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.25,
+          height: 1.25,
+          color: textColor),
+      headlineLarge: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.25,
+          height: 1.3,
+          color: textColor),
+      headlineMedium: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          height: 1.3,
+          color: textColor),
+      headlineSmall: TextStyle(
+          fontSize: 19,
+          fontWeight: FontWeight.w600,
+          height: 1.3,
+          color: textColor),
+      titleLarge: TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          height: 1.35,
+          color: textColor),
+      titleMedium: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          height: 1.4,
+          color: textColor),
+      titleSmall: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
+          height: 1.4,
+          color: textColor),
       bodyLarge: TextStyle(fontSize: 15, height: 1.45, color: textColor),
       bodyMedium: TextStyle(fontSize: 13.5, height: 1.45, color: mutedColor),
       bodySmall: TextStyle(fontSize: 12, height: 1.4, color: mutedColor),
-      labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.2, color: textColor),
-      labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.4, color: mutedColor),
-      labelSmall: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, letterSpacing: 0.5, color: mutedColor),
+      labelLarge: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
+          color: textColor),
+      labelMedium: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.4,
+          color: mutedColor),
+      labelSmall: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+          color: mutedColor),
     );
 
     final buttonShape = RoundedRectangleBorder(
@@ -107,17 +161,19 @@ class AppTheme {
       }),
 
       appBarTheme: AppBarTheme(
-        backgroundColor: isDark ? AppColors.backgroundDark : AppColors.darkGreen,
+        backgroundColor:
+            isDark ? AppColors.backgroundDark : AppColors.darkGreen,
         foregroundColor: AppColors.offWhite,
         elevation: 0,
         scrolledUnderElevation: 2,
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
-        titleTextStyle: textTheme.titleLarge?.copyWith(color: AppColors.offWhite),
+        titleTextStyle:
+            textTheme.titleLarge?.copyWith(color: AppColors.offWhite),
         systemOverlayStyle: isDark
             ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.light.copyWith(
-                statusBarColor: Colors.transparent),
+            : SystemUiOverlayStyle.light
+                .copyWith(statusBarColor: Colors.transparent),
       ),
 
       cardTheme: CardThemeData(
@@ -156,7 +212,8 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: scheme.primary,
-          side: BorderSide(color: scheme.primary.withValues(alpha: 0.6), width: 1.2),
+          side: BorderSide(
+              color: scheme.primary.withValues(alpha: 0.6), width: 1.2),
           padding: buttonPadding,
           minimumSize: buttonMinSize,
           shape: buttonShape,
@@ -233,7 +290,8 @@ class AppTheme {
         // would render a duplicate.
         showDragHandle: false,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(radiusSheet)),
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(radiusSheet)),
         ),
         clipBehavior: Clip.antiAlias,
       ),
@@ -251,8 +309,9 @@ class AppTheme {
       ),
 
       chipTheme: ChipThemeData(
-        backgroundColor:
-            isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.paleGreen.withValues(alpha: 0.5),
+        backgroundColor: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : AppColors.paleGreen.withValues(alpha: 0.5),
         selectedColor: scheme.primary.withValues(alpha: isDark ? 0.25 : 0.18),
         labelStyle: textTheme.labelLarge?.copyWith(fontSize: 13),
         side: BorderSide(color: outlineFaint),
@@ -291,7 +350,8 @@ class AppTheme {
         indicatorSize: TabBarIndicatorSize.label,
         dividerColor: Colors.transparent,
         labelStyle: textTheme.labelLarge,
-        unselectedLabelStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500),
+        unselectedLabelStyle:
+            textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w500),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: isDark ? const Color(0xFF161616) : Colors.white,
@@ -349,8 +409,7 @@ class AppTheme {
           color: isDark ? const Color(0xFF2A2A2A) : AppColors.darkText,
           borderRadius: BorderRadius.circular(radiusSmall),
         ),
-        textStyle:
-            textTheme.bodySmall?.copyWith(color: AppColors.offWhite),
+        textStyle: textTheme.bodySmall?.copyWith(color: AppColors.offWhite),
       ),
     );
   }

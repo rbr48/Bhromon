@@ -14,11 +14,12 @@ class OtaRepositoryImpl implements IOtaRepository {
   @override
   Future<Either<Failure, AppVersionInfo>> getLatestVersion() async {
     try {
-      final response = await _networkClient.dio.get<dynamic>('https://app.bhromon.fun/version.json');
+      final response = await _networkClient.dio
+          .get<dynamic>('https://app.bhromon.fun/version.json');
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
         final String? version;
-        
+
         if (data is Map) {
           version = data['version'] as String?;
         } else if (data is String) {

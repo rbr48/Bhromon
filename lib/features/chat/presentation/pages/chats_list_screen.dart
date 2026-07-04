@@ -20,7 +20,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
-    final currentUid = authState is Authenticated ? authState.profile.uid : 'explorer_user';
+    final currentUid =
+        authState is Authenticated ? authState.profile.uid : 'explorer_user';
 
     return PopScope(
       canPop: false,
@@ -72,11 +73,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Search chats or messages...',
-                    hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white30, size: 18),
+                    hintStyle:
+                        const TextStyle(color: Colors.white30, fontSize: 13),
+                    prefixIcon: const Icon(Icons.search,
+                        color: Colors.white30, size: 18),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.white30, size: 16),
+                            icon: const Icon(Icons.clear,
+                                color: Colors.white30, size: 16),
                             onPressed: () => setState(() => _searchQuery = ''),
                           )
                         : null,
@@ -125,7 +129,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator(color: Color(0xFF00A884)));
+                        return const Center(
+                            child: CircularProgressIndicator(
+                                color: Color(0xFF00A884)));
                       }
                       if (snapshot.hasError) {
                         return Center(
@@ -133,7 +139,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                             padding: const EdgeInsets.all(24.0),
                             child: Text(
                               'Error loading chats: ${snapshot.error}',
-                              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                              style: const TextStyle(
+                                  color: Colors.redAccent, fontSize: 13),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -143,16 +150,21 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                       final allDocs = snapshot.data?.docs ?? [];
                       final chatListItems = allDocs.where((doc) {
                         final data = doc.data() as Map<String, dynamic>;
-                        final participants = List<String>.from(data['participants'] as Iterable? ?? <dynamic>[]);
-                        final otherUser = participants.firstWhere((p) => p != currentUid, orElse: () => '');
-                        
+                        final participants = List<String>.from(
+                            data['participants'] as Iterable? ?? <dynamic>[]);
+                        final otherUser = participants.firstWhere(
+                            (p) => p != currentUid,
+                            orElse: () => '');
+
                         if (blockedUids.contains(otherUser)) return false;
 
                         // Match Search Query against UID or last message text
                         if (_searchQuery.isNotEmpty) {
-                          final lastMsg = (data['lastMessage'] as String? ?? '').toLowerCase();
+                          final lastMsg = (data['lastMessage'] as String? ?? '')
+                              .toLowerCase();
                           final otherUserLower = otherUser.toLowerCase();
-                          if (!lastMsg.contains(_searchQuery) && !otherUserLower.contains(_searchQuery)) {
+                          if (!lastMsg.contains(_searchQuery) &&
+                              !otherUserLower.contains(_searchQuery)) {
                             return false;
                           }
                         }
@@ -165,16 +177,20 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.chat_bubble_outline, size: 64, color: Colors.white.withValues(alpha: 0.08)),
+                              Icon(Icons.chat_bubble_outline,
+                                  size: 64,
+                                  color: Colors.white.withValues(alpha: 0.08)),
                               const SizedBox(height: 16),
                               const Text(
                                 'No conversations here yet.',
-                                style: TextStyle(color: Colors.white24, fontSize: 13),
+                                style: TextStyle(
+                                    color: Colors.white24, fontSize: 13),
                               ),
                               const SizedBox(height: 8),
                               const Text(
                                 'Tap the green button to start a chat!',
-                                style: TextStyle(color: Color(0xFF00A884), fontSize: 11),
+                                style: TextStyle(
+                                    color: Color(0xFF00A884), fontSize: 11),
                               ),
                             ],
                           ),
@@ -194,11 +210,16 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           final doc = chatListItems[index];
                           final data = doc.data() as Map<String, dynamic>;
                           final chatId = doc.id;
-                          final participants = List<String>.from(data['participants'] as Iterable? ?? <dynamic>[]);
-                          final otherUserUid = participants.firstWhere((p) => p != currentUid, orElse: () => 'Guest');
-                          
-                          final String lastMsgMeta = (data['lastMessage'] as String?) ?? '';
-                          final lastTimeMeta = data['lastMessageTime'] as Timestamp?;
+                          final participants = List<String>.from(
+                              data['participants'] as Iterable? ?? <dynamic>[]);
+                          final otherUserUid = participants.firstWhere(
+                              (p) => p != currentUid,
+                              orElse: () => 'Guest');
+
+                          final String lastMsgMeta =
+                              (data['lastMessage'] as String?) ?? '';
+                          final lastTimeMeta =
+                              data['lastMessageTime'] as Timestamp?;
 
                           return ChatTile(
                             chatId: chatId,
@@ -207,7 +228,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                             lastMessageMeta: lastMsgMeta,
                             lastTimeMeta: lastTimeMeta,
                             activeTabFilter: _activeTab,
-                            onTap: () => context.push('/chat/$chatId', extra: {'otherUid': otherUserUid}),
+                            onTap: () => context.push('/chat/$chatId',
+                                extra: {'otherUid': otherUserUid}),
                           );
                         },
                       );
@@ -222,7 +244,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         floatingActionButton: FloatingActionButton(
           backgroundColor: const Color(0xFF00A884), // WhatsApp green
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: const Icon(Icons.chat_bubble),
           onPressed: () => _showSelectTravelerSheet(context, currentUid),
         ),
@@ -240,7 +263,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           color: isSelected ? const Color(0xFF005C4B) : const Color(0xFF1F2C34),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF00A884).withValues(alpha: 0.3) : Colors.transparent,
+            color: isSelected
+                ? const Color(0xFF00A884).withValues(alpha: 0.3)
+                : Colors.transparent,
             width: 1,
           ),
         ),
@@ -288,7 +313,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
                       'Start Conversation',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -301,11 +329,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: TextField(
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
                         decoration: const InputDecoration(
                           hintText: 'Search traveler name or division...',
-                          hintStyle: TextStyle(color: Colors.white30, fontSize: 12),
-                          prefixIcon: Icon(Icons.search, color: Colors.white30, size: 18),
+                          hintStyle:
+                              TextStyle(color: Colors.white30, fontSize: 12),
+                          prefixIcon: Icon(Icons.search,
+                              color: Colors.white30, size: 18),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(vertical: 10),
                         ),
@@ -320,35 +351,47 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   const SizedBox(height: 12),
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance.collection('explorer_profiles').snapshots(),
+                      stream: FirebaseFirestore.instance
+                          .collection('explorer_profiles')
+                          .snapshots(),
                       builder: (context, snap) {
                         if (!snap.hasData) {
-                          return const Center(child: CircularProgressIndicator(color: Color(0xFF00A884)));
+                          return const Center(
+                              child: CircularProgressIndicator(
+                                  color: Color(0xFF00A884)));
                         }
                         final travelers = snap.data!.docs.where((doc) {
                           if (doc.id == currentUid) return false;
                           final data = doc.data() as Map<String, dynamic>;
-                          final name = (data['displayName'] as String? ?? '').toLowerCase();
-                          final div = (data['division'] as String? ?? '').toLowerCase();
-                          return sheetSearch.isEmpty || name.contains(sheetSearch) || div.contains(sheetSearch);
+                          final name = (data['displayName'] as String? ?? '')
+                              .toLowerCase();
+                          final div =
+                              (data['division'] as String? ?? '').toLowerCase();
+                          return sheetSearch.isEmpty ||
+                              name.contains(sheetSearch) ||
+                              div.contains(sheetSearch);
                         }).toList();
 
-
-                        final List<Map<String, dynamic>> travelerList = travelers.map((doc) {
+                        final List<Map<String, dynamic>> travelerList =
+                            travelers.map((doc) {
                           final data = doc.data() as Map<String, dynamic>;
                           return <String, dynamic>{
                             'uid': doc.id,
-                            'displayName': (data['displayName'] as String?)?.trim().isNotEmpty == true
+                            'displayName': (data['displayName'] as String?)
+                                        ?.trim()
+                                        .isNotEmpty ==
+                                    true
                                 ? data['displayName'] as String
                                 : 'Traveler',
                             'avatarUrl': (data['avatarUrl'] as String?) ?? '',
-                            'division': (data['division'] as String?) ?? 'Explorer',
+                            'division':
+                                (data['division'] as String?) ?? 'Explorer',
                           };
                         }).toList();
 
-
                         // Add AI Companion at the top if search is empty or matches
-                        if (sheetSearch.isEmpty || 'bhromon ai guide'.contains(sheetSearch)) {
+                        if (sheetSearch.isEmpty ||
+                            'bhromon ai guide'.contains(sheetSearch)) {
                           travelerList.insert(0, {
                             'uid': 'bhromon_ai_advisor',
                             'displayName': 'Bhromon AI Guide',
@@ -359,25 +402,34 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
                         if (travelerList.isEmpty) {
                           return const Center(
-                            child: Text('No other travelers registered yet.', style: TextStyle(color: Colors.white24, fontSize: 12)),
+                            child: Text('No other travelers registered yet.',
+                                style: TextStyle(
+                                    color: Colors.white24, fontSize: 12)),
                           );
                         }
 
                         return ListView.separated(
                           padding: const EdgeInsets.all(8),
-                          separatorBuilder: (context, index) => const Divider(color: Colors.white10, height: 1),
+                          separatorBuilder: (context, index) =>
+                              const Divider(color: Colors.white10, height: 1),
                           itemCount: travelerList.length,
                           itemBuilder: (context, idx) {
                             final traveler = travelerList[idx];
-                            final String name = traveler['displayName'] as String;
-                            final String avatarUrl = traveler['avatarUrl'] as String;
-                            final String division = traveler['division'] as String;
+                            final String name =
+                                traveler['displayName'] as String;
+                            final String avatarUrl =
+                                traveler['avatarUrl'] as String;
+                            final String division =
+                                traveler['division'] as String;
                             final String targetUid = traveler['uid'] as String;
 
-                            final initials = name.length > 2 ? name.substring(0, 2).toUpperCase() : 'EX';
+                            final initials = name.length > 2
+                                ? name.substring(0, 2).toUpperCase()
+                                : 'EX';
 
                             return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 4),
                               leading: CircleAvatar(
                                 radius: 20,
                                 backgroundColor: const Color(0xFF005C4B),
@@ -385,16 +437,27 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                     ? NetworkImage(avatarUrl)
                                     : null,
                                 child: avatarUrl.isEmpty
-                                    ? Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12))
+                                    ? Text(initials,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12))
                                     : null,
                               ),
-                              title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                              subtitle: Text(division, style: const TextStyle(color: Colors.white30, fontSize: 11)),
+                              title: Text(name,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13)),
+                              subtitle: Text(division,
+                                  style: const TextStyle(
+                                      color: Colors.white30, fontSize: 11)),
                               onTap: () {
                                 Navigator.pop(context); // close sheet
                                 final uids = [currentUid, targetUid]..sort();
                                 final chatId = uids.join('_');
-                                GoRouter.of(context).push('/chat/$chatId', extra: {'otherUid': targetUid});
+                                GoRouter.of(context).push('/chat/$chatId',
+                                    extra: {'otherUid': targetUid});
                               },
                             );
                           },
@@ -464,10 +527,17 @@ class ChatTile extends StatelessWidget {
         final profileData = profileSnap.data?.data() as Map<String, dynamic>?;
         final String displayName = otherUserUid == 'bhromon_ai_advisor'
             ? 'Bhromon AI Guide'
-            : (profileData?['displayName'] as String? ?? 'Traveler ${otherUserUid.substring(0, math.min(otherUserUid.length, 6))}');
-        final String? avatarUrl = otherUserUid == 'bhromon_ai_advisor' ? null : (profileData?['avatarUrl'] as String?);
+            : (profileData?['displayName'] as String? ??
+                'Traveler ${otherUserUid.substring(0, math.min(otherUserUid.length, 6))}');
+        final String? avatarUrl = otherUserUid == 'bhromon_ai_advisor'
+            ? null
+            : (profileData?['avatarUrl'] as String?);
 
-        final initials = otherUserUid == 'bhromon_ai_advisor' ? 'AI' : (displayName.length > 2 ? displayName.substring(0, 2).toUpperCase() : 'TR');
+        final initials = otherUserUid == 'bhromon_ai_advisor'
+            ? 'AI'
+            : (displayName.length > 2
+                ? displayName.substring(0, 2).toUpperCase()
+                : 'TR');
 
         return StreamBuilder<QuerySnapshot>(
           stream: unreadStream,
@@ -499,11 +569,13 @@ class ChatTile extends StatelessWidget {
                 String timeStr = '';
                 if (lastTime != null) {
                   final date = lastTime.toDate();
-                  timeStr = '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+                  timeStr =
+                      '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
                 }
 
                 return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   leading: CircleAvatar(
                     radius: 24,
                     backgroundColor: const Color(0xFF005C4B),
@@ -511,12 +583,19 @@ class ChatTile extends StatelessWidget {
                         ? NetworkImage(avatarUrl)
                         : null,
                     child: (avatarUrl == null || avatarUrl.isEmpty)
-                        ? Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))
+                        ? Text(initials,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13))
                         : null,
                   ),
                   title: Text(
                     displayName,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14),
                   ),
                   subtitle: Row(
                     children: [
@@ -524,7 +603,8 @@ class ChatTile extends StatelessWidget {
                         Icon(
                           seen ? Icons.done_all : Icons.done,
                           size: 16,
-                          color: seen ? const Color(0xFF53BDEB) : Colors.white30,
+                          color:
+                              seen ? const Color(0xFF53BDEB) : Colors.white30,
                         ),
                         const SizedBox(width: 4),
                       ],
@@ -534,9 +614,13 @@ class ChatTile extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: unreadCount > 0 ? const Color(0xFF00A884) : Colors.white54,
+                            color: unreadCount > 0
+                                ? const Color(0xFF00A884)
+                                : Colors.white54,
                             fontSize: 12,
-                            fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: unreadCount > 0
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                       ),
@@ -549,9 +633,13 @@ class ChatTile extends StatelessWidget {
                       Text(
                         timeStr,
                         style: TextStyle(
-                          color: unreadCount > 0 ? const Color(0xFF00A884) : Colors.white30,
+                          color: unreadCount > 0
+                              ? const Color(0xFF00A884)
+                              : Colors.white30,
                           fontSize: 10,
-                          fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: unreadCount > 0
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                       if (unreadCount > 0) ...[
@@ -564,7 +652,10 @@ class ChatTile extends StatelessWidget {
                           ),
                           child: Text(
                             '$unreadCount',
-                            style: const TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -580,4 +671,3 @@ class ChatTile extends StatelessWidget {
     );
   }
 }
-

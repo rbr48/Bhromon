@@ -14,7 +14,7 @@ import '../../../../core/services/offline_map_service.dart';
 import '../../../../core/database/app_database.dart';
 import '../datasources/sync_manager.dart';
 import '../../domain/repositories/i_offline_repository.dart';
- 
+
 @LazySingleton(as: IOfflineRepository)
 class OfflineRepositoryImpl implements IOfflineRepository {
   final HiveEncryptionService _encryptionService;
@@ -24,7 +24,7 @@ class OfflineRepositoryImpl implements IOfflineRepository {
   final String _bundleBoxName = 'offline_bundles';
   // ignore: unused_field
   final String _outboxBoxName = 'sync_outbox';
- 
+
   OfflineRepositoryImpl(
     this._encryptionService,
     this._syncManager,
@@ -35,7 +35,8 @@ class OfflineRepositoryImpl implements IOfflineRepository {
   @override
   Future<Either<Failure, List<OfflineBundle>>> getDownloadedBundles() async {
     try {
-      final box = await _encryptionService.openEncryptedBox<dynamic>(_bundleBoxName);
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>(_bundleBoxName);
       final bundles = box.values.map((v) {
         return OfflineBundle.fromJson(Map<String, dynamic>.from(v as Map));
       }).toList();
@@ -54,11 +55,13 @@ class OfflineRepositoryImpl implements IOfflineRepository {
       final mapDownloaded = await OfflineMapService.downloadRegion(districtId);
       if (!mapDownloaded) {
         // ignore: avoid_print
-        print('[OfflineRepo] Map region download failed for $districtId; continuing with data bundle');
+        print(
+            '[OfflineRepo] Map region download failed for $districtId; continuing with data bundle');
       }
 
-      final box = await _encryptionService.openEncryptedBox<dynamic>(_bundleBoxName);
-      
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>(_bundleBoxName);
+
       // 2. Fetch Pins for this district or division from Firestore
       final pinsSnapshot = await _firestore
           .collection('location_pins')
@@ -80,7 +83,8 @@ class OfflineRepositoryImpl implements IOfflineRepository {
           final data = doc.data();
           data['pinId'] = doc.id;
           if (data['lastConfirmed'] is Timestamp) {
-            data['lastConfirmed'] = (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
+            data['lastConfirmed'] =
+                (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
           }
           pins.add(LocationPin.fromJson(data));
           pinIds.add(doc.id);
@@ -126,7 +130,9 @@ class OfflineRepositoryImpl implements IOfflineRepository {
             final data = doc.data();
             data['tipId'] = doc.id;
             if (data['lastConfirmed'] is Timestamp) {
-              data['lastConfirmed'] = (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
+              data['lastConfirmed'] = (data['lastConfirmed'] as Timestamp)
+                  .toDate()
+                  .toIso8601String();
             }
             final tip = ProTip.fromJson(data);
             if (pinIds.contains(tip.locationPinId)) {
@@ -140,7 +146,10 @@ class OfflineRepositoryImpl implements IOfflineRepository {
       }
 
       // Calculate a dynamic size based on items (roughly, plus simulated tile data)
-      final int size = 150 * 1024 + (pins.length * 15 * 1024) + (trips.length * 90 * 1024) + (tips.length * 8 * 1024);
+      final int size = 150 * 1024 +
+          (pins.length * 15 * 1024) +
+          (trips.length * 90 * 1024) +
+          (tips.length * 8 * 1024);
 
       final bundle = OfflineBundle(
         districtId: districtId,
@@ -167,7 +176,8 @@ class OfflineRepositoryImpl implements IOfflineRepository {
   Future<Either<Failure, Unit>> deleteBundle(String districtId) async {
     try {
       await OfflineMapService.deleteRegion(districtId);
-      final box = await _encryptionService.openEncryptedBox<dynamic>(_bundleBoxName);
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>(_bundleBoxName);
       await box.delete(districtId);
       return const Right(unit);
     } catch (e) {
@@ -180,7 +190,8 @@ class OfflineRepositoryImpl implements IOfflineRepository {
     try {
       final jsonStrings = await _database.getOutboxEntriesOrdered();
       final entries = jsonStrings.map((jsonStr) {
-        return OutboxEntry.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+        return OutboxEntry.fromJson(
+            jsonDecode(jsonStr) as Map<String, dynamic>);
       }).toList();
       return Right(entries);
     } catch (e) {
@@ -212,15 +223,30 @@ class OfflineRepositoryImpl implements IOfflineRepository {
       for (final rawBlock in rawBlocks) {
         if (rawBlock is Map) {
           final block = Map<String, dynamic>.from(rawBlock);
-          
-          const validTypes = {'text', 'image', 'video', 'costEntry', 'route', 'safetyNote', 'voiceNote'};
+
+          const validTypes = {
+            'text',
+            'image',
+            'video',
+            'costEntry',
+            'route',
+            'safetyNote',
+            'voiceNote'
+          };
           dynamic rawType = block['runtimeType'] ?? block['type'];
           if (rawType == null || !validTypes.contains(rawType.toString())) {
             if (block['durationSeconds'] != null) {
               rawType = 'voiceNote';
-            } else if (block['storageUrl'] != null || block['localPath'] != null) {
-              final path = (block['storageUrl'] ?? block['localPath']).toString().toLowerCase();
-              if (path.contains('.mp4') || path.contains('.mov') || path.contains('.avi') || path.contains('.mkv') || path.contains('video')) {
+            } else if (block['storageUrl'] != null ||
+                block['localPath'] != null) {
+              final path = (block['storageUrl'] ?? block['localPath'])
+                  .toString()
+                  .toLowerCase();
+              if (path.contains('.mp4') ||
+                  path.contains('.mov') ||
+                  path.contains('.avi') ||
+                  path.contains('.mkv') ||
+                  path.contains('video')) {
                 rawType = 'video';
               } else {
                 rawType = 'image';
@@ -237,7 +263,7 @@ class OfflineRepositoryImpl implements IOfflineRepository {
           }
           block['runtimeType'] = rawType;
           block['id'] ??= 'blk_${DateTime.now().microsecondsSinceEpoch}';
-          
+
           final type = block['runtimeType'];
           if (type == 'text') {
             block['content'] ??= '';
@@ -275,13 +301,15 @@ class OfflineRepositoryImpl implements IOfflineRepository {
     if (data['lastConfirmed'] == null) {
       data['lastConfirmed'] = DateTime.now().toIso8601String();
     } else if (data['lastConfirmed'] is Timestamp) {
-      data['lastConfirmed'] = (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
+      data['lastConfirmed'] =
+          (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
     } else if (data['lastConfirmed'] is! String) {
       data['lastConfirmed'] = DateTime.now().toIso8601String();
     }
 
     if (data['publishedAt'] is Timestamp) {
-      data['publishedAt'] = (data['publishedAt'] as Timestamp).toDate().toIso8601String();
+      data['publishedAt'] =
+          (data['publishedAt'] as Timestamp).toDate().toIso8601String();
     }
   }
 
@@ -297,7 +325,8 @@ class OfflineRepositoryImpl implements IOfflineRepository {
             video: (vid) => vid.storageUrl,
           );
           if (storageUrl != null && storageUrl.isNotEmpty) {
-            if (storageUrl.startsWith('http://') || storageUrl.startsWith('https://')) {
+            if (storageUrl.startsWith('http://') ||
+                storageUrl.startsWith('https://')) {
               imageUrls.add(storageUrl);
             }
           }
