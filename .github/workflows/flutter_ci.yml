@@ -27,6 +27,11 @@ jobs:
           channel: stable
           cache: true
 
+      # pub get first: dart format picks its style from the resolved package
+      # language version, so unresolved packages produce false diffs.
+      - name: Install dependencies
+        run: flutter pub get
+
       - name: Check dart format
         run: dart format --output=none --set-exit-if-changed .
 
