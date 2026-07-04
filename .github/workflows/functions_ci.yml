@@ -109,11 +109,12 @@ jobs:
       # The Firestore emulator (a Java process) backs the security-rules
       # tests; firebase emulators:exec runs from the repo root where
       # firebase.json and firestore.rules live.
-      - name: Set up Java 17 (Firestore emulator)
+      # firebase-tools requires Java 21+ for the emulator runtime
+      - name: Set up Java 21 (Firestore emulator)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       # Bounded workers + a larger heap: jest with ts-jest OOMs the default
       # 2GB Node heap when it spawns a compiling worker per core.
