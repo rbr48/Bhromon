@@ -4,6 +4,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/value_objects/trust_tier.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
+import '../../../../core/theme/theme_context.dart';
 
 class GuideCreateScreen extends StatelessWidget {
   const GuideCreateScreen({super.key});
@@ -44,9 +45,9 @@ class GuideCreateScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF111111),
+        color: context.surfacePanel,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -74,7 +75,8 @@ class GuideCreateScreen extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.gold,
               foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('Back to Discovery'),
           ),
@@ -92,7 +94,8 @@ class GuideCreateScreen extends StatelessWidget {
       children: [
         const Text(
           'Guide Details',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         TextField(
@@ -101,8 +104,10 @@ class GuideCreateScreen extends StatelessWidget {
           decoration: const InputDecoration(
             labelText: 'Guide Title',
             labelStyle: TextStyle(color: Colors.white70),
-            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.mintGreen)),
+            enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white24)),
+            focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: AppColors.mintGreen)),
           ),
         ),
         const SizedBox(height: 16),
@@ -113,8 +118,10 @@ class GuideCreateScreen extends StatelessWidget {
           decoration: const InputDecoration(
             labelText: 'Description (optional)',
             labelStyle: TextStyle(color: Colors.white70),
-            enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-            focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppColors.mintGreen)),
+            enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white24)),
+            focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: AppColors.mintGreen)),
           ),
         ),
         const SizedBox(height: 24),
@@ -133,7 +140,8 @@ class GuideCreateScreen extends StatelessWidget {
             backgroundColor: AppColors.mintGreen,
             foregroundColor: Colors.black,
             minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
           child: const Text('Publish Premium Guide'),
         ),

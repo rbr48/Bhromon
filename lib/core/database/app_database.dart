@@ -15,7 +15,8 @@ class AuthProfilesTable extends Table {
 class TripLogsTable extends Table {
   TextColumn get tripId => text()();
   TextColumn get locationPinId => text()();
-  IntColumn get isDraft => integer().withDefault(const Constant(0))(); // 1 = Draft, 0 = Published
+  IntColumn get isDraft =>
+      integer().withDefault(const Constant(0))(); // 1 = Draft, 0 = Published
   TextColumn get jsonData => text()(); // Serialized TripLog
 
   @override
@@ -25,7 +26,8 @@ class TripLogsTable extends Table {
 class SyncOutboxTable extends Table {
   TextColumn get id => text()();
   IntColumn get enqueuedAt => integer()(); // Epoch milliseconds
-  TextColumn get status => text().withDefault(const Constant('pending'))(); // pending, processing, failed, conflict
+  TextColumn get status => text().withDefault(
+      const Constant('pending'))(); // pending, processing, failed, conflict
   TextColumn get jsonData => text()(); // Serialized OutboxEntry
 
   @override
@@ -76,13 +78,16 @@ class AppDatabase extends _$AppDatabase {
             // Add status column to SyncOutboxTable
             await m.addColumn(syncOutboxTable, syncOutboxTable.status);
             // Add jsonData column to PointsOfInterestTable
-            await m.addColumn(pointsOfInterestTable, pointsOfInterestTable.jsonData);
+            await m.addColumn(
+                pointsOfInterestTable, pointsOfInterestTable.jsonData);
             // Create SyncConflictsTable
             await m.createTable(syncConflictsTable);
           }
           if (from < 3) {
-            await customStatement('CREATE INDEX IF NOT EXISTS trip_logs_pin_idx ON trip_logs_table (location_pin_id);');
-            await customStatement('CREATE INDEX IF NOT EXISTS poi_district_idx ON points_of_interest_table (district_id);');
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS trip_logs_pin_idx ON trip_logs_table (location_pin_id);');
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS poi_district_idx ON points_of_interest_table (district_id);');
           }
         },
       );
@@ -108,7 +113,8 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Trip Log Operations
-  Future<void> saveTripLog(String tripId, String pinId, bool isDraft, String json) async {
+  Future<void> saveTripLog(
+      String tripId, String pinId, bool isDraft, String json) async {
     await into(tripLogsTable).insertOnConflictUpdate(
       TripLogsTableCompanion(
         tripId: Value(tripId),
@@ -121,7 +127,8 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<String>> getTripLogsForPin(String pinId, bool isDraft) async {
     final query = select(tripLogsTable)
-      ..where((t) => t.locationPinId.equals(pinId) & t.isDraft.equals(isDraft ? 1 : 0));
+      ..where((t) =>
+          t.locationPinId.equals(pinId) & t.isDraft.equals(isDraft ? 1 : 0));
     final rows = await query.get();
     return rows.map((r) => r.jsonData).toList();
   }
@@ -138,12 +145,13 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteTripLogDraft(String pinId) async {
     await (delete(tripLogsTable)
-      ..where((t) => t.locationPinId.equals(pinId) & t.isDraft.equals(1)))
-      .go();
+          ..where((t) => t.locationPinId.equals(pinId) & t.isDraft.equals(1)))
+        .go();
   }
 
   // Sync Outbox Operations
-  Future<void> enqueueOutbox(String id, int enqueuedAt, String json, {String status = 'pending'}) async {
+  Future<void> enqueueOutbox(String id, int enqueuedAt, String json,
+      {String status = 'pending'}) async {
     await into(syncOutboxTable).insertOnConflictUpdate(
       SyncOutboxTableCompanion(
         id: Value(id),
@@ -157,7 +165,9 @@ class AppDatabase extends _$AppDatabase {
   Future<List<String>> getOutboxEntriesOrdered() async {
     final query = select(syncOutboxTable)
       ..where((t) => t.status.equals('pending') | t.status.equals('failed'))
-      ..orderBy([(t) => OrderingTerm(expression: t.enqueuedAt, mode: OrderingMode.asc)]);
+      ..orderBy([
+        (t) => OrderingTerm(expression: t.enqueuedAt, mode: OrderingMode.asc)
+      ]);
     final rows = await query.get();
     return rows.map((r) => r.jsonData).toList();
   }
@@ -195,20 +205,24 @@ class AppDatabase extends _$AppDatabase {
     return select(pointsOfInterestTable).get();
   }
 
-  Future<List<String>> searchPointsOfInterest(String query, String districtId) async {
+  Future<List<String>> searchPointsOfInterest(
+      String query, String districtId) async {
     final sqlQuery = select(pointsOfInterestTable)
-      ..where((t) => t.districtId.equals(districtId) & 
-                     (t.title.like('%$query%') | t.description.like('%$query%')));
+      ..where((t) =>
+          t.districtId.equals(districtId) &
+          (t.title.like('%$query%') | t.description.like('%$query%')));
     final rows = await sqlQuery.get();
-    return rows.map((r) => '{'
-      '"id":"${r.id}",'
-      '"districtId":"${r.districtId}",'
-      '"title":"${r.title.replaceAll('"', '\\"')}",'
-      '"category":"${r.category}",'
-      '"latitude":${r.latitude},'
-      '"longitude":${r.longitude},'
-      '"description":"${(r.description ?? '').replaceAll('"', '\\"')}"'
-    '}').toList();
+    return rows
+        .map((r) => '{'
+            '"id":"${r.id}",'
+            '"districtId":"${r.districtId}",'
+            '"title":"${r.title.replaceAll('"', '\\"')}",'
+            '"category":"${r.category}",'
+            '"latitude":${r.latitude},'
+            '"longitude":${r.longitude},'
+            '"description":"${(r.description ?? '').replaceAll('"', '\\"')}"'
+            '}')
+        .toList();
   }
 
   // Sync Conflict Operations
@@ -224,7 +238,9 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<String>> getConflictsOrdered() async {
     final query = select(syncConflictsTable)
-      ..orderBy([(t) => OrderingTerm(expression: t.enqueuedAt, mode: OrderingMode.asc)]);
+      ..orderBy([
+        (t) => OrderingTerm(expression: t.enqueuedAt, mode: OrderingMode.asc)
+      ]);
     final rows = await query.get();
     return rows.map((r) => r.jsonData).toList();
   }
@@ -233,5 +249,3 @@ class AppDatabase extends _$AppDatabase {
     await (delete(syncConflictsTable)..where((t) => t.id.equals(id))).go();
   }
 }
-
-

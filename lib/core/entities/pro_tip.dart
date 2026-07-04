@@ -19,6 +19,5 @@ class ProTip with _$ProTip {
     @Default(false) bool hidden,
   }) = _ProTip;
 
-  factory ProTip.fromJson(Map<String, dynamic> json) =>
-      _$ProTipFromJson(json);
+  factory ProTip.fromJson(Map<String, dynamic> json) => _$ProTipFromJson(json);
 }

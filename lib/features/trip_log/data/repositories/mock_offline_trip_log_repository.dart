@@ -28,7 +28,8 @@ class MockOfflineTripLogRepository implements ITripLogRepository {
   Future<Either<Failure, TripLog>> publishTripLog(TripLog tripLog) async {
     try {
       final jsonStr = jsonEncode(tripLog.toJson());
-      await _database.saveTripLog(tripLog.tripId, tripLog.locationPinId, false, jsonStr);
+      await _database.saveTripLog(
+          tripLog.tripId, tripLog.locationPinId, false, jsonStr);
       await _database.deleteTripLogDraft(tripLog.locationPinId);
       return Right(tripLog);
     } catch (e) {
@@ -41,7 +42,8 @@ class MockOfflineTripLogRepository implements ITripLogRepository {
     try {
       final jsonStr = jsonEncode(tripLog.toJson());
       // For drafts, we use the pinId as draft identity to ensure one draft per pin
-      await _database.saveTripLog(tripLog.tripId, tripLog.locationPinId, true, jsonStr);
+      await _database.saveTripLog(
+          tripLog.tripId, tripLog.locationPinId, true, jsonStr);
       return const Right(unit);
     } catch (e) {
       return Left(CacheFailure(e.toString()));

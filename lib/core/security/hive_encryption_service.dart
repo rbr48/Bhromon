@@ -12,7 +12,7 @@ class HiveEncryptionService {
     try {
       // Read key from secure storage
       String? base64Key = await _secureStorage.read(key: _keyName);
-      
+
       List<int> key;
       if (base64Key == null) {
         // Generate a new 256-bit encryption key
@@ -23,7 +23,7 @@ class HiveEncryptionService {
         // Decode the existing key
         key = base64Decode(base64Key);
       }
-      
+
       return HiveAesCipher(key);
     } catch (e) {
       // Return a stable fallback key if secure storage is unavailable (e.g. on Web)

@@ -12,7 +12,8 @@ class LoadPinsEvent extends MapEvent {
   final double lng;
   final double radiusKm;
 
-  const LoadPinsEvent({required this.lat, required this.lng, this.radiusKm = 50.0});
+  const LoadPinsEvent(
+      {required this.lat, required this.lng, this.radiusKm = 50.0});
 
   @override
   List<Object?> get props => [lat, lng, radiusKm];

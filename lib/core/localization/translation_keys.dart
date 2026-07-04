@@ -13,7 +13,8 @@ class TranslationKeys {
       'editor_saving': 'Saving...',
       'editor_draft_saved': 'Draft saved successfully!',
       'editor_publish_success': 'Your diary has been shared!',
-      'private_instant_posting_enabled': 'Private mode: Instant posting enabled (no requirements)',
+      'private_instant_posting_enabled':
+          'Private mode: Instant posting enabled (no requirements)',
 
       // ── Visibility labels ──────────────────────────────────────────────────
       'visibility_private': 'Only Me',
@@ -104,14 +105,16 @@ class TranslationKeys {
       'HOW TO EARN SCORE POINTS:': 'HOW TO EARN SCORE POINTS:',
       'Publish a travel log': 'Publish a travel log',
       'Receive helpful vote on log': 'Receive helpful vote on log',
-      'Visit a new district in Bangladesh': 'Visit a new district in Bangladesh',
+      'Visit a new district in Bangladesh':
+          'Visit a new district in Bangladesh',
       'New Explorer': 'New Explorer',
       'Community Explorer': 'Community Explorer',
       'Verified Explorer': 'Verified Explorer',
       'Region Expert': 'Region Expert',
       'Pioneer': 'Pioneer',
       'photos': 'photos',
-      'No memories found. Add images to trip logs!': 'No memories found. Add images to trip logs!',
+      'No memories found. Add images to trip logs!':
+          'No memories found. Add images to trip logs!',
       'pts': 'pts',
       'div_dhaka': 'Dhaka',
       'div_sylhet': 'Sylhet',
@@ -139,7 +142,8 @@ class TranslationKeys {
       'editor_saving': 'সংরক্ষণ করা হচ্ছে...',
       'editor_draft_saved': 'খসড়া সফলভাবে সংরক্ষণ করা হয়েছে!',
       'editor_publish_success': 'আপনার ডায়েরি শেয়ার হয়েছে!',
-      'private_instant_posting_enabled': 'ব্যক্তিগত মোড: তাৎক্ষণিক শেয়ারিং সক্ষম (কোনো শর্ত নেই)',
+      'private_instant_posting_enabled':
+          'ব্যক্তিগত মোড: তাৎক্ষণিক শেয়ারিং সক্ষম (কোনো শর্ত নেই)',
 
       // ── Visibility labels ──────────────────────────────────────────────────
       'visibility_private': '🔒 শুধু আমি',
@@ -237,7 +241,8 @@ class TranslationKeys {
       'Region Expert': 'আঞ্চলিক বিশেষজ্ঞ',
       'Pioneer': 'পাইওনিয়ার',
       'photos': 'টি ছবি',
-      'No memories found. Add images to trip logs!': 'কোনো স্মৃতি পাওয়া যায়নি। ট্রিপ ব্লগে ছবি যোগ করুন!',
+      'No memories found. Add images to trip logs!':
+          'কোনো স্মৃতি পাওয়া যায়নি। ট্রিপ ব্লগে ছবি যোগ করুন!',
       'pts': 'পয়েন্ট',
       'div_dhaka': 'ঢাকা',
       'div_sylhet': 'সিলেট',

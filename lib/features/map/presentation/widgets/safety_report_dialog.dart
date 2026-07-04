@@ -48,11 +48,15 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: const Row(
         children: [
-          Icon(Icons.report_problem_outlined, color: Colors.redAccent, size: 22),
+          Icon(Icons.report_problem_outlined,
+              color: Colors.redAccent, size: 22),
           SizedBox(width: 8),
           Expanded(
             child: Text('Report Safety Issue',
-                style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -60,25 +64,40 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('📍 ${widget.pin.name}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          Text('📍 ${widget.pin.name}',
+              style: const TextStyle(color: Colors.white54, fontSize: 12)),
           const SizedBox(height: 14),
-          const Text('Reason:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+          const Text('Reason:',
+              style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: _selectedReason,
+            initialValue: _selectedReason,
             dropdownColor: const Color(0xFF2A2A3E),
             style: const TextStyle(color: Colors.white, fontSize: 13),
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white.withOpacity(0.06),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              fillColor: Colors.white.withValues(alpha: 0.06),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
-            items: _reasons.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-            onChanged: (v) => setState(() => _selectedReason = v ?? _selectedReason),
+            items: _reasons
+                .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                .toList(),
+            onChanged: (v) =>
+                setState(() => _selectedReason = v ?? _selectedReason),
           ),
           const SizedBox(height: 12),
-          const Text('Additional details (optional):', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+          const Text('Additional details (optional):',
+              style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           TextField(
             controller: _detailCtrl,
@@ -89,8 +108,10 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
               hintText: 'Describe the safety issue...',
               hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.06),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              fillColor: Colors.white.withValues(alpha: 0.06),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
               counterStyle: const TextStyle(color: Colors.white38, fontSize: 9),
               contentPadding: const EdgeInsets.all(12),
             ),
@@ -106,12 +127,18 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.redAccent,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onPressed: _submitting ? null : _submit,
           child: _submitting
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Text('Submit Report', style: TextStyle(fontWeight: FontWeight.bold)),
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2))
+              : const Text('Submit Report',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
         ),
       ],
     );
@@ -139,13 +166,16 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🛡️ Safety report submitted. Thank you for keeping explorers safe!')),
+          const SnackBar(
+              content: Text(
+                  '🛡️ Safety report submitted. Thank you for keeping explorers safe!')),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _submitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }

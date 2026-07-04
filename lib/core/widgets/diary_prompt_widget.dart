@@ -29,7 +29,7 @@ class DiaryPromptWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.mintGreen.withOpacity(0.3)),
+        border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,7 +117,7 @@ class _PromptButton extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.04),
+          color: Colors.white.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.white10),
         ),
@@ -144,7 +144,8 @@ class _PromptButton extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.add_circle_outline, color: Colors.white30, size: 18),
+            const Icon(Icons.add_circle_outline,
+                color: Colors.white30, size: 18),
           ],
         ),
       ),

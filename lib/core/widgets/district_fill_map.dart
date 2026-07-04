@@ -20,29 +20,72 @@ class DistrictFillMapWidget extends StatelessWidget {
 
   static const Map<String, List<String>> _districtsByDivision = {
     'ঢাকা': [
-      'ঢাকা', 'ফরিদপুর', 'গাজীপুর', 'গোপালগঞ্জ', 'কিশোরগঞ্জ',
-      'মাদারীপুর', 'মানিকগঞ্জ', 'মুন্সীগঞ্জ', 'নারায়ণগঞ্জ', 'নরসিংদী',
-      'রাজবাড়ী', 'শরীয়তপুর', 'টাঙ্গাইল',
+      'ঢাকা',
+      'ফরিদপুর',
+      'গাজীপুর',
+      'গোপালগঞ্জ',
+      'কিশোরগঞ্জ',
+      'মাদারীপুর',
+      'মানিকগঞ্জ',
+      'মুন্সীগঞ্জ',
+      'নারায়ণগঞ্জ',
+      'নরসিংদী',
+      'রাজবাড়ী',
+      'শরীয়তপুর',
+      'টাঙ্গাইল',
     ],
     'চট্টগ্রাম': [
-      'ব্রাহ্মণবাড়িয়া', 'চাঁদপুর', 'চট্টগ্রাম', 'কুমিল্লা', 'কক্সবাজার',
-      'ফেনী', 'খাগড়াছড়ি', 'লক্ষ্মীপুর', 'নোয়াখালী', 'রাঙামাটি',
+      'ব্রাহ্মণবাড়িয়া',
+      'চাঁদপুর',
+      'চট্টগ্রাম',
+      'কুমিল্লা',
+      'কক্সবাজার',
+      'ফেনী',
+      'খাগড়াছড়ি',
+      'লক্ষ্মীপুর',
+      'নোয়াখালী',
+      'রাঙামাটি',
     ],
     'সিলেট': ['হবিগঞ্জ', 'মৌলভীবাজার', 'সুনামগঞ্জ', 'সিলেট'],
     'রাজশাহী': [
-      'বগুড়া', 'চাঁপাইনবাবগঞ্জ', 'জয়পুরহাট', 'নওগাঁ', 'নাটোর',
-      'পাবনা', 'রাজশাহী', 'সিরাজগঞ্জ',
+      'বগুড়া',
+      'চাঁপাইনবাবগঞ্জ',
+      'জয়পুরহাট',
+      'নওগাঁ',
+      'নাটোর',
+      'পাবনা',
+      'রাজশাহী',
+      'সিরাজগঞ্জ',
     ],
     'খুলনা': [
-      'বাগেরহাট', 'চুয়াডাঙ্গা', 'যশোর', 'ঝিনাইদহ', 'খুলনা',
-      'কুষ্টিয়া', 'মাগুরা', 'মেহেরপুর', 'নড়াইল', 'সাতক্ষীরা',
+      'বাগেরহাট',
+      'চুয়াডাঙ্গা',
+      'যশোর',
+      'ঝিনাইদহ',
+      'খুলনা',
+      'কুষ্টিয়া',
+      'মাগুরা',
+      'মেহেরপুর',
+      'নড়াইল',
+      'সাতক্ষীরা',
     ],
     'বরিশাল': [
-      'বরগুনা', 'বরিশাল', 'ভোলা', 'ঝালকাঠি', 'পটুয়াখালী', 'পিরোজপুর',
+      'বরগুনা',
+      'বরিশাল',
+      'ভোলা',
+      'ঝালকাঠি',
+      'পটুয়াখালী',
+      'পিরোজপুর',
     ],
     'রংপুর': [
-      'দিনাজপুর', 'গাইবান্ধা', 'কুড়িগ্রাম', 'লালমনিরহাট', 'নীলফামারী',
-      'পঞ্চগড়', 'রংপুর', 'ঠাকুরগাঁও',
+      'দিনাজপুর',
+      'গাইবান্ধা',
+      'কুড়িগ্রাম',
+      'লালমনিরহাট',
+      'নীলফামারী',
+      'পঞ্চগড়',
+      'রংপুর',
+      'ঠাকুরগাঁও',
     ],
     'ময়মনসিংহ': ['জামালপুর', 'ময়মনসিংহ', 'নেত্রকোণা', 'শেরপুর'],
     'বান্দরবান': ['বান্দরবান'],
@@ -104,25 +147,28 @@ class DistrictFillMapWidget extends StatelessWidget {
               final district = _allDistricts[index];
               final division = _divisionFor(district);
               final isVisited = visitedSet.contains(district);
-              final baseColor = _divisionColors[division] ?? AppColors.mintGreen;
+              final baseColor =
+                  _divisionColors[division] ?? AppColors.mintGreen;
 
               return Tooltip(
                 message: district,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 400),
                   decoration: BoxDecoration(
-                    color: isVisited ? baseColor : Colors.white.withOpacity(0.07),
+                    color: isVisited
+                        ? baseColor
+                        : Colors.white.withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(3),
                     border: Border.all(
                       color: isVisited
-                          ? baseColor.withOpacity(0.5)
+                          ? baseColor.withValues(alpha: 0.5)
                           : Colors.white10,
                       width: 0.5,
                     ),
                     boxShadow: isVisited
                         ? [
                             BoxShadow(
-                              color: baseColor.withOpacity(0.4),
+                              color: baseColor.withValues(alpha: 0.4),
                               blurRadius: 4,
                             )
                           ]

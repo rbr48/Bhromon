@@ -34,30 +34,81 @@ class TripLogDetailSheet extends StatefulWidget {
           .update({'views': FieldValue.increment(1)});
     } catch (_) {}
 
-    showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.92,
-          minChildSize: 0.5,
-          maxChildSize: 1.0,
-          expand: false,
-          builder: (ctx, scrollController) {
-            return TripLogDetailSheet(
-              log: log,
-              scrollController: scrollController,
-            );
-          },
+    // Transparent page route (not a modal sheet): Hero images fly from the
+    // feed card into the sheet during this push. Drag below the min extent or
+    // tap the dimmed area to dismiss, matching the old bottom-sheet behavior.
+    Navigator.of(context).push(PageRouteBuilder<void>(
+      opaque: false,
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 340),
+      reverseTransitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (ctx, animation, secondaryAnimation) =>
+          _TripLogDetailPage(log: log),
+      transitionsBuilder: (ctx, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.15),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
         );
       },
-    );
+    ));
   }
 
   @override
   State<TripLogDetailSheet> createState() => _TripLogDetailSheetState();
+}
+
+class _TripLogDetailPage extends StatelessWidget {
+  final TripLog log;
+  const _TripLogDetailPage({required this.log});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          // Tapping the dimmed area above the sheet dismisses, like a modal.
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).maybePop(),
+              child: const SizedBox.expand(),
+            ),
+          ),
+          NotificationListener<DraggableScrollableNotification>(
+            onNotification: (notification) {
+              if (notification.extent <= notification.minExtent + 0.005) {
+                Navigator.of(context).maybePop();
+              }
+              return false;
+            },
+            child: DraggableScrollableSheet(
+              initialChildSize: 0.92,
+              minChildSize: 0.45,
+              maxChildSize: 1.0,
+              builder: (ctx, scrollController) {
+                return TripLogDetailSheet(
+                  log: log,
+                  scrollController: scrollController,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
@@ -69,7 +120,14 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
   void initState() {
     super.initState();
     _authorProfileFuture = _fetchAuthorProfile(widget.log.authorId);
-    _cachedBlocks = widget.log.blocks.map((block) => _buildTripBlockWidget(block)).toList();
+    final blocks = <Widget>[];
+    bool firstImageSeen = false;
+    for (final block in widget.log.blocks) {
+      final bool isFirstImage = !firstImageSeen && block is ImageBlock;
+      if (isFirstImage) firstImageSeen = true;
+      blocks.add(_buildTripBlockWidget(block, isFirstImage: isFirstImage));
+    }
+    _cachedBlocks = blocks;
   }
 
   Future<Map<String, String>> _fetchAuthorProfile(String authorId) async {
@@ -84,9 +142,10 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         final profile = {
-          'displayName': (data['displayName'] as String?)?.trim().isNotEmpty == true
-              ? data['displayName'] as String
-              : 'Explorer',
+          'displayName':
+              (data['displayName'] as String?)?.trim().isNotEmpty == true
+                  ? data['displayName'] as String
+                  : 'Explorer',
           'avatarUrl': (data['avatarUrl'] as String?) ?? '',
         };
         _profileCache[authorId] = profile;
@@ -109,16 +168,18 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
     );
@@ -147,7 +208,8 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
       }
 
       final urlString = match.group(0)!;
-      final isYoutube = urlString.contains('youtube.com') || urlString.contains('youtu.be');
+      final isYoutube =
+          urlString.contains('youtube.com') || urlString.contains('youtu.be');
 
       spans.add(
         TextSpan(
@@ -198,7 +260,7 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
     );
   }
 
-  Widget _buildTripBlockWidget(TripBlock block) {
+  Widget _buildTripBlockWidget(TripBlock block, {bool isFirstImage = false}) {
     switch (block) {
       case TextBlock textBlock:
         return Padding(
@@ -207,7 +269,8 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
             textBlock.content,
             TextStyle(
               fontSize: 13.5,
-              fontWeight: textBlock.isBold ? FontWeight.bold : FontWeight.normal,
+              fontWeight:
+                  textBlock.isBold ? FontWeight.bold : FontWeight.normal,
               color: Colors.black87,
               height: 1.35,
             ),
@@ -227,7 +290,11 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
             imageBlock.localPath != null &&
             imageBlock.localPath!.isNotEmpty &&
             File(imageBlock.localPath!).existsSync();
-        final String heroTag = 'sheet_${widget.log.tripId}_${imageBlock.storageUrl}';
+        // The first image shares the feed card's tag so it hero-flies from
+        // the card into this sheet; the rest keep sheet-local tags.
+        final String heroTag = isFirstImage
+            ? 'feed_${widget.log.tripId}_${imageBlock.storageUrl}'
+            : 'sheet_${widget.log.tripId}_${imageBlock.storageUrl}';
         return Padding(
           padding: const EdgeInsets.only(bottom: 8.0),
           child: Column(
@@ -267,7 +334,9 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                                 child: SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.midGreen),
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.midGreen),
                                 ),
                               ),
                             ),
@@ -275,12 +344,16 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                               height: 180,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFFE2EBE2), Color(0xFFECEAE4)],
+                                  colors: [
+                                    Color(0xFFE2EBE2),
+                                    Color(0xFFECEAE4)
+                                  ],
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Center(
-                                child: Icon(Icons.image, color: Colors.black26, size: 36),
+                                child: Icon(Icons.image,
+                                    color: Colors.black26, size: 36),
                               ),
                             ),
                           ),
@@ -291,7 +364,10 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                 const SizedBox(height: 4),
                 Text(
                   imageBlock.caption,
-                  style: const TextStyle(fontSize: 11.5, fontStyle: FontStyle.italic, color: Colors.black54),
+                  style: const TextStyle(
+                      fontSize: 11.5,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.black54),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -316,21 +392,30 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                   SizedBox(width: 6),
                   Text(
                     'Itemized Cost Details',
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF1B4332)),
+                    style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1B4332)),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
               ...costBlock.items.map((item) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 1.5),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(item.category, style: const TextStyle(fontSize: 11.5, color: Colors.black87)),
-                    Text('${costBlock.currency} ${item.amountBDT}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  ],
-                ),
-              )),
+                    padding: const EdgeInsets.symmetric(vertical: 1.5),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(item.category,
+                            style: const TextStyle(
+                                fontSize: 11.5, color: Colors.black87)),
+                        Text('${costBlock.currency} ${item.amountBDT}',
+                            style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87)),
+                      ],
+                    ),
+                  )),
             ],
           ),
         );
@@ -348,15 +433,20 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.route_outlined, color: Color(0xFFE76F51), size: 14),
+                  Icon(Icons.route_outlined,
+                      color: Color(0xFFE76F51), size: 14),
                   SizedBox(width: 6),
                   Text(
                     'Route Stops Mapped',
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF9E3A25)),
+                    style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF9E3A25)),
                   ),
                 ],
               ),
-              if (routeBlock.description != null && routeBlock.description!.isNotEmpty) ...[
+              if (routeBlock.description != null &&
+                  routeBlock.description!.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
                   routeBlock.description!,
@@ -440,8 +530,11 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
   void _showCommentsBottomSheet(BuildContext context, TripLog log) {
     final TextEditingController commentController = TextEditingController();
     final authState = context.read<AuthCubit>().state;
-    final String currentUserId = authState is Authenticated ? authState.profile.uid : '';
-    final String currentUserName = authState is Authenticated ? authState.profile.displayName : 'Guest User';
+    final String currentUserId =
+        authState is Authenticated ? authState.profile.uid : '';
+    final String currentUserName = authState is Authenticated
+        ? authState.profile.displayName
+        : 'Guest User';
 
     showModalBottomSheet<void>(
       context: context,
@@ -487,7 +580,9 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
-                          .collection(log.isArchived ? 'archived_trip_logs' : 'trip_logs')
+                          .collection(log.isArchived
+                              ? 'archived_trip_logs'
+                              : 'trip_logs')
                           .doc(log.tripId)
                           .collection('comments')
                           .orderBy('createdAt', descending: false)
@@ -495,11 +590,16 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                       builder: (context, snapshot) {
                         if (snapshot.hasError) {
                           return Center(
-                            child: Text('Error loading comments: ${snapshot.error}', style: const TextStyle(color: Colors.red)),
+                            child: Text(
+                                'Error loading comments: ${snapshot.error}',
+                                style: const TextStyle(color: Colors.red)),
                           );
                         }
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator(color: AppColors.midGreen));
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator(
+                                  color: AppColors.midGreen));
                         }
 
                         final docs = snapshot.data?.docs ?? [];
@@ -518,24 +618,34 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                             final doc = docs[index];
                             final data = doc.data() as Map<String, dynamic>;
                             final String commentId = doc.id;
-                            final String authorId = (data['authorId'] as String?) ?? '';
-                            final String authorName = (data['authorName'] as String?) ?? 'Anonymous';
-                            final String content = (data['content'] as String?) ?? '';
-                            final Timestamp? timestamp = data['createdAt'] as Timestamp?;
-                            final DateTime time = timestamp?.toDate() ?? DateTime.now();
+                            final String authorId =
+                                (data['authorId'] as String?) ?? '';
+                            final String authorName =
+                                (data['authorName'] as String?) ?? 'Anonymous';
+                            final String content =
+                                (data['content'] as String?) ?? '';
+                            final Timestamp? timestamp =
+                                data['createdAt'] as Timestamp?;
+                            final DateTime time =
+                                timestamp?.toDate() ?? DateTime.now();
 
-                            final isCommentOwner = currentUserId.isNotEmpty && authorId == currentUserId;
+                            final isCommentOwner = currentUserId.isNotEmpty &&
+                                authorId == currentUserId;
 
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 8.0),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   CircleAvatar(
                                     radius: 16,
-                                    backgroundColor: AppColors.mintGreen.withOpacity(0.2),
+                                    backgroundColor: AppColors.mintGreen
+                                        .withValues(alpha: 0.2),
                                     child: Text(
-                                      authorName.isNotEmpty ? authorName[0].toUpperCase() : '?',
+                                      authorName.isNotEmpty
+                                          ? authorName[0].toUpperCase()
+                                          : '?',
                                       style: const TextStyle(
                                         color: AppColors.midGreen,
                                         fontWeight: FontWeight.bold,
@@ -546,7 +656,8 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
@@ -581,12 +692,15 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                                   ),
                                   if (isCommentOwner)
                                     IconButton(
-                                      icon: const Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
+                                      icon: const Icon(Icons.delete_outline,
+                                          size: 16, color: Colors.redAccent),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
                                       onPressed: () async {
                                         await FirebaseFirestore.instance
-                                            .collection(log.isArchived ? 'archived_trip_logs' : 'trip_logs')
+                                            .collection(log.isArchived
+                                                ? 'archived_trip_logs'
+                                                : 'trip_logs')
                                             .doc(log.tripId)
                                             .collection('comments')
                                             .doc(commentId)
@@ -613,12 +727,15 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                           ),
                           child: TextField(
                             controller: commentController,
-                            style: const TextStyle(color: Colors.black87, fontSize: 13.5),
+                            style: const TextStyle(
+                                color: Colors.black87, fontSize: 13.5),
                             decoration: const InputDecoration(
                               hintText: 'Write a comment...',
-                              hintStyle: TextStyle(color: Colors.grey, fontSize: 12.5),
+                              hintStyle:
+                                  TextStyle(color: Colors.grey, fontSize: 12.5),
                               border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
                             ),
                           ),
                         ),
@@ -632,14 +749,18 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
 
                           if (currentUserId.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please log in to post comments.')),
+                              const SnackBar(
+                                  content:
+                                      Text('Please log in to post comments.')),
                             );
                             return;
                           }
 
                           commentController.clear();
                           await FirebaseFirestore.instance
-                              .collection(log.isArchived ? 'archived_trip_logs' : 'trip_logs')
+                              .collection(log.isArchived
+                                  ? 'archived_trip_logs'
+                                  : 'trip_logs')
                               .doc(log.tripId)
                               .collection('comments')
                               .add({
@@ -678,8 +799,10 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
   Widget build(BuildContext context) {
     final log = widget.log;
     final authState = context.read<AuthCubit>().state;
-    final String currentUserId = authState is Authenticated ? authState.profile.uid : '';
-    final totalCost = log.costItems.fold<int>(0, (acc, item) => acc + item.amountBDT);
+    final String currentUserId =
+        authState is Authenticated ? authState.profile.uid : '';
+    final totalCost =
+        log.costItems.fold<int>(0, (acc, item) => acc + item.amountBDT);
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFFF6F5F1),
@@ -703,7 +826,8 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
           Expanded(
             child: SingleChildScrollView(
               controller: widget.scrollController,
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 32 + MediaQuery.of(context).padding.bottom),
+              padding: EdgeInsets.fromLTRB(
+                  16, 8, 16, 32 + MediaQuery.of(context).padding.bottom),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -712,7 +836,12 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                     builder: (context, snapshot) {
                       final name = snapshot.data?['displayName'] ?? 'Explorer';
                       final avatarUrl = snapshot.data?['avatarUrl'] ?? '';
-                      final initials = name.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase();
+                      final initials = name
+                          .split(' ')
+                          .map((e) => e.isNotEmpty ? e[0] : '')
+                          .take(2)
+                          .join()
+                          .toUpperCase();
                       return Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -733,10 +862,17 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                                 radius: 24,
                                 backgroundColor: const Color(0xFF40916C),
                                 backgroundImage: avatarUrl.isNotEmpty
-                                    ? CachedNetworkImageProvider(avatarUrl)
+                                    ? CachedNetworkImageProvider(
+                                        avatarUrl,
+                                        errorListener: (dynamic error) {},
+                                      )
                                     : null,
                                 child: avatarUrl.isEmpty
-                                    ? Text(initials, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold))
+                                    ? Text(initials,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold))
                                     : null,
                               ),
                             ),
@@ -749,7 +885,8 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                                     onTap: () {
                                       Navigator.pop(context);
                                       if (log.authorId.isNotEmpty) {
-                                        context.push('/profile/${log.authorId}');
+                                        context
+                                            .push('/profile/${log.authorId}');
                                       }
                                     },
                                     child: Text(
@@ -765,13 +902,24 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                                   Row(
                                     children: [
                                       Text(
-                                        _timeAgo(log.publishedAt ?? log.lastConfirmed),
-                                        style: const TextStyle(color: Colors.black38, fontSize: 11),
+                                        _timeAgo(log.publishedAt ??
+                                            log.lastConfirmed),
+                                        style: const TextStyle(
+                                            color: Colors.black38,
+                                            fontSize: 11),
                                       ),
-                                      const Text(' · ', style: TextStyle(color: Colors.black38, fontSize: 11)),
+                                      const Text(' · ',
+                                          style: TextStyle(
+                                              color: Colors.black38,
+                                              fontSize: 11)),
                                       Text(
-                                        log.district.isNotEmpty ? log.district : log.division,
-                                        style: const TextStyle(color: Color(0xFF40916C), fontWeight: FontWeight.bold, fontSize: 11),
+                                        log.district.isNotEmpty
+                                            ? log.district
+                                            : log.division,
+                                        style: const TextStyle(
+                                            color: Color(0xFF40916C),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11),
                                       ),
                                     ],
                                   ),
@@ -779,24 +927,33 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEAF5EE),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 '${log.trustScore} XP',
-                                style: const TextStyle(color: Color(0xFF1B4332), fontSize: 11, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    color: Color(0xFF1B4332),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ),
-                            if (currentUserId.isNotEmpty && currentUserId != log.authorId) ...[
+                            if (currentUserId.isNotEmpty &&
+                                currentUserId != log.authorId) ...[
                               const SizedBox(width: 8),
                               IconButton(
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
-                                icon: const Icon(Icons.report_gmailerrorred_rounded, color: Colors.redAccent, size: 20),
+                                icon: const Icon(
+                                    Icons.report_gmailerrorred_rounded,
+                                    color: Colors.redAccent,
+                                    size: 20),
                                 tooltip: 'Report Travel Log',
-                                onPressed: () => TravelLogReportDialog.show(context, log),
+                                onPressed: () =>
+                                    TravelLogReportDialog.show(context, log),
                               ),
                             ],
                           ],
@@ -825,12 +982,19 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _detailChip(Icons.location_on, log.district.isNotEmpty ? log.district : '—', const Color(0xFF40916C)),
+                      _detailChip(
+                          Icons.location_on,
+                          log.district.isNotEmpty ? log.district : '—',
+                          const Color(0xFF40916C)),
                       const SizedBox(width: 8),
-                      _detailChip(Icons.map_outlined, log.division.isNotEmpty ? log.division : '—', const Color(0xFF4361EE)),
+                      _detailChip(
+                          Icons.map_outlined,
+                          log.division.isNotEmpty ? log.division : '—',
+                          const Color(0xFF4361EE)),
                       if (totalCost > 0) ...[
                         const SizedBox(width: 8),
-                        _detailChip(Icons.attach_money_rounded, 'BDT $totalCost', const Color(0xFFE76F51)),
+                        _detailChip(Icons.attach_money_rounded,
+                            'BDT $totalCost', const Color(0xFFE76F51)),
                       ],
                     ],
                   ),
@@ -847,11 +1011,16 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                       children: [
                         const Text(
                           'Trip Details',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1B4332)),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: Color(0xFF1B4332)),
                         ),
                         const SizedBox(height: 10),
                         if (log.blocks.isEmpty)
-                          const Text('No content blocks.', style: TextStyle(color: Colors.black45, fontSize: 13))
+                          const Text('No content blocks.',
+                              style: TextStyle(
+                                  color: Colors.black45, fontSize: 13))
                         else
                           ..._cachedBlocks,
                       ],
@@ -871,28 +1040,50 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.receipt_long_outlined, color: Color(0xFF2D6A4F), size: 16),
+                              Icon(Icons.receipt_long_outlined,
+                                  color: Color(0xFF2D6A4F), size: 16),
                               SizedBox(width: 6),
-                              Text('Cost Breakdown', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1B4332))),
+                              Text('Cost Breakdown',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: Color(0xFF1B4332))),
                             ],
                           ),
                           const SizedBox(height: 10),
                           ...log.costItems.map((item) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 3),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(item.category, style: const TextStyle(fontSize: 13, color: Colors.black87)),
-                                Text('BDT ${item.amountBDT}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1B4332))),
-                              ],
-                            ),
-                          )),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 3),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(item.category,
+                                        style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.black87)),
+                                    Text('BDT ${item.amountBDT}',
+                                        style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF1B4332))),
+                                  ],
+                                ),
+                              )),
                           const Divider(),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF181818))),
-                              Text('BDT $totalCost', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1B4332))),
+                              const Text('Total',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF181818))),
+                              Text('BDT $totalCost',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF1B4332))),
                             ],
                           ),
                         ],
@@ -908,24 +1099,30 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.thumb_up, color: Color(0xFF40916C), size: 18),
+                        const Icon(Icons.thumb_up,
+                            color: Color(0xFF40916C), size: 18),
                         const SizedBox(width: 8),
                         Text(
                           '${log.helpfulVotes} people found this helpful',
-                          style: const TextStyle(color: Colors.black54, fontSize: 13),
+                          style: const TextStyle(
+                              color: Colors.black54, fontSize: 13),
                         ),
                         const Spacer(),
                         GestureDetector(
                           onTap: () => _showCommentsBottomSheet(context, log),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
                               color: const Color(0xFFEAF5EE),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(
                               'Comments',
-                              style: TextStyle(color: Color(0xFF1B4332), fontWeight: FontWeight.bold, fontSize: 12),
+                              style: TextStyle(
+                                  color: Color(0xFF1B4332),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12),
                             ),
                           ),
                         ),
@@ -985,11 +1182,15 @@ class _TravelLogReportDialogState extends State<TravelLogReportDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: const Row(
         children: [
-          Icon(Icons.report_gmailerrorred_rounded, color: Colors.redAccent, size: 22),
+          Icon(Icons.report_gmailerrorred_rounded,
+              color: Colors.redAccent, size: 22),
           SizedBox(width: 8),
           Expanded(
             child: Text('Report Travel Log',
-                style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -997,25 +1198,42 @@ class _TravelLogReportDialogState extends State<TravelLogReportDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('📖 ${widget.log.title}', style: const TextStyle(color: Colors.white54, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text('📖 ${widget.log.title}',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
           const SizedBox(height: 14),
-          const Text('Reason:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+          const Text('Reason:',
+              style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: _selectedReason,
+            initialValue: _selectedReason,
             dropdownColor: const Color(0xFF2A2A3E),
             style: const TextStyle(color: Colors.white, fontSize: 13),
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white.withOpacity(0.06),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              fillColor: Colors.white.withValues(alpha: 0.06),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
-            items: _reasons.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-            onChanged: (v) => setState(() => _selectedReason = v ?? _selectedReason),
+            items: _reasons
+                .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                .toList(),
+            onChanged: (v) =>
+                setState(() => _selectedReason = v ?? _selectedReason),
           ),
           const SizedBox(height: 12),
-          const Text('Additional details (optional):', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+          const Text('Additional details (optional):',
+              style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           TextField(
             controller: _detailCtrl,
@@ -1026,8 +1244,10 @@ class _TravelLogReportDialogState extends State<TravelLogReportDialog> {
               hintText: 'Describe why you are reporting this log...',
               hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.06),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              fillColor: Colors.white.withValues(alpha: 0.06),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
               counterStyle: const TextStyle(color: Colors.white38, fontSize: 9),
               contentPadding: const EdgeInsets.all(12),
             ),
@@ -1043,12 +1263,18 @@ class _TravelLogReportDialogState extends State<TravelLogReportDialog> {
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.redAccent,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onPressed: _submitting ? null : _submit,
           child: _submitting
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Text('Submit Report', style: TextStyle(fontWeight: FontWeight.bold)),
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2))
+              : const Text('Submit Report',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
         ),
       ],
     );
@@ -1078,13 +1304,16 @@ class _TravelLogReportDialogState extends State<TravelLogReportDialog> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🛡️ Travel log report submitted. Thank you for maintaining community guidelines!')),
+          const SnackBar(
+              content: Text(
+                  '🛡️ Travel log report submitted. Thank you for maintaining community guidelines!')),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _submitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }

@@ -10,7 +10,7 @@ import '../../domain/repositories/i_auth_repository.dart';
 class MockOfflineAuthRepository implements IAuthRepository {
   final AppDatabase _database;
   ExplorerProfile? _cachedProfile;
-  
+
   MockOfflineAuthRepository(this._database);
 
   Future<void> _initLocalCache() async {
@@ -90,7 +90,8 @@ class MockOfflineAuthRepository implements IAuthRepository {
   }
 
   @override
-  Future<Either<Failure, ExplorerProfile>> updateProfile(ExplorerProfile profile) async {
+  Future<Either<Failure, ExplorerProfile>> updateProfile(
+      ExplorerProfile profile) async {
     await _updateLocalCache(profile);
     return Right(profile);
   }

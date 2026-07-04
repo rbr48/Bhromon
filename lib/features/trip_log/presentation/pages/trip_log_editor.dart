@@ -27,7 +27,8 @@ import '../../../../core/localization/app_localizations.dart';
 class TripLogEditor extends StatefulWidget {
   final String pinId;
   final TripLog? existingTripLog;
-  const TripLogEditor({super.key, this.pinId = 'pin_sajek', this.existingTripLog});
+  const TripLogEditor(
+      {super.key, this.pinId = 'pin_sajek', this.existingTripLog});
 
   @override
   State<TripLogEditor> createState() => _TripLogEditorState();
@@ -45,7 +46,9 @@ class _TripLogEditorState extends State<TripLogEditor> {
   void initState() {
     super.initState();
     if (widget.existingTripLog != null) {
-      context.read<TripLogBloc>().add(LoadExistingTripLogEvent(widget.existingTripLog!));
+      context
+          .read<TripLogBloc>()
+          .add(LoadExistingTripLogEvent(widget.existingTripLog!));
     } else {
       context.read<TripLogBloc>().add(LoadDraftEvent(widget.pinId));
     }
@@ -71,17 +74,23 @@ class _TripLogEditorState extends State<TripLogEditor> {
       listener: (context, state) {
         if (state.status == EditorStatus.success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('TripLog published successfully! +50 Trust points.')),
+            const SnackBar(
+                content:
+                    Text('TripLog published successfully! +50 Trust points.')),
           );
           context.pop();
         }
         if (state.status == EditorStatus.error && state.errorMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.errorMessage!), backgroundColor: AppColors.amber),
+            SnackBar(
+                content: Text(state.errorMessage!),
+                backgroundColor: AppColors.amber),
           );
         }
         // Sync title controller only once on draft load
-        if (state.status == EditorStatus.idle && _titleController.text.isEmpty && state.title.isNotEmpty) {
+        if (state.status == EditorStatus.idle &&
+            _titleController.text.isEmpty &&
+            state.title.isNotEmpty) {
           _titleController.text = state.title;
         }
       },
@@ -98,11 +107,18 @@ class _TripLogEditorState extends State<TripLogEditor> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.l10n.translate(widget.existingTripLog != null ? 'editor_title_edit' : 'editor_title_new'),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  context.l10n.translate(widget.existingTripLog != null
+                      ? 'editor_title_edit'
+                      : 'editor_title_new'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16),
                 ),
                 Text(
-                  widget.existingTripLog != null ? 'Edit Diary' : 'Write New Diary',
+                  widget.existingTripLog != null
+                      ? 'Edit Diary'
+                      : 'Write New Diary',
                   style: const TextStyle(color: Colors.white38, fontSize: 11),
                 ),
               ],
@@ -115,20 +131,23 @@ class _TripLogEditorState extends State<TripLogEditor> {
                 child: GestureDetector(
                   onTap: () => _showPrivacySheet(context, state),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.07),
+                      color: Colors.white.withValues(alpha: 0.07),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.white12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(state.visibility.icon, style: const TextStyle(fontSize: 14)),
+                        Text(state.visibility.icon,
+                            style: const TextStyle(fontSize: 14)),
                         const SizedBox(width: 4),
                         Text(
                           state.visibility.label,
-                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 11),
                         ),
                       ],
                     ),
@@ -144,7 +163,8 @@ class _TripLogEditorState extends State<TripLogEditor> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.library_books_outlined, color: AppColors.mintGreen),
+                icon: const Icon(Icons.library_books_outlined,
+                    color: AppColors.mintGreen),
                 tooltip: 'টেমপ্লেট বেছে নিন',
                 onPressed: _showTemplatesSheet,
               ),
@@ -152,21 +172,27 @@ class _TripLogEditorState extends State<TripLogEditor> {
                 IconButton(
                   icon: Icon(
                     Icons.send_rounded,
-                    color: (state.isComplete && !_isUploading) ? AppColors.mintGreen : Colors.white60,
+                    color: (state.isComplete && !_isUploading)
+                        ? AppColors.mintGreen
+                        : Colors.white60,
                   ),
                   tooltip: context.l10n.translate('editor_publish'),
-                  onPressed: _isUploading ? null : () {
-                    if (state.isComplete) {
-                      context.read<TripLogBloc>().add(PublishTripLogEvent(_titleController.text));
-                    } else {
-                      _showCompletenessSheet(context, state);
-                    }
-                  },
+                  onPressed: _isUploading
+                      ? null
+                      : () {
+                          if (state.isComplete) {
+                            context.read<TripLogBloc>().add(
+                                PublishTripLogEvent(_titleController.text));
+                          } else {
+                            _showCompletenessSheet(context, state);
+                          }
+                        },
                 ),
                 IconButton(
                   icon: Badge(
                     isLabelVisible: !state.isComplete,
-                    child: const Icon(Icons.fact_check_outlined, color: AppColors.mintGreen),
+                    child: const Icon(Icons.fact_check_outlined,
+                        color: AppColors.mintGreen),
                   ),
                   tooltip: context.l10n.translate('req_checklist_title'),
                   onPressed: () => _showCompletenessSheet(context, state),
@@ -179,14 +205,22 @@ class _TripLogEditorState extends State<TripLogEditor> {
                     child: SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation(Colors.white)),
                     ),
                   ),
                 )
               else
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Center(child: Text(Localizations.localeOf(context).languageCode == 'bn' ? 'সংরক্ষিত' : 'Saved', style: const TextStyle(color: Colors.white60, fontSize: 12))),
+                  child: Center(
+                      child: Text(
+                          Localizations.localeOf(context).languageCode == 'bn'
+                              ? 'সংরক্ষিত'
+                              : 'Saved',
+                          style: const TextStyle(
+                              color: Colors.white60, fontSize: 12))),
                 ),
             ],
           ),
@@ -208,27 +242,36 @@ class _TripLogEditorState extends State<TripLogEditor> {
                             decoration: BoxDecoration(
                               color: AppColors.cardDark,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.mintGreen.withOpacity(0.3)),
+                              border: Border.all(
+                                  color: AppColors.mintGreen
+                                      .withValues(alpha: 0.3)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: Text(
                                         _uploadTotalFiles > 1
                                             ? '[$_uploadCurrentFileIndex/$_uploadTotalFiles] $_uploadStatus'
                                             : _uploadStatus,
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
                                       '${(_uploadProgress * 100).toInt()}%',
-                                      style: const TextStyle(color: AppColors.mintGreen, fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: const TextStyle(
+                                          color: AppColors.mintGreen,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13),
                                     ),
                                   ],
                                 ),
@@ -236,7 +279,9 @@ class _TripLogEditorState extends State<TripLogEditor> {
                                 LinearProgressIndicator(
                                   value: _uploadProgress,
                                   backgroundColor: Colors.white10,
-                                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                          AppColors.mintGreen),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ],
@@ -247,8 +292,14 @@ class _TripLogEditorState extends State<TripLogEditor> {
                         // Title Input
                         TextField(
                           controller: _titleController,
-                          onChanged: (val) => context.read<TripLogBloc>().add(UpdateTitleEvent(val)),
-                          style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                          onChanged: (val) => context
+                              .read<TripLogBloc>()
+                              .add(UpdateTitleEvent(val)),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5),
                           decoration: const InputDecoration(
                             hintText: 'শিরোনাম দিন (যেমন: সুন্দরবনের গল্প)',
                             hintStyle: TextStyle(color: Colors.white24),
@@ -260,7 +311,8 @@ class _TripLogEditorState extends State<TripLogEditor> {
                         if (state.weatherSnapshot != null)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: WeatherStampWidget(weather: state.weatherSnapshot!),
+                            child: WeatherStampWidget(
+                                weather: state.weatherSnapshot!),
                           ),
                         const Divider(color: Colors.white12, height: 1),
                         const SizedBox(height: 12),
@@ -273,42 +325,52 @@ class _TripLogEditorState extends State<TripLogEditor> {
                                     onAddText: () => _addTextBlock(context),
                                     onAddPhoto: () => _pickAndAddImage(),
                                     onAddCost: () {
-                                      context.read<TripLogBloc>().add(AddBlockEvent(TripBlock.costEntry(
-                                        id: 'cost_${DateTime.now().microsecondsSinceEpoch}',
-                                        items: const [],
-                                        currency: 'BDT',
-                                      )));
+                                      context.read<TripLogBloc>().add(
+                                              AddBlockEvent(TripBlock.costEntry(
+                                            id: 'cost_${DateTime.now().microsecondsSinceEpoch}',
+                                            items: const [],
+                                            currency: 'BDT',
+                                          )));
                                     },
                                     onAddRoute: () {
-                                      context.read<TripLogBloc>().add(AddBlockEvent(TripBlock.route(
-                                        id: 'route_${DateTime.now().microsecondsSinceEpoch}',
-                                        points: const [],
-                                        description: '',
-                                      )));
+                                      context
+                                          .read<TripLogBloc>()
+                                          .add(AddBlockEvent(TripBlock.route(
+                                            id: 'route_${DateTime.now().microsecondsSinceEpoch}',
+                                            points: const [],
+                                            description: '',
+                                          )));
                                     },
                                     onAddSafety: () {
-                                      context.read<TripLogBloc>().add(AddBlockEvent(TripBlock.safetyNote(
-                                        id: 'safe_${DateTime.now().microsecondsSinceEpoch}',
-                                        text: '',
-                                        level: 'warning',
-                                      )));
+                                      context.read<TripLogBloc>().add(
+                                              AddBlockEvent(
+                                                  TripBlock.safetyNote(
+                                            id: 'safe_${DateTime.now().microsecondsSinceEpoch}',
+                                            text: '',
+                                            level: 'warning',
+                                          )));
                                     },
-                                    onAddVoice: () => _showVoiceNoteDialog(context),
+                                    onAddVoice: () =>
+                                        _showVoiceNoteDialog(context),
                                   ),
                                 )
                               : ReorderableListView.builder(
                                   padding: const EdgeInsets.only(bottom: 80),
-                                  onReorder: (oldIndex, newIndex) {
-                                    if (newIndex > oldIndex) newIndex--;
-                                    final updated = List<TripBlock>.from(state.blocks);
+                                  onReorderItem: (oldIndex, newIndex) {
+                                    // onReorderItem pre-adjusts newIndex for the removed item.
+                                    final updated =
+                                        List<TripBlock>.from(state.blocks);
                                     final item = updated.removeAt(oldIndex);
                                     updated.insert(newIndex, item);
-                                    context.read<TripLogBloc>().add(ReorderBlocksEvent(updated));
+                                    context
+                                        .read<TripLogBloc>()
+                                        .add(ReorderBlocksEvent(updated));
                                   },
                                   itemCount: state.blocks.length,
                                   itemBuilder: (context, index) {
                                     final block = state.blocks[index];
-                                    return _buildBlockWrapper(context, index, block, state);
+                                    return _buildBlockWrapper(
+                                        context, index, block, state);
                                   },
                                 ),
                         ),
@@ -316,14 +378,16 @@ class _TripLogEditorState extends State<TripLogEditor> {
                         // Floating Insertion Bar
                         Container(
                           margin: const EdgeInsets.only(top: 8, bottom: 16),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
                             color: AppColors.cardDark,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withOpacity(0.08)),
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.08)),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
+                                color: Colors.black.withValues(alpha: 0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -333,37 +397,54 @@ class _TripLogEditorState extends State<TripLogEditor> {
                             scrollDirection: Axis.horizontal,
                             child: Row(
                               children: [
-                                _buildAddBlockButton(Icons.text_fields_rounded, 'লেখা', () {
-                                  context.read<TripLogBloc>().add(AddBlockEvent(TripBlock.text(
+                                _buildAddBlockButton(
+                                    Icons.text_fields_rounded, 'লেখা', () {
+                                  context
+                                      .read<TripLogBloc>()
+                                      .add(AddBlockEvent(TripBlock.text(
                                         id: 'txt_${DateTime.now().microsecondsSinceEpoch}',
                                         content: '',
                                       )));
                                 }),
                                 const SizedBox(width: 8),
-                                _buildAddBlockButton(Icons.add_photo_alternate_rounded, 'ছবি', _pickAndAddImage),
+                                _buildAddBlockButton(
+                                    Icons.add_photo_alternate_rounded,
+                                    'ছবি',
+                                    _pickAndAddImage),
                                 const SizedBox(width: 8),
-                                _buildAddBlockButton(Icons.video_call_rounded, 'ভিডিও', _showVideoSourceSelectorDialog),
+                                _buildAddBlockButton(Icons.video_call_rounded,
+                                    'ভিডিও', _showVideoSourceSelectorDialog),
                                 const SizedBox(width: 8),
-                                _buildAddBlockButton(Icons.mic_rounded, 'ভয়েস', () => _showVoiceNoteDialog(context)),
+                                _buildAddBlockButton(Icons.mic_rounded, 'ভয়েস',
+                                    () => _showVoiceNoteDialog(context)),
                                 const SizedBox(width: 8),
-                                _buildAddBlockButton(Icons.receipt_long_rounded, 'খরচ', () {
-                                  context.read<TripLogBloc>().add(AddBlockEvent(TripBlock.costEntry(
+                                _buildAddBlockButton(
+                                    Icons.receipt_long_rounded, 'খরচ', () {
+                                  context
+                                      .read<TripLogBloc>()
+                                      .add(AddBlockEvent(TripBlock.costEntry(
                                         id: 'cost_${DateTime.now().microsecondsSinceEpoch}',
                                         items: const [],
                                         currency: 'BDT',
                                       )));
                                 }),
                                 const SizedBox(width: 8),
-                                _buildAddBlockButton(Icons.warning_amber_rounded, 'সেফটি', () {
-                                  context.read<TripLogBloc>().add(AddBlockEvent(TripBlock.safetyNote(
+                                _buildAddBlockButton(
+                                    Icons.warning_amber_rounded, 'সেফটি', () {
+                                  context
+                                      .read<TripLogBloc>()
+                                      .add(AddBlockEvent(TripBlock.safetyNote(
                                         id: 'safe_${DateTime.now().microsecondsSinceEpoch}',
                                         text: '',
                                         level: 'warning',
                                       )));
                                 }),
                                 const SizedBox(width: 8),
-                                _buildAddBlockButton(Icons.alt_route_rounded, 'রুট', () {
-                                  context.read<TripLogBloc>().add(AddBlockEvent(TripBlock.route(
+                                _buildAddBlockButton(
+                                    Icons.alt_route_rounded, 'রুট', () {
+                                  context
+                                      .read<TripLogBloc>()
+                                      .add(AddBlockEvent(TripBlock.route(
                                         id: 'route_${DateTime.now().microsecondsSinceEpoch}',
                                         points: const [],
                                         description: '',
@@ -392,29 +473,43 @@ class _TripLogEditorState extends State<TripLogEditor> {
                         children: [
                           Text(
                             context.l10n.translate('req_checklist_title'),
-                            style: const TextStyle(color: Colors.white54, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 1.5),
+                            style: const TextStyle(
+                                color: Colors.white54,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                letterSpacing: 1.5),
                           ),
                           const SizedBox(height: 16),
                           // Privacy toggle
                           PrivacyToggleWidget(
                             current: state.visibility,
-                            onChanged: (v) => context.read<TripLogBloc>().add(UpdateVisibilityEvent(v)),
+                            onChanged: (v) => context
+                                .read<TripLogBloc>()
+                                .add(UpdateVisibilityEvent(v)),
                           ),
                           const SizedBox(height: 20),
                           ..._buildChecklistItems(context, state),
                           const Spacer(),
                           ElevatedButton(
                             onPressed: (state.isComplete && !_isUploading)
-                                ? () => context.read<TripLogBloc>().add(PublishTripLogEvent(_titleController.text))
+                                ? () => context.read<TripLogBloc>().add(
+                                    PublishTripLogEvent(_titleController.text))
                                 : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: (state.isComplete && !_isUploading) ? AppColors.midGreen : Colors.grey[800],
+                              backgroundColor:
+                                  (state.isComplete && !_isUploading)
+                                      ? AppColors.midGreen
+                                      : Colors.grey[800],
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14)),
                               elevation: 0,
                             ),
-                            child: Text('${context.l10n.translate('editor_publish')} ${state.visibility.icon}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            child: Text(
+                                '${context.l10n.translate('editor_publish')} ${state.visibility.icon}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 15)),
                           ),
                         ],
                       ),
@@ -444,7 +539,10 @@ class _TripLogEditorState extends State<TripLogEditor> {
           children: [
             const Text(
               'কে দেখতে পাবেন?',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18),
             ),
             const Text(
               'Who can see your diary?',
@@ -460,21 +558,26 @@ class _TripLogEditorState extends State<TripLogEditor> {
             ),
             const SizedBox(height: 20),
             ...DiaryVisibility.values.map((v) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Text(v.icon, style: const TextStyle(fontSize: 20)),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
                     children: [
-                      Text(v.label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      Text(v.labelEn, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                      Text(v.icon, style: const TextStyle(fontSize: 20)),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(v.label,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                          Text(v.labelEn,
+                              style: const TextStyle(
+                                  color: Colors.white38, fontSize: 12)),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
-            )),
+                )),
             const SizedBox(height: 16),
           ],
         ),
@@ -508,12 +611,12 @@ class _TripLogEditorState extends State<TripLogEditor> {
             VoiceNoteRecorderWidget(
               onRecordingComplete: (path, durationSeconds) {
                 context.read<TripLogBloc>().add(AddBlockEvent(
-                  TripBlock.voiceNote(
-                    id: 'voice_${DateTime.now().microsecondsSinceEpoch}',
-                    localPath: path,
-                    durationSeconds: durationSeconds,
-                  ),
-                ));
+                      TripBlock.voiceNote(
+                        id: 'voice_${DateTime.now().microsecondsSinceEpoch}',
+                        localPath: path,
+                        durationSeconds: durationSeconds,
+                      ),
+                    ));
                 Navigator.pop(context);
               },
             ),
@@ -531,7 +634,8 @@ class _TripLogEditorState extends State<TripLogEditor> {
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Row(
             children: [
-              const Icon(Icons.check_circle_outline_rounded, color: AppColors.mintGreen, size: 20),
+              const Icon(Icons.check_circle_outline_rounded,
+                  color: AppColors.mintGreen, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -546,10 +650,13 @@ class _TripLogEditorState extends State<TripLogEditor> {
     }
 
     return [
-      _buildChecklistItem(context.l10n.translate('req_title'), _titleController.text.isNotEmpty),
+      _buildChecklistItem(context.l10n.translate('req_title'),
+          _titleController.text.isNotEmpty),
       _buildChecklistItem(context.l10n.translate('req_media'), state.hasImage),
-      _buildChecklistItem(context.l10n.translate('req_safety'), state.hasSafetyNote),
-      _buildChecklistItem(context.l10n.translate('req_cost'), state.hasCostEntry),
+      _buildChecklistItem(
+          context.l10n.translate('req_safety'), state.hasSafetyNote),
+      _buildChecklistItem(
+          context.l10n.translate('req_cost'), state.hasCostEntry),
       _buildChecklistItem(context.l10n.translate('req_route'), state.hasRoute),
     ];
   }
@@ -559,8 +666,12 @@ class _TripLogEditorState extends State<TripLogEditor> {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
-          Icon(satisfied ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-              color: satisfied ? AppColors.mintGreen : Colors.white24, size: 20),
+          Icon(
+              satisfied
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: satisfied ? AppColors.mintGreen : Colors.white24,
+              size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(label,
@@ -583,16 +694,20 @@ class _TripLogEditorState extends State<TripLogEditor> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.04),
+            color: Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.03)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.03)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, color: AppColors.mintGreen, size: 18),
               const SizedBox(width: 8),
-              Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text(label,
+                  style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -655,13 +770,18 @@ class _TripLogEditorState extends State<TripLogEditor> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: TextStyle(color: color.withOpacity(0.8), fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          style: TextStyle(
+              color: color.withValues(alpha: 0.8),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5),
         ),
       ],
     );
   }
 
-  Widget _buildBlockWrapper(BuildContext context, int index, TripBlock block, TripLogState state) {
+  Widget _buildBlockWrapper(
+      BuildContext context, int index, TripBlock block, TripLogState state) {
     Color indicatorColor = Colors.white24;
     block.when(
       text: (_, __, ___) => indicatorColor = Colors.white24,
@@ -678,7 +798,8 @@ class _TripLogEditorState extends State<TripLogEditor> {
         }
       },
       route: (_, __, ___) => indicatorColor = Colors.tealAccent,
-      voiceNote: (_, __, ___, ____, _____) => indicatorColor = Colors.orangeAccent,
+      voiceNote: (_, __, ___, ____, _____) =>
+          indicatorColor = Colors.orangeAccent,
     );
 
     return Container(
@@ -687,7 +808,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
       decoration: BoxDecoration(
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.04)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -710,24 +831,33 @@ class _TripLogEditorState extends State<TripLogEditor> {
                         children: [
                           _buildBlockHeader(block),
                           PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_horiz_rounded, color: Colors.white30, size: 18),
+                            icon: const Icon(Icons.more_horiz_rounded,
+                                color: Colors.white30, size: 18),
                             color: AppColors.cardDark,
                             elevation: 8,
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(minWidth: 120),
                             onSelected: (value) {
                               if (value == 'move_up') {
-                                final updated = List<TripBlock>.from(state.blocks);
+                                final updated =
+                                    List<TripBlock>.from(state.blocks);
                                 final item = updated.removeAt(index);
                                 updated.insert(index - 1, item);
-                                context.read<TripLogBloc>().add(ReorderBlocksEvent(updated));
+                                context
+                                    .read<TripLogBloc>()
+                                    .add(ReorderBlocksEvent(updated));
                               } else if (value == 'move_down') {
-                                final updated = List<TripBlock>.from(state.blocks);
+                                final updated =
+                                    List<TripBlock>.from(state.blocks);
                                 final item = updated.removeAt(index);
                                 updated.insert(index + 1, item);
-                                context.read<TripLogBloc>().add(ReorderBlocksEvent(updated));
+                                context
+                                    .read<TripLogBloc>()
+                                    .add(ReorderBlocksEvent(updated));
                               } else if (value == 'delete') {
-                                context.read<TripLogBloc>().add(DeleteBlockEvent(index));
+                                context
+                                    .read<TripLogBloc>()
+                                    .add(DeleteBlockEvent(index));
                               }
                             },
                             itemBuilder: (context) => [
@@ -736,9 +866,13 @@ class _TripLogEditorState extends State<TripLogEditor> {
                                 enabled: index > 0,
                                 child: const Row(
                                   children: [
-                                    Icon(Icons.arrow_upward_rounded, color: Colors.white70, size: 16),
+                                    Icon(Icons.arrow_upward_rounded,
+                                        color: Colors.white70, size: 16),
                                     SizedBox(width: 8),
-                                    Text('Move Up', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                    Text('Move Up',
+                                        style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 13)),
                                   ],
                                 ),
                               ),
@@ -747,9 +881,13 @@ class _TripLogEditorState extends State<TripLogEditor> {
                                 enabled: index < state.blocks.length - 1,
                                 child: const Row(
                                   children: [
-                                    Icon(Icons.arrow_downward_rounded, color: Colors.white70, size: 16),
+                                    Icon(Icons.arrow_downward_rounded,
+                                        color: Colors.white70, size: 16),
                                     SizedBox(width: 8),
-                                    Text('Move Down', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                    Text('Move Down',
+                                        style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 13)),
                                   ],
                                 ),
                               ),
@@ -758,9 +896,13 @@ class _TripLogEditorState extends State<TripLogEditor> {
                                 value: 'delete',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 16),
+                                    Icon(Icons.delete_outline_rounded,
+                                        color: Colors.redAccent, size: 16),
                                     SizedBox(width: 8),
-                                    Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                                    Text('Delete',
+                                        style: TextStyle(
+                                            color: Colors.redAccent,
+                                            fontSize: 13)),
                                   ],
                                 ),
                               ),
@@ -773,54 +915,94 @@ class _TripLogEditorState extends State<TripLogEditor> {
                         text: (id, content, isBold) => TextBlockEditor(
                           id: id,
                           initialContent: content,
-                          onChanged: (newContent) => context.read<TripLogBloc>().add(
-                                UpdateBlockEvent(index, TripBlock.text(id: id, content: newContent)),
-                              ),
+                          onChanged: (newContent) =>
+                              context.read<TripLogBloc>().add(
+                                    UpdateBlockEvent(
+                                        index,
+                                        TripBlock.text(
+                                            id: id, content: newContent)),
+                                  ),
                         ),
-                        image: (id, url, caption, localPath) => ImageBlockEditor(
+                        image: (id, url, caption, localPath) =>
+                            ImageBlockEditor(
                           id: id,
                           imageUrl: url,
                           localPath: localPath,
                           initialCaption: caption,
-                          onCaptionChanged: (newCaption) => context.read<TripLogBloc>().add(
-                                UpdateBlockEvent(index, TripBlock.image(id: id, storageUrl: url, caption: newCaption, localPath: localPath)),
-                              ),
+                          onCaptionChanged: (newCaption) =>
+                              context.read<TripLogBloc>().add(
+                                    UpdateBlockEvent(
+                                        index,
+                                        TripBlock.image(
+                                            id: id,
+                                            storageUrl: url,
+                                            caption: newCaption,
+                                            localPath: localPath)),
+                                  ),
                         ),
-                        video: (id, url, caption, localPath) => VideoBlockEditor(
+                        video: (id, url, caption, localPath) =>
+                            VideoBlockEditor(
                           id: id,
                           videoUrl: url,
                           localPath: localPath,
                           initialCaption: caption,
-                          onCaptionChanged: (newCaption) => context.read<TripLogBloc>().add(
-                                UpdateBlockEvent(index, TripBlock.video(id: id, storageUrl: url, caption: newCaption, localPath: localPath)),
-                              ),
+                          onCaptionChanged: (newCaption) =>
+                              context.read<TripLogBloc>().add(
+                                    UpdateBlockEvent(
+                                        index,
+                                        TripBlock.video(
+                                            id: id,
+                                            storageUrl: url,
+                                            caption: newCaption,
+                                            localPath: localPath)),
+                                  ),
                         ),
                         costEntry: (id, items, currency) => CostBlockEditor(
                           id: id,
                           items: items,
                           currency: currency,
-                          onUpdateItems: (newItems) => context.read<TripLogBloc>().add(
-                                UpdateBlockEvent(index, TripBlock.costEntry(id: id, items: newItems, currency: currency)),
-                              ),
+                          onUpdateItems: (newItems) =>
+                              context.read<TripLogBloc>().add(
+                                    UpdateBlockEvent(
+                                        index,
+                                        TripBlock.costEntry(
+                                            id: id,
+                                            items: newItems,
+                                            currency: currency)),
+                                  ),
                         ),
                         route: (id, points, description) => RouteBlockEditor(
                           id: id,
                           initialPoints: points,
                           initialDescription: description ?? '',
-                          onChanged: (newPoints, newDescription) => context.read<TripLogBloc>().add(
-                                UpdateBlockEvent(index, TripBlock.route(id: id, points: newPoints, description: newDescription)),
-                              ),
+                          onChanged: (newPoints, newDescription) =>
+                              context.read<TripLogBloc>().add(
+                                    UpdateBlockEvent(
+                                        index,
+                                        TripBlock.route(
+                                            id: id,
+                                            points: newPoints,
+                                            description: newDescription)),
+                                  ),
                         ),
                         safetyNote: (id, text, level) => SafetyBlockEditor(
                           id: id,
                           initialText: text,
                           initialLevel: level,
-                          onChanged: (newText, newLevel) => context.read<TripLogBloc>().add(
-                                UpdateBlockEvent(index, TripBlock.safetyNote(id: id, text: newText, level: newLevel)),
-                              ),
+                          onChanged: (newText, newLevel) =>
+                              context.read<TripLogBloc>().add(
+                                    UpdateBlockEvent(
+                                        index,
+                                        TripBlock.safetyNote(
+                                            id: id,
+                                            text: newText,
+                                            level: newLevel)),
+                                  ),
                         ),
-                        voiceNote: (id, storageUrl, durationSeconds, localPath, transcript) =>
-                          _buildVoiceNoteDisplay(id, durationSeconds, localPath, transcript),
+                        voiceNote: (id, storageUrl, durationSeconds, localPath,
+                                transcript) =>
+                            _buildVoiceNoteDisplay(
+                                id, durationSeconds, localPath, transcript),
                       ),
                     ],
                   ),
@@ -832,7 +1014,6 @@ class _TripLogEditorState extends State<TripLogEditor> {
       ),
     );
   }
-
 
   /// Renders a voice note block for display/playback in the editor.
   Widget _buildVoiceNoteDisplay(
@@ -849,13 +1030,15 @@ class _TripLogEditorState extends State<TripLogEditor> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.orangeAccent.withOpacity(0.08),
+            color: Colors.orangeAccent.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.orangeAccent.withOpacity(0.3)),
+            border:
+                Border.all(color: Colors.orangeAccent.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
-              const Icon(Icons.mic_rounded, color: Colors.orangeAccent, size: 20),
+              const Icon(Icons.mic_rounded,
+                  color: Colors.orangeAccent, size: 20),
               const SizedBox(width: 10),
               Text(
                 '$m:$s',
@@ -868,7 +1051,9 @@ class _TripLogEditorState extends State<TripLogEditor> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  localPath != null ? '📱 স্থানীয়ভাবে সংরক্ষিত' : '☁️ আপলোড হয়েছে',
+                  localPath != null
+                      ? '📱 স্থানীয়ভাবে সংরক্ষিত'
+                      : '☁️ আপলোড হয়েছে',
                   style: const TextStyle(color: Colors.white38, fontSize: 12),
                 ),
               ),
@@ -910,7 +1095,9 @@ class _TripLogEditorState extends State<TripLogEditor> {
     context.read<TripLogBloc>().add(const ReorderBlocksEvent([]));
 
     // 1. Update title
-    context.read<TripLogBloc>().add(UpdateTitleEvent('${template.emoji} ${template.name}: My Trip'));
+    context
+        .read<TripLogBloc>()
+        .add(UpdateTitleEvent('${template.emoji} ${template.name}: My Trip'));
     _titleController.text = '${template.emoji} ${template.name}: My Trip';
 
     // 2. Add text blocks
@@ -957,18 +1144,24 @@ class _TripLogEditorState extends State<TripLogEditor> {
       context: context,
       useSafeArea: true,
       backgroundColor: AppColors.cardDark,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text('PUBLISH CHECKLIST',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.5)),
+                    style: TextStyle(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        letterSpacing: 1.5)),
                 const SizedBox(height: 24),
                 ..._buildChecklistItems(context, state),
                 const SizedBox(height: 32),
@@ -976,7 +1169,9 @@ class _TripLogEditorState extends State<TripLogEditor> {
                   onPressed: state.isComplete
                       ? () {
                           Navigator.pop(context);
-                          context.read<TripLogBloc>().add(PublishTripLogEvent(_titleController.text));
+                          context
+                              .read<TripLogBloc>()
+                              .add(PublishTripLogEvent(_titleController.text));
                         }
                       : null,
                   style: ElevatedButton.styleFrom(
@@ -985,10 +1180,13 @@ class _TripLogEditorState extends State<TripLogEditor> {
                     foregroundColor: Colors.white,
                     disabledForegroundColor: Colors.white24,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
-                  child: const Text('Publish TripLog', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  child: const Text('Publish TripLog',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ],
             ),
@@ -1020,12 +1218,14 @@ class _TripLogEditorState extends State<TripLogEditor> {
         setState(() {
           _uploadCurrentFileIndex = i + 1;
           _uploadProgress = 0.0;
-          _uploadStatus = 'Uploading photo ${i + 1} of ${images.length}: ${image.name}';
+          _uploadStatus =
+              'Uploading photo ${i + 1} of ${images.length}: ${image.name}';
         });
 
         String finalUrl = '';
         try {
-          final String path = 'trip_logs/${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+          final String path =
+              'trip_logs/${DateTime.now().millisecondsSinceEpoch}_${image.name}';
           if (kIsWeb) {
             final bytes = await image.readAsBytes();
             finalUrl = await MediaUploadService.uploadBytes(
@@ -1057,7 +1257,9 @@ class _TripLogEditorState extends State<TripLogEditor> {
           debugPrint('Firebase Storage upload failed: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Upload failed for ${image.name}: $e'), backgroundColor: AppColors.amber),
+              SnackBar(
+                  content: Text('Upload failed for ${image.name}: $e'),
+                  backgroundColor: AppColors.amber),
             );
           }
           continue;
@@ -1103,7 +1305,8 @@ class _TripLogEditorState extends State<TripLogEditor> {
       if (video != null) {
         String finalUrl = '';
         try {
-          final String path = 'trip_logs/videos/${DateTime.now().millisecondsSinceEpoch}_${video.name}';
+          final String path =
+              'trip_logs/videos/${DateTime.now().millisecondsSinceEpoch}_${video.name}';
           if (kIsWeb) {
             final bytes = await video.readAsBytes();
             finalUrl = await MediaUploadService.uploadBytes(
@@ -1135,7 +1338,9 @@ class _TripLogEditorState extends State<TripLogEditor> {
           debugPrint('Firebase Storage video upload failed: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Video upload failed: $e'), backgroundColor: AppColors.amber),
+              SnackBar(
+                  content: Text('Video upload failed: $e'),
+                  backgroundColor: AppColors.amber),
             );
           }
         }
@@ -1146,11 +1351,14 @@ class _TripLogEditorState extends State<TripLogEditor> {
                 caption: '',
                 localPath: video.path,
               )));
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Video added')));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('Video added')));
         } else {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Failed to upload video.'), backgroundColor: AppColors.amber),
+              const SnackBar(
+                  content: Text('Failed to upload video.'),
+                  backgroundColor: AppColors.amber),
             );
           }
         }
@@ -1172,14 +1380,21 @@ class _TripLogEditorState extends State<TripLogEditor> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E2C),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Add Video', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text('Add Video',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.link_rounded, color: AppColors.mintGreen),
-              title: const Text('Paste YouTube Link', style: TextStyle(color: Colors.white, fontSize: 14)),
-              subtitle: const Text('Embed a video from YouTube', style: TextStyle(color: Colors.white30, fontSize: 11)),
+              leading:
+                  const Icon(Icons.link_rounded, color: AppColors.mintGreen),
+              title: const Text('Paste YouTube Link',
+                  style: TextStyle(color: Colors.white, fontSize: 14)),
+              subtitle: const Text('Embed a video from YouTube',
+                  style: TextStyle(color: Colors.white30, fontSize: 11)),
               onTap: () {
                 Navigator.pop(context);
                 _showYouTubeLinkDialog();
@@ -1187,9 +1402,12 @@ class _TripLogEditorState extends State<TripLogEditor> {
             ),
             const Divider(color: Colors.white10),
             ListTile(
-              leading: const Icon(Icons.video_library_rounded, color: AppColors.mintGreen),
-              title: const Text('Upload Local Video', style: TextStyle(color: Colors.white, fontSize: 14)),
-              subtitle: const Text('Select a video file from gallery', style: TextStyle(color: Colors.white30, fontSize: 11)),
+              leading: const Icon(Icons.video_library_rounded,
+                  color: AppColors.mintGreen),
+              title: const Text('Upload Local Video',
+                  style: TextStyle(color: Colors.white, fontSize: 14)),
+              subtitle: const Text('Select a video file from gallery',
+                  style: TextStyle(color: Colors.white30, fontSize: 11)),
               onTap: () {
                 Navigator.pop(context);
                 _pickAndAddVideo();
@@ -1208,7 +1426,11 @@ class _TripLogEditorState extends State<TripLogEditor> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E2C),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Paste YouTube Link', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text('Paste YouTube Link',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1226,12 +1448,13 @@ class _TripLogEditorState extends State<TripLogEditor> {
                 hintText: 'https://www.youtube.com/watch?v=...',
                 hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.05),
+                fillColor: Colors.white.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
           ],
@@ -1239,13 +1462,15 @@ class _TripLogEditorState extends State<TripLogEditor> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child:
+                const Text('Cancel', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.mintGreen,
               foregroundColor: const Color(0xFF1E1E2C),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () {
               final url = urlController.text.trim();
@@ -1258,15 +1483,19 @@ class _TripLogEditorState extends State<TripLogEditor> {
                         storageUrl: url,
                         caption: '',
                       )));
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('YouTube video added')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('YouTube video added')));
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invalid YouTube URL. Please try again.'), backgroundColor: AppColors.amber),
+                    const SnackBar(
+                        content: Text('Invalid YouTube URL. Please try again.'),
+                        backgroundColor: AppColors.amber),
                   );
                 }
               }
             },
-            child: const Text('Add', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Add',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1278,7 +1507,11 @@ class TextBlockEditor extends StatefulWidget {
   final String id;
   final String initialContent;
   final void Function(String) onChanged;
-  const TextBlockEditor({super.key, required this.id, required this.initialContent, required this.onChanged});
+  const TextBlockEditor(
+      {super.key,
+      required this.id,
+      required this.initialContent,
+      required this.onChanged});
 
   @override
   State<TextBlockEditor> createState() => _TextBlockEditorState();
@@ -1296,7 +1529,8 @@ class _TextBlockEditorState extends State<TextBlockEditor> {
   @override
   void didUpdateWidget(covariant TextBlockEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialContent != widget.initialContent && _controller.text != widget.initialContent) {
+    if (oldWidget.initialContent != widget.initialContent &&
+        _controller.text != widget.initialContent) {
       _controller.text = widget.initialContent;
     }
   }
@@ -1331,7 +1565,13 @@ class ImageBlockEditor extends StatefulWidget {
   final String? localPath;
   final String initialCaption;
   final void Function(String) onCaptionChanged;
-  const ImageBlockEditor({super.key, required this.id, required this.imageUrl, this.localPath, required this.initialCaption, required this.onCaptionChanged});
+  const ImageBlockEditor(
+      {super.key,
+      required this.id,
+      required this.imageUrl,
+      this.localPath,
+      required this.initialCaption,
+      required this.onCaptionChanged});
 
   @override
   State<ImageBlockEditor> createState() => _ImageBlockEditorState();
@@ -1349,7 +1589,8 @@ class _ImageBlockEditorState extends State<ImageBlockEditor> {
   @override
   void didUpdateWidget(covariant ImageBlockEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialCaption != widget.initialCaption && _captionController.text != widget.initialCaption) {
+    if (oldWidget.initialCaption != widget.initialCaption &&
+        _captionController.text != widget.initialCaption) {
       _captionController.text = widget.initialCaption;
     }
   }
@@ -1367,7 +1608,10 @@ class _ImageBlockEditorState extends State<ImageBlockEditor> {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: (widget.localPath != null && widget.localPath!.isNotEmpty && !kIsWeb && File(widget.localPath!).existsSync())
+          child: (widget.localPath != null &&
+                  widget.localPath!.isNotEmpty &&
+                  !kIsWeb &&
+                  File(widget.localPath!).existsSync())
               ? Image.file(
                   File(widget.localPath!),
                   height: 200,
@@ -1383,13 +1627,15 @@ class _ImageBlockEditorState extends State<ImageBlockEditor> {
                     height: 200,
                     color: Colors.white10,
                     child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.mintGreen),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.mintGreen),
                     ),
                   ),
                   errorWidget: (_, __, ___) => Container(
                     height: 200,
                     color: Colors.white10,
-                    child: const Icon(Icons.broken_image, color: Colors.white24),
+                    child:
+                        const Icon(Icons.broken_image, color: Colors.white24),
                   ),
                 ),
         ),
@@ -1417,7 +1663,13 @@ class VideoBlockEditor extends StatefulWidget {
   final String? localPath;
   final String initialCaption;
   final void Function(String) onCaptionChanged;
-  const VideoBlockEditor({super.key, required this.id, required this.videoUrl, this.localPath, required this.initialCaption, required this.onCaptionChanged});
+  const VideoBlockEditor(
+      {super.key,
+      required this.id,
+      required this.videoUrl,
+      this.localPath,
+      required this.initialCaption,
+      required this.onCaptionChanged});
 
   @override
   State<VideoBlockEditor> createState() => _VideoBlockEditorState();
@@ -1435,7 +1687,8 @@ class _VideoBlockEditorState extends State<VideoBlockEditor> {
   @override
   void didUpdateWidget(covariant VideoBlockEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialCaption != widget.initialCaption && _captionController.text != widget.initialCaption) {
+    if (oldWidget.initialCaption != widget.initialCaption &&
+        _captionController.text != widget.initialCaption) {
       _captionController.text = widget.initialCaption;
     }
   }
@@ -1472,9 +1725,13 @@ class _VideoBlockEditorState extends State<VideoBlockEditor> {
                     ? CachedNetworkImage(
                         imageUrl: thumbnailUrl,
                         fit: BoxFit.cover,
-                        errorWidget: (context, url, error) => const Icon(Icons.video_collection_rounded, color: Colors.white24, size: 48),
+                        errorWidget: (context, url, error) => const Icon(
+                            Icons.video_collection_rounded,
+                            color: Colors.white24,
+                            size: 48),
                       )
-                    : const Icon(Icons.video_collection_rounded, color: Colors.white24, size: 48),
+                    : const Icon(Icons.video_collection_rounded,
+                        color: Colors.white24, size: 48),
               ),
             ),
             Container(
@@ -1483,7 +1740,8 @@ class _VideoBlockEditorState extends State<VideoBlockEditor> {
                 color: Colors.black54,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.play_arrow_rounded, color: AppColors.mintGreen, size: 36),
+              child: const Icon(Icons.play_arrow_rounded,
+                  color: AppColors.mintGreen, size: 36),
             ),
           ],
         ),
@@ -1510,7 +1768,12 @@ class CostBlockEditor extends StatefulWidget {
   final List<CostItem> items;
   final String currency;
   final void Function(List<CostItem>) onUpdateItems;
-  const CostBlockEditor({super.key, required this.id, required this.items, required this.currency, required this.onUpdateItems});
+  const CostBlockEditor(
+      {super.key,
+      required this.id,
+      required this.items,
+      required this.currency,
+      required this.onUpdateItems});
 
   @override
   State<CostBlockEditor> createState() => _CostBlockEditorState();
@@ -1537,9 +1800,9 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
         if (widget.items.isNotEmpty) ...[
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.02),
+              color: Colors.white.withValues(alpha: 0.02),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.04)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
             ),
             child: Column(
               children: [
@@ -1547,28 +1810,36 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                   final idx = entry.key;
                   final item = entry.value;
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: Row(
                       children: [
-                        const Icon(Icons.label_outline_rounded, color: AppColors.gold, size: 16),
+                        const Icon(Icons.label_outline_rounded,
+                            color: AppColors.gold, size: 16),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             item.label,
-                            style: const TextStyle(color: Colors.white70, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 14),
                           ),
                         ),
                         Text(
                           '${item.amountBDT} BDT',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: const Icon(Icons.remove_circle_outline_rounded, color: Colors.redAccent, size: 16),
+                          icon: const Icon(Icons.remove_circle_outline_rounded,
+                              color: Colors.redAccent, size: 16),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () {
-                            final updated = List<CostItem>.from(widget.items)..removeAt(idx);
+                            final updated = List<CostItem>.from(widget.items)
+                              ..removeAt(idx);
                             widget.onUpdateItems(updated);
                           },
                         ),
@@ -1584,11 +1855,17 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                     children: [
                       const Text(
                         'Total Expenses:',
-                        style: TextStyle(color: Colors.white54, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(
+                            color: Colors.white54,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13),
                       ),
                       Text(
                         '$total BDT',
-                        style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold, fontSize: 15),
+                        style: const TextStyle(
+                            color: AppColors.gold,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15),
                       ),
                     ],
                   ),
@@ -1607,11 +1884,13 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Expense item (e.g. Bus fare)',
-                  hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                  hintStyle:
+                      const TextStyle(color: Colors.white24, fontSize: 13),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.04),
+                  fillColor: Colors.white.withValues(alpha: 0.04),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -1627,11 +1906,13 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                 style: const TextStyle(color: Colors.white, fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Amount',
-                  hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                  hintStyle:
+                      const TextStyle(color: Colors.white24, fontSize: 13),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   filled: true,
-                  fillColor: Colors.white.withOpacity(0.04),
+                  fillColor: Colors.white.withValues(alpha: 0.04),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -1641,12 +1922,17 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
             ),
             const SizedBox(width: 8),
             IconButton(
-              icon: const Icon(Icons.add_circle_rounded, color: AppColors.mintGreen, size: 28),
+              icon: const Icon(Icons.add_circle_rounded,
+                  color: AppColors.mintGreen, size: 28),
               onPressed: () {
                 final name = _nameController.text.trim();
                 final amount = int.tryParse(_amountController.text.trim()) ?? 0;
                 if (name.isNotEmpty && amount > 0) {
-                  widget.onUpdateItems([...widget.items, CostItem(label: name, amountBDT: amount, category: 'general')]);
+                  widget.onUpdateItems([
+                    ...widget.items,
+                    CostItem(
+                        label: name, amountBDT: amount, category: 'general')
+                  ]);
                   _nameController.clear();
                   _amountController.clear();
                 }
@@ -1664,7 +1950,12 @@ class SafetyBlockEditor extends StatefulWidget {
   final String initialText;
   final String initialLevel;
   final void Function(String, String) onChanged;
-  const SafetyBlockEditor({super.key, required this.id, required this.initialText, required this.initialLevel, required this.onChanged});
+  const SafetyBlockEditor(
+      {super.key,
+      required this.id,
+      required this.initialText,
+      required this.initialLevel,
+      required this.onChanged});
 
   @override
   State<SafetyBlockEditor> createState() => _SafetyBlockEditorState();
@@ -1684,7 +1975,8 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
   @override
   void didUpdateWidget(covariant SafetyBlockEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialText != widget.initialText && _textController.text != widget.initialText) {
+    if (oldWidget.initialText != widget.initialText &&
+        _textController.text != widget.initialText) {
       _textController.text = widget.initialText;
     }
     if (oldWidget.initialLevel != widget.initialLevel) {
@@ -1704,13 +1996,13 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
     Color accentColor;
 
     if (_selectedLevel == 'danger') {
-      cardColor = Colors.redAccent.withOpacity(0.05);
+      cardColor = Colors.redAccent.withValues(alpha: 0.05);
       accentColor = Colors.redAccent;
     } else if (_selectedLevel == 'warning') {
-      cardColor = AppColors.amber.withOpacity(0.05);
+      cardColor = AppColors.amber.withValues(alpha: 0.05);
       accentColor = AppColors.amber;
     } else {
-      cardColor = Colors.blueAccent.withOpacity(0.05);
+      cardColor = Colors.blueAccent.withValues(alpha: 0.05);
       accentColor = Colors.blueAccent;
     }
 
@@ -1719,7 +2011,7 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accentColor.withOpacity(0.15)),
+        border: Border.all(color: accentColor.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1729,7 +2021,11 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
             children: [
               Text(
                 'ALERT LEVEL',
-                style: TextStyle(color: accentColor, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 1.0),
+                style: TextStyle(
+                    color: accentColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                    letterSpacing: 1.0),
               ),
               Wrap(
                 spacing: 6,
@@ -1750,9 +2046,12 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
                     },
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isSelected ? levelColor : Colors.white.withOpacity(0.05),
+                        color: isSelected
+                            ? levelColor
+                            : Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -1775,7 +2074,8 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
             maxLines: null,
             style: const TextStyle(color: Colors.white, fontSize: 14),
             decoration: const InputDecoration(
-              hintText: 'Describe safety warnings (e.g. steep slopes, heavy tides)',
+              hintText:
+                  'Describe safety warnings (e.g. steep slopes, heavy tides)',
               hintStyle: TextStyle(color: Colors.white24, fontSize: 14),
               border: InputBorder.none,
               isDense: true,
@@ -1794,7 +2094,12 @@ class RouteBlockEditor extends StatefulWidget {
   final List<GeoCoordinate> initialPoints;
   final String initialDescription;
   final void Function(List<GeoCoordinate>, String) onChanged;
-  const RouteBlockEditor({super.key, required this.id, required this.initialPoints, required this.initialDescription, required this.onChanged});
+  const RouteBlockEditor(
+      {super.key,
+      required this.id,
+      required this.initialPoints,
+      required this.initialDescription,
+      required this.onChanged});
 
   @override
   State<RouteBlockEditor> createState() => _RouteBlockEditorState();
@@ -1817,14 +2122,16 @@ class _RouteBlockEditorState extends State<RouteBlockEditor> {
     }
     _pointControllers.clear();
     for (var point in widget.initialPoints) {
-      _pointControllers.add(TextEditingController(text: "${point.latitude}, ${point.longitude}"));
+      _pointControllers.add(
+          TextEditingController(text: "${point.latitude}, ${point.longitude}"));
     }
   }
 
   @override
   void didUpdateWidget(covariant RouteBlockEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialDescription != widget.initialDescription && _descController.text != widget.initialDescription) {
+    if (oldWidget.initialDescription != widget.initialDescription &&
+        _descController.text != widget.initialDescription) {
       _descController.text = widget.initialDescription;
     }
     if (oldWidget.initialPoints.length != widget.initialPoints.length ||
@@ -1884,19 +2191,23 @@ class _RouteBlockEditorState extends State<RouteBlockEditor> {
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
                   children: [
-                    const Icon(Icons.location_on_rounded, color: Colors.tealAccent, size: 16),
+                    const Icon(Icons.location_on_rounded,
+                        color: Colors.tealAccent, size: 16),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
                         controller: _pointControllers[idx],
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
                         decoration: InputDecoration(
                           hintText: 'Latitude, Longitude (e.g. 23.68, 90.35)',
-                          hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                          hintStyle: const TextStyle(
+                              color: Colors.white24, fontSize: 13),
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
                           filled: true,
-                          fillColor: Colors.white.withOpacity(0.04),
+                          fillColor: Colors.white.withValues(alpha: 0.04),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -1906,7 +2217,8 @@ class _RouteBlockEditorState extends State<RouteBlockEditor> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.remove_circle_outline_rounded, color: Colors.redAccent, size: 18),
+                      icon: const Icon(Icons.remove_circle_outline_rounded,
+                          color: Colors.redAccent, size: 18),
                       onPressed: () {
                         _pointControllers[idx].dispose();
                         _pointControllers.removeAt(idx);
@@ -1928,8 +2240,10 @@ class _RouteBlockEditorState extends State<RouteBlockEditor> {
               _pointControllers.add(TextEditingController());
               setState(() {});
             },
-            icon: const Icon(Icons.add_location_alt_rounded, color: Colors.tealAccent, size: 16),
-            label: const Text('Add waypoint coordinate', style: TextStyle(color: Colors.tealAccent, fontSize: 13)),
+            icon: const Icon(Icons.add_location_alt_rounded,
+                color: Colors.tealAccent, size: 16),
+            label: const Text('Add waypoint coordinate',
+                style: TextStyle(color: Colors.tealAccent, fontSize: 13)),
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,
               minimumSize: const Size(0, 32),
@@ -1943,7 +2257,8 @@ class _RouteBlockEditorState extends State<RouteBlockEditor> {
           maxLines: 2,
           style: const TextStyle(color: Colors.white, fontSize: 14),
           decoration: const InputDecoration(
-            hintText: 'Describe the route path (e.g. "Take the hiking path towards the waterfall")',
+            hintText:
+                'Describe the route path (e.g. "Take the hiking path towards the waterfall")',
             hintStyle: TextStyle(color: Colors.white24, fontSize: 14),
             border: InputBorder.none,
             isDense: true,

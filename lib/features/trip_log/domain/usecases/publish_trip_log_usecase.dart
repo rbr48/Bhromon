@@ -29,27 +29,33 @@ class PublishTripLogUseCase implements UseCase<TripLog, PublishTripLogParams> {
 
     if (isPublic) {
       if (log.title.trim().isEmpty) {
-        return const Left(ValidationFailure('Title is required for public posts'));
+        return const Left(
+            ValidationFailure('Title is required for public posts'));
       }
 
-      final hasImage = log.blocks.any((b) => b is ImageBlock || b is VideoBlock);
+      final hasImage =
+          log.blocks.any((b) => b is ImageBlock || b is VideoBlock);
       if (!hasImage) {
-        return const Left(ValidationFailure('At least one image or video is required for public posts'));
+        return const Left(ValidationFailure(
+            'At least one image or video is required for public posts'));
       }
 
       final hasSafetyNote = log.blocks.any((b) => b is SafetyNoteBlock);
       if (!hasSafetyNote) {
-        return const Left(ValidationFailure('A safety note is required for public posts'));
+        return const Left(
+            ValidationFailure('A safety note is required for public posts'));
       }
 
       final hasCostEntry = log.blocks.any((b) => b is CostEntryBlock);
       if (!hasCostEntry) {
-        return const Left(ValidationFailure('An expense breakdown is required for public posts'));
+        return const Left(ValidationFailure(
+            'An expense breakdown is required for public posts'));
       }
 
       final hasRoute = log.blocks.any((b) => b is RouteBlock);
       if (!hasRoute) {
-        return const Left(ValidationFailure('A route map is required for public posts'));
+        return const Left(
+            ValidationFailure('A route map is required for public posts'));
       }
     } else {
       // Private mode (self-posting): title is not mandatory

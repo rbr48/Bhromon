@@ -20,7 +20,8 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
   void initState() {
     super.initState();
     final authState = context.read<AuthCubit>().state;
-    final uid = authState is Authenticated ? authState.profile.uid : 'explorer_user';
+    final uid =
+        authState is Authenticated ? authState.profile.uid : 'explorer_user';
     context.read<TrustBloc>().add(SubscribeScoreEvent(uid));
   }
 
@@ -53,11 +54,15 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
         listener: (context, state) {
           if (state.appealStatus == AppealStatus.success) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Appeal submitted successfully! Under review.')),
+              const SnackBar(
+                  content:
+                      Text('Appeal submitted successfully! Under review.')),
             );
           } else if (state.appealStatus == AppealStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage ?? 'Appeal submission failed.')),
+              SnackBar(
+                  content:
+                      Text(state.errorMessage ?? 'Appeal submission failed.')),
             );
           }
         },
@@ -82,10 +87,13 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                   ElevatedButton(
                     onPressed: () {
                       final authState = context.read<AuthCubit>().state;
-                      final uid = authState is Authenticated ? authState.profile.uid : 'explorer_user';
+                      final uid = authState is Authenticated
+                          ? authState.profile.uid
+                          : 'explorer_user';
                       context.read<TrustBloc>().add(SubscribeScoreEvent(uid));
                     },
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.mintGreen),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.mintGreen),
                     child: const Text('Retry'),
                   ),
                 ],
@@ -106,9 +114,11 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                 Card(
                   color: AppColors.cardDark,
                   elevation: 6,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 16.0),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 32.0, horizontal: 16.0),
                     child: Column(
                       children: [
                         // Styled Circular Progress Ring representing score
@@ -122,7 +132,8 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                                 value: scoreValue / 1000.0,
                                 strokeWidth: 10,
                                 backgroundColor: Colors.white10,
-                                valueColor: AlwaysStoppedAnimation<Color>(color),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(color),
                               ),
                             ),
                             Column(
@@ -164,7 +175,8 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                         const Text(
                           'Moderation authority is active. Maintain your score above 500 to keep verified status.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
+                          style: TextStyle(
+                              color: Colors.white38, fontSize: 11, height: 1.4),
                         ),
                       ],
                     ),
@@ -174,21 +186,30 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                 // 2. Score Breakdown Card
                 const Text(
                   'SCORE FORMULA & CONTRIBUTIONS',
-                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.5),
+                  style: TextStyle(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      letterSpacing: 1.5),
                 ),
                 const SizedBox(height: 12),
                 Card(
                   color: AppColors.cardDark,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
                       children: [
                         _buildFormulaRow('Base Score', '+100', Colors.white70),
                         const Divider(color: Colors.white10),
-                        _buildFormulaRow('Verified Contributions', '+${(scoreValue - 100).clamp(0, 900)}', AppColors.mintGreen),
+                        _buildFormulaRow(
+                            'Verified Contributions',
+                            '+${(scoreValue - 100).clamp(0, 900)}',
+                            AppColors.mintGreen),
                         const Divider(color: Colors.white10),
-                        _buildFormulaRow('Community Flags', '-0', Colors.redAccent),
+                        _buildFormulaRow(
+                            'Community Flags', '-0', Colors.redAccent),
                       ],
                     ),
                   ),
@@ -197,18 +218,27 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                 // 3. Flags and Appeals section
                 const Text(
                   'ACTIVE PENALTIES & APPEALS',
-                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.5),
+                  style: TextStyle(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      letterSpacing: 1.5),
                 ),
                 const SizedBox(height: 12),
                 Card(
                   color: AppColors.cardDark,
                   child: ListTile(
-                    leading: const Icon(Icons.warning_amber, color: AppColors.amber),
-                    title: const Text('Spam Flag on Sajek TipLog', style: TextStyle(color: Colors.white)),
-                    subtitle: const Text('Penalty weight: -5 points • 3 days ago', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    leading:
+                        const Icon(Icons.warning_amber, color: AppColors.amber),
+                    title: const Text('Spam Flag on Sajek TipLog',
+                        style: TextStyle(color: Colors.white)),
+                    subtitle: const Text(
+                        'Penalty weight: -5 points • 3 days ago',
+                        style: TextStyle(color: Colors.white54, fontSize: 12)),
                     trailing: TextButton(
                       onPressed: () => _showAppealSheet(context),
-                      child: const Text('Appeal', style: TextStyle(color: AppColors.gold)),
+                      child: const Text('Appeal',
+                          style: TextStyle(color: AppColors.gold)),
                     ),
                   ),
                 ),
@@ -243,7 +273,8 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
       useSafeArea: true,
       isScrollControlled: true,
       backgroundColor: AppColors.cardDark,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (modalContext) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(modalContext).viewInsets.bottom +
@@ -259,7 +290,10 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
           children: [
             const Text(
               'Submit Flag Appeal',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -274,7 +308,8 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
               decoration: InputDecoration(
                 hintText: 'Describe the validity of your post...',
                 hintStyle: const TextStyle(color: Colors.white24),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: AppColors.mintGreen),
@@ -286,7 +321,8 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
               onPressed: () {
                 final reason = controller.text.trim();
                 if (reason.isNotEmpty) {
-                  context.read<TrustBloc>().add(SubmitAppealEvent(targetId: 'flag_sajek_1', justification: reason));
+                  context.read<TrustBloc>().add(SubmitAppealEvent(
+                      targetId: 'flag_sajek_1', justification: reason));
                   Navigator.pop(modalContext);
                 }
               },
@@ -294,9 +330,11 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                 backgroundColor: AppColors.midGreen,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Submit Appeal', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Submit Appeal',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 24),
           ],

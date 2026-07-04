@@ -11,7 +11,8 @@ import '../../../../core/database/app_database.dart';
 @lazySingleton
 class SyncManager {
   bool _isProcessing = false;
-  final StreamController<bool> _syncStatusController = StreamController<bool>.broadcast();
+  final StreamController<bool> _syncStatusController =
+      StreamController<bool>.broadcast();
 
   Stream<bool> get syncStatusStream => _syncStatusController.stream;
 
@@ -19,7 +20,9 @@ class SyncManager {
   final FirebaseFirestore _firestore;
 
   SyncManager(this._database, this._firestore) {
-    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+    Connectivity()
+        .onConnectivityChanged
+        .listen((List<ConnectivityResult> results) {
       if (results.isNotEmpty && results.first != ConnectivityResult.none) {
         flushOutbox();
       }
@@ -35,7 +38,9 @@ class SyncManager {
 
   Future<void> enqueue(OutboxEntry item) async {
     final jsonStr = jsonEncode(item.toJson());
-    await _database.enqueueOutbox(item.id, item.enqueuedAt.millisecondsSinceEpoch, jsonStr, status: 'pending');
+    await _database.enqueueOutbox(
+        item.id, item.enqueuedAt.millisecondsSinceEpoch, jsonStr,
+        status: 'pending');
     flushOutbox();
   }
 
@@ -53,7 +58,7 @@ class SyncManager {
 
     for (final group in grouped.values) {
       if (group.isEmpty) continue;
-      
+
       if (group.length == 1) {
         compacted.add(group.first);
         continue;
@@ -118,9 +123,11 @@ class SyncManager {
 
   Future<void> flushOutbox() async {
     if (_isProcessing) return;
-    
+
     final connectivity = await Connectivity().checkConnectivity();
-    if (connectivity.isEmpty || connectivity.first == ConnectivityResult.none) return;
+    if (connectivity.isEmpty || connectivity.first == ConnectivityResult.none) {
+      return;
+    }
 
     _isProcessing = true;
     _syncStatusController.add(true);
@@ -157,13 +164,17 @@ class SyncManager {
           await _database.deleteOutboxEntry(item.id);
         } catch (e) {
           // ignore: avoid_print
-          print('[SyncManager] Sync failed for item ${item.id} (${item.operation} -> ${item.collectionPath}/${item.documentId}): $e');
-          
+          print(
+              '[SyncManager] Sync failed for item ${item.id} (${item.operation} -> ${item.collectionPath}/${item.documentId}): $e');
+
           if (_isPermanentError(e)) {
             // Isolate permanent errors immediately to conflict table
             final conflictItem = item.copyWith(
               status: 'conflict',
-              serverConflictPayload: {'error': e.toString(), 'type': 'permanent_error'},
+              serverConflictPayload: {
+                'error': e.toString(),
+                'type': 'permanent_error'
+              },
             );
             await _database.saveConflict(
               item.id,
@@ -193,7 +204,7 @@ class SyncManager {
                 jsonStr,
                 status: 'failed',
               );
-              
+
               final backoffMs = _calculateBackoff(updatedItem.retryCount);
               await Future<void>.delayed(Duration(milliseconds: backoffMs));
               break; // Stop processing further entries since this one failed
@@ -211,16 +222,25 @@ class SyncManager {
     final processedPayload = _processPayload(item.payload);
 
     if (item.operation == 'delete') {
-      await _firestore.collection(item.collectionPath).doc(item.documentId).delete();
+      await _firestore
+          .collection(item.collectionPath)
+          .doc(item.documentId)
+          .delete();
     } else if (item.operation == 'create') {
-      await _firestore.collection(item.collectionPath).doc(item.documentId).set(processedPayload);
+      await _firestore
+          .collection(item.collectionPath)
+          .doc(item.documentId)
+          .set(processedPayload);
     } else if (item.operation == 'update') {
-      await _firestore.collection(item.collectionPath).doc(item.documentId).update(processedPayload);
+      await _firestore
+          .collection(item.collectionPath)
+          .doc(item.documentId)
+          .update(processedPayload);
     } else {
       await _firestore.collection(item.collectionPath).doc(item.documentId).set(
-        processedPayload,
-        SetOptions(merge: true),
-      );
+            processedPayload,
+            SetOptions(merge: true),
+          );
     }
   }
 
@@ -231,7 +251,8 @@ class SyncManager {
       } else if (value['_type'] == 'serverTimestamp') {
         return FieldValue.serverTimestamp();
       } else {
-        return value.map((k, v) => MapEntry(k.toString(), _processPayloadValue(v)));
+        return value
+            .map((k, v) => MapEntry(k.toString(), _processPayloadValue(v)));
       }
     } else if (value is List) {
       return value.map(_processPayloadValue).toList();

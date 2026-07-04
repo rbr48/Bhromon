@@ -49,7 +49,8 @@ void main() {
           id: 'blk-2',
           storageUrl: 'https://storage/img.jpg',
           caption: 'River view'),
-      const TripBlock.safetyNote(id: 'blk-3', text: 'Watch out for tigers', level: 'warning'),
+      const TripBlock.safetyNote(
+          id: 'blk-3', text: 'Watch out for tigers', level: 'warning'),
       const TripBlock.costEntry(id: 'blk-4', items: [], currency: 'BDT'),
       const TripBlock.route(id: 'blk-5', points: []),
     ],
@@ -132,10 +133,13 @@ void main() {
       );
     });
 
-    test('returns ValidationFailure when blocks have no images/videos', () async {
+    test('returns ValidationFailure when blocks have no images/videos',
+        () async {
       final params = PublishTripLogParams(
         tripLog: validPublicTripLog.copyWith(
-          blocks: validPublicTripLog.blocks.where((b) => b is! ImageBlock && b is! VideoBlock).toList(),
+          blocks: validPublicTripLog.blocks
+              .where((b) => b is! ImageBlock && b is! VideoBlock)
+              .toList(),
         ),
         authorId: 'author-uid',
       );
@@ -146,7 +150,8 @@ void main() {
       result.fold(
         (f) {
           expect(f, isA<ValidationFailure>());
-          expect(f.message, 'At least one image or video is required for public posts');
+          expect(f.message,
+              'At least one image or video is required for public posts');
         },
         (_) => fail('Expected Left'),
       );
@@ -155,7 +160,9 @@ void main() {
     test('returns ValidationFailure when blocks have no safety note', () async {
       final params = PublishTripLogParams(
         tripLog: validPublicTripLog.copyWith(
-          blocks: validPublicTripLog.blocks.where((b) => b is! SafetyNoteBlock).toList(),
+          blocks: validPublicTripLog.blocks
+              .where((b) => b is! SafetyNoteBlock)
+              .toList(),
         ),
         authorId: 'author-uid',
       );
@@ -175,7 +182,9 @@ void main() {
     test('returns ValidationFailure when blocks have no cost entry', () async {
       final params = PublishTripLogParams(
         tripLog: validPublicTripLog.copyWith(
-          blocks: validPublicTripLog.blocks.where((b) => b is! CostEntryBlock).toList(),
+          blocks: validPublicTripLog.blocks
+              .where((b) => b is! CostEntryBlock)
+              .toList(),
         ),
         authorId: 'author-uid',
       );
@@ -186,7 +195,8 @@ void main() {
       result.fold(
         (f) {
           expect(f, isA<ValidationFailure>());
-          expect(f.message, 'An expense breakdown is required for public posts');
+          expect(
+              f.message, 'An expense breakdown is required for public posts');
         },
         (_) => fail('Expected Left'),
       );
@@ -195,7 +205,8 @@ void main() {
     test('returns ValidationFailure when blocks have no route map', () async {
       final params = PublishTripLogParams(
         tripLog: validPublicTripLog.copyWith(
-          blocks: validPublicTripLog.blocks.where((b) => b is! RouteBlock).toList(),
+          blocks:
+              validPublicTripLog.blocks.where((b) => b is! RouteBlock).toList(),
         ),
         authorId: 'author-uid',
       );
@@ -224,7 +235,8 @@ void main() {
 
       when(mockExplorerRepo.getProfile('author-uid'))
           .thenAnswer((_) async => Right(tProfile));
-      when(mockTripLogRepo.publishTripLog(any)).thenAnswer((_) async => Right(expectedSavedLog));
+      when(mockTripLogRepo.publishTripLog(any))
+          .thenAnswer((_) async => Right(expectedSavedLog));
 
       final result = await useCase(params);
 
@@ -239,7 +251,8 @@ void main() {
   });
 
   group('Happy path', () {
-    test('returns Right(TripLog) when all validations pass and publish succeeds',
+    test(
+        'returns Right(TripLog) when all validations pass and publish succeeds',
         () async {
       final tPublishedLog = validPublicTripLog.copyWith(
         publishedAt: DateTime(2024, 5, 10, 10, 30),
