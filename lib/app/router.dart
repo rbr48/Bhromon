@@ -25,6 +25,7 @@ import '../features/premium_guide/presentation/pages/guide_create_screen.dart';
 import '../features/premium_guide/presentation/pages/guide_detail_screen.dart';
 import '../features/premium_guide/presentation/pages/guide_purchase_screen.dart';
 import '../features/notifications/presentation/pages/notification_settings_screen.dart';
+import '../features/auth/presentation/pages/account_deletion_page.dart';
 import '../features/chat/presentation/pages/chats_list_screen.dart';
 import '../features/chat/presentation/pages/chat_screen.dart';
 
@@ -163,6 +164,11 @@ class AppRouter {
         path: '/settings',
         pageBuilder: (context, state) =>
             _customPageTransition(state, const NotificationSettingsScreen()),
+      ),
+      GoRoute(
+        path: '/delete-account',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const AccountDeletionPage()),
       ),
       GoRoute(
         path: '/chats',

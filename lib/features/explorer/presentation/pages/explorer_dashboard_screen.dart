@@ -90,13 +90,9 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
           return spot;
         }).toList();
       } else {
-        // Fallback demo data
-        _chartSpots = [
-          const FlSpot(0, 10),
-          const FlSpot(1, 25),
-          const FlSpot(2, 45),
-          FlSpot(3, _trustScore.toDouble()),
-        ];
+        // No history yet: show the real current score only — never a
+        // fabricated trend.
+        _chartSpots = [FlSpot(0, _trustScore.toDouble())];
       }
 
       // 4. Earned Badges
