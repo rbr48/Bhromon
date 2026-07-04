@@ -26,6 +26,8 @@ const mockDb = {
           }
           capturedSets[collectionName].push({ data, options });
         },
+        // Pioneer lookup in computeExplorerScore; no profile doc in tests.
+        get: async () => ({ data: () => undefined, exists: false }),
       }),
     };
   },
@@ -45,23 +47,11 @@ describe('computeExplorerScore', () => {
     currentEvents = [];
   });
 
+  // computeExplorerScore is an authenticated https.onCall: invoke it with a
+  // callable context (the old Firestore-trigger signature no longer exists).
   async function runFunction(events: any[], triggerUid: string) {
     currentEvents = events;
-    const beforeSnap = {
-      data: () => null,
-      exists: false,
-    };
-    const afterData = {
-      targetUid: triggerUid,
-      type: 'helpful_vote',
-      weight: events.reduce((sum, e) => sum + (e.weight || 0), 0),
-    };
-    const afterSnap = {
-      data: () => afterData,
-      exists: true,
-    };
-
-    await computeExplorerScore.run({ before: beforeSnap, after: afterSnap } as any, {} as any);
+    await computeExplorerScore.run({}, { auth: { uid: triggerUid } } as any);
     return capturedSets;
   }
 

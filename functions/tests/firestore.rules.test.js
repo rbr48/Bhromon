@@ -66,10 +66,12 @@ describe('Firestore Security Rules', () => {
     const profileData = {
       uid: userUid,
       displayName: 'Jane Doe',
-      tier: 'community',
+      // Client-creatable shape: privileged trust fields (tier, score) may
+      // only start at their defaults — Cloud Functions promote them later.
+      tier: 'unverified',
       isPioneer: false,
       isRegionExpert: false,
-      explorerScore: { value: 100, tier: 'community' },
+      explorerScore: { value: 0, tier: 'unverified' },
       createdAt: new Date(),
     };
 
