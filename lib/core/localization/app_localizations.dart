@@ -10,7 +10,8 @@ class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   String translate(String key) {
     final values = TranslationKeys.localizedValues[locale.languageCode];
@@ -26,7 +27,8 @@ class AppLocalizations {
   }
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -46,5 +48,6 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
 }
 
 extension AppLocalizationsExtension on BuildContext {
-  AppLocalizations get l10n => AppLocalizations.of(this) ?? AppLocalizations(const Locale('en'));
+  AppLocalizations get l10n =>
+      AppLocalizations.of(this) ?? AppLocalizations(const Locale('en'));
 }

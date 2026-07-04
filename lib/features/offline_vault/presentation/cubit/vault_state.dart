@@ -6,7 +6,8 @@ enum VaultStatus { initial, loading, loaded, error }
 class VaultState extends Equatable {
   final List<String> districts;
   final Map<String, int> downloadedDistricts; // 'District' -> size in MB
-  final Map<String, double> downloadProgress; // 'District' -> progress (0.0 to 1.0)
+  final Map<String, double>
+      downloadProgress; // 'District' -> progress (0.0 to 1.0)
   final bool isSyncing;
   final VaultStatus status;
   final String? errorMessage;

@@ -66,7 +66,15 @@ sealed class TripBlock with _$TripBlock {
       _$TripBlockFromJson(TripBlock.sanitizeJson(json));
 
   static Map<String, dynamic> sanitizeJson(Map<String, dynamic> json) {
-    const validTypes = {'text', 'image', 'video', 'costEntry', 'route', 'safetyNote', 'voiceNote'};
+    const validTypes = {
+      'text',
+      'image',
+      'video',
+      'costEntry',
+      'route',
+      'safetyNote',
+      'voiceNote'
+    };
     // Check runtimeType first, fall back to 'type' (used by legacy docs)
     String? type = json['runtimeType']?.toString();
     if (type == null || !validTypes.contains(type)) {
@@ -80,9 +88,16 @@ sealed class TripBlock with _$TripBlock {
         type = 'voiceNote';
         sanitized['storageUrl'] ??= '';
         sanitized['durationSeconds'] ??= 0;
-      } else if (sanitized['storageUrl'] != null || sanitized['localPath'] != null) {
-        final path = (sanitized['storageUrl'] ?? sanitized['localPath']).toString().toLowerCase();
-        if (path.contains('.mp4') || path.contains('.mov') || path.contains('.avi') || path.contains('.mkv') || path.contains('video')) {
+      } else if (sanitized['storageUrl'] != null ||
+          sanitized['localPath'] != null) {
+        final path = (sanitized['storageUrl'] ?? sanitized['localPath'])
+            .toString()
+            .toLowerCase();
+        if (path.contains('.mp4') ||
+            path.contains('.mov') ||
+            path.contains('.avi') ||
+            path.contains('.mkv') ||
+            path.contains('video')) {
           type = 'video';
         } else {
           type = 'image';
@@ -122,4 +137,3 @@ sealed class TripBlock with _$TripBlock {
   @override
   Map<String, dynamic> toJson();
 }
-

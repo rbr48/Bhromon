@@ -107,9 +107,8 @@ class _AccountDeletionPageState extends State<AccountDeletionPage> {
           'Delete Account',
           style: TextStyle(color: _kWhite, fontWeight: FontWeight.w600),
         ),
-        leading: _step == 2 && _isDeleting
-            ? null
-            : const BackButton(color: _kWhite),
+        leading:
+            _step == 2 && _isDeleting ? null : const BackButton(color: _kWhite),
       ),
       body: _buildBody(),
     );

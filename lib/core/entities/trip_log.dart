@@ -96,4 +96,3 @@ extension TripLogArchiveExt on TripLog {
     };
   }
 }
-

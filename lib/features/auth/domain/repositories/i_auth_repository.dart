@@ -8,5 +8,6 @@ abstract class IAuthRepository {
   Future<Either<Failure, ExplorerProfile>> signInWithGoogle();
   Future<Either<Failure, Unit>> signOut();
   Future<Either<Failure, ExplorerProfile?>> getCurrentProfile();
-  Future<Either<Failure, ExplorerProfile>> updateProfile(ExplorerProfile profile);
+  Future<Either<Failure, ExplorerProfile>> updateProfile(
+      ExplorerProfile profile);
 }

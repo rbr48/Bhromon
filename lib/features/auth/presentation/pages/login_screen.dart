@@ -258,7 +258,8 @@ class _BrandHeader extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: _kCardBg,
-              border: Border.all(color: _kGreen.withValues(alpha: .35), width: 2),
+              border:
+                  Border.all(color: _kGreen.withValues(alpha: .35), width: 2),
             ),
             child: ClipOval(
               child: Image.asset(
@@ -320,7 +321,6 @@ class _BrandHeader extends StatelessWidget {
             letterSpacing: 0.5,
           ),
         ),
-
       ],
     );
   }
@@ -360,7 +360,8 @@ class _LoginFormState extends State<_LoginForm> {
   @override
   void initState() {
     super.initState();
-    _termsRecognizer = TapGestureRecognizer()..onTap = () => _showTermsDialog(context);
+    _termsRecognizer = TapGestureRecognizer()
+      ..onTap = () => _showTermsDialog(context);
     _privacyRecognizer = TapGestureRecognizer()..onTap = _openPrivacyPolicy;
   }
 
@@ -399,7 +400,8 @@ class _LoginFormState extends State<_LoginForm> {
             Expanded(
               child: Text(
                 'Please accept the Terms of Use and Privacy Policy to continue.',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -428,7 +430,8 @@ class _LoginFormState extends State<_LoginForm> {
             SizedBox(width: 10),
             Text(
               'Terms & Privacy Policy',
-              style: TextStyle(color: _kWhite, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: _kWhite, fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -446,7 +449,10 @@ class _LoginFormState extends State<_LoginForm> {
                 SizedBox(height: 16),
                 Text(
                   '1. Outdoor Trekking Safety Disclaimer',
-                  style: TextStyle(color: _kGreen, fontSize: 13, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: _kGreen,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 6),
                 Text(
@@ -456,7 +462,10 @@ class _LoginFormState extends State<_LoginForm> {
                 SizedBox(height: 16),
                 Text(
                   '2. User Contributions & Trust Rating',
-                  style: TextStyle(color: _kGreen, fontSize: 13, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: _kGreen,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 6),
                 Text(
@@ -466,7 +475,10 @@ class _LoginFormState extends State<_LoginForm> {
                 SizedBox(height: 16),
                 Text(
                   '3. Location & Data Usage Policy',
-                  style: TextStyle(color: _kGreen, fontSize: 13, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: _kGreen,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 6),
                 Text(
@@ -476,7 +488,10 @@ class _LoginFormState extends State<_LoginForm> {
                 SizedBox(height: 16),
                 Text(
                   '4. Revisions & Updates',
-                  style: TextStyle(color: _kGreen, fontSize: 13, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: _kGreen,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 6),
                 Text(
@@ -490,7 +505,8 @@ class _LoginFormState extends State<_LoginForm> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(color: _kGreen, fontWeight: FontWeight.bold)),
+            child: const Text('Close',
+                style: TextStyle(color: _kGreen, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -594,9 +610,9 @@ class _LoginFormState extends State<_LoginForm> {
             context.read<AuthCubit>().signInWithGoogle();
           },
         ),
-        
+
         const SizedBox(height: 20),
-        
+
         // OR Divider
         const Row(
           children: [
@@ -605,13 +621,16 @@ class _LoginFormState extends State<_LoginForm> {
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'OR',
-                style: TextStyle(color: _kWhite30, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: _kWhite30,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold),
               ),
             ),
             Expanded(child: Divider(color: _kBorder)),
           ],
         ),
-        
+
         const SizedBox(height: 20),
 
         const _Label('EMAIL ADDRESS'),
@@ -693,14 +712,17 @@ class _OtpFormState extends State<_OtpForm> {
           style: TextStyle(color: _kWhite54, fontSize: 13, height: 1.4),
         ),
         const SizedBox(height: 24),
-        
         const _Label('VERIFICATION CODE'),
         const SizedBox(height: 8),
         TextField(
           controller: _otpController,
           keyboardType: TextInputType.number,
           maxLength: 6,
-          style: const TextStyle(color: Colors.white, letterSpacing: 8, fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+              color: Colors.white,
+              letterSpacing: 8,
+              fontSize: 18,
+              fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
           decoration: _inputDeco(
             hint: '777777',
@@ -723,7 +745,8 @@ class _OtpFormState extends State<_OtpForm> {
             onPressed: () {
               context.read<AuthCubit>().checkAuthStatus();
             },
-            child: const Text('Back to Sign In', style: TextStyle(color: _kWhite54, fontSize: 13)),
+            child: const Text('Back to Sign In',
+                style: TextStyle(color: _kWhite54, fontSize: 13)),
           ),
         )
       ],

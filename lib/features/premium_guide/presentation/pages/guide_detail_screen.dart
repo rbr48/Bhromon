@@ -29,17 +29,22 @@ class PremiumGuideDetailScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Icon(Icons.workspace_premium_outlined, size: 64, color: AppColors.gold),
+            const Icon(Icons.workspace_premium_outlined,
+                size: 64, color: AppColors.gold),
             const SizedBox(height: 16),
             const Text(
               'Premium Guide Gated',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             const Text(
               'Unlock high-value itineraries, precise local transport budgets, and direct safety alerts curated by division experts.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
+              style:
+                  TextStyle(color: Colors.white70, fontSize: 14, height: 1.5),
             ),
             const SizedBox(height: 32),
             ElevatedButton(
@@ -50,7 +55,8 @@ class PremiumGuideDetailScreen extends StatelessWidget {
                 backgroundColor: AppColors.gold,
                 foregroundColor: Colors.black,
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
               child: const Text('Unlock Full Access'),
             ),

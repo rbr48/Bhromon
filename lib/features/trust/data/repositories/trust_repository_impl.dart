@@ -11,7 +11,8 @@ import '../../domain/repositories/i_trust_repository.dart';
 class TrustRepositoryImpl implements ITrustRepository {
   final FirebaseFirestore _firestore;
   final int _currentScore = 55;
-  final _scoreStreamController = StreamController<Either<Failure, int>>.broadcast();
+  final _scoreStreamController =
+      StreamController<Either<Failure, int>>.broadcast();
 
   TrustRepositoryImpl(this._firestore) {
     _scoreStreamController.add(Right(_currentScore));
@@ -26,12 +27,12 @@ class TrustRepositoryImpl implements ITrustRepository {
           .doc(uid)
           .snapshots()
           .map((snapshot) {
-            if (snapshot.exists && snapshot.data() != null) {
-              final val = snapshot.data()!['score'] as int? ?? 0;
-              return Right(val);
-            }
-            return Right(_currentScore);
-          });
+        if (snapshot.exists && snapshot.data() != null) {
+          final val = snapshot.data()!['score'] as int? ?? 0;
+          return Right(val);
+        }
+        return Right(_currentScore);
+      });
     } catch (e) {
       return _scoreStreamController.stream;
     }
@@ -59,7 +60,7 @@ class TrustRepositoryImpl implements ITrustRepository {
 
       // Deduct 5 XP for flagging/moderation action
       await XpUtils.awardXp(uid, -5);
-      
+
       return const Right(unit);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -84,7 +85,7 @@ class TrustRepositoryImpl implements ITrustRepository {
 
       // Award 5 XP for submitting a valid appeal
       await XpUtils.awardXp(uid, 5);
-      
+
       return const Right(unit);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

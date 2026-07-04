@@ -33,7 +33,8 @@ class ChallengesScreen extends StatefulWidget {
   State<ChallengesScreen> createState() => _ChallengesScreenState();
 }
 
-class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerProviderStateMixin {
+class _ChallengesScreenState extends State<ChallengesScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _loading = true;
   List<ChallengeItem> _challenges = [];
@@ -135,7 +136,8 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
       final uid = authState.profile.uid;
 
       // 1. Load active challenges from Firestore (if empty, load defaults)
-      final challQuery = await FirebaseFirestore.instance.collection('challenges').get();
+      final challQuery =
+          await FirebaseFirestore.instance.collection('challenges').get();
       if (challQuery.docs.isNotEmpty) {
         _challenges = challQuery.docs.map((doc) {
           final data = doc.data();
@@ -172,7 +174,11 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
       if (_myBadges.isEmpty) {
         _myBadges = [
           {'name': 'First Pin Visit', 'icon': '🧭', 'date': DateTime.now()},
-          {'name': 'Explorer Starter', 'icon': '⛺', 'date': DateTime.now().subtract(const Duration(days: 2))},
+          {
+            'name': 'Explorer Starter',
+            'icon': '⛺',
+            'date': DateTime.now().subtract(const Duration(days: 2))
+          },
         ];
       }
 
@@ -210,12 +216,14 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
         backgroundColor: const Color(0xFF141426),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70, size: 18),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: Colors.white70, size: 18),
           onPressed: () => context.pop(),
         ),
         title: const Text(
           'Explorer Challenges',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         centerTitle: true,
         bottom: TabBar(
@@ -245,13 +253,17 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
       itemCount: _challenges.length,
       itemBuilder: (context, index) {
         final challenge = _challenges[index];
-        final double progress = (challenge.currentCount / challenge.requiredCount).clamp(0.0, 1.0);
+        final double progress =
+            (challenge.currentCount / challenge.requiredCount).clamp(0.0, 1.0);
         return Card(
           color: Colors.white.withValues(alpha: 0.04),
           margin: const EdgeInsets.only(bottom: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: progress >= 1.0 ? Colors.amber.withValues(alpha: 0.4) : Colors.white10),
+            side: BorderSide(
+                color: progress >= 1.0
+                    ? Colors.amber.withValues(alpha: 0.4)
+                    : Colors.white10),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -266,10 +278,12 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
                       decoration: BoxDecoration(
                         color: Colors.amber.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                        border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.3)),
                       ),
                       child: Center(
-                        child: Text(challenge.rewardBadge, style: const TextStyle(fontSize: 24)),
+                        child: Text(challenge.rewardBadge,
+                            style: const TextStyle(fontSize: 24)),
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -279,12 +293,16 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
                         children: [
                           Text(
                             challenge.title,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             challenge.description,
-                            style: const TextStyle(color: Colors.white54, fontSize: 11),
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 11),
                           ),
                         ],
                       ),
@@ -297,11 +315,15 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
                   children: [
                     Text(
                       'Progress: ${challenge.currentCount}/${challenge.requiredCount}',
-                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 11),
                     ),
                     Text(
                       '🏆 +${challenge.rewardPoints} pts',
-                      style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 12),
+                      style: const TextStyle(
+                          color: Colors.amberAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12),
                     ),
                   ],
                 ),
@@ -311,7 +333,8 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
                   child: LinearProgressIndicator(
                     value: progress,
                     backgroundColor: Colors.white12,
-                    valueColor: AlwaysStoppedAnimation<Color>(progress >= 1.0 ? Colors.amber : AppColors.mintGreen),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        progress >= 1.0 ? Colors.amber : AppColors.mintGreen),
                     minHeight: 6,
                   ),
                 ),
@@ -340,7 +363,9 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
           decoration: BoxDecoration(
             color: const Color(0xFF1B1B36),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.3), width: 1.2),
+            border: Border.all(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
+                width: 1.2),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFFD4AF37).withValues(alpha: 0.08),
@@ -352,12 +377,16 @@ class _ChallengesScreenState extends State<ChallengesScreen> with SingleTickerPr
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(badge['icon'] as String? ?? '🏆', style: const TextStyle(fontSize: 36)),
+              Text(badge['icon'] as String? ?? '🏆',
+                  style: const TextStyle(fontSize: 36)),
               const SizedBox(height: 8),
               Text(
                 badge['name'] as String? ?? 'Badge',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12),
               ),
               const SizedBox(height: 4),
               Text(

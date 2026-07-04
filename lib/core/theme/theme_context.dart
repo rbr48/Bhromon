@@ -11,8 +11,7 @@ extension AppThemeContextX on BuildContext {
   bool get isDarkMode => Theme.of(this).brightness == Brightness.dark;
 
   /// Near-black panel used for cards, tiles and sheets placed on the scaffold.
-  Color get surfacePanel =>
-      isDarkMode ? const Color(0xFF111111) : Colors.white;
+  Color get surfacePanel => isDarkMode ? const Color(0xFF111111) : Colors.white;
 
   /// Slightly elevated surface (dialogs, popovers, chips on panels).
   Color get surfaceElevated =>

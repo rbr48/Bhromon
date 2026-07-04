@@ -123,7 +123,8 @@ class _MoodChip extends StatelessWidget {
   final TripMood mood;
   final bool selected;
   final VoidCallback onTap;
-  const _MoodChip({required this.mood, required this.selected, required this.onTap});
+  const _MoodChip(
+      {required this.mood, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +135,9 @@ class _MoodChip extends StatelessWidget {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.mintGreen.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
+          color: selected
+              ? AppColors.mintGreen.withValues(alpha: 0.2)
+              : Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: selected ? AppColors.mintGreen : Colors.white12,
@@ -164,7 +167,8 @@ class _TagChip extends StatelessWidget {
   final TripTag tag;
   final bool selected;
   final VoidCallback onTap;
-  const _TagChip({required this.tag, required this.selected, required this.onTap});
+  const _TagChip(
+      {required this.tag, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -174,10 +178,14 @@ class _TagChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? AppColors.gold.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.04),
+          color: selected
+              ? AppColors.gold.withValues(alpha: 0.15)
+              : Colors.white.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? AppColors.gold.withValues(alpha: 0.6) : Colors.white10,
+            color: selected
+                ? AppColors.gold.withValues(alpha: 0.6)
+                : Colors.white10,
           ),
         ),
         child: Text(

@@ -12,10 +12,16 @@ class AchievementsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
-    final explorerName = authState is Authenticated ? authState.profile.displayName : 'Guest Explorer';
-    final explorerXP = authState is Authenticated ? authState.profile.explorerScore.value : 0;
-    final explorerTier = authState is Authenticated ? authState.profile.tier : TrustTier.unverified;
-    final avatarUrl = authState is Authenticated ? authState.profile.avatarUrl : null;
+    final explorerName = authState is Authenticated
+        ? authState.profile.displayName
+        : 'Guest Explorer';
+    final explorerXP =
+        authState is Authenticated ? authState.profile.explorerScore.value : 0;
+    final explorerTier = authState is Authenticated
+        ? authState.profile.tier
+        : TrustTier.unverified;
+    final avatarUrl =
+        authState is Authenticated ? authState.profile.avatarUrl : null;
 
     // Calculate XP needed for next tier
     int targetXP = 100;
@@ -53,7 +59,11 @@ class AchievementsScreen extends StatelessWidget {
         ),
         title: const Text(
           'EXPLORER PROGRESS',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5),
         ),
         centerTitle: true,
       ),
@@ -69,15 +79,23 @@ class AchievementsScreen extends StatelessWidget {
                 color: AppColors.cardDark,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 10)],
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 10)
+                ],
               ),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 36,
                     backgroundColor: tierColor,
-                    backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                    child: avatarUrl == null ? const Icon(Icons.person, size: 36, color: Colors.white) : null,
+                    backgroundImage:
+                        avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                    child: avatarUrl == null
+                        ? const Icon(Icons.person,
+                            size: 36, color: Colors.white)
+                        : null,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -86,19 +104,28 @@ class AchievementsScreen extends StatelessWidget {
                       children: [
                         Text(
                           explorerName,
-                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: tierColor.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: tierColor.withValues(alpha: 0.4), width: 0.8),
+                            border: Border.all(
+                                color: tierColor.withValues(alpha: 0.4),
+                                width: 0.8),
                           ),
                           child: Text(
                             explorerTier.displayName,
-                            style: TextStyle(color: tierColor, fontSize: 10, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                color: tierColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -112,7 +139,11 @@ class AchievementsScreen extends StatelessWidget {
             // Progress meter section
             const Text(
               'TIER PROGRESS',
-              style: TextStyle(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+              style: TextStyle(
+                  color: Colors.white60,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0),
             ),
             const SizedBox(height: 12),
             Container(
@@ -142,11 +173,17 @@ class AchievementsScreen extends StatelessWidget {
                             children: [
                               Text(
                                 '$explorerXP',
-                                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold),
                               ),
                               const Text(
                                 'XP',
-                                style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -161,12 +198,16 @@ class AchievementsScreen extends StatelessWidget {
                       children: [
                         Text(
                           'Next Up: $nextTierName',
-                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           'Earn ${targetXP - explorerXP} more XP to level up. Submit verified logs, vote on routes, or verify checkins.',
-                          style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.4),
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 12, height: 1.4),
                         ),
                       ],
                     ),
@@ -179,7 +220,11 @@ class AchievementsScreen extends StatelessWidget {
             // Achievements Grid
             const Text(
               'UNLOCKED MILESTONES',
-              style: TextStyle(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+              style: TextStyle(
+                  color: Colors.white60,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0),
             ),
             const SizedBox(height: 12),
             GridView.count(
@@ -190,12 +235,18 @@ class AchievementsScreen extends StatelessWidget {
               mainAxisSpacing: 12,
               childAspectRatio: 0.8,
               children: [
-                _buildBadgeCard('Dhaka Voyager', Icons.location_city, explorerXP > 0, AppColors.mintGreen),
-                _buildBadgeCard('Safety First', Icons.security, explorerXP >= 25, AppColors.leafGreen),
-                _buildBadgeCard('Trek Pioneer', Icons.landscape, explorerXP >= 50, AppColors.midGreen),
-                _buildBadgeCard('Route Judge', Icons.verified_user, explorerXP >= 100, AppColors.gold),
-                _buildBadgeCard('Elite Leader', Icons.workspace_premium, explorerXP >= 150, Colors.redAccent),
-                _buildBadgeCard('Pinnacle', Icons.star, explorerXP >= 250, Colors.purpleAccent),
+                _buildBadgeCard('Dhaka Voyager', Icons.location_city,
+                    explorerXP > 0, AppColors.mintGreen),
+                _buildBadgeCard('Safety First', Icons.security,
+                    explorerXP >= 25, AppColors.leafGreen),
+                _buildBadgeCard('Trek Pioneer', Icons.landscape,
+                    explorerXP >= 50, AppColors.midGreen),
+                _buildBadgeCard('Route Judge', Icons.verified_user,
+                    explorerXP >= 100, AppColors.gold),
+                _buildBadgeCard('Elite Leader', Icons.workspace_premium,
+                    explorerXP >= 150, Colors.redAccent),
+                _buildBadgeCard('Pinnacle', Icons.star, explorerXP >= 250,
+                    Colors.purpleAccent),
               ],
             ),
             const SizedBox(height: 28),
@@ -203,7 +254,11 @@ class AchievementsScreen extends StatelessWidget {
             // Leaderboard list
             const Text(
               'LEADERBOARD RANKINGS',
-              style: TextStyle(color: Colors.white60, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+              style: TextStyle(
+                  color: Colors.white60,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.0),
             ),
             const SizedBox(height: 12),
             Container(
@@ -215,10 +270,15 @@ class AchievementsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   _buildLeaderRow(1, 'Adnan Chowdhury', 'Pioneer', 485, true),
-                  _buildLeaderRow(2, 'Sadia Rahman', 'Region Expert', 310, false),
-                  _buildLeaderRow(3, explorerName, explorerTier.displayName, explorerXP, false, isCurrentUser: true),
-                  _buildLeaderRow(4, 'Farhan Ishraq', 'Verified Explorer', 145, false),
-                  _buildLeaderRow(5, 'Tasmia Nuren', 'Community Explorer', 85, false),
+                  _buildLeaderRow(
+                      2, 'Sadia Rahman', 'Region Expert', 310, false),
+                  _buildLeaderRow(3, explorerName, explorerTier.displayName,
+                      explorerXP, false,
+                      isCurrentUser: true),
+                  _buildLeaderRow(
+                      4, 'Farhan Ishraq', 'Verified Explorer', 145, false),
+                  _buildLeaderRow(
+                      5, 'Tasmia Nuren', 'Community Explorer', 85, false),
                 ],
               ),
             ),
@@ -229,7 +289,8 @@ class AchievementsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBadgeCard(String name, IconData icon, bool isUnlocked, Color color) {
+  Widget _buildBadgeCard(
+      String name, IconData icon, bool isUnlocked, Color color) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardDark,
@@ -245,7 +306,8 @@ class AchievementsScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircleAvatar(
-              backgroundColor: isUnlocked ? color.withValues(alpha: 0.1) : Colors.white10,
+              backgroundColor:
+                  isUnlocked ? color.withValues(alpha: 0.1) : Colors.white10,
               child: Icon(icon, color: isUnlocked ? color : Colors.white30),
             ),
             const SizedBox(height: 8),
@@ -273,12 +335,17 @@ class AchievementsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLeaderRow(int rank, String name, String tier, int xp, bool isFirst, {bool isCurrentUser = false}) {
+  Widget _buildLeaderRow(
+      int rank, String name, String tier, int xp, bool isFirst,
+      {bool isCurrentUser = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: isCurrentUser ? AppColors.mintGreen.withValues(alpha: 0.08) : Colors.transparent,
-        border: const Border(bottom: BorderSide(color: Colors.white10, width: 0.5)),
+        color: isCurrentUser
+            ? AppColors.mintGreen.withValues(alpha: 0.08)
+            : Colors.transparent,
+        border:
+            const Border(bottom: BorderSide(color: Colors.white10, width: 0.5)),
       ),
       child: Row(
         children: [
@@ -287,7 +354,9 @@ class AchievementsScreen extends StatelessWidget {
             child: Text(
               '#$rank',
               style: TextStyle(
-                color: isFirst ? AppColors.gold : (isCurrentUser ? AppColors.mintGreen : Colors.white60),
+                color: isFirst
+                    ? AppColors.gold
+                    : (isCurrentUser ? AppColors.mintGreen : Colors.white60),
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),
@@ -302,7 +371,8 @@ class AchievementsScreen extends StatelessWidget {
                   name,
                   style: TextStyle(
                     color: isCurrentUser ? AppColors.mintGreen : Colors.white,
-                    fontWeight: isCurrentUser ? FontWeight.bold : FontWeight.w500,
+                    fontWeight:
+                        isCurrentUser ? FontWeight.bold : FontWeight.w500,
                     fontSize: 13,
                   ),
                 ),
@@ -315,7 +385,8 @@ class AchievementsScreen extends StatelessWidget {
           ),
           Text(
             '$xp XP',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
           ),
         ],
       ),

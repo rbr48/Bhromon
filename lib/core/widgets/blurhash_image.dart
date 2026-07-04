@@ -36,13 +36,15 @@ class BlurHashImage extends StatelessWidget {
           : Container(
               color: context.surfaceElevated,
               child: const Center(
-                child: Icon(Icons.image_outlined, color: Colors.white10, size: 24),
+                child:
+                    Icon(Icons.image_outlined, color: Colors.white10, size: 24),
               ),
             ),
       errorWidget: (context, url, error) => Container(
         color: context.surfaceElevated,
         child: const Center(
-          child: Icon(Icons.image_not_supported_outlined, color: Colors.white24, size: 28),
+          child: Icon(Icons.image_not_supported_outlined,
+              color: Colors.white24, size: 28),
         ),
       ),
     );

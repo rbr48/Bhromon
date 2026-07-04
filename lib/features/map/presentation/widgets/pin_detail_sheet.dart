@@ -13,7 +13,6 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/value_objects/trust_tier.dart';
 import '../../../../core/services/weather_service.dart';
 import '../../../../core/services/discovery_score_service.dart';
-import '../../../../core/services/deep_link_service.dart';
 
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
@@ -32,7 +31,8 @@ class PinDetailSheet extends StatefulWidget {
   });
 
   /// Show pin detail as a full DraggableScrollableSheet (Google Maps style)
-  static void show(BuildContext context, LocationPin pin, {Position? currentPosition}) {
+  static void show(BuildContext context, LocationPin pin,
+      {Position? currentPosition}) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -77,23 +77,20 @@ class _PinDetailSheetState extends State<PinDetailSheet>
   bool _loadingWeather = true;
   bool _hasVoted = false;
 
-
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 350));
-    _fadeAnim =
-        CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _animController.forward();
     _loadWeather();
     _recordVisit();
-
   }
 
   Future<void> _loadWeather() async {
-    final data = await WeatherService.getCurrentWeather(
-        widget.pin.lat, widget.pin.lng);
+    final data =
+        await WeatherService.getCurrentWeather(widget.pin.lat, widget.pin.lng);
     if (mounted) {
       setState(() {
         _weather = data;
@@ -125,22 +122,38 @@ class _PinDetailSheetState extends State<PinDetailSheet>
 
   IconData _categoryIcon(String cat) {
     switch (cat.toLowerCase()) {
-      case 'waterfall': return Icons.water;
-      case 'beach': return Icons.beach_access;
-      case 'temple': return Icons.account_balance;
-      case 'mosque': return Icons.mosque;
-      case 'church': return Icons.church;
-      case 'forest': return Icons.forest;
-      case 'market': return Icons.storefront;
-      case 'heritage': return Icons.museum;
-      case 'hill': return Icons.landscape;
-      case 'lake': return Icons.water_outlined;
-      case 'river': return Icons.water_damage;
-      case 'restaurant': return Icons.restaurant;
-      case 'hotel': return Icons.hotel;
-      case 'park': return Icons.park;
-      case 'mountain': return Icons.terrain;
-      default: return Icons.place;
+      case 'waterfall':
+        return Icons.water;
+      case 'beach':
+        return Icons.beach_access;
+      case 'temple':
+        return Icons.account_balance;
+      case 'mosque':
+        return Icons.mosque;
+      case 'church':
+        return Icons.church;
+      case 'forest':
+        return Icons.forest;
+      case 'market':
+        return Icons.storefront;
+      case 'heritage':
+        return Icons.museum;
+      case 'hill':
+        return Icons.landscape;
+      case 'lake':
+        return Icons.water_outlined;
+      case 'river':
+        return Icons.water_damage;
+      case 'restaurant':
+        return Icons.restaurant;
+      case 'hotel':
+        return Icons.hotel;
+      case 'park':
+        return Icons.park;
+      case 'mountain':
+        return Icons.terrain;
+      default:
+        return Icons.place;
     }
   }
 
@@ -149,19 +162,26 @@ class _PinDetailSheetState extends State<PinDetailSheet>
       case 'waterfall':
       case 'lake':
       case 'river':
-      case 'beach': return const Color(0xFF00B4D8);
+      case 'beach':
+        return const Color(0xFF00B4D8);
       case 'forest':
-      case 'park': return const Color(0xFF52B788);
+      case 'park':
+        return const Color(0xFF52B788);
       case 'temple':
       case 'mosque':
       case 'church':
-      case 'heritage': return const Color(0xFFF4A261);
+      case 'heritage':
+        return const Color(0xFFF4A261);
       case 'hill':
-      case 'mountain': return const Color(0xFF6D6875);
+      case 'mountain':
+        return const Color(0xFF6D6875);
       case 'market':
-      case 'restaurant': return const Color(0xFFE76F51);
-      case 'hotel': return const Color(0xFF74C69D);
-      default: return AppColors.mintGreen;
+      case 'restaurant':
+        return const Color(0xFFE76F51);
+      case 'hotel':
+        return const Color(0xFF74C69D);
+      default:
+        return AppColors.mintGreen;
     }
   }
 
@@ -364,7 +384,9 @@ class _PinDetailSheetState extends State<PinDetailSheet>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  _quickStat(Icons.star_rounded, AppColors.gold,
+                  _quickStat(
+                      Icons.star_rounded,
+                      AppColors.gold,
                       pin.averageRating > 0
                           ? pin.averageRating.toStringAsFixed(1)
                           : 'N/A'),
@@ -489,11 +511,11 @@ class _PinDetailSheetState extends State<PinDetailSheet>
       onTap: () => setState(() => _activeTab = index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color:
-              selected ? AppColors.mintGreen : Colors.white.withValues(alpha: 0.06),
+          color: selected
+              ? AppColors.mintGreen
+              : Colors.white.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
               color: selected
@@ -552,14 +574,12 @@ class _PinDetailSheetState extends State<PinDetailSheet>
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline,
-                      color: Colors.white38, size: 16),
+                  Icon(Icons.info_outline, color: Colors.white38, size: 16),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'No description yet. Be the first to add one by creating a trip log!',
-                      style:
-                          TextStyle(color: Colors.white38, fontSize: 12),
+                      style: TextStyle(color: Colors.white38, fontSize: 12),
                     ),
                   ),
                 ],
@@ -585,8 +605,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
           else if (_weather != null)
             Container(
               margin: const EdgeInsets.only(bottom: 16),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: _weather!.isSafeToVisit
@@ -596,13 +615,11 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(14),
-                border:
-                    Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
               ),
               child: Row(
                 children: [
-                  Text(_weather!.emoji,
-                      style: const TextStyle(fontSize: 28)),
+                  Text(_weather!.emoji, style: const TextStyle(fontSize: 28)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -624,8 +641,8 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: _weather!.isSafeToVisit
                           ? Colors.green.withValues(alpha: 0.2)
@@ -702,13 +719,13 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                   children: [
                     Text(
                       'Last confirmed: ${_formatDate(pin.lastConfirmed)}',
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 10),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 10),
                     ),
                     Text(
                       '${pin.linkedTripIds.length} logs • ${pin.linkedTipIds.length} tips',
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 10),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 10),
                     ),
                   ],
                 ),
@@ -758,41 +775,120 @@ class _PinDetailSheetState extends State<PinDetailSheet>
   }
 
   Widget _buildTravelLogsTab(LocationPin pin) {
+    final authState = context.watch<AuthCubit>().state;
+    final currentUid = authState is Authenticated ? authState.profile.uid : '';
+
+    if (currentUid.isEmpty) {
+      // Guests can only see community logs
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('trip_logs')
+            .where('locationPinId', isEqualTo: pin.pinId)
+            .where('visibility', isEqualTo: 'community')
+            .orderBy('createdAt', descending: true)
+            .limit(20)
+            .snapshots(),
+        builder: (ctx, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(
+                  color: AppColors.mintGreen, strokeWidth: 2),
+            );
+          }
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
+            return _emptyState(
+              Icons.article_outlined,
+              'No travel logs yet',
+              'Be the first to share your experience at ${pin.name}!',
+            );
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: docs.length,
+            itemBuilder: (ctx, i) {
+              final data = docs[i].data() as Map<String, dynamic>;
+              data['tripId'] = docs[i].id;
+              TripLog log;
+              try {
+                log = TripLog.fromJson(data);
+              } catch (_) {
+                return const SizedBox.shrink();
+              }
+              return _buildTripLogCard(log);
+            },
+          );
+        },
+      );
+    }
+
+    // Authenticated users:
+    final followsStream = FirebaseFirestore.instance
+        .collection('follows')
+        .where('followerId', isEqualTo: currentUid)
+        .snapshots();
+
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('trip_logs')
-          .where('locationPinId', isEqualTo: pin.pinId)
-          .orderBy('createdAt', descending: true)
-          .limit(20)
-          .snapshots(),
-      builder: (ctx, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(
-                color: AppColors.mintGreen, strokeWidth: 2),
-          );
-        }
-        final docs = snapshot.data?.docs ?? [];
-        if (docs.isEmpty) {
-          return _emptyState(
-            Icons.article_outlined,
-            'No travel logs yet',
-            'Be the first to share your experience at ${pin.name}!',
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: docs.length,
-          itemBuilder: (ctx, i) {
-            final data = docs[i].data() as Map<String, dynamic>;
-            data['tripId'] = docs[i].id;
-            TripLog log;
-            try {
-              log = TripLog.fromJson(data);
-            } catch (_) {
-              return const SizedBox.shrink();
+      stream: followsStream,
+      builder: (ctx, followsSnapshot) {
+        final followedUids = (followsSnapshot.data?.docs ?? [])
+            .map((doc) =>
+                (doc.data() as Map<String, dynamic>)['followedId']
+                    ?.toString() ??
+                '')
+            .where((uid) => uid.isNotEmpty)
+            .toSet();
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('trip_logs')
+              .where('locationPinId', isEqualTo: pin.pinId)
+              .orderBy('createdAt', descending: true)
+              .limit(20)
+              .snapshots(),
+          builder: (ctx, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(
+                    color: AppColors.mintGreen, strokeWidth: 2),
+              );
             }
-            return _buildTripLogCard(log);
+            final rawDocs = snapshot.data?.docs ?? [];
+            final docs = rawDocs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final visibility = data['visibility']?.toString() ?? 'community';
+              final authorId = data['authorId']?.toString() ?? '';
+
+              if (authorId == currentUid) return true;
+              if (visibility == 'private') return false;
+              if (visibility == 'friends') {
+                return followedUids.contains(authorId);
+              }
+              return true;
+            }).toList();
+
+            if (docs.isEmpty) {
+              return _emptyState(
+                Icons.article_outlined,
+                'No travel logs yet',
+                'Be the first to share your experience at ${pin.name}!',
+              );
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: docs.length,
+              itemBuilder: (ctx, i) {
+                final data = docs[i].data() as Map<String, dynamic>;
+                data['tripId'] = docs[i].id;
+                TripLog log;
+                try {
+                  log = TripLog.fromJson(data);
+                } catch (_) {
+                  return const SizedBox.shrink();
+                }
+                return _buildTripLogCard(log);
+              },
+            );
           },
         );
       },
@@ -806,7 +902,8 @@ class _PinDetailSheetState extends State<PinDetailSheet>
     for (final block in log.blocks) {
       if (block is ImageBlock) {
         final url = block.storageUrl;
-        if (url.isNotEmpty && (url.startsWith('http') || url.startsWith('https'))) {
+        if (url.isNotEmpty &&
+            (url.startsWith('http') || url.startsWith('https'))) {
           thumbUrl = url;
           break;
         }
@@ -845,8 +942,8 @@ class _PinDetailSheetState extends State<PinDetailSheet>
             // Content
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -942,9 +1039,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                     value: score / 100,
                     backgroundColor: Colors.white12,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      score >= 60
-                          ? const Color(0xFF52B788)
-                          : Colors.white38,
+                      score >= 60 ? const Color(0xFF52B788) : Colors.white38,
                     ),
                     minHeight: 5,
                   ),
@@ -979,9 +1074,8 @@ class _PinDetailSheetState extends State<PinDetailSheet>
     final name = authState is Authenticated
         ? authState.profile.displayName
         : 'Guest Explorer';
-    final tierName = authState is Authenticated
-        ? authState.profile.tier.name
-        : 'unverified';
+    final tierName =
+        authState is Authenticated ? authState.profile.tier.name : 'unverified';
 
     return Column(
       children: [
@@ -1016,8 +1110,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                   final String text = (data['text'] as String?) ?? '';
                   final authorName =
                       data['authorName'] as String? ?? 'Explorer';
-                  final tierStr =
-                      data['tier'] as String? ?? 'unverified';
+                  final tierStr = data['tier'] as String? ?? 'unverified';
                   final tier = TrustTier.values.firstWhere(
                     (t) => t.name == tierStr,
                     orElse: () => TrustTier.unverified,
@@ -1038,8 +1131,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
@@ -1065,8 +1157,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                                       horizontal: 5, vertical: 1),
                                   decoration: BoxDecoration(
                                     color: tipColor.withValues(alpha: 0.12),
-                                    borderRadius:
-                                        BorderRadius.circular(4),
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
                                     tier.displayName.toUpperCase(),
@@ -1082,8 +1173,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                               Text(
                                 _formatDate(ts.toDate()),
                                 style: const TextStyle(
-                                    color: Colors.white30,
-                                    fontSize: 9),
+                                    color: Colors.white30, fontSize: 9),
                               ),
                           ],
                         ),
@@ -1118,17 +1208,16 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextField(
                     controller: _tipController,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 12),
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
                     maxLength: 140,
-                    buildCounter: (_, {required currentLength,
+                    buildCounter: (_,
+                            {required currentLength,
                             required isFocused,
                             maxLength}) =>
                         null,
                     decoration: const InputDecoration(
                       hintText: 'Share a tip (max 140 chars)...',
-                      hintStyle: TextStyle(
-                          color: Colors.white38, fontSize: 11),
+                      hintStyle: TextStyle(color: Colors.white38, fontSize: 11),
                       border: InputBorder.none,
                       counterText: '',
                     ),
@@ -1159,8 +1248,8 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                   },
                   child: const Padding(
                     padding: EdgeInsets.all(8),
-                    child: Icon(Icons.send_rounded,
-                        color: Colors.black, size: 18),
+                    child:
+                        Icon(Icons.send_rounded, color: Colors.black, size: 18),
                   ),
                 ),
               ),
@@ -1176,21 +1265,11 @@ class _PinDetailSheetState extends State<PinDetailSheet>
       padding: EdgeInsets.fromLTRB(16, 8, 16, 12 + bottomPad),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A2E),
-        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+        border: Border(
+            top: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
       ),
       child: Row(
         children: [
-          // Share button
-          Expanded(
-            child: _actionBtn(
-              icon: Icons.share_outlined,
-              label: 'Share',
-              color: const Color(0xFF00B4D8),
-              onTap: () => DeepLinkService.sharePin(pin),
-            ),
-          ),
-          const SizedBox(width: 8),
-
           // Directions → Google Maps
           Expanded(
             child: _actionBtn(
@@ -1201,8 +1280,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                 final url = Uri.parse(
                     'https://www.google.com/maps/search/?api=1&query=${pin.lat},${pin.lng}');
                 if (await canLaunchUrl(url)) {
-                  await launchUrl(url,
-                      mode: LaunchMode.externalApplication);
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
                 }
               },
             ),
@@ -1237,8 +1315,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
               color: AppColors.midGreen,
               onTap: () {
                 Navigator.pop(context);
-                context.push('/editor',
-                    extra: {'pinId': pin.pinId});
+                context.push('/editor', extra: {'pinId': pin.pinId});
               },
             ),
           ),
@@ -1271,9 +1348,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon,
-                  size: 16,
-                  color: filled ? Colors.white : color),
+              Icon(icon, size: 16, color: filled ? Colors.white : color),
               const SizedBox(height: 3),
               Text(
                 label,
@@ -1308,8 +1383,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
             child: Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: Colors.white38, fontSize: 11),
+              style: const TextStyle(color: Colors.white38, fontSize: 11),
             ),
           ),
         ],
@@ -1371,11 +1445,15 @@ class _PinDetailSheetState extends State<PinDetailSheet>
             children: [
               Row(
                 children: [
-                  const Icon(Icons.people_outline, color: AppColors.mintGreen, size: 14),
+                  const Icon(Icons.people_outline,
+                      color: AppColors.mintGreen, size: 14),
                   const SizedBox(width: 6),
                   Text(
                     "Who's Been Here (${docs.length})",
-                    style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 12),
+                    style: const TextStyle(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12),
                   ),
                 ],
               ),
@@ -1384,9 +1462,12 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                 children: [
                   ...docs.take(5).map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
-                    final name = (data['userName'] as String? ?? '?')[0].toUpperCase();
+                    final name =
+                        (data['userName'] as String? ?? '?')[0].toUpperCase();
                     final tierStr = data['tier'] as String? ?? 'unverified';
-                    final tier = TrustTier.values.firstWhere((t) => t.name == tierStr, orElse: () => TrustTier.unverified);
+                    final tier = TrustTier.values.firstWhere(
+                        (t) => t.name == tierStr,
+                        orElse: () => TrustTier.unverified);
                     return Container(
                       width: 36,
                       height: 36,
@@ -1397,13 +1478,18 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                         border: Border.all(color: Colors.white24, width: 1.5),
                       ),
                       child: Center(
-                        child: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                        child: Text(name,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14)),
                       ),
                     );
                   }),
                   if (docs.length > 5)
                     Container(
-                      width: 36, height: 36,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white12,
@@ -1411,7 +1497,10 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                       ),
                       child: Center(
                         child: Text('+${docs.length - 5}',
-                            style: const TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold)),
+                            style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold)),
                       ),
                     ),
                   const Spacer(),
@@ -1449,7 +1538,10 @@ class _PinDetailSheetState extends State<PinDetailSheet>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Is this info still accurate?',
-                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 12)),
+                  style: TextStyle(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12)),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -1479,7 +1571,11 @@ class _PinDetailSheetState extends State<PinDetailSheet>
     );
   }
 
-  Widget _voteBtn({required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+  Widget _voteBtn(
+      {required IconData icon,
+      required String label,
+      required Color color,
+      required VoidCallback onTap}) {
     return GestureDetector(
       onTap: _hasVoted ? null : onTap,
       child: Container(
@@ -1494,7 +1590,9 @@ class _PinDetailSheetState extends State<PinDetailSheet>
           children: [
             Icon(icon, color: color, size: 14),
             const SizedBox(width: 6),
-            Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+            Text(label,
+                style: TextStyle(
+                    color: color, fontSize: 11, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -1512,9 +1610,12 @@ class _PinDetailSheetState extends State<PinDetailSheet>
           .update({field: FieldValue.increment(1)});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(isAccurate ? '👍 Thanks for confirming!' : '👎 Thanks for the feedback!'),
-                 duration: const Duration(seconds: 2)),
-      );
+          SnackBar(
+              content: Text(isAccurate
+                  ? '👍 Thanks for confirming!'
+                  : '👎 Thanks for the feedback!'),
+              duration: const Duration(seconds: 2)),
+        );
       }
     } catch (_) {
       setState(() => _hasVoted = false);

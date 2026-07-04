@@ -51,7 +51,8 @@ class SecureNetworkClient {
     if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) {
       dio.httpClientAdapter = IOHttpClientAdapter(
         createHttpClient: () {
-          final client = HttpClient(context: SecurityContext(withTrustedRoots: true));
+          final client =
+              HttpClient(context: SecurityContext(withTrustedRoots: true));
           client.badCertificateCallback = _verifyCertificate;
           return client;
         },
@@ -218,7 +219,8 @@ class _LoggingInterceptor extends Interceptor {
   }
 
   @override
-  void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
+  void onResponse(
+      Response<dynamic> response, ResponseInterceptorHandler handler) {
     logDebug(
       '← ${response.statusCode} ${response.requestOptions.method} '
       '${response.requestOptions.uri}',

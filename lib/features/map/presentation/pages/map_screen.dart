@@ -108,9 +108,11 @@ class _MapScreenState extends State<MapScreen> {
   double? _lastCirclesZoom;
   int? _lastCirclesHash;
 
-  _MapLocationTrackingMode _currentTrackingMode = _MapLocationTrackingMode.moving;
+  _MapLocationTrackingMode _currentTrackingMode =
+      _MapLocationTrackingMode.moving;
   StreamSubscription<Position>? _positionStreamSubscription;
-  final ValueNotifier<Position?> _positionNotifier = ValueNotifier<Position?>(null);
+  final ValueNotifier<Position?> _positionNotifier =
+      ValueNotifier<Position?>(null);
 
   // For resolving proximity tap correctly when multiple circles overlap
   final Map<String, LocationPin> _circleIdToPin = {};
@@ -118,8 +120,10 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
-    _currentStyle = brightness == Brightness.dark ? _MapStyle.dark : _MapStyle.light;
+    final brightness =
+        WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    _currentStyle =
+        brightness == Brightness.dark ? _MapStyle.dark : _MapStyle.light;
     _mapStyleUrl = _currentStyle.url;
     _determinePosition();
     _watchConnectivity();
@@ -259,7 +263,8 @@ class _MapScreenState extends State<MapScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please enable location services (GPS) for maps navigation.'),
+              content: Text(
+                  'Please enable location services (GPS) for maps navigation.'),
               duration: Duration(seconds: 4),
             ),
           );
@@ -277,11 +282,13 @@ class _MapScreenState extends State<MapScreen> {
         _positionNotifier.value = pos;
         _checkAndSuggestOfflineDownload(pos);
         _mapController?.animateCamera(CameraUpdate.newCameraPosition(
-          CameraPosition(target: LatLng(pos.latitude, pos.longitude), zoom: 11.0),
+          CameraPosition(
+              target: LatLng(pos.latitude, pos.longitude), zoom: 11.0),
         ));
-        context.read<MapBloc>().add(
-            LoadPinsEvent(lat: pos.latitude, lng: pos.longitude));
-        
+        context
+            .read<MapBloc>()
+            .add(LoadPinsEvent(lat: pos.latitude, lng: pos.longitude));
+
         // Initialize location tracking stream now that we have permission
         _initPositionStream();
       }
@@ -290,21 +297,27 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-
-
   void _useDefaultLocation() {
     if (!mounted) return;
     setState(() {
       _currentPosition = Position(
-        latitude: 23.6850, longitude: 90.3563,
+        latitude: 23.6850,
+        longitude: 90.3563,
         timestamp: DateTime.now(),
-        accuracy: 0, altitude: 0, altitudeAccuracy: 0,
-        heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0,
+        accuracy: 0,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: 0,
+        headingAccuracy: 0,
+        speed: 0,
+        speedAccuracy: 0,
       );
       _loadingLocation = false;
     });
     _positionNotifier.value = _currentPosition;
-    context.read<MapBloc>().add(const LoadPinsEvent(lat: 23.6850, lng: 90.3563));
+    context
+        .read<MapBloc>()
+        .add(const LoadPinsEvent(lat: 23.6850, lng: 90.3563));
   }
 
   // ── Map Helpers ────────────────────────────────────────────────────────────
@@ -384,7 +397,8 @@ class _MapScreenState extends State<MapScreen> {
       if (highZoom) {
         final optionsList = pins.map((pin) {
           final Color color = AppColors.forTier(pin.trustTier);
-          final String hex = '#${color.toARGB32().toRadixString(16).substring(2).padLeft(6, '0')}';
+          final String hex =
+              '#${color.toARGB32().toRadixString(16).substring(2).padLeft(6, '0')}';
           return CircleOptions(
             geometry: LatLng(pin.lat, pin.lng),
             circleColor: hex,
@@ -413,14 +427,20 @@ class _MapScreenState extends State<MapScreen> {
               (pin.lng - (cluster['lng'] as double)).abs() < threshold) {
             final list = cluster['pins'] as List<LocationPin>;
             list.add(pin);
-            cluster['lat'] = list.map((p) => p.lat).reduce((a, b) => a + b) / list.length;
-            cluster['lng'] = list.map((p) => p.lng).reduce((a, b) => a + b) / list.length;
+            cluster['lat'] =
+                list.map((p) => p.lat).reduce((a, b) => a + b) / list.length;
+            cluster['lng'] =
+                list.map((p) => p.lng).reduce((a, b) => a + b) / list.length;
             merged = true;
             break;
           }
         }
         if (!merged) {
-          clusters.add({'lat': pin.lat, 'lng': pin.lng, 'pins': [pin]});
+          clusters.add({
+            'lat': pin.lat,
+            'lng': pin.lng,
+            'pins': [pin]
+          });
         }
       }
 
@@ -432,7 +452,8 @@ class _MapScreenState extends State<MapScreen> {
         if (list.length == 1) {
           final pin = list.first;
           final Color color = AppColors.forTier(pin.trustTier);
-          final String hex = '#${color.toARGB32().toRadixString(16).substring(2).padLeft(6, '0')}';
+          final String hex =
+              '#${color.toARGB32().toRadixString(16).substring(2).padLeft(6, '0')}';
           optionsList.add(CircleOptions(
             geometry: LatLng(pin.lat, pin.lng),
             circleColor: hex,
@@ -536,7 +557,10 @@ class _MapScreenState extends State<MapScreen> {
       final lngD = (p.lng - latlng.longitude).abs();
       if (latD < threshold && lngD < threshold) {
         final d = latD * latD + lngD * lngD;
-        if (d < minDist) { minDist = d; closest = p; }
+        if (d < minDist) {
+          minDist = d;
+          closest = p;
+        }
       }
     }
     return closest;
@@ -582,12 +606,14 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
-    final explorerName =
-        authState is Authenticated ? authState.profile.displayName : 'Guest Explorer';
+    final explorerName = authState is Authenticated
+        ? authState.profile.displayName
+        : 'Guest Explorer';
     final explorerScore =
         authState is Authenticated ? authState.profile.explorerScore.value : 0;
-    final explorerTier =
-        authState is Authenticated ? authState.profile.tier : TrustTier.unverified;
+    final explorerTier = authState is Authenticated
+        ? authState.profile.tier
+        : TrustTier.unverified;
 
     return PopScope(
       canPop: false,
@@ -735,7 +761,8 @@ class _MapScreenState extends State<MapScreen> {
                           CircleAvatar(
                             radius: 20,
                             backgroundColor: AppColors.forTier(explorerTier),
-                            child: const Icon(Icons.person, color: Colors.white, size: 20),
+                            child: const Icon(Icons.person,
+                                color: Colors.white, size: 20),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -752,7 +779,8 @@ class _MapScreenState extends State<MapScreen> {
                                 Text(
                                   '${explorerTier.displayName} • $explorerScore pts',
                                   style: TextStyle(
-                                      color: AppColors.mintGreen.withValues(alpha: 0.9),
+                                      color: AppColors.mintGreen
+                                          .withValues(alpha: 0.9),
                                       fontWeight: FontWeight.w500,
                                       fontSize: 11),
                                 ),
@@ -770,12 +798,13 @@ class _MapScreenState extends State<MapScreen> {
                               ),
                             ),
                             child: IconButton(
-                              icon: const Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+                              icon: const Icon(Icons.warning_amber_rounded,
+                                  color: Colors.redAccent),
                               iconSize: 22,
                               onPressed: () => showDialog<void>(
                                 context: context,
-                                builder: (_) =>
-                                    SosHubDialog(currentPosition: _currentPosition),
+                                builder: (_) => SosHubDialog(
+                                    currentPosition: _currentPosition),
                               ),
                             ),
                           ),
@@ -816,11 +845,13 @@ class _MapScreenState extends State<MapScreen> {
                             }
                           });
                         },
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
                         decoration: InputDecoration(
                           hintText: 'Search — Sajek, Cox\'s Bazar, waterfall…',
-                          hintStyle:
-                              TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
+                          hintStyle: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 12),
                           prefixIcon: const Icon(Icons.search,
                               color: AppColors.mintGreen, size: 20),
                           suffixIcon: _searchController.text.isNotEmpty
@@ -853,8 +884,12 @@ class _MapScreenState extends State<MapScreen> {
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: ['All', 'Verified Safety', 'Verified Business', 'Active Hubs']
-                        .map((filter) {
+                    children: [
+                      'All',
+                      'Verified Safety',
+                      'Verified Business',
+                      'Active Hubs'
+                    ].map((filter) {
                       final sel = _activeFilter == filter;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -870,15 +905,17 @@ class _MapScreenState extends State<MapScreen> {
                               filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: sel 
-                                      ? AppColors.mintGreen.withValues(alpha: 0.9) 
+                                  color: sel
+                                      ? AppColors.mintGreen
+                                          .withValues(alpha: 0.9)
                                       : Colors.black.withValues(alpha: 0.55),
                                   borderRadius: BorderRadius.circular(18),
                                   border: Border.all(
-                                    color: sel 
-                                        ? AppColors.mintGreen 
+                                    color: sel
+                                        ? AppColors.mintGreen
                                         : Colors.white.withValues(alpha: 0.15),
                                     width: 1.5,
                                   ),
@@ -887,7 +924,8 @@ class _MapScreenState extends State<MapScreen> {
                                   child: Text(
                                     filter,
                                     style: TextStyle(
-                                      color: sel ? Colors.black87 : Colors.white,
+                                      color:
+                                          sel ? Colors.black87 : Colors.white,
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -985,7 +1023,8 @@ class _MapScreenState extends State<MapScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _hudRow(Icons.speed, '${speed.toStringAsFixed(1)} km/h'),
+                            _hudRow(Icons.speed,
+                                '${speed.toStringAsFixed(1)} km/h'),
                             const SizedBox(height: 6),
                             _hudRow(Icons.terrain_rounded,
                                 '${altitude.toStringAsFixed(0)} m'),
@@ -1000,8 +1039,6 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
 
-
-
               // ── 7. Map Controls (right side) ────────────────────────────
               Positioned(
                 right: 16,
@@ -1013,7 +1050,8 @@ class _MapScreenState extends State<MapScreen> {
                     const SizedBox(height: 8),
 
                     // Recenter
-                    _mapFab('recenter', Icons.my_location, AppColors.mintGreen, () {
+                    _mapFab('recenter', Icons.my_location, AppColors.mintGreen,
+                        () {
                       if (_currentPosition != null) {
                         _mapController?.animateCamera(
                             CameraUpdate.newCameraPosition(CameraPosition(
@@ -1093,8 +1131,14 @@ class _MapScreenState extends State<MapScreen> {
                     _extFab(Icons.edit_note, 'Log Trip', AppColors.midGreen,
                         () => context.push('/editor')),
                     const SizedBox(height: 10),
-                    _extFab(Icons.explore_outlined, 'AR Compass', const Color(0xFF8A2BE2),
-                        () => context.push('/ar', extra: {'nearbyPins': _filteredPins, 'currentPosition': _currentPosition})),
+                    _extFab(
+                        Icons.explore_outlined,
+                        'AR Compass',
+                        const Color(0xFF8A2BE2),
+                        () => context.push('/ar', extra: {
+                              'nearbyPins': _filteredPins,
+                              'currentPosition': _currentPosition
+                            })),
                     const SizedBox(height: 10),
                     _extFab(Icons.cloud_download_outlined, 'Offline Vault',
                         AppColors.leafGreen, () => context.push('/vault')),
@@ -1134,11 +1178,12 @@ class _MapScreenState extends State<MapScreen> {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.touch_app, color: AppColors.mintGreen, size: 16),
+                          Icon(Icons.touch_app,
+                              color: AppColors.mintGreen, size: 16),
                           SizedBox(width: 8),
                           Text('Tap pins to build your route',
-                              style: TextStyle(
-                                  color: Colors.white, fontSize: 13)),
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 13)),
                         ],
                       ),
                     ),
@@ -1153,8 +1198,6 @@ class _MapScreenState extends State<MapScreen> {
 
   // ── Widget Builders ────────────────────────────────────────────────────────
 
-
-
   Widget _hudRow(IconData icon, String text) {
     return Row(
       children: [
@@ -1163,15 +1206,17 @@ class _MapScreenState extends State<MapScreen> {
         Flexible(
           child: Text(text,
               style: const TextStyle(
-                  color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold),
               overflow: TextOverflow.ellipsis),
         ),
       ],
     );
   }
 
-  Widget _mapFab(String tag, IconData icon, Color iconColor,
-      VoidCallback onTap, {Color? bgColor}) {
+  Widget _mapFab(String tag, IconData icon, Color iconColor, VoidCallback onTap,
+      {Color? bgColor}) {
     return FloatingActionButton(
       mini: true,
       heroTag: tag,
@@ -1202,8 +1247,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _extFab(
-      IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _extFab(IconData icon, String label, Color color, VoidCallback onTap) {
     return FloatingActionButton.extended(
       heroTag: label,
       onPressed: onTap,
@@ -1218,9 +1262,8 @@ class _MapScreenState extends State<MapScreen> {
     final bp = MediaQuery.of(context).padding.bottom;
     double totalDist = 0;
     for (int i = 0; i < _routePins.length - 1; i++) {
-      totalDist += Geolocator.distanceBetween(
-              _routePins[i].lat, _routePins[i].lng,
-              _routePins[i + 1].lat, _routePins[i + 1].lng) /
+      totalDist += Geolocator.distanceBetween(_routePins[i].lat,
+              _routePins[i].lng, _routePins[i + 1].lat, _routePins[i + 1].lng) /
           1000;
     }
     return Positioned(
@@ -1255,7 +1298,8 @@ class _MapScreenState extends State<MapScreen> {
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1)),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white60, size: 18),
+                  icon:
+                      const Icon(Icons.close, color: Colors.white60, size: 18),
                   onPressed: () {
                     setState(() {
                       _routePins.clear();
@@ -1284,14 +1328,18 @@ class _MapScreenState extends State<MapScreen> {
                   children: [
                     Text(
                       '${_routePins.length} stops  •  ${totalDist.toStringAsFixed(1)} km  •  ⏱️ ~${(totalDist * 2).toStringAsFixed(0)} mins',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '🚌 Bus ~৳${(totalDist * 2.5).toStringAsFixed(0)}  '
                       '🛺 CNG ~৳${(totalDist * 6).toStringAsFixed(0)}  '
                       '🏍️ Bike ~৳${(totalDist * 4).toStringAsFixed(0)}',
-                      style: const TextStyle(color: Colors.white38, fontSize: 10),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 10),
                     ),
                   ],
                 ),
@@ -1303,8 +1351,7 @@ class _MapScreenState extends State<MapScreen> {
                         borderRadius: BorderRadius.circular(16)),
                   ),
                   onPressed: () {
-                    _showSnack(
-                        'Itinerary saved: ${_routePins.length} stops!');
+                    _showSnack('Itinerary saved: ${_routePins.length} stops!');
                     setState(() {
                       _routePlanningMode = false;
                       _routePins.clear();
@@ -1335,8 +1382,19 @@ class _MapScreenState extends State<MapScreen> {
     String selectedCategory = 'place';
 
     final categories = [
-      'place', 'waterfall', 'beach', 'temple', 'mosque', 'forest',
-      'market', 'heritage', 'hill', 'lake', 'river', 'park', 'mountain',
+      'place',
+      'waterfall',
+      'beach',
+      'temple',
+      'mosque',
+      'forest',
+      'market',
+      'heritage',
+      'hill',
+      'lake',
+      'river',
+      'park',
+      'mountain',
     ];
 
     showDialog<void>(
@@ -1357,8 +1415,7 @@ class _MapScreenState extends State<MapScreen> {
                 const SizedBox(height: 12),
                 _dialogField(districtCtrl, 'District *', Icons.location_city),
                 const SizedBox(height: 12),
-                _dialogField(
-                    divisionCtrl, 'Division *', Icons.map_outlined),
+                _dialogField(divisionCtrl, 'Division *', Icons.map_outlined),
                 const SizedBox(height: 16),
                 // Category picker
                 const Align(
@@ -1373,8 +1430,7 @@ class _MapScreenState extends State<MapScreen> {
                   children: categories.map((cat) {
                     final sel = cat == selectedCategory;
                     return GestureDetector(
-                      onTap: () =>
-                          setDialogState(() => selectedCategory = cat),
+                      onTap: () => setDialogState(() => selectedCategory = cat),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 5),
@@ -1384,9 +1440,8 @@ class _MapScreenState extends State<MapScreen> {
                               : Colors.white.withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                              color: sel
-                                  ? AppColors.mintGreen
-                                  : Colors.white24),
+                              color:
+                                  sel ? AppColors.mintGreen : Colors.white24),
                         ),
                         child: Text(cat,
                             style: TextStyle(
@@ -1400,8 +1455,7 @@ class _MapScreenState extends State<MapScreen> {
                 const SizedBox(height: 8),
                 Text(
                   '📍 ${center.latitude.toStringAsFixed(5)}, ${center.longitude.toStringAsFixed(5)}',
-                  style:
-                      const TextStyle(color: Colors.white38, fontSize: 11),
+                  style: const TextStyle(color: Colors.white38, fontSize: 11),
                 ),
               ],
             ),
@@ -1409,7 +1463,8 @@ class _MapScreenState extends State<MapScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -1449,7 +1504,8 @@ class _MapScreenState extends State<MapScreen> {
                 Navigator.pop(ctx);
                 _showSnack('📍 Pin "$name" added!');
               },
-              child: const Text('Create', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Create',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -1457,8 +1513,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _dialogField(
-      TextEditingController ctrl, String hint, IconData icon) {
+  Widget _dialogField(TextEditingController ctrl, String hint, IconData icon) {
     return TextField(
       controller: ctrl,
       style: const TextStyle(color: Colors.white),
@@ -1482,44 +1537,93 @@ class _MapScreenState extends State<MapScreen> {
 
   void _showSnack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   List<LocationPin> _parseNlpQuery(String query) {
     final q = query.toLowerCase().trim();
     // Extract location keywords
-    final districts = ['sylhet', 'chittagong', 'dhaka', 'rajshahi', 'khulna', 'barisal',
-        'mymensingh', 'rangamati', 'bandarban', 'cox\'s bazar', 'coxsbazar', 'sunamganj'];
-    final categories = ['waterfall', 'beach', 'temple', 'mosque', 'forest', 'market',
-        'heritage', 'hill', 'lake', 'river', 'park', 'mountain', 'hotel', 'restaurant'];
-    
+    final districts = [
+      'sylhet',
+      'chittagong',
+      'dhaka',
+      'rajshahi',
+      'khulna',
+      'barisal',
+      'mymensingh',
+      'rangamati',
+      'bandarban',
+      'cox\'s bazar',
+      'coxsbazar',
+      'sunamganj'
+    ];
+    final categories = [
+      'waterfall',
+      'beach',
+      'temple',
+      'mosque',
+      'forest',
+      'market',
+      'heritage',
+      'hill',
+      'lake',
+      'river',
+      'park',
+      'mountain',
+      'hotel',
+      'restaurant'
+    ];
+
     String? districtFilter;
     String? categoryFilter;
-    
+
     for (final d in districts) {
-      if (q.contains(d)) { districtFilter = d; break; }
+      if (q.contains(d)) {
+        districtFilter = d;
+        break;
+      }
     }
     for (final c in categories) {
-      if (q.contains(c)) { categoryFilter = c; break; }
+      if (q.contains(c)) {
+        categoryFilter = c;
+        break;
+      }
     }
-    
+
     // Remove location/category words to get name query
     var nameQuery = q;
-    if (districtFilter != null) nameQuery = nameQuery.replaceAll(districtFilter, '');
-    if (categoryFilter != null) nameQuery = nameQuery.replaceAll(categoryFilter, '');
+    if (districtFilter != null) {
+      nameQuery = nameQuery.replaceAll(districtFilter, '');
+    }
+    if (categoryFilter != null) {
+      nameQuery = nameQuery.replaceAll(categoryFilter, '');
+    }
     // Remove common filler words
-    for (final word in ['near', 'in', 'at', 'around', 'best', 'cheap', 'good']) {
+    for (final word in [
+      'near',
+      'in',
+      'at',
+      'around',
+      'best',
+      'cheap',
+      'good'
+    ]) {
       nameQuery = nameQuery.replaceAll(word, '');
     }
     nameQuery = nameQuery.trim();
-    
-    return _filteredPins.where((p) {
-      bool matchesName = nameQuery.isEmpty || p.name.toLowerCase().contains(nameQuery);
-      bool matchesDistrict = districtFilter == null || p.district.toLowerCase().contains(districtFilter);
-      bool matchesCategory = categoryFilter == null || p.category.toLowerCase() == categoryFilter;
-      return matchesName && matchesDistrict && matchesCategory;
-    }).take(8).toList();
+
+    return _filteredPins
+        .where((p) {
+          bool matchesName =
+              nameQuery.isEmpty || p.name.toLowerCase().contains(nameQuery);
+          bool matchesDistrict = districtFilter == null ||
+              p.district.toLowerCase().contains(districtFilter);
+          bool matchesCategory = categoryFilter == null ||
+              p.category.toLowerCase() == categoryFilter;
+          return matchesName && matchesDistrict && matchesCategory;
+        })
+        .take(8)
+        .toList();
   }
 
   void _showClusterPinsList(List<LocationPin> pins) {
@@ -1552,7 +1656,8 @@ class _MapScreenState extends State<MapScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    const Icon(Icons.maps_home_work_outlined, color: AppColors.mintGreen, size: 20),
+                    const Icon(Icons.maps_home_work_outlined,
+                        color: AppColors.mintGreen, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       'Pins in this Area (${pins.length})',
@@ -1584,7 +1689,8 @@ class _MapScreenState extends State<MapScreen> {
                       margin: const EdgeInsets.only(bottom: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: Colors.white10, width: 0.5),
+                        side:
+                            const BorderSide(color: Colors.white10, width: 0.5),
                       ),
                       child: ListTile(
                         leading: Container(
@@ -1605,7 +1711,8 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                         subtitle: Text(
                           '${pin.category} • ${pin.district}',
-                          style: const TextStyle(color: Colors.white54, fontSize: 11),
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 11),
                         ),
                         trailing: const Icon(
                           Icons.arrow_forward_ios_rounded,
@@ -1641,16 +1748,18 @@ class _MapScreenState extends State<MapScreen> {
         break;
       }
     }
-    
-    if (currentDistrict != null && !_downloadedOfflineDistricts.contains(currentDistrict)) {
+
+    if (currentDistrict != null &&
+        !_downloadedOfflineDistricts.contains(currentDistrict)) {
       final district = currentDistrict;
       if (_suggestedOfflineDistricts.contains(district)) return;
       _suggestedOfflineDistricts.add(district);
-      
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('📍 You are in $district. Download offline map to save data?'),
+            content: Text(
+                '📍 You are in $district. Download offline map to save data?'),
             duration: const Duration(seconds: 7),
             action: SnackBarAction(
               label: 'DOWNLOAD',

@@ -49,8 +49,10 @@ void main() {
     lastConfirmed: DateTime.now(),
     blocks: const [
       TripBlock.text(id: 'txt-1', content: 'Beautiful Dhaka heritage visit'),
-      TripBlock.image(id: 'img-1', storageUrl: 'http://img.jpg', caption: 'Lalbagh'),
-      TripBlock.safetyNote(id: 'safe-1', text: 'Safe for night walks', level: 'info'),
+      TripBlock.image(
+          id: 'img-1', storageUrl: 'http://img.jpg', caption: 'Lalbagh'),
+      TripBlock.safetyNote(
+          id: 'safe-1', text: 'Safe for night walks', level: 'info'),
       TripBlock.costEntry(id: 'cost-1', items: [], currency: 'BDT'),
       TripBlock.route(id: 'route-1', points: [], description: 'Main highway'),
     ],
@@ -73,7 +75,7 @@ void main() {
 
     when(mockFirebaseAuth.currentUser).thenReturn(mockUser);
     when(mockUser.uid).thenReturn('user-123');
-    
+
     bloc = TripLogBloc(
       mockPublishTripLog,
       mockGetTripLogsForPin,
@@ -116,7 +118,8 @@ void main() {
     blocTest<TripLogBloc, TripLogState>(
       'emits [loading, error] when draft loading fails',
       build: () {
-        when(mockLoadDraft(any)).thenAnswer((_) async => const Left(CacheFailure('Failed to load')));
+        when(mockLoadDraft(any)).thenAnswer(
+            (_) async => const Left(CacheFailure('Failed to load')));
         return bloc;
       },
       act: (b) => b.add(const LoadDraftEvent('pin-123')),
@@ -185,9 +188,11 @@ void main() {
     blocTest<TripLogBloc, TripLogState>(
       'emits state with updated dates when UpdateTripDatesEvent is added',
       build: () => bloc,
-      act: (b) => b.add(UpdateTripDatesEvent(startDate: tStartDate, endDate: tEndDate)),
+      act: (b) =>
+          b.add(UpdateTripDatesEvent(startDate: tStartDate, endDate: tEndDate)),
       expect: () => [
-        TripLogState(pinId: '', tripStartDate: tStartDate, tripEndDate: tEndDate),
+        TripLogState(
+            pinId: '', tripStartDate: tStartDate, tripEndDate: tEndDate),
       ],
     );
 
@@ -271,7 +276,8 @@ void main() {
     blocTest<TripLogBloc, TripLogState>(
       'emits [publishing, error] when publishing fails on repository layer',
       build: () {
-        when(mockPublishTripLog(any)).thenAnswer((_) async => const Left(ServerFailure('Publish error')));
+        when(mockPublishTripLog(any)).thenAnswer(
+            (_) async => const Left(ServerFailure('Publish error')));
         return bloc;
       },
       seed: () => TripLogState(

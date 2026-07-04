@@ -128,10 +128,9 @@ class ChatMediaBubble extends StatelessWidget {
         );
       } else {
         // Prefer CDN WebP thumbnail for in-list display; fall back to full URL
-        final displayUrl =
-            (thumbnailUrl != null && thumbnailUrl!.isNotEmpty)
-                ? thumbnailUrl!
-                : mediaUrl!;
+        final displayUrl = (thumbnailUrl != null && thumbnailUrl!.isNotEmpty)
+            ? thumbnailUrl!
+            : mediaUrl!;
         return CachedNetworkImage(
           imageUrl: displayUrl,
           width: double.infinity,

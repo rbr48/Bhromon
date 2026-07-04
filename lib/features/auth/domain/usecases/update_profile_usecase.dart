@@ -6,7 +6,8 @@ import '../../../../core/entities/explorer_profile.dart';
 import '../repositories/i_auth_repository.dart';
 
 @injectable
-class UpdateProfileUseCase implements UseCase<ExplorerProfile, ExplorerProfile> {
+class UpdateProfileUseCase
+    implements UseCase<ExplorerProfile, ExplorerProfile> {
   final IAuthRepository _repository;
 
   UpdateProfileUseCase(this._repository);

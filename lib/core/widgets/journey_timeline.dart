@@ -81,7 +81,8 @@ class _StatPill extends StatelessWidget {
   final String value;
   final String label;
 
-  const _StatPill({required this.emoji, required this.value, required this.label});
+  const _StatPill(
+      {required this.emoji, required this.value, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -163,8 +164,18 @@ class _TimelineEntry extends StatelessWidget {
 
   String get _monthLabel {
     const months = [
-      'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-      'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
+      'জানুয়ারি',
+      'ফেব্রুয়ারি',
+      'মার্চ',
+      'এপ্রিল',
+      'মে',
+      'জুন',
+      'জুলাই',
+      'আগস্ট',
+      'সেপ্টেম্বর',
+      'অক্টোবর',
+      'নভেম্বর',
+      'ডিসেম্বর',
     ];
     return months[entry.date.month - 1];
   }

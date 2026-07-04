@@ -33,7 +33,6 @@ import '../../../../core/widgets/brand_logo_text.dart';
 import '../../../../core/theme/theme_context.dart';
 import '../../../../core/widgets/skeleton.dart';
 
-
 class HomeFeedScreen extends StatefulWidget {
   const HomeFeedScreen({super.key});
 
@@ -41,7 +40,8 @@ class HomeFeedScreen extends StatefulWidget {
   State<HomeFeedScreen> createState() => _HomeFeedScreenState();
 }
 
-class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProviderStateMixin {
+class _HomeFeedScreenState extends State<HomeFeedScreen>
+    with SingleTickerProviderStateMixin {
   late final FeedCubit _feedCubit;
   String _selectedTab = 'Discover';
   StreamSubscription<AuthState>? _authSubscription;
@@ -62,7 +62,15 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
   }
 
   String _getDayOfWeek() {
-    final weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
     return weekdays[DateTime.now().weekday - 1];
   }
 
@@ -138,7 +146,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     _loadSavedLogs();
 
     // Load nearby pins (centered around Dhaka default) from Firestore
-    context.read<MapBloc>().add(const LoadPinsEvent(lat: 23.6850, lng: 90.3563));
+    context
+        .read<MapBloc>()
+        .add(const LoadPinsEvent(lat: 23.6850, lng: 90.3563));
 
     _animationController = AnimationController(
       vsync: this,
@@ -167,7 +177,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
   Future<void> _loadSavedLogs() async {
     try {
       final encryptionService = getIt<HiveEncryptionService>();
-      final box = await encryptionService.openEncryptedBox<dynamic>('saved_logs');
+      final box =
+          await encryptionService.openEncryptedBox<dynamic>('saved_logs');
       setState(() {
         _savedLogs.addAll(box.values.cast<String>());
       });
@@ -195,7 +206,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
   Future<void> _toggleSaveLog(String tripId) async {
     try {
       final encryptionService = getIt<HiveEncryptionService>();
-      final box = await encryptionService.openEncryptedBox<dynamic>('saved_logs');
+      final box =
+          await encryptionService.openEncryptedBox<dynamic>('saved_logs');
       final currentUid = FirebaseAuth.instance.currentUser?.uid;
 
       setState(() {
@@ -203,7 +215,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
           _savedLogs.remove(tripId);
           box.delete(tripId);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Removed from Saved!'), duration: Duration(seconds: 1)),
+            const SnackBar(
+                content: Text('Removed from Saved!'),
+                duration: Duration(seconds: 1)),
           );
           if (currentUid != null) {
             FirebaseFirestore.instance
@@ -223,7 +237,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
           _savedLogs.add(tripId);
           box.put(tripId, tripId);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Saved to your vault!'), duration: Duration(seconds: 1)),
+            const SnackBar(
+                content: Text('Saved to your vault!'),
+                duration: Duration(seconds: 1)),
           );
           if (currentUid != null) {
             FirebaseFirestore.instance
@@ -256,10 +272,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         .doc(log.tripId)
         .collection('reactions')
         .doc(docId);
-    
-    final parentLogRef = FirebaseFirestore.instance
-        .collection('trip_logs')
-        .doc(log.tripId);
+
+    final parentLogRef =
+        FirebaseFirestore.instance.collection('trip_logs').doc(log.tripId);
 
     // Save previous reaction for rollback if needed
     final String? rollbackReaction = _myReactionsCache[log.tripId];
@@ -287,12 +302,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         final freshParentDoc = await transaction.get(parentLogRef);
         if (!freshParentDoc.exists) return;
 
-        final Map<String, dynamic> data = freshParentDoc.data() as Map<String, dynamic>;
+        final Map<String, dynamic> data =
+            freshParentDoc.data() as Map<String, dynamic>;
         final Map<String, int> reactionsMap = Map<String, int>.from(
-          (data['reactions'] as Map<dynamic, dynamic>?)?.map(
-            (k, v) => MapEntry(k.toString(), (v as num).toInt())
-          ) ?? {}
-        );
+            (data['reactions'] as Map<dynamic, dynamic>?)?.map(
+                    (k, v) => MapEntry(k.toString(), (v as num).toInt())) ??
+                {});
 
         if (previousReaction == key) {
           // Un-react: remove reaction
@@ -307,9 +322,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             'reactionKey': key,
             'timestamp': FieldValue.serverTimestamp(),
           });
-          
+
           if (previousReaction != null) {
-            reactionsMap[previousReaction] = (reactionsMap[previousReaction] ?? 1) - 1;
+            reactionsMap[previousReaction] =
+                (reactionsMap[previousReaction] ?? 1) - 1;
             if (reactionsMap[previousReaction]! <= 0) {
               reactionsMap.remove(previousReaction);
             }
@@ -332,7 +348,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     if (query.trim().isEmpty) return;
     try {
       final encryptionService = getIt<HiveEncryptionService>();
-      final box = await encryptionService.openEncryptedBox<dynamic>('user_search_history');
+      final box = await encryptionService
+          .openEncryptedBox<dynamic>('user_search_history');
       final List<String> history = List<String>.from(box.values);
       history.remove(query);
       history.insert(0, query);
@@ -346,8 +363,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     } catch (_) {}
   }
 
-
-
   @override
   void dispose() {
     _authSubscription?.cancel();
@@ -356,7 +371,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     _searchController.dispose();
     super.dispose();
   }
-
 
   void _setupNotificationsListener(String uid) {
     _notificationsSubscription?.cancel();
@@ -371,7 +385,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         if (change.type == DocumentChangeType.added) {
           final data = change.doc.data();
           if (data == null) continue;
-          
+
           final timestamp = data['timestamp'] as Timestamp?;
           if (timestamp != null && _appStartTime != null) {
             // Check if this notification is new (added after app started)
@@ -385,7 +399,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   backgroundColor: AppColors.cardDark.withValues(alpha: 0.95),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -393,12 +408,16 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.mintGreen, fontSize: 13),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.mintGreen,
+                            fontSize: 13),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         body,
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 12),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -433,7 +452,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
       final guestProfile = ExplorerProfile(
         uid: 'explorer_user',
         displayName: 'Guest Explorer',
-        explorerScore: const ExplorerScore(value: 0, tier: TrustTier.unverified),
+        explorerScore:
+            const ExplorerScore(value: 0, tier: TrustTier.unverified),
         tier: TrustTier.unverified,
         badges: const [],
         division: 'Dhaka',
@@ -447,7 +467,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
     final uid = authState is Authenticated ? authState.profile.uid : '';
-    final displayName = authState is Authenticated ? authState.profile.displayName : 'Guest';
+    final displayName =
+        authState is Authenticated ? authState.profile.displayName : 'Guest';
 
     // Specific colors from the ultra mockup
     const Color mockBackground = Color(0xFFF6F5F1);
@@ -462,7 +483,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             final guestProfile = ExplorerProfile(
               uid: 'guest',
               displayName: 'Guest Explorer',
-              explorerScore: const ExplorerScore(value: 0, tier: TrustTier.unverified),
+              explorerScore:
+                  const ExplorerScore(value: 0, tier: TrustTier.unverified),
               tier: TrustTier.unverified,
               badges: const [],
               division: 'Dhaka',
@@ -478,7 +500,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               child: RefreshIndicator(
                 onRefresh: _refreshFeed,
                 color: const Color(0xFF52B788), // Mint-green spinner
-                backgroundColor: const Color(0xFF0D1A12), // Dark card background
+                backgroundColor:
+                    const Color(0xFF0D1A12), // Dark card background
                 child: SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
                   child: Column(
@@ -540,7 +563,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
   Widget _buildAnimatedHeroHeader(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
     final uid = authState is Authenticated ? authState.profile.uid : '';
-    final displayName = authState is Authenticated ? authState.profile.displayName : 'Guest';
+    final displayName =
+        authState is Authenticated ? authState.profile.displayName : 'Guest';
 
     return AnimatedBuilder(
       animation: _animationController,
@@ -597,7 +621,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 ),
               ),
 
-
               // Hero content layout
               SafeArea(
                 bottom: false,
@@ -606,7 +629,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   children: [
                     // Brand top bar
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 12.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18.0, vertical: 12.0),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -625,21 +649,29 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                             Expanded(
                               child: Container(
                                 height: 36,
-                                margin: const EdgeInsets.symmetric(horizontal: 10),
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 10),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                                  border: Border.all(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.18)),
                                 ),
                                 child: TextField(
                                   controller: _searchController,
                                   autofocus: true,
-                                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 13.5),
                                   decoration: InputDecoration(
                                     hintText: 'Search travel logs...',
-                                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12.5),
+                                    hintStyle: TextStyle(
+                                        color:
+                                            Colors.white.withValues(alpha: 0.4),
+                                        fontSize: 12.5),
                                     border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
                                   ),
                                   onChanged: (val) {
                                     setState(() {
@@ -689,14 +721,17 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                 const SizedBox(width: 8),
                                 _buildIconButton(
                                   icon: Icons.tune_rounded,
-                                  onTap: () => _showPersonalizeFeedBottomSheet(context),
+                                  onTap: () =>
+                                      _showPersonalizeFeedBottomSheet(context),
                                 ),
                                 const SizedBox(width: 8),
                                 _buildIconButton(
                                   icon: Icons.account_circle_outlined,
                                   onTap: () {
-                                    final targetUid = uid.isNotEmpty ? uid : 'explorer_user';
-                                    _showProfileNavigationMenu(context, targetUid);
+                                    final targetUid =
+                                        uid.isNotEmpty ? uid : 'explorer_user';
+                                    _showProfileNavigationMenu(
+                                        context, targetUid);
                                   },
                                 ),
                               ],
@@ -708,7 +743,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
 
                     // Greeting Info
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 4.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18.0, vertical: 4.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -731,11 +767,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                           RichText(
                             text: TextSpan(
                               style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: -0.5,
-                                  height: 1.15,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                                height: 1.15,
                               ),
                               children: [
                                 const TextSpan(text: 'Where to next, '),
@@ -759,7 +795,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                       height: 22,
                       decoration: const BoxDecoration(
                         color: Color(0xFFF6F5F1), // mockBackground
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(22)),
                       ),
                     ),
                   ],
@@ -775,8 +812,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
   void _showCommentsBottomSheet(BuildContext context, TripLog log) {
     final TextEditingController commentController = TextEditingController();
     final authState = context.read<AuthCubit>().state;
-    final String currentUserId = authState is Authenticated ? authState.profile.uid : '';
-    final String currentUserName = authState is Authenticated ? authState.profile.displayName : 'Guest User';
+    final String currentUserId =
+        authState is Authenticated ? authState.profile.uid : '';
+    final String currentUserName = authState is Authenticated
+        ? authState.profile.displayName
+        : 'Guest User';
 
     showModalBottomSheet<void>(
       context: context,
@@ -788,15 +828,16 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
       ),
       builder: (context) {
         return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom,
-            ),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.92,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom +
+                MediaQuery.of(context).padding.bottom,
+          ),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.92,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Center(
                   child: Container(
@@ -822,7 +863,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
-                        .collection(log.isArchived ? 'archived_trip_logs' : 'trip_logs')
+                        .collection(
+                            log.isArchived ? 'archived_trip_logs' : 'trip_logs')
                         .doc(log.tripId)
                         .collection('comments')
                         .orderBy('createdAt', descending: false)
@@ -830,11 +872,15 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     builder: (context, snapshot) {
                       if (snapshot.hasError) {
                         return Center(
-                          child: Text('Error loading comments: ${snapshot.error}', style: const TextStyle(color: Colors.red)),
+                          child: Text(
+                              'Error loading comments: ${snapshot.error}',
+                              style: const TextStyle(color: Colors.red)),
                         );
                       }
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator(color: AppColors.midGreen));
+                        return const Center(
+                            child: CircularProgressIndicator(
+                                color: AppColors.midGreen));
                       }
 
                       final docs = snapshot.data?.docs ?? [];
@@ -853,13 +899,19 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                           final doc = docs[index];
                           final data = doc.data() as Map<String, dynamic>;
                           final String commentId = doc.id;
-                          final String authorId = (data['authorId'] as String?) ?? '';
-                          final String authorName = (data['authorName'] as String?) ?? 'Anonymous';
-                          final String content = (data['content'] as String?) ?? '';
-                          final Timestamp? timestamp = data['createdAt'] as Timestamp?;
-                          final DateTime time = timestamp?.toDate() ?? DateTime.now();
+                          final String authorId =
+                              (data['authorId'] as String?) ?? '';
+                          final String authorName =
+                              (data['authorName'] as String?) ?? 'Anonymous';
+                          final String content =
+                              (data['content'] as String?) ?? '';
+                          final Timestamp? timestamp =
+                              data['createdAt'] as Timestamp?;
+                          final DateTime time =
+                              timestamp?.toDate() ?? DateTime.now();
 
-                          final isCommentOwner = currentUserId.isNotEmpty && authorId == currentUserId;
+                          final isCommentOwner = currentUserId.isNotEmpty &&
+                              authorId == currentUserId;
 
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -868,9 +920,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                               children: [
                                 CircleAvatar(
                                   radius: 16,
-                                  backgroundColor: AppColors.mintGreen.withValues(alpha: 0.2),
+                                  backgroundColor: AppColors.mintGreen
+                                      .withValues(alpha: 0.2),
                                   child: Text(
-                                    authorName.isNotEmpty ? authorName[0].toUpperCase() : '?',
+                                    authorName.isNotEmpty
+                                        ? authorName[0].toUpperCase()
+                                        : '?',
                                     style: const TextStyle(
                                       color: AppColors.midGreen,
                                       fontWeight: FontWeight.bold,
@@ -881,7 +936,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
@@ -916,12 +972,15 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                 ),
                                 if (isCommentOwner)
                                   IconButton(
-                                    icon: const Icon(Icons.delete_outline, size: 16, color: Colors.redAccent),
+                                    icon: const Icon(Icons.delete_outline,
+                                        size: 16, color: Colors.redAccent),
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
                                     onPressed: () async {
                                       await FirebaseFirestore.instance
-                                          .collection(log.isArchived ? 'archived_trip_logs' : 'trip_logs')
+                                          .collection(log.isArchived
+                                              ? 'archived_trip_logs'
+                                              : 'trip_logs')
                                           .doc(log.tripId)
                                           .collection('comments')
                                           .doc(commentId)
@@ -948,12 +1007,15 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                         ),
                         child: TextField(
                           controller: commentController,
-                          style: const TextStyle(color: Colors.black87, fontSize: 13.5),
+                          style: const TextStyle(
+                              color: Colors.black87, fontSize: 13.5),
                           decoration: const InputDecoration(
                             hintText: 'Write a comment...',
-                            hintStyle: TextStyle(color: Colors.grey, fontSize: 12.5),
+                            hintStyle:
+                                TextStyle(color: Colors.grey, fontSize: 12.5),
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
                           ),
                         ),
                       ),
@@ -967,14 +1029,18 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
 
                         if (currentUserId.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Please log in to post comments.')),
+                            const SnackBar(
+                                content:
+                                    Text('Please log in to post comments.')),
                           );
                           return;
                         }
 
                         commentController.clear();
                         await FirebaseFirestore.instance
-                            .collection(log.isArchived ? 'archived_trip_logs' : 'trip_logs')
+                            .collection(log.isArchived
+                                ? 'archived_trip_logs'
+                                : 'trip_logs')
                             .doc(log.tripId)
                             .collection('comments')
                             .add({
@@ -1018,7 +1084,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
       _feedCubit.loadFeed(ExplorerProfile(
         uid: 'explorer_user',
         displayName: 'Guest Explorer',
-        explorerScore: const ExplorerScore(value: 0, tier: TrustTier.unverified),
+        explorerScore:
+            const ExplorerScore(value: 0, tier: TrustTier.unverified),
         tier: TrustTier.unverified,
         badges: const [],
         division: 'Dhaka',
@@ -1028,7 +1095,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
   }
 
   // Helper buttons in hero bar
-  Widget _buildIconButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _buildIconButton(
+      {required IconData icon, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1044,7 +1112,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     );
   }
 
-  Widget _buildIconButtonWithDot({required IconData icon, required bool hasNotification, required VoidCallback onTap}) {
+  Widget _buildIconButtonWithDot(
+      {required IconData icon,
+      required bool hasNotification,
+      required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Stack(
@@ -1116,17 +1187,21 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 decoration: BoxDecoration(
                   color: isSelected ? const Color(0xFF1B4332) : Colors.white,
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: isSelected ? const Color(0xFF1B4332) : const Color(0xFFECEAE4),
+                    color: isSelected
+                        ? const Color(0xFF1B4332)
+                        : const Color(0xFFECEAE4),
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF1B4332).withValues(alpha: 0.3),
+                            color:
+                                const Color(0xFF1B4332).withValues(alpha: 0.3),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           )
@@ -1143,7 +1218,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   child: Text(
                     tab['label']!,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : const Color(0xFF5A5A5A),
+                      color:
+                          isSelected ? Colors.white : const Color(0xFF5A5A5A),
                       fontSize: 11.5,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.1,
@@ -1184,8 +1260,13 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 radius: 18,
                 backgroundColor: const Color(0xFF1B4332),
                 child: Text(
-                  displayName.isNotEmpty ? displayName.substring(0, 1).toUpperCase() : 'G',
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                  displayName.isNotEmpty
+                      ? displayName.substring(0, 1).toUpperCase()
+                      : 'G',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1193,14 +1274,16 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 child: GestureDetector(
                   onTap: _navigateToEditor,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF0F2F5),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       "Share your travel experience, $displayName...",
-                      style: const TextStyle(color: Colors.black54, fontSize: 13),
+                      style:
+                          const TextStyle(color: Colors.black54, fontSize: 13),
                     ),
                   ),
                 ),
@@ -1216,18 +1299,33 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             children: [
               TextButton.icon(
                 onPressed: _navigateToEditor,
-                icon: const Icon(Icons.edit_note, color: Color(0xFFE76F51), size: 18),
-                label: const Text('Write Log', style: TextStyle(color: Colors.black87, fontSize: 11.5, fontWeight: FontWeight.w600)),
+                icon: const Icon(Icons.edit_note,
+                    color: Color(0xFFE76F51), size: 18),
+                label: const Text('Write Log',
+                    style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600)),
               ),
               TextButton.icon(
                 onPressed: _navigateToEditor,
-                icon: const Icon(Icons.add_photo_alternate, color: Color(0xFF40916C), size: 18),
-                label: const Text('Photo/Video', style: TextStyle(color: Colors.black87, fontSize: 11.5, fontWeight: FontWeight.w600)),
+                icon: const Icon(Icons.add_photo_alternate,
+                    color: Color(0xFF40916C), size: 18),
+                label: const Text('Photo/Video',
+                    style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600)),
               ),
               TextButton.icon(
                 onPressed: () => context.push('/map'),
-                icon: const Icon(Icons.location_on, color: Color(0xFFFFD166), size: 18),
-                label: const Text('Check-in', style: TextStyle(color: Colors.black87, fontSize: 11.5, fontWeight: FontWeight.w600)),
+                icon: const Icon(Icons.location_on,
+                    color: Color(0xFFFFD166), size: 18),
+                label: const Text('Check-in',
+                    style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -1261,7 +1359,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         }
 
         if (state is FeedLoaded) {
-          final activeLogs = state.logs.where((log) => !log.isArchived).toList();
+          final activeLogs =
+              state.logs.where((log) => !log.isArchived).toList();
           final filteredLogs = activeLogs.where((log) {
             if (_searchQuery.isEmpty) return true;
             final query = _searchQuery.toLowerCase();
@@ -1271,15 +1370,22 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             final matchesBlocks = log.blocks.any((block) {
               return block.when(
                 text: (_, content, __) => content.toLowerCase().contains(query),
-                image: (_, __, caption, ___) => caption.toLowerCase().contains(query),
-                video: (_, __, caption, ___) => caption.toLowerCase().contains(query),
+                image: (_, __, caption, ___) =>
+                    caption.toLowerCase().contains(query),
+                video: (_, __, caption, ___) =>
+                    caption.toLowerCase().contains(query),
                 costEntry: (_, __, ___) => false,
-                route: (_, __, desc) => desc?.toLowerCase().contains(query) ?? false,
+                route: (_, __, desc) =>
+                    desc?.toLowerCase().contains(query) ?? false,
                 safetyNote: (_, text, __) => text.toLowerCase().contains(query),
-                voiceNote: (_, __, ___, ____, transcript) => transcript?.toLowerCase().contains(query) ?? false,
+                voiceNote: (_, __, ___, ____, transcript) =>
+                    transcript?.toLowerCase().contains(query) ?? false,
               );
             });
-            return matchesTitle || matchesDistrict || matchesDivision || matchesBlocks;
+            return matchesTitle ||
+                matchesDistrict ||
+                matchesDivision ||
+                matchesBlocks;
           }).toList();
 
           if (filteredLogs.isEmpty) {
@@ -1325,9 +1431,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         final profile = {
-          'displayName': (data['displayName'] as String?)?.trim().isNotEmpty == true
-              ? data['displayName'] as String
-              : 'Explorer',
+          'displayName':
+              (data['displayName'] as String?)?.trim().isNotEmpty == true
+                  ? data['displayName'] as String
+                  : 'Explorer',
           'avatarUrl': (data['avatarUrl'] as String?) ?? '',
         };
         _profileCache[authorId] = profile;
@@ -1339,9 +1446,15 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     return fallback;
   }
 
-  Widget _buildAvatarWidget(String authorId, String avatarUrl, String name, String initials) {
+  Widget _buildAvatarWidget(
+      String authorId, String avatarUrl, String name, String initials) {
     final displayInitials = name.isNotEmpty
-        ? name.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+        ? name
+            .split(' ')
+            .map((e) => e.isNotEmpty ? e[0] : '')
+            .take(2)
+            .join()
+            .toUpperCase()
         : initials;
     return GestureDetector(
       onTap: () {
@@ -1353,19 +1466,26 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         radius: 18,
         backgroundColor: const Color(0xFF40916C),
         backgroundImage: avatarUrl.isNotEmpty
-            ? CachedNetworkImageProvider(avatarUrl)
+            ? CachedNetworkImageProvider(
+                avatarUrl,
+                errorListener: (dynamic error) {},
+              )
             : null,
         child: avatarUrl.isEmpty
             ? Text(
                 displayInitials,
-                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold),
               )
             : null,
       ),
     );
   }
 
-  Widget _buildAuthorNameWidget(String authorId, String name, bool isPremiumGuide) {
+  Widget _buildAuthorNameWidget(
+      String authorId, String name, bool isPremiumGuide) {
     return GestureDetector(
       onTap: () {
         if (authorId.isNotEmpty) {
@@ -1415,220 +1535,259 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
   }
 
   Widget _buildFacebookStyleTripLogCard(TripLog log) {
-    final totalCost = log.costItems.fold<int>(0, (acc, item) => acc + item.amountBDT);
+    final totalCost =
+        log.costItems.fold<int>(0, (acc, item) => acc + item.amountBDT);
     final hasSaved = _savedLogs.contains(log.tripId);
-    final initials = log.authorId.isNotEmpty ? log.authorId.substring(0, 2).toUpperCase() : 'EX';
+    final initials = log.authorId.isNotEmpty
+        ? log.authorId.substring(0, 2).toUpperCase()
+        : 'EX';
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
 
     return GestureDetector(
       onTap: () => _showTripLogDetailSheet(context, log),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFECEAE4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Post Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-            child: Row(
-              children: [
-                // Author avatar → tap to open profile
-                _profileCache.containsKey(log.authorId)
-                    ? _buildAvatarWidget(
-                        log.authorId,
-                        _profileCache[log.authorId]!['avatarUrl'] ?? '',
-                        _profileCache[log.authorId]!['displayName'] ?? '',
-                        initials,
-                      )
-                    : FutureBuilder<Map<String, String>>(
-                        future: _fetchAuthorProfile(log.authorId),
-                        builder: (context, snapshot) {
-                          final avatarUrl = snapshot.data?['avatarUrl'] ?? '';
-                          final name = snapshot.data?['displayName'] ?? '';
-                          return _buildAvatarWidget(log.authorId, avatarUrl, name, initials);
-                        },
-                      ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Author name — fetched dynamically, tappable to open profile
-                      _profileCache.containsKey(log.authorId)
-                          ? _buildAuthorNameWidget(
-                              log.authorId,
-                              _profileCache[log.authorId]!['displayName'] ?? 'Explorer',
-                              log.isPremiumGuide,
-                            )
-                          : FutureBuilder<Map<String, String>>(
-                              future: _fetchAuthorProfile(log.authorId),
-                              builder: (context, snapshot) {
-                                final name = snapshot.data?['displayName'] ?? 'Explorer';
-                                return _buildAuthorNameWidget(log.authorId, name, log.isPremiumGuide);
-                              },
-                            ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Text(
-                            _timeAgo(log.publishedAt ?? log.lastConfirmed),
-                            style: const TextStyle(color: Colors.black38, fontSize: 10.5),
-                          ),
-                          const Text(' · ', style: TextStyle(color: Colors.black38, fontSize: 10.5)),
-                          const Icon(Icons.public, color: Colors.black38, size: 10.5),
-                          if (log.district.isNotEmpty || log.division.isNotEmpty) ...[
-                            const Text(' · ', style: TextStyle(color: Colors.black38, fontSize: 10.5)),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFECEAE4)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Post Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Row(
+                children: [
+                  // Author avatar → tap to open profile
+                  _profileCache.containsKey(log.authorId)
+                      ? _buildAvatarWidget(
+                          log.authorId,
+                          _profileCache[log.authorId]!['avatarUrl'] ?? '',
+                          _profileCache[log.authorId]!['displayName'] ?? '',
+                          initials,
+                        )
+                      : FutureBuilder<Map<String, String>>(
+                          future: _fetchAuthorProfile(log.authorId),
+                          builder: (context, snapshot) {
+                            final avatarUrl = snapshot.data?['avatarUrl'] ?? '';
+                            final name = snapshot.data?['displayName'] ?? '';
+                            return _buildAvatarWidget(
+                                log.authorId, avatarUrl, name, initials);
+                          },
+                        ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Author name — fetched dynamically, tappable to open profile
+                        _profileCache.containsKey(log.authorId)
+                            ? _buildAuthorNameWidget(
+                                log.authorId,
+                                _profileCache[log.authorId]!['displayName'] ??
+                                    'Explorer',
+                                log.isPremiumGuide,
+                              )
+                            : FutureBuilder<Map<String, String>>(
+                                future: _fetchAuthorProfile(log.authorId),
+                                builder: (context, snapshot) {
+                                  final name = snapshot.data?['displayName'] ??
+                                      'Explorer';
+                                  return _buildAuthorNameWidget(
+                                      log.authorId, name, log.isPremiumGuide);
+                                },
+                              ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
                             Text(
-                              log.district.isNotEmpty ? log.district : log.division,
-                              style: const TextStyle(color: Color(0xFF40916C), fontWeight: FontWeight.bold, fontSize: 10.5),
+                              _timeAgo(log.publishedAt ?? log.lastConfirmed),
+                              style: const TextStyle(
+                                  color: Colors.black38, fontSize: 10.5),
                             ),
+                            const Text(' · ',
+                                style: TextStyle(
+                                    color: Colors.black38, fontSize: 10.5)),
+                            const Icon(Icons.public,
+                                color: Colors.black38, size: 10.5),
+                            if (log.district.isNotEmpty ||
+                                log.division.isNotEmpty) ...[
+                              const Text(' · ',
+                                  style: TextStyle(
+                                      color: Colors.black38, fontSize: 10.5)),
+                              Text(
+                                log.district.isNotEmpty
+                                    ? log.district
+                                    : log.division,
+                                style: const TextStyle(
+                                    color: Color(0xFF40916C),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10.5),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
+                  // Trust/XP Badge
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEAF5EE),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text('🧭', style: TextStyle(fontSize: 10)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${log.trustScore} XP',
+                          style: const TextStyle(
+                              color: Color(0xFF1B4332),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Text(
+                log.title,
+                style: const TextStyle(
+                  color: Color(0xFF181818),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
                 ),
-                // Trust/XP Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+            ),
+
+            // Post Body — video thumbnail hero + short text preview
+            _buildFeedCardBody(log),
+
+            // Cost Summary if available
+            if (totalCost > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEAF5EE),
+                    color: const Color(0xFFF0F9F4),
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFD8EFE2)),
                   ),
                   child: Row(
                     children: [
-                      const Text('🧭', style: TextStyle(fontSize: 10)),
+                      const Icon(Icons.attach_money_rounded,
+                          color: Color(0xFF2D6A4F), size: 16),
                       const SizedBox(width: 4),
-                      Text(
-                        '${log.trustScore} XP',
-                        style: const TextStyle(color: Color(0xFF1B4332), fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
+                      const Text('Total Budget:',
+                          style: TextStyle(
+                              color: Color(0xFF1B4332),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      Text('BDT $totalCost',
+                          style: const TextStyle(
+                              color: Color(0xFF1B4332),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
                     ],
+                  ),
+                ),
+              ),
+
+            // Travel-specific Reactions Row
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: currentUid == null
+                  ? EntryReactionsWidget(
+                      reactions: log.reactions,
+                      myReaction: null,
+                      onReact: (_) {},
+                    )
+                  : _myReactionsCache.containsKey(log.tripId)
+                      ? EntryReactionsWidget(
+                          reactions: log.reactions,
+                          myReaction: _myReactionsCache[log.tripId],
+                          onReact: (key) => _handleReaction(log, key),
+                        )
+                      : FutureBuilder<String?>(
+                          future: _fetchMyReaction(log.tripId),
+                          builder: (context, snapshot) {
+                            final myReaction = snapshot.data;
+                            return EntryReactionsWidget(
+                              reactions: log.reactions,
+                              myReaction: myReaction,
+                              onReact: (key) => _handleReaction(log, key),
+                            );
+                          },
+                        ),
+            ),
+
+            const Divider(height: 1, color: Color(0xFFECEAE4)),
+
+            // Footer Action Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _showCommentsBottomSheet(context, log),
+                    icon: const Icon(Icons.mode_comment_outlined,
+                        color: Colors.black54, size: 16),
+                    label: const Text(
+                      'Comment',
+                      style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                Container(height: 16, width: 1, color: const Color(0xFFECEAE4)),
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => _toggleSaveLog(log.tripId),
+                    icon: Icon(
+                      hasSaved ? Icons.bookmark : Icons.bookmark_border,
+                      color:
+                          hasSaved ? const Color(0xFFE76F51) : Colors.black54,
+                      size: 16,
+                    ),
+                    label: Text(
+                      hasSaved ? 'Saved' : 'Save',
+                      style: TextStyle(
+                        color:
+                            hasSaved ? const Color(0xFFE76F51) : Colors.black87,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-
-          // Title
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Text(
-              log.title,
-              style: const TextStyle(
-                color: Color(0xFF181818),
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
-            ),
-          ),
-
-          // Post Body — video thumbnail hero + short text preview
-          _buildFeedCardBody(log),
-
-          // Cost Summary if available
-          if (totalCost > 0)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F9F4),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFD8EFE2)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.attach_money_rounded, color: Color(0xFF2D6A4F), size: 16),
-                    const SizedBox(width: 4),
-                    const Text('Total Budget:', style: TextStyle(color: Color(0xFF1B4332), fontSize: 12, fontWeight: FontWeight.bold)),
-                    const Spacer(),
-                    Text('BDT $totalCost', style: const TextStyle(color: Color(0xFF1B4332), fontSize: 12, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ),
-
-          // Travel-specific Reactions Row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: currentUid == null
-                ? EntryReactionsWidget(
-                    reactions: log.reactions,
-                    myReaction: null,
-                    onReact: (_) {},
-                  )
-                : _myReactionsCache.containsKey(log.tripId)
-                    ? EntryReactionsWidget(
-                        reactions: log.reactions,
-                        myReaction: _myReactionsCache[log.tripId],
-                        onReact: (key) => _handleReaction(log, key),
-                      )
-                    : FutureBuilder<String?>(
-                        future: _fetchMyReaction(log.tripId),
-                        builder: (context, snapshot) {
-                          final myReaction = snapshot.data;
-                          return EntryReactionsWidget(
-                            reactions: log.reactions,
-                            myReaction: myReaction,
-                            onReact: (key) => _handleReaction(log, key),
-                          );
-                        },
-                      ),
-          ),
-
-          const Divider(height: 1, color: Color(0xFFECEAE4)),
-
-          // Footer Action Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Expanded(
-                child: TextButton.icon(
-                  onPressed: () => _showCommentsBottomSheet(context, log),
-                  icon: const Icon(Icons.mode_comment_outlined, color: Colors.black54, size: 16),
-                  label: const Text(
-                    'Comment',
-                    style: TextStyle(color: Colors.black87, fontSize: 11.5, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-              Container(height: 16, width: 1, color: const Color(0xFFECEAE4)),
-              Expanded(
-                child: TextButton.icon(
-                  onPressed: () => _toggleSaveLog(log.tripId),
-                  icon: Icon(
-                    hasSaved ? Icons.bookmark : Icons.bookmark_border,
-                    color: hasSaved ? const Color(0xFFE76F51) : Colors.black54,
-                    size: 16,
-                  ),
-                  label: Text(
-                    hasSaved ? 'Saved' : 'Save',
-                    style: TextStyle(
-                      color: hasSaved ? const Color(0xFFE76F51) : Colors.black87,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
-     ),
     );
   }
 
@@ -1642,7 +1801,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     for (final block in log.blocks) {
       if (block is VideoBlock && firstVideo == null) firstVideo = block;
       if (block is ImageBlock && firstImage == null) firstImage = block;
-      if (block is TextBlock && shortText == null && block.content.trim().isNotEmpty) {
+      if (block is TextBlock &&
+          shortText == null &&
+          block.content.trim().isNotEmpty) {
         shortText = block.content.trim();
       }
     }
@@ -1651,51 +1812,48 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // ── Hero: YouTube thumbnail or image ──
-        if (firstVideo != null) ...
-          [_buildFeedVideoHero(firstVideo)]
-        else if (firstImage != null) ...
-          [
-            Builder(
-              builder: (context) {
-                final img = firstImage!;
-                final String heroTag = 'feed_${log.tripId}_${img.storageUrl}';
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (context) => FullScreenImageViewer(
-                            imageUrl: img.storageUrl,
-                            heroTag: heroTag,
-                            localPath: img.localPath,
-                            caption: img.caption,
-                          ),
-                        ),
-                      );
-                    },
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.zero,
-                        topRight: Radius.zero,
-                        bottomLeft: Radius.circular(0),
-                        bottomRight: Radius.circular(0),
-                      ),
-                      child: Hero(
-                        tag: heroTag,
-                        child: BlurHashImage(
-                          imageUrl: img.storageUrl,
-                          height: 210,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
+        if (firstVideo != null) ...[
+          _buildFeedVideoHero(firstVideo)
+        ] else if (firstImage != null) ...[
+          Builder(builder: (context) {
+            final img = firstImage!;
+            final String heroTag = 'feed_${log.tripId}_${img.storageUrl}';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (context) => FullScreenImageViewer(
+                        imageUrl: img.storageUrl,
+                        heroTag: heroTag,
+                        localPath: img.localPath,
+                        caption: img.caption,
                       ),
                     ),
+                  );
+                },
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.zero,
+                    topRight: Radius.zero,
+                    bottomLeft: Radius.circular(0),
+                    bottomRight: Radius.circular(0),
                   ),
-                );
-              }
-            ),
-          ],
+                  child: Hero(
+                    tag: heroTag,
+                    child: BlurHashImage(
+                      imageUrl: img.storageUrl,
+                      height: 210,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
 
         // ── Short text preview ──
         if (shortText != null && shortText.isNotEmpty)
@@ -1706,7 +1864,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               children: [
                 Text(
                   shortText,
-                  style: const TextStyle(fontSize: 13.5, color: Colors.black87, height: 1.4),
+                  style: const TextStyle(
+                      fontSize: 13.5, color: Colors.black87, height: 1.4),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1745,9 +1904,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     );
   }
 
-
-
-
   // --- 5. SYNC BAR (dynamic – displays actual pending outbox sync count) ---
   Widget _buildSyncBar() {
     final encryptionService = getIt<HiveEncryptionService>();
@@ -1770,7 +1926,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   colors: [Color(0xFF1B4332), Color(0xFF2D6A4F)],
                 ),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF74C69D).withValues(alpha: 0.15)),
+                border: Border.all(
+                    color: const Color(0xFF74C69D).withValues(alpha: 0.15)),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF1B4332).withValues(alpha: 0.3),
@@ -1872,7 +2029,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Icon(Icons.chevron_right_rounded, color: Color(0xFF40916C), size: 12),
+                        Icon(Icons.chevron_right_rounded,
+                            color: Color(0xFF40916C), size: 12),
                       ],
                     ),
                   );
@@ -1888,7 +2046,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             bloc: _feedCubit,
             builder: (context, state) {
               if (state is FeedLoading || state is FeedInitial) {
-                return const HorizontalCardsSkeleton(cardWidth: 240, cardHeight: 200);
+                return const HorizontalCardsSkeleton(
+                    cardWidth: 240, cardHeight: 200);
               }
 
               if (state is FeedError) {
@@ -1897,7 +2056,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       'Failed to load feed: ${state.message}',
-                      style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                      style: const TextStyle(
+                          color: Colors.redAccent, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -1905,7 +2065,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               }
 
               if (state is FeedLoaded) {
-                final activeLogs = state.logs.where((l) => !l.isArchived).toList();
+                final activeLogs =
+                    state.logs.where((l) => !l.isArchived).toList();
                 if (activeLogs.isNotEmpty) {
                   return ListView.builder(
                     scrollDirection: Axis.horizontal,
@@ -1939,7 +2100,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
 
   // Dynamic TripLog card builder (no static data)
   Widget _buildDynamicTripLogCard(TripLog log) {
-    final totalCost = log.costItems.fold<int>(0, (acc, item) => acc + item.amountBDT);
+    final totalCost =
+        log.costItems.fold<int>(0, (acc, item) => acc + item.amountBDT);
     // Derive tier based on trustScore or isPremiumGuide flag
     final isPremium = log.trustScore > 70;
     final tier = isPremium ? '★ Pioneer' : '✓ Community';
@@ -1977,8 +2139,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         rating: '4.8',
         title: log.title,
         cost: totalCost > 0 ? 'BDT $totalCost total' : 'Cost not listed',
-        authorInitials: log.authorId.isNotEmpty ? log.authorId.substring(0, 2).toUpperCase() : 'EX',
-        authorColor: isPremium ? const Color(0xFFE76F51) : const Color(0xFF40916C),
+        authorInitials: log.authorId.isNotEmpty
+            ? log.authorId.substring(0, 2).toUpperCase()
+            : 'EX',
+        authorColor:
+            isPremium ? const Color(0xFFE76F51) : const Color(0xFF40916C),
         authorName: 'Explorer',
         likes: log.helpfulVotes.toString(),
         pins: log.trustScore.toString(),
@@ -1998,14 +2163,21 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     return '${diff.inDays}d ago';
   }
 
-  Widget _buildAuthorWidget(String authorId, Color fallbackColor, String fallbackInitials) {
+  Widget _buildAuthorWidget(
+      String authorId, Color fallbackColor, String fallbackInitials) {
     return FutureBuilder<Map<String, String>>(
-      future: _fetchAuthorProfile(authorId.isEmpty ? 'explorer_user' : authorId),
+      future:
+          _fetchAuthorProfile(authorId.isEmpty ? 'explorer_user' : authorId),
       builder: (context, snapshot) {
         final name = snapshot.data?['displayName'] ?? 'Explorer';
         final avatarUrl = snapshot.data?['avatarUrl'] ?? '';
         final initials = name.isNotEmpty
-            ? name.split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+            ? name
+                .split(' ')
+                .map((e) => e.isNotEmpty ? e[0] : '')
+                .take(2)
+                .join()
+                .toUpperCase()
             : fallbackInitials;
         return GestureDetector(
           onTap: () {
@@ -2019,7 +2191,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 radius: 11,
                 backgroundColor: fallbackColor,
                 backgroundImage: avatarUrl.isNotEmpty
-                    ? CachedNetworkImageProvider(avatarUrl)
+                    ? CachedNetworkImageProvider(
+                        avatarUrl,
+                        errorListener: (dynamic error) {},
+                      )
                     : null,
                 child: avatarUrl.isEmpty
                     ? Text(
@@ -2083,8 +2258,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     }
 
     final authState = context.read<AuthCubit>().state;
-    final currentUid = authState is Authenticated ? authState.profile.uid : 'explorer_user';
-    final currentName = authState is Authenticated ? authState.profile.displayName : 'An explorer';
+    final currentUid =
+        authState is Authenticated ? authState.profile.uid : 'explorer_user';
+    final currentName = authState is Authenticated
+        ? authState.profile.displayName
+        : 'An explorer';
     final docId = '${currentUid}_$tripId';
 
     return Container(
@@ -2113,7 +2291,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 // Background Image or Gradient
                 Positioned.fill(
                   child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(22)),
                     child: (thumbnailUrl != null && thumbnailUrl.isNotEmpty)
                         ? BlurHashImage(
                             imageUrl: thumbnailUrl,
@@ -2124,7 +2303,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                               gradient: LinearGradient(
                                 colors: gradientColors,
                                 begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
+                                end: Alignment.bottomRight,
                               ),
                             ),
                           ),
@@ -2134,7 +2313,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(22)),
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -2157,7 +2337,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                       style: const TextStyle(
                         fontSize: 60,
                         shadows: [
-                          Shadow(color: Colors.black38, blurRadius: 10, offset: Offset(0, 4)),
+                          Shadow(
+                              color: Colors.black38,
+                              blurRadius: 10,
+                              offset: Offset(0, 4)),
                         ],
                       ),
                     ),
@@ -2168,7 +2351,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   top: 10,
                   left: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: tierBg,
                       borderRadius: BorderRadius.circular(8),
@@ -2189,10 +2373,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   top: 10,
                   right: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2.5),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.42),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.12)),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -2212,7 +2398,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   left: 10,
                   child: Row(
                     children: [
-                      const Icon(Icons.location_on, color: Colors.white, size: 11),
+                      const Icon(Icons.location_on,
+                          color: Colors.white, size: 11),
                       const SizedBox(width: 3),
                       Text(
                         location,
@@ -2231,14 +2418,17 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   bottom: 10,
                   right: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 2.5),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFD166).withValues(alpha: 0.88),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       children: [
-                        const Text('★', style: TextStyle(color: Color(0xFF3A1000), fontSize: 10)),
+                        const Text('★',
+                            style: TextStyle(
+                                color: Color(0xFF3A1000), fontSize: 10)),
                         const SizedBox(width: 2),
                         Text(
                           rating,
@@ -2276,7 +2466,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
 
                 // Cost Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEAF5EE),
                     borderRadius: BorderRadius.circular(6),
@@ -2284,7 +2475,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.attach_money_rounded, size: 11, color: Color(0xFF1B4332)),
+                      const Icon(Icons.attach_money_rounded,
+                          size: 11, color: Color(0xFF1B4332)),
                       const SizedBox(width: 2),
                       Text(
                         cost,
@@ -2310,21 +2502,38 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     Row(
                       children: [
                         StreamBuilder<DocumentSnapshot>(
-                          stream: FirebaseFirestore.instance.collection('likes').doc(docId).snapshots(),
+                          stream: FirebaseFirestore.instance
+                              .collection('likes')
+                              .doc(docId)
+                              .snapshots(),
                           builder: (context, snapshot) {
                             final isLiked = snapshot.data?.exists ?? false;
                             return GestureDetector(
                               onTap: () async {
-                                final ref = FirebaseFirestore.instance.collection('likes').doc(docId);
-                                final logRef = FirebaseFirestore.instance.collection(isArchived ? 'archived_trip_logs' : 'trip_logs').doc(tripId);
-                                
+                                final ref = FirebaseFirestore.instance
+                                    .collection('likes')
+                                    .doc(docId);
+                                final logRef = FirebaseFirestore.instance
+                                    .collection(isArchived
+                                        ? 'archived_trip_logs'
+                                        : 'trip_logs')
+                                    .doc(tripId);
+
                                 if (isLiked) {
                                   await ref.delete();
-                                  await FirebaseFirestore.instance.runTransaction((transaction) async {
+                                  await FirebaseFirestore.instance
+                                      .runTransaction((transaction) async {
                                     final sfDoc = await transaction.get(logRef);
                                     if (sfDoc.exists) {
-                                      final currentVotes = sfDoc.data()?['helpfulVotes'] as int? ?? 0;
-                                      transaction.update(logRef, {'helpfulVotes': currentVotes > 0 ? currentVotes - 1 : 0});
+                                      final currentVotes =
+                                          sfDoc.data()?['helpfulVotes']
+                                                  as int? ??
+                                              0;
+                                      transaction.update(logRef, {
+                                        'helpfulVotes': currentVotes > 0
+                                            ? currentVotes - 1
+                                            : 0
+                                      });
                                     }
                                   });
                                 } else {
@@ -2333,22 +2542,29 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                     'tripId': tripId,
                                     'timestamp': FieldValue.serverTimestamp(),
                                   });
-                                  await FirebaseFirestore.instance.runTransaction((transaction) async {
+                                  await FirebaseFirestore.instance
+                                      .runTransaction((transaction) async {
                                     final sfDoc = await transaction.get(logRef);
                                     if (sfDoc.exists) {
-                                      final currentVotes = sfDoc.data()?['helpfulVotes'] as int? ?? 0;
-                                      transaction.update(logRef, {'helpfulVotes': currentVotes + 1});
+                                      final currentVotes =
+                                          sfDoc.data()?['helpfulVotes']
+                                                  as int? ??
+                                              0;
+                                      transaction.update(logRef,
+                                          {'helpfulVotes': currentVotes + 1});
                                     }
                                   });
-                                  
-                                  if (currentUid != authorId && authorId.isNotEmpty) {
+
+                                  if (currentUid != authorId &&
+                                      authorId.isNotEmpty) {
                                     await FirebaseFirestore.instance
                                         .collection('users')
                                         .doc(authorId)
                                         .collection('notifications')
                                         .add({
                                       'title': 'New Like!',
-                                      'body': '$currentName liked your TripLog: "$tripTitle".',
+                                      'body':
+                                          '$currentName liked your TripLog: "$tripTitle".',
                                       'action': 'helpful_vote',
                                       'itemId': tripId,
                                       'uid': currentUid,
@@ -2358,8 +2574,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                 }
                               },
                               child: Icon(
-                                isLiked ? Icons.favorite : Icons.favorite_border,
-                                color: isLiked ? Colors.redAccent : const Color(0xFF74C69D),
+                                isLiked
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                color: isLiked
+                                    ? Colors.redAccent
+                                    : const Color(0xFF74C69D),
                                 size: 13,
                               ),
                             );
@@ -2368,28 +2588,37 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                         const SizedBox(width: 3),
                         Text(
                           likes,
-                          style: const TextStyle(color: Color(0xFFAEABA4), fontSize: 10.5),
+                          style: const TextStyle(
+                              color: Color(0xFFAEABA4), fontSize: 10.5),
                         ),
                         const SizedBox(width: 8),
-                        const Icon(Icons.location_on_outlined, color: Color(0xFF74C69D), size: 12),
+                        const Icon(Icons.location_on_outlined,
+                            color: Color(0xFF74C69D), size: 12),
                         const SizedBox(width: 3),
                         Text(
                           pins,
-                          style: const TextStyle(color: Color(0xFFAEABA4), fontSize: 10.5),
+                          style: const TextStyle(
+                              color: Color(0xFFAEABA4), fontSize: 10.5),
                         ),
                         const SizedBox(width: 8),
                         StreamBuilder<DocumentSnapshot>(
-                          stream: FirebaseFirestore.instance.collection('trip_logs').doc(tripId).snapshots(),
+                          stream: FirebaseFirestore.instance
+                              .collection('trip_logs')
+                              .doc(tripId)
+                              .snapshots(),
                           builder: (context, snapshot) {
-                            final data = snapshot.data?.data() as Map<String, dynamic>?;
+                            final data =
+                                snapshot.data?.data() as Map<String, dynamic>?;
                             final viewsCount = data?['views'] as int? ?? 0;
                             return Row(
                               children: [
-                                const Icon(Icons.visibility_outlined, color: Color(0xFF74C69D), size: 11),
+                                const Icon(Icons.visibility_outlined,
+                                    color: Color(0xFF74C69D), size: 11),
                                 const SizedBox(width: 3),
                                 Text(
                                   viewsCount.toString(),
-                                  style: const TextStyle(color: Color(0xFFAEABA4), fontSize: 10.5),
+                                  style: const TextStyle(
+                                      color: Color(0xFFAEABA4), fontSize: 10.5),
                                 ),
                               ],
                             );
@@ -2410,8 +2639,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
   Future<void> _recordInteraction(TripLog log) async {
     try {
       final encryptionService = getIt<HiveEncryptionService>();
-      final box = await encryptionService.openEncryptedBox<dynamic>('user_preferences');
-      
+      final box =
+          await encryptionService.openEncryptedBox<dynamic>('user_preferences');
+
       // Update implicit division interest
       final divisionKey = 'interest_div_${log.division.toLowerCase()}';
       final currentDivInterest = box.get(divisionKey, defaultValue: 0) as int;
@@ -2435,28 +2665,41 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
           builder: (context, setModalState) {
             final encryptionService = getIt<HiveEncryptionService>();
             return FutureBuilder<Box<dynamic>>(
-              future: encryptionService.openEncryptedBox<dynamic>('user_preferences'),
+              future: encryptionService
+                  .openEncryptedBox<dynamic>('user_preferences'),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return Container(
                     height: 200,
                     decoration: const BoxDecoration(
                       color: Color(0xFF0D1A12),
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(24)),
                     ),
                     child: const Center(
-                      child: CircularProgressIndicator(color: Color(0xFF74C69D)),
+                      child:
+                          CircularProgressIndicator(color: Color(0xFF74C69D)),
                     ),
                   );
                 }
 
                 final box = snapshot.data!;
-                final currentDivs = List<String>.from(box.get('preferred_divisions', defaultValue: <String>[]) as List);
-                final currentCats = List<String>.from(box.get('preferred_categories', defaultValue: <String>[]) as List);
+                final currentDivs = List<String>.from(
+                    box.get('preferred_divisions', defaultValue: <String>[])
+                        as List);
+                final currentCats = List<String>.from(
+                    box.get('preferred_categories', defaultValue: <String>[])
+                        as List);
 
                 final divisions = [
-                  'Dhaka', 'Chittagong', 'Sylhet', 'Khulna', 
-                  'Barisal', 'Rajshahi', 'Rangpur', 'Mymensingh'
+                  'Dhaka',
+                  'Chittagong',
+                  'Sylhet',
+                  'Khulna',
+                  'Barisal',
+                  'Rajshahi',
+                  'Rangpur',
+                  'Mymensingh'
                 ];
 
                 final categories = {
@@ -2472,12 +2715,16 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     top: 20,
                     left: 20,
                     right: 20,
-                    bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 24,
+                    bottom: MediaQuery.of(context).viewInsets.bottom +
+                        MediaQuery.of(context).padding.bottom +
+                        24,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF0D1A12),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                    border: Border.all(color: const Color(0xFF74C69D).withValues(alpha: 0.12)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(28)),
+                    border: Border.all(
+                        color: const Color(0xFF74C69D).withValues(alpha: 0.12)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.5),
@@ -2504,7 +2751,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                         ),
                         const Row(
                           children: [
-                            Icon(Icons.tune_rounded, color: Color(0xFF74C69D), size: 22),
+                            Icon(Icons.tune_rounded,
+                                color: Color(0xFF74C69D), size: 22),
                             SizedBox(width: 8),
                             Text(
                               'Personalize Your Feed',
@@ -2542,16 +2790,22 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                               selected: isSelected,
                               checkmarkColor: Colors.black,
                               selectedColor: const Color(0xFF74C69D),
-                              backgroundColor: Colors.white.withValues(alpha: 0.06),
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.06),
                               labelStyle: TextStyle(
-                                color: isSelected ? Colors.black : Colors.white70,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color:
+                                    isSelected ? Colors.black : Colors.white70,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                                 fontSize: 12,
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 side: BorderSide(
-                                  color: isSelected ? Colors.transparent : Colors.white12,
+                                  color: isSelected
+                                      ? Colors.transparent
+                                      : Colors.white12,
                                 ),
                               ),
                               onSelected: (selected) async {
@@ -2562,7 +2816,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                     currentDivs.remove(div);
                                   }
                                 });
-                                await box.put('preferred_divisions', currentDivs);
+                                await box.put(
+                                    'preferred_divisions', currentDivs);
                               },
                             );
                           }).toList(),
@@ -2590,16 +2845,22 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                               selected: isSelected,
                               checkmarkColor: Colors.black,
                               selectedColor: const Color(0xFF74C69D),
-                              backgroundColor: Colors.white.withValues(alpha: 0.06),
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.06),
                               labelStyle: TextStyle(
-                                color: isSelected ? Colors.black : Colors.white70,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color:
+                                    isSelected ? Colors.black : Colors.white70,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                                 fontSize: 12,
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 side: BorderSide(
-                                  color: isSelected ? Colors.transparent : Colors.white12,
+                                  color: isSelected
+                                      ? Colors.transparent
+                                      : Colors.white12,
                                 ),
                               ),
                               onSelected: (selected) async {
@@ -2610,7 +2871,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                     currentCats.remove(key);
                                   }
                                 });
-                                await box.put('preferred_categories', currentCats);
+                                await box.put(
+                                    'preferred_categories', currentCats);
                               },
                             );
                           }).toList(),
@@ -2625,27 +2887,32 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                               borderRadius: BorderRadius.circular(14),
                             ),
                             elevation: 8,
-                            shadowColor: const Color(0xFF40916C).withValues(alpha: 0.4),
+                            shadowColor:
+                                const Color(0xFF40916C).withValues(alpha: 0.4),
                           ),
                           onPressed: () {
                             Navigator.pop(ctx);
                             final authState = context.read<AuthCubit>().state;
-                            final profile = authState is Authenticated ? authState.profile : ExplorerProfile(
-                              uid: 'explorer_user',
-                              displayName: 'Guest Explorer',
-                              explorerScore: const ExplorerScore(value: 0, tier: TrustTier.unverified),
-                              tier: TrustTier.unverified,
-                              badges: const [],
-                              division: 'Dhaka',
-                              createdAt: DateTime.now(),
-                            );
+                            final profile = authState is Authenticated
+                                ? authState.profile
+                                : ExplorerProfile(
+                                    uid: 'explorer_user',
+                                    displayName: 'Guest Explorer',
+                                    explorerScore: const ExplorerScore(
+                                        value: 0, tier: TrustTier.unverified),
+                                    tier: TrustTier.unverified,
+                                    badges: const [],
+                                    division: 'Dhaka',
+                                    createdAt: DateTime.now(),
+                                  );
                             _feedCubit.loadFeed(profile);
 
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: const Row(
                                   children: [
-                                    Icon(Icons.auto_awesome, color: Color(0xFF74C69D), size: 18),
+                                    Icon(Icons.auto_awesome,
+                                        color: Color(0xFF74C69D), size: 18),
                                     SizedBox(width: 8),
                                     Text('Feed personalized successfully!'),
                                   ],
@@ -2660,7 +2927,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                           },
                           child: const Text(
                             'Apply Personalization',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14),
                           ),
                         ),
                       ],
@@ -2680,6 +2948,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     _recordInteraction(log);
     TripLogDetailSheet.show(context, log);
   }
+
   void _showAllFeaturedTripLogsSheet(BuildContext context, List<TripLog> logs) {
     showModalBottomSheet<void>(
       context: context,
@@ -2716,7 +2985,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   ),
                   // Header
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -2739,14 +3009,16 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   Expanded(
                     child: ListView.builder(
                       controller: scrollController,
-                      padding: EdgeInsets.fromLTRB(16, 8, 16, 32 + MediaQuery.of(ctx).padding.bottom),
+                      padding: EdgeInsets.fromLTRB(
+                          16, 8, 16, 32 + MediaQuery.of(ctx).padding.bottom),
                       itemCount: logs.length,
                       itemBuilder: (context, index) {
                         final log = logs[index];
-                        final totalCost = log.costItems.fold<int>(0, (acc, item) => acc + item.amountBDT);
+                        final totalCost = log.costItems
+                            .fold<int>(0, (acc, item) => acc + item.amountBDT);
                         final isPremium = log.trustScore > 70;
                         final tier = isPremium ? '★ Pioneer' : '✓ Community';
-                        
+
                         return Container(
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
@@ -2766,26 +3038,38 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: isPremium ? const Color(0xFFE76F51).withValues(alpha: 0.1) : const Color(0xFF1D9E75).withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(8),
+                                          color: isPremium
+                                              ? const Color(0xFFE76F51)
+                                                  .withValues(alpha: 0.1)
+                                              : const Color(0xFF1D9E75)
+                                                  .withValues(alpha: 0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: Text(
                                           tier,
                                           style: TextStyle(
-                                            color: isPremium ? const Color(0xFFE76F51) : const Color(0xFF1D9E75),
+                                            color: isPremium
+                                                ? const Color(0xFFE76F51)
+                                                : const Color(0xFF1D9E75),
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                       ),
                                       Text(
-                                        _timeAgo(log.publishedAt ?? log.lastConfirmed),
-                                        style: const TextStyle(color: Colors.black38, fontSize: 11),
+                                        _timeAgo(log.publishedAt ??
+                                            log.lastConfirmed),
+                                        style: const TextStyle(
+                                            color: Colors.black38,
+                                            fontSize: 11),
                                       ),
                                     ],
                                   ),
@@ -2801,28 +3085,46 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                   const SizedBox(height: 6),
                                   Row(
                                     children: [
-                                      const Icon(Icons.location_on_outlined, color: Colors.grey, size: 14),
+                                      const Icon(Icons.location_on_outlined,
+                                          color: Colors.grey, size: 14),
                                       const SizedBox(width: 4),
                                       Text(
-                                        log.district.isNotEmpty ? log.district : log.division,
-                                        style: const TextStyle(color: Colors.black54, fontSize: 12),
+                                        log.district.isNotEmpty
+                                            ? log.district
+                                            : log.division,
+                                        style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 12),
                                       ),
                                       const Spacer(),
-                                      const Icon(Icons.wallet_outlined, color: Colors.grey, size: 14),
+                                      const Icon(Icons.wallet_outlined,
+                                          color: Colors.grey, size: 14),
                                       const SizedBox(width: 4),
                                       Text(
-                                        totalCost > 0 ? 'BDT $totalCost' : 'Free',
-                                        style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w500),
+                                        totalCost > 0
+                                            ? 'BDT $totalCost'
+                                            : 'Free',
+                                        style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 12),
-                                  const Divider(height: 1, color: Color(0xFFECEAE4)),
+                                  const Divider(
+                                      height: 1, color: Color(0xFFECEAE4)),
                                   const SizedBox(height: 10),
                                   _buildAuthorWidget(
                                     log.authorId,
-                                    isPremium ? const Color(0xFFE76F51) : const Color(0xFF40916C),
-                                    log.authorId.isNotEmpty ? log.authorId.substring(0, 2).toUpperCase() : 'EX',
+                                    isPremium
+                                        ? const Color(0xFFE76F51)
+                                        : const Color(0xFF40916C),
+                                    log.authorId.isNotEmpty
+                                        ? log.authorId
+                                            .substring(0, 2)
+                                            .toUpperCase()
+                                        : 'EX',
                                   ),
                                 ],
                               ),
@@ -2854,7 +3156,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         children: [
           Icon(icon, size: 12, color: color),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
     );
@@ -2872,22 +3176,39 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         if (pins.isEmpty) {
           return const Padding(
             padding: EdgeInsets.all(24),
-            child: Center(child: Text('No nearby spots found', style: TextStyle(color: Color(0xFFAEABA4), fontSize: 13))),
+            child: Center(
+                child: Text('No nearby spots found',
+                    style: TextStyle(color: Color(0xFFAEABA4), fontSize: 13))),
           );
         }
 
         final spots = pins.map((pin) {
           String emoji = '📍';
           final nameLower = pin.name.toLowerCase();
-          if (nameLower.contains('valley') || nameLower.contains('hill') || nameLower.contains('peak') || nameLower.contains('pahar') || nameLower.contains('sajek')) {
+          if (nameLower.contains('valley') ||
+              nameLower.contains('hill') ||
+              nameLower.contains('peak') ||
+              nameLower.contains('pahar') ||
+              nameLower.contains('sajek')) {
             emoji = '🏔';
-          } else if (nameLower.contains('beach') || nameLower.contains('sea') || nameLower.contains('ocean') || nameLower.contains('island')) {
+          } else if (nameLower.contains('beach') ||
+              nameLower.contains('sea') ||
+              nameLower.contains('ocean') ||
+              nameLower.contains('island')) {
             emoji = '🏖';
-          } else if (nameLower.contains('swamp') || nameLower.contains('forest') || nameLower.contains('sundarban') || nameLower.contains('garden')) {
+          } else if (nameLower.contains('swamp') ||
+              nameLower.contains('forest') ||
+              nameLower.contains('sundarban') ||
+              nameLower.contains('garden')) {
             emoji = '🌿';
-          } else if (nameLower.contains('fort') || nameLower.contains('manzil') || nameLower.contains('palace') || nameLower.contains('heritage')) {
+          } else if (nameLower.contains('fort') ||
+              nameLower.contains('manzil') ||
+              nameLower.contains('palace') ||
+              nameLower.contains('heritage')) {
             emoji = '🏛';
-          } else if (nameLower.contains('mosque') || nameLower.contains('temple') || nameLower.contains('church')) {
+          } else if (nameLower.contains('mosque') ||
+              nameLower.contains('temple') ||
+              nameLower.contains('church')) {
             emoji = '🕌';
           }
 
@@ -2895,7 +3216,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
           Color badgeBg = const Color(0xFF40916C);
           Color tierColor = const Color(0xFF0A5E35);
           Color tierBg = const Color(0xFFE4F5EC);
-          List<Color> gradient = [const Color(0xFF1D9E75), const Color(0xFF0A5C3A)];
+          List<Color> gradient = [
+            const Color(0xFF1D9E75),
+            const Color(0xFF0A5C3A)
+          ];
 
           if (pin.trustTier == TrustTier.pioneer) {
             badge = 'P';
@@ -2930,7 +3254,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             'gradient': gradient,
             'name': pin.name,
             'dist': pin.district,
-            'tier': '★ ${pin.trustTier.name[0].toUpperCase()}${pin.trustTier.name.substring(1)}',
+            'tier':
+                '★ ${pin.trustTier.name[0].toUpperCase()}${pin.trustTier.name.substring(1)}',
             'tierColor': tierColor,
             'tierBg': tierBg,
           };
@@ -2976,7 +3301,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Icon(Icons.map_outlined, color: Color(0xFF40916C), size: 12),
+                    Icon(Icons.map_outlined,
+                        color: Color(0xFF40916C), size: 12),
                   ],
                 ),
               ),
@@ -2995,122 +3321,128 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               return GestureDetector(
                 onTap: () => context.push('/map'),
                 child: Container(
-                width: 108,
-                margin: const EdgeInsets.only(right: 11, bottom: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFECEAE4)),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x1A000000),
-                      blurRadius: 16,
-                      offset: Offset(0, 4),
-                    )
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Spot icon area
-                    Container(
-                      height: 68,
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                        gradient: LinearGradient(
-                          colors: spot['gradient'] as List<Color>,
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Center(
-                            child: Text(
-                              spot['emoji'] as String,
-                              style: const TextStyle(fontSize: 30),
-                            ),
+                  width: 108,
+                  margin: const EdgeInsets.only(right: 11, bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFECEAE4)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1A000000),
+                        blurRadius: 16,
+                        offset: Offset(0, 4),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Spot icon area
+                      Container(
+                        height: 68,
+                        decoration: BoxDecoration(
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(18)),
+                          gradient: LinearGradient(
+                            colors: spot['gradient'] as List<Color>,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          Positioned(
-                            bottom: 5,
-                            right: 5,
-                            child: Container(
-                              width: 19,
-                              height: 19,
-                              decoration: BoxDecoration(
-                                color: spot['badgeBg'] as Color,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Center(
+                              child: Text(
+                                spot['emoji'] as String,
+                                style: const TextStyle(fontSize: 30),
                               ),
-                              child: Center(
-                                child: Text(
-                                  spot['badge'] as String,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w800,
+                            ),
+                            Positioned(
+                              bottom: 5,
+                              right: 5,
+                              child: Container(
+                                width: 19,
+                                height: 19,
+                                decoration: BoxDecoration(
+                                  color: spot['badgeBg'] as Color,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.white, width: 1.5),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    spot['badge'] as String,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
 
-                    // Info area
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            spot['name'] as String,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF181818),
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              const Icon(Icons.location_on, size: 10, color: Color(0xFFAEABA4)),
-                              const SizedBox(width: 2),
-                              Text(
-                                spot['dist'] as String,
-                                style: const TextStyle(
-                                  color: Color(0xFFAEABA4),
-                                  fontSize: 9.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: spot['tierBg'] as Color? ?? const Color(0xFFE4F5EC),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            child: Text(
-                              spot['tier'] as String,
-                              style: TextStyle(
-                                color: spot['tierColor'] as Color? ?? const Color(0xFF0A5E35),
-                                fontSize: 8,
+                      // Info area
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              spot['name'] as String,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF181818),
+                                fontSize: 10.5,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on,
+                                    size: 10, color: Color(0xFFAEABA4)),
+                                const SizedBox(width: 2),
+                                Text(
+                                  spot['dist'] as String,
+                                  style: const TextStyle(
+                                    color: Color(0xFFAEABA4),
+                                    fontSize: 9.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: spot['tierBg'] as Color? ??
+                                    const Color(0xFFE4F5EC),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Text(
+                                spot['tier'] as String,
+                                style: TextStyle(
+                                  color: spot['tierColor'] as Color? ??
+                                      const Color(0xFF0A5E35),
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-               ),
               );
             },
           ),
@@ -3131,7 +3463,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             children: [
               Row(
                 children: [
-                  const CircleAvatar(radius: 3.5, backgroundColor: Color(0xFFF4A261)),
+                  const CircleAvatar(
+                      radius: 3.5, backgroundColor: Color(0xFFF4A261)),
                   const SizedBox(width: 7),
                   Text(
                     'Top Explorers',
@@ -3162,14 +3495,14 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Icon(Icons.chevron_right_rounded, color: Color(0xFF40916C), size: 12),
+                    Icon(Icons.chevron_right_rounded,
+                        color: Color(0xFF40916C), size: 12),
                   ],
                 ),
               ),
             ],
           ),
         ),
-
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
@@ -3189,7 +3522,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             bloc: _feedCubit,
             builder: (context, state) {
               if (state is FeedLoading) {
-                return const HorizontalCardsSkeleton(cardWidth: 150, cardHeight: 170);
+                return const HorizontalCardsSkeleton(
+                    cardWidth: 150, cardHeight: 170);
               }
 
               List<ExplorerProfile> explorersList = [];
@@ -3199,7 +3533,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
 
               if (explorersList.isEmpty) {
                 return const Center(
-                  child: Text('No explorers yet', style: TextStyle(color: Color(0xFFAEABA4), fontSize: 12)),
+                  child: Text('No explorers yet',
+                      style: TextStyle(color: Color(0xFFAEABA4), fontSize: 12)),
                 );
               }
 
@@ -3209,22 +3544,39 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: explorersList.map((exp) {
-                    final initials = exp.displayName.split(' ').map((s) => s.isNotEmpty ? s[0] : '').take(2).join().toUpperCase();
+                    final initials = exp.displayName
+                        .split(' ')
+                        .map((s) => s.isNotEmpty ? s[0] : '')
+                        .take(2)
+                        .join()
+                        .toUpperCase();
 
-                    List<Color> avatarColors = [const Color(0xFF40916C), const Color(0xFF1B4332)];
+                    List<Color> avatarColors = [
+                      const Color(0xFF40916C),
+                      const Color(0xFF1B4332)
+                    ];
                     String pip = 'C';
                     Color pipBg = const Color(0xFF40916C);
 
                     if (exp.tier == TrustTier.pioneer) {
-                      avatarColors = [const Color(0xFFE76F51), const Color(0xFFC94F34)];
+                      avatarColors = [
+                        const Color(0xFFE76F51),
+                        const Color(0xFFC94F34)
+                      ];
                       pip = '★';
                       pipBg = const Color(0xFFE76F51);
                     } else if (exp.tier == TrustTier.verified) {
-                      avatarColors = [const Color(0xFFFFD166), const Color(0xFFF4A261)];
+                      avatarColors = [
+                        const Color(0xFFFFD166),
+                        const Color(0xFFF4A261)
+                      ];
                       pip = 'V';
                       pipBg = const Color(0xFFFFD166);
                     } else if (exp.tier == TrustTier.regionExpert) {
-                      avatarColors = [const Color(0xFF4361EE), const Color(0xFF2D46B5)];
+                      avatarColors = [
+                        const Color(0xFF4361EE),
+                        const Color(0xFF2D46B5)
+                      ];
                       pip = 'E';
                       pipBg = const Color(0xFF4361EE);
                     }
@@ -3247,15 +3599,21 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                   padding: const EdgeInsets.all(2.0),
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: avatarColors[0], width: 2),
+                                    border: Border.all(
+                                        color: avatarColors[0], width: 2),
                                   ),
                                   child: CircleAvatar(
                                     radius: 20,
                                     backgroundColor: Colors.transparent,
-                                    backgroundImage: (exp.avatarUrl != null && exp.avatarUrl!.isNotEmpty)
-                                        ? CachedNetworkImageProvider(exp.avatarUrl!)
+                                    backgroundImage: (exp.avatarUrl != null &&
+                                            exp.avatarUrl!.isNotEmpty)
+                                        ? CachedNetworkImageProvider(
+                                            exp.avatarUrl!,
+                                            errorListener: (dynamic error) {},
+                                          )
                                         : null,
-                                    child: (exp.avatarUrl == null || exp.avatarUrl!.isEmpty)
+                                    child: (exp.avatarUrl == null ||
+                                            exp.avatarUrl!.isEmpty)
                                         ? Container(
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
@@ -3288,7 +3646,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                                     decoration: BoxDecoration(
                                       color: pipBg,
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2),
+                                      border: Border.all(
+                                          color: Colors.white, width: 2),
                                     ),
                                     child: Center(
                                       child: Text(
@@ -3340,9 +3699,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     );
   }
 
-
-
-
   // --- 11. LIVE PRO-TIPS HORIZONTAL SLIDER (dynamic from FeedCubit) ---
   Widget _buildProTipsHorizontalFeed() {
     return SizedBox(
@@ -3351,7 +3707,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         bloc: _feedCubit,
         builder: (context, state) {
           if (state is FeedLoading) {
-            return const HorizontalCardsSkeleton(cardWidth: 220, cardHeight: 150);
+            return const HorizontalCardsSkeleton(
+                cardWidth: 220, cardHeight: 150);
           }
 
           List<ProTip> tipsList = [];
@@ -3419,7 +3776,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               Color decayColor = const Color(0xFF1D9E75); // fresh = green
               bool isStale = false;
 
-              final ageDays = DateTime.now().difference(tip.lastConfirmed).inDays;
+              final ageDays =
+                  DateTime.now().difference(tip.lastConfirmed).inDays;
               if (ageDays > 60 || tip.outdatedVotes > 5) {
                 decayColor = const Color(0xFFE24B4A); // stale = red
                 isStale = true;
@@ -3427,139 +3785,150 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 decayColor = const Color(0xFFF4A261); // aging = amber
               }
 
-              final timeAgoStr = ageDays == 0 ? 'Today' : (ageDays == 1 ? 'Yesterday' : '$ageDays days ago');
+              final timeAgoStr = ageDays == 0
+                  ? 'Today'
+                  : (ageDays == 1 ? 'Yesterday' : '$ageDays days ago');
 
               return GestureDetector(
                 onTap: () => _showProTipDetailSheet(context, tip),
                 child: Container(
-                width: 166,
-                margin: const EdgeInsets.only(right: 11, bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFECEAE4)),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x0F000000),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    )
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Category Chip
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: tagBg,
-                            borderRadius: BorderRadius.circular(20),
+                  width: 166,
+                  margin: const EdgeInsets.only(right: 11, bottom: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFECEAE4)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0F000000),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Category Chip
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: tagBg,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(tagIcon, size: 10, color: tagText),
+                                const SizedBox(width: 4),
+                                Text(
+                                  tag,
+                                  style: TextStyle(
+                                    color: tagText,
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                          // Mini Decay Circle
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: decayColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Stale warning if needed
+                      if (isStale)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 7),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFE24B4A).withValues(alpha: 0.07),
+                            border: Border.all(
+                                color: const Color(0xFFE24B4A)
+                                    .withValues(alpha: 0.2)),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Row(
                             children: [
-                              Icon(tagIcon, size: 10, color: tagText),
-                              const SizedBox(width: 4),
+                              Icon(Icons.access_time_rounded,
+                                  size: 11, color: Color(0xFFE24B4A)),
+                              SizedBox(width: 5),
                               Text(
-                                tag,
+                                'Tap to re-confirm',
                                 style: TextStyle(
-                                  color: tagText,
-                                  fontSize: 8.5,
+                                  color: Color(0xFFE24B4A),
+                                  fontSize: 9.5,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        // Mini Decay Circle
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: decayColor,
-                            shape: BoxShape.circle,
+
+                      // Tip body text
+                      Expanded(
+                        child: Text(
+                          tip.text,
+                          maxLines: isStale ? 2 : 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF2B2B2B),
+                            fontSize: 10.5,
+                            height: 1.35,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Stale warning if needed
-                    if (isStale)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 7),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE24B4A).withValues(alpha: 0.07),
-                          border: Border.all(color: const Color(0xFFE24B4A).withValues(alpha: 0.2)),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.access_time_rounded, size: 11, color: Color(0xFFE24B4A)),
-                            SizedBox(width: 5),
-                            Text(
-                              'Tap to re-confirm',
-                              style: TextStyle(
-                                color: Color(0xFFE24B4A),
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Metadata footer
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            timeAgoStr,
+                            style: TextStyle(
+                              color: Colors.black.withValues(alpha: 0.4),
+                              fontSize: 8,
                             ),
-                          ],
-                        ),
-                      ),
-
-                    // Tip body text
-                    Expanded(
-                      child: Text(
-                        tip.text,
-                        maxLines: isStale ? 2 : 4,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF2B2B2B),
-                          fontSize: 10.5,
-                          height: 1.35,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    // Metadata footer
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          timeAgoStr,
-                          style: TextStyle(
-                            color: Colors.black.withValues(alpha: 0.4),
-                            fontSize: 8,
                           ),
-                        ),
-                        Row(
-                          children: [
-                            Icon(Icons.thumb_up_alt_outlined, size: 9, color: Colors.black.withValues(alpha: 0.4)),
-                            const SizedBox(width: 3),
-                            Text(
-                              '${tip.helpfulVotes}',
-                              style: TextStyle(
-                                color: Colors.black.withValues(alpha: 0.4),
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.bold,
+                          Row(
+                            children: [
+                              Icon(Icons.thumb_up_alt_outlined,
+                                  size: 9,
+                                  color: Colors.black.withValues(alpha: 0.4)),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${tip.helpfulVotes}',
+                                style: TextStyle(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-               ),
               );
             },
           );
@@ -3571,7 +3940,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
   // Pro-Tip full detail bottom sheet
   void _showProTipDetailSheet(BuildContext context, ProTip tip) {
     final ageDays = DateTime.now().difference(tip.lastConfirmed).inDays;
-    final timeAgoStr = ageDays == 0 ? 'Today' : (ageDays == 1 ? 'Yesterday' : '$ageDays days ago');
+    final timeAgoStr = ageDays == 0
+        ? 'Today'
+        : (ageDays == 1 ? 'Yesterday' : '$ageDays days ago');
     Color decayColor = const Color(0xFF1D9E75);
     String freshnessLabel = 'Fresh';
     if (ageDays > 60 || tip.outdatedVotes > 5) {
@@ -3605,7 +3976,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     padding: const EdgeInsets.only(top: 12, bottom: 4),
                     child: Center(
                       child: Container(
-                        width: 40, height: 5,
+                        width: 40,
+                        height: 5,
                         decoration: BoxDecoration(
                           color: Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(2.5),
@@ -3616,7 +3988,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                   Expanded(
                     child: SingleChildScrollView(
                       controller: scrollController,
-                      padding: EdgeInsets.fromLTRB(16, 8, 16, 32 + MediaQuery.of(ctx).padding.bottom),
+                      padding: EdgeInsets.fromLTRB(
+                          16, 8, 16, 32 + MediaQuery.of(ctx).padding.bottom),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -3624,25 +3997,39 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFEAF5EE),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  tip.category.isNotEmpty ? tip.category : 'General',
-                                  style: const TextStyle(color: Color(0xFF1B4332), fontWeight: FontWeight.bold, fontSize: 12),
+                                  tip.category.isNotEmpty
+                                      ? tip.category
+                                      : 'General',
+                                  style: const TextStyle(
+                                      color: Color(0xFF1B4332),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12),
                                 ),
                               ),
                               const SizedBox(width: 10),
                               Container(
-                                width: 8, height: 8,
-                                decoration: BoxDecoration(color: decayColor, shape: BoxShape.circle),
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                    color: decayColor, shape: BoxShape.circle),
                               ),
                               const SizedBox(width: 5),
-                              Text(freshnessLabel, style: TextStyle(color: decayColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                              Text(freshnessLabel,
+                                  style: TextStyle(
+                                      color: decayColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold)),
                               const Spacer(),
-                              Text(timeAgoStr, style: const TextStyle(color: Colors.black38, fontSize: 11)),
+                              Text(timeAgoStr,
+                                  style: const TextStyle(
+                                      color: Colors.black38, fontSize: 11)),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -3653,7 +4040,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFECEAE4)),
+                              border:
+                                  Border.all(color: const Color(0xFFECEAE4)),
                             ),
                             child: Text(
                               tip.text,
@@ -3670,11 +4058,22 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                           // Location + helpful votes
                           Row(
                             children: [
-                              _detailChip(Icons.location_on, tip.locationPinId.isNotEmpty ? tip.locationPinId : 'General', const Color(0xFF40916C)),
+                              _detailChip(
+                                  Icons.location_on,
+                                  tip.locationPinId.isNotEmpty
+                                      ? tip.locationPinId
+                                      : 'General',
+                                  const Color(0xFF40916C)),
                               const SizedBox(width: 8),
-                              _detailChip(Icons.thumb_up, '${tip.helpfulVotes} helpful', const Color(0xFF4361EE)),
+                              _detailChip(
+                                  Icons.thumb_up,
+                                  '${tip.helpfulVotes} helpful',
+                                  const Color(0xFF4361EE)),
                               const SizedBox(width: 8),
-                              _detailChip(Icons.warning_amber_rounded, '${tip.outdatedVotes} outdated', const Color(0xFFE76F51)),
+                              _detailChip(
+                                  Icons.warning_amber_rounded,
+                                  '${tip.outdatedVotes} outdated',
+                                  const Color(0xFFE76F51)),
                             ],
                           ),
 
@@ -3686,21 +4085,26 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFECEAE4)),
+                              border:
+                                  Border.all(color: const Color(0xFFECEAE4)),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.person_outline, color: Color(0xFF40916C), size: 18),
+                                const Icon(Icons.person_outline,
+                                    color: Color(0xFF40916C), size: 18),
                                 const SizedBox(width: 10),
                                 FutureBuilder<Map<String, String>>(
                                   future: _fetchAuthorProfile(tip.authorId),
                                   builder: (context, snapshot) {
-                                    final name = snapshot.data?['displayName'] ?? 'Explorer';
+                                    final name =
+                                        snapshot.data?['displayName'] ??
+                                            'Explorer';
                                     return GestureDetector(
                                       onTap: () {
                                         Navigator.pop(ctx);
                                         if (tip.authorId.isNotEmpty) {
-                                          context.push('/profile/${tip.authorId}');
+                                          context
+                                              .push('/profile/${tip.authorId}');
                                         }
                                       },
                                       child: Text(
@@ -3817,15 +4221,16 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         return Container(
           height: MediaQuery.of(ctx).size.height * 0.95,
           padding: EdgeInsets.only(
-            top: 20, 
-            left: 20, 
-            right: 20, 
+            top: 20,
+            left: 20,
+            right: 20,
             bottom: 24 + MediaQuery.of(ctx).padding.bottom,
           ),
           decoration: BoxDecoration(
             color: const Color(0xFF0D1A12),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border.all(color: const Color(0xFF74C69D).withValues(alpha: 0.12)),
+            border: Border.all(
+                color: const Color(0xFF74C69D).withValues(alpha: 0.12)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -4049,31 +4454,47 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               const SizedBox(height: 12),
               const Text(
                 'CREATE NEW TRAVEL CONTENT',
-                style: TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5),
               ),
               const SizedBox(height: 8),
               ListTile(
-                leading: const Icon(Icons.edit_note, color: AppColors.mintGreen),
-                title: const Text('New TripLog', style: TextStyle(color: Colors.white)),
-                subtitle: const Text('Log a fresh trip route, expenses & pictures', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                leading:
+                    const Icon(Icons.edit_note, color: AppColors.mintGreen),
+                title: const Text('New TripLog',
+                    style: TextStyle(color: Colors.white)),
+                subtitle: const Text(
+                    'Log a fresh trip route, expenses & pictures',
+                    style: TextStyle(color: Colors.white54, fontSize: 11)),
                 onTap: () async {
                   Navigator.pop(context);
                   await _navigateToEditor();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.tips_and_updates_outlined, color: AppColors.gold),
-                title: const Text('New Pro-Tip', style: TextStyle(color: Colors.white)),
-                subtitle: const Text('Post situational fare tips, warnings or advice', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                leading: const Icon(Icons.tips_and_updates_outlined,
+                    color: AppColors.gold),
+                title: const Text('New Pro-Tip',
+                    style: TextStyle(color: Colors.white)),
+                subtitle: const Text(
+                    'Post situational fare tips, warnings or advice',
+                    style: TextStyle(color: Colors.white54, fontSize: 11)),
                 onTap: () async {
                   Navigator.pop(context);
                   await _navigateToEditor();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.add_location_alt_outlined, color: Colors.white70),
-                title: const Text('New Location Pin', style: TextStyle(color: Colors.white)),
-                subtitle: const Text('Recommend a spot not currently on the map', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                leading: const Icon(Icons.add_location_alt_outlined,
+                    color: Colors.white70),
+                title: const Text('New Location Pin',
+                    style: TextStyle(color: Colors.white)),
+                subtitle: const Text(
+                    'Recommend a spot not currently on the map',
+                    style: TextStyle(color: Colors.white54, fontSize: 11)),
                 onTap: () {
                   Navigator.pop(context);
                   context.push('/map');
@@ -4117,16 +4538,22 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10),
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 10),
               ],
             ),
             child: Column(
               children: [
-                const Icon(Icons.map_outlined, color: Color(0xFF74C69D), size: 40),
+                const Icon(Icons.map_outlined,
+                    color: Color(0xFF74C69D), size: 40),
                 const SizedBox(height: 12),
                 const Text(
                   'Explore Interactive Travel Map',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0D2018)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Color(0xFF0D2018)),
                 ),
                 const SizedBox(height: 4),
                 const Text(
@@ -4138,10 +4565,13 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF40916C),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   onPressed: () => context.push('/map'),
-                  child: const Text('Open Map Tab', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: const Text('Open Map Tab',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -4158,7 +4588,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
         final List<TripLog> allLogs = state is FeedLoaded
             ? state.logs.where((log) => !log.isArchived).toList()
             : [];
-        final savedLogsList = allLogs.where((log) => _savedLogs.contains(log.tripId)).toList();
+        final savedLogsList =
+            allLogs.where((log) => _savedLogs.contains(log.tripId)).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -4175,7 +4606,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 ),
               ),
             ),
-            
             if (savedLogsList.isEmpty) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -4185,16 +4615,22 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10),
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 10),
                     ],
                   ),
                   child: const Column(
                     children: [
-                      Icon(Icons.bookmark_outline, color: Color(0xFF74C69D), size: 40),
+                      Icon(Icons.bookmark_outline,
+                          color: Color(0xFF74C69D), size: 40),
                       SizedBox(height: 12),
                       Text(
                         'No Saved Posts Yet',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0D2018)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Color(0xFF0D2018)),
                       ),
                       SizedBox(height: 4),
                       Text(
@@ -4218,7 +4654,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 },
               ),
             ],
-            
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -4227,11 +4662,13 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.cloud_download_outlined, color: Color(0xFF40916C)),
+                    const Icon(Icons.cloud_download_outlined,
+                        color: Color(0xFF40916C)),
                     const SizedBox(width: 12),
                     const Expanded(
                       child: Text(
@@ -4243,11 +4680,17 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF40916C),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                       ),
                       onPressed: () => context.push('/vault'),
-                      child: const Text('Go to Vault', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                      child: const Text('Go to Vault',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -4282,7 +4725,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 ),
               ),
             ),
-            
             if (archivedLogs.isEmpty) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -4292,16 +4734,22 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10),
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 10),
                     ],
                   ),
                   child: const Column(
                     children: [
-                      Icon(Icons.archive_outlined, color: Color(0xFF74C69D), size: 40),
+                      Icon(Icons.archive_outlined,
+                          color: Color(0xFF74C69D), size: 40),
                       SizedBox(height: 12),
                       Text(
                         'No Archived Logs',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0D2018)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Color(0xFF0D2018)),
                       ),
                       SizedBox(height: 4),
                       Text(
@@ -4332,7 +4780,16 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
   }
 
   Widget _buildDivisionsTabContent() {
-    final divisions = ['Dhaka', 'Sylhet', 'Chittagong', 'Khulna', 'Barishal', 'Rajshahi', 'Rangpur', 'Mymensingh'];
+    final divisions = [
+      'Dhaka',
+      'Sylhet',
+      'Chittagong',
+      'Khulna',
+      'Barishal',
+      'Rajshahi',
+      'Rangpur',
+      'Mymensingh'
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -4352,8 +4809,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
               ),
               if (_selectedDivisionFilter != null)
                 TextButton(
-                  onPressed: () => setState(() => _selectedDivisionFilter = null),
-                  child: const Text('Clear Filter', style: TextStyle(color: Colors.redAccent, fontSize: 11)),
+                  onPressed: () =>
+                      setState(() => _selectedDivisionFilter = null),
+                  child: const Text('Clear Filter',
+                      style: TextStyle(color: Colors.redAccent, fontSize: 11)),
                 ),
             ],
           ),
@@ -4379,19 +4838,25 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF40916C) : Colors.white,
+                      color:
+                          isSelected ? const Color(0xFF40916C) : Colors.white,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6),
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6),
                       ],
                       border: Border.all(
-                        color: isSelected ? Colors.transparent : const Color(0xFFECEAE4),
+                        color: isSelected
+                            ? Colors.transparent
+                            : const Color(0xFFECEAE4),
                       ),
                     ),
                     child: Text(
                       div,
                       style: TextStyle(
-                        color: isSelected ? Colors.white : const Color(0xFF0D2018),
+                        color:
+                            isSelected ? Colors.white : const Color(0xFF0D2018),
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -4418,7 +4883,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             _selectedDivisionFilter == null
                 ? 'Select a division above to filter'
                 : 'Trip Logs in $_selectedDivisionFilter Division',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0D2018)),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Color(0xFF0D2018)),
           ),
         ),
         SizedBox(
@@ -4427,13 +4895,20 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             bloc: _feedCubit,
             builder: (context, state) {
               if (state is FeedLoading || state is FeedInitial) {
-                return const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: FeedListSkeleton(count: 2));
+                return const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: FeedListSkeleton(count: 2));
               }
               if (state is FeedLoaded) {
-                final activeLogs = state.logs.where((l) => !l.isArchived).toList();
+                final activeLogs =
+                    state.logs.where((l) => !l.isArchived).toList();
                 final filtered = _selectedDivisionFilter == null
                     ? activeLogs
-                    : activeLogs.where((l) => l.division.toLowerCase() == _selectedDivisionFilter!.toLowerCase()).toList();
+                    : activeLogs
+                        .where((l) =>
+                            l.division.toLowerCase() ==
+                            _selectedDivisionFilter!.toLowerCase())
+                        .toList();
 
                 if (filtered.isNotEmpty) {
                   return ListView.builder(
@@ -4487,10 +4962,13 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             bloc: _feedCubit,
             builder: (context, state) {
               if (state is FeedLoading || state is FeedInitial) {
-                return const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: FeedListSkeleton(count: 2));
+                return const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: FeedListSkeleton(count: 2));
               }
               if (state is FeedLoaded) {
-                final activeLogs = state.logs.where((l) => !l.isArchived).toList();
+                final activeLogs =
+                    state.logs.where((l) => !l.isArchived).toList();
                 final sorted = List<TripLog>.from(activeLogs);
                 sorted.sort((a, b) => b.helpfulVotes.compareTo(a.helpfulVotes));
 
@@ -4508,7 +4986,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                 }
               }
               return const Center(
-                child: Text('No trending logs available.', style: TextStyle(color: Color(0xFFAEABA4))),
+                child: Text('No trending logs available.',
+                    style: TextStyle(color: Color(0xFFAEABA4))),
               );
             },
           ),
@@ -4519,7 +4998,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
 
   void _showNotificationCenter(BuildContext context) {
     final authState = context.read<AuthCubit>().state;
-    final uid = authState is Authenticated ? authState.profile.uid : 'explorer_user';
+    final uid =
+        authState is Authenticated ? authState.profile.uid : 'explorer_user';
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
 
     showModalBottomSheet<void>(
@@ -4555,7 +5035,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                       );
                       Navigator.pop(context);
                     },
-                    child: const Text('Clear all', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    child: const Text('Clear all',
+                        style: TextStyle(color: Colors.white54, fontSize: 12)),
                   ),
                 ],
               ),
@@ -4575,11 +5056,13 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.notifications_off_outlined, size: 48, color: Colors.white24),
+                            Icon(Icons.notifications_off_outlined,
+                                size: 48, color: Colors.white24),
                             SizedBox(height: 12),
                             Text(
                               'No notifications yet',
-                              style: TextStyle(color: Colors.white30, fontSize: 13),
+                              style: TextStyle(
+                                  color: Colors.white30, fontSize: 13),
                             ),
                           ],
                         ),
@@ -4590,7 +5073,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                       itemCount: docs.length,
                       itemBuilder: (context, index) {
                         final data = docs[index].data() as Map<String, dynamic>;
-                        final String title = (data['title'] as String?) ?? 'Bhromon Alert';
+                        final String title =
+                            (data['title'] as String?) ?? 'Bhromon Alert';
                         final String body = (data['body'] as String?) ?? '';
                         final String action = (data['action'] as String?) ?? '';
                         final String notifUid = (data['uid'] as String?) ?? uid;
@@ -4627,7 +5111,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
                           iconColor: iconColor,
                           onTap: () {
                             Navigator.pop(context);
-                            _handleNotificationAction(context, action, notifUid);
+                            _handleNotificationAction(
+                                context, action, notifUid);
                           },
                         );
                       },
@@ -4670,7 +5155,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13),
               ),
             ),
             Text(
@@ -4691,7 +5179,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     );
   }
 
-  void _handleNotificationAction(BuildContext context, String action, String? targetUid) {
+  void _handleNotificationAction(
+      BuildContext context, String action, String? targetUid) {
     switch (action) {
       case 're_confirm_tips':
         context.push('/vault');
@@ -4730,6 +5219,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> with SingleTickerProvid
     }
   }
 }
+
 // --- SYNC PULSE ORB ---
 class _SyncPulseOrb extends StatefulWidget {
   const _SyncPulseOrb();
@@ -4738,7 +5228,8 @@ class _SyncPulseOrb extends StatefulWidget {
   State<_SyncPulseOrb> createState() => _SyncPulseOrbState();
 }
 
-class _SyncPulseOrbState extends State<_SyncPulseOrb> with SingleTickerProviderStateMixin {
+class _SyncPulseOrbState extends State<_SyncPulseOrb>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
@@ -4767,10 +5258,13 @@ class _SyncPulseOrbState extends State<_SyncPulseOrb> with SingleTickerProviderS
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: const Color(0xFF74C69D).withValues(alpha: 0.15),
-            border: Border.all(color: const Color(0xFF74C69D).withValues(alpha: 0.35), width: 1.5),
+            border: Border.all(
+                color: const Color(0xFF74C69D).withValues(alpha: 0.35),
+                width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF74C69D).withValues(alpha: 0.35 * (1.0 - _controller.value)),
+                color: const Color(0xFF74C69D)
+                    .withValues(alpha: 0.35 * (1.0 - _controller.value)),
                 blurRadius: 10 * _controller.value,
                 spreadRadius: 6 * _controller.value,
               )
@@ -4788,4 +5282,3 @@ class _SyncPulseOrbState extends State<_SyncPulseOrb> with SingleTickerProviderS
     );
   }
 }
-

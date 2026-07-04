@@ -176,7 +176,8 @@ class OfflineMapService {
       debugPrint('[OfflineMapService] Offline region ready for $districtId');
       return true;
     } catch (e) {
-      debugPrint('[OfflineMapService] Failed to download region $districtId: $e');
+      debugPrint(
+          '[OfflineMapService] Failed to download region $districtId: $e');
       return false;
     }
   }

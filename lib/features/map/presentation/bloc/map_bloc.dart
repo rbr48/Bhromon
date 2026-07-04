@@ -38,7 +38,8 @@ class MapBloc extends Bloc<MapEvent, MapState> {
         result.fold(
           (failure) => emit(MapError(failure.message)),
           (newPin) {
-            final updatedPins = List<LocationPin>.from(currentState.pins)..add(newPin);
+            final updatedPins = List<LocationPin>.from(currentState.pins)
+              ..add(newPin);
             emit(MapPinsLoaded(updatedPins));
           },
         );

@@ -30,7 +30,8 @@ class AuthRepositoryImpl implements IAuthRepository {
 
   Future<void> _initLocalCache() async {
     try {
-      final box = await _encryptionService.openEncryptedBox<dynamic>(_localBoxName);
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>(_localBoxName);
       final profileJson = box.get('profile');
       if (profileJson != null) {
         _cachedProfile = ExplorerProfile.fromJson(
@@ -42,7 +43,8 @@ class AuthRepositoryImpl implements IAuthRepository {
   Future<void> _updateLocalCache(ExplorerProfile profile) async {
     _cachedProfile = profile;
     try {
-      final box = await _encryptionService.openEncryptedBox<dynamic>(_localBoxName);
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>(_localBoxName);
       await box.put('profile', profile.toJson());
     } catch (_) {}
   }
@@ -50,7 +52,8 @@ class AuthRepositoryImpl implements IAuthRepository {
   Future<void> _clearLocalCache() async {
     _cachedProfile = null;
     try {
-      final box = await _encryptionService.openEncryptedBox<dynamic>(_localBoxName);
+      final box =
+          await _encryptionService.openEncryptedBox<dynamic>(_localBoxName);
       await box.delete('profile');
     } catch (_) {}
   }
@@ -71,8 +74,13 @@ class AuthRepositoryImpl implements IAuthRepository {
         lastError = e;
       } on FirebaseException catch (e) {
         lastError = e;
-        final transient = {'unavailable', 'deadline-exceeded', 'internal',
-            'resource-exhausted', 'aborted'};
+        final transient = {
+          'unavailable',
+          'deadline-exceeded',
+          'internal',
+          'resource-exhausted',
+          'aborted'
+        };
         if (!transient.contains(e.code)) rethrow;
       } catch (e) {
         rethrow;
@@ -105,11 +113,13 @@ class AuthRepositoryImpl implements IAuthRepository {
   @override
   Future<Either<Failure, ExplorerProfile>> verifyOtp(String smsCode) async {
     if (_emailForOtp == null) {
-      return const Left(AuthFailure('Email address is missing. Please request a code first.'));
+      return const Left(AuthFailure(
+          'Email address is missing. Please request a code first.'));
     }
     try {
       final functions = FirebaseFunctions.instanceFor(region: 'asia-south1');
-      final callableResult = await functions.httpsCallable('verifyOtp').call<dynamic>({
+      final callableResult =
+          await functions.httpsCallable('verifyOtp').call<dynamic>({
         'email': _emailForOtp!,
         'otp': smsCode,
       });
@@ -160,10 +170,10 @@ class AuthRepositoryImpl implements IAuthRepository {
     try {
       // Clear local Hive cache immediately for instant logout
       await _clearLocalCache();
-      
+
       // Perform remote Firebase and Google sign-out in the background
       _signOutRemotely();
-      
+
       return const Right(unit);
     } catch (e) {
       return Left(AuthFailure(e.toString()));
@@ -227,7 +237,8 @@ class AuthRepositoryImpl implements IAuthRepository {
   }
 
   @override
-  Future<Either<Failure, ExplorerProfile>> updateProfile(ExplorerProfile profile) async {
+  Future<Either<Failure, ExplorerProfile>> updateProfile(
+      ExplorerProfile profile) async {
     final user = _auth.currentUser;
     if (user == null) return const Left(AuthFailure('User not authenticated'));
 
@@ -244,7 +255,8 @@ class AuthRepositoryImpl implements IAuthRepository {
     return Right(profile);
   }
 
-  Future<Either<Failure, ExplorerProfile>> _syncUserWithFirestore(User user) async {
+  Future<Either<Failure, ExplorerProfile>> _syncUserWithFirestore(
+      User user) async {
     try {
       final doc = await _withRetry(
         () => _firestore.collection('explorer_profiles').doc(user.uid).get(),

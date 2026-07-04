@@ -48,10 +48,8 @@ class _SavedDiaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('trip_logs')
-          .doc(tripId)
-          .get(),
+      future:
+          FirebaseFirestore.instance.collection('trip_logs').doc(tripId).get(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(

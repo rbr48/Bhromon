@@ -42,7 +42,8 @@ class MediaUploadService {
   }) async {
     try {
       if (kIsWeb) {
-        throw UnsupportedError('Direct File upload is not supported on web. Use bytes instead.');
+        throw UnsupportedError(
+            'Direct File upload is not supported on web. Use bytes instead.');
       }
       if (!file.existsSync()) {
         throw FileSystemException('File does not exist at path: ${file.path}');
@@ -53,20 +54,23 @@ class MediaUploadService {
       if (extension == 'jpg' || extension == 'jpeg' || extension == 'png') {
         try {
           final tempDir = await getTemporaryDirectory();
-          final targetPath = '${tempDir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.$extension';
-          
+          final targetPath =
+              '${tempDir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.$extension';
+
           final compressedFile = await FlutterImageCompress.compressAndGetFile(
             file.absolute.path,
             targetPath,
             quality: 75,
-            format: extension == 'png' ? CompressFormat.png : CompressFormat.jpeg,
+            format:
+                extension == 'png' ? CompressFormat.png : CompressFormat.jpeg,
           );
-          
+
           if (compressedFile != null) {
             final xfile = File(compressedFile.path);
             if (xfile.lengthSync() < file.lengthSync()) {
               fileToUpload = xfile;
-              debugPrint('Compressed image from ${file.lengthSync()} to ${xfile.lengthSync()} bytes');
+              debugPrint(
+                  'Compressed image from ${file.lengthSync()} to ${xfile.lengthSync()} bytes');
             }
           }
         } catch (e) {
@@ -76,7 +80,7 @@ class MediaUploadService {
 
       final mappedPath = _mapPath(path);
       final ref = FirebaseStorage.instance.ref().child(mappedPath);
-      
+
       final uploadTask = ref.putFile(
         fileToUpload,
         SettableMetadata(contentType: _getContentTypeForExtension(extension)),
@@ -84,7 +88,8 @@ class MediaUploadService {
 
       if (onProgress != null) {
         uploadTask.snapshotEvents.listen((snap) {
-          final progress = snap.bytesTransferred / (snap.totalBytes > 0 ? snap.totalBytes : 1);
+          final progress = snap.bytesTransferred /
+              (snap.totalBytes > 0 ? snap.totalBytes : 1);
           onProgress(progress);
         });
       }
@@ -109,7 +114,7 @@ class MediaUploadService {
     try {
       final mappedPath = _mapPath(path);
       final ref = FirebaseStorage.instance.ref().child(mappedPath);
-      
+
       final uploadTask = ref.putData(
         Uint8List.fromList(bytes),
         SettableMetadata(contentType: contentType),
@@ -117,7 +122,8 @@ class MediaUploadService {
 
       if (onProgress != null) {
         uploadTask.snapshotEvents.listen((snap) {
-          final progress = snap.bytesTransferred / (snap.totalBytes > 0 ? snap.totalBytes : 1);
+          final progress = snap.bytesTransferred /
+              (snap.totalBytes > 0 ? snap.totalBytes : 1);
           onProgress(progress);
         });
       }

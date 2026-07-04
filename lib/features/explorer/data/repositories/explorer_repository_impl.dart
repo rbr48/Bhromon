@@ -14,9 +14,11 @@ class ExplorerRepositoryImpl implements IExplorerRepository {
   @override
   Future<Either<Failure, ExplorerProfile>> getProfile(String uid) async {
     try {
-      final doc = await _firestore.collection('explorer_profiles').doc(uid).get();
+      final doc =
+          await _firestore.collection('explorer_profiles').doc(uid).get();
       if (!doc.exists) {
-        return Left(NotFoundFailure('Explorer profile not found', resourceId: uid));
+        return Left(
+            NotFoundFailure('Explorer profile not found', resourceId: uid));
       }
       final data = doc.data()!;
       data['uid'] = doc.id;
@@ -28,7 +30,8 @@ class ExplorerRepositoryImpl implements IExplorerRepository {
   }
 
   @override
-  Future<Either<Failure, List<ExplorerProfile>>> getTopExplorers({int? limit}) async {
+  Future<Either<Failure, List<ExplorerProfile>>> getTopExplorers(
+      {int? limit}) async {
     try {
       final snapshot = await _firestore.collection('explorer_profiles').get();
       var profiles = snapshot.docs.map((doc) {
@@ -39,7 +42,8 @@ class ExplorerRepositoryImpl implements IExplorerRepository {
       }).toList();
 
       // Sort locally by explorerScore.value descending
-      profiles.sort((a, b) => b.explorerScore.value.compareTo(a.explorerScore.value));
+      profiles.sort(
+          (a, b) => b.explorerScore.value.compareTo(a.explorerScore.value));
 
       if (limit != null && profiles.length > limit) {
         profiles = profiles.sublist(0, limit);
@@ -53,7 +57,8 @@ class ExplorerRepositoryImpl implements IExplorerRepository {
 
   void _fixTimestamp(Map<String, dynamic> data) {
     if (data['createdAt'] is Timestamp) {
-      data['createdAt'] = (data['createdAt'] as Timestamp).toDate().toIso8601String();
+      data['createdAt'] =
+          (data['createdAt'] as Timestamp).toDate().toIso8601String();
     }
   }
 }

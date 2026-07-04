@@ -33,7 +33,8 @@ import 'features/ota/presentation/widgets/ota_update_dialog.dart';
 import 'features/feed/presentation/bloc/feed_cubit.dart';
 import 'core/security/device_integrity_service.dart';
 import 'core/database/app_database.dart';
-import 'features/notifications/geo_fence_service.dart' show registerGeoFenceWork;
+import 'features/notifications/geo_fence_service.dart'
+    show registerGeoFenceWork;
 
 void main() {
   runZonedGuarded(() async {
@@ -48,7 +49,8 @@ void main() {
     ));
 
     // Optimize ImageCache to hold up to 300 images & 250MB to prevent constant lazy-loading and jank on feeds
-    PaintingBinding.instance.imageCache.maximumSizeBytes = 250 * 1024 * 1024; // 250 MB
+    PaintingBinding.instance.imageCache.maximumSizeBytes =
+        250 * 1024 * 1024; // 250 MB
     PaintingBinding.instance.imageCache.maximumSize = 300; // 300 images
 
     HydratedBloc.storage = await HydratedStorage.build(
@@ -58,7 +60,8 @@ void main() {
     // Global Sync/Layout Error Boundaries
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
-      logError('[GlobalError] Synchronous error caught', details.exception, details.stack);
+      logError('[GlobalError] Synchronous error caught', details.exception,
+          details.stack);
       appLogger.handle(details.exception, details.stack);
     };
 
@@ -80,17 +83,22 @@ void main() {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 64),
+                  const Icon(Icons.error_outline_rounded,
+                      color: Colors.redAccent, size: 64),
                   const SizedBox(height: 24),
                   const Text(
                     'Application Error',
-                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
                   const Text(
                     'An unexpected error occurred in the layout interface. Please restart the application if the issue persists.',
-                    style: TextStyle(color: Colors.white60, fontSize: 14, height: 1.4),
+                    style: TextStyle(
+                        color: Colors.white60, fontSize: 14, height: 1.4),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -102,7 +110,10 @@ void main() {
                     ),
                     child: Text(
                       details.exceptionAsString(),
-                      style: const TextStyle(color: Colors.redAccent, fontFamily: 'monospace', fontSize: 11),
+                      style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontFamily: 'monospace',
+                          fontSize: 11),
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
@@ -115,13 +126,14 @@ void main() {
         ),
       );
     };
-    
-    final bool isCompromised = await DeviceIntegrityService.isDeviceCompromised();
+
+    final bool isCompromised =
+        await DeviceIntegrityService.isDeviceCompromised();
     if (isCompromised) {
       runApp(const SecurityCompromisedApp());
       return;
     }
-    
+
     await Hive.initFlutter();
 
     bool firebaseAvailable = true;
@@ -131,14 +143,18 @@ void main() {
       );
     } catch (e, stack) {
       firebaseAvailable = false;
-      logWarning('Firebase initialization failed (likely blocked by client adblocker)', e, stack);
+      logWarning(
+          'Firebase initialization failed (likely blocked by client adblocker)',
+          e,
+          stack);
     }
-    
+
     if (!firebaseAvailable) {
       if (kReleaseMode) {
         // Enforce production dependencies and raise a warning rather than serving dummy mock data
         configureDependencies(environment: Env.prod);
-        logError('Firebase initialization failed in release build. Proceeding with production environment config.');
+        logError(
+            'Firebase initialization failed in release build. Proceeding with production environment config.');
       } else {
         configureDependencies(environment: Env.offline);
         // Register offline mock repositories for auth and trip logs in debug/profile builds
@@ -151,10 +167,10 @@ void main() {
       }
     } else {
       configureDependencies(environment: Env.prod);
-      
+
       // Wire up Firebase Crashlytics error handlers
       FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
-      
+
       final originalOnError = FlutterError.onError;
       FlutterError.onError = (FlutterErrorDetails details) {
         if (originalOnError != null) originalOnError(details);
@@ -194,7 +210,8 @@ void main() {
         );
         logInfo('[Firestore] Offline persistence enabled');
       } catch (e, stack) {
-        logWarning('[Firestore] Could not enable offline persistence', e, stack);
+        logWarning(
+            '[Firestore] Could not enable offline persistence', e, stack);
       }
 
       try {
@@ -205,13 +222,15 @@ void main() {
         SyncWorker.registerPeriodicSync();
         await registerGeoFenceWork();
       } catch (e, stack) {
-        logWarning('[SyncWorker] Failed to initialize background sync', e, stack);
+        logWarning(
+            '[SyncWorker] Failed to initialize background sync', e, stack);
       }
     }
 
     runApp(const MyApp());
   }, (error, stack) {
-    logError('[GlobalError] Asynchronous error caught in runZonedGuarded zone', error, stack);
+    logError('[GlobalError] Asynchronous error caught in runZonedGuarded zone',
+        error, stack);
     appLogger.handle(error, stack);
     try {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
@@ -363,4 +382,3 @@ class SecurityCompromisedApp extends StatelessWidget {
     );
   }
 }
-

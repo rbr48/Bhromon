@@ -12,7 +12,8 @@ class ExplorerDashboardScreen extends StatefulWidget {
   const ExplorerDashboardScreen({super.key});
 
   @override
-  State<ExplorerDashboardScreen> createState() => _ExplorerDashboardScreenState();
+  State<ExplorerDashboardScreen> createState() =>
+      _ExplorerDashboardScreenState();
 }
 
 class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
@@ -39,16 +40,19 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
       final uid = authState.profile.uid;
 
       // 1. Fetch profile and trust score
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
       final userData = userDoc.data() ?? {};
-      _trustScore = userData['trustScore'] as int? ?? userData['explorerScore'] as int? ?? 10;
+      _trustScore = userData['trustScore'] as int? ??
+          userData['explorerScore'] as int? ??
+          10;
 
       // 2. Fetch logs for stats
       final logsQuery = await FirebaseFirestore.instance
           .collection('trip_logs')
           .where('authorId', isEqualTo: uid)
           .get();
-      
+
       _totalLogs = logsQuery.docs.length;
       final Set<String> districts = {};
       double kmCount = 0.0;
@@ -101,7 +105,7 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
           .doc(uid)
           .collection('badges')
           .get();
-      
+
       _earnedBadges = badgesQuery.docs.map((doc) {
         final data = doc.data();
         return {
@@ -159,7 +163,8 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
         elevation: 0,
         title: const Text(
           'Explorer Dashboard',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         centerTitle: true,
       ),
@@ -177,10 +182,26 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
               crossAxisSpacing: 12,
               childAspectRatio: 1.5,
               children: [
-                _buildStatCard('Total Logs', '$_totalLogs', Icons.article_outlined, [const Color(0xFF6366F1), const Color(0xFF4F46E5)]),
-                _buildStatCard('Trust Score', '$_trustScore', Icons.verified_outlined, [const Color(0xFF10B981), const Color(0xFF059669)]),
-                _buildStatCard('Districts', '$_districtsVisited', Icons.map_outlined, [const Color(0xFFF59E0B), const Color(0xFFD97706)]),
-                _buildStatCard('Total Km', '${_totalKm.toStringAsFixed(0)} km', Icons.directions_run_outlined, [const Color(0xFFEC4899), const Color(0xFFDB2777)]),
+                _buildStatCard(
+                    'Total Logs',
+                    '$_totalLogs',
+                    Icons.article_outlined,
+                    [const Color(0xFF6366F1), const Color(0xFF4F46E5)]),
+                _buildStatCard(
+                    'Trust Score',
+                    '$_trustScore',
+                    Icons.verified_outlined,
+                    [const Color(0xFF10B981), const Color(0xFF059669)]),
+                _buildStatCard(
+                    'Districts',
+                    '$_districtsVisited',
+                    Icons.map_outlined,
+                    [const Color(0xFFF59E0B), const Color(0xFFD97706)]),
+                _buildStatCard(
+                    'Total Km',
+                    '${_totalKm.toStringAsFixed(0)} km',
+                    Icons.directions_run_outlined,
+                    [const Color(0xFFEC4899), const Color(0xFFDB2777)]),
               ],
             ),
             const SizedBox(height: 24),
@@ -188,7 +209,10 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
             // Line Chart Section
             const Text(
               'Trust Progression',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16),
             ),
             const SizedBox(height: 12),
             Container(
@@ -204,9 +228,13 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                   gridData: const FlGridData(show: false),
                   titlesData: const FlTitlesData(
                     show: true,
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30)),
+                    topTitles:
+                        AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles:
+                        AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: AxisTitles(
+                        sideTitles:
+                            SideTitles(showTitles: true, reservedSize: 30)),
                   ),
                   borderData: FlBorderData(show: false),
                   lineBarsData: [
@@ -229,11 +257,15 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
             // Category breakdown
             const Text(
               'Categories Visited',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16),
             ),
             const SizedBox(height: 12),
             _categoriesCount.isEmpty
-                ? const Text('No categories logged yet.', style: TextStyle(color: Colors.white38, fontSize: 12))
+                ? const Text('No categories logged yet.',
+                    style: TextStyle(color: Colors.white38, fontSize: 12))
                 : Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -243,7 +275,8 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                         side: const BorderSide(color: Colors.white10),
                         label: Text(
                           '${entry.key} (${entry.value})',
-                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 11),
                         ),
                       );
                     }).toList(),
@@ -256,11 +289,16 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
               children: [
                 const Text(
                   'Achievements & Badges',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16),
                 ),
                 TextButton(
                   onPressed: () => context.push('/challenges'),
-                  child: const Text('View All', style: TextStyle(color: AppColors.mintGreen, fontSize: 12)),
+                  child: const Text('View All',
+                      style:
+                          TextStyle(color: AppColors.mintGreen, fontSize: 12)),
                 ),
               ],
             ),
@@ -273,11 +311,15 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.02),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.05)),
                     ),
                     child: const Text(
                       'No badges earned yet. Start exploring to unlock!',
-                      style: TextStyle(color: Colors.white30, fontSize: 12, fontStyle: FontStyle.italic),
+                      style: TextStyle(
+                          color: Colors.white30,
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic),
                     ),
                   )
                 : SizedBox(
@@ -297,11 +339,15 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                           ),
                           child: Row(
                             children: [
-                              Text(badge['icon'] as String? ?? '🏆', style: const TextStyle(fontSize: 24)),
+                              Text(badge['icon'] as String? ?? '🏆',
+                                  style: const TextStyle(fontSize: 24)),
                               const SizedBox(width: 8),
                               Text(
                                 badge['name'] as String? ?? 'Achievement',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12),
                               ),
                             ],
                           ),
@@ -314,7 +360,10 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
             // Explore more pins
             const Text(
               'Explore More Destinations',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16),
             ),
             const SizedBox(height: 12),
             ListView.builder(
@@ -331,9 +380,16 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                     side: const BorderSide(color: Colors.white10),
                   ),
                   child: ListTile(
-                    title: Text(pin.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                    subtitle: Text('${pin.category} • ${pin.district}', style: const TextStyle(color: Colors.white54, fontSize: 11)),
-                    trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white30, size: 14),
+                    title: Text(pin.name,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13)),
+                    subtitle: Text('${pin.category} • ${pin.district}',
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 11)),
+                    trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                        color: Colors.white30, size: 14),
                     onTap: () {
                       context.push('/map');
                     },
@@ -347,7 +403,8 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, List<Color> gradientColors) {
+  Widget _buildStatCard(
+      String label, String value, IconData icon, List<Color> gradientColors) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -367,14 +424,18 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
             children: [
               Text(
                 label,
-                style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500),
               ),
               Icon(icon, color: Colors.white70, size: 18),
             ],
           ),
           Text(
             value,
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ],
       ),

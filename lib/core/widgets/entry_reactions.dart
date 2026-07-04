@@ -26,10 +26,10 @@ class _EntryReactionsWidgetState extends State<EntryReactionsWidget> {
   String? _myReaction;
 
   static const _reactionDefs = [
-    {'key': 'wantToGo',  'emoji': '🗺️', 'label': 'যেতে চাই'},
-    {'key': 'beenHere',  'emoji': '✅',  'label': 'গিয়েছি'},
-    {'key': 'learned',   'emoji': '💡',  'label': 'শিখেছি'},
-    {'key': 'beautiful', 'emoji': '🙏',  'label': 'সুন্দর'},
+    {'key': 'wantToGo', 'emoji': '🗺️', 'label': 'যেতে চাই'},
+    {'key': 'beenHere', 'emoji': '✅', 'label': 'গিয়েছি'},
+    {'key': 'learned', 'emoji': '💡', 'label': 'শিখেছি'},
+    {'key': 'beautiful', 'emoji': '🙏', 'label': 'সুন্দর'},
   ];
 
   @override
@@ -92,7 +92,8 @@ class _EntryReactionsWidgetState extends State<EntryReactionsWidget> {
                     Text(
                       count.toString(),
                       style: TextStyle(
-                        color: isSelected ? AppColors.mintGreen : Colors.white54,
+                        color:
+                            isSelected ? AppColors.mintGreen : Colors.white54,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),

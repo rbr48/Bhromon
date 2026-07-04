@@ -25,11 +25,13 @@ class PrivacyToggleWidget extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: DiaryVisibility.values.map((v) => _Segment(
-          visibility: v,
-          isSelected: v == current,
-          onTap: () => onChanged(v),
-        )).toList(),
+        children: DiaryVisibility.values
+            .map((v) => _Segment(
+                  visibility: v,
+                  isSelected: v == current,
+                  onTap: () => onChanged(v),
+                ))
+            .toList(),
       ),
     );
   }
@@ -61,7 +63,9 @@ class _Segment extends StatelessWidget {
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? _selectedColor.withValues(alpha: 0.18) : Colors.transparent,
+          color: isSelected
+              ? _selectedColor.withValues(alpha: 0.18)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: isSelected
               ? Border.all(color: _selectedColor.withValues(alpha: 0.5))

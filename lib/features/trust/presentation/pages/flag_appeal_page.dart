@@ -132,7 +132,8 @@ class _FlagAppealPageState extends State<FlagAppealPage> {
                     'If you believe your content was flagged in error, '
                     'explain why below. Our trust team reviews all appeals '
                     'within 48 hours.',
-                    style: TextStyle(color: _kWhite54, fontSize: 14, height: 1.5),
+                    style:
+                        TextStyle(color: _kWhite54, fontSize: 14, height: 1.5),
                   ),
 
                   const SizedBox(height: 28),
@@ -181,7 +182,8 @@ class _FlagAppealPageState extends State<FlagAppealPage> {
                           'Explain why this content should not have been flagged. '
                           'Include any relevant context about the content and why '
                           'it complies with Bhromon community guidelines…',
-                      hintStyle: const TextStyle(color: _kWhite30, fontSize: 13),
+                      hintStyle:
+                          const TextStyle(color: _kWhite30, fontSize: 13),
                       filled: true,
                       fillColor: _kFieldBg,
                       counterStyle: const TextStyle(color: _kWhite30),
@@ -195,8 +197,8 @@ class _FlagAppealPageState extends State<FlagAppealPage> {
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            BorderSide(color: Colors.redAccent.withValues(alpha: .7)),
+                        borderSide: BorderSide(
+                            color: Colors.redAccent.withValues(alpha: .7)),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),

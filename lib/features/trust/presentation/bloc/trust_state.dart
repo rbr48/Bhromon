@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/value_objects/trust_tier.dart';
 
 enum TrustStatus { initial, loading, loaded, error }
+
 enum AppealStatus { idle, submitting, success, error }
 
 class TrustState extends Equatable {
