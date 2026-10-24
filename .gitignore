@@ -53,6 +53,7 @@ key.properties
 
 # Crawler credentials & scraped binaries
 travel_data_crawler/cookies/
+travel_data_crawler/data/
 *.cookies.json
 travel_data_crawler/**/*.html
 travel_data_crawler/**/*.db
