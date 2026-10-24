@@ -96,7 +96,7 @@ dependencies {
 }
 
 tasks.whenTaskAdded { task ->
-    if (task.name.toLowerCase().contains("artprofile") || task.name.toLowerCase().contains("nativesymboltable")) {
+    if (task.name.toLowerCase().contains("artprofile") || task.name.toLowerCase().contains("nativesymboltable") || task.name.toLowerCase().contains("cleanmergereleaseassets")) {
         task.enabled = false
     }
 }
