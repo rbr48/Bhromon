@@ -30,7 +30,7 @@ class MapRepositoryImpl implements IMapRepository {
       final connectivity = await Connectivity().checkConnectivity();
       if (connectivity.isNotEmpty &&
           connectivity.first == ConnectivityResult.none) {
-        return _getCachedPins();
+        return await _getCachedPins();
       }
 
       final snapshot = await _firestore.collection('location_pins').get();
@@ -72,7 +72,7 @@ class MapRepositoryImpl implements IMapRepository {
 
       return Right(pins);
     } catch (e) {
-      return _getCachedPins();
+      return await _getCachedPins();
     }
   }
 

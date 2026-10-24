@@ -285,14 +285,20 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true,
+      useSafeArea: false,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       backgroundColor: Colors.transparent,
       builder: (context) {
         String sheetSearch = '';
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             return Container(
-              height: MediaQuery.of(ctx).size.height * 0.8,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.82,
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).padding.bottom + 12,
+              ),
               decoration: const BoxDecoration(
                 color: Color(0xFF1F2C34), // WhatsApp slate dark
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),

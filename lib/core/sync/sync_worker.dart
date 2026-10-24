@@ -24,9 +24,9 @@ void callbackDispatcher() {
       final syncManager = getIt<SyncManager>();
       await syncManager.flushOutbox();
 
-      return Future.value(true);
+      return await Future.value(true);
     } catch (err) {
-      return Future.value(false);
+      return await Future.value(false);
     }
   });
 }

@@ -86,6 +86,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
 
     showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF142428),
@@ -171,6 +172,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
 
     showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF142428),
         title: const Text('লাইভ মিটিং পয়েন্ট আপডেট',
@@ -430,6 +432,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.place, color: Colors.amber, size: 12),
                     SizedBox(width: 4),

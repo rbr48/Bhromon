@@ -363,7 +363,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             const SizedBox(height: 6),
             Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
             const SizedBox(height: 2),
-            Text(displayNumber, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(displayNumber, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+            ),
           ],
         ),
       ),

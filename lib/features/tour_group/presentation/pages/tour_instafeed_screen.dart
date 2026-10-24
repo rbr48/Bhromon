@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:uuid/uuid.dart';
 import '../../domain/models/tour_post_models.dart';
 import '../../data/tour_group_repository.dart';
 import '../../../../core/theme/colors.dart';
@@ -94,6 +98,62 @@ const Map<String, String> kFilterLabels = {
   'moon': 'মুন (B&W)',
   'vintage': 'ভিন্টেজ',
 };
+
+
+Widget buildSmartMediaImage(String path, {BoxFit fit = BoxFit.cover, double? width, double? height}) {
+  if (path.isEmpty) {
+    return Container(
+      width: width,
+      height: height,
+      color: const Color(0xFF14241B),
+      child: const Center(child: Icon(Icons.photo, color: Colors.white24, size: 36)),
+    );
+  }
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return CachedNetworkImage(
+      imageUrl: path,
+      fit: fit,
+      width: width,
+      height: height,
+      placeholder: (_, __) => Container(
+        width: width,
+        height: height,
+        color: const Color(0xFF14241B),
+        child: const Center(
+          child: CircularProgressIndicator(color: AppColors.mintGreen, strokeWidth: 2),
+        ),
+      ),
+      errorWidget: (_, __, ___) => Container(
+        width: width,
+        height: height,
+        color: Colors.black26,
+        child: const Center(child: Icon(Icons.broken_image, color: Colors.white38)),
+      ),
+    );
+  } else {
+    final file = File(path);
+    if (file.existsSync()) {
+      return Image.file(
+        file,
+        fit: fit,
+        width: width,
+        height: height,
+        errorBuilder: (_, __, ___) => Container(
+          width: width,
+          height: height,
+          color: Colors.black26,
+          child: const Center(child: Icon(Icons.broken_image, color: Colors.white38)),
+        ),
+      );
+    }
+    return Container(
+      width: width,
+      height: height,
+      color: const Color(0xFF14241B),
+      child: const Center(child: Icon(Icons.photo, color: Colors.white24, size: 36)),
+    );
+  }
+}
 
 class TourInstaFeedScreen extends StatefulWidget {
   final String tourId;
@@ -496,6 +556,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       backgroundColor: Colors.transparent,
       builder: (ctx) => _CreatePostStudioSheet(
         tourId: widget.tourId,
@@ -508,10 +569,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   void _showAddStoryModal(BuildContext context) {
     final captionCtrl = TextEditingController();
     String? selectedImageUrl;
+    bool isUploading = false;
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       backgroundColor: const Color(0xFF14241B),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -524,7 +587,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 top: 20,
                 left: 20,
                 right: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 24,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -547,7 +610,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   if (selectedImageUrl != null)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
+                      child: buildSmartMediaImage(
                         selectedImageUrl!,
                         height: 200,
                         width: double.infinity,
@@ -592,12 +655,25 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: selectedImageUrl == null
+                    onPressed: selectedImageUrl == null || isUploading
                         ? null
                         : () async {
+                            setModalState(() => isUploading = true);
+                            String finalUrl = selectedImageUrl!;
+                            try {
+                              final file = File(selectedImageUrl!);
+                              if (file.existsSync()) {
+                                final sName = '${const Uuid().v4()}.jpg';
+                                final sRef = FirebaseStorage.instance
+                                    .ref('tours/${widget.tourId}/stories/$sName');
+                                final sTask = await sRef.putFile(file);
+                                finalUrl = await sTask.ref.getDownloadURL();
+                              }
+                            } catch (_) {}
+
                             await _repository.addStory(
                               tourId: widget.tourId,
-                              mediaUrl: selectedImageUrl!,
+                              mediaUrl: finalUrl,
                               caption: captionCtrl.text.trim().isEmpty
                                   ? null
                                   : captionCtrl.text.trim(),
@@ -851,16 +927,9 @@ class _TourPostCardState extends State<_TourPostCard>
                               setState(() => _currentImageIndex = i);
                             },
                             itemBuilder: (context, idx) {
-                              return Image.network(
+                              return buildSmartMediaImage(
                                 post.images[idx],
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: Colors.black26,
-                                  child: const Center(
-                                    child: Icon(Icons.broken_image,
-                                        color: Colors.white38),
-                                  ),
-                                ),
                               );
                             },
                           ),
@@ -1056,6 +1125,7 @@ class _TourPostCardState extends State<_TourPostCard>
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       backgroundColor: Colors.transparent,
       builder: (ctx) => _TourCommentsSheet(
         tourId: widget.tourId,
@@ -1262,7 +1332,7 @@ class _TourCommentsSheetState extends State<_TourCommentsSheet> {
               left: 14,
               right: 14,
               top: 8,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+              bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 12,
             ),
             decoration: const BoxDecoration(
               color: Color(0xFF0D1A12),
@@ -1350,10 +1420,33 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
 
     setState(() => _isPublishing = true);
     try {
+      final List<String> uploadedUrls = [];
+      for (final localPath in _selectedImagePaths) {
+        if (localPath.startsWith('http://') || localPath.startsWith('https://')) {
+          uploadedUrls.add(localPath);
+        } else {
+          try {
+            final file = File(localPath);
+            if (file.existsSync()) {
+              final fileName = '${const Uuid().v4()}.jpg';
+              final ref = FirebaseStorage.instance
+                  .ref('tours/${widget.tourId}/posts/$fileName');
+              final task = await ref.putFile(file);
+              final dUrl = await task.ref.getDownloadURL();
+              uploadedUrls.add(dUrl);
+            } else {
+              uploadedUrls.add(localPath);
+            }
+          } catch (_) {
+            uploadedUrls.add(localPath);
+          }
+        }
+      }
+
       await widget.repository.addPost(
         tourId: widget.tourId,
         caption: _captionCtrl.text.trim(),
-        images: _selectedImagePaths,
+        images: uploadedUrls,
         location: _selectedLandmark,
         tourDay: _selectedDay,
         filterId: _selectedFilter,
@@ -1374,6 +1467,9 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom + 8,
+      ),
       decoration: const BoxDecoration(
         color: Color(0xFF14241B),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -1494,17 +1590,11 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                                   borderRadius: BorderRadius.circular(14),
                                   child: ColorFiltered(
                                     colorFilter: ColorFilter.matrix(matrix),
-                                    child: Image.network(
+                                    child: buildSmartMediaImage(
                                       _selectedImagePaths[i],
                                       width: 180,
                                       height: 220,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
-                                        width: 180,
-                                        color: Colors.black38,
-                                        child: const Icon(Icons.broken_image,
-                                            color: Colors.white38),
-                                      ),
                                     ),
                                   ),
                                 ),
@@ -1760,13 +1850,9 @@ class _StoryViewerScreenState extends State<_StoryViewerScreen>
           children: [
             // Media
             Center(
-              child: Image.network(
+              child: buildSmartMediaImage(
                 story.mediaUrl,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Center(
-                  child: Icon(Icons.broken_image,
-                      color: Colors.white38, size: 64),
-                ),
               ),
             ),
 
@@ -1906,12 +1992,18 @@ class _ReelsPlayerModalState extends State<_ReelsPlayerModal> {
   @override
   void initState() {
     super.initState();
-    _videoCtrl = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
-      ..initialize().then((_) {
+    if (widget.videoUrl.startsWith('http://') || widget.videoUrl.startsWith('https://')) {
+      _videoCtrl = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+    } else {
+      _videoCtrl = VideoPlayerController.file(File(widget.videoUrl));
+    }
+    _videoCtrl.initialize().then((_) {
+      if (mounted) {
         setState(() => _isInitialized = true);
         _videoCtrl.setLooping(true);
         _videoCtrl.play();
-      });
+      }
+    });
   }
 
   @override

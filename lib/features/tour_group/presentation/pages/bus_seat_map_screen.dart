@@ -267,6 +267,8 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
   void _showSeatAssignmentSheet(BuildContext context, BusSeat seat) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       backgroundColor: const Color(0xFF14241B),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
@@ -274,10 +276,20 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
           stream: _repository.watchMembers(widget.tourId),
           builder: (context, snapshot) {
             final members = snapshot.data ?? [];
+            final bottomPad = MediaQuery.of(ctx).padding.bottom;
 
             return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              top: false,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.75,
+                ),
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 12,
+                  bottom: bottomPad + 12,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,

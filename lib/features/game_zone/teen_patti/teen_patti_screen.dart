@@ -289,28 +289,32 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
 
             // Table Felt Canvas
             Expanded(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // North Seat
-                  Positioned(
-                    top: 16,
-                    child: _buildPlayerSeat(_players[2]),
-                  ),
-                  // West Seat
-                  Positioned(
-                    left: 14,
-                    child: _buildPlayerSeat(_players[3]),
-                  ),
-                  // East Seat
-                  Positioned(
-                    right: 14,
-                    child: _buildPlayerSeat(_players[1]),
-                  ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // North Seat
+                      Positioned(
+                        top: 12,
+                        child: _buildPlayerSeat(_players[2]),
+                      ),
+                      // West Seat
+                      Positioned(
+                        left: 8,
+                        child: _buildPlayerSeat(_players[3]),
+                      ),
+                      // East Seat
+                      Positioned(
+                        right: 8,
+                        child: _buildPlayerSeat(_players[1]),
+                      ),
 
-                  // Center Pot & Chips Mat
-                  _buildCenterPot(),
-                ],
+                      // Center Pot & Chips Mat
+                      _buildCenterPot(constraints.maxWidth),
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -373,12 +377,17 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
             children: [
               Icon(Icons.smart_toy, size: 12, color: isTurn ? Colors.black87 : Colors.white),
               const SizedBox(width: 4),
-              Text(
-                '${player.name} (${player.chips})',
-                style: TextStyle(
-                  color: isTurn ? Colors.black87 : Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 90),
+                child: Text(
+                  '${player.name} (${player.chips})',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isTurn ? Colors.black87 : Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
                 ),
               ),
             ],
@@ -411,10 +420,11 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
     );
   }
 
-  Widget _buildCenterPot() {
+  Widget _buildCenterPot(double maxWidth) {
+    final potSize = (maxWidth * 0.28).clamp(90.0, 125.0);
     return Container(
-      width: 140,
-      height: 140,
+      width: potSize,
+      height: potSize,
       decoration: BoxDecoration(
         color: const Color(0xFF134526),
         shape: BoxShape.circle,
@@ -443,7 +453,9 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
         color: Color(0xFF092614),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Column(
+      child: SafeArea(
+        top: false,
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Hand cards
@@ -474,49 +486,51 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Action Buttons
+          // Action Buttons (Wrap to prevent horizontal overflow on all screen widths)
           if (isUserTurn && !user.isFolded)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
               children: [
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.redAccent,
                     side: const BorderSide(color: Colors.redAccent),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   ),
                   onPressed: _userFold,
                   child: const Text('Pack (Fold)'),
                 ),
-                const SizedBox(width: 8),
                 if (!user.isSeen)
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     ),
                     onPressed: _userSeeCards,
                     child: const Text('See Cards'),
                   ),
-                if (!user.isSeen) const SizedBox(width: 8),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.amber,
                     foregroundColor: Colors.black87,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   ),
                   onPressed: _userBet,
                   child: Text(user.isSeen ? 'Chaal (${_currentBet * 2})' : 'Blind ($_currentBet)'),
                 ),
-                if (activeRemaining == 2) ...[
-                  const SizedBox(width: 8),
+                if (activeRemaining == 2)
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.greenAccent.shade700,
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     ),
                     onPressed: _userShow,
                     child: const Text('Show'),
                   ),
-                ],
               ],
             )
           else if (_isRoundOver)
@@ -526,6 +540,7 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
               child: const Text('Deal Next Hand'),
             ),
         ],
+        ),
       ),
     );
   }
