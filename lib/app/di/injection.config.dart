@@ -290,7 +290,7 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i343.GetExplorerProfileUseCase(gh<_i436.IExplorerRepository>()));
     gh.factory<_i146.GetTopExplorersUseCase>(
         () => _i146.GetTopExplorersUseCase(gh<_i436.IExplorerRepository>()));
-    gh.factory<_i117.AuthCubit>(() => _i117.AuthCubit(
+    gh.lazySingleton<_i117.AuthCubit>(() => _i117.AuthCubit(
           gh<_i176.GetCurrentProfileUseCase>(),
           gh<_i336.SignInEmailUseCase>(),
           gh<_i503.VerifyOtpUseCase>(),
