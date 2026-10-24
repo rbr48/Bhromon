@@ -326,6 +326,10 @@ class SyncManager {
     }
   }
 
+  /// Whether a retry flush is scheduled. For tests.
+  @visibleForTesting
+  bool get hasScheduledRetry => _retryTimer?.isActive ?? false;
+
   @visibleForTesting
   void dispose() {
     _retryTimer?.cancel();

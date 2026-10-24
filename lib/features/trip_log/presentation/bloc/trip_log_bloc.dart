@@ -93,11 +93,14 @@ class TripLogBloc extends HydratedBloc<TripLogEvent, TripLogState> {
       ));
     });
 
+    // Edits are applied synchronously, in the order they arrive; the quality
+    // score follows. (Awaiting the score before applying the edit let a slow,
+    // older event land after a newer one and overwrite the newer text.)
     on<AddBlockEvent>((event, emit) async {
       final updated = List<TripBlock>.from(state.blocks)..add(event.block);
-      final quality = await _computeQuality(updated, state.title);
-      emit(state.copyWith(blocks: updated, qualityResult: quality));
+      emit(state.copyWith(blocks: updated));
       _markDirty();
+      await _refreshQuality(emit);
       // Auto-stamp weather on first block addition if not yet done
       if (!_weatherStamped) _tryStampWeather();
     });
@@ -105,16 +108,16 @@ class TripLogBloc extends HydratedBloc<TripLogEvent, TripLogState> {
     on<UpdateBlockEvent>((event, emit) async {
       final updated = List<TripBlock>.from(state.blocks);
       updated[event.index] = event.block;
-      final quality = await _computeQuality(updated, state.title);
-      emit(state.copyWith(blocks: updated, qualityResult: quality));
+      emit(state.copyWith(blocks: updated));
       _markDirty();
+      await _refreshQuality(emit);
     });
 
     on<DeleteBlockEvent>((event, emit) async {
       final updated = List<TripBlock>.from(state.blocks)..removeAt(event.index);
-      final quality = await _computeQuality(updated, state.title);
-      emit(state.copyWith(blocks: updated, qualityResult: quality));
+      emit(state.copyWith(blocks: updated));
       _markDirty();
+      await _refreshQuality(emit);
     });
 
     on<ReorderBlocksEvent>((event, emit) {
@@ -123,9 +126,9 @@ class TripLogBloc extends HydratedBloc<TripLogEvent, TripLogState> {
     });
 
     on<UpdateTitleEvent>((event, emit) async {
-      final quality = await _computeQuality(state.blocks, event.title);
-      emit(state.copyWith(title: event.title, qualityResult: quality));
+      emit(state.copyWith(title: event.title));
       _markDirty();
+      await _refreshQuality(emit);
     });
 
     on<AutoSaveDraftEvent>((event, emit) => _saveCurrentDraft());
@@ -248,6 +251,17 @@ class TripLogBloc extends HydratedBloc<TripLogEvent, TripLogState> {
   }
 
   /// Computes quality score in background isolate.
+  int _qualityRequest = 0;
+
+  /// Rescores the current content; only the latest request's result is kept.
+  Future<void> _refreshQuality(Emitter<TripLogState> emit) async {
+    final request = ++_qualityRequest;
+    final quality = await _computeQuality(state.blocks, state.title);
+    if (request == _qualityRequest && !emit.isDone) {
+      emit(state.copyWith(qualityResult: quality));
+    }
+  }
+
   Future<QualityResult> _computeQuality(List<TripBlock> blocks, String title) {
     final bodyText =
         blocks.whereType<TextBlock>().map((b) => b.content).join(' ');

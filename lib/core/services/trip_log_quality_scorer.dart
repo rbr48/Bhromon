@@ -38,16 +38,41 @@ class TripLogQualityScorer {
     required int costItemCount,
     required int safetyNoteCount,
   }) {
+    final params = _QualityParams(
+      title: title,
+      bodyText: bodyText,
+      imageCount: imageCount,
+      videoCount: videoCount,
+      routePointCount: routePointCount,
+      costItemCount: costItemCount,
+      safetyNoteCount: safetyNoteCount,
+    );
+    // Spawning an isolate costs far more than scoring a normal diary (the
+    // editor scores on every edit), so only very long text goes off-thread.
+    if (title.length + bodyText.length < isolateThreshold) {
+      return Future.value(_scoreInIsolate(params));
+    }
+    return compute(_scoreInIsolate, params);
+  }
+
+  /// Text length at which scoring moves to a background isolate.
+  static const int isolateThreshold = 50000;
+
+  @visibleForTesting
+  static Future<QualityResult> scoreInIsolate({
+    required String title,
+    required String bodyText,
+  }) {
     return compute(
       _scoreInIsolate,
       _QualityParams(
         title: title,
         bodyText: bodyText,
-        imageCount: imageCount,
-        videoCount: videoCount,
-        routePointCount: routePointCount,
-        costItemCount: costItemCount,
-        safetyNoteCount: safetyNoteCount,
+        imageCount: 0,
+        videoCount: 0,
+        routePointCount: 0,
+        costItemCount: 0,
+        safetyNoteCount: 0,
       ),
     );
   }
