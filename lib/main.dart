@@ -30,7 +30,6 @@ import 'features/trip_log/data/repositories/mock_offline_trip_log_repository.dar
 import 'features/ota/presentation/cubit/ota_cubit.dart';
 import 'features/ota/presentation/cubit/ota_state.dart';
 import 'features/ota/presentation/widgets/ota_update_dialog.dart';
-import 'features/feed/presentation/bloc/feed_cubit.dart';
 import 'core/security/device_integrity_service.dart';
 import 'core/database/app_database.dart';
 import 'features/notifications/geo_fence_service.dart'
@@ -127,27 +126,29 @@ void main() {
       );
     };
 
-    final bool isCompromised =
-        await DeviceIntegrityService.isDeviceCompromised();
+    // These three don't depend on each other: start them together rather
+    // than one after another before the first frame. The integrity result
+    // still gates everything else.
+    final integrityCheck = DeviceIntegrityService.isDeviceCompromised();
+    final hiveInit = Hive.initFlutter();
+    final firebaseInit = Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).then<bool>((_) => true, onError: (Object e, StackTrace stack) {
+      logWarning(
+          'Firebase initialization failed (likely blocked by client adblocker)',
+          e,
+          stack);
+      return false;
+    });
+
+    final bool isCompromised = await integrityCheck;
     if (isCompromised) {
       runApp(const SecurityCompromisedApp());
       return;
     }
 
-    await Hive.initFlutter();
-
-    bool firebaseAvailable = true;
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    } catch (e, stack) {
-      firebaseAvailable = false;
-      logWarning(
-          'Firebase initialization failed (likely blocked by client adblocker)',
-          e,
-          stack);
-    }
+    await hiveInit;
+    final bool firebaseAvailable = await firebaseInit;
 
     if (!firebaseAvailable) {
       if (kReleaseMode) {
@@ -213,21 +214,12 @@ void main() {
         logWarning(
             '[Firestore] Could not enable offline persistence', e, stack);
       }
-
-      try {
-        // SyncWorker.initialize() calls Workmanager().initialize() internally
-        // with the single unified callbackDispatcher that handles both sync
-        // and geo-fence tasks.
-        SyncWorker.initialize();
-        SyncWorker.registerPeriodicSync();
-        await registerGeoFenceWork();
-      } catch (e, stack) {
-        logWarning(
-            '[SyncWorker] Failed to initialize background sync', e, stack);
-      }
     }
 
     runApp(const MyApp());
+
+    // Background job registration isn't needed to draw the first frame.
+    if (firebaseAvailable) unawaited(_registerBackgroundWork());
   }, (error, stack) {
     logError('[GlobalError] Asynchronous error caught in runZonedGuarded zone',
         error, stack);
@@ -236,6 +228,19 @@ void main() {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
     } catch (_) {}
   });
+}
+
+Future<void> _registerBackgroundWork() async {
+  try {
+    // SyncWorker.initialize() calls Workmanager().initialize() internally
+    // with the single unified callbackDispatcher that handles both sync
+    // and geo-fence tasks.
+    SyncWorker.initialize();
+    SyncWorker.registerPeriodicSync();
+    await registerGeoFenceWork();
+  } catch (e, stack) {
+    logWarning('[SyncWorker] Failed to initialize background sync', e, stack);
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -256,9 +261,6 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<OtaCubit>(
           create: (context) => getIt<OtaCubit>()..triggerCheck(),
-        ),
-        BlocProvider<FeedCubit>(
-          create: (context) => getIt<FeedCubit>(),
         ),
       ],
       child: MaterialApp.router(
