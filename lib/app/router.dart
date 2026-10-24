@@ -29,6 +29,18 @@ import '../features/auth/presentation/pages/account_deletion_page.dart';
 import '../features/chat/presentation/pages/chats_list_screen.dart';
 import '../features/chat/presentation/pages/chat_screen.dart';
 
+import '../features/tour_group/presentation/pages/tour_group_hub_screen.dart';
+import '../features/tour_group/presentation/pages/expense_ledger_screen.dart';
+import '../features/tour_group/presentation/pages/tour_logistics_hub_screen.dart';
+import '../features/tour_group/presentation/pages/tide_beach_guide_screen.dart';
+import '../features/tour_group/presentation/pages/group_channels_screen.dart';
+import '../features/tour_group/presentation/pages/tour_checklist_screen.dart';
+
+import '../features/game_zone/game_zone_hub_screen.dart';
+import '../features/game_zone/card29/card29_screen.dart';
+import '../features/game_zone/chess/chess_screen.dart';
+import '../features/game_zone/ludo/ludo_screen.dart';
+
 import '../features/offline_vault/presentation/cubit/vault_cubit.dart';
 import '../features/trip_log/presentation/bloc/trip_log_bloc.dart';
 
@@ -188,6 +200,66 @@ class AppRouter {
             ),
           );
         },
+      ),
+      GoRoute(
+        path: '/group-hub',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const TourGroupHubScreen()),
+      ),
+      GoRoute(
+        path: '/group/:tourId/ledger',
+        pageBuilder: (context, state) => _customPageTransition(
+          state,
+          ExpenseLedgerScreen(tourId: state.pathParameters['tourId']!),
+        ),
+      ),
+      GoRoute(
+        path: '/group/:tourId/logistics',
+        pageBuilder: (context, state) => _customPageTransition(
+          state,
+          TourLogisticsHubScreen(tourId: state.pathParameters['tourId']!),
+        ),
+      ),
+      GoRoute(
+        path: '/group/:tourId/tide',
+        pageBuilder: (context, state) => _customPageTransition(
+          state,
+          TideBeachGuideScreen(tourId: state.pathParameters['tourId']!),
+        ),
+      ),
+      GoRoute(
+        path: '/group/:tourId/channels',
+        pageBuilder: (context, state) => _customPageTransition(
+          state,
+          GroupChannelsScreen(tourId: state.pathParameters['tourId']!),
+        ),
+      ),
+      GoRoute(
+        path: '/group/:tourId/checklist',
+        pageBuilder: (context, state) => _customPageTransition(
+          state,
+          TourChecklistScreen(tourId: state.pathParameters['tourId']!),
+        ),
+      ),
+      GoRoute(
+        path: '/game-zone',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const GameZoneHubScreen()),
+      ),
+      GoRoute(
+        path: '/game-zone/card29',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const Card29Screen()),
+      ),
+      GoRoute(
+        path: '/game-zone/chess',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const ChessScreen()),
+      ),
+      GoRoute(
+        path: '/game-zone/ludo',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const LudoScreen()),
       ),
     ],
   );

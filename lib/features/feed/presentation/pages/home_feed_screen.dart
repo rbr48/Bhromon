@@ -4239,11 +4239,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
                 child: Container(
                   width: 38,
                   height: 4.5,
@@ -4333,11 +4334,32 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                       context.push('/vault');
                     },
                   ),
+                  _buildNavMenuItem(
+                    icon: Icons.groups_outlined,
+                    title: 'Tour Groups',
+                    subtitle: 'Tours & Ledger',
+                    color: const Color(0xFF2DD4BF),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      context.push('/group-hub');
+                    },
+                  ),
+                  _buildNavMenuItem(
+                    icon: Icons.sports_esports_outlined,
+                    title: 'GameZone',
+                    subtitle: '29, Chess & Ludo',
+                    color: const Color(0xFFA855F7),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      context.push('/game-zone');
+                    },
+                  ),
                 ],
               ),
             ],
           ),
-        );
+        ),
+      );
       },
     );
   }
