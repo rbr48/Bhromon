@@ -7,7 +7,7 @@ type Data = Record<string, any>;
 
 export class FakeFirestore {
   collections = new Map<string, Map<string, Data>>();
-  stats = { queryGets: 0, docGets: 0, getAllCalls: 0, batchCommits: 0, maxBatchWrites: 0 };
+  stats = { queryGets: 0, docGets: 0, getAllCalls: 0, batchCommits: 0, maxBatchWrites: 0, singleUpdates: 0 };
 
   seed(collection: string, id: string, data: Data) {
     if (!this.collections.has(collection)) this.collections.set(collection, new Map());
@@ -32,6 +32,11 @@ export class FakeFirestore {
       get: async () => {
         store.stats.docGets++;
         return store.snapshot(collection, id);
+      },
+      update: async (data: Data) => {
+        const docs = store.docs(collection);
+        docs.set(id, { ...docs.get(id), ...data });
+        store.stats.singleUpdates++;
       },
     };
   }
@@ -89,23 +94,37 @@ class FakeQuery {
     private name: string,
     private filters: Filter[],
     private max: number | undefined,
+    private byId = false,
+    private afterId: string | undefined = undefined,
   ) {}
+
+  /** Only document-id ordering is supported (the backfill's paging). */
+  orderBy(_field: unknown) {
+    return new FakeQuery(this.store, this.name, this.filters, this.max, true, this.afterId);
+  }
+
+  startAfter(id: string) {
+    return new FakeQuery(this.store, this.name, this.filters, this.max, this.byId, id);
+  }
 
   doc(id: string) {
     return this.store.ref(this.name, id);
   }
 
   where(field: string, op: string, value: any) {
-    return new FakeQuery(this.store, this.name, [...this.filters, { field, op, value }], this.max);
+    return new FakeQuery(this.store, this.name, [...this.filters, { field, op, value }], this.max, this.byId, this.afterId);
   }
 
   limit(n: number) {
-    return new FakeQuery(this.store, this.name, this.filters, n);
+    return new FakeQuery(this.store, this.name, this.filters, n, this.byId, this.afterId);
   }
 
   async get() {
     this.store.stats.queryGets++;
-    const matches = [...this.store.docs(this.name).entries()].filter(([, data]) =>
+    let entries = [...this.store.docs(this.name).entries()];
+    if (this.byId) entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    if (this.afterId !== undefined) entries = entries.filter(([id]) => id > this.afterId!);
+    const matches = entries.filter(([, data]) =>
       this.filters.every(({ field, op, value }) => {
         const actual = toComparable(data[field]);
         const expected = toComparable(value);

@@ -77,21 +77,42 @@ class FakeQuery implements Query<Map<String, dynamic>> {
   final List<(String field, bool descending)> _orders;
   final int? _limit;
   final String? _startAfterId;
+  final Object? _startAt;
+  final Object? _endAt;
 
   FakeQuery(this.store, this.path,
       [this._filters = const [],
       this._orders = const [],
       this._limit,
-      this._startAfterId]);
+      this._startAfterId,
+      this._startAt,
+      this._endAt]);
 
   FakeQuery _copy({
     List<_Filter>? filters,
     List<(String, bool)>? orders,
     int? limit,
     String? startAfterId,
+    Object? startAt,
+    Object? endAt,
   }) =>
-      FakeQuery(store, path, filters ?? _filters, orders ?? _orders,
-          limit ?? _limit, startAfterId ?? _startAfterId);
+      FakeQuery(
+          store,
+          path,
+          filters ?? _filters,
+          orders ?? _orders,
+          limit ?? _limit,
+          startAfterId ?? _startAfterId,
+          startAt ?? _startAt,
+          endAt ?? _endAt);
+
+  @override
+  Query<Map<String, dynamic>> startAt(Iterable<Object?> values) =>
+      _copy(startAt: values.first);
+
+  @override
+  Query<Map<String, dynamic>> endAt(Iterable<Object?> values) =>
+      _copy(endAt: values.first);
 
   static dynamic _value(String id, Map<String, dynamic> data, Object field) {
     if (field == FieldPath.documentId) return id;
@@ -195,6 +216,15 @@ class FakeQuery implements Query<Map<String, dynamic>> {
         }
         return a.key.compareTo(b.key);
       });
+    }
+    if (_orders.isNotEmpty && (_startAt != null || _endAt != null)) {
+      final field = _orders.first.$1;
+      entries = entries.where((e) {
+        final v = _value(e.key, e.value, field);
+        if (_startAt != null && _compare(v, _startAt) < 0) return false;
+        if (_endAt != null && _compare(v, _endAt) > 0) return false;
+        return true;
+      }).toList();
     }
     if (_startAfterId != null) {
       final i = entries.indexWhere((e) => e.key == _startAfterId);
