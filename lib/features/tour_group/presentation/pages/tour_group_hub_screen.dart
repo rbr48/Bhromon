@@ -59,9 +59,48 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       body: StreamBuilder<List<TourGroup>>(
         stream: _repository.watchMyGroups(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
             return const Center(
               child: CircularProgressIndicator(color: AppColors.midGreen),
+            );
+          }
+
+          if (snapshot.hasError &&
+              (snapshot.data == null || snapshot.data!.isEmpty)) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.cloud_off_rounded,
+                        color: Colors.redAccent, size: 54),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'ট্যুর গ্রুপ লোড করতে সমস্যা হয়েছে',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.midGreen),
+                      onPressed: () => setState(() {}),
+                      child: const Text('আবার চেষ্টা করুন'),
+                    ),
+                  ],
+                ),
+              ),
             );
           }
 
@@ -70,7 +109,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             return _buildEmptyState(context);
           }
 
-          final current = _activeGroup ?? groups.first;
+          final current = _activeGroup != null &&
+                  groups.any((g) => g.id == _activeGroup!.id)
+              ? groups.firstWhere((g) => g.id == _activeGroup!.id)
+              : groups.first;
 
           return ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -525,69 +567,118 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     final destCtrl = TextEditingController(text: "Cox's Bazar");
+    bool isCreating = false;
 
     showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF14241B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Text('Create Tour Group',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Tour Name (e.g. Cox Tour 2026)',
-                  labelStyle: TextStyle(color: Colors.white70),
-                ),
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF14241B),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              title: const Text('Create Tour Group',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Tour Name (e.g. Cox Tour 2026)',
+                      labelStyle: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: destCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Destination',
+                      labelStyle: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: descCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Description (optional)',
+                      labelStyle: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: destCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Destination',
-                  labelStyle: TextStyle(color: Colors.white70),
+              actions: [
+                TextButton(
+                  onPressed: isCreating ? null : () => Navigator.pop(ctx),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.white54)),
                 ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: descCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Description (optional)',
-                  labelStyle: TextStyle(color: Colors.white70),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.midGreen),
+                  onPressed: isCreating
+                      ? null
+                      : () async {
+                          final name = nameCtrl.text.trim();
+                          if (name.isEmpty) return;
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(ctx);
+                          setDialogState(() => isCreating = true);
+                          try {
+                            final newGroup = await _repository.createGroup(
+                              name: name,
+                              description: descCtrl.text.trim(),
+                              destination: destCtrl.text.trim(),
+                              startDate: DateTime.now(),
+                              endDate:
+                                  DateTime.now().add(const Duration(days: 4)),
+                            );
+                            if (mounted) {
+                              setState(() {
+                                _activeGroup = newGroup;
+                              });
+                              navigator.pop();
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      'ট্যুর গ্রুপ "${newGroup.name}" সফলভাবে তৈরি হয়েছে!'),
+                                  backgroundColor: AppColors.midGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isCreating = false);
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('গ্রুপ তৈরি করা যায়নি: $e'),
+                                  backgroundColor: Colors.redAccent,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isCreating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Create',
+                          style: TextStyle(color: Colors.white)),
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
-              onPressed: () async {
-                final name = nameCtrl.text.trim();
-                if (name.isEmpty) return;
-                Navigator.pop(ctx);
-                await _repository.createGroup(
-                  name: name,
-                  description: descCtrl.text.trim(),
-                  destination: destCtrl.text.trim(),
-                  startDate: DateTime.now(),
-                  endDate: DateTime.now().add(const Duration(days: 4)),
-                );
-              },
-              child: const Text('Create', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
@@ -595,82 +686,114 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
   void _showJoinGroupDialog(BuildContext context) {
     final codeCtrl = TextEditingController();
+    bool isJoining = false;
 
     showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF14241B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Text('Join Tour Group',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Enter the 6-character tour invite code shared by your tour admin.',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: codeCtrl,
-                textCapitalization: TextCapitalization.characters,
-                style: const TextStyle(
-                  color: AppColors.mintGreen,
-                  fontSize: 20,
-                  letterSpacing: 4,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-                decoration: InputDecoration(
-                  hintText: 'e.g. 7X9A2F',
-                  hintStyle: const TextStyle(color: Colors.white24, letterSpacing: 2),
-                  filled: true,
-                  fillColor: Colors.black26,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.mintGreen),
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF14241B),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              title: const Text('Join Tour Group',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Enter the 6-character tour invite code shared by your tour admin.',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: codeCtrl,
+                    textCapitalization: TextCapitalization.characters,
+                    style: const TextStyle(
+                      color: AppColors.mintGreen,
+                      fontSize: 20,
+                      letterSpacing: 4,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 7X9A2F',
+                      hintStyle: const TextStyle(
+                          color: Colors.white24, letterSpacing: 2),
+                      filled: true,
+                      fillColor: Colors.black26,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: AppColors.mintGreen),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
-              onPressed: () async {
-                final code = codeCtrl.text.trim();
-                if (code.isEmpty) return;
-                Navigator.pop(ctx);
-                try {
-                  await _repository.joinGroupWithCode(code);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Successfully joined tour group!'),
-                        backgroundColor: AppColors.midGreen,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(e.toString()),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Join', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: isJoining ? null : () => Navigator.pop(ctx),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.midGreen),
+                  onPressed: isJoining
+                      ? null
+                      : () async {
+                          final code = codeCtrl.text.trim();
+                          if (code.isEmpty) return;
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(ctx);
+                          setDialogState(() => isJoining = true);
+                          try {
+                            final joinedGroup =
+                                await _repository.joinGroupWithCode(code);
+                            if (mounted) {
+                              setState(() {
+                                _activeGroup = joinedGroup;
+                              });
+                              navigator.pop();
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      'গ্রুপ "${joinedGroup.name}" এ সফলভাবে যোগ দিয়েছেন!'),
+                                  backgroundColor: AppColors.midGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isJoining = false);
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(e.toString()),
+                                  backgroundColor: Colors.redAccent,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isJoining
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Join',
+                          style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -698,7 +821,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   void _showManageMemberSheet(
       BuildContext context, String tourId, TourMember member) {
     final currentEmail = _repository.currentEmail;
-    final isMe = currentEmail != null && currentEmail.toLowerCase() == member.email.toLowerCase();
+    final isMe = currentEmail.toLowerCase() == member.email.toLowerCase();
 
     showModalBottomSheet<void>(
       context: context,

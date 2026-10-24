@@ -785,8 +785,6 @@ class _TourPostCardState extends State<_TourPostCard>
 
   void _handleDoubleTapLike() {
     final email = widget.repository.currentEmail;
-    if (email == null) return;
-
     if (!widget.post.likes.contains(email)) {
       widget.repository.toggleLikePost(widget.tourId, widget.post.id);
     }
@@ -801,7 +799,7 @@ class _TourPostCardState extends State<_TourPostCard>
   Widget build(BuildContext context) {
     final post = widget.post;
     final currentEmail = widget.repository.currentEmail;
-    final isLiked = currentEmail != null && post.likes.contains(currentEmail);
+    final isLiked = post.likes.contains(currentEmail);
     final matrix = kFilterMatrices[post.filterId] ?? kFilterMatrices['normal']!;
 
     return Container(

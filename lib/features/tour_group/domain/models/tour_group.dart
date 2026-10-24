@@ -38,6 +38,7 @@ enum TourMemberStatus {
 
 class TourMember {
   final String tourId;
+  final String tourName;
   final String email;
   final String displayName;
   final String? photoUrl;
@@ -47,6 +48,7 @@ class TourMember {
 
   const TourMember({
     required this.tourId,
+    this.tourName = '',
     required this.email,
     required this.displayName,
     this.photoUrl,
@@ -58,10 +60,11 @@ class TourMember {
   Map<String, dynamic> toMap() {
     return {
       'tourId': tourId,
+      'tourName': tourName,
       'email': email.toLowerCase().trim(),
       'displayName': displayName,
       'photoUrl': photoUrl,
-      'role': role.toValue(),
+      'role': role == TourRole.owner ? 'admin' : role.toValue(),
       'status': status.toValue(),
       'joinedAt': joinedAt.toIso8601String(),
     };
@@ -70,6 +73,7 @@ class TourMember {
   factory TourMember.fromMap(Map<String, dynamic> map) {
     return TourMember(
       tourId: map['tourId'] as String? ?? '',
+      tourName: map['tourName'] as String? ?? '',
       email: (map['email'] as String? ?? '').toLowerCase().trim(),
       displayName: map['displayName'] as String? ?? 'Explorer',
       photoUrl: map['photoUrl'] as String?,
@@ -121,6 +125,7 @@ class TourGroup {
   final String description;
   final String destination;
   final String ownerEmail;
+  final String ownerUid;
   final String inviteCode;
   final DateTime startDate;
   final DateTime endDate;
@@ -133,6 +138,7 @@ class TourGroup {
     this.description = '',
     this.destination = "Cox's Bazar",
     required this.ownerEmail,
+    this.ownerUid = '',
     required this.inviteCode,
     required this.startDate,
     required this.endDate,
@@ -147,6 +153,7 @@ class TourGroup {
       'description': description,
       'destination': destination,
       'ownerEmail': ownerEmail.toLowerCase().trim(),
+      'ownerUid': ownerUid,
       'inviteCode': inviteCode,
       'startDate': startDate.toIso8601String(),
       'endDate': endDate.toIso8601String(),
@@ -163,6 +170,7 @@ class TourGroup {
       description: map['description'] as String? ?? '',
       destination: map['destination'] as String? ?? "Cox's Bazar",
       ownerEmail: (map['ownerEmail'] as String? ?? '').toLowerCase().trim(),
+      ownerUid: map['ownerUid'] as String? ?? '',
       inviteCode: map['inviteCode'] as String? ?? '',
       startDate: map['startDate'] != null
           ? DateTime.tryParse(map['startDate'].toString()) ?? DateTime.now()
