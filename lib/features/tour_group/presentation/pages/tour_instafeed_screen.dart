@@ -169,6 +169,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   final ImagePicker _picker = ImagePicker();
 
   String _selectedDayFilter = 'all';
+  String _selectedMediaFilter = 'all'; // 'all', 'photos', 'reels'
   final Set<String> _bookmarkedPostIds = {};
 
   final List<Map<String, String>> _tourDays = [
@@ -244,9 +245,18 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             stream: _repository.watchPosts(widget.tourId),
             builder: (context, postsSnap) {
               final posts = postsSnap.data ?? [];
-              final filteredPosts = _selectedDayFilter == 'all'
-                  ? posts
-                  : posts.where((p) => p.tourDay == _selectedDayFilter).toList();
+              final filteredPosts = posts.where((p) {
+                if (_selectedDayFilter != 'all' && p.tourDay != _selectedDayFilter) {
+                  return false;
+                }
+                if (_selectedMediaFilter == 'photos' && p.isReel) {
+                  return false;
+                }
+                if (_selectedMediaFilter == 'reels' && !p.isReel) {
+                  return false;
+                }
+                return true;
+              }).toList();
 
               return CustomScrollView(
                 slivers: [
@@ -255,12 +265,17 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     child: _buildStoriesBar(context, stories),
                   ),
 
-                  // 2. Day-wise Filter Chips
+                  // 2. Media Type Filter Tabs (All, Photos, Reels)
+                  SliverToBoxAdapter(
+                    child: _buildMediaFilterTabs(),
+                  ),
+
+                  // 3. Day-wise Filter Chips
                   SliverToBoxAdapter(
                     child: _buildDayFilterChips(),
                   ),
 
-                  // 3. Post Feed or Empty State
+                  // 4. Post Feed or Empty State
                   if (postsSnap.connectionState == ConnectionState.waiting)
                     const SliverFillRemaining(
                       child: Center(
@@ -293,7 +308,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                               });
                             },
                             onOpenReel: (videoUrl) {
-                              _openReelModal(context, videoUrl, post);
+                              _openReelModal(context, videoUrl, post, posts);
                             },
                           );
                         },
@@ -452,6 +467,99 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     );
   }
 
+  // --- Media Type Filter Tabs (All, Photos, Reels) ---
+
+  Widget _buildMediaFilterTabs() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 6, 14, 2),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF14241B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          _buildMediaTabButton(
+            id: 'all',
+            title: 'সব পোস্ট',
+            icon: Icons.grid_view_rounded,
+          ),
+          _buildMediaTabButton(
+            id: 'photos',
+            title: 'ছবি (Photos)',
+            icon: Icons.photo_library_rounded,
+          ),
+          _buildMediaTabButton(
+            id: 'reels',
+            title: '🎬 রিলস (Reels)',
+            icon: Icons.movie_creation_rounded,
+            isReelTab: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMediaTabButton({
+    required String id,
+    required String title,
+    required IconData icon,
+    bool isReelTab = false,
+  }) {
+    final isSelected = _selectedMediaFilter == id;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _selectedMediaFilter = id);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? (isReelTab
+                    ? const LinearGradient(
+                        colors: [Color(0xFFE11D48), Color(0xFF9333EA)],
+                      )
+                    : const LinearGradient(
+                        colors: [AppColors.mintGreen, Color(0xFF10B981)],
+                      ))
+                : null,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: isSelected
+                    ? (isReelTab ? Colors.white : Colors.black)
+                    : Colors.white60,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isSelected
+                        ? (isReelTab ? Colors.white : Colors.black)
+                        : Colors.white70,
+                    fontSize: 11.5,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // --- Day-wise Filter Chips ---
 
   Widget _buildDayFilterChips() {
@@ -497,6 +605,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   }
 
   Widget _buildEmptyFeedState(BuildContext context) {
+    final isReelsTab = _selectedMediaFilter == 'reels';
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -506,16 +615,22 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             Container(
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                color: AppColors.mintGreen.withValues(alpha: 0.1),
+                color: (isReelsTab ? const Color(0xFFE11D48) : AppColors.mintGreen)
+                    .withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.photo_library_outlined,
-                  size: 64, color: AppColors.mintGreen),
+              child: Icon(
+                isReelsTab
+                    ? Icons.movie_filter_outlined
+                    : Icons.photo_library_outlined,
+                size: 64,
+                color: isReelsTab ? const Color(0xFFE11D48) : AppColors.mintGreen,
+              ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'কোনো ছবি পাওয়া যায়নি',
-              style: TextStyle(
+            Text(
+              isReelsTab ? 'কোনো রিলস পাওয়া যায়নি' : 'কোনো ছবি পাওয়া যায়নি',
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -523,19 +638,26 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _selectedDayFilter == 'all'
-                  ? 'ট্যুরের সুন্দর মুহূর্তগুলো এখনই ইনস্টাফিডে শেয়ার করুন!'
-                  : 'এই দিনের জন্য এখনও কোনো পোস্ট নেই। প্রথম ছবি শেয়ার করুন!',
+              isReelsTab
+                  ? 'ট্যুরের আনন্দঘন ভিডিও মুহূর্তগুলো এখনই রিলস হিসেবে শেয়ার করুন (সর্বোচ্চ ৩ মিনিট)!'
+                  : (_selectedDayFilter == 'all'
+                      ? 'ট্যুরের সুন্দর মুহূর্তগুলো এখনই ইনস্টাফিডে শেয়ার করুন!'
+                      : 'এই দিনের জন্য এখনও কোনো পোস্ট নেই। প্রথম ছবি শেয়ার করুন!'),
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white60, fontSize: 13),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => _showCreatePostModal(context),
-              icon: const Icon(Icons.add_a_photo_rounded),
-              label: const Text('ছবি আপলোড করুন'),
+              onPressed: () => _showCreatePostModal(context,
+                  initialModeIsReel: isReelsTab),
+              icon: Icon(isReelsTab
+                  ? Icons.video_call_rounded
+                  : Icons.add_a_photo_rounded),
+              label: Text(isReelsTab ? 'রিলস আপলোড করুন' : 'ছবি আপলোড করুন'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.midGreen,
+                backgroundColor: isReelsTab
+                    ? const Color(0xFFE11D48)
+                    : AppColors.midGreen,
                 foregroundColor: Colors.white,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
@@ -552,7 +674,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
   // --- Post Creation Studio Modal ---
 
-  void _showCreatePostModal(BuildContext context) {
+  void _showCreatePostModal(BuildContext context,
+      {bool initialModeIsReel = false}) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -562,6 +685,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         tourId: widget.tourId,
         repository: _repository,
         picker: _picker,
+        initialModeIsReel: initialModeIsReel,
       ),
     );
   }
@@ -715,14 +839,21 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   }
 
   void _openReelModal(
-      BuildContext context, String videoUrl, TourPostItem post) {
+      BuildContext context, String videoUrl, TourPostItem post,
+      [List<TourPostItem>? allPosts]) {
+    final reels = (allPosts ?? [post])
+        .where((p) => p.isReel && p.videoUrl != null && p.videoUrl!.isNotEmpty)
+        .toList();
+    final initialIndex = reels.indexWhere((p) => p.id == post.id);
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: false,
       backgroundColor: Colors.black,
       builder: (ctx) => _ReelsPlayerModal(
-        videoUrl: videoUrl,
-        post: post,
+        reels: reels.isNotEmpty ? reels : [post],
+        initialIndex: initialIndex >= 0 ? initialIndex : 0,
         repository: _repository,
       ),
     );
@@ -904,55 +1035,158 @@ class _TourPostCardState extends State<_TourPostCard>
           // 2. Media Viewport (Carousel or Video Reel)
           GestureDetector(
             onDoubleTap: _handleDoubleTapLike,
+            onTap: post.isReel && post.videoUrl != null
+                ? () => widget.onOpenReel(post.videoUrl!)
+                : null,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 AspectRatio(
                   aspectRatio: post.isReel ? (9 / 14) : 1.0,
-                  child: post.images.isEmpty && post.videoUrl == null
-                      ? Container(
-                          color: const Color(0xFF1B4332),
-                          child: const Center(
-                            child: Icon(Icons.image,
-                                size: 54, color: Colors.white30),
-                          ),
-                        )
-                      : ColorFiltered(
-                          colorFilter: ColorFilter.matrix(matrix),
-                          child: PageView.builder(
-                            itemCount: post.images.length,
-                            onPageChanged: (i) {
-                              setState(() => _currentImageIndex = i);
-                            },
-                            itemBuilder: (context, idx) {
-                              return buildSmartMediaImage(
-                                post.images[idx],
+                  child: post.isReel
+                      ? (post.images.isNotEmpty
+                          ? ColorFiltered(
+                              colorFilter: ColorFilter.matrix(matrix),
+                              child: buildSmartMediaImage(
+                                post.images.first,
                                 fit: BoxFit.cover,
-                              );
-                            },
-                          ),
-                        ),
+                              ),
+                            )
+                          : Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Color(0xFF1E1B4B),
+                                    Color(0xFF0F172A),
+                                    Color(0xFF000000),
+                                  ],
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(18),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFFE11D48),
+                                          Color(0xFF9333EA),
+                                        ],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFFE11D48)
+                                              .withValues(alpha: 0.4),
+                                          blurRadius: 16,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.play_arrow_rounded,
+                                      color: Colors.white,
+                                      size: 42,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    '🎬 ট্যুর রিলস দেখতে ট্যাপ করুন',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    post.location,
+                                    style: const TextStyle(
+                                      color: Colors.white60,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ))
+                      : (post.images.isEmpty
+                          ? Container(
+                              color: const Color(0xFF1B4332),
+                              child: const Center(
+                                child: Icon(Icons.image,
+                                    size: 54, color: Colors.white30),
+                              ),
+                            )
+                          : ColorFiltered(
+                              colorFilter: ColorFilter.matrix(matrix),
+                              child: PageView.builder(
+                                itemCount: post.images.length,
+                                onPageChanged: (i) {
+                                  setState(() => _currentImageIndex = i);
+                                },
+                                itemBuilder: (context, idx) {
+                                  return buildSmartMediaImage(
+                                    post.images[idx],
+                                    fit: BoxFit.cover,
+                                  );
+                                },
+                              ),
+                            )),
                 ),
 
-                // Reel Play Indicator Overlay
-                if (post.isReel && post.videoUrl != null)
-                  Positioned.fill(
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => widget.onOpenReel(post.videoUrl!),
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.5),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white38),
-                            ),
-                            child: const Icon(Icons.play_arrow_rounded,
-                                color: Colors.white, size: 40),
-                          ),
+                // Floating Reel Pill Badge
+                if (post.isReel)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFE11D48), Color(0xFF9333EA)],
                         ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black45, blurRadius: 4),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.movie_creation_rounded,
+                              color: Colors.white, size: 12),
+                          SizedBox(width: 4),
+                          Text(
+                            'REEL',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // Reel Play Indicator Overlay on cover image
+                if (post.isReel && post.videoUrl != null && post.images.isNotEmpty)
+                  Positioned.fill(
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white38),
+                        ),
+                        child: const Icon(Icons.play_arrow_rounded,
+                            color: Colors.white, size: 40),
                       ),
                     ),
                   ),
@@ -1022,10 +1256,19 @@ class _TourPostCardState extends State<_TourPostCard>
                   icon: const Icon(Icons.send_rounded,
                       color: Colors.white, size: 23),
                   onPressed: () {
+                    final videoLink = (post.videoUrl != null &&
+                            (post.videoUrl!.startsWith('http://') ||
+                                post.videoUrl!.startsWith('https://')))
+                        ? '\n\nভিডিও লিংক: ${post.videoUrl}'
+                        : '';
                     // ignore: deprecated_member_use
                     Share.share(
-                      '${post.authorName} shared a tour moment from ${post.location}:\n"${post.caption}"',
-                      subject: 'Bhromon Tour Memory',
+                      post.isReel
+                          ? '🎬 ${post.authorName}-এর ট্যুর রিলস:\n"${post.caption}"\n📍 স্থান: ${post.location}$videoLink'
+                          : '${post.authorName} shared a tour moment from ${post.location}:\n"${post.caption}"',
+                      subject: post.isReel
+                          ? 'Bhromon Tour Reel'
+                          : 'Bhromon Tour Memory',
                     );
                   },
                 ),
@@ -1379,11 +1622,13 @@ class _CreatePostStudioSheet extends StatefulWidget {
   final String tourId;
   final TourGroupRepository repository;
   final ImagePicker picker;
+  final bool initialModeIsReel;
 
   const _CreatePostStudioSheet({
     required this.tourId,
     required this.repository,
     required this.picker,
+    this.initialModeIsReel = false,
   });
 
   @override
@@ -1398,9 +1643,25 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
   String _selectedFilter = 'normal';
   bool _isPublishing = false;
 
+  // Reels Mode State
+  late bool _isReelMode;
+  String? _selectedVideoPath;
+  VideoPlayerController? _videoPlayerController;
+  Duration _videoDuration = Duration.zero;
+  bool _isVideoPlaying = false;
+  String? _videoError;
+  String _uploadStatusText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _isReelMode = widget.initialModeIsReel;
+  }
+
   @override
   void dispose() {
     _captionCtrl.dispose();
+    _videoPlayerController?.dispose();
     super.dispose();
   }
 
@@ -1413,56 +1674,209 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
     }
   }
 
-  Future<void> _publishPost() async {
-    if (_selectedImagePaths.isEmpty) return;
-
-    setState(() => _isPublishing = true);
+  Future<void> _pickVideo(ImageSource source) async {
     try {
-      final List<String> uploadedUrls = [];
-      for (final localPath in _selectedImagePaths) {
-        if (localPath.startsWith('http://') || localPath.startsWith('https://')) {
-          uploadedUrls.add(localPath);
+      final picked = await widget.picker.pickVideo(
+        source: source,
+        maxDuration: const Duration(minutes: 3),
+      );
+      if (picked != null) {
+        if (_videoPlayerController != null) {
+          await _videoPlayerController!.dispose();
+          _videoPlayerController = null;
+        }
+
+        final controller = VideoPlayerController.file(File(picked.path));
+        await controller.initialize();
+        final duration = controller.value.duration;
+
+        if (duration.inSeconds > 185) {
+          setState(() {
+            _videoError =
+                'রিলস সর্বোচ্চ ৩ মিনিট হতে পারে। অনুগ্রহ করে ছোট ভিডিও বাছাই করুন।';
+          });
         } else {
-          try {
-            final file = File(localPath);
-            if (file.existsSync()) {
-              final fileName = '${const Uuid().v4()}.jpg';
-              final ref = FirebaseStorage.instance
-                  .ref('tours/${widget.tourId}/posts/$fileName');
-              final task = await ref.putFile(file);
-              final dUrl = await task.ref.getDownloadURL();
-              uploadedUrls.add(dUrl);
-            } else {
-              uploadedUrls.add(localPath);
-            }
-          } catch (_) {
-            uploadedUrls.add(localPath);
-          }
+          setState(() {
+            _videoError = null;
+          });
+        }
+
+        await controller.setLooping(true);
+        await controller.play();
+
+        if (mounted) {
+          setState(() {
+            _selectedVideoPath = picked.path;
+            _videoPlayerController = controller;
+            _videoDuration = duration;
+            _isVideoPlaying = true;
+          });
         }
       }
-
-      await widget.repository.addPost(
-        tourId: widget.tourId,
-        caption: _captionCtrl.text.trim(),
-        images: uploadedUrls,
-        location: _selectedLandmark,
-        tourDay: _selectedDay,
-        filterId: _selectedFilter,
-      );
-      if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('পোস্ট করতে সমস্যা হয়েছে: $e')),
+          SnackBar(content: Text('ভিডিও বাছাই করতে সমস্যা হয়েছে: $e')),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isPublishing = false);
+    }
+  }
+
+  void _toggleVideoPlayback() {
+    if (_videoPlayerController == null ||
+        !_videoPlayerController!.value.isInitialized) {
+      return;
+    }
+    setState(() {
+      if (_videoPlayerController!.value.isPlaying) {
+        _videoPlayerController!.pause();
+        _isVideoPlaying = false;
+      } else {
+        _videoPlayerController!.play();
+        _isVideoPlaying = true;
+      }
+    });
+  }
+
+  Future<void> _publishPost() async {
+    if (_isReelMode) {
+      if (_selectedVideoPath == null) return;
+      if (_videoError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_videoError!)),
+        );
+        return;
+      }
+
+      setState(() {
+        _isPublishing = true;
+        _uploadStatusText = 'রিলস আপলোড হচ্ছে...';
+      });
+
+      try {
+        final file = File(_selectedVideoPath!);
+        String finalVideoUrl = _selectedVideoPath!;
+        if (file.existsSync()) {
+          final fileName = '${const Uuid().v4()}.mp4';
+          final ref = FirebaseStorage.instance
+              .ref('tours/${widget.tourId}/reels/$fileName');
+          final uploadTask = ref.putFile(
+            file,
+            SettableMetadata(contentType: 'video/mp4'),
+          );
+          uploadTask.snapshotEvents.listen((event) {
+            if (mounted && event.totalBytes > 0) {
+              final progress =
+                  (event.bytesTransferred / event.totalBytes * 100).toInt();
+              setState(() {
+                _uploadStatusText = 'রিলস আপলোড হচ্ছে $progress%...';
+              });
+            }
+          });
+          final snap = await uploadTask;
+          finalVideoUrl = await snap.ref.getDownloadURL();
+        }
+
+        await widget.repository.addPost(
+          tourId: widget.tourId,
+          caption: _captionCtrl.text.trim().isEmpty
+              ? 'ট্যুর রিলস 🏖️🎬'
+              : _captionCtrl.text.trim(),
+          images: [],
+          videoUrl: finalVideoUrl,
+          isReel: true,
+          location: _selectedLandmark,
+          tourDay: _selectedDay,
+          filterId: 'normal',
+        );
+
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🎬 রিলস সফলভাবে পাবলিশ হয়েছে!'),
+              backgroundColor: AppColors.darkGreen,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('রিলস পাবলিশ করতে সমস্যা হয়েছে: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isPublishing = false);
+      }
+    } else {
+      if (_selectedImagePaths.isEmpty) return;
+
+      setState(() {
+        _isPublishing = true;
+        _uploadStatusText = 'ছবি আপলোড হচ্ছে...';
+      });
+
+      try {
+        final List<String> uploadedUrls = [];
+        for (final localPath in _selectedImagePaths) {
+          if (localPath.startsWith('http://') ||
+              localPath.startsWith('https://')) {
+            uploadedUrls.add(localPath);
+          } else {
+            try {
+              final file = File(localPath);
+              if (file.existsSync()) {
+                final fileName = '${const Uuid().v4()}.jpg';
+                final ref = FirebaseStorage.instance
+                    .ref('tours/${widget.tourId}/posts/$fileName');
+                final task = await ref.putFile(file);
+                final dUrl = await task.ref.getDownloadURL();
+                uploadedUrls.add(dUrl);
+              } else {
+                uploadedUrls.add(localPath);
+              }
+            } catch (_) {
+              uploadedUrls.add(localPath);
+            }
+          }
+        }
+
+        await widget.repository.addPost(
+          tourId: widget.tourId,
+          caption: _captionCtrl.text.trim(),
+          images: uploadedUrls,
+          location: _selectedLandmark,
+          tourDay: _selectedDay,
+          filterId: _selectedFilter,
+        );
+
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('📸 পোস্ট সফলভাবে শেয়ার হয়েছে!'),
+              backgroundColor: AppColors.darkGreen,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('পোস্ট করতে সমস্যা হয়েছে: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isPublishing = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool canSubmit = _isReelMode
+        ? (_selectedVideoPath != null && _videoError == null && !_isPublishing)
+        : (_selectedImagePaths.isNotEmpty && !_isPublishing);
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       padding: EdgeInsets.only(
@@ -1485,185 +1899,544 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                   child: const Text('বাতিল',
                       style: TextStyle(color: Colors.white60)),
                 ),
-                const Text(
-                  'নতুন ইনস্টাফিড পোস্ট',
-                  style: TextStyle(
+                Text(
+                  _isReelMode ? 'নতুন ট্যুর রিলস পাবলিশ' : 'নতুন ইনস্টাফিড পোস্ট',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: _selectedImagePaths.isEmpty || _isPublishing
-                      ? null
-                      : _publishPost,
+                  onPressed: canSubmit ? _publishPost : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.mintGreen,
-                    foregroundColor: Colors.black,
+                    backgroundColor: _isReelMode
+                        ? const Color(0xFFE11D48)
+                        : AppColors.mintGreen,
+                    foregroundColor: _isReelMode ? Colors.white : Colors.black,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
                   child: _isPublishing
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.black),
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color:
+                                    _isReelMode ? Colors.white : Colors.black,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _uploadStatusText.isNotEmpty
+                                  ? _uploadStatusText
+                                  : 'আপলোড...',
+                              style: const TextStyle(
+                                  fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         )
-                      : const Text('শেয়ার করুন',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      : Text(
+                          _isReelMode ? 'রিলস শেয়ার' : 'শেয়ার করুন',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                 ),
               ],
             ),
           ),
           const Divider(color: Colors.white10, height: 1),
 
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
+          // Post Type Switcher Tabs (Photos vs Reel)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.black38,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Row(
               children: [
-                // Media Picker & Preview Area
-                if (_selectedImagePaths.isEmpty)
-                  GestureDetector(
-                    onTap: _pickImages,
-                    child: Container(
-                      height: 200,
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (_isPublishing) return;
+                      setState(() => _isReelMode = false);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.black26,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: AppColors.mintGreen.withValues(alpha: 0.3),
-                            style: BorderStyle.solid),
+                        color: !_isReelMode ? AppColors.mintGreen : null,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Column(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add_photo_alternate_rounded,
-                              size: 48, color: AppColors.mintGreen),
-                          SizedBox(height: 10),
+                          Icon(Icons.photo_library_rounded,
+                              size: 16,
+                              color:
+                                  !_isReelMode ? Colors.black : Colors.white60),
+                          const SizedBox(width: 6),
                           Text(
-                            'গ্যালারি থেকে এক বা একাধিক ছবি নির্বাচন করুন',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 13),
+                            '📸 ছবি (Photos)',
+                            style: TextStyle(
+                              color:
+                                  !_isReelMode ? Colors.black : Colors.white70,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  )
-                else
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        height: 220,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _selectedImagePaths.length + 1,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 10),
-                          itemBuilder: (context, i) {
-                            if (i == _selectedImagePaths.length) {
-                              return GestureDetector(
-                                onTap: _pickImages,
-                                child: Container(
-                                  width: 120,
-                                  decoration: BoxDecoration(
-                                    color: Colors.black26,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(color: Colors.white24),
-                                  ),
-                                  child: const Center(
-                                    child: Icon(Icons.add,
-                                        color: AppColors.mintGreen, size: 36),
-                                  ),
-                                ),
-                              );
-                            }
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      if (_isPublishing) return;
+                      setState(() => _isReelMode = true);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: _isReelMode
+                            ? const LinearGradient(
+                                colors: [Color(0xFFE11D48), Color(0xFF9333EA)],
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.movie_creation_rounded,
+                              size: 16,
+                              color:
+                                  _isReelMode ? Colors.white : Colors.white60),
+                          const SizedBox(width: 6),
+                          Text(
+                            '🎬 রিলস (≤ ৩ মি.)',
+                            style: TextStyle(
+                              color:
+                                  _isReelMode ? Colors.white : Colors.white70,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-                            final matrix = kFilterMatrices[_selectedFilter] ??
-                                kFilterMatrices['normal']!;
-                            return Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: ColorFiltered(
-                                    colorFilter: ColorFilter.matrix(matrix),
-                                    child: buildSmartMediaImage(
-                                      _selectedImagePaths[i],
-                                      width: 180,
-                                      height: 220,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: 6,
-                                  right: 6,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedImagePaths.removeAt(i);
-                                      });
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.black87,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(Icons.close,
-                                          color: Colors.white, size: 16),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (_isReelMode) ...[
+                  // ── Reels Mode Video Picker & Preview ──
+                  if (_selectedVideoPath == null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 28, horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.black26,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFE11D48).withValues(alpha: 0.4),
+                          width: 1.5,
                         ),
                       ),
-                    ],
-                  ),
-
-                const SizedBox(height: 20),
-
-                // 8 Instagram Color Filter Selector Strip
-                const Text(
-                  'কালার ফিল্টার সিলেক্ট করুন (Instagram Presets)',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 48,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: kFilterLabels.entries.map((entry) {
-                      final isSelected = _selectedFilter == entry.key;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(entry.value),
-                          selected: isSelected,
-                          selectedColor: AppColors.mintGreen,
-                          backgroundColor: const Color(0xFF0D1A12),
-                          labelStyle: TextStyle(
-                            color: isSelected ? Colors.black : Colors.white70,
-                            fontSize: 11,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFE11D48), Color(0xFF9333EA)],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFE11D48)
+                                      .withValues(alpha: 0.35),
+                                  blurRadius: 16,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(Icons.movie_creation_rounded,
+                                size: 36, color: Colors.white),
                           ),
-                          onSelected: (val) {
-                            if (val) setState(() => _selectedFilter = entry.key);
-                          },
+                          const SizedBox(height: 14),
+                          const Text(
+                            'ডিভাইস থেকে রিলস ভিডিও বাছুন',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'সর্বোচ্চ ৩ মিনিট অনুমোদিত (HD/MP4)\nট্যুরের আনন্দময় ভিডিও মুহূর্ত পরিবারের সাথে শেয়ার করুন',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Colors.white60, fontSize: 12),
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () =>
+                                    _pickVideo(ImageSource.gallery),
+                                icon: const Icon(Icons.video_library_rounded,
+                                    size: 18),
+                                label: const Text('গ্যালারি থেকে বাছুন'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFE11D48),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 11),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              OutlinedButton.icon(
+                                onPressed: () =>
+                                    _pickVideo(ImageSource.camera),
+                                icon: const Icon(Icons.videocam_rounded,
+                                    size: 18),
+                                label: const Text('ক্যামেরা রেকর্ড'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: Colors.white30),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 11),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: AspectRatio(
+                                  aspectRatio: (_videoPlayerController !=
+                                              null &&
+                                          _videoPlayerController!
+                                              .value.isInitialized)
+                                      ? _videoPlayerController!
+                                          .value.aspectRatio
+                                      : (9 / 14),
+                                  child: (_videoPlayerController != null &&
+                                          _videoPlayerController!
+                                              .value.isInitialized)
+                                      ? VideoPlayer(_videoPlayerController!)
+                                      : const Center(
+                                          child: CircularProgressIndicator(
+                                              color: AppColors.mintGreen),
+                                        ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: _toggleVideoPlayback,
+                                child: Container(
+                                  color: Colors.transparent,
+                                  height: 220,
+                                  width: double.infinity,
+                                  child: Center(
+                                    child: AnimatedOpacity(
+                                      opacity: !_isVideoPlaying ? 1.0 : 0.0,
+                                      duration:
+                                          const Duration(milliseconds: 200),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(14),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black54,
+                                          shape: BoxShape.circle,
+                                          border:
+                                              Border.all(color: Colors.white30),
+                                        ),
+                                        child: const Icon(
+                                            Icons.play_arrow_rounded,
+                                            color: Colors.white,
+                                            size: 36),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 10,
+                                left: 10,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black87,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '⏱️ দৈর্ঘ্য: ${_videoDuration.inMinutes} মি. ${_videoDuration.inSeconds % 60} সে.',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          if (_videoError != null)
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _videoError!,
+                                style: const TextStyle(
+                                    color: Colors.redAccent, fontSize: 12),
+                              ),
+                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextButton.icon(
+                                  onPressed: () =>
+                                      _pickVideo(ImageSource.gallery),
+                                  icon: const Icon(Icons.refresh_rounded,
+                                      size: 16),
+                                  label: const Text('অন্য ভিডিও বাছুন'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: Colors.pinkAccent,
+                                  ),
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: () {
+                                  _videoPlayerController?.dispose();
+                                  setState(() {
+                                    _selectedVideoPath = null;
+                                    _videoPlayerController = null;
+                                    _videoDuration = Duration.zero;
+                                    _videoError = null;
+                                  });
+                                },
+                                icon: const Icon(Icons.delete_outline_rounded,
+                                    color: Colors.redAccent, size: 16),
+                                label: const Text('মুছুন',
+                                    style:
+                                        TextStyle(color: Colors.redAccent)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                ] else ...[
+                  // ── Photos Mode Image Picker & Preview ──
+                  if (_selectedImagePaths.isEmpty)
+                    GestureDetector(
+                      onTap: _pickImages,
+                      child: Container(
+                        height: 200,
+                        decoration: BoxDecoration(
+                          color: Colors.black26,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: AppColors.mintGreen.withValues(alpha: 0.3),
+                              style: BorderStyle.solid),
                         ),
-                      );
-                    }).toList(),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_photo_alternate_rounded,
+                                size: 48, color: AppColors.mintGreen),
+                            SizedBox(height: 10),
+                            Text(
+                              'গ্যালারি থেকে এক বা একাধিক ছবি নির্বাচন করুন',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          height: 220,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _selectedImagePaths.length + 1,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 10),
+                            itemBuilder: (context, i) {
+                              if (i == _selectedImagePaths.length) {
+                                return GestureDetector(
+                                  onTap: _pickImages,
+                                  child: Container(
+                                    width: 120,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black26,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: Colors.white24),
+                                    ),
+                                    child: const Center(
+                                      child: Icon(Icons.add,
+                                          color: AppColors.mintGreen,
+                                          size: 36),
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              final matrix =
+                                  kFilterMatrices[_selectedFilter] ??
+                                      kFilterMatrices['normal']!;
+                              return Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: ColorFiltered(
+                                      colorFilter:
+                                          ColorFilter.matrix(matrix),
+                                      child: buildSmartMediaImage(
+                                        _selectedImagePaths[i],
+                                        width: 180,
+                                        height: 220,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 6,
+                                    right: 6,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedImagePaths.removeAt(i);
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.black54,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.close,
+                                            size: 16, color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'নির্বাচিত ছবি: ${_selectedImagePaths.length} টি',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 12),
+                            ),
+                            TextButton.icon(
+                              onPressed: () {
+                                setState(() => _selectedImagePaths.clear());
+                              },
+                              icon: const Icon(Icons.delete_outline,
+                                  size: 16, color: Colors.redAccent),
+                              label: const Text('সব মুছুন',
+                                  style: TextStyle(
+                                      color: Colors.redAccent, fontSize: 12)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                  const SizedBox(height: 16),
+
+                  // 8 Instagram Color Filter Selector Strip
+                  const Text(
+                    'কালার ফিল্টার সিলেক্ট করুন (Instagram Presets)',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 38,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: kFilterLabels.entries.map((entry) {
+                        final isSelected = _selectedFilter == entry.key;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(entry.value),
+                            selected: isSelected,
+                            selectedColor: AppColors.mintGreen,
+                            backgroundColor: Colors.black26,
+                            labelStyle: TextStyle(
+                              color: isSelected ? Colors.black : Colors.white70,
+                              fontSize: 12,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                            onSelected: (val) {
+                              if (val) {
+                                setState(() => _selectedFilter = entry.key);
+                              }
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 20),
 
@@ -1690,11 +2463,21 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                     ),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'day1', child: Text('ডে ১: রংপুর ➔ কক্সবাজার যাত্রা ও পৌঁছানো')),
-                    DropdownMenuItem(value: 'day2', child: Text('ডে ২: সুগন্ধা ও লাবণী বিচ গোসল ও ইনানী')),
-                    DropdownMenuItem(value: 'day3', child: Text('ডে ৩: হিমছড়ি পাহাড়, ঝর্ণা ও সূর্যাস্ত')),
-                    DropdownMenuItem(value: 'day4', child: Text('ডে ৪: মহেশখালী ও বার্মিজ মার্কেট শপিং')),
-                    DropdownMenuItem(value: 'day5', child: Text('ডে ৫: বিদায় ও রংপুর প্রত্যাবর্তন')),
+                    DropdownMenuItem(
+                        value: 'day1',
+                        child: Text('ডে ১: রংপুর ➔ কক্সবাজার যাত্রা ও পৌঁছানো')),
+                    DropdownMenuItem(
+                        value: 'day2',
+                        child: Text('ডে ২: সুগন্ধা ও লাবণী বিচ গোসল ও ইনানী')),
+                    DropdownMenuItem(
+                        value: 'day3',
+                        child: Text('ডে ৩: হিমছড়ি পাহাড়, ঝর্ণা ও সূর্যাস্ত')),
+                    DropdownMenuItem(
+                        value: 'day4',
+                        child: Text('ডে ৪: মহেশখালী ও বার্মিজ মার্কেট শপিং')),
+                    DropdownMenuItem(
+                        value: 'day5',
+                        child: Text('ডে ৫: বিদায় ও রংপুর প্রত্যাবর্তন')),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedDay = val);
@@ -1736,9 +2519,11 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                 const SizedBox(height: 16),
 
                 // Caption
-                const Text(
-                  'ক্যাপশন লিখুন (Caption)',
-                  style: TextStyle(
+                Text(
+                  _isReelMode
+                      ? 'রিলস ক্যাপশন লিখুন (Reel Caption)'
+                      : 'ক্যাপশন লিখুন (Caption)',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -1750,7 +2535,9 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                   maxLines: 3,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: 'সুন্দর মুহূর্তের অনুভূতি লিখে পরিবারের সাথে ভাগ করুন...',
+                    hintText: _isReelMode
+                        ? 'রিলস নিয়ে চমৎকার অনুভূতি লিখুন... 🎬🏖️'
+                        : 'সুন্দর মুহূর্তের অনুভূতি লিখে পরিবারের সাথে ভাগ করুন...',
                     hintStyle:
                         const TextStyle(color: Colors.white38, fontSize: 13),
                     filled: true,
@@ -1969,13 +2756,13 @@ class _StoryViewerScreenState extends State<_StoryViewerScreen>
 // ============================================================================
 
 class _ReelsPlayerModal extends StatefulWidget {
-  final String videoUrl;
-  final TourPostItem post;
+  final List<TourPostItem> reels;
+  final int initialIndex;
   final TourGroupRepository repository;
 
   const _ReelsPlayerModal({
-    required this.videoUrl,
-    required this.post,
+    required this.reels,
+    this.initialIndex = 0,
     required this.repository,
   });
 
@@ -1984,77 +2771,356 @@ class _ReelsPlayerModal extends StatefulWidget {
 }
 
 class _ReelsPlayerModalState extends State<_ReelsPlayerModal> {
-  late VideoPlayerController _videoCtrl;
-  bool _isInitialized = false;
+  late PageController _pageController;
+  late int _currentIndex;
+  bool _isMuted = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.videoUrl.startsWith('http://') || widget.videoUrl.startsWith('https://')) {
-      _videoCtrl = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
-    } else {
-      _videoCtrl = VideoPlayerController.file(File(widget.videoUrl));
-    }
-    _videoCtrl.initialize().then((_) {
-      if (mounted) {
-        setState(() => _isInitialized = true);
-        _videoCtrl.setLooping(true);
-        _videoCtrl.play();
-      }
-    });
+    _currentIndex = widget.reels.isEmpty
+        ? 0
+        : widget.initialIndex.clamp(0, widget.reels.length - 1);
+    _pageController = PageController(initialPage: _currentIndex);
   }
 
   @override
   void dispose() {
-    _videoCtrl.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.reels.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.movie_filter_outlined,
+                  size: 64, color: Colors.white38),
+              const SizedBox(height: 12),
+              const Text('কোনো রিলস পাওয়া যায়নি',
+                  style: TextStyle(color: Colors.white70)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('ফিরে যান'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: PageView.builder(
+        controller: _pageController,
+        scrollDirection: Axis.vertical,
+        itemCount: widget.reels.length,
+        onPageChanged: (idx) {
+          setState(() => _currentIndex = idx);
+        },
+        itemBuilder: (context, index) {
+          final post = widget.reels[index];
+          final isActive = index == _currentIndex;
+          return _ReelVideoItem(
+            key: ValueKey(post.id),
+            post: post,
+            isActive: isActive,
+            isMuted: _isMuted,
+            onToggleMute: () {
+              setState(() => _isMuted = !_isMuted);
+            },
+            onClose: () => Navigator.pop(context),
+            repository: widget.repository,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ReelVideoItem extends StatefulWidget {
+  final TourPostItem post;
+  final bool isActive;
+  final bool isMuted;
+  final VoidCallback onToggleMute;
+  final VoidCallback onClose;
+  final TourGroupRepository repository;
+
+  const _ReelVideoItem({
+    super.key,
+    required this.post,
+    required this.isActive,
+    required this.isMuted,
+    required this.onToggleMute,
+    required this.onClose,
+    required this.repository,
+  });
+
+  @override
+  State<_ReelVideoItem> createState() => _ReelVideoItemState();
+}
+
+class _ReelVideoItemState extends State<_ReelVideoItem>
+    with SingleTickerProviderStateMixin {
+  VideoPlayerController? _controller;
+  bool _isInitialized = false;
+  bool _isPlaying = true;
+  bool _hasError = false;
+  bool _showHeartAnim = false;
+  late AnimationController _animCtrl;
+  late Animation<double> _heartScale;
+  bool _isCaptionExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _heartScale = Tween<double>(begin: 0.2, end: 1.3).animate(
+      CurvedAnimation(parent: _animCtrl, curve: Curves.elasticOut),
+    );
+    _initVideo();
+  }
+
+  Future<void> _initVideo() async {
+    final url = widget.post.videoUrl;
+    if (url == null || url.isEmpty) {
+      if (mounted) setState(() => _hasError = true);
+      return;
+    }
+
+    try {
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        _controller = VideoPlayerController.networkUrl(Uri.parse(url));
+      } else {
+        _controller = VideoPlayerController.file(File(url));
+      }
+
+      await _controller!.initialize();
+      await _controller!.setLooping(true);
+      await _controller!.setVolume(widget.isMuted ? 0.0 : 1.0);
+
+      if (mounted) {
+        setState(() => _isInitialized = true);
+        if (widget.isActive) {
+          _controller!.play();
+          _isPlaying = true;
+        }
+      }
+    } catch (_) {
+      if (mounted) setState(() => _hasError = true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReelVideoItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_controller != null && _isInitialized) {
+      if (widget.isActive && !oldWidget.isActive) {
+        _controller!.play();
+        _isPlaying = true;
+      } else if (!widget.isActive && oldWidget.isActive) {
+        _controller!.pause();
+        _isPlaying = false;
+      }
+
+      if (widget.isMuted != oldWidget.isMuted) {
+        _controller!.setVolume(widget.isMuted ? 0.0 : 1.0);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _handleDoubleTapLike() {
+    widget.repository.toggleLikePost(widget.post.tourId, widget.post.id);
+    setState(() => _showHeartAnim = true);
+    _animCtrl.forward(from: 0.0).then((_) {
+      if (mounted) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) setState(() => _showHeartAnim = false);
+        });
+      }
+    });
+  }
+
+  void _togglePlayPause() {
+    if (_controller == null || !_isInitialized) return;
+    setState(() {
+      if (_controller!.value.isPlaying) {
+        _controller!.pause();
+        _isPlaying = false;
+      } else {
+        _controller!.play();
+        _isPlaying = true;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final post = widget.post;
+    final isLiked = post.likes.contains(widget.repository.currentEmail);
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          // Video Player
-          Center(
-            child: _isInitialized
-                ? AspectRatio(
-                    aspectRatio: _videoCtrl.value.aspectRatio,
-                    child: VideoPlayer(_videoCtrl),
-                  )
-                : const CircularProgressIndicator(color: AppColors.mintGreen),
-          ),
-
-          // Top Close Button
-          Positioned(
-            top: 40,
-            left: 16,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 28),
-              onPressed: () => Navigator.pop(context),
+          // 1. Video Player or Placeholder
+          GestureDetector(
+            onTap: _togglePlayPause,
+            onDoubleTap: _handleDoubleTapLike,
+            child: Center(
+              child: _isInitialized && _controller != null
+                  ? AspectRatio(
+                      aspectRatio: _controller!.value.aspectRatio,
+                      child: VideoPlayer(_controller!),
+                    )
+                  : (_hasError
+                      ? const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error_outline_rounded,
+                                color: Colors.white54, size: 48),
+                            SizedBox(height: 10),
+                            Text('ভিডিও লোড করা যায়নি',
+                                style: TextStyle(color: Colors.white70)),
+                          ],
+                        )
+                      : const CircularProgressIndicator(
+                          color: AppColors.mintGreen, strokeWidth: 2)),
             ),
           ),
 
-          // Right Action Column (Like, Comment, Share)
+          // 2. Play / Pause Overlay Icon
+          if (_isInitialized && !_isPlaying)
+            Center(
+              child: IgnorePointer(
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.play_arrow_rounded,
+                      color: Colors.white, size: 48),
+                ),
+              ),
+            ),
+
+          // 3. Heart Burst Animation
+          if (_showHeartAnim)
+            Center(
+              child: ScaleTransition(
+                scale: _heartScale,
+                child: const Icon(
+                  Icons.favorite,
+                  color: Colors.redAccent,
+                  size: 110,
+                  shadows: [
+                    Shadow(color: Colors.black54, blurRadius: 20),
+                  ],
+                ),
+              ),
+            ),
+
+          // 4. Top Controls (Back, Mute, Reel Tag)
           Positioned(
-            right: 16,
-            bottom: 60,
-            child: Column(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 12,
+            right: 12,
+            child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.favorite,
-                      color: Colors.white, size: 30),
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white, size: 22),
+                  onPressed: widget.onClose,
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE11D48), Color(0xFF9333EA)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.movie_creation_rounded,
+                          color: Colors.white, size: 13),
+                      SizedBox(width: 4),
+                      Text(
+                        'REELS',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(
+                    widget.isMuted
+                        ? Icons.volume_off_rounded
+                        : Icons.volume_up_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  onPressed: widget.onToggleMute,
+                ),
+              ],
+            ),
+          ),
+
+          // 5. Right Action Sidebar (Like, Comment, Share)
+          Positioned(
+            right: 14,
+            bottom: 80,
+            child: Column(
+              children: [
+                // Like
+                IconButton(
+                  icon: Icon(
+                    isLiked ? Icons.favorite : Icons.favorite_border_rounded,
+                    color: isLiked ? Colors.redAccent : Colors.white,
+                    size: 32,
+                  ),
                   onPressed: () {
-                    widget.repository
-                        .toggleLikePost(widget.post.tourId, widget.post.id);
+                    widget.repository.toggleLikePost(post.tourId, post.id);
                   },
                 ),
                 Text(
-                  toBengaliNum(widget.post.likes.length),
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  toBengaliNum(post.likes.length),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                  ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
+
+                // Comment
                 IconButton(
                   icon: const Icon(Icons.chat_bubble_outline_rounded,
                       color: Colors.white, size: 28),
@@ -2064,59 +3130,178 @@ class _ReelsPlayerModalState extends State<_ReelsPlayerModal> {
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
                       builder: (ctx) => _TourCommentsSheet(
-                        tourId: widget.post.tourId,
-                        postId: widget.post.id,
+                        tourId: post.tourId,
+                        postId: post.id,
                         repository: widget.repository,
                       ),
                     );
                   },
                 ),
                 Text(
-                  toBengaliNum(widget.post.commentCount),
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  toBengaliNum(post.commentCount),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                  ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
+
+                // Share
                 IconButton(
                   icon: const Icon(Icons.share_rounded,
                       color: Colors.white, size: 28),
                   onPressed: () {
+                    final videoLink = (post.videoUrl != null &&
+                            (post.videoUrl!.startsWith('http://') ||
+                                post.videoUrl!.startsWith('https://')))
+                        ? '\n\nভিডিও লিংক: ${post.videoUrl}'
+                        : '';
                     // ignore: deprecated_member_use
                     Share.share(
-                      'Check out this tour reel from ${widget.post.location}!',
+                      '🎬 ${post.authorName}-এর ট্যুর রিলস:\n"${post.caption}"\n📍 স্থান: ${post.location}$videoLink',
                       subject: 'Bhromon Tour Reel',
                     );
                   },
+                ),
+                const Text(
+                  'শেয়ার',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                  ),
                 ),
               ],
             ),
           ),
 
-          // Bottom Details
+          // 6. Bottom Information Overlay (Author, Location, Caption)
           Positioned(
-            bottom: 30,
             left: 16,
             right: 80,
+            bottom: MediaQuery.of(context).padding.bottom + 16,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  widget.post.authorName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                // Author row
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 17,
+                      backgroundColor: AppColors.midGreen,
+                      backgroundImage: post.authorPhoto != null
+                          ? NetworkImage(post.authorPhoto!)
+                          : null,
+                      child: post.authorPhoto == null
+                          ? Text(
+                              post.authorName.isNotEmpty
+                                  ? post.authorName[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        post.authorName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'পরিবার',
+                        style: TextStyle(color: Colors.white, fontSize: 10),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Location Pill
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.black45,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.location_on_rounded,
+                          color: AppColors.mintGreen, size: 13),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          post.location,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 11),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.post.caption,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                ),
+                const SizedBox(height: 8),
+
+                // Caption
+                if (post.caption.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      setState(() => _isCaptionExpanded = !_isCaptionExpanded);
+                    },
+                    child: Text(
+                      post.caption,
+                      maxLines: _isCaptionExpanded ? 8 : 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
+
+          // 7. Video Progress Scrubber Bar
+          if (_isInitialized && _controller != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: VideoProgressIndicator(
+                _controller!,
+                allowScrubbing: true,
+                colors: const VideoProgressColors(
+                  playedColor: Color(0xFFE11D48),
+                  bufferedColor: Colors.white30,
+                  backgroundColor: Colors.white12,
+                ),
+              ),
+            ),
         ],
       ),
     );
