@@ -89,26 +89,27 @@ class _ChatMediaPickerSheet extends StatelessWidget {
   }
 
   Future<void> _pick(BuildContext context, _PickMode mode) async {
-    // Request relevant permission
-    final Permission perm =
-        (mode == _PickMode.camera) ? Permission.camera : Permission.photos;
+    // Only request Camera permission when capturing from camera.
+    // Gallery image/video picking uses system pickers which require no runtime permissions.
+    if (mode == _PickMode.camera) {
+      final status = await Permission.camera.request();
+      if (!context.mounted) return;
 
-    final status = await perm.request();
-    if (!context.mounted) return;
-
-    if (status.isDenied || status.isPermanentlyDenied) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Permission denied. Please enable it in Settings.'),
-          action: SnackBarAction(
-            label: 'Settings',
-            onPressed: openAppSettings,
+      if (status.isDenied || status.isPermanentlyDenied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Camera permission denied. Please enable it in Settings.'),
+            action: SnackBarAction(
+              label: 'Settings',
+              onPressed: openAppSettings,
+            ),
+            backgroundColor: Color(0xFF1F2C34),
           ),
-          backgroundColor: Color(0xFF1F2C34),
-        ),
-      );
-      Navigator.of(context).pop();
-      return;
+        );
+        Navigator.of(context).pop();
+        return;
+      }
     }
 
     final picker = ImagePicker();
