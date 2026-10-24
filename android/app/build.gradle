@@ -80,9 +80,9 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            ndk {
-                debugSymbolLevel 'SYMBOL_TABLE'
-            }
+            // ndk {
+            //     debugSymbolLevel 'SYMBOL_TABLE'
+            // }
         }
     }
 }
@@ -96,7 +96,7 @@ dependencies {
 }
 
 tasks.whenTaskAdded { task ->
-    if (task.name.toLowerCase().contains("artprofile")) {
+    if (task.name.toLowerCase().contains("artprofile") || task.name.toLowerCase().contains("nativesymboltable")) {
         task.enabled = false
     }
 }
