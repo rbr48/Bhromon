@@ -565,7 +565,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
 
     if (_latestMembers.isNotEmpty) {
       final defaultM = _latestMembers.firstWhere(
-        (m) => m.email.toLowerCase() == (_repository.currentEmail ?? '').toLowerCase(),
+        (m) => m.email.toLowerCase() == _repository.currentEmail.toLowerCase(),
         orElse: () => _latestMembers.first,
       );
       selectedPayerEmail = defaultM.email;
@@ -709,12 +709,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
 
   void _showAddDepositDialog(BuildContext context) {
     final amountCtrl = TextEditingController();
-    String selectedDepositorEmail = _repository.currentEmail ?? 'unknown';
+    String selectedDepositorEmail = _repository.currentEmail;
     String selectedDepositorName = _repository.currentDisplayName;
 
     if (_latestMembers.isNotEmpty) {
       final defaultM = _latestMembers.firstWhere(
-        (m) => m.email.toLowerCase() == (_repository.currentEmail ?? '').toLowerCase(),
+        (m) => m.email.toLowerCase() == _repository.currentEmail.toLowerCase(),
         orElse: () => _latestMembers.first,
       );
       selectedDepositorEmail = defaultM.email;

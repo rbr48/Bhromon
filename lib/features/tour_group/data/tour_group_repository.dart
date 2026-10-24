@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/expense_models.dart';
@@ -16,35 +18,124 @@ class TourGroupRepository {
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _auth = auth ?? FirebaseAuth.instance;
 
-  String? get currentEmail => _auth.currentUser?.email?.toLowerCase().trim();
-  String get currentDisplayName => _auth.currentUser?.displayName ?? 'Explorer';
+  String get currentUid => _auth.currentUser?.uid ?? 'explorer_guest';
 
-  /// Stream of groups the current user is a member of.
-  Stream<List<TourGroup>> watchMyGroups() {
-    final email = currentEmail;
-    if (email == null) return Stream.value([]);
+  String get currentEmail =>
+      _auth.currentUser?.email?.toLowerCase().trim() ??
+      '$currentUid@bhromon.app';
 
-    return _firestore
-        .collection('memberships')
-        .where('email', isEqualTo: email)
-        .where('status', isEqualTo: 'active')
-        .snapshots()
-        .asyncMap((snapshot) async {
-      final tourIds = snapshot.docs.map((d) => d.data()['tourId'] as String).toList();
-      if (tourIds.isEmpty) return <TourGroup>[];
+  String get currentDisplayName {
+    final name = _auth.currentUser?.displayName;
+    if (name != null && name.trim().isNotEmpty) return name.trim();
+    return 'Explorer';
+  }
 
-      final groups = <TourGroup>[];
-      for (final id in tourIds) {
-        final doc = await _firestore.collection('tours').doc(id).get();
-        if (doc.exists && doc.data() != null) {
-          groups.add(TourGroup.fromMap(doc.id, doc.data()!));
+  Future<Box<dynamic>> _openBox() async {
+    if (Hive.isBoxOpen('tour_groups_box')) {
+      return Hive.box<dynamic>('tour_groups_box');
+    }
+    return await Hive.openBox<dynamic>('tour_groups_box');
+  }
+
+  Future<void> _cacheLocalGroup(TourGroup group) async {
+    try {
+      final box = await _openBox();
+      await box.put('tour_${group.id}', group.toMap());
+      final List<dynamic> rawIds = box.get('my_tour_ids', defaultValue: <dynamic>[]) as List<dynamic>;
+      final List<String> myIds = List<String>.from(rawIds);
+      if (!myIds.contains(group.id)) {
+        myIds.add(group.id);
+        await box.put('my_tour_ids', myIds);
+      }
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Error caching local group: $e');
+    }
+  }
+
+  Future<List<TourGroup>> getLocalGroups() async {
+    try {
+      final box = await _openBox();
+      final List<dynamic> rawIds = box.get('my_tour_ids', defaultValue: <dynamic>[]) as List<dynamic>;
+      final List<String> myIds = List<String>.from(rawIds);
+      final List<TourGroup> groups = [];
+      for (final id in myIds) {
+        final data = box.get('tour_$id');
+        if (data is Map) {
+          groups.add(TourGroup.fromMap(id, Map<String, dynamic>.from(data)));
         }
       }
       return groups;
-    });
+    } catch (_) {
+      return [];
+    }
   }
 
-  /// Creates a new tour group and registers the creator as the Owner.
+  /// Stream of groups the current user is a member of.
+  /// Yields local Hive-cached groups immediately, then updates from Firestore.
+  Stream<List<TourGroup>> watchMyGroups() async* {
+    // 1. Immediately emit offline/cached groups
+    final initialLocal = await getLocalGroups();
+    yield initialLocal;
+
+    final email = currentEmail;
+
+    // 2. Stream from Firestore
+    final membershipStream = _firestore
+        .collection('memberships')
+        .where('email', isEqualTo: email)
+        .where('status', isEqualTo: 'active')
+        .snapshots();
+
+    await for (final snapshot in membershipStream.handleError((Object error) {
+      debugPrint('[TourGroupRepository] Error watching memberships: $error');
+    })) {
+      final tourIds = snapshot.docs
+          .map((d) => d.data()['tourId'] as String? ?? '')
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+
+      final List<TourGroup> groups = [];
+
+      for (final id in tourIds) {
+        try {
+          final doc = await _firestore.collection('tours').doc(id).get();
+          if (doc.exists && doc.data() != null) {
+            final group = TourGroup.fromMap(doc.id, doc.data()!);
+            groups.add(group);
+            await _cacheLocalGroup(group);
+          }
+        } catch (_) {}
+      }
+
+      // Also query tours owned by user if memberships didn't catch them
+      try {
+        final ownedSnap = await _firestore
+            .collection('tours')
+            .where('ownerEmail', isEqualTo: email)
+            .get();
+        for (final doc in ownedSnap.docs) {
+          if (!groups.any((g) => g.id == doc.id)) {
+            final group = TourGroup.fromMap(doc.id, doc.data());
+            groups.add(group);
+            await _cacheLocalGroup(group);
+          }
+        }
+      } catch (_) {}
+
+      // Merge with any local groups
+      final local = await getLocalGroups();
+      for (final lg in local) {
+        if (!groups.any((g) => g.id == lg.id)) {
+          groups.add(lg);
+        }
+      }
+
+      yield groups;
+    }
+  }
+
+  /// Creates a new tour group and registers the creator as the Owner/Admin.
   Future<TourGroup> createGroup({
     required String name,
     required String description,
@@ -54,7 +145,7 @@ class TourGroupRepository {
     TourModules modules = const TourModules(),
   }) async {
     final email = currentEmail;
-    if (email == null) throw StateError('User must be logged in to create a tour');
+    final uid = currentUid;
 
     final tourId = _uuid.v4().substring(0, 20);
     final inviteCode = _uuid.v4().substring(0, 6).toUpperCase();
@@ -65,6 +156,7 @@ class TourGroupRepository {
       description: description,
       destination: destination,
       ownerEmail: email,
+      ownerUid: uid,
       inviteCode: inviteCode,
       startDate: startDate,
       endDate: endDate,
@@ -72,61 +164,102 @@ class TourGroupRepository {
       createdAt: DateTime.now(),
     );
 
-    final batch = _firestore.batch();
-    final tourRef = _firestore.collection('tours').doc(tourId);
-    batch.set(tourRef, group.toMap());
+    // Cache locally immediately so the user sees their group right away
+    await _cacheLocalGroup(group);
 
-    final membershipId = '${tourId}__$email';
-    final membershipRef = _firestore.collection('memberships').doc(membershipId);
-    final member = TourMember(
-      tourId: tourId,
-      email: email,
-      displayName: currentDisplayName,
-      photoUrl: _auth.currentUser?.photoURL,
-      role: TourRole.owner,
-      status: TourMemberStatus.active,
-      joinedAt: DateTime.now(),
-    );
-    batch.set(membershipRef, member.toMap());
+    // Persist to remote Firestore with subcollection private/invite
+    try {
+      final batch = _firestore.batch();
+      final tourRef = _firestore.collection('tours').doc(tourId);
+      batch.set(tourRef, group.toMap());
 
-    await batch.commit();
+      final membershipId = '${tourId}__$email';
+      final membershipRef = _firestore.collection('memberships').doc(membershipId);
+      final member = TourMember(
+        tourId: tourId,
+        tourName: name,
+        email: email,
+        displayName: currentDisplayName,
+        photoUrl: _auth.currentUser?.photoURL,
+        role: TourRole.owner,
+        status: TourMemberStatus.active,
+        joinedAt: DateTime.now(),
+      );
+      batch.set(membershipRef, member.toMap());
+
+      final inviteRef = tourRef.collection('private').doc('invite');
+      batch.set(inviteRef, {
+        'code': inviteCode,
+        'rotatedAt': DateTime.now().toIso8601String(),
+      });
+
+      await batch.commit();
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Remote write failed; saved locally: $e');
+    }
+
     return group;
   }
 
   /// Joins an existing tour using its 6-character invite code.
   Future<TourGroup> joinGroupWithCode(String inviteCode) async {
     final email = currentEmail;
-    if (email == null) throw StateError('User must be logged in to join a tour');
-
     final code = inviteCode.trim().toUpperCase();
-    final query = await _firestore
-        .collection('tours')
-        .where('inviteCode', isEqualTo: code)
-        .limit(1)
-        .get();
 
-    if (query.docs.isEmpty) {
-      throw ArgumentError('Invalid invite code. No matching tour found.');
+    TourGroup? matchedGroup;
+
+    try {
+      final query = await _firestore
+          .collection('tours')
+          .where('inviteCode', isEqualTo: code)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        final tourDoc = query.docs.first;
+        matchedGroup = TourGroup.fromMap(tourDoc.id, tourDoc.data());
+      }
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Query inviteCode failed: $e');
     }
 
-    final tourDoc = query.docs.first;
-    final group = TourGroup.fromMap(tourDoc.id, tourDoc.data());
+    if (matchedGroup == null) {
+      final localGroups = await getLocalGroups();
+      for (final g in localGroups) {
+        if (g.inviteCode.toUpperCase() == code) {
+          matchedGroup = g;
+          break;
+        }
+      }
+    }
 
-    final membershipId = '${group.id}__$email';
-    final memberRef = _firestore.collection('memberships').doc(membershipId);
+    if (matchedGroup == null) {
+      throw ArgumentError('সঠিক ৬-সংখ্যার আমন্ত্রণ কোড দিন। কোনো ট্যুর গ্রুপ পাওয়া যায়নি।');
+    }
 
-    final member = TourMember(
-      tourId: group.id,
-      email: email,
-      displayName: currentDisplayName,
-      photoUrl: _auth.currentUser?.photoURL,
-      role: TourRole.member,
-      status: TourMemberStatus.active,
-      joinedAt: DateTime.now(),
-    );
+    await _cacheLocalGroup(matchedGroup);
 
-    await memberRef.set(member.toMap(), SetOptions(merge: true));
-    return group;
+    try {
+      final membershipId = '${matchedGroup.id}__$email';
+      final memberRef = _firestore.collection('memberships').doc(membershipId);
+
+      final member = TourMember(
+        tourId: matchedGroup.id,
+        tourName: matchedGroup.name,
+        email: email,
+        displayName: currentDisplayName,
+        photoUrl: _auth.currentUser?.photoURL,
+        role: TourRole.member,
+        status: TourMemberStatus.active,
+        joinedAt: DateTime.now(),
+      );
+
+      await memberRef.set(member.toMap(), SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Join membership set failed: $e');
+    }
+
+    return matchedGroup;
   }
 
   /// Stream of active members in a tour.
@@ -137,7 +270,11 @@ class TourGroupRepository {
         .where('status', isEqualTo: 'active')
         .snapshots()
         .map((snapshot) =>
-            snapshot.docs.map((d) => TourMember.fromMap(d.data())).toList());
+            snapshot.docs.map((d) => TourMember.fromMap(d.data())).toList())
+        .handleError((Object e) {
+      debugPrint('[TourGroupRepository] watchMembers error: $e');
+      return <TourMember>[];
+    });
   }
 
   /// Stream of expenses for a tour.
@@ -149,7 +286,11 @@ class TourGroupRepository {
         .orderBy('date', descending: true)
         .snapshots()
         .map((snapshot) =>
-            snapshot.docs.map((d) => ExpenseItem.fromMap(d.id, d.data())).toList());
+            snapshot.docs.map((d) => ExpenseItem.fromMap(d.id, d.data())).toList())
+        .handleError((Object e) {
+      debugPrint('[TourGroupRepository] watchExpenses error: $e');
+      return <ExpenseItem>[];
+    });
   }
 
   /// Adds a new expense item.
@@ -193,7 +334,11 @@ class TourGroupRepository {
         .orderBy('date', descending: true)
         .snapshots()
         .map((snapshot) =>
-            snapshot.docs.map((d) => DepositItem.fromMap(d.id, d.data())).toList());
+            snapshot.docs.map((d) => DepositItem.fromMap(d.id, d.data())).toList())
+        .handleError((Object e) {
+      debugPrint('[TourGroupRepository] watchDeposits error: $e');
+      return <DepositItem>[];
+    });
   }
 
   /// Adds a new deposit contribution into the shared fund.
@@ -233,7 +378,11 @@ class TourGroupRepository {
         .collection('posts')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList());
+        .map((s) => s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList())
+        .handleError((Object e) {
+      debugPrint('[TourGroupRepository] watchPosts error: $e');
+      return <TourPostItem>[];
+    });
   }
 
   Future<void> addPost({
@@ -250,7 +399,7 @@ class TourGroupRepository {
     final post = TourPostItem(
       id: postId,
       tourId: tourId,
-      authorEmail: currentEmail ?? 'anonymous',
+      authorEmail: currentEmail,
       authorName: currentDisplayName,
       authorPhoto: _auth.currentUser?.photoURL,
       caption: caption,
@@ -275,7 +424,6 @@ class TourGroupRepository {
 
   Future<void> toggleLikePost(String tourId, String postId) async {
     final email = currentEmail;
-    if (email == null) return;
     final postRef = _firestore
         .collection('tours')
         .doc(tourId)
@@ -305,7 +453,11 @@ class TourGroupRepository {
         .collection('comments')
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((s) => s.docs.map((d) => TourCommentItem.fromMap(d.id, d.data())).toList());
+        .map((s) => s.docs.map((d) => TourCommentItem.fromMap(d.id, d.data())).toList())
+        .handleError((Object e) {
+      debugPrint('[TourGroupRepository] watchComments error: $e');
+      return <TourCommentItem>[];
+    });
   }
 
   Future<void> addComment({
@@ -317,7 +469,7 @@ class TourGroupRepository {
     final commentId = _uuid.v4();
     final comment = TourCommentItem(
       id: commentId,
-      authorEmail: currentEmail ?? 'anonymous',
+      authorEmail: currentEmail,
       authorName: currentDisplayName,
       authorPhoto: _auth.currentUser?.photoURL,
       text: text,
@@ -348,7 +500,11 @@ class TourGroupRepository {
         .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => TourStoryItem.fromMap(d.id, d.data())).toList());
+        .map((s) => s.docs.map((d) => TourStoryItem.fromMap(d.id, d.data())).toList())
+        .handleError((Object e) {
+      debugPrint('[TourGroupRepository] watchStories error: $e');
+      return <TourStoryItem>[];
+    });
   }
 
   Future<void> addStory({
@@ -359,7 +515,7 @@ class TourGroupRepository {
     final storyId = _uuid.v4();
     final story = TourStoryItem(
       id: storyId,
-      authorEmail: currentEmail ?? 'anonymous',
+      authorEmail: currentEmail,
       authorName: currentDisplayName,
       authorPhoto: _auth.currentUser?.photoURL,
       mediaUrl: mediaUrl,
@@ -404,11 +560,9 @@ class TourGroupRepository {
     });
 
     // 3. Demote old owner to admin
-    if (oldOwnerEmail != null) {
-      batch.update(_firestore.collection('memberships').doc('${tourId}__$oldOwnerEmail'), {
-        'role': TourRole.admin.toValue(),
-      });
-    }
+    batch.update(_firestore.collection('memberships').doc('${tourId}__$oldOwnerEmail'), {
+      'role': TourRole.admin.toValue(),
+    });
 
     await batch.commit();
   }
