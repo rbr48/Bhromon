@@ -51,6 +51,12 @@ key.properties
 .env.*
 **/.env
 
+# Crawler credentials & scraped binaries
+travel_data_crawler/cookies/
+*.cookies.json
+travel_data_crawler/**/*.html
+travel_data_crawler/**/*.db
+
 # Signing keys & machine-local config — never commit
 *.jks
 *.keystore
