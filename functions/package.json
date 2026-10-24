@@ -6,7 +6,8 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "test": "jest"
+    "test": "jest",
+    "backfill:geohashes": "npm run build && node lib/scripts/backfillGeohashes.js"
   },
   "engines": {
     "node": "20"

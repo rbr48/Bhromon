@@ -7,6 +7,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/entities/location_pin.dart';
+import '../../../../core/geo/geohash.dart';
 import '../../../../core/network/connectivity_check.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../../../../core/database/app_database.dart';
@@ -209,12 +210,15 @@ class MapRepositoryImpl implements IMapRepository {
   @override
   Future<Either<Failure, LocationPin>> addPin(LocationPin pin) async {
     try {
+      // A real geohash, so the pin can be found by nearby-pin queries (the
+      // map's add-pin dialog used to send a placeholder).
+      final toSave = pin.copyWith(geoHash: encodeGeohash(pin.lat, pin.lng));
       await _firestore
           .collection('location_pins')
-          .doc(pin.pinId)
-          .set(pin.toJson());
+          .doc(toSave.pinId)
+          .set(toSave.toJson());
       invalidatePinCache();
-      return Right(pin);
+      return Right(toSave);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
