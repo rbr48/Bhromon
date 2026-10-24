@@ -26,11 +26,20 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
   Future<void> _loadScrapbookData() async {
     try {
       final doc = await _firestore.collection('tours').doc(widget.tourId).get();
-      final membersSnap = await _firestore
-          .collection('tours')
-          .doc(widget.tourId)
-          .collection('members')
+      // In Bhromon, memberships are stored at root collection 'memberships'
+      var membersSnap = await _firestore
+          .collection('memberships')
+          .where('tourId', isEqualTo: widget.tourId)
           .get();
+
+      if (membersSnap.docs.isEmpty) {
+        // Fallback to subcollection if applicable
+        membersSnap = await _firestore
+            .collection('tours')
+            .doc(widget.tourId)
+            .collection('members')
+            .get();
+      }
 
       if (mounted) {
         setState(() {
@@ -232,7 +241,7 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF142428),
         borderRadius: BorderRadius.circular(16),
@@ -240,12 +249,21 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: color, size: 20),
           const SizedBox(height: 8),
-          Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+          ),
           const SizedBox(height: 2),
-          Text(title, style: const TextStyle(color: Colors.white60, fontSize: 10)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(title, style: const TextStyle(color: Colors.white60, fontSize: 10)),
+          ),
         ],
       ),
     );

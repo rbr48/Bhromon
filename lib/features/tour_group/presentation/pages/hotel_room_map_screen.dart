@@ -245,6 +245,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
 
     showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -368,6 +369,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
   void _showManageRoomGuestsSheet(BuildContext context, HotelRoom room) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       backgroundColor: const Color(0xFF14241B),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
@@ -375,12 +378,21 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
           stream: _repository.watchMembers(widget.tourId),
           builder: (context, snapshot) {
             final members = snapshot.data ?? [];
+            final bottomPad = MediaQuery.of(ctx).padding.bottom;
 
             return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+              top: false,
+              child: SizedBox(
+                height: MediaQuery.of(ctx).size.height * 0.75,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 12,
+                    bottom: bottomPad + 12,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -446,10 +458,11 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   ],
                 ),
               ),
-            );
-          },
-        );
-      },
-    );
-  }
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 }

@@ -377,7 +377,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       itemCount: modules.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 1.35,
+        childAspectRatio: 1.15,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
       ),
@@ -528,6 +528,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
     showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: const Color(0xFF14241B),
@@ -597,6 +598,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
     showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: const Color(0xFF14241B),
@@ -700,13 +702,21 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       backgroundColor: const Color(0xFF14241B),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
+        final bottomPad = MediaQuery.of(ctx).padding.bottom;
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 16,
+            bottom: bottomPad + 16,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

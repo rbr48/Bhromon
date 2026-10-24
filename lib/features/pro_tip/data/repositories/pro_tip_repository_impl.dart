@@ -25,7 +25,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
       final connectivity = await Connectivity().checkConnectivity();
       if (connectivity.isNotEmpty &&
           connectivity.first == ConnectivityResult.none) {
-        return _getCachedTipsForPin(pinId);
+        return await _getCachedTipsForPin(pinId);
       }
 
       final snapshot = await _firestore
@@ -42,7 +42,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
 
       return Right(tips);
     } catch (e) {
-      return _getCachedTipsForPin(pinId);
+      return await _getCachedTipsForPin(pinId);
     }
   }
 
@@ -227,7 +227,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
       final connectivity = await Connectivity().checkConnectivity();
       if (connectivity.isNotEmpty &&
           connectivity.first == ConnectivityResult.none) {
-        return _getCachedLatestTips(limit: limit);
+        return await _getCachedLatestTips(limit: limit);
       }
 
       final snapshot = await _firestore.collection('pro_tips').get();
@@ -248,7 +248,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
 
       return Right(tips);
     } catch (e) {
-      return _getCachedLatestTips(limit: limit);
+      return await _getCachedLatestTips(limit: limit);
     }
   }
 

@@ -188,6 +188,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
 
     showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: const Color(0xFF14241B),

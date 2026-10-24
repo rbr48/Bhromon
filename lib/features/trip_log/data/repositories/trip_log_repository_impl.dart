@@ -27,7 +27,7 @@ class TripLogRepositoryImpl implements ITripLogRepository {
       final connectivity = await Connectivity().checkConnectivity();
       if (connectivity.isNotEmpty &&
           connectivity.first == ConnectivityResult.none) {
-        return _getCachedTripLogsForPin(pinId);
+        return await _getCachedTripLogsForPin(pinId);
       }
 
       final snapshots = await Future.wait([
@@ -62,7 +62,7 @@ class TripLogRepositoryImpl implements ITripLogRepository {
 
       return Right(logs);
     } catch (e) {
-      return _getCachedTripLogsForPin(pinId);
+      return await _getCachedTripLogsForPin(pinId);
     }
   }
 
@@ -173,7 +173,7 @@ class TripLogRepositoryImpl implements ITripLogRepository {
       final connectivity = await Connectivity().checkConnectivity();
       if (connectivity.isNotEmpty &&
           connectivity.first == ConnectivityResult.none) {
-        return _getCachedById(id);
+        return await _getCachedById(id);
       }
 
       var doc = await _firestore.collection('trip_logs').doc(id).get();
@@ -188,7 +188,7 @@ class TripLogRepositoryImpl implements ITripLogRepository {
       _sanitizeTripLogData(data);
       return Right(TripLog.fromJson(data));
     } catch (e) {
-      return _getCachedById(id);
+      return await _getCachedById(id);
     }
   }
 

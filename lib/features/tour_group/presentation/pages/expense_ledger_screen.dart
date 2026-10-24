@@ -23,6 +23,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
 
   LedgerSummary? _latestSummary;
   List<ExpenseItem> _latestExpenses = [];
+  List<TourMember> _latestMembers = [];
 
   @override
   void initState() {
@@ -103,6 +104,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     );
                   }).toList();
 
+                  _latestMembers = members;
                   _latestExpenses = expenses;
                   final summary = TripLedgerEngine.computeLedger(
                     members: ledgerMembers,
@@ -511,11 +513,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   void _showAddEntryMenu(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       backgroundColor: const Color(0xFF14241B),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
-        return SafeArea(
+        final bottomPad = MediaQuery.of(ctx).padding.bottom;
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomPad + 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -555,9 +560,21 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     final amountCtrl = TextEditingController();
     String category = 'Food';
     bool paidFromFund = true;
+    String? selectedPayerEmail = _repository.currentEmail;
+    String selectedPayerName = _repository.currentDisplayName;
+
+    if (_latestMembers.isNotEmpty) {
+      final defaultM = _latestMembers.firstWhere(
+        (m) => m.email.toLowerCase() == (_repository.currentEmail ?? '').toLowerCase(),
+        orElse: () => _latestMembers.first,
+      );
+      selectedPayerEmail = defaultM.email;
+      selectedPayerName = defaultM.displayName;
+    }
 
     showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -614,7 +631,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       subtitle: Text(
                         paidFromFund
                             ? 'Deducted directly from Fund'
-                            : 'Paid out-of-pocket by you',
+                            : 'Paid out-of-pocket by a member',
                         style: const TextStyle(
                             color: Colors.white54, fontSize: 11),
                       ),
@@ -623,6 +640,33 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       onChanged: (val) =>
                           setDialogState(() => paidFromFund = val),
                     ),
+                    if (!paidFromFund && _latestMembers.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedPayerEmail,
+                        dropdownColor: const Color(0xFF1B4332),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Paid By Member',
+                          labelStyle: TextStyle(color: Colors.white70),
+                        ),
+                        items: _latestMembers.map((m) {
+                          return DropdownMenuItem(
+                            value: m.email,
+                            child: Text(m.displayName, overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            final m = _latestMembers.firstWhere((x) => x.email == val);
+                            setDialogState(() {
+                              selectedPayerEmail = m.email;
+                              selectedPayerName = m.displayName;
+                            });
+                          }
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -647,10 +691,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       tourId: widget.tourId,
                       title: title,
                       amountPaisa: TripLedgerEngine.toPaisa(amountNum),
-                      paidById: paidFromFund ? null : _repository.currentEmail,
-                      paidByName: paidFromFund
-                          ? null
-                          : _repository.currentDisplayName,
+                      paidById: paidFromFund ? null : selectedPayerEmail,
+                      paidByName: paidFromFund ? null : selectedPayerName,
                       category: category,
                     );
                   },
@@ -667,60 +709,106 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
 
   void _showAddDepositDialog(BuildContext context) {
     final amountCtrl = TextEditingController();
+    String selectedDepositorEmail = _repository.currentEmail ?? 'unknown';
+    String selectedDepositorName = _repository.currentDisplayName;
+
+    if (_latestMembers.isNotEmpty) {
+      final defaultM = _latestMembers.firstWhere(
+        (m) => m.email.toLowerCase() == (_repository.currentEmail ?? '').toLowerCase(),
+        orElse: () => _latestMembers.first,
+      );
+      selectedDepositorEmail = defaultM.email;
+      selectedDepositorName = defaultM.displayName;
+    }
 
     showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF14241B),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Text('Record Deposit',
-              style: TextStyle(color: Colors.white)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Contributing member: ${_repository.currentDisplayName}',
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: amountCtrl,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Deposit Amount (BDT)',
-                  labelStyle: TextStyle(color: Colors.white70),
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF14241B),
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              title: const Text('Record Deposit',
+                  style: TextStyle(color: Colors.white)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_latestMembers.isNotEmpty) ...[
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedDepositorEmail,
+                        dropdownColor: const Color(0xFF1B4332),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Contributing Member',
+                          labelStyle: TextStyle(color: Colors.white70),
+                        ),
+                        items: _latestMembers.map((m) {
+                          return DropdownMenuItem(
+                            value: m.email,
+                            child: Text(m.displayName, overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            final m = _latestMembers.firstWhere((x) => x.email == val);
+                            setDialogState(() {
+                              selectedDepositorEmail = m.email;
+                              selectedDepositorName = m.displayName;
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                    ] else ...[
+                      Text(
+                        'Contributing member: ${_repository.currentDisplayName}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    TextField(
+                      controller: amountCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Deposit Amount (BDT)',
+                        labelStyle: TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child:
-                  const Text('Cancel', style: TextStyle(color: Colors.white54)),
-            ),
-            ElevatedButton(
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
-              onPressed: () async {
-                final amountNum = double.tryParse(amountCtrl.text.trim());
-                if (amountNum == null || amountNum <= 0) return;
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child:
+                      const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
+                  onPressed: () async {
+                    final amountNum = double.tryParse(amountCtrl.text.trim());
+                    if (amountNum == null || amountNum <= 0) return;
 
-                Navigator.pop(ctx);
-                await _repository.addDeposit(
-                  tourId: widget.tourId,
-                  memberId: _repository.currentEmail ?? 'unknown',
-                  memberName: _repository.currentDisplayName,
-                  amountPaisa: TripLedgerEngine.toPaisa(amountNum),
-                );
-              },
-              child:
-                  const Text('Record', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+                    Navigator.pop(ctx);
+                    await _repository.addDeposit(
+                      tourId: widget.tourId,
+                      memberId: selectedDepositorEmail,
+                      memberName: selectedDepositorName,
+                      amountPaisa: TripLedgerEngine.toPaisa(amountNum),
+                    );
+                  },
+                  child:
+                      const Text('Record', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
         );
       },
     );

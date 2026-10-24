@@ -16,6 +16,7 @@ class MediaPickResult {
 Future<MediaPickResult?> showChatMediaPicker(BuildContext context) {
   return showModalBottomSheet<MediaPickResult>(
     context: context,
+    barrierColor: Colors.black.withValues(alpha: 0.75),
     backgroundColor: const Color(0xFF1F2C34),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
