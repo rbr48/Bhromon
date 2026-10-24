@@ -62,9 +62,6 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   static const int _kTripLogPageStep = 10;
   int _visibleTripLogCount = _kTripLogPageStep;
-
-  /// Profiles whose bucket list was already synced this session.
-  static final Set<String> _bucketListSyncedFor = {};
   Stream<QuerySnapshot>? _followersStream;
   Stream<QuerySnapshot>? _followingStream;
   Stream<QuerySnapshot>? _bucketListStream;
@@ -261,11 +258,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
       // Load leaderboard and rank
       _loadLeaderboardAndRank(profile.uid, profile.explorerScore.value);
-      // Only the owner can tick off their own bucket list; once per session
-      // is enough since it's driven by their published trip logs.
-      if (currentUid.isNotEmpty &&
-          currentUid == profile.uid &&
-          _bucketListSyncedFor.add(profile.uid)) {
+      // Only the owner can tick off their own bucket list; on anyone else's
+      // profile the reads were wasted and the batch write was rejected.
+      if (currentUid.isNotEmpty && currentUid == profile.uid) {
         _syncBucketList(profile.uid);
       }
 

@@ -396,8 +396,36 @@ class _MapScreenState extends State<MapScreen> {
     return '#${color.toARGB32().toRadixString(16).substring(2).padLeft(6, '0')}';
   }
 
+  // Redraws are async (visible region, clear, add); camera idles can fire
+  // while one is running, so they're serialised and only the latest request
+  // runs after it.
+  bool _circlesUpdating = false;
+  ({List<LocationPin> pins, bool force})? _pendingCircles;
+
   /// Re-draw map circles for the given pin list using smarter clustering.
   Future<void> _updateMapCircles(List<LocationPin> pins,
+      {bool force = false}) async {
+    if (_circlesUpdating) {
+      _pendingCircles = (
+        pins: pins,
+        force: force || (_pendingCircles?.force ?? false),
+      );
+      return;
+    }
+    _circlesUpdating = true;
+    try {
+      await _redrawMapCircles(pins, force: force);
+    } finally {
+      _circlesUpdating = false;
+    }
+    final next = _pendingCircles;
+    _pendingCircles = null;
+    if (next != null && mounted) {
+      await _updateMapCircles(next.pins, force: next.force);
+    }
+  }
+
+  Future<void> _redrawMapCircles(List<LocationPin> pins,
       {bool force = false}) async {
     if (_mapController == null) return;
     try {
