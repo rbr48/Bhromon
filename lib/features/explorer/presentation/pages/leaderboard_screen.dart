@@ -5,9 +5,19 @@ import '../../../../app/di/injection.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/entities/explorer_profile.dart';
 import '../../domain/usecases/get_top_explorers_usecase.dart';
+import '../../../../core/utils/image_sizing.dart';
 
-class LeaderboardScreen extends StatelessWidget {
+class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
+
+  @override
+  State<LeaderboardScreen> createState() => _LeaderboardScreenState();
+}
+
+class _LeaderboardScreenState extends State<LeaderboardScreen> {
+  // Created once: a future built inside build() refetches on every rebuild.
+  late final Future<dynamic> _topExplorers =
+      getIt<GetTopExplorersUseCase>()(20);
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +43,7 @@ class LeaderboardScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: FutureBuilder<dynamic>(
-        future: getIt<GetTopExplorersUseCase>()(20),
+        future: _topExplorers,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -160,10 +170,12 @@ class LeaderboardScreen extends StatelessWidget {
                         backgroundColor: const Color(0xFF40916C),
                         backgroundImage: profile.avatarUrl != null &&
                                 profile.avatarUrl!.isNotEmpty
-                            ? CachedNetworkImageProvider(
-                                profile.avatarUrl!,
-                                errorListener: (dynamic error) {},
-                              )
+                            ? sizedImage(
+                                CachedNetworkImageProvider(
+                                  profile.avatarUrl!,
+                                  errorListener: (dynamic error) {},
+                                ),
+                                context.decodeWidth(40))
                             : null,
                         child: profile.avatarUrl == null ||
                                 profile.avatarUrl!.isEmpty

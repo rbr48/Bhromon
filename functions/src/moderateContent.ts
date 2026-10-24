@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { chunk, getAllInChunks, MAX_FCM_BATCH } from './lib/batching';
 
 const db = admin.firestore();
 
@@ -7,13 +8,16 @@ async function _notifyFounders(targetId: string, targetType: string) {
   const pioneers = await db.collection('explorer_profiles')
     .where('tier', '==', 'pioneer').get();
 
+  // One batched read of every pioneer's token instead of a sequential
+  // round trip per pioneer.
+  const tokenDocs = await getAllInChunks(
+    db,
+    pioneers.docs.map((doc) => db.collection('fcm_tokens').doc(doc.id)),
+  );
   const tokens: string[] = [];
-  for (const doc of pioneers.docs) {
-    const tokenDoc = await db.collection('fcm_tokens').doc(doc.id).get();
-    const tokenData = tokenDoc.data();
-    if (tokenDoc.exists && tokenData?.token) {
-      tokens.push(tokenData.token);
-    }
+  for (const tokenDoc of tokenDocs) {
+    const token = tokenDoc.exists ? tokenDoc.data()?.token : undefined;
+    if (token) tokens.push(token);
   }
 
   if (tokens.length === 0) return;
@@ -31,11 +35,15 @@ async function _notifyFounders(targetId: string, targetType: string) {
   };
 
   try {
-    const response = await admin.messaging().sendEachForMulticast({
-      tokens: tokens,
-      ...payload
-    });
-    console.log(`Successfully sent safety notification to ${response.successCount} founders.`);
+    let sent = 0;
+    for (const part of chunk(tokens, MAX_FCM_BATCH)) {
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens: part,
+        ...payload
+      });
+      sent += response.successCount;
+    }
+    console.log(`Successfully sent safety notification to ${sent} founders.`);
   } catch (e) {
     console.error('Error sending multicast FCM notification:', e);
   }

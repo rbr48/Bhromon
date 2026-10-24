@@ -9,7 +9,10 @@ import '../../domain/usecases/update_profile_usecase.dart';
 import '../../../../core/entities/explorer_profile.dart';
 import 'auth_state.dart';
 
-@injectable
+/// One instance app-wide: the router's refresh stream and the widget tree
+/// must observe the same cubit (as a factory, the router got its own
+/// instance that never emitted, so redirects missed sign-in/sign-out).
+@lazySingleton
 class AuthCubit extends Cubit<AuthState> {
   final GetCurrentProfileUseCase _getCurrentProfile;
   final SignInEmailUseCase _signInEmail;

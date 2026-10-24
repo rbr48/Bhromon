@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/entities/trip_log.dart';
 import '../../../feed/presentation/widgets/trip_log_detail_sheet.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 /// 🔖 Saved Diaries tab for the Explorer Profile.
 /// Shows diary entries the user has bookmarked from the community.
@@ -131,6 +132,7 @@ class _SavedDiaryCard extends StatelessWidget {
                   Expanded(
                     child: thumbnailUrl != null
                         ? CachedNetworkImage(
+                            memCacheWidth: context.decodeWidth(),
                             imageUrl: thumbnailUrl,
                             width: double.infinity,
                             fit: BoxFit.cover,

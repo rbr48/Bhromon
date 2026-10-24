@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/theme_context.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 class SocialGraphWidget extends StatefulWidget {
   final String uid;
@@ -285,6 +286,7 @@ class _SocialGraphWidgetState extends State<SocialGraphWidget> {
         borderRadius: BorderRadius.circular(size),
         child: hasAvatar
             ? CachedNetworkImage(
+                memCacheWidth: context.decodeWidth(size),
                 imageUrl: node.avatarUrl!,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(

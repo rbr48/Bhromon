@@ -499,6 +499,12 @@ class $SyncOutboxTableTable extends SyncOutboxTable
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('pending'));
+  static const VerificationMeta _processingSinceMeta =
+      const VerificationMeta('processingSince');
+  @override
+  late final GeneratedColumn<int> processingSince = GeneratedColumn<int>(
+      'processing_since', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _jsonDataMeta =
       const VerificationMeta('jsonData');
   @override
@@ -506,7 +512,8 @@ class $SyncOutboxTableTable extends SyncOutboxTable
       'json_data', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns => [id, enqueuedAt, status, jsonData];
+  List<GeneratedColumn> get $columns =>
+      [id, enqueuedAt, status, processingSince, jsonData];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -535,6 +542,12 @@ class $SyncOutboxTableTable extends SyncOutboxTable
       context.handle(_statusMeta,
           status.isAcceptableOrUnknown(data['status']!, _statusMeta));
     }
+    if (data.containsKey('processing_since')) {
+      context.handle(
+          _processingSinceMeta,
+          processingSince.isAcceptableOrUnknown(
+              data['processing_since']!, _processingSinceMeta));
+    }
     if (data.containsKey('json_data')) {
       context.handle(_jsonDataMeta,
           jsonData.isAcceptableOrUnknown(data['json_data']!, _jsonDataMeta));
@@ -556,6 +569,8 @@ class $SyncOutboxTableTable extends SyncOutboxTable
           .read(DriftSqlType.int, data['${effectivePrefix}enqueued_at'])!,
       status: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      processingSince: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}processing_since']),
       jsonData: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}json_data'])!,
     );
@@ -572,11 +587,16 @@ class SyncOutboxTableData extends DataClass
   final String id;
   final int enqueuedAt;
   final String status;
+
+  /// When this entry was claimed for sending (epoch ms); lets a later flush
+  /// release claims left behind by a process that died mid-sync.
+  final int? processingSince;
   final String jsonData;
   const SyncOutboxTableData(
       {required this.id,
       required this.enqueuedAt,
       required this.status,
+      this.processingSince,
       required this.jsonData});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -584,6 +604,9 @@ class SyncOutboxTableData extends DataClass
     map['id'] = Variable<String>(id);
     map['enqueued_at'] = Variable<int>(enqueuedAt);
     map['status'] = Variable<String>(status);
+    if (!nullToAbsent || processingSince != null) {
+      map['processing_since'] = Variable<int>(processingSince);
+    }
     map['json_data'] = Variable<String>(jsonData);
     return map;
   }
@@ -593,6 +616,9 @@ class SyncOutboxTableData extends DataClass
       id: Value(id),
       enqueuedAt: Value(enqueuedAt),
       status: Value(status),
+      processingSince: processingSince == null && nullToAbsent
+          ? const Value.absent()
+          : Value(processingSince),
       jsonData: Value(jsonData),
     );
   }
@@ -604,6 +630,7 @@ class SyncOutboxTableData extends DataClass
       id: serializer.fromJson<String>(json['id']),
       enqueuedAt: serializer.fromJson<int>(json['enqueuedAt']),
       status: serializer.fromJson<String>(json['status']),
+      processingSince: serializer.fromJson<int?>(json['processingSince']),
       jsonData: serializer.fromJson<String>(json['jsonData']),
     );
   }
@@ -614,16 +641,24 @@ class SyncOutboxTableData extends DataClass
       'id': serializer.toJson<String>(id),
       'enqueuedAt': serializer.toJson<int>(enqueuedAt),
       'status': serializer.toJson<String>(status),
+      'processingSince': serializer.toJson<int?>(processingSince),
       'jsonData': serializer.toJson<String>(jsonData),
     };
   }
 
   SyncOutboxTableData copyWith(
-          {String? id, int? enqueuedAt, String? status, String? jsonData}) =>
+          {String? id,
+          int? enqueuedAt,
+          String? status,
+          Value<int?> processingSince = const Value.absent(),
+          String? jsonData}) =>
       SyncOutboxTableData(
         id: id ?? this.id,
         enqueuedAt: enqueuedAt ?? this.enqueuedAt,
         status: status ?? this.status,
+        processingSince: processingSince.present
+            ? processingSince.value
+            : this.processingSince,
         jsonData: jsonData ?? this.jsonData,
       );
   SyncOutboxTableData copyWithCompanion(SyncOutboxTableCompanion data) {
@@ -632,6 +667,9 @@ class SyncOutboxTableData extends DataClass
       enqueuedAt:
           data.enqueuedAt.present ? data.enqueuedAt.value : this.enqueuedAt,
       status: data.status.present ? data.status.value : this.status,
+      processingSince: data.processingSince.present
+          ? data.processingSince.value
+          : this.processingSince,
       jsonData: data.jsonData.present ? data.jsonData.value : this.jsonData,
     );
   }
@@ -642,13 +680,15 @@ class SyncOutboxTableData extends DataClass
           ..write('id: $id, ')
           ..write('enqueuedAt: $enqueuedAt, ')
           ..write('status: $status, ')
+          ..write('processingSince: $processingSince, ')
           ..write('jsonData: $jsonData')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, enqueuedAt, status, jsonData);
+  int get hashCode =>
+      Object.hash(id, enqueuedAt, status, processingSince, jsonData);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -656,6 +696,7 @@ class SyncOutboxTableData extends DataClass
           other.id == this.id &&
           other.enqueuedAt == this.enqueuedAt &&
           other.status == this.status &&
+          other.processingSince == this.processingSince &&
           other.jsonData == this.jsonData);
 }
 
@@ -663,12 +704,14 @@ class SyncOutboxTableCompanion extends UpdateCompanion<SyncOutboxTableData> {
   final Value<String> id;
   final Value<int> enqueuedAt;
   final Value<String> status;
+  final Value<int?> processingSince;
   final Value<String> jsonData;
   final Value<int> rowid;
   const SyncOutboxTableCompanion({
     this.id = const Value.absent(),
     this.enqueuedAt = const Value.absent(),
     this.status = const Value.absent(),
+    this.processingSince = const Value.absent(),
     this.jsonData = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -676,6 +719,7 @@ class SyncOutboxTableCompanion extends UpdateCompanion<SyncOutboxTableData> {
     required String id,
     required int enqueuedAt,
     this.status = const Value.absent(),
+    this.processingSince = const Value.absent(),
     required String jsonData,
     this.rowid = const Value.absent(),
   })  : id = Value(id),
@@ -685,6 +729,7 @@ class SyncOutboxTableCompanion extends UpdateCompanion<SyncOutboxTableData> {
     Expression<String>? id,
     Expression<int>? enqueuedAt,
     Expression<String>? status,
+    Expression<int>? processingSince,
     Expression<String>? jsonData,
     Expression<int>? rowid,
   }) {
@@ -692,6 +737,7 @@ class SyncOutboxTableCompanion extends UpdateCompanion<SyncOutboxTableData> {
       if (id != null) 'id': id,
       if (enqueuedAt != null) 'enqueued_at': enqueuedAt,
       if (status != null) 'status': status,
+      if (processingSince != null) 'processing_since': processingSince,
       if (jsonData != null) 'json_data': jsonData,
       if (rowid != null) 'rowid': rowid,
     });
@@ -701,12 +747,14 @@ class SyncOutboxTableCompanion extends UpdateCompanion<SyncOutboxTableData> {
       {Value<String>? id,
       Value<int>? enqueuedAt,
       Value<String>? status,
+      Value<int?>? processingSince,
       Value<String>? jsonData,
       Value<int>? rowid}) {
     return SyncOutboxTableCompanion(
       id: id ?? this.id,
       enqueuedAt: enqueuedAt ?? this.enqueuedAt,
       status: status ?? this.status,
+      processingSince: processingSince ?? this.processingSince,
       jsonData: jsonData ?? this.jsonData,
       rowid: rowid ?? this.rowid,
     );
@@ -724,6 +772,9 @@ class SyncOutboxTableCompanion extends UpdateCompanion<SyncOutboxTableData> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (processingSince.present) {
+      map['processing_since'] = Variable<int>(processingSince.value);
+    }
     if (jsonData.present) {
       map['json_data'] = Variable<String>(jsonData.value);
     }
@@ -739,6 +790,7 @@ class SyncOutboxTableCompanion extends UpdateCompanion<SyncOutboxTableData> {
           ..write('id: $id, ')
           ..write('enqueuedAt: $enqueuedAt, ')
           ..write('status: $status, ')
+          ..write('processingSince: $processingSince, ')
           ..write('jsonData: $jsonData, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1646,6 +1698,7 @@ typedef $$SyncOutboxTableTableCreateCompanionBuilder = SyncOutboxTableCompanion
   required String id,
   required int enqueuedAt,
   Value<String> status,
+  Value<int?> processingSince,
   required String jsonData,
   Value<int> rowid,
 });
@@ -1654,6 +1707,7 @@ typedef $$SyncOutboxTableTableUpdateCompanionBuilder = SyncOutboxTableCompanion
   Value<String> id,
   Value<int> enqueuedAt,
   Value<String> status,
+  Value<int?> processingSince,
   Value<String> jsonData,
   Value<int> rowid,
 });
@@ -1679,6 +1733,7 @@ class $$SyncOutboxTableTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<int> enqueuedAt = const Value.absent(),
             Value<String> status = const Value.absent(),
+            Value<int?> processingSince = const Value.absent(),
             Value<String> jsonData = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -1686,6 +1741,7 @@ class $$SyncOutboxTableTableTableManager extends RootTableManager<
             id: id,
             enqueuedAt: enqueuedAt,
             status: status,
+            processingSince: processingSince,
             jsonData: jsonData,
             rowid: rowid,
           ),
@@ -1693,6 +1749,7 @@ class $$SyncOutboxTableTableTableManager extends RootTableManager<
             required String id,
             required int enqueuedAt,
             Value<String> status = const Value.absent(),
+            Value<int?> processingSince = const Value.absent(),
             required String jsonData,
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -1700,6 +1757,7 @@ class $$SyncOutboxTableTableTableManager extends RootTableManager<
             id: id,
             enqueuedAt: enqueuedAt,
             status: status,
+            processingSince: processingSince,
             jsonData: jsonData,
             rowid: rowid,
           ),
@@ -1724,6 +1782,11 @@ class $$SyncOutboxTableTableFilterComposer
       builder: (column, joinBuilders) =>
           ColumnFilters(column, joinBuilders: joinBuilders));
 
+  ColumnFilters<int> get processingSince => $state.composableBuilder(
+      column: $state.table.processingSince,
+      builder: (column, joinBuilders) =>
+          ColumnFilters(column, joinBuilders: joinBuilders));
+
   ColumnFilters<String> get jsonData => $state.composableBuilder(
       column: $state.table.jsonData,
       builder: (column, joinBuilders) =>
@@ -1745,6 +1808,11 @@ class $$SyncOutboxTableTableOrderingComposer
 
   ColumnOrderings<String> get status => $state.composableBuilder(
       column: $state.table.status,
+      builder: (column, joinBuilders) =>
+          ColumnOrderings(column, joinBuilders: joinBuilders));
+
+  ColumnOrderings<int> get processingSince => $state.composableBuilder(
+      column: $state.table.processingSince,
       builder: (column, joinBuilders) =>
           ColumnOrderings(column, joinBuilders: joinBuilders));
 

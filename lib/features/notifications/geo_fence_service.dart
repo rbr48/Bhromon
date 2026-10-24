@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:bhromon/core/security/hive_encryption_service.dart';
 import 'package:bhromon/features/map/presentation/widgets/pin_detail_sheet.dart';
 import 'package:bhromon/core/entities/location_pin.dart';
 import 'package:bhromon/core/theme/colors.dart';
@@ -21,16 +23,55 @@ Future<void> registerGeoFenceWork() async {
   );
 }
 
-/// Called by workmanager in the background — named distinctly to avoid
-/// colliding with SyncWorker's callbackDispatcher in sync_worker.dart.
-@pragma('vm:entry-point')
-void geoFenceCallbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    if (task == kGeoFenceTask) {
-      await _checkGeoFences();
-    }
-    return true;
+/// Pins within this distance raise a geo-fence trigger.
+const double kGeoFenceRadiusMeters = 5000;
+
+/// The same pin triggers at most once per this period on a device.
+const Duration kGeoFenceRepeatAfter = Duration(hours: 24);
+
+/// Latitude half-height (degrees) of the band queried around the device;
+/// one degree of latitude is ~111 km, so this comfortably covers the radius.
+const double _kLatBandDegrees = 0.05;
+
+/// A candidate pin for the geo-fence check.
+class GeoFenceCandidate {
+  final String pinId;
+  final String name;
+  final double lat;
+  final double lng;
+  final bool hidden;
+
+  const GeoFenceCandidate({
+    required this.pinId,
+    required this.name,
+    required this.lat,
+    required this.lng,
+    this.hidden = false,
   });
+}
+
+/// The nearest visible candidate within [radiusMeters] of ([lat], [lng]) that
+/// hasn't triggered since [now] - [kGeoFenceRepeatAfter], with its distance.
+({GeoFenceCandidate pin, double meters})? nearestUntriggeredPin({
+  required double lat,
+  required double lng,
+  required Iterable<GeoFenceCandidate> candidates,
+  required Map<String, DateTime> lastTriggered,
+  required DateTime now,
+  double radiusMeters = kGeoFenceRadiusMeters,
+  double Function(double, double, double, double) distance =
+      Geolocator.distanceBetween,
+}) {
+  ({GeoFenceCandidate pin, double meters})? best;
+  for (final pin in candidates) {
+    if (pin.hidden) continue;
+    final last = lastTriggered[pin.pinId];
+    if (last != null && now.difference(last) < kGeoFenceRepeatAfter) continue;
+    final meters = distance(lat, lng, pin.lat, pin.lng);
+    if (meters >= radiusMeters) continue;
+    if (best == null || meters < best.meters) best = (pin: pin, meters: meters);
+  }
+  return best;
 }
 
 Future<void> _checkGeoFences() async {
@@ -38,34 +79,69 @@ Future<void> _checkGeoFences() async {
     final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium);
 
+    // Pins in a latitude band around the device (a single-field range, so no
+    // composite index), instead of the first 100 pins anywhere in the country.
     final snap = await FirebaseFirestore.instance
         .collection('location_pins')
-        .where('hidden', isEqualTo: false)
-        .limit(100)
+        .where('lat', isGreaterThanOrEqualTo: pos.latitude - _kLatBandDegrees)
+        .where('lat', isLessThanOrEqualTo: pos.latitude + _kLatBandDegrees)
+        .limit(300)
         .get();
 
+    final candidates = <GeoFenceCandidate>[];
     for (final doc in snap.docs) {
       final data = doc.data();
       final lat = (data['lat'] as num?)?.toDouble();
       final lng = (data['lng'] as num?)?.toDouble();
       if (lat == null || lng == null) continue;
-
-      final dist =
-          Geolocator.distanceBetween(pos.latitude, pos.longitude, lat, lng);
-
-      if (dist < 5000) {
-        // Within 5km — would normally send FCM notification via Cloud Function
-        // Here we just log it; actual notification is sent by Cloud Function
-        await FirebaseFirestore.instance.collection('geo_fence_triggers').add({
-          'pinId': doc.id,
-          'pinName': data['name'] ?? 'Unknown',
-          'distanceM': dist.toInt(),
-          'triggeredAt': FieldValue.serverTimestamp(),
-        });
-        break; // Only one notification per check
-      }
+      candidates.add(GeoFenceCandidate(
+        pinId: doc.id,
+        name: (data['name'] ?? 'Unknown').toString(),
+        lat: lat,
+        lng: lng,
+        hidden: data['hidden'] == true,
+      ));
     }
+
+    final box = await _openTriggerHistory();
+    final lastTriggered = <String, DateTime>{
+      if (box != null)
+        for (final key in box.keys)
+          if (box.get(key) is int)
+            key.toString():
+                DateTime.fromMillisecondsSinceEpoch(box.get(key) as int),
+    };
+
+    final now = DateTime.now();
+    final hit = nearestUntriggeredPin(
+      lat: pos.latitude,
+      lng: pos.longitude,
+      candidates: candidates,
+      lastTriggered: lastTriggered,
+      now: now,
+    );
+    if (hit == null) return;
+
+    // The notification itself is sent by a Cloud Function.
+    await FirebaseFirestore.instance.collection('geo_fence_triggers').add({
+      'pinId': hit.pin.pinId,
+      'pinName': hit.pin.name,
+      'distanceM': hit.meters.toInt(),
+      'triggeredAt': FieldValue.serverTimestamp(),
+    });
+    await box?.put(hit.pin.pinId, now.millisecondsSinceEpoch);
   } catch (_) {}
+}
+
+/// Pin id -> last trigger time (epoch ms) on this device.
+Future<Box<dynamic>?> _openTriggerHistory() async {
+  try {
+    await Hive.initFlutter();
+    return await HiveEncryptionService()
+        .openEncryptedBox<dynamic>('geofence_triggers');
+  } catch (_) {
+    return null;
+  }
 }
 
 /// Public entry point called by [SyncWorker.callbackDispatcher] when the

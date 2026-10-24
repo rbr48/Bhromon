@@ -15,6 +15,7 @@ import 'full_screen_image_viewer.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 class TripLogDetailSheet extends StatefulWidget {
   final TripLog log;
@@ -320,10 +321,12 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                     child: hasLocalFile
                         ? Image.file(
                             File(imageBlock.localPath!),
+                            cacheWidth: context.decodeWidth(),
                             fit: BoxFit.cover,
                             height: 180,
                           )
                         : CachedNetworkImage(
+                            memCacheWidth: context.decodeWidth(),
                             imageUrl: imageBlock.storageUrl,
                             fit: BoxFit.cover,
                             height: 180,
@@ -536,6 +539,14 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
         ? authState.profile.displayName
         : 'Guest User';
 
+    // Created once per sheet, not on every sheet rebuild.
+    final commentsStream = FirebaseFirestore.instance
+        .collection(log.isArchived ? 'archived_trip_logs' : 'trip_logs')
+        .doc(log.tripId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots();
+
     showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -579,14 +590,7 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                   const Divider(),
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection(log.isArchived
-                              ? 'archived_trip_logs'
-                              : 'trip_logs')
-                          .doc(log.tripId)
-                          .collection('comments')
-                          .orderBy('createdAt', descending: false)
-                          .snapshots(),
+                      stream: commentsStream,
                       builder: (context, snapshot) {
                         if (snapshot.hasError) {
                           return Center(
@@ -862,10 +866,12 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                                 radius: 24,
                                 backgroundColor: const Color(0xFF40916C),
                                 backgroundImage: avatarUrl.isNotEmpty
-                                    ? CachedNetworkImageProvider(
-                                        avatarUrl,
-                                        errorListener: (dynamic error) {},
-                                      )
+                                    ? sizedImage(
+                                        CachedNetworkImageProvider(
+                                          avatarUrl,
+                                          errorListener: (dynamic error) {},
+                                        ),
+                                        context.decodeWidth(48))
                                     : null,
                                 child: avatarUrl.isEmpty
                                     ? Text(initials,
