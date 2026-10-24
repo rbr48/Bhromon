@@ -124,8 +124,18 @@ class OfflineRepositoryImpl implements IOfflineRepository {
       // 3. Fetch ProTips linked to the pins from Firestore
       final tips = <ProTip>[];
       if (pinIds.isNotEmpty) {
-        final tipsSnapshot = await _firestore.collection('pro_tips').get();
-        for (final doc in tipsSnapshot.docs) {
+        // Only this bundle's tips: whereIn takes up to 30 ids per query, so
+        // chunk the pin ids instead of downloading every tip in the app.
+        final tipSnapshots = await Future.wait([
+          for (var i = 0; i < pinIds.length; i += 30)
+            _firestore
+                .collection('pro_tips')
+                .where('locationPinId',
+                    whereIn: pinIds.sublist(
+                        i, i + 30 > pinIds.length ? pinIds.length : i + 30))
+                .get(),
+        ]);
+        for (final doc in [for (final snap in tipSnapshots) ...snap.docs]) {
           try {
             final data = doc.data();
             data['tipId'] = doc.id;

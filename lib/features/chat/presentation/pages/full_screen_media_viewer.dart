@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 /// Full-screen viewer for chat images and videos.
 ///
@@ -77,6 +78,7 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                       minScale: 0.8,
                       maxScale: 5.0,
                       child: CachedNetworkImage(
+                        memCacheWidth: kMaxDecodeDimension,
                         imageUrl: widget.mediaUrl,
                         fit: BoxFit.contain,
                         placeholder: (_, __) => const Center(

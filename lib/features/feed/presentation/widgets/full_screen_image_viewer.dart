@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 class FullScreenImageViewer extends StatelessWidget {
   final String imageUrl;
@@ -53,11 +54,13 @@ class FullScreenImageViewer extends StatelessWidget {
                     child: hasLocalFile
                         ? Image.file(
                             File(localPath!),
+                            cacheWidth: kMaxDecodeDimension,
                             fit: BoxFit.contain,
                             width: double.infinity,
                             height: double.infinity,
                           )
                         : CachedNetworkImage(
+                            memCacheWidth: kMaxDecodeDimension,
                             imageUrl: imageUrl,
                             fit: BoxFit.contain,
                             width: double.infinity,

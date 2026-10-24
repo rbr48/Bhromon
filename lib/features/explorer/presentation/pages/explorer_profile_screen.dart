@@ -23,6 +23,7 @@ import '../../../trust/presentation/pages/achievements_screen.dart';
 import '../../../../core/entities/trip_log.dart';
 import 'package:bhromon/features/feed/presentation/widgets/trip_log_detail_sheet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../../core/utils/doc_future_cache.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/services/media_upload_service.dart';
@@ -32,6 +33,7 @@ import '../../../../core/services/diary_badges_service.dart';
 import '../widgets/saved_diaries_widget.dart';
 import '../../../../core/theme/theme_context.dart';
 import '../../../../core/widgets/skeleton.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 class ExplorerProfileScreen extends StatefulWidget {
   final String uid;
@@ -57,6 +59,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   // Cached streams to completely eliminate unsubscription flashing / shaking
   Stream<QuerySnapshot>? _tripLogsStream;
+
+  static const int _kTripLogPageStep = 10;
+  int _visibleTripLogCount = _kTripLogPageStep;
+
+  /// Profiles whose bucket list was already synced this session.
+  static final Set<String> _bucketListSyncedFor = {};
   Stream<QuerySnapshot>? _followersStream;
   Stream<QuerySnapshot>? _followingStream;
   Stream<QuerySnapshot>? _bucketListStream;
@@ -109,16 +117,19 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   Future<void> _loadLeaderboardAndRank(String uid, int userScore) async {
     try {
-      final rankSnap = await FirebaseFirestore.instance
-          .collection('explorer_profiles')
-          .where('explorerScore.value', isGreaterThan: userScore)
-          .get();
-      final rank = rankSnap.size + 1;
-
-      final totalSnap = await FirebaseFirestore.instance
-          .collection('explorer_profiles')
-          .get();
-      final total = totalSnap.size;
+      // count() aggregations cost one read per 1,000 index entries instead
+      // of downloading every profile just to read the result size.
+      final profiles =
+          FirebaseFirestore.instance.collection('explorer_profiles');
+      final counts = await Future.wait([
+        profiles
+            .where('explorerScore.value', isGreaterThan: userScore)
+            .count()
+            .get(),
+        profiles.count().get(),
+      ]);
+      final rank = (counts[0].count ?? 0) + 1;
+      final total = counts[1].count ?? 0;
 
       final topSnap = await FirebaseFirestore.instance
           .collection('explorer_profiles')
@@ -250,7 +261,18 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
       // Load leaderboard and rank
       _loadLeaderboardAndRank(profile.uid, profile.explorerScore.value);
-      _syncBucketList(profile.uid);
+      // Only the owner can tick off their own bucket list; once per session
+      // is enough since it's driven by their published trip logs.
+      if (currentUid.isNotEmpty &&
+          currentUid == profile.uid &&
+          _bucketListSyncedFor.add(profile.uid)) {
+        _syncBucketList(profile.uid);
+      }
+
+      final rawDocFuture = FirebaseFirestore.instance
+          .collection('explorer_profiles')
+          .doc(profile.uid)
+          .get();
 
       bool blockedOther = false;
       bool blockedByOther = false;
@@ -261,28 +283,27 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             .doc(docId)
             .snapshots();
 
-        final blockedOtherDoc = await FirebaseFirestore.instance
-            .collection('explorer_profiles')
-            .doc(currentUid)
-            .collection('blocked_users')
-            .doc(profile.uid)
-            .get();
-        blockedOther = blockedOtherDoc.exists;
-
-        final blockedByOtherDoc = await FirebaseFirestore.instance
-            .collection('explorer_profiles')
-            .doc(profile.uid)
-            .collection('blocked_users')
-            .doc(currentUid)
-            .get();
-        blockedByOther = blockedByOtherDoc.exists;
+        // Independent reads: run them together instead of back to back.
+        final blockDocs = await Future.wait([
+          FirebaseFirestore.instance
+              .collection('explorer_profiles')
+              .doc(currentUid)
+              .collection('blocked_users')
+              .doc(profile.uid)
+              .get(),
+          FirebaseFirestore.instance
+              .collection('explorer_profiles')
+              .doc(profile.uid)
+              .collection('blocked_users')
+              .doc(currentUid)
+              .get(),
+        ]);
+        blockedOther = blockDocs[0].exists;
+        blockedByOther = blockDocs[1].exists;
       }
 
       // Fetch the raw document to get bioBangla/bioEnglish
-      final doc = await FirebaseFirestore.instance
-          .collection('explorer_profiles')
-          .doc(profile.uid)
-          .get();
+      final doc = await rawDocFuture;
 
       // Check and award badges dynamically
       List<String> dynamicBadges = [];
@@ -524,7 +545,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                             final file = await ImagePicker()
                                                 .pickImage(
                                                     source: ImageSource.gallery,
-                                                    imageQuality: 80);
+                                                    imageQuality: 80,
+                                                    maxWidth:
+                                                        kMaxCaptureDimension,
+                                                    maxHeight:
+                                                        kMaxCaptureDimension);
                                             if (file != null) {
                                               setDialogState(() {
                                                 dialogCoverFile = file;
@@ -564,6 +589,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                               (kIsWeb
                                                   ? Image.network(
                                                       dialogCoverFile!.path,
+                                                      cacheWidth:
+                                                          context.decodeWidth(),
                                                       fit: BoxFit.cover,
                                                       errorBuilder: (context,
                                                           error, stackTrace) {
@@ -574,6 +601,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                   : Image.file(
                                                       File(dialogCoverFile!
                                                           .path),
+                                                      cacheWidth:
+                                                          context.decodeWidth(),
                                                       fit: BoxFit.cover,
                                                       errorBuilder: (context,
                                                           error, stackTrace) {
@@ -583,6 +612,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                     ))
                                             else if (profile.coverUrl != null)
                                               CachedNetworkImage(
+                                                memCacheWidth:
+                                                    context.decodeWidth(),
                                                 imageUrl: profile.coverUrl!,
                                                 fit: BoxFit.cover,
                                                 errorWidget:
@@ -639,7 +670,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                   .pickImage(
                                                       source:
                                                           ImageSource.gallery,
-                                                      imageQuality: 80);
+                                                      imageQuality: 80,
+                                                      maxWidth: 1024,
+                                                      maxHeight: 1024);
                                               if (file != null) {
                                                 setDialogState(() {
                                                   dialogAvatarFile = file;
@@ -672,6 +705,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                         ? Image.network(
                                                             dialogAvatarFile!
                                                                 .path,
+                                                            cacheWidth: context
+                                                                .decodeWidth(
+                                                                    avatarRadius *
+                                                                        2),
                                                             fit: BoxFit.cover,
                                                             errorBuilder:
                                                                 (context, error,
@@ -704,6 +741,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                             File(
                                                                 dialogAvatarFile!
                                                                     .path),
+                                                            cacheWidth: context
+                                                                .decodeWidth(
+                                                                    avatarRadius *
+                                                                        2),
                                                             fit: BoxFit.cover,
                                                             errorBuilder:
                                                                 (context, error,
@@ -734,6 +775,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                           ))
                                                     : (profile.avatarUrl != null
                                                         ? CachedNetworkImage(
+                                                            memCacheWidth: context
+                                                                .decodeWidth(
+                                                                    avatarRadius *
+                                                                        2),
                                                             imageUrl: profile
                                                                 .avatarUrl!,
                                                             fit: BoxFit.cover,
@@ -1589,10 +1634,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 decoration: BoxDecoration(
                   image: profile.coverUrl != null
                       ? DecorationImage(
-                          image: CachedNetworkImageProvider(
-                            profile.coverUrl!,
-                            errorListener: (dynamic error) {},
-                          ),
+                          image: sizedImage(
+                              CachedNetworkImageProvider(
+                                profile.coverUrl!,
+                                errorListener: (dynamic error) {},
+                              ),
+                              context.decodeWidth()),
                           fit: BoxFit.cover,
                         )
                       : null,
@@ -1691,10 +1738,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             radius: 50,
                             backgroundColor: AppColors.darkGreen,
                             backgroundImage: profile.avatarUrl != null
-                                ? CachedNetworkImageProvider(
-                                    profile.avatarUrl!,
-                                    errorListener: (dynamic error) {},
-                                  )
+                                ? sizedImage(
+                                    CachedNetworkImageProvider(
+                                      profile.avatarUrl!,
+                                      errorListener: (dynamic error) {},
+                                    ),
+                                    context.decodeWidth(100))
                                 : null,
                             child: profile.avatarUrl == null
                                 ? Text(
@@ -3005,10 +3054,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           ),
           const SizedBox(height: 8),
         ],
+        // This list sits inside the profile's scroll view, so every card it
+        // creates is laid out. Show them in steps rather than all at once.
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: docs.length,
+          itemCount: min(docs.length, _visibleTripLogCount),
           itemBuilder: (context, index) {
             final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>;
@@ -3107,6 +3158,18 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             );
           },
         ),
+        if (docs.length > _visibleTripLogCount)
+          Center(
+            child: TextButton(
+              onPressed: () =>
+                  setState(() => _visibleTripLogCount += _kTripLogPageStep),
+              child: Text(
+                'Show more (${docs.length - _visibleTripLogCount})',
+                style: const TextStyle(
+                    color: Color(0xFF74C69D), fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -3129,10 +3192,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 radius: 18,
                 backgroundColor: AppColors.darkGreen,
                 backgroundImage: profile.avatarUrl != null
-                    ? CachedNetworkImageProvider(
-                        profile.avatarUrl!,
-                        errorListener: (dynamic error) {},
-                      )
+                    ? sizedImage(
+                        CachedNetworkImageProvider(
+                          profile.avatarUrl!,
+                          errorListener: (dynamic error) {},
+                        ),
+                        context.decodeWidth(36))
                     : null,
                 child: profile.avatarUrl == null
                     ? Text(
@@ -4045,6 +4110,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   void _showSocialSheet(BuildContext context, String uid, bool isFollowers) {
+    // Built once for the sheet, not on every sheet rebuild.
+    final socialStream = FirebaseFirestore.instance
+        .collection('follows')
+        .where(isFollowers ? 'followedId' : 'followerId', isEqualTo: uid)
+        .snapshots();
     final authState = context.read<AuthCubit>().state;
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
 
@@ -4081,15 +4151,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const Divider(color: Colors.white10),
               Flexible(
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: isFollowers
-                      ? FirebaseFirestore.instance
-                          .collection('follows')
-                          .where('followedId', isEqualTo: uid)
-                          .snapshots()
-                      : FirebaseFirestore.instance
-                          .collection('follows')
-                          .where('followerId', isEqualTo: uid)
-                          .snapshots(),
+                  stream: socialStream,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Padding(
@@ -5228,10 +5290,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               radius: 14,
                               backgroundColor: AppColors.darkGreen,
                               backgroundImage: avatar != null
-                                  ? CachedNetworkImageProvider(
-                                      avatar,
-                                      errorListener: (dynamic error) {},
-                                    )
+                                  ? sizedImage(
+                                      CachedNetworkImageProvider(
+                                        avatar,
+                                        errorListener: (dynamic error) {},
+                                      ),
+                                      context.decodeWidth(28))
                                   : null,
                               child: avatar == null
                                   ? Text(
@@ -5748,6 +5812,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: CachedNetworkImage(
+                    memCacheWidth: context.decodeWidth(),
                     imageUrl: url,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
@@ -5814,6 +5879,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           children: [
             InteractiveViewer(
               child: CachedNetworkImage(
+                memCacheWidth: context.decodeWidth(),
                 imageUrl: url,
                 fit: BoxFit.contain,
                 width: double.infinity,
@@ -5840,10 +5906,9 @@ class _UserSocialTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance
+      future: DocFutureCache.instance.get(FirebaseFirestore.instance
           .collection('explorer_profiles')
-          .doc(userId)
-          .get(),
+          .doc(userId)),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const ListTile(
@@ -5874,10 +5939,12 @@ class _UserSocialTile extends StatelessWidget {
           leading: CircleAvatar(
             backgroundColor: AppColors.darkGreen,
             backgroundImage: avatarUrl != null
-                ? CachedNetworkImageProvider(
-                    avatarUrl,
-                    errorListener: (dynamic error) {},
-                  )
+                ? sizedImage(
+                    CachedNetworkImageProvider(
+                      avatarUrl,
+                      errorListener: (dynamic error) {},
+                    ),
+                    context.decodeWidth())
                 : null,
             child: avatarUrl == null
                 ? Text(
@@ -6229,7 +6296,8 @@ class _MiniAvatarFetcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+      future: DocFutureCache.instance
+          .get(FirebaseFirestore.instance.collection('users').doc(uid)),
       builder: (context, snap) {
         final data = snap.data?.data() as Map<String, dynamic>?;
         final avatarUrl = data?['avatarUrl'] as String?;
@@ -6238,10 +6306,12 @@ class _MiniAvatarFetcher extends StatelessWidget {
           radius: 12,
           backgroundColor: AppColors.darkGreen,
           backgroundImage: avatarUrl != null
-              ? CachedNetworkImageProvider(
-                  avatarUrl,
-                  errorListener: (dynamic error) {},
-                )
+              ? sizedImage(
+                  CachedNetworkImageProvider(
+                    avatarUrl,
+                    errorListener: (dynamic error) {},
+                  ),
+                  context.decodeWidth(24))
               : null,
           child: avatarUrl == null
               ? Text(

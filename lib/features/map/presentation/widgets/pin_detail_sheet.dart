@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../../core/utils/shared_latest_stream.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -19,6 +20,7 @@ import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../../feed/presentation/widgets/trip_log_detail_sheet.dart';
 import '../bloc/map_bloc.dart';
 import '../bloc/map_event.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 class PinDetailSheet extends StatefulWidget {
   final LocationPin pin;
@@ -72,6 +74,19 @@ class _PinDetailSheetState extends State<PinDetailSheet>
 
   // Cache for author names
   final Map<String, String> _authorCache = {};
+
+  // Firestore listeners keyed by what they watch, created once per sheet.
+  // Building them inline re-subscribed every listener on each sheet rebuild.
+  final Map<String, Stream<QuerySnapshot>> _queryStreams = {};
+  final Map<String, Stream<DocumentSnapshot>> _docStreams = {};
+
+  Stream<QuerySnapshot> _memoQuery(String key, Query Function() query) =>
+      _queryStreams.putIfAbsent(key,
+          () => SharedLatestStream<QuerySnapshot>(query().snapshots()).stream);
+
+  Stream<DocumentSnapshot> _memoDoc(String key, DocumentReference ref) =>
+      _docStreams.putIfAbsent(key,
+          () => SharedLatestStream<DocumentSnapshot>(ref.snapshots()).stream);
 
   WeatherData? _weather;
   bool _loadingWeather = true;
@@ -255,6 +270,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                       // Background: image or gradient
                       if (pin.imageUrl != null && pin.imageUrl!.isNotEmpty)
                         CachedNetworkImage(
+                          memCacheWidth: context.decodeWidth(),
                           imageUrl: pin.imageUrl!,
                           fit: BoxFit.cover,
                           errorWidget: (_, __, ___) =>
@@ -759,6 +775,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                 itemBuilder: (ctx, i) => ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: CachedNetworkImage(
+                    memCacheWidth: context.decodeWidth(120),
                     imageUrl: pin.photos[i],
                     width: 120,
                     height: 90,
@@ -781,13 +798,14 @@ class _PinDetailSheetState extends State<PinDetailSheet>
     if (currentUid.isEmpty) {
       // Guests can only see community logs
       return StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('trip_logs')
-            .where('locationPinId', isEqualTo: pin.pinId)
-            .where('visibility', isEqualTo: 'community')
-            .orderBy('createdAt', descending: true)
-            .limit(20)
-            .snapshots(),
+        stream: _memoQuery(
+            'logs_community_${pin.pinId}',
+            () => FirebaseFirestore.instance
+                .collection('trip_logs')
+                .where('locationPinId', isEqualTo: pin.pinId)
+                .where('visibility', isEqualTo: 'community')
+                .orderBy('createdAt', descending: true)
+                .limit(20)),
         builder: (ctx, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -840,12 +858,13 @@ class _PinDetailSheetState extends State<PinDetailSheet>
             .toSet();
 
         return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('trip_logs')
-              .where('locationPinId', isEqualTo: pin.pinId)
-              .orderBy('createdAt', descending: true)
-              .limit(20)
-              .snapshots(),
+          stream: _memoQuery(
+              'logs_all_${pin.pinId}',
+              () => FirebaseFirestore.instance
+                  .collection('trip_logs')
+                  .where('locationPinId', isEqualTo: pin.pinId)
+                  .orderBy('createdAt', descending: true)
+                  .limit(20)),
           builder: (ctx, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -931,6 +950,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                 color: Colors.white.withValues(alpha: 0.05),
                 child: thumbUrl != null
                     ? CachedNetworkImage(
+                        memCacheWidth: context.decodeWidth(80),
                         imageUrl: thumbUrl,
                         fit: BoxFit.cover,
                         errorWidget: (_, __, ___) =>
@@ -1081,12 +1101,14 @@ class _PinDetailSheetState extends State<PinDetailSheet>
       children: [
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('location_pins')
-                .doc(pin.pinId)
-                .collection('live_tips')
-                .orderBy('timestamp', descending: true)
-                .snapshots(),
+            stream: _memoQuery(
+                'live_tips_${pin.pinId}',
+                () => FirebaseFirestore.instance
+                    .collection('location_pins')
+                    .doc(pin.pinId)
+                    .collection('live_tips')
+                    .orderBy('timestamp', descending: true)
+                    .limit(50)),
             builder: (ctx, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
@@ -1424,12 +1446,13 @@ class _PinDetailSheetState extends State<PinDetailSheet>
 
   Widget _buildRecentVisitors(LocationPin pin) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('pin_visits')
-          .where('pinId', isEqualTo: pin.pinId)
-          .orderBy('visitedAt', descending: true)
-          .limit(8)
-          .snapshots(),
+      stream: _memoQuery(
+          'visits_${pin.pinId}',
+          () => FirebaseFirestore.instance
+              .collection('pin_visits')
+              .where('pinId', isEqualTo: pin.pinId)
+              .orderBy('visitedAt', descending: true)
+              .limit(8)),
       builder: (ctx, snapshot) {
         final docs = snapshot.data?.docs ?? [];
         if (docs.isEmpty) return const SizedBox.shrink();
@@ -1519,10 +1542,11 @@ class _PinDetailSheetState extends State<PinDetailSheet>
 
   Widget _buildCommunityVoting(LocationPin pin) {
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('location_pins')
-          .doc(pin.pinId)
-          .snapshots(),
+      stream: _memoDoc(
+          'pin_${pin.pinId}',
+          FirebaseFirestore.instance
+              .collection('location_pins')
+              .doc(pin.pinId)),
       builder: (ctx, snapshot) {
         final data = snapshot.data?.data() as Map<String, dynamic>?;
         final upvotes = (data?['upvotes'] as int?) ?? 0;

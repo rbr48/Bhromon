@@ -2,36 +2,69 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dartz/dartz.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/entities/location_pin.dart';
+import '../../../../core/network/connectivity_check.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/value_objects/trust_tier.dart';
 import '../../../../app/di/injection.dart';
 import '../../domain/repositories/i_map_repository.dart';
 
+/// How long a fetched pin set is reused before the next network read.
+const Duration kPinCacheTtl = Duration(minutes: 10);
+
 @LazySingleton(as: IMapRepository)
 class MapRepositoryImpl implements IMapRepository {
   final FirebaseFirestore _firestore;
   final AppDatabase _database;
+  final OnlineCheck _isOnline;
+  final DateTime Function() _now;
 
-  MapRepositoryImpl(this._firestore, this._database);
+  MapRepositoryImpl(this._firestore, this._database)
+      : _isOnline = deviceIsOnline,
+        _now = DateTime.now;
+
+  @visibleForTesting
+  MapRepositoryImpl.withDependencies(
+      this._firestore, this._database, this._isOnline, this._now);
+
+  // The feed, the map and Discover all ask for pins as they open. One
+  // network read serves them all until the cache expires or a pin changes.
+  List<LocationPin>? _cachedPins;
+  DateTime? _cachedAt;
+  Future<Either<Failure, List<LocationPin>>>? _inFlight;
+
+  /// Drops the cached pin set so the next request reads Firestore again.
+  void invalidatePinCache() {
+    _cachedPins = null;
+    _cachedAt = null;
+  }
 
   @override
   Future<Either<Failure, List<LocationPin>>> getPinsInProximity(
     double lat,
     double lng,
     double radiusKm,
-  ) async {
+  ) {
+    // The whole pin set is returned (the map shows the entire country);
+    // a radius-bounded server query needs geohashes stored on every pin.
+    final cached = _cachedPins;
+    final cachedAt = _cachedAt;
+    if (cached != null &&
+        cachedAt != null &&
+        _now().difference(cachedAt) < kPinCacheTtl) {
+      return Future.value(Right(cached));
+    }
+    return _inFlight ??= _fetchPins().whenComplete(() => _inFlight = null);
+  }
+
+  Future<Either<Failure, List<LocationPin>>> _fetchPins() async {
     try {
-      final connectivity = await Connectivity().checkConnectivity();
-      if (connectivity.isNotEmpty &&
-          connectivity.first == ConnectivityResult.none) {
-        return _getCachedPins();
-      }
+      if (!await _isOnline()) return _getCachedPins();
 
       final snapshot = await _firestore.collection('location_pins').get();
 
@@ -50,29 +83,35 @@ class MapRepositoryImpl implements IMapRepository {
         return LocationPin.fromJson(data);
       }).toList();
 
-      // Cache pins in the local Drift SQLite database
-      for (final pin in pins) {
-        try {
-          await _database.savePointOfInterest(
-            pin.pinId,
-            pin.district,
-            pin.name,
-            pin.category,
-            pin.lat,
-            pin.lng,
-            pin.description,
-            jsonEncode(pin.toJson()),
-          );
-        } catch (dbError) {
-          // Non-blocking log
-          debugPrint(
-              '[MapRepository] Failed to cache pin ${pin.pinId} in Drift: $dbError');
-        }
-      }
+      await _cachePinsLocally(pins);
 
+      _cachedPins = pins;
+      _cachedAt = _now();
       return Right(pins);
     } catch (e) {
       return _getCachedPins();
+    }
+  }
+
+  /// Writes [pins] to Drift in one batched transaction.
+  Future<void> _cachePinsLocally(List<LocationPin> pins) async {
+    try {
+      await _database.savePointsOfInterest([
+        for (final pin in pins)
+          PointsOfInterestTableCompanion.insert(
+            id: pin.pinId,
+            districtId: pin.district,
+            title: pin.name,
+            category: pin.category,
+            latitude: pin.lat,
+            longitude: pin.lng,
+            description: Value(pin.description),
+            jsonData: Value(jsonEncode(pin.toJson())),
+          ),
+      ]);
+    } catch (dbError) {
+      // Non-blocking: the network result is still returned.
+      debugPrint('[MapRepository] Failed to cache pins in Drift: $dbError');
     }
   }
 
@@ -155,20 +194,7 @@ class MapRepositoryImpl implements IMapRepository {
             pins.add(LocationPin.fromJson(item as Map<String, dynamic>));
           }
           // Save them to the local SQLite database so they are cached inside Drift
-          for (final pin in pins) {
-            try {
-              await _database.savePointOfInterest(
-                pin.pinId,
-                pin.district,
-                pin.name,
-                pin.category,
-                pin.lat,
-                pin.lng,
-                pin.description,
-                jsonEncode(pin.toJson()),
-              );
-            } catch (_) {}
-          }
+          await _cachePinsLocally(pins);
         } catch (e) {
           debugPrint('Failed to load predefined travel spots: $e');
         }
@@ -187,6 +213,7 @@ class MapRepositoryImpl implements IMapRepository {
           .collection('location_pins')
           .doc(pin.pinId)
           .set(pin.toJson());
+      invalidatePinCache();
       return Right(pin);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
@@ -200,6 +227,7 @@ class MapRepositoryImpl implements IMapRepository {
           .collection('location_pins')
           .doc(pinId)
           .update({'lastConfirmed': FieldValue.serverTimestamp()});
+      invalidatePinCache();
       return const Right(unit);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

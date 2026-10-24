@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
@@ -10,67 +10,123 @@ import '../../../../core/value_objects/freshness_age.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../repositories/i_feed_repository.dart';
 
+/// Which feed collection a request pages through.
+enum FeedSource { live, archived }
+
+class SmartFeedRequest {
+  final ExplorerProfile viewer;
+
+  /// Reused from the previous page; loaded fresh when null (a refresh).
+  final FeedViewerContext? viewerContext;
+  final FeedCursor? after;
+  final FeedSource source;
+  final int pageSize;
+
+  const SmartFeedRequest({
+    required this.viewer,
+    this.viewerContext,
+    this.after,
+    this.source = FeedSource.live,
+    this.pageSize = kFeedPageSize,
+  });
+}
+
+class SmartFeedPage {
+  /// This page's logs, ranked for the viewer.
+  final List<TripLog> logs;
+  final FeedCursor? next;
+  final FeedViewerContext viewerContext;
+
+  const SmartFeedPage({
+    required this.logs,
+    required this.next,
+    required this.viewerContext,
+  });
+
+  bool get hasMore => next != null;
+}
+
+/// The viewer's local personalisation signals.
+class _RankSignals {
+  /// Already lower-cased, so ranking doesn't redo it per log.
+  final List<String> searchHistory;
+  final Map<String, dynamic> preferences;
+  final Set<String> followedUids;
+
+  const _RankSignals(this.searchHistory, this.preferences, this.followedUids);
+}
+
 @injectable
-class GetSmartFeedUseCase implements UseCase<List<TripLog>, ExplorerProfile> {
+class GetSmartFeedUseCase implements UseCase<SmartFeedPage, SmartFeedRequest> {
   final IFeedRepository _repository;
   final HiveEncryptionService _encryptionService;
 
   GetSmartFeedUseCase(this._repository, this._encryptionService);
 
   @override
-  Future<Either<Failure, List<TripLog>>> call(ExplorerProfile params) async {
-    final result = await _repository.getFeedItems(params);
+  Future<Either<Failure, SmartFeedPage>> call(SmartFeedRequest request) async {
+    final viewerContext = request.viewerContext ??
+        await _repository.loadViewerContext(request.viewer);
 
-    // Load local search history & preferences for personalized ranking
+    final pageResult = request.source == FeedSource.archived
+        ? await _repository.getArchivedPage(request.viewer, viewerContext,
+            pageSize: request.pageSize, after: request.after)
+        : await _repository.getFeedPage(request.viewer, viewerContext,
+            pageSize: request.pageSize, after: request.after);
+
+    return pageResult.fold(
+      (failure) async => Left(failure),
+      (page) async {
+        final signals = await _loadSignals(viewerContext);
+        final ranked = rankLogs(
+          page.logs,
+          (log) => _rankScore(log, request.viewer, signals),
+        );
+        return Right(SmartFeedPage(
+          logs: ranked,
+          next: page.next,
+          viewerContext: viewerContext,
+        ));
+      },
+    );
+  }
+
+  Future<_RankSignals> _loadSignals(FeedViewerContext viewerContext) async {
     List<String> searchHistory = [];
     Map<String, dynamic> preferences = {};
     try {
       final historyBox = await _encryptionService
           .openEncryptedBox<dynamic>('user_search_history');
-      searchHistory = historyBox.values.cast<String>().toList();
+      searchHistory = historyBox.values
+          .whereType<String>()
+          .map((keyword) => keyword.toLowerCase())
+          .toList();
 
       final prefsBox = await _encryptionService
           .openEncryptedBox<dynamic>('user_preferences');
       preferences = Map<String, dynamic>.from(prefsBox.toMap());
     } catch (_) {}
+    return _RankSignals(searchHistory, preferences, viewerContext.followedUids);
+  }
 
-    // Load followed user IDs if the user is authenticated
-    List<String> followedUids = [];
-    if (params.uid.isNotEmpty && params.uid != 'explorer_user') {
-      try {
-        final followsSnapshot = await FirebaseFirestore.instance
-            .collection('follows')
-            .where('followerId', isEqualTo: params.uid)
-            .get(const GetOptions(source: Source.serverAndCache));
-        followedUids = followsSnapshot.docs
-            .map((doc) => doc.data()['followedId']?.toString() ?? '')
-            .where((uid) => uid.isNotEmpty)
-            .toList();
-      } catch (_) {}
-    }
-
-    return result.map((logs) {
-      final rankedLogs = List<TripLog>.from(logs);
-
-      rankedLogs.sort((a, b) {
-        final scoreA =
-            _rankScore(a, params, searchHistory, preferences, followedUids);
-        final scoreB =
-            _rankScore(b, params, searchHistory, preferences, followedUids);
-        return scoreB.compareTo(scoreA); // Descending order
-      });
-
-      return rankedLogs;
-    });
+  /// Sorts [logs] by descending [score], calling [score] once per log.
+  @visibleForTesting
+  static List<TripLog> rankLogs(
+      List<TripLog> logs, double Function(TripLog log) score) {
+    final scored = [for (final log in logs) (log: log, score: score(log))];
+    scored.sort((a, b) => b.score.compareTo(a.score));
+    return [for (final entry in scored) entry.log];
   }
 
   double _rankScore(
     TripLog item,
     ExplorerProfile viewer,
-    List<String> searchHistory,
-    Map<String, dynamic> preferences,
-    List<String> followedUids,
+    _RankSignals signals,
   ) {
+    final searchHistory = signals.searchHistory;
+    final preferences = signals.preferences;
+    final followedUids = signals.followedUids;
+
     // 1. Freshness Factor (new posts are heavily favored)
     final referenceTime = item.publishedAt ?? item.lastConfirmed;
     final freshnessAge = FreshnessAge(referenceTime);
@@ -101,8 +157,7 @@ class GetSmartFeedUseCase implements UseCase<List<TripLog>, ExplorerProfile> {
       final districtLower = item.district.toLowerCase();
       final divisionLower = item.division.toLowerCase();
 
-      for (final keyword in searchHistory) {
-        final kwLower = keyword.toLowerCase();
+      for (final kwLower in searchHistory) {
         if (titleLower.contains(kwLower) ||
             districtLower.contains(kwLower) ||
             divisionLower.contains(kwLower)) {
