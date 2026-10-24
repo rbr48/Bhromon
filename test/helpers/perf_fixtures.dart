@@ -114,3 +114,14 @@ Map<String, dynamic> pinDoc(int i, {double? lat, double? lng}) => {
       'createdByUid': 'u',
       'category': 'place',
     };
+
+/// Secure storage that is unavailable: every call throws.
+class FailingSecureStorage implements FlutterSecureStorage {
+  int reads = 0;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #read) reads++;
+    return Future<Never>.error(StateError('secure storage unavailable'));
+  }
+}
