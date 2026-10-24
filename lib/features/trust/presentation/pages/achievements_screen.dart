@@ -5,6 +5,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/value_objects/trust_tier.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 class AchievementsScreen extends StatelessWidget {
   const AchievementsScreen({super.key});
@@ -90,8 +91,10 @@ class AchievementsScreen extends StatelessWidget {
                   CircleAvatar(
                     radius: 36,
                     backgroundColor: tierColor,
-                    backgroundImage:
-                        avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                    backgroundImage: avatarUrl != null
+                        ? sizedImage(
+                            NetworkImage(avatarUrl), context.decodeWidth(72))
+                        : null,
                     child: avatarUrl == null
                         ? const Icon(Icons.person,
                             size: 36, color: Colors.white)

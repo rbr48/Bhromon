@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +14,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../../../core/entities/location_pin.dart';
+import '../utils/map_math.dart';
 import '../bloc/map_bloc.dart';
 import '../bloc/map_event.dart';
 import '../bloc/map_state.dart';
@@ -81,8 +81,6 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-enum _MapLocationTrackingMode { stationary, moving, fast }
-
 class _MapScreenState extends State<MapScreen> {
   MapLibreMapController? _mapController;
   Position? _currentPosition;
@@ -100,7 +98,10 @@ class _MapScreenState extends State<MapScreen> {
   List<String> _downloadedOfflineDistricts = [];
   bool _loadingRoute = false;
   bool _justTappedCircle = false;
-  double _mapBearing = 0.0;
+  // Only the compass needs the bearing; a notifier rebuilds just that icon
+  // instead of the whole screen on every camera frame during rotation.
+  final ValueNotifier<double> _mapBearing = ValueNotifier<double>(0.0);
+  Timer? _searchDebounce;
   bool _isOffline = false;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
@@ -108,8 +109,7 @@ class _MapScreenState extends State<MapScreen> {
   double? _lastCirclesZoom;
   int? _lastCirclesHash;
 
-  _MapLocationTrackingMode _currentTrackingMode =
-      _MapLocationTrackingMode.moving;
+  MapTrackingMode _currentTrackingMode = MapTrackingMode.moving;
   StreamSubscription<Position>? _positionStreamSubscription;
   final ValueNotifier<Position?> _positionNotifier =
       ValueNotifier<Position?>(null);
@@ -137,17 +137,15 @@ class _MapScreenState extends State<MapScreen> {
     _connectivitySubscription?.cancel();
     _searchController.dispose();
     _positionNotifier.dispose();
+    _mapBearing.dispose();
+    _searchDebounce?.cancel();
     super.dispose();
   }
 
   void _onMapCameraChanged() {
     if (_mapController != null && mounted) {
       final bearing = _mapController!.cameraPosition?.bearing;
-      if (bearing != null && bearing != _mapBearing) {
-        setState(() {
-          _mapBearing = bearing;
-        });
-      }
+      if (bearing != null) _mapBearing.value = bearing;
     }
   }
 
@@ -171,26 +169,19 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _adaptLocationTrackingSettings(Position pos) {
-    _MapLocationTrackingMode newMode;
-    if (pos.speed < 1.0) {
-      newMode = _MapLocationTrackingMode.stationary;
-    } else if (pos.speed < 8.0) {
-      newMode = _MapLocationTrackingMode.moving;
-    } else {
-      newMode = _MapLocationTrackingMode.fast;
-    }
+    final newMode = nextTrackingMode(_currentTrackingMode, pos.speed);
 
     if (newMode != _currentTrackingMode) {
       _currentTrackingMode = newMode;
       _positionStreamSubscription?.cancel();
 
       LocationSettings settings;
-      if (newMode == _MapLocationTrackingMode.stationary) {
+      if (newMode == MapTrackingMode.stationary) {
         settings = const LocationSettings(
           accuracy: LocationAccuracy.medium,
           distanceFilter: 20,
         );
-      } else if (newMode == _MapLocationTrackingMode.moving) {
+      } else if (newMode == MapTrackingMode.moving) {
         settings = const LocationSettings(
           accuracy: LocationAccuracy.high,
           distanceFilter: 3,
@@ -322,7 +313,23 @@ class _MapScreenState extends State<MapScreen> {
 
   // ── Map Helpers ────────────────────────────────────────────────────────────
 
+  // Recomputed only when the pins or the filter change, not per access.
+  List<LocationPin>? _filteredCache;
+  List<LocationPin>? _filteredCacheSource;
+  String? _filteredCacheFilter;
+
   List<LocationPin> get _filteredPins {
+    if (_filteredCache != null &&
+        identical(_filteredCacheSource, _pins) &&
+        _filteredCacheFilter == _activeFilter) {
+      return _filteredCache!;
+    }
+    _filteredCacheSource = _pins;
+    _filteredCacheFilter = _activeFilter;
+    return _filteredCache = _computeFilteredPins();
+  }
+
+  List<LocationPin> _computeFilteredPins() {
     switch (_activeFilter) {
       case 'Verified Safety':
         return _pins.where((p) => p.trustTier.isVerifiedOrAbove).toList();
@@ -369,16 +376,72 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  /// The visible map area plus a margin, or null if it can't be read.
+  Future<GeoBounds?> _paddedVisibleBounds() async {
+    try {
+      final region = await _mapController!.getVisibleRegion();
+      return GeoBounds(
+        south: region.southwest.latitude,
+        west: region.southwest.longitude,
+        north: region.northeast.latitude,
+        east: region.northeast.longitude,
+      ).expandedBy(0.5);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _tierHex(LocationPin pin) {
+    final Color color = AppColors.forTier(pin.trustTier);
+    return '#${color.toARGB32().toRadixString(16).substring(2).padLeft(6, '0')}';
+  }
+
+  // Redraws are async (visible region, clear, add); camera idles can fire
+  // while one is running, so they're serialised and only the latest request
+  // runs after it.
+  bool _circlesUpdating = false;
+  ({List<LocationPin> pins, bool force})? _pendingCircles;
+
   /// Re-draw map circles for the given pin list using smarter clustering.
   Future<void> _updateMapCircles(List<LocationPin> pins,
+      {bool force = false}) async {
+    if (_circlesUpdating) {
+      _pendingCircles = (
+        pins: pins,
+        force: force || (_pendingCircles?.force ?? false),
+      );
+      return;
+    }
+    _circlesUpdating = true;
+    try {
+      await _redrawMapCircles(pins, force: force);
+    } finally {
+      _circlesUpdating = false;
+    }
+    final next = _pendingCircles;
+    _pendingCircles = null;
+    if (next != null && mounted) {
+      await _updateMapCircles(next.pins, force: next.force);
+    }
+  }
+
+  Future<void> _redrawMapCircles(List<LocationPin> pins,
       {bool force = false}) async {
     if (_mapController == null) return;
     try {
       final double zoom = _mapController!.cameraPosition?.zoom ?? 7.0;
+      final bool highZoom = zoom > 10.0;
+
+      // Zoomed in, only pins near the viewport are sent to the native map;
+      // zoomed out, clustering already keeps the marker count down.
+      final drawn =
+          highZoom ? pinsInBounds(pins, await _paddedVisibleBounds()) : pins;
+      if (_mapController == null) return;
 
       // Camera idle fires constantly while panning; skip the full
-      // clear-and-redraw when neither the pin set nor the zoom regime changed.
-      final int pinsHash = Object.hashAll(pins.map((p) => p.pinId));
+      // clear-and-redraw when neither the drawn pins nor the zoom regime
+      // changed. The padded bounds mean small pans keep the same set.
+      final int pinsHash = Object.hashAll(drawn.map((p) => p.pinId));
       final bool sameZoomRegime = _lastCirclesZoom != null &&
           ((zoom > 10.0 && _lastCirclesZoom! > 10.0) ||
               (zoom <= 10.0 &&
@@ -392,101 +455,60 @@ class _MapScreenState extends State<MapScreen> {
       _circleIdToPin.clear();
       _clusterIdToPins.clear();
 
-      final bool highZoom = zoom > 10.0;
-
       if (highZoom) {
-        final optionsList = pins.map((pin) {
-          final Color color = AppColors.forTier(pin.trustTier);
-          final String hex =
-              '#${color.toARGB32().toRadixString(16).substring(2).padLeft(6, '0')}';
-          return CircleOptions(
-            geometry: LatLng(pin.lat, pin.lng),
-            circleColor: hex,
-            circleRadius: 11.0,
-            circleStrokeColor: '#ffffff',
-            circleStrokeWidth: 2.0,
-            circleOpacity: 0.95,
-          );
-        }).toList();
-
+        final optionsList = [
+          for (final pin in drawn)
+            CircleOptions(
+              geometry: LatLng(pin.lat, pin.lng),
+              circleColor: _tierHex(pin),
+              circleRadius: 11.0,
+              circleStrokeColor: '#ffffff',
+              circleStrokeWidth: 2.0,
+              circleOpacity: 0.95,
+            ),
+        ];
+        if (optionsList.isEmpty) return;
         final circles = await _mapController!.addCircles(optionsList);
         for (int i = 0; i < circles.length; i++) {
-          _circleIdToPin[circles[i].id] = pins[i];
+          _circleIdToPin[circles[i].id] = drawn[i];
         }
         return;
       }
 
-      // Cluster by proximity (threshold scales with zoom)
-      final double threshold = 1.2 / (zoom < 1 ? 1 : zoom);
-      final List<Map<String, dynamic>> clusters = [];
-
-      for (final pin in pins) {
-        bool merged = false;
-        for (final cluster in clusters) {
-          if ((pin.lat - (cluster['lat'] as double)).abs() < threshold &&
-              (pin.lng - (cluster['lng'] as double)).abs() < threshold) {
-            final list = cluster['pins'] as List<LocationPin>;
-            list.add(pin);
-            cluster['lat'] =
-                list.map((p) => p.lat).reduce((a, b) => a + b) / list.length;
-            cluster['lng'] =
-                list.map((p) => p.lng).reduce((a, b) => a + b) / list.length;
-            merged = true;
-            break;
-          }
-        }
-        if (!merged) {
-          clusters.add({
-            'lat': pin.lat,
-            'lng': pin.lng,
-            'pins': [pin]
-          });
-        }
-      }
-
+      final clusters = clusterPins(drawn, zoom);
       final List<CircleOptions> optionsList = [];
-      final List<dynamic> associationList = [];
-
       for (final cluster in clusters) {
-        final list = cluster['pins'] as List<LocationPin>;
-        if (list.length == 1) {
-          final pin = list.first;
-          final Color color = AppColors.forTier(pin.trustTier);
-          final String hex =
-              '#${color.toARGB32().toRadixString(16).substring(2).padLeft(6, '0')}';
+        if (cluster.pins.length == 1) {
+          final pin = cluster.pins.first;
           optionsList.add(CircleOptions(
             geometry: LatLng(pin.lat, pin.lng),
-            circleColor: hex,
+            circleColor: _tierHex(pin),
             circleRadius: 11.0,
             circleStrokeColor: '#ffffff',
             circleStrokeWidth: 2.0,
             circleOpacity: 0.95,
           ));
-          associationList.add(pin);
         } else {
-          final lat = cluster['lat'] as double;
-          final lng = cluster['lng'] as double;
-          final count = list.length;
+          final count = cluster.pins.length;
           optionsList.add(CircleOptions(
-            geometry: LatLng(lat, lng),
+            geometry: LatLng(cluster.lat, cluster.lng),
             circleColor: '#FF9F1C',
             circleRadius: 14.0 + (count > 9 ? 4.0 : count.toDouble()),
             circleStrokeColor: '#ffffff',
             circleStrokeWidth: 2.0,
             circleOpacity: 0.92,
           ));
-          associationList.add(list);
         }
       }
 
       if (optionsList.isNotEmpty) {
         final circles = await _mapController!.addCircles(optionsList);
         for (int i = 0; i < circles.length; i++) {
-          final assoc = associationList[i];
-          if (assoc is LocationPin) {
-            _circleIdToPin[circles[i].id] = assoc;
-          } else if (assoc is List<LocationPin>) {
-            _clusterIdToPins[circles[i].id] = assoc;
+          final cluster = clusters[i];
+          if (cluster.pins.length == 1) {
+            _circleIdToPin[circles[i].id] = cluster.pins.first;
+          } else {
+            _clusterIdToPins[circles[i].id] = cluster.pins;
           }
         }
       }
@@ -743,73 +765,70 @@ class _MapScreenState extends State<MapScreen> {
                 right: 16,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(18),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          width: 1.5,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.72),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        width: 1.5,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 11),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: AppColors.forTier(explorerTier),
+                          child: const Icon(Icons.person,
+                              color: Colors.white, size: 20),
                         ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 11),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: AppColors.forTier(explorerTier),
-                            child: const Icon(Icons.person,
-                                color: Colors.white, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  explorerName,
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15),
-                                ),
-                                Text(
-                                  '${explorerTier.displayName} • $explorerScore pts',
-                                  style: TextStyle(
-                                      color: AppColors.mintGreen
-                                          .withValues(alpha: 0.9),
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 11),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // SOS
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.redAccent.withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.redAccent.withValues(alpha: 0.4),
-                                width: 1,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                explorerName,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15),
                               ),
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.warning_amber_rounded,
-                                  color: Colors.redAccent),
-                              iconSize: 22,
-                              onPressed: () => showDialog<void>(
-                                context: context,
-                                builder: (_) => SosHubDialog(
-                                    currentPosition: _currentPosition),
+                              Text(
+                                '${explorerTier.displayName} • $explorerScore pts',
+                                style: TextStyle(
+                                    color: AppColors.mintGreen
+                                        .withValues(alpha: 0.9),
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 11),
                               ),
+                            ],
+                          ),
+                        ),
+                        // SOS
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.redAccent.withValues(alpha: 0.4),
+                              width: 1,
                             ),
                           ),
-                        ],
-                      ),
+                          child: IconButton(
+                            icon: const Icon(Icons.warning_amber_rounded,
+                                color: Colors.redAccent),
+                            iconSize: 22,
+                            onPressed: () => showDialog<void>(
+                              context: context,
+                              builder: (_) => SosHubDialog(
+                                  currentPosition: _currentPosition),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -822,52 +841,53 @@ class _MapScreenState extends State<MapScreen> {
                 right: 16,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(23),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        borderRadius: BorderRadius.circular(23),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          width: 1.5,
-                        ),
+                  child: Container(
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.72),
+                      borderRadius: BorderRadius.circular(23),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        width: 1.5,
                       ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (val) {
-                          setState(() {
-                            if (val.trim().isEmpty) {
-                              _searchSuggestions = [];
-                            } else {
-                              _searchSuggestions = _parseNlpQuery(val);
-                            }
-                          });
-                        },
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 13),
-                        decoration: InputDecoration(
-                          hintText: 'Search — Sajek, Cox\'s Bazar, waterfall…',
-                          hintStyle: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 12),
-                          prefixIcon: const Icon(Icons.search,
-                              color: AppColors.mintGreen, size: 20),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear,
-                                      color: Colors.white70, size: 16),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchSuggestions = []);
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 13),
-                        ),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (val) {
+                        // Parse once typing pauses, not per keystroke.
+                        _searchDebounce?.cancel();
+                        if (val.trim().isEmpty) {
+                          setState(() => _searchSuggestions = []);
+                          return;
+                        }
+                        _searchDebounce =
+                            Timer(const Duration(milliseconds: 250), () {
+                          if (!mounted) return;
+                          setState(
+                              () => _searchSuggestions = _parseNlpQuery(val));
+                        });
+                      },
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Search — Sajek, Cox\'s Bazar, waterfall…',
+                        hintStyle: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 12),
+                        prefixIcon: const Icon(Icons.search,
+                            color: AppColors.mintGreen, size: 20),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear,
+                                    color: Colors.white70, size: 16),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchSuggestions = []);
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 13),
                       ),
                     ),
                   ),
@@ -901,34 +921,29 @@ class _MapScreenState extends State<MapScreen> {
                           },
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(18),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 8),
-                                decoration: BoxDecoration(
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: sel
+                                    ? AppColors.mintGreen.withValues(alpha: 0.9)
+                                    : Colors.black.withValues(alpha: 0.72),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
                                   color: sel
                                       ? AppColors.mintGreen
-                                          .withValues(alpha: 0.9)
-                                      : Colors.black.withValues(alpha: 0.55),
-                                  borderRadius: BorderRadius.circular(18),
-                                  border: Border.all(
-                                    color: sel
-                                        ? AppColors.mintGreen
-                                        : Colors.white.withValues(alpha: 0.15),
-                                    width: 1.5,
-                                  ),
+                                      : Colors.white.withValues(alpha: 0.15),
+                                  width: 1.5,
                                 ),
-                                child: Center(
-                                  child: Text(
-                                    filter,
-                                    style: TextStyle(
-                                      color:
-                                          sel ? Colors.black87 : Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  filter,
+                                  style: TextStyle(
+                                    color: sel ? Colors.black87 : Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
@@ -1236,8 +1251,10 @@ class _MapScreenState extends State<MapScreen> {
           CameraUpdate.bearingTo(0.0),
         );
       },
-      child: Transform.rotate(
-        angle: -_mapBearing * pi / 180,
+      child: ValueListenableBuilder<double>(
+        valueListenable: _mapBearing,
+        builder: (context, bearing, icon) =>
+            Transform.rotate(angle: -bearing * pi / 180, child: icon),
         child: const Icon(
           Icons.explore,
           color: AppColors.mintGreen,

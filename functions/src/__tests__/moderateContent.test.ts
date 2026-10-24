@@ -10,11 +10,23 @@ let updateCalls: Record<string, any[]> = {};
 let addCalls: any[] = [];
 let targetAuthorId = 'author_123';
 let spamFlagCount = 1;
+let pioneerCount = 1;
+
+let tokenGetAllCalls = 0;
+let tokenDocGets = 0;
 
 const mockDb = {
+  getAll: async (...refs: any[]) => {
+    tokenGetAllCalls++;
+    return refs.map((ref) => ({
+      exists: true,
+      data: () => ({ token: `token_${ref.id}` }),
+    }));
+  },
   collection: (collectionName: string) => {
     return {
       doc: (docId: string) => ({
+        id: docId,
         get: async () => {
           if (collectionName === 'trip_logs' || collectionName === 'pro_tips') {
             return {
@@ -23,6 +35,7 @@ const mockDb = {
             };
           }
           if (collectionName === 'fcm_tokens') {
+            tokenDocGets++;
             return {
               exists: true,
               data: () => ({ token: 'token_abc' }),
@@ -42,9 +55,10 @@ const mockDb = {
           get: async () => {
             if (collectionName === 'explorer_profiles' && field === 'tier' && value === 'pioneer') {
               return {
-                docs: [
-                  { id: 'pioneer_1', data: () => ({ tier: 'pioneer' }) }
-                ],
+                docs: Array.from({ length: pioneerCount }, (_, i) => ({
+                  id: `pioneer_${i + 1}`,
+                  data: () => ({ tier: 'pioneer' }),
+                })),
               };
             }
             return { docs: [] };
@@ -83,6 +97,30 @@ describe('moderateContent', () => {
     addCalls = [];
     targetAuthorId = 'author_123';
     spamFlagCount = 1;
+    pioneerCount = 1;
+    tokenGetAllCalls = 0;
+    tokenDocGets = 0;
+  });
+
+  it('reads pioneer tokens with batched getAll, not one get per pioneer', async () => {
+    pioneerCount = 250;
+    const afterSnap = {
+      data: () => ({
+        type: 'safety_flag',
+        targetId: 'trip_999',
+        targetType: 'trip_log',
+        actorId: 'reporter_1',
+      }),
+      exists: true,
+    };
+
+    await moderateContent.run(afterSnap as any, {} as any);
+
+    expect(tokenDocGets).toBe(0);
+    expect(tokenGetAllCalls).toBe(3); // 250 refs in chunks of 100
+    const messaging = (admin.messaging as any)();
+    const lastCall = messaging.sendEachForMulticast.mock.calls.at(-1)[0];
+    expect(lastCall.tokens).toHaveLength(250);
   });
 
   it('handles safety_flag by immediately hiding the content and adding penalty', async () => {

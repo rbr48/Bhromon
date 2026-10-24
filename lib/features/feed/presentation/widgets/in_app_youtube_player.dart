@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Utility: Extract YouTube video ID from any common URL format
@@ -138,6 +139,7 @@ class _InAppYoutubePlayerState extends State<InAppYoutubePlayer> {
                 // Thumbnail image
                 thumbnailUrl.isNotEmpty
                     ? CachedNetworkImage(
+                        memCacheWidth: context.decodeWidth(),
                         imageUrl: thumbnailUrl,
                         fit: BoxFit.cover,
                         height: 210,

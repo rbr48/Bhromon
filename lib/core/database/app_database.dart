@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:injectable/injectable.dart';
 import 'connection/connection.dart' as conn;
 
@@ -28,6 +29,9 @@ class SyncOutboxTable extends Table {
   IntColumn get enqueuedAt => integer()(); // Epoch milliseconds
   TextColumn get status => text().withDefault(
       const Constant('pending'))(); // pending, processing, failed, conflict
+  /// When this entry was claimed for sending (epoch ms); lets a later flush
+  /// release claims left behind by a process that died mid-sync.
+  IntColumn get processingSince => integer().nullable()();
   TextColumn get jsonData => text()(); // Serialized OutboxEntry
 
   @override
@@ -68,11 +72,34 @@ class SyncConflictsTable extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(conn.openConnection());
 
+  @visibleForTesting
+  AppDatabase.forTesting(super.executor);
+
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
+
+  /// Secondary indexes for the queries below. Created on install and on
+  /// upgrade (before v4 they were only added when upgrading from v2, so fresh
+  /// installs had none and every lookup scanned the whole table).
+  static const List<String> _indexStatements = [
+    'CREATE INDEX IF NOT EXISTS trip_logs_pin_idx ON trip_logs_table (location_pin_id);',
+    'CREATE INDEX IF NOT EXISTS trip_logs_pin_draft_idx ON trip_logs_table (location_pin_id, is_draft);',
+    'CREATE INDEX IF NOT EXISTS poi_district_idx ON points_of_interest_table (district_id);',
+    'CREATE INDEX IF NOT EXISTS outbox_status_enqueued_idx ON sync_outbox_table (status, enqueued_at);',
+  ];
+
+  Future<void> _createIndexes() async {
+    for (final statement in _indexStatements) {
+      await customStatement(statement);
+    }
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) async {
+          await m.createAll();
+          await _createIndexes();
+        },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
             // Add status column to SyncOutboxTable
@@ -83,11 +110,9 @@ class AppDatabase extends _$AppDatabase {
             // Create SyncConflictsTable
             await m.createTable(syncConflictsTable);
           }
-          if (from < 3) {
-            await customStatement(
-                'CREATE INDEX IF NOT EXISTS trip_logs_pin_idx ON trip_logs_table (location_pin_id);');
-            await customStatement(
-                'CREATE INDEX IF NOT EXISTS poi_district_idx ON points_of_interest_table (district_id);');
+          if (from < 4) {
+            await m.addColumn(syncOutboxTable, syncOutboxTable.processingSince);
+            await _createIndexes();
           }
         },
       );
@@ -176,6 +201,50 @@ class AppDatabase extends _$AppDatabase {
     await (delete(syncOutboxTable)..where((t) => t.id.equals(id))).go();
   }
 
+  /// Applies several outbox changes in one batched transaction: deletes
+  /// [deleteIds], upserts [upserts], then sets [statusIds] to [status].
+  Future<void> applyOutboxChanges({
+    List<String> deleteIds = const [],
+    List<SyncOutboxTableCompanion> upserts = const [],
+    List<String> statusIds = const [],
+    String? status,
+  }) async {
+    if (deleteIds.isEmpty && upserts.isEmpty && statusIds.isEmpty) return;
+    await batch((b) {
+      if (deleteIds.isNotEmpty) {
+        b.deleteWhere(syncOutboxTable, (t) => t.id.isIn(deleteIds));
+      }
+      if (upserts.isNotEmpty) {
+        b.insertAllOnConflictUpdate(syncOutboxTable, upserts);
+      }
+      if (statusIds.isNotEmpty && status != null) {
+        b.update(
+            syncOutboxTable,
+            SyncOutboxTableCompanion(
+              status: Value(status),
+              processingSince: Value(status == 'processing'
+                  ? DateTime.now().millisecondsSinceEpoch
+                  : null),
+            ),
+            where: (t) => t.id.isIn(statusIds));
+      }
+    });
+  }
+
+  /// Returns entries claimed before [claimedBeforeMs] (or by an app version
+  /// that didn't record when) to 'pending' so they are sent again.
+  Future<int> releaseStaleOutboxClaims(int claimedBeforeMs) {
+    return (update(syncOutboxTable)
+          ..where((t) =>
+              t.status.equals('processing') &
+              (t.processingSince.isNull() |
+                  t.processingSince.isSmallerThanValue(claimedBeforeMs))))
+        .write(const SyncOutboxTableCompanion(
+      status: Value('pending'),
+      processingSince: Value(null),
+    ));
+  }
+
   // Points of Interest Operations (Fuzzy Local Search)
   Future<void> savePointOfInterest(
     String id,
@@ -199,6 +268,15 @@ class AppDatabase extends _$AppDatabase {
         jsonData: Value(json),
       ),
     );
+  }
+
+  /// Upserts many points of interest in one batched transaction, instead of
+  /// one statement (and one commit) per row.
+  Future<void> savePointsOfInterest(
+      List<PointsOfInterestTableCompanion> rows) async {
+    if (rows.isEmpty) return;
+    await batch(
+        (b) => b.insertAllOnConflictUpdate(pointsOfInterestTable, rows));
   }
 
   Future<List<PointsOfInterestTableData>> getAllPointsOfInterest() async {

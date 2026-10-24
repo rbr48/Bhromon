@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import '../../../../core/entities/trip_block.dart';
 import '../../../../core/value_objects/diary_visibility.dart';
 import '../../../../core/value_objects/trip_mood.dart';
@@ -201,6 +202,48 @@ class TripLogState extends Equatable {
               json['weatherSnapshot'] as Map<String, dynamic>)
           : null,
     );
+  }
+
+  /// True when [next] differs from [previous] only in text the user is typing
+  /// into a field that keeps its own controller (the title, text block
+  /// content, image/video captions, safety notes, route descriptions), and
+  /// nothing the editor derives from that text changed. The editor skips
+  /// rebuilding the whole screen for those changes.
+  static bool onlyTypedTextChanged(TripLogState previous, TripLogState next) {
+    if (identical(previous, next)) return true;
+    if (previous.title.isEmpty != next.title.isEmpty ||
+        previous.isComplete != next.isComplete ||
+        !_sameQuality(previous.qualityResult, next.qualityResult) ||
+        previous.blocks.length != next.blocks.length) {
+      return false;
+    }
+    return _withoutTypedText(previous) == _withoutTypedText(next);
+  }
+
+  static const _qualityPlaceholder =
+      QualityResult(score: 0, tips: [], strengths: [], trustBonus: 0);
+
+  static TripLogState _withoutTypedText(TripLogState state) => state.copyWith(
+        title: '',
+        blocks: [for (final block in state.blocks) _blankTypedText(block)],
+        qualityResult: _qualityPlaceholder,
+      );
+
+  static TripBlock _blankTypedText(TripBlock block) => switch (block) {
+        TextBlock() => block.copyWith(content: ''),
+        ImageBlock() => block.copyWith(caption: ''),
+        VideoBlock() => block.copyWith(caption: ''),
+        SafetyNoteBlock() => block.copyWith(text: ''),
+        RouteBlock() => block.copyWith(description: ''),
+        _ => block,
+      };
+
+  static bool _sameQuality(QualityResult? a, QualityResult? b) {
+    if (a == null || b == null) return a == b;
+    return a.score == b.score &&
+        a.trustBonus == b.trustBonus &&
+        listEquals(a.tips, b.tips) &&
+        listEquals(a.strengths, b.strengths);
   }
 
   @override
