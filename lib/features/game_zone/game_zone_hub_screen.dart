@@ -112,6 +112,20 @@ class GameZoneHubScreen extends StatelessWidget {
               gradient: const [Color(0xFF5D4037), Color(0xFF271C19)],
               route: '/game-zone/ludo',
             ),
+
+            const SizedBox(height: 16),
+
+            // Teen Patti (তিন পাত্তি)
+            _buildGameCard(
+              context,
+              title: 'Teen Patti (তিন পাত্তি)',
+              subtitle: 'Classic South Asian 3-card poker. Play blind or seen, manage chips, and call showdowns with trail & pure sequence.',
+              icon: Icons.filter_3,
+              tag: 'DESI CLASSIC',
+              tagColor: Colors.tealAccent,
+              gradient: const [Color(0xFF004D40), Color(0xFF001F1A)],
+              route: '/game-zone/teen-patti',
+            ),
           ],
         ),
       ),

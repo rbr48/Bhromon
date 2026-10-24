@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../domain/models/expense_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/trip_ledger_engine.dart';
@@ -18,6 +20,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     with SingleTickerProviderStateMixin {
   final TourGroupRepository _repository = TourGroupRepository();
   late TabController _tabController;
+
+  LedgerSummary? _latestSummary;
+  List<ExpenseItem> _latestExpenses = [];
 
   @override
   void initState() {
@@ -42,6 +47,13 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           'Tour Fund & Ledger',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.table_view_rounded, color: AppColors.mintGreen),
+            tooltip: 'Excel CSV অডিট এক্সপোর্ট',
+            onPressed: _exportLedgerCsv,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.mintGreen,
@@ -91,10 +103,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     );
                   }).toList();
 
+                  _latestExpenses = expenses;
                   final summary = TripLedgerEngine.computeLedger(
                     members: ledgerMembers,
                     expenses: expenses,
                   );
+                  _latestSummary = summary;
 
                   return Column(
                     children: [
@@ -711,4 +725,106 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       },
     );
   }
+  void _exportLedgerCsv() {
+    final summary = _latestSummary;
+    if (summary == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('হিসাবের ডেটা লোড হচ্ছে, অপেক্ষা করুন...')),
+      );
+      return;
+    }
+
+    final expenses = _latestExpenses;
+    final buffer = StringBuffer();
+
+    String escapeCell(dynamic val) {
+      final str = val?.toString() ?? '';
+      if (str.contains(',') || str.contains('"') || str.contains('\n')) {
+        return '"${str.replaceAll('"', '""')}"';
+      }
+      return str;
+    }
+
+    void line(List<dynamic> values) {
+      buffer.writeln(values.map(escapeCell).join(','));
+    }
+
+    void section(String title) {
+      buffer.writeln('');
+      buffer.writeln(escapeCell('================== $title =================='));
+    }
+
+    line(['রংপুর ➔ কক্সবাজার ফ্যামিলি ট্যুর ২০২৬ - অফিশিয়াল অডিট বিবরণী']);
+    line(['ভ্রমণকাল', '১৯ অক্টোবর ২০২৬ – ২৩ অক্টোবর ২০২৬']);
+    line(['পরিবহন', 'এভারগ্রীন এসি বাস (রংপুর-কক্সবাজার)']);
+    line(['হোটেল', 'হোটেল সি মুন (কক্সবাজার)']);
+    line(['রিপোর্ট তৈরির তারিখ', DateFormat('dd MMMM yyyy, hh:mm a').format(DateTime.now())]);
+
+    section('আর্থিক সারসংক্ষেপ (FINANCIAL AUDIT SUMMARY)');
+    line(['বিবরণ', 'পরিমাণ (টাকা)']);
+    line(['মোট সংগৃহীত জমা ফান্ড', '৳${summary.totalDepositsTaka.toStringAsFixed(2)}']);
+    line(['সর্বমোট খরচ', '৳${summary.totalExpenseTaka.toStringAsFixed(2)}']);
+    line(['ফান্ড থেকে পরিশোধিত খরচ বাদে অবশিষ্ট ফান্ড', '৳${summary.fundBalanceTaka.toStringAsFixed(2)}']);
+    line(['মোট সদস্য সংখ্যা (হেডকাউন্ট)', '${summary.headcount} জন']);
+    line(['মাথাপিছু গড় ব্যয়', '৳${summary.perHeadCostTaka.toStringAsFixed(2)}']);
+
+    section('খাতভিত্তিক খরচের সারসংক্ষেপ (CATEGORY BREAKDOWN)');
+    line(['খাত (Category)', 'মোট ব্যয় (টাকা)', 'শতকরা অনুপাত (%)']);
+    for (final ct in summary.categoryTotals) {
+      final pct = summary.totalExpensePaisa > 0
+          ? ((ct.amountPaisa / summary.totalExpensePaisa) * 100).toStringAsFixed(1)
+          : '0.0';
+      line([ct.category, '৳${ct.amountTaka.toStringAsFixed(2)}', '$pct%']);
+    }
+
+    section('খরচের সম্পূর্ণ বিবরণী (EXPENSES LEDGER)');
+    line(['ক্রমিক নং', 'তারিখ', 'খাত', 'খরচের বিবরণ', 'বিল পরিশোধক', 'পরিমাণ (টাকা)']);
+    for (int i = 0; i < expenses.length; i++) {
+      final exp = expenses[i];
+      final payer = exp.paidByName ?? exp.paidById ?? 'ফান্ড';
+      line([
+        i + 1,
+        DateFormat('dd-MMM-yyyy').format(exp.date),
+        exp.category,
+        exp.title,
+        payer,
+        exp.amountTaka.toStringAsFixed(2),
+      ]);
+    }
+    line(['', '', '', 'সর্বমোট ব্যয়:', '', '৳${summary.totalExpenseTaka.toStringAsFixed(2)}']);
+
+    section('সদস্যদের জমা ও খরচ শেয়ার (MEMBERS & DEPOSITS)');
+    line(['ক্রমিক নং', 'সদস্যের নাম', 'ইমেইল/আইডি', 'মোট জমা (টাকা)', 'খরচের শেয়ার (টাকা)', 'হিসাব (+ পাবেন / - দেবেন)']);
+    for (int i = 0; i < summary.rows.length; i++) {
+      final row = summary.rows[i];
+      line([
+        i + 1,
+        row.name,
+        row.id,
+        row.depositTaka.toStringAsFixed(2),
+        row.shareTaka.toStringAsFixed(2),
+        row.netTaka.toStringAsFixed(2),
+      ]);
+    }
+    line(['', '', 'মোট ফান্ড:', '৳${summary.totalDepositsTaka.toStringAsFixed(2)}', '৳${summary.totalExpenseTaka.toStringAsFixed(2)}', '৳${summary.fundBalanceTaka.toStringAsFixed(2)}']);
+
+    section('চূড়ান্ত সেটেলমেন্ট ম্যাট্রিক্স (SETTLEMENTS)');
+    line(['কে দেবেন (Debtor)', 'কাকে দেবেন (Creditor)', 'পরিমাণ (টাকা)']);
+    for (final st in summary.settlements) {
+      line([st.from, st.to, '৳${st.amountTaka.toStringAsFixed(2)}']);
+    }
+
+    section('অডিট অনুমোদন ও স্বাক্ষর');
+    line(['ট্যুর লিডার: রেজাউল করিম', 'কোষাধ্যক্ষ: অডিট প্যানেল', 'অনুমোদনকারী: পরিবারের অভিভাবকবৃন্দ']);
+
+    // Prepend UTF-8 BOM so Excel opens Bangla text without mojibake
+    final csvContent = '\uFEFF${buffer.toString()}';
+
+    // ignore: deprecated_member_use
+    Share.share(
+      csvContent,
+      subject: 'CoxsBazar_Tour2026_Official_Audit_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
+    );
+  }
+
 }
