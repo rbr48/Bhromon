@@ -20,7 +20,7 @@ describe('decayFreshness', () => {
 
   beforeEach(() => {
     db.collections.clear();
-    db.stats = { queryGets: 0, docGets: 0, getAllCalls: 0, batchCommits: 0, maxBatchWrites: 0 };
+    db.stats = { queryGets: 0, docGets: 0, getAllCalls: 0, batchCommits: 0, maxBatchWrites: 0, singleUpdates: 0 };
     sendEach.mockClear();
   });
 

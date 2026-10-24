@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:bhromon/core/security/hive_encryption_service.dart';
+import 'package:bhromon/features/map/data/datasources/nearby_pins_query.dart';
 import 'package:bhromon/features/map/presentation/widgets/pin_detail_sheet.dart';
 import 'package:bhromon/core/entities/location_pin.dart';
 import 'package:bhromon/core/theme/colors.dart';
@@ -28,10 +29,6 @@ const double kGeoFenceRadiusMeters = 5000;
 
 /// The same pin triggers at most once per this period on a device.
 const Duration kGeoFenceRepeatAfter = Duration(hours: 24);
-
-/// Latitude half-height (degrees) of the band queried around the device;
-/// one degree of latitude is ~111 km, so this comfortably covers the radius.
-const double _kLatBandDegrees = 0.05;
 
 /// A candidate pin for the geo-fence check.
 class GeoFenceCandidate {
@@ -79,17 +76,12 @@ Future<void> _checkGeoFences() async {
     final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium);
 
-    // Pins in a latitude band around the device (a single-field range, so no
-    // composite index), instead of the first 100 pins anywhere in the country.
-    final snap = await FirebaseFirestore.instance
-        .collection('location_pins')
-        .where('lat', isGreaterThanOrEqualTo: pos.latitude - _kLatBandDegrees)
-        .where('lat', isLessThanOrEqualTo: pos.latitude + _kLatBandDegrees)
-        .limit(300)
-        .get();
+    // Geohash ranges around the device instead of the first N pins anywhere.
+    final docs = await queryPinsNear(FirebaseFirestore.instance, pos.latitude,
+        pos.longitude, kGeoFenceRadiusMeters);
 
     final candidates = <GeoFenceCandidate>[];
-    for (final doc in snap.docs) {
+    for (final doc in docs) {
       final data = doc.data();
       final lat = (data['lat'] as num?)?.toDouble();
       final lng = (data['lng'] as num?)?.toDouble();
