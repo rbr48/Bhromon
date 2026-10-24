@@ -5,6 +5,9 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/entities/explorer_profile.dart';
 import '../../domain/repositories/i_explorer_repository.dart';
 
+/// Used when a caller asks for the top explorers without a limit.
+const int kDefaultTopExplorers = 50;
+
 @LazySingleton(as: IExplorerRepository)
 class ExplorerRepositoryImpl implements IExplorerRepository {
   final FirebaseFirestore _firestore;
@@ -33,21 +36,19 @@ class ExplorerRepositoryImpl implements IExplorerRepository {
   Future<Either<Failure, List<ExplorerProfile>>> getTopExplorers(
       {int? limit}) async {
     try {
-      final snapshot = await _firestore.collection('explorer_profiles').get();
-      var profiles = snapshot.docs.map((doc) {
+      // Rank on the server: reading every profile to keep the top few
+      // costs one document read per explorer on every feed load.
+      final snapshot = await _firestore
+          .collection('explorer_profiles')
+          .orderBy('explorerScore.value', descending: true)
+          .limit(limit ?? kDefaultTopExplorers)
+          .get();
+      final profiles = snapshot.docs.map((doc) {
         final data = doc.data();
         data['uid'] = doc.id;
         _fixTimestamp(data);
         return ExplorerProfile.fromJson(data);
       }).toList();
-
-      // Sort locally by explorerScore.value descending
-      profiles.sort(
-          (a, b) => b.explorerScore.value.compareTo(a.explorerScore.value));
-
-      if (limit != null && profiles.length > limit) {
-        profiles = profiles.sublist(0, limit);
-      }
 
       return Right(profiles);
     } catch (e) {

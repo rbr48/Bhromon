@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
 import '../../core/theme/theme_context.dart';
+import '../utils/image_sizing.dart';
 
 class BlurHashImage extends StatelessWidget {
   final String imageUrl;
@@ -24,6 +25,10 @@ class BlurHashImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget imageWidget = CachedNetworkImage(
+      // Decode at display size; cover crops, so size by the longer edge.
+      memCacheWidth: context.decodeWidth(width != null && height != null
+          ? (width! > height! ? width! : height!)
+          : width ?? double.infinity),
       imageUrl: imageUrl,
       width: width,
       height: height,

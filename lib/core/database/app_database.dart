@@ -201,6 +201,15 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Upserts many points of interest in one batched transaction, instead of
+  /// one statement (and one commit) per row.
+  Future<void> savePointsOfInterest(
+      List<PointsOfInterestTableCompanion> rows) async {
+    if (rows.isEmpty) return;
+    await batch(
+        (b) => b.insertAllOnConflictUpdate(pointsOfInterestTable, rows));
+  }
+
   Future<List<PointsOfInterestTableData>> getAllPointsOfInterest() async {
     return select(pointsOfInterestTable).get();
   }

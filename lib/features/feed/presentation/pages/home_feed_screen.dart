@@ -32,6 +32,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/widgets/brand_logo_text.dart';
 import '../../../../core/theme/theme_context.dart';
 import '../../../../core/widgets/skeleton.dart';
+import '../../../../core/utils/shared_latest_stream.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 class HomeFeedScreen extends StatefulWidget {
   const HomeFeedScreen({super.key});
@@ -134,14 +136,42 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
   // Cache user's own reactions: tripId -> reactionKey
   final Map<String, String?> _myReactionsCache = {};
 
+  // In-flight/completed lookups, so FutureBuilders get the same future on
+  // every rebuild and a page of posts by one author fires one read, not N.
+  static final Map<String, Future<Map<String, String>>> _profileFutures = {};
+  final Map<String, Future<String?>> _myReactionFutures = {};
+
+  // Firestore listeners per card, created once per doc instead of on every
+  // card rebuild.
+  // Shared so a trip shown twice (carousel + list) still gets the current
+  // value immediately.
+  final Map<String, Stream<DocumentSnapshot>> _likeStreams = {};
+  final Map<String, Stream<DocumentSnapshot>> _logDocStreams = {};
+
+  static Stream<DocumentSnapshot> _shared(DocumentReference ref) =>
+      SharedLatestStream<DocumentSnapshot>(ref.snapshots()).stream;
+
+  // Lower-cased searchable text per trip log, built once per load.
+  final Map<String, String> _searchTextCache = {};
+  Timer? _searchDebounce;
+
+  final ScrollController _scrollController = ScrollController();
+
+  // Opened once: a future created in build() restarts its FutureBuilder.
+  late final Future<Box<dynamic>> _syncOutboxBox =
+      getIt<HiveEncryptionService>().openEncryptedBox<dynamic>('sync_outbox');
+
   // Animation controller for grid movement and orb pulsation
   late final AnimationController _animationController;
+  late final Animation<double> _orbOpacity;
 
   @override
   void initState() {
     super.initState();
     _feedCubit = getIt<FeedCubit>();
-    _refreshFeed();
+    // Loads once auth has settled; the BlocListener in build() picks up later
+    // sign-in/sign-out changes.
+    _loadFeedFor(context.read<AuthCubit>().state);
     _searchController = TextEditingController();
     _loadSavedLogs();
 
@@ -154,6 +184,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
       vsync: this,
       duration: const Duration(seconds: 20),
     )..repeat();
+    _orbOpacity = _animationController.drive(Tween(begin: 0.7, end: 1.0));
 
     // Setup active notifications listener based on AuthCubit state
     _authSubscription = context.read<AuthCubit>().stream.listen((state) {
@@ -191,9 +222,13 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
             .collection('saved_diaries')
             .get();
         final firestoreIds = snap.docs.map((doc) => doc.id).toList();
+        if (!mounted) return;
         setState(() {
           _savedLogs.addAll(firestoreIds);
         });
+        if (_selectedTab == 'Saved') {
+          _feedCubit.loadSaved(_savedLogs.toList().reversed.toList());
+        }
         for (final id in firestoreIds) {
           if (!box.containsKey(id)) {
             box.put(id, id);
@@ -369,6 +404,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     _notificationsSubscription?.cancel();
     _animationController.dispose();
     _searchController.dispose();
+    _searchDebounce?.cancel();
+    _scrollController.dispose();
+    _feedCubit.close();
     super.dispose();
   }
 
@@ -444,23 +482,43 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     _notificationsSubscription = null;
   }
 
+  static final ExplorerProfile _guestProfile = ExplorerProfile(
+    uid: 'explorer_user',
+    displayName: 'Guest Explorer',
+    explorerScore: const ExplorerScore(value: 0, tier: TrustTier.unverified),
+    tier: TrustTier.unverified,
+    badges: const [],
+    division: 'Dhaka',
+    createdAt: DateTime(2024),
+  );
+
+  /// The feed viewer for [state], or null while auth is still resolving
+  /// (initial, loading, waiting for an OTP).
+  static ExplorerProfile? _viewerFor(AuthState state) => switch (state) {
+        Authenticated(:final profile) => profile,
+        Unauthenticated() || AuthError() => _guestProfile,
+        _ => null,
+      };
+
+  /// Who the currently loaded feed is for; avoids reloading for the same one.
+  String? _loadedViewerUid;
+
+  void _loadFeedFor(AuthState state, {bool force = false}) {
+    final viewer = _viewerFor(state);
+    if (viewer == null) return;
+    if (!force && viewer.uid == _loadedViewerUid) return;
+    _loadedViewerUid = viewer.uid;
+    _searchTextCache.clear();
+    _feedCubit.loadFeed(viewer);
+  }
+
   Future<void> _refreshFeed() async {
-    final authState = context.read<AuthCubit>().state;
-    if (authState is Authenticated) {
-      await _feedCubit.loadFeed(authState.profile);
-    } else {
-      final guestProfile = ExplorerProfile(
-        uid: 'explorer_user',
-        displayName: 'Guest Explorer',
-        explorerScore:
-            const ExplorerScore(value: 0, tier: TrustTier.unverified),
-        tier: TrustTier.unverified,
-        badges: const [],
-        division: 'Dhaka',
-        createdAt: DateTime.now(),
-      );
-      await _feedCubit.loadFeed(guestProfile);
-    }
+    final viewer = _viewerFor(context.read<AuthCubit>().state) ??
+        _feedCubit.viewer ??
+        _guestProfile;
+    _loadedViewerUid = viewer.uid;
+    _searchTextCache.clear();
+    await _feedCubit.loadFeed(viewer);
   }
 
   @override
@@ -476,23 +534,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     return Scaffold(
       backgroundColor: mockBackground,
       body: BlocListener<AuthCubit, AuthState>(
-        listener: (context, state) {
-          if (state is Authenticated) {
-            _feedCubit.loadFeed(state.profile);
-          } else {
-            final guestProfile = ExplorerProfile(
-              uid: 'guest',
-              displayName: 'Guest Explorer',
-              explorerScore:
-                  const ExplorerScore(value: 0, tier: TrustTier.unverified),
-              tier: TrustTier.unverified,
-              badges: const [],
-              division: 'Dhaka',
-              createdAt: DateTime.now(),
-            );
-            _feedCubit.loadFeed(guestProfile);
-          }
-        },
+        // React only when the viewer actually changes, not to every
+        // intermediate auth state (loading, OTP sent, ...).
+        listenWhen: (previous, current) =>
+            _viewerFor(current) != null &&
+            _viewerFor(current)?.uid != _viewerFor(previous)?.uid,
+        listener: (context, state) => _loadFeedFor(state),
         child: Stack(
           children: [
             // Scrollable Body
@@ -502,45 +549,44 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                 color: const Color(0xFF52B788), // Mint-green spinner
                 backgroundColor:
                     const Color(0xFF0D1A12), // Dark card background
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+                // A CustomScrollView builds only the cards on screen; the
+                // old Column-in-SingleChildScrollView laid out every card.
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _onFeedScroll,
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    physics: const ClampingScrollPhysics(),
+                    slivers: [
                       // 1. HERO HEADER AREA
-                      _buildAnimatedHeroHeader(context),
+                      SliverToBoxAdapter(
+                          child: _buildAnimatedHeroHeader(context)),
 
                       // 2. TABS & SCROLLABLE BODY SECTIONS
-                      Container(
-                        color: mockBackground,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Tabs Row
-                            _buildSubNavigation(),
+                      SliverToBoxAdapter(child: _buildSubNavigation()),
 
-                            if (_selectedTab == 'Discover') ...[
-                              _buildSyncBar(),
-                              _buildCreatePostComposer(displayName, uid),
-                              _buildFeaturedTripLogsSection(),
-                              _buildProTipsHorizontalFeed(),
-                              _buildExplorerSpotlightSection(),
-                              _buildFacebookFeedSection(),
-                            ] else if (_selectedTab == 'Near me') ...[
-                              _buildNearMeTabContent(),
-                            ] else if (_selectedTab == 'Saved') ...[
-                              _buildSavedTabContent(),
-                            ] else if (_selectedTab == 'Divisions') ...[
-                              _buildDivisionsTabContent(),
-                            ] else if (_selectedTab == 'Trending') ...[
-                              _buildTrendingTabContent(),
-                            ] else if (_selectedTab == 'Archive') ...[
-                              _buildArchiveTabContent(),
-                            ],
-                            const SizedBox(height: 100),
-                          ],
-                        ),
-                      ),
+                      if (_selectedTab == 'Discover') ...[
+                        SliverToBoxAdapter(child: _buildSyncBar()),
+                        SliverToBoxAdapter(
+                            child: _buildCreatePostComposer(displayName, uid)),
+                        SliverToBoxAdapter(
+                            child: _buildFeaturedTripLogsSection()),
+                        SliverToBoxAdapter(
+                            child: _buildProTipsHorizontalFeed()),
+                        SliverToBoxAdapter(
+                            child: _buildExplorerSpotlightSection()),
+                        _buildFacebookFeedSliver(),
+                      ] else if (_selectedTab == 'Near me') ...[
+                        SliverToBoxAdapter(child: _buildNearMeTabContent()),
+                      ] else if (_selectedTab == 'Saved') ...[
+                        _buildSavedTabSliver(),
+                      ] else if (_selectedTab == 'Divisions') ...[
+                        SliverToBoxAdapter(child: _buildDivisionsTabContent()),
+                      ] else if (_selectedTab == 'Trending') ...[
+                        SliverToBoxAdapter(child: _buildTrendingTabContent()),
+                      ] else if (_selectedTab == 'Archive') ...[
+                        _buildArchiveTabSliver(),
+                      ],
+                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
                     ],
                   ),
                 ),
@@ -566,246 +612,248 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     final displayName =
         authState is Authenticated ? authState.profile.displayName : 'Guest';
 
-    return AnimatedBuilder(
-      animation: _animationController,
-      builder: (context, child) {
-        return Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0B2117), // Deep forest/pine green
-                Color(0xFF1B4332), // Nature green
-              ],
+    // Only the orb's opacity animates, so it's the only thing the animation
+    // drives: FadeTransition repaints that one layer without rebuilding the
+    // hero (search field, greeting, stats) on every frame.
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0B2117), // Deep forest/pine green
+            Color(0xFF1B4332), // Nature green
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Pulsing Orbs Background
+          Positioned(
+            top: -80,
+            right: -60,
+            child: FadeTransition(
+              opacity: _orbOpacity,
+              child: Container(
+                width: 220,
+                height: 220,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF74C69D).withValues(alpha: 0.15),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-          child: Stack(
-            children: [
-              // Pulsing Orbs Background
-              Positioned(
-                top: -80,
-                right: -60,
-                child: Opacity(
-                  opacity: 0.7 + (_animationController.value * 0.3),
-                  child: Container(
-                    width: 220,
-                    height: 220,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          const Color(0xFF74C69D).withValues(alpha: 0.15),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -30,
-                left: -30,
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        const Color(0xFF52B788).withValues(alpha: 0.12),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Hero content layout
-              SafeArea(
-                bottom: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Brand top bar
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 18.0, vertical: 12.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          if (_isSearching) ...[
-                            // Search Mode Row
-                            _buildIconButton(
-                              icon: Icons.arrow_back,
-                              onTap: () {
-                                setState(() {
-                                  _isSearching = false;
-                                  _searchQuery = '';
-                                  _searchController.clear();
-                                });
-                              },
-                            ),
-                            Expanded(
-                              child: Container(
-                                height: 36,
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 10),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.18)),
-                                ),
-                                child: TextField(
-                                  controller: _searchController,
-                                  autofocus: true,
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 13.5),
-                                  decoration: InputDecoration(
-                                    hintText: 'Search travel logs...',
-                                    hintStyle: TextStyle(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.4),
-                                        fontSize: 12.5),
-                                    border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 10),
-                                  ),
-                                  onChanged: (val) {
-                                    setState(() {
-                                      _searchQuery = val;
-                                    });
-                                  },
-                                  onSubmitted: (val) {
-                                    _saveSearchToHistory(val);
-                                  },
-                                ),
-                              ),
-                            ),
-                            if (_searchQuery.isNotEmpty)
-                              _buildIconButton(
-                                icon: Icons.close,
-                                onTap: () {
-                                  setState(() {
-                                    _searchQuery = '';
-                                    _searchController.clear();
-                                  });
-                                },
-                              )
-                            else
-                              const SizedBox(width: 36),
-                          ] else ...[
-                            // Default Mode Row
-                            // Brand top bar (Left: Logo and Title)
-                            const BhromonBrandLogo(height: 38),
-
-                            // Brand top bar (Right: Search, Bell notification, Profile)
-                            Row(
-                              children: [
-                                _buildIconButton(
-                                  icon: Icons.search,
-                                  onTap: () {
-                                    setState(() {
-                                      _isSearching = true;
-                                    });
-                                  },
-                                ),
-                                const SizedBox(width: 8),
-                                _buildIconButtonWithDot(
-                                  icon: Icons.notifications_none_outlined,
-                                  hasNotification: true,
-                                  onTap: () => _showNotificationCenter(context),
-                                ),
-                                const SizedBox(width: 8),
-                                _buildIconButton(
-                                  icon: Icons.tune_rounded,
-                                  onTap: () =>
-                                      _showPersonalizeFeedBottomSheet(context),
-                                ),
-                                const SizedBox(width: 8),
-                                _buildIconButton(
-                                  icon: Icons.account_circle_outlined,
-                                  onTap: () {
-                                    final targetUid =
-                                        uid.isNotEmpty ? uid : 'explorer_user';
-                                    _showProfileNavigationMenu(
-                                        context, targetUid);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    // Greeting Info
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 18.0, vertical: 4.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(_getWeatherIcon(),
-                                  color: _getWeatherIconColor(), size: 13),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${_getGreeting()} · ${_getDayOfWeek()} · ${_getTemp()}° ${_getWeatherCondition()}',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.45),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          RichText(
-                            text: TextSpan(
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
-                                height: 1.15,
-                              ),
-                              children: [
-                                const TextSpan(text: 'Where to next, '),
-                                TextSpan(
-                                  text: '$displayName?',
-                                  style: const TextStyle(
-                                    color: Color(0xFFE9C46A),
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Rounded curves connecting to the body
-                    const SizedBox(height: 14),
-                    Container(
-                      height: 22,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF6F5F1), // mockBackground
-                        borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(22)),
-                      ),
-                    ),
+          Positioned(
+            bottom: -30,
+            left: -30,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF52B788).withValues(alpha: 0.12),
+                    Colors.transparent,
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        );
-      },
+
+          // Hero content layout
+          SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Brand top bar
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 18.0, vertical: 12.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (_isSearching) ...[
+                        // Search Mode Row
+                        _buildIconButton(
+                          icon: Icons.arrow_back,
+                          onTap: () {
+                            _searchDebounce?.cancel();
+                            setState(() {
+                              _isSearching = false;
+                              _searchQuery = '';
+                              _searchController.clear();
+                            });
+                          },
+                        ),
+                        Expanded(
+                          child: Container(
+                            height: 36,
+                            margin: const EdgeInsets.symmetric(horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.18)),
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              autofocus: true,
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 13.5),
+                              decoration: InputDecoration(
+                                hintText: 'Search travel logs...',
+                                hintStyle: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.4),
+                                    fontSize: 12.5),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
+                              ),
+                              onChanged: (val) {
+                                // Filter once typing pauses, not on
+                                // every keystroke.
+                                _searchDebounce?.cancel();
+                                _searchDebounce = Timer(
+                                    const Duration(milliseconds: 300), () {
+                                  if (mounted) {
+                                    setState(() => _searchQuery = val);
+                                  }
+                                });
+                              },
+                              onSubmitted: (val) {
+                                _saveSearchToHistory(val);
+                              },
+                            ),
+                          ),
+                        ),
+                        if (_searchQuery.isNotEmpty)
+                          _buildIconButton(
+                            icon: Icons.close,
+                            onTap: () {
+                              _searchDebounce?.cancel();
+                              setState(() {
+                                _searchQuery = '';
+                                _searchController.clear();
+                              });
+                            },
+                          )
+                        else
+                          const SizedBox(width: 36),
+                      ] else ...[
+                        // Default Mode Row
+                        // Brand top bar (Left: Logo and Title)
+                        const BhromonBrandLogo(height: 38),
+
+                        // Brand top bar (Right: Search, Bell notification, Profile)
+                        Row(
+                          children: [
+                            _buildIconButton(
+                              icon: Icons.search,
+                              onTap: () {
+                                setState(() {
+                                  _isSearching = true;
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _buildIconButtonWithDot(
+                              icon: Icons.notifications_none_outlined,
+                              hasNotification: true,
+                              onTap: () => _showNotificationCenter(context),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildIconButton(
+                              icon: Icons.tune_rounded,
+                              onTap: () =>
+                                  _showPersonalizeFeedBottomSheet(context),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildIconButton(
+                              icon: Icons.account_circle_outlined,
+                              onTap: () {
+                                final targetUid =
+                                    uid.isNotEmpty ? uid : 'explorer_user';
+                                _showProfileNavigationMenu(context, targetUid);
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // Greeting Info
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 18.0, vertical: 4.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(_getWeatherIcon(),
+                              color: _getWeatherIconColor(), size: 13),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${_getGreeting()} · ${_getDayOfWeek()} · ${_getTemp()}° ${_getWeatherCondition()}',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.45),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      RichText(
+                        text: TextSpan(
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
+                            height: 1.15,
+                          ),
+                          children: [
+                            const TextSpan(text: 'Where to next, '),
+                            TextSpan(
+                              text: '$displayName?',
+                              style: const TextStyle(
+                                color: Color(0xFFE9C46A),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Rounded curves connecting to the body
+                const SizedBox(height: 14),
+                Container(
+                  height: 22,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF6F5F1), // mockBackground
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(22)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -817,6 +865,13 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     final String currentUserName = authState is Authenticated
         ? authState.profile.displayName
         : 'Guest User';
+    // Created once per sheet, not on every sheet rebuild.
+    final commentsStream = FirebaseFirestore.instance
+        .collection(log.isArchived ? 'archived_trip_logs' : 'trip_logs')
+        .doc(log.tripId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots();
 
     showModalBottomSheet<void>(
       context: context,
@@ -862,13 +917,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                 const Divider(),
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection(
-                            log.isArchived ? 'archived_trip_logs' : 'trip_logs')
-                        .doc(log.tripId)
-                        .collection('comments')
-                        .orderBy('createdAt', descending: false)
-                        .snapshots(),
+                    stream: commentsStream,
                     builder: (context, snapshot) {
                       if (snapshot.hasError) {
                         return Center(
@@ -1181,11 +1230,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
             child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedTab = tab['key']!;
-                });
-              },
+              onTap: () => _selectTab(tab['key']!),
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -1334,92 +1379,174 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     );
   }
 
-  Widget _buildFacebookFeedSection() {
+  /// Loads the next page when the main scroll view nears its end.
+  bool _onFeedScroll(ScrollNotification notification) {
+    // Horizontal carousels inside the feed report with depth > 0.
+    if (notification.depth != 0 ||
+        notification.metrics.axis != Axis.vertical ||
+        notification.metrics.extentAfter > 900) {
+      return false;
+    }
+    if (_selectedTab == 'Discover') {
+      _feedCubit.loadMore();
+    } else if (_selectedTab == 'Archive') {
+      _feedCubit.loadArchived(more: true);
+    }
+    return false;
+  }
+
+  void _selectTab(String tab) {
+    setState(() => _selectedTab = tab);
+    if (tab == 'Saved') {
+      _feedCubit.loadSaved(_savedLogs.toList().reversed.toList());
+    } else if (tab == 'Archive') {
+      _feedCubit.loadArchived();
+    }
+  }
+
+  /// Every searchable string of [log], lower-cased once and reused.
+  String _searchTextFor(TripLog log) {
+    return _searchTextCache.putIfAbsent(log.tripId, () {
+      final parts = <String>[log.title, log.district, log.division];
+      for (final block in log.blocks) {
+        final text = block.when(
+          text: (_, content, __) => content,
+          image: (_, __, caption, ___) => caption,
+          video: (_, __, caption, ___) => caption,
+          costEntry: (_, __, ___) => null,
+          route: (_, __, desc) => desc,
+          safetyNote: (_, text, __) => text,
+          voiceNote: (_, __, ___, ____, transcript) => transcript,
+        );
+        if (text != null && text.isNotEmpty) parts.add(text);
+      }
+      // Newline-separated so a query can't match across two fields.
+      return parts.join('\n').toLowerCase();
+    });
+  }
+
+  Widget _buildTripLogSliverList(List<TripLog> logs) {
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      sliver: SliverList.builder(
+        itemCount: logs.length,
+        itemBuilder: (context, index) =>
+            _buildFacebookStyleTripLogCard(logs[index]),
+      ),
+    );
+  }
+
+  Widget _buildPagingFooter({
+    required bool isLoading,
+    required bool hasMore,
+    required VoidCallback onLoadMore,
+    String label = 'Load more',
+  }) {
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+                strokeWidth: 2.4, color: Color(0xFF52B788)),
+          ),
+        ),
+      );
+    }
+    if (!hasMore) return const SizedBox.shrink();
+    return Center(
+      child: TextButton(
+        onPressed: onLoadMore,
+        child: Text(label,
+            style: const TextStyle(
+                color: Color(0xFF40916C), fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildFacebookFeedSliver() {
     return BlocBuilder<FeedCubit, FeedState>(
       bloc: _feedCubit,
       builder: (context, state) {
         if (state is FeedLoading || state is FeedInitial) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: FeedListSkeleton(count: 3),
+          return const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: FeedListSkeleton(count: 3),
+            ),
           );
         }
 
         if (state is FeedError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'Failed to load feed: ${state.message}',
-                style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-                textAlign: TextAlign.center,
+          return SliverToBoxAdapter(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Failed to load feed: ${state.message}',
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           );
         }
 
         if (state is FeedLoaded) {
-          final activeLogs =
-              state.logs.where((log) => !log.isArchived).toList();
-          final filteredLogs = activeLogs.where((log) {
-            if (_searchQuery.isEmpty) return true;
-            final query = _searchQuery.toLowerCase();
-            final matchesTitle = log.title.toLowerCase().contains(query);
-            final matchesDistrict = log.district.toLowerCase().contains(query);
-            final matchesDivision = log.division.toLowerCase().contains(query);
-            final matchesBlocks = log.blocks.any((block) {
-              return block.when(
-                text: (_, content, __) => content.toLowerCase().contains(query),
-                image: (_, __, caption, ___) =>
-                    caption.toLowerCase().contains(query),
-                video: (_, __, caption, ___) =>
-                    caption.toLowerCase().contains(query),
-                costEntry: (_, __, ___) => false,
-                route: (_, __, desc) =>
-                    desc?.toLowerCase().contains(query) ?? false,
-                safetyNote: (_, text, __) => text.toLowerCase().contains(query),
-                voiceNote: (_, __, ___, ____, transcript) =>
-                    transcript?.toLowerCase().contains(query) ?? false,
-              );
-            });
-            return matchesTitle ||
-                matchesDistrict ||
-                matchesDivision ||
-                matchesBlocks;
-          }).toList();
+          final query = _searchQuery.trim().toLowerCase();
+          final filteredLogs = state.logs
+              .where((log) =>
+                  !log.isArchived &&
+                  (query.isEmpty || _searchTextFor(log).contains(query)))
+              .toList();
+
+          final footer = SliverToBoxAdapter(
+            child: _buildPagingFooter(
+              isLoading: state.isLoadingMore,
+              hasMore: state.hasMore,
+              onLoadMore: _feedCubit.loadMore,
+              label: query.isEmpty ? 'Load more' : 'Search older posts',
+            ),
+          );
 
           if (filteredLogs.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(40),
-                child: Text(
-                  'No matching trip logs found.',
-                  style: TextStyle(color: Color(0xFFAEABA4), fontSize: 14),
-                  textAlign: TextAlign.center,
+            return SliverMainAxisGroup(slivers: [
+              const SliverToBoxAdapter(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(40),
+                    child: Text(
+                      'No matching trip logs found.',
+                      style: TextStyle(color: Color(0xFFAEABA4), fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
               ),
-            );
+              footer,
+            ]);
           }
 
-          return ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: filteredLogs.length,
-            itemBuilder: (context, index) {
-              final log = filteredLogs[index];
-              return _buildFacebookStyleTripLogCard(log);
-            },
-          );
+          return SliverMainAxisGroup(slivers: [
+            _buildTripLogSliverList(filteredLogs),
+            footer,
+          ]);
         }
 
-        return const SizedBox.shrink();
+        return const SliverToBoxAdapter(child: SizedBox.shrink());
       },
     );
   }
 
   // Fetch author profile with in-memory caching to avoid repeated Firestore calls
-  Future<Map<String, String>> _fetchAuthorProfile(String authorId) async {
+  /// One shared future per author: repeated builds and many posts by the
+  /// same author all wait on a single Firestore read.
+  Future<Map<String, String>> _fetchAuthorProfile(String authorId) =>
+      _profileFutures.putIfAbsent(authorId, () => _loadAuthorProfile(authorId));
+
+  Future<Map<String, String>> _loadAuthorProfile(String authorId) async {
     if (_profileCache.containsKey(authorId)) {
       return _profileCache[authorId]!;
     }
@@ -1466,10 +1593,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
         radius: 18,
         backgroundColor: const Color(0xFF40916C),
         backgroundImage: avatarUrl.isNotEmpty
-            ? CachedNetworkImageProvider(
-                avatarUrl,
-                errorListener: (dynamic error) {},
-              )
+            ? sizedImage(
+                CachedNetworkImageProvider(
+                  avatarUrl,
+                  errorListener: (dynamic error) {},
+                ),
+                context.decodeWidth(36))
             : null,
         child: avatarUrl.isEmpty
             ? Text(
@@ -1511,7 +1640,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     );
   }
 
-  Future<String?> _fetchMyReaction(String tripId) async {
+  Future<String?> _fetchMyReaction(String tripId) =>
+      _myReactionFutures.putIfAbsent(tripId, () => _loadMyReaction(tripId));
+
+  Future<String?> _loadMyReaction(String tripId) async {
     if (_myReactionsCache.containsKey(tripId)) {
       return _myReactionsCache[tripId];
     }
@@ -1906,9 +2038,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
 
   // --- 5. SYNC BAR (dynamic – displays actual pending outbox sync count) ---
   Widget _buildSyncBar() {
-    final encryptionService = getIt<HiveEncryptionService>();
     return FutureBuilder<Box<dynamic>>(
-      future: encryptionService.openEncryptedBox<dynamic>('sync_outbox'),
+      future: _syncOutboxBox,
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const SizedBox.shrink();
         final box = snapshot.data!;
@@ -2191,10 +2322,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                 radius: 11,
                 backgroundColor: fallbackColor,
                 backgroundImage: avatarUrl.isNotEmpty
-                    ? CachedNetworkImageProvider(
-                        avatarUrl,
-                        errorListener: (dynamic error) {},
-                      )
+                    ? sizedImage(
+                        CachedNetworkImageProvider(
+                          avatarUrl,
+                          errorListener: (dynamic error) {},
+                        ),
+                        context.decodeWidth(22))
                     : null,
                 child: avatarUrl.isEmpty
                     ? Text(
@@ -2502,10 +2635,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                     Row(
                       children: [
                         StreamBuilder<DocumentSnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('likes')
-                              .doc(docId)
-                              .snapshots(),
+                          stream: _likeStreams.putIfAbsent(
+                              docId,
+                              () => _shared(FirebaseFirestore.instance
+                                  .collection('likes')
+                                  .doc(docId))),
                           builder: (context, snapshot) {
                             final isLiked = snapshot.data?.exists ?? false;
                             return GestureDetector(
@@ -2602,10 +2736,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                         ),
                         const SizedBox(width: 8),
                         StreamBuilder<DocumentSnapshot>(
-                          stream: FirebaseFirestore.instance
-                              .collection('trip_logs')
-                              .doc(tripId)
-                              .snapshots(),
+                          stream: _logDocStreams.putIfAbsent(
+                              tripId,
+                              () => _shared(FirebaseFirestore.instance
+                                  .collection('trip_logs')
+                                  .doc(tripId))),
                           builder: (context, snapshot) {
                             final data =
                                 snapshot.data?.data() as Map<String, dynamic>?;
@@ -2655,6 +2790,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
   }
 
   void _showPersonalizeFeedBottomSheet(BuildContext context) {
+    // Opened once per sheet; setModalState rebuilds would otherwise restart
+    // the FutureBuilder (and flash its loading state) on every tap.
+    final prefsBoxFuture = getIt<HiveEncryptionService>()
+        .openEncryptedBox<dynamic>('user_preferences');
     showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -2663,10 +2802,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            final encryptionService = getIt<HiveEncryptionService>();
             return FutureBuilder<Box<dynamic>>(
-              future: encryptionService
-                  .openEncryptedBox<dynamic>('user_preferences'),
+              future: prefsBoxFuture,
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return Container(
@@ -3607,10 +3744,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                                     backgroundColor: Colors.transparent,
                                     backgroundImage: (exp.avatarUrl != null &&
                                             exp.avatarUrl!.isNotEmpty)
-                                        ? CachedNetworkImageProvider(
-                                            exp.avatarUrl!,
-                                            errorListener: (dynamic error) {},
-                                          )
+                                        ? sizedImage(
+                                            CachedNetworkImageProvider(
+                                              exp.avatarUrl!,
+                                              errorListener: (dynamic error) {},
+                                            ),
+                                            context.decodeWidth(40))
                                         : null,
                                     child: (exp.avatarUrl == null ||
                                             exp.avatarUrl!.isEmpty)
@@ -4581,20 +4720,28 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     );
   }
 
-  Widget _buildSavedTabContent() {
+  Widget _buildSavedTabSliver() {
     return BlocBuilder<FeedCubit, FeedState>(
       bloc: _feedCubit,
       builder: (context, state) {
-        final List<TripLog> allLogs = state is FeedLoaded
-            ? state.logs.where((log) => !log.isArchived).toList()
-            : [];
-        final savedLogsList =
-            allLogs.where((log) => _savedLogs.contains(log.tripId)).toList();
+        final byId = <String, TripLog>{
+          if (state is FeedLoaded)
+            for (final log in [
+              ...state.savedLogs,
+              ...state.archivedLogs,
+              ...state.logs,
+            ])
+              log.tripId: log,
+        };
+        // Most recently saved first.
+        final savedLogsList = [
+          for (final id in _savedLogs.toList().reversed)
+            if (byId[id] != null) byId[id]!,
+        ];
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Padding(
+        return SliverMainAxisGroup(slivers: [
+          const SliverToBoxAdapter(
+            child: Padding(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 'SAVED EXPLORATION DATA',
@@ -4606,8 +4753,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                 ),
               ),
             ),
-            if (savedLogsList.isEmpty) ...[
-              Padding(
+          ),
+          if (savedLogsList.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Container(
                   padding: const EdgeInsets.all(20),
@@ -4642,20 +4791,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                   ),
                 ),
               ),
-            ] else ...[
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: savedLogsList.length,
-                itemBuilder: (context, index) {
-                  final log = savedLogsList[index];
-                  return _buildFacebookStyleTripLogCard(log);
-                },
-              ),
-            ],
-            const SizedBox(height: 24),
-            Padding(
+            )
+          else
+            _buildTripLogSliverList(savedLogsList),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          SliverToBoxAdapter(
+            child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Container(
                 padding: const EdgeInsets.all(16),
@@ -4696,24 +4837,32 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                 ),
               ),
             ),
-          ],
-        );
+          ),
+        ]);
       },
     );
   }
 
-  Widget _buildArchiveTabContent() {
+  Widget _buildArchiveTabSliver() {
     return BlocBuilder<FeedCubit, FeedState>(
       bloc: _feedCubit,
       builder: (context, state) {
-        final List<TripLog> archivedLogs = state is FeedLoaded
-            ? state.logs.where((log) => log.isArchived).toList()
-            : [];
+        final loaded = state is FeedLoaded ? state : null;
+        // Old logs still in the live collection, then the archive collection.
+        final seen = <String>{};
+        final archivedLogs = [
+          if (loaded != null)
+            for (final log in [
+              ...loaded.logs.where((log) => log.isArchived),
+              ...loaded.archivedLogs,
+            ])
+              if (seen.add(log.tripId)) log,
+        ];
+        final isLoading = loaded?.isLoadingArchived ?? false;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Padding(
+        return SliverMainAxisGroup(slivers: [
+          const SliverToBoxAdapter(
+            child: Padding(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 'ARCHIVED TRIP LOGS',
@@ -4725,8 +4874,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                 ),
               ),
             ),
-            if (archivedLogs.isEmpty) ...[
-              Padding(
+          ),
+          if (archivedLogs.isEmpty && !isLoading)
+            SliverToBoxAdapter(
+              child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Container(
                   padding: const EdgeInsets.all(20),
@@ -4761,20 +4912,17 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                   ),
                 ),
               ),
-            ] else ...[
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: archivedLogs.length,
-                itemBuilder: (context, index) {
-                  final log = archivedLogs[index];
-                  return _buildFacebookStyleTripLogCard(log);
-                },
-              ),
-            ],
-          ],
-        );
+            )
+          else
+            _buildTripLogSliverList(archivedLogs),
+          SliverToBoxAdapter(
+            child: _buildPagingFooter(
+              isLoading: isLoading,
+              hasMore: loaded?.archivedHasMore ?? false,
+              onLoadMore: () => _feedCubit.loadArchived(more: true),
+            ),
+          ),
+        ]);
       },
     );
   }
@@ -5001,6 +5149,14 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     final uid =
         authState is Authenticated ? authState.profile.uid : 'explorer_user';
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
+    // Newest 50 only, created once for the sheet's lifetime.
+    final notificationsStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .limit(50)
+        .snapshots();
 
     showModalBottomSheet<void>(
       context: context,
@@ -5043,12 +5199,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
               const SizedBox(height: 16),
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(uid)
-                      .collection('notifications')
-                      .orderBy('timestamp', descending: true)
-                      .snapshots(),
+                  stream: notificationsStream,
                   builder: (context, snapshot) {
                     final docs = snapshot.data?.docs ?? [];
                     if (docs.isEmpty) {

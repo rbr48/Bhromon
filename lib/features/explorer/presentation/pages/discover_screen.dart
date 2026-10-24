@@ -8,8 +8,11 @@ import 'package:bhromon/core/entities/location_pin.dart';
 import 'package:bhromon/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:bhromon/features/auth/presentation/cubit/auth_state.dart';
 import 'package:bhromon/features/map/presentation/widgets/pin_detail_sheet.dart';
+import '../../../../app/di/injection.dart';
 import '../../../../core/services/discovery_score_service.dart';
+import '../../../map/domain/usecases/get_nearby_pins_usecase.dart';
 import '../../../../core/value_objects/trust_tier.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
@@ -38,24 +41,26 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     super.dispose();
   }
 
+  Future<List<LocationPin>> _fetchAllPins() async {
+    // Shares the map's pin cache, so opening Discover after the map (or the
+    // other way round) costs no extra Firestore reads.
+    final result = await getIt<GetNearbyPinsUseCase>()(
+        GetNearbyPinsParams(lat: 23.6850, lng: 90.3563, radiusKm: 500));
+    return result.getOrElse(() => const []);
+  }
+
   Future<void> _loadPins() async {
     try {
-      final query =
-          await FirebaseFirestore.instance.collection('location_pins').get();
+      final fetched = await _fetchAllPins();
 
-      if (query.docs.isNotEmpty) {
-        final allPins = query.docs.map((doc) {
-          final data = doc.data();
-          data['pinId'] = doc.id;
-          return LocationPin.fromJson(data);
-        }).toList();
-
-        // Sort by computed Discovery Score descending (Hidden Gems first!)
-        allPins.sort((a, b) {
-          final scoreA = DiscoveryScoreService.compute(a);
-          final scoreB = DiscoveryScoreService.compute(b);
-          return scoreB.compareTo(scoreA);
-        });
+      if (fetched.isNotEmpty) {
+        // Sort by Discovery Score descending (Hidden Gems first!), scoring
+        // each pin once rather than twice per comparison.
+        final scored = [
+          for (final pin in fetched)
+            (pin: pin, score: DiscoveryScoreService.compute(pin)),
+        ]..sort((a, b) => b.score.compareTo(a.score));
+        final allPins = [for (final entry in scored) entry.pin];
 
         _pins = allPins;
       } else {
@@ -131,19 +136,32 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           .collection('wishlist')
           .get();
 
-      final list = <LocationPin>[];
-      for (final doc in query.docs) {
-        final pinId = doc.id;
+      // Resolve wishlist ids from the shared pin set; fetch any stragglers
+      // in parallel instead of one round trip per pin.
+      final byId = {for (final pin in await _fetchAllPins()) pin.pinId: pin};
+      final missing =
+          query.docs.map((d) => d.id).where((id) => !byId.containsKey(id));
+      final fetched = await Future.wait(missing.map((pinId) async {
         final pinDoc = await FirebaseFirestore.instance
             .collection('location_pins')
             .doc(pinId)
             .get();
-        if (pinDoc.exists) {
-          final data = pinDoc.data()!;
-          data['pinId'] = pinDoc.id;
-          list.add(LocationPin.fromJson(data));
+        if (!pinDoc.exists) return null;
+        final data = pinDoc.data()!;
+        data['pinId'] = pinDoc.id;
+        if (data['lastConfirmed'] is Timestamp) {
+          data['lastConfirmed'] =
+              (data['lastConfirmed'] as Timestamp).toDate().toIso8601String();
         }
+        return LocationPin.fromJson(data);
+      }));
+      for (final pin in fetched) {
+        if (pin != null) byId[pin.pinId] = pin;
       }
+      final list = [
+        for (final doc in query.docs)
+          if (byId[doc.id] != null) byId[doc.id]!,
+      ];
 
       if (mounted) {
         setState(() {
@@ -364,6 +382,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             if (hasImg)
               Image.network(
                 pin.imageUrl!,
+                cacheWidth: context.decodeWidth(),
                 width: double.infinity,
                 height: double.infinity,
                 fit: BoxFit.cover,

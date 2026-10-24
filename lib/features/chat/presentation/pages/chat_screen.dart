@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../../core/utils/shared_latest_stream.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -14,6 +15,7 @@ import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../widgets/chat_media_picker.dart';
 import '../widgets/chat_media_bubble.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -57,6 +59,31 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _hasMoreMessages = true; // false once all pages loaded
   bool _isLoadingMore = false; // prevents duplicate fetches
   final List<QueryDocumentSnapshot> _allMessages = [];
+
+  // The header (online/typing) and the typing overlay both watch the chat
+  // document: one shared listener, created once instead of in build().
+  late final Stream<DocumentSnapshot> _chatDocStream =
+      SharedLatestStream<DocumentSnapshot>(FirebaseFirestore.instance
+              .collection('chats')
+              .doc(widget.chatId)
+              .snapshots())
+          .stream;
+
+  String? _otherProfileUid;
+  Stream<DocumentSnapshot>? _otherProfileSnapshots;
+
+  /// The other participant's profile stream, rebuilt only if they change.
+  Stream<DocumentSnapshot> _otherProfileStream(String uid) {
+    if (_otherProfileUid != uid || _otherProfileSnapshots == null) {
+      _otherProfileUid = uid;
+      _otherProfileSnapshots = FirebaseFirestore.instance
+          .collection('explorer_profiles')
+          .doc(uid)
+          .snapshots();
+    }
+    return _otherProfileSnapshots!;
+  }
+
   StreamSubscription<QuerySnapshot>? _messagesSub;
 
   @override
@@ -707,10 +734,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final resolvedOtherUid = _resolveOtherUid(currentUid) ?? 'guest';
 
     // ── Stream: Retrieve profile of the other explorer ──
-    final profileStream = FirebaseFirestore.instance
-        .collection('explorer_profiles')
-        .doc(resolvedOtherUid)
-        .snapshots();
+    final profileStream = _otherProfileStream(resolvedOtherUid);
 
     return StreamBuilder<DocumentSnapshot>(
       stream: profileStream,
@@ -749,7 +773,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   radius: 18,
                   backgroundColor: const Color(0xFF005C4B),
                   backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-                      ? NetworkImage(avatarUrl)
+                      ? sizedImage(
+                          NetworkImage(avatarUrl), context.decodeWidth(36))
                       : null,
                   child: (avatarUrl == null || avatarUrl.isEmpty)
                       ? Text(initials,
@@ -777,10 +802,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(height: 2),
                 // Typing / Online status stream
                 StreamBuilder<DocumentSnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('chats')
-                      .doc(widget.chatId)
-                      .snapshots(),
+                  stream: _chatDocStream,
                   builder: (context, chatSnap) {
                     final data = chatSnap.data?.data() as Map<String, dynamic>?;
                     final bool isOtherTyping =
@@ -1114,10 +1136,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
                 // Typing indicator message overlay
                 StreamBuilder<DocumentSnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('chats')
-                      .doc(widget.chatId)
-                      .snapshots(),
+                  stream: _chatDocStream,
                   builder: (context, chatSnap) {
                     final data = chatSnap.data?.data() as Map<String, dynamic>?;
                     final bool isOtherTyping =

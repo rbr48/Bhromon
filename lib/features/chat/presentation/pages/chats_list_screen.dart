@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'dart:math' as math;
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
@@ -17,11 +19,32 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   String _activeTab = 'All'; // 'All' | 'Unread'
   String _searchQuery = '';
 
+  // Built once per signed-in user, so typing in search or switching tabs
+  // doesn't tear down and re-attach both Firestore listeners.
+  String? _streamsUid;
+  late Stream<QuerySnapshot> _blockedStream;
+  late Stream<QuerySnapshot> _chatsStream;
+
+  void _ensureStreams(String uid) {
+    if (_streamsUid == uid) return;
+    _streamsUid = uid;
+    _blockedStream = FirebaseFirestore.instance
+        .collection('explorer_profiles')
+        .doc(uid)
+        .collection('blocked_users')
+        .snapshots();
+    _chatsStream = FirebaseFirestore.instance
+        .collection('chats')
+        .where('participants', arrayContains: uid)
+        .snapshots();
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
     final currentUid =
         authState is Authenticated ? authState.profile.uid : 'explorer_user';
+    _ensureStreams(currentUid);
 
     return PopScope(
       canPop: false,
@@ -112,21 +135,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             // Conversations List
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('explorer_profiles')
-                    .doc(currentUid)
-                    .collection('blocked_users')
-                    .snapshots(),
+                stream: _blockedStream,
                 builder: (context, blockSnapshot) {
                   final blockedUids = blockSnapshot.hasData
                       ? blockSnapshot.data!.docs.map((d) => d.id).toSet()
                       : <String>{};
 
                   return StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('chats')
-                        .where('participants', arrayContains: currentUid)
-                        .snapshots(),
+                    stream: _chatsStream,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(
@@ -281,7 +297,36 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     );
   }
 
+  /// How many travelers the picker loads before any search.
+  static const int _kTravelerPickerLimit = 100;
+
+  /// Name-prefix lookups so travelers outside the first page can be found.
+  static Future<List<QueryDocumentSnapshot>> _searchTravelersByName(
+      String raw) async {
+    final variants = {
+      raw,
+      raw[0].toUpperCase() + raw.substring(1),
+    };
+    final profiles = FirebaseFirestore.instance.collection('explorer_profiles');
+    final snaps = await Future.wait(variants.map((prefix) => profiles
+        .where('displayName', isGreaterThanOrEqualTo: prefix)
+        .where('displayName', isLessThan: '$prefix\uf8ff')
+        .limit(20)
+        .get()));
+    return [for (final snap in snaps) ...snap.docs];
+  }
+
   void _showSelectTravelerSheet(BuildContext context, String currentUid) {
+    // One bounded read when the sheet opens. This used to be a live listener
+    // on every profile in the app, re-subscribed on each keystroke.
+    final Future<List<QueryDocumentSnapshot>> baseDocs = FirebaseFirestore
+        .instance
+        .collection('explorer_profiles')
+        .orderBy('explorerScore.value', descending: true)
+        .limit(_kTravelerPickerLimit)
+        .get()
+        .then((snap) => snap.docs);
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -289,6 +334,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         String sheetSearch = '';
+        Future<List<QueryDocumentSnapshot>> docsFuture = baseDocs;
+        Timer? searchDebounce;
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             return Container(
@@ -344,23 +391,43 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           setSheetState(() {
                             sheetSearch = val.trim().toLowerCase();
                           });
+                          // Ask the server only once typing pauses.
+                          searchDebounce?.cancel();
+                          final raw = val.trim();
+                          searchDebounce =
+                              Timer(const Duration(milliseconds: 350), () {
+                            if (!ctx.mounted) return;
+                            setSheetState(() {
+                              docsFuture = raw.length < 2
+                                  ? baseDocs
+                                  : Future.wait([
+                                      baseDocs,
+                                      _searchTravelersByName(raw),
+                                    ]).then((lists) {
+                                      final seen = <String>{};
+                                      return [
+                                        for (final doc
+                                            in lists.expand((l) => l))
+                                          if (seen.add(doc.id)) doc,
+                                      ];
+                                    });
+                            });
+                          });
                         },
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Expanded(
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('explorer_profiles')
-                          .snapshots(),
+                    child: FutureBuilder<List<QueryDocumentSnapshot>>(
+                      future: docsFuture,
                       builder: (context, snap) {
                         if (!snap.hasData) {
                           return const Center(
                               child: CircularProgressIndicator(
                                   color: Color(0xFF00A884)));
                         }
-                        final travelers = snap.data!.docs.where((doc) {
+                        final travelers = snap.data!.where((doc) {
                           if (doc.id == currentUid) return false;
                           final data = doc.data() as Map<String, dynamic>;
                           final name = (data['displayName'] as String? ?? '')
@@ -434,7 +501,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 radius: 20,
                                 backgroundColor: const Color(0xFF005C4B),
                                 backgroundImage: avatarUrl.isNotEmpty
-                                    ? NetworkImage(avatarUrl)
+                                    ? sizedImage(NetworkImage(avatarUrl),
+                                        context.decodeWidth(40))
                                     : null,
                                 child: avatarUrl.isEmpty
                                     ? Text(initials,
@@ -475,7 +543,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   }
 }
 
-class ChatTile extends StatelessWidget {
+class ChatTile extends StatefulWidget {
   final String chatId;
   final String otherUserUid;
   final String currentUid;
@@ -496,31 +564,67 @@ class ChatTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // ── Stream 1: Get latest message details directly from the sub-collection ──
-    final lastMsgStream = FirebaseFirestore.instance
+  State<ChatTile> createState() => _ChatTileState();
+}
+
+/// The unread badge shows "99+" past this, so the listener never needs more.
+const int _kUnreadCap = 100;
+
+class _ChatTileState extends State<ChatTile> {
+  String get chatId => widget.chatId;
+  String get otherUserUid => widget.otherUserUid;
+  String get currentUid => widget.currentUid;
+  String get lastMessageMeta => widget.lastMessageMeta;
+  Timestamp? get lastTimeMeta => widget.lastTimeMeta;
+  String get activeTabFilter => widget.activeTabFilter;
+  VoidCallback get onTap => widget.onTap;
+
+  // Listeners are created once per conversation. Building them in build()
+  // re-subscribed three Firestore listeners per tile on every list update.
+  late Stream<QuerySnapshot> lastMsgStream;
+  late Stream<QuerySnapshot> unreadStream;
+  late Stream<DocumentSnapshot> profileStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscribe();
+  }
+
+  @override
+  void didUpdateWidget(ChatTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.chatId != chatId || oldWidget.otherUserUid != otherUserUid) {
+      _subscribe();
+    }
+  }
+
+  void _subscribe() {
+    final messages = FirebaseFirestore.instance
         .collection('chats')
         .doc(chatId)
-        .collection('messages')
-        .orderBy('timestamp', descending: true)
-        .limit(1)
-        .snapshots();
+        .collection('messages');
+
+    // ── Stream 1: Get latest message details directly from the sub-collection ──
+    lastMsgStream =
+        messages.orderBy('timestamp', descending: true).limit(1).snapshots();
 
     // ── Stream 2: Count unread messages from this other user ──
-    final unreadStream = FirebaseFirestore.instance
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
+    unreadStream = messages
         .where('senderId', isEqualTo: otherUserUid)
         .where('seen', isEqualTo: false)
+        .limit(_kUnreadCap)
         .snapshots();
 
     // ── Stream 3: Retrieve profile of the other explorer ──
-    final profileStream = FirebaseFirestore.instance
+    profileStream = FirebaseFirestore.instance
         .collection('explorer_profiles')
         .doc(otherUserUid)
         .snapshots();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
       stream: profileStream,
       builder: (context, profileSnap) {
@@ -580,7 +684,8 @@ class ChatTile extends StatelessWidget {
                     radius: 24,
                     backgroundColor: const Color(0xFF005C4B),
                     backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-                        ? NetworkImage(avatarUrl)
+                        ? sizedImage(
+                            NetworkImage(avatarUrl), context.decodeWidth(48))
                         : null,
                     child: (avatarUrl == null || avatarUrl.isEmpty)
                         ? Text(initials,
@@ -651,7 +756,7 @@ class ChatTile extends StatelessWidget {
                             shape: BoxShape.circle,
                           ),
                           child: Text(
-                            '$unreadCount',
+                            unreadCount >= _kUnreadCap ? '99+' : '$unreadCount',
                             style: const TextStyle(
                                 color: Colors.black,
                                 fontSize: 9,

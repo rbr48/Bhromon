@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../pages/full_screen_media_viewer.dart';
+import '../../../../core/utils/image_sizing.dart';
 
 /// Renders an image or video message bubble inside the chat.
 ///
@@ -77,7 +78,8 @@ class ChatMediaBubble extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             // ── Media content ──────────────────────────────────────────────
-            _buildMediaContent(isUploading),
+            _buildMediaContent(isUploading,
+                context.decodeWidth(MediaQuery.of(context).size.width * 0.65)),
 
             // ── Upload progress overlay ────────────────────────────────────
             if (isUploading) _buildProgressOverlay(),
@@ -104,11 +106,12 @@ class ChatMediaBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildMediaContent(bool isUploading) {
+  Widget _buildMediaContent(bool isUploading, int decodeWidth) {
     // While uploading, show local file preview
     if (isUploading && localFile != null) {
       return Image.file(
         localFile!,
+        cacheWidth: decodeWidth,
         width: double.infinity,
         height: 200,
         fit: BoxFit.cover,
@@ -132,6 +135,7 @@ class ChatMediaBubble extends StatelessWidget {
             ? thumbnailUrl!
             : mediaUrl!;
         return CachedNetworkImage(
+          memCacheWidth: decodeWidth,
           imageUrl: displayUrl,
           width: double.infinity,
           height: 200,

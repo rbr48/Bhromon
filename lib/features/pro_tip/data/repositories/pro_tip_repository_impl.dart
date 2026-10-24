@@ -1,30 +1,38 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/entities/pro_tip.dart';
 import '../../../../core/entities/outbox_entry.dart';
+import '../../../../core/network/connectivity_check.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../../../../core/utils/xp_utils.dart';
 import '../../../offline_vault/data/datasources/sync_manager.dart';
 import '../../domain/repositories/i_pro_tip_repository.dart';
+
+/// Used when a caller asks for the latest tips without a limit.
+const int kDefaultLatestTips = 50;
 
 @LazySingleton(as: IProTipRepository)
 class ProTipRepositoryImpl implements IProTipRepository {
   final FirebaseFirestore _firestore;
   final HiveEncryptionService _encryptionService;
   final SyncManager _syncManager;
+  final OnlineCheck _isOnline;
 
   ProTipRepositoryImpl(
-      this._firestore, this._encryptionService, this._syncManager);
+      this._firestore, this._encryptionService, this._syncManager)
+      : _isOnline = deviceIsOnline;
+
+  @visibleForTesting
+  ProTipRepositoryImpl.withOnlineCheck(this._firestore, this._encryptionService,
+      this._syncManager, this._isOnline);
 
   @override
   Future<Either<Failure, List<ProTip>>> getTipsForPin(String pinId) async {
     try {
-      final connectivity = await Connectivity().checkConnectivity();
-      if (connectivity.isNotEmpty &&
-          connectivity.first == ConnectivityResult.none) {
+      if (!await _isOnline()) {
         return _getCachedTipsForPin(pinId);
       }
 
@@ -75,9 +83,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
   Future<Either<Failure, ProTip>> voteTip(
       String tipId, int voteIncrement) async {
     try {
-      final connectivity = await Connectivity().checkConnectivity();
-      final isOffline = connectivity.isNotEmpty &&
-          connectivity.first == ConnectivityResult.none;
+      final isOffline = !await _isOnline();
 
       if (isOffline) {
         final cachedTip = await _getCachedTipById(tipId);
@@ -170,9 +176,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
   @override
   Future<Either<Failure, ProTip>> addTip(ProTip tip) async {
     try {
-      final connectivity = await Connectivity().checkConnectivity();
-      final isOffline = connectivity.isNotEmpty &&
-          connectivity.first == ConnectivityResult.none;
+      final isOffline = !await _isOnline();
 
       final json = tip.toJson();
 
@@ -224,27 +228,23 @@ class ProTipRepositoryImpl implements IProTipRepository {
   @override
   Future<Either<Failure, List<ProTip>>> getLatestTips({int? limit}) async {
     try {
-      final connectivity = await Connectivity().checkConnectivity();
-      if (connectivity.isNotEmpty &&
-          connectivity.first == ConnectivityResult.none) {
+      if (!await _isOnline()) {
         return _getCachedLatestTips(limit: limit);
       }
 
-      final snapshot = await _firestore.collection('pro_tips').get();
+      // Sort and cut on the server instead of downloading every tip.
+      final snapshot = await _firestore
+          .collection('pro_tips')
+          .orderBy('helpfulVotes', descending: true)
+          .limit(limit ?? kDefaultLatestTips)
+          .get();
 
-      var tips = snapshot.docs.map((doc) {
+      final tips = snapshot.docs.map((doc) {
         final data = doc.data();
         data['tipId'] = doc.id;
         _fixTimestamp(data);
         return ProTip.fromJson(data);
       }).toList();
-
-      // Sort locally by helpfulVotes descending
-      tips.sort((a, b) => b.helpfulVotes.compareTo(a.helpfulVotes));
-
-      if (limit != null && tips.length > limit) {
-        tips = tips.sublist(0, limit);
-      }
 
       return Right(tips);
     } catch (e) {

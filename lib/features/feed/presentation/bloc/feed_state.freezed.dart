@@ -20,8 +20,17 @@ mixin _$FeedState {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)
+    required TResult Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)
         loaded,
     required TResult Function(String message) error,
   }) =>
@@ -30,8 +39,17 @@ mixin _$FeedState {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)?
+    TResult? Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)?
         loaded,
     TResult? Function(String message)? error,
   }) =>
@@ -40,8 +58,17 @@ mixin _$FeedState {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)?
+    TResult Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)?
         loaded,
     TResult Function(String message)? error,
     required TResult orElse(),
@@ -131,8 +158,17 @@ class _$FeedInitialImpl implements FeedInitial {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)
+    required TResult Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)
         loaded,
     required TResult Function(String message) error,
   }) {
@@ -144,8 +180,17 @@ class _$FeedInitialImpl implements FeedInitial {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)?
+    TResult? Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)?
         loaded,
     TResult? Function(String message)? error,
   }) {
@@ -157,8 +202,17 @@ class _$FeedInitialImpl implements FeedInitial {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)?
+    TResult Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)?
         loaded,
     TResult Function(String message)? error,
     required TResult orElse(),
@@ -251,8 +305,17 @@ class _$FeedLoadingImpl implements FeedLoading {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)
+    required TResult Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)
         loaded,
     required TResult Function(String message) error,
   }) {
@@ -264,8 +327,17 @@ class _$FeedLoadingImpl implements FeedLoading {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)?
+    TResult? Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)?
         loaded,
     TResult? Function(String message)? error,
   }) {
@@ -277,8 +349,17 @@ class _$FeedLoadingImpl implements FeedLoading {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)?
+    TResult Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)?
         loaded,
     TResult Function(String message)? error,
     required TResult orElse(),
@@ -338,7 +419,16 @@ abstract class _$$FeedLoadedImplCopyWith<$Res> {
       __$$FeedLoadedImplCopyWithImpl<$Res>;
   @useResult
   $Res call(
-      {List<TripLog> logs, List<ProTip> tips, List<ExplorerProfile> explorers});
+      {List<TripLog> logs,
+      List<ProTip> tips,
+      List<ExplorerProfile> explorers,
+      bool hasMore,
+      bool isLoadingMore,
+      List<TripLog> archivedLogs,
+      bool archivedLoaded,
+      bool archivedHasMore,
+      bool isLoadingArchived,
+      List<TripLog> savedLogs});
 }
 
 /// @nodoc
@@ -355,6 +445,13 @@ class __$$FeedLoadedImplCopyWithImpl<$Res>
     Object? logs = null,
     Object? tips = null,
     Object? explorers = null,
+    Object? hasMore = null,
+    Object? isLoadingMore = null,
+    Object? archivedLogs = null,
+    Object? archivedLoaded = null,
+    Object? archivedHasMore = null,
+    Object? isLoadingArchived = null,
+    Object? savedLogs = null,
   }) {
     return _then(_$FeedLoadedImpl(
       logs: null == logs
@@ -369,6 +466,34 @@ class __$$FeedLoadedImplCopyWithImpl<$Res>
           ? _value._explorers
           : explorers // ignore: cast_nullable_to_non_nullable
               as List<ExplorerProfile>,
+      hasMore: null == hasMore
+          ? _value.hasMore
+          : hasMore // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isLoadingMore: null == isLoadingMore
+          ? _value.isLoadingMore
+          : isLoadingMore // ignore: cast_nullable_to_non_nullable
+              as bool,
+      archivedLogs: null == archivedLogs
+          ? _value._archivedLogs
+          : archivedLogs // ignore: cast_nullable_to_non_nullable
+              as List<TripLog>,
+      archivedLoaded: null == archivedLoaded
+          ? _value.archivedLoaded
+          : archivedLoaded // ignore: cast_nullable_to_non_nullable
+              as bool,
+      archivedHasMore: null == archivedHasMore
+          ? _value.archivedHasMore
+          : archivedHasMore // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isLoadingArchived: null == isLoadingArchived
+          ? _value.isLoadingArchived
+          : isLoadingArchived // ignore: cast_nullable_to_non_nullable
+              as bool,
+      savedLogs: null == savedLogs
+          ? _value._savedLogs
+          : savedLogs // ignore: cast_nullable_to_non_nullable
+              as List<TripLog>,
     ));
   }
 }
@@ -379,10 +504,19 @@ class _$FeedLoadedImpl implements FeedLoaded {
   const _$FeedLoadedImpl(
       {required final List<TripLog> logs,
       required final List<ProTip> tips,
-      required final List<ExplorerProfile> explorers})
+      required final List<ExplorerProfile> explorers,
+      this.hasMore = false,
+      this.isLoadingMore = false,
+      final List<TripLog> archivedLogs = const <TripLog>[],
+      this.archivedLoaded = false,
+      this.archivedHasMore = false,
+      this.isLoadingArchived = false,
+      final List<TripLog> savedLogs = const <TripLog>[]})
       : _logs = logs,
         _tips = tips,
-        _explorers = explorers;
+        _explorers = explorers,
+        _archivedLogs = archivedLogs,
+        _savedLogs = savedLogs;
 
   final List<TripLog> _logs;
   @override
@@ -408,9 +542,51 @@ class _$FeedLoadedImpl implements FeedLoaded {
     return EqualUnmodifiableListView(_explorers);
   }
 
+  /// More live logs can be fetched with `loadMore`.
+  @override
+  @JsonKey()
+  final bool hasMore;
+  @override
+  @JsonKey()
+  final bool isLoadingMore;
+
+  /// Logs from the archive collection, fetched when the Archive tab opens.
+  final List<TripLog> _archivedLogs;
+
+  /// Logs from the archive collection, fetched when the Archive tab opens.
+  @override
+  @JsonKey()
+  List<TripLog> get archivedLogs {
+    if (_archivedLogs is EqualUnmodifiableListView) return _archivedLogs;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_archivedLogs);
+  }
+
+  @override
+  @JsonKey()
+  final bool archivedLoaded;
+  @override
+  @JsonKey()
+  final bool archivedHasMore;
+  @override
+  @JsonKey()
+  final bool isLoadingArchived;
+
+  /// Saved logs in the order they were saved, fetched for the Saved tab.
+  final List<TripLog> _savedLogs;
+
+  /// Saved logs in the order they were saved, fetched for the Saved tab.
+  @override
+  @JsonKey()
+  List<TripLog> get savedLogs {
+    if (_savedLogs is EqualUnmodifiableListView) return _savedLogs;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_savedLogs);
+  }
+
   @override
   String toString() {
-    return 'FeedState.loaded(logs: $logs, tips: $tips, explorers: $explorers)';
+    return 'FeedState.loaded(logs: $logs, tips: $tips, explorers: $explorers, hasMore: $hasMore, isLoadingMore: $isLoadingMore, archivedLogs: $archivedLogs, archivedLoaded: $archivedLoaded, archivedHasMore: $archivedHasMore, isLoadingArchived: $isLoadingArchived, savedLogs: $savedLogs)';
   }
 
   @override
@@ -421,7 +597,20 @@ class _$FeedLoadedImpl implements FeedLoaded {
             const DeepCollectionEquality().equals(other._logs, _logs) &&
             const DeepCollectionEquality().equals(other._tips, _tips) &&
             const DeepCollectionEquality()
-                .equals(other._explorers, _explorers));
+                .equals(other._explorers, _explorers) &&
+            (identical(other.hasMore, hasMore) || other.hasMore == hasMore) &&
+            (identical(other.isLoadingMore, isLoadingMore) ||
+                other.isLoadingMore == isLoadingMore) &&
+            const DeepCollectionEquality()
+                .equals(other._archivedLogs, _archivedLogs) &&
+            (identical(other.archivedLoaded, archivedLoaded) ||
+                other.archivedLoaded == archivedLoaded) &&
+            (identical(other.archivedHasMore, archivedHasMore) ||
+                other.archivedHasMore == archivedHasMore) &&
+            (identical(other.isLoadingArchived, isLoadingArchived) ||
+                other.isLoadingArchived == isLoadingArchived) &&
+            const DeepCollectionEquality()
+                .equals(other._savedLogs, _savedLogs));
   }
 
   @override
@@ -429,7 +618,14 @@ class _$FeedLoadedImpl implements FeedLoaded {
       runtimeType,
       const DeepCollectionEquality().hash(_logs),
       const DeepCollectionEquality().hash(_tips),
-      const DeepCollectionEquality().hash(_explorers));
+      const DeepCollectionEquality().hash(_explorers),
+      hasMore,
+      isLoadingMore,
+      const DeepCollectionEquality().hash(_archivedLogs),
+      archivedLoaded,
+      archivedHasMore,
+      isLoadingArchived,
+      const DeepCollectionEquality().hash(_savedLogs));
 
   @JsonKey(ignore: true)
   @override
@@ -442,12 +638,22 @@ class _$FeedLoadedImpl implements FeedLoaded {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)
+    required TResult Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)
         loaded,
     required TResult Function(String message) error,
   }) {
-    return loaded(logs, tips, explorers);
+    return loaded(logs, tips, explorers, hasMore, isLoadingMore, archivedLogs,
+        archivedLoaded, archivedHasMore, isLoadingArchived, savedLogs);
   }
 
   @override
@@ -455,12 +661,31 @@ class _$FeedLoadedImpl implements FeedLoaded {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)?
+    TResult? Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)?
         loaded,
     TResult? Function(String message)? error,
   }) {
-    return loaded?.call(logs, tips, explorers);
+    return loaded?.call(
+        logs,
+        tips,
+        explorers,
+        hasMore,
+        isLoadingMore,
+        archivedLogs,
+        archivedLoaded,
+        archivedHasMore,
+        isLoadingArchived,
+        savedLogs);
   }
 
   @override
@@ -468,14 +693,24 @@ class _$FeedLoadedImpl implements FeedLoaded {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)?
+    TResult Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)?
         loaded,
     TResult Function(String message)? error,
     required TResult orElse(),
   }) {
     if (loaded != null) {
-      return loaded(logs, tips, explorers);
+      return loaded(logs, tips, explorers, hasMore, isLoadingMore, archivedLogs,
+          archivedLoaded, archivedHasMore, isLoadingArchived, savedLogs);
     }
     return orElse();
   }
@@ -522,11 +757,31 @@ abstract class FeedLoaded implements FeedState {
   const factory FeedLoaded(
       {required final List<TripLog> logs,
       required final List<ProTip> tips,
-      required final List<ExplorerProfile> explorers}) = _$FeedLoadedImpl;
+      required final List<ExplorerProfile> explorers,
+      final bool hasMore,
+      final bool isLoadingMore,
+      final List<TripLog> archivedLogs,
+      final bool archivedLoaded,
+      final bool archivedHasMore,
+      final bool isLoadingArchived,
+      final List<TripLog> savedLogs}) = _$FeedLoadedImpl;
 
   List<TripLog> get logs;
   List<ProTip> get tips;
   List<ExplorerProfile> get explorers;
+
+  /// More live logs can be fetched with `loadMore`.
+  bool get hasMore;
+  bool get isLoadingMore;
+
+  /// Logs from the archive collection, fetched when the Archive tab opens.
+  List<TripLog> get archivedLogs;
+  bool get archivedLoaded;
+  bool get archivedHasMore;
+  bool get isLoadingArchived;
+
+  /// Saved logs in the order they were saved, fetched for the Saved tab.
+  List<TripLog> get savedLogs;
   @JsonKey(ignore: true)
   _$$FeedLoadedImplCopyWith<_$FeedLoadedImpl> get copyWith =>
       throw _privateConstructorUsedError;
@@ -598,8 +853,17 @@ class _$FeedErrorImpl implements FeedError {
   TResult when<TResult extends Object?>({
     required TResult Function() initial,
     required TResult Function() loading,
-    required TResult Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)
+    required TResult Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)
         loaded,
     required TResult Function(String message) error,
   }) {
@@ -611,8 +875,17 @@ class _$FeedErrorImpl implements FeedError {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function()? initial,
     TResult? Function()? loading,
-    TResult? Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)?
+    TResult? Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)?
         loaded,
     TResult? Function(String message)? error,
   }) {
@@ -624,8 +897,17 @@ class _$FeedErrorImpl implements FeedError {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function()? initial,
     TResult Function()? loading,
-    TResult Function(List<TripLog> logs, List<ProTip> tips,
-            List<ExplorerProfile> explorers)?
+    TResult Function(
+            List<TripLog> logs,
+            List<ProTip> tips,
+            List<ExplorerProfile> explorers,
+            bool hasMore,
+            bool isLoadingMore,
+            List<TripLog> archivedLogs,
+            bool archivedLoaded,
+            bool archivedHasMore,
+            bool isLoadingArchived,
+            List<TripLog> savedLogs)?
         loaded,
     TResult Function(String message)? error,
     required TResult orElse(),

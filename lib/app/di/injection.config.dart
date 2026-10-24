@@ -49,6 +49,8 @@ import '../../features/feed/data/repositories/feed_repository_impl.dart'
     as _i452;
 import '../../features/feed/domain/repositories/i_feed_repository.dart'
     as _i695;
+import '../../features/feed/domain/usecases/get_saved_trip_logs_usecase.dart'
+    as _i360;
 import '../../features/feed/domain/usecases/get_smart_feed_usecase.dart'
     as _i436;
 import '../../features/feed/presentation/bloc/feed_cubit.dart' as _i80;
@@ -184,12 +186,12 @@ extension GetItInjectableX on _i174.GetIt {
               gh<_i1061.HiveEncryptionService>(),
               gh<_i416.SyncManager>(),
             ));
-    gh.factory<_i402.GetTripLogsForPinUseCase>(
-        () => _i402.GetTripLogsForPinUseCase(gh<_i699.ITripLogRepository>()));
-    gh.factory<_i773.LoadDraftUseCase>(
-        () => _i773.LoadDraftUseCase(gh<_i699.ITripLogRepository>()));
     gh.factory<_i304.SaveDraftUseCase>(
         () => _i304.SaveDraftUseCase(gh<_i699.ITripLogRepository>()));
+    gh.factory<_i773.LoadDraftUseCase>(
+        () => _i773.LoadDraftUseCase(gh<_i699.ITripLogRepository>()));
+    gh.factory<_i402.GetTripLogsForPinUseCase>(
+        () => _i402.GetTripLogsForPinUseCase(gh<_i699.ITripLogRepository>()));
     gh.singleton<_i209.FcmService>(() => _i209.FcmService(
           gh<_i892.FirebaseMessaging>(),
           gh<_i974.FirebaseFirestore>(),
@@ -215,53 +217,55 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i842.TrustRepositoryImpl(gh<_i974.FirebaseFirestore>()));
     gh.lazySingleton<_i42.IGuideRepository>(
         () => _i307.GuideRepositoryImpl(gh<_i974.FirebaseFirestore>()));
+    gh.factory<_i503.VerifyOtpUseCase>(
+        () => _i503.VerifyOtpUseCase(gh<_i589.IAuthRepository>()));
     gh.factory<_i176.GetCurrentProfileUseCase>(
         () => _i176.GetCurrentProfileUseCase(gh<_i589.IAuthRepository>()));
-    gh.factory<_i336.SignInEmailUseCase>(
-        () => _i336.SignInEmailUseCase(gh<_i589.IAuthRepository>()));
-    gh.factory<_i138.SignInGoogleUseCase>(
-        () => _i138.SignInGoogleUseCase(gh<_i589.IAuthRepository>()));
     gh.factory<_i915.SignOutUseCase>(
         () => _i915.SignOutUseCase(gh<_i589.IAuthRepository>()));
     gh.factory<_i798.UpdateProfileUseCase>(
         () => _i798.UpdateProfileUseCase(gh<_i589.IAuthRepository>()));
-    gh.factory<_i503.VerifyOtpUseCase>(
-        () => _i503.VerifyOtpUseCase(gh<_i589.IAuthRepository>()));
+    gh.factory<_i336.SignInEmailUseCase>(
+        () => _i336.SignInEmailUseCase(gh<_i589.IAuthRepository>()));
+    gh.factory<_i138.SignInGoogleUseCase>(
+        () => _i138.SignInGoogleUseCase(gh<_i589.IAuthRepository>()));
     gh.lazySingleton<_i622.FeatureFlags>(
         () => _i622.FeatureFlags(gh<_i627.FirebaseRemoteConfig>()));
+    gh.factory<_i360.GetSavedTripLogsUseCase>(
+        () => _i360.GetSavedTripLogsUseCase(gh<_i695.IFeedRepository>()));
     gh.factory<_i438.CreatePremiumGuideUseCase>(
         () => _i438.CreatePremiumGuideUseCase(gh<_i42.IGuideRepository>()));
-    gh.factory<_i168.AppealFlagUseCase>(
-        () => _i168.AppealFlagUseCase(gh<_i1000.ITrustRepository>()));
     gh.factory<_i964.FlagContentUseCase>(
         () => _i964.FlagContentUseCase(gh<_i1000.ITrustRepository>()));
+    gh.factory<_i168.AppealFlagUseCase>(
+        () => _i168.AppealFlagUseCase(gh<_i1000.ITrustRepository>()));
     gh.factory<_i111.GetExplorerScoreUseCase>(
         () => _i111.GetExplorerScoreUseCase(gh<_i1000.ITrustRepository>()));
-    gh.factory<_i1057.DeleteVaultUseCase>(
-        () => _i1057.DeleteVaultUseCase(gh<_i988.IOfflineRepository>()));
     gh.factory<_i2.DownloadVaultUseCase>(
         () => _i2.DownloadVaultUseCase(gh<_i988.IOfflineRepository>()));
-    gh.factory<_i958.GetVaultStatusUseCase>(
-        () => _i958.GetVaultStatusUseCase(gh<_i988.IOfflineRepository>()));
+    gh.factory<_i1057.DeleteVaultUseCase>(
+        () => _i1057.DeleteVaultUseCase(gh<_i988.IOfflineRepository>()));
     gh.factory<_i936.SyncOutboxUseCase>(
         () => _i936.SyncOutboxUseCase(gh<_i988.IOfflineRepository>()));
-    gh.factory<_i843.ConfirmPinUseCase>(
-        () => _i843.ConfirmPinUseCase(gh<_i529.IMapRepository>()));
+    gh.factory<_i958.GetVaultStatusUseCase>(
+        () => _i958.GetVaultStatusUseCase(gh<_i988.IOfflineRepository>()));
     gh.factory<_i562.CreateDraftPinUseCase>(
         () => _i562.CreateDraftPinUseCase(gh<_i529.IMapRepository>()));
     gh.factory<_i1073.GetNearbyPinsUseCase>(
         () => _i1073.GetNearbyPinsUseCase(gh<_i529.IMapRepository>()));
+    gh.factory<_i843.ConfirmPinUseCase>(
+        () => _i843.ConfirmPinUseCase(gh<_i529.IMapRepository>()));
     gh.factory<_i437.MapBloc>(() => _i437.MapBloc(
           gh<_i1073.GetNearbyPinsUseCase>(),
           gh<_i562.CreateDraftPinUseCase>(),
           gh<_i843.ConfirmPinUseCase>(),
         ));
+    gh.factory<_i295.GetTipsForLocationUseCase>(
+        () => _i295.GetTipsForLocationUseCase(gh<_i1005.IProTipRepository>()));
     gh.factory<_i862.AddProTipUseCase>(
         () => _i862.AddProTipUseCase(gh<_i1005.IProTipRepository>()));
     gh.factory<_i242.GetLatestTipsUseCase>(
         () => _i242.GetLatestTipsUseCase(gh<_i1005.IProTipRepository>()));
-    gh.factory<_i295.GetTipsForLocationUseCase>(
-        () => _i295.GetTipsForLocationUseCase(gh<_i1005.IProTipRepository>()));
     gh.factory<_i303.VoteTipUseCase>(
         () => _i303.VoteTipUseCase(gh<_i1005.IProTipRepository>()));
     gh.factory<_i884.VaultCubit>(() => _i884.VaultCubit(
@@ -310,6 +314,7 @@ extension GetItInjectableX on _i174.GetIt {
           gh<_i436.GetSmartFeedUseCase>(),
           gh<_i242.GetLatestTipsUseCase>(),
           gh<_i146.GetTopExplorersUseCase>(),
+          gh<_i360.GetSavedTripLogsUseCase>(),
         ));
     return this;
   }

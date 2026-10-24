@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/concurrency.dart';
+import '../../../../core/utils/image_sizing.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:io';
@@ -23,6 +25,9 @@ import '../../../../core/widgets/voice_note_recorder_widget.dart';
 import '../../../../core/widgets/privacy_toggle.dart';
 import '../../../../core/value_objects/diary_visibility.dart';
 import '../../../../core/localization/app_localizations.dart';
+
+/// Photos uploaded in parallel when several are picked at once.
+const int _kConcurrentUploads = 3;
 
 class TripLogEditor extends StatefulWidget {
   final String pinId;
@@ -71,6 +76,10 @@ class _TripLogEditorState extends State<TripLogEditor> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<TripLogBloc, TripLogState>(
+      // Typing into the title or a block only changes text those fields
+      // already hold; rebuilding the whole editor per keystroke is wasted.
+      buildWhen: (previous, current) =>
+          !TripLogState.onlyTypedTextChanged(previous, current),
       listener: (context, state) {
         if (state.status == EditorStatus.success) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1200,7 +1209,13 @@ class _TripLogEditorState extends State<TripLogEditor> {
     if (_isUploading) return;
     try {
       final ImagePicker picker = ImagePicker();
-      final List<XFile> images = await picker.pickMultiImage(imageQuality: 80);
+      // Cap the long edge: phone originals (12 MP+) are far bigger than any
+      // screen shows, and every byte is uploaded and later decoded.
+      final List<XFile> images = await picker.pickMultiImage(
+        imageQuality: 80,
+        maxWidth: kMaxCaptureDimension,
+        maxHeight: kMaxCaptureDimension,
+      );
       if (images.isEmpty) return;
 
       setState(() {
@@ -1211,46 +1226,44 @@ class _TripLogEditorState extends State<TripLogEditor> {
         _uploadStatus = 'Starting upload of ${images.length} images...';
       });
 
-      for (int i = 0; i < images.length; i++) {
-        final image = images[i];
-        if (!mounted) break;
-
+      // Upload a few photos at a time instead of strictly one after another.
+      final progress = List<double>.filled(images.length, 0);
+      var finished = 0;
+      void reportProgress() {
+        if (!mounted) return;
         setState(() {
-          _uploadCurrentFileIndex = i + 1;
-          _uploadProgress = 0.0;
+          _uploadCurrentFileIndex = finished;
+          _uploadProgress =
+              progress.fold<double>(0, (sum, p) => sum + p) / images.length;
           _uploadStatus =
-              'Uploading photo ${i + 1} of ${images.length}: ${image.name}';
+              'Uploading ${images.length} photos ($finished done)...';
         });
+      }
 
+      final urls = await mapWithConcurrency<XFile, String>(
+          images, _kConcurrentUploads, (image, i) async {
         String finalUrl = '';
         try {
           final String path =
-              'trip_logs/${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+              'trip_logs/${DateTime.now().millisecondsSinceEpoch}_${i}_${image.name}';
+          void onProgress(double p) {
+            progress[i] = p;
+            reportProgress();
+          }
+
           if (kIsWeb) {
             final bytes = await image.readAsBytes();
             finalUrl = await MediaUploadService.uploadBytes(
               bytes: bytes,
               path: path,
               contentType: 'image/jpeg',
-              onProgress: (progress) {
-                if (mounted) {
-                  setState(() {
-                    _uploadProgress = progress;
-                  });
-                }
-              },
+              onProgress: onProgress,
             );
           } else {
             finalUrl = await MediaUploadService.uploadFile(
               file: File(image.path),
               path: path,
-              onProgress: (progress) {
-                if (mounted) {
-                  setState(() {
-                    _uploadProgress = progress;
-                  });
-                }
-              },
+              onProgress: onProgress,
             );
           }
         } catch (e) {
@@ -1262,17 +1275,23 @@ class _TripLogEditorState extends State<TripLogEditor> {
                   backgroundColor: AppColors.amber),
             );
           }
-          continue;
         }
+        progress[i] = 1;
+        finished++;
+        reportProgress();
+        return finalUrl;
+      });
 
-        if (mounted && finalUrl.isNotEmpty) {
-          context.read<TripLogBloc>().add(AddBlockEvent(TripBlock.image(
-                id: 'img_${DateTime.now().microsecondsSinceEpoch}_$i',
-                storageUrl: finalUrl,
-                caption: '',
-                localPath: image.path,
-              )));
-        }
+      // Add the blocks in the order the photos were picked.
+      for (var i = 0; i < images.length; i++) {
+        if (!mounted) break;
+        if (urls[i].isEmpty) continue;
+        context.read<TripLogBloc>().add(AddBlockEvent(TripBlock.image(
+              id: 'img_${DateTime.now().microsecondsSinceEpoch}_$i',
+              storageUrl: urls[i],
+              caption: '',
+              localPath: images[i].path,
+            )));
       }
 
       if (mounted) {
@@ -1614,11 +1633,13 @@ class _ImageBlockEditorState extends State<ImageBlockEditor> {
                   File(widget.localPath!).existsSync())
               ? Image.file(
                   File(widget.localPath!),
+                  cacheWidth: context.decodeWidth(),
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
                 )
               : CachedNetworkImage(
+                  memCacheWidth: context.decodeWidth(),
                   imageUrl: widget.imageUrl,
                   height: 200,
                   width: double.infinity,
@@ -1723,6 +1744,7 @@ class _VideoBlockEditorState extends State<VideoBlockEditor> {
                 ),
                 child: thumbnailUrl != null
                     ? CachedNetworkImage(
+                        memCacheWidth: context.decodeWidth(),
                         imageUrl: thumbnailUrl,
                         fit: BoxFit.cover,
                         errorWidget: (context, url, error) => const Icon(
