@@ -70,3 +70,6 @@ functions/lib/
 test_hive/
 firestore-debug.log
 coverage/
+
+# Facebook session cookies: never commit (they grant account access)
+travel_data_crawler/cookies/facebook_cookies.json
