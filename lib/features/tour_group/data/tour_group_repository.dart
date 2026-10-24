@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/expense_models.dart';
+import '../domain/models/tour_post_models.dart';
 
 class TourGroupRepository {
   final FirebaseFirestore _firestore;
@@ -221,5 +222,216 @@ class TourGroupRepository {
         .collection('deposits')
         .doc(depId)
         .set(deposit.toMap());
+  }
+
+  // --- Tour Posts & InstaFeed ---
+
+  Stream<List<TourPostItem>> watchPosts(String tourId) {
+    return _firestore
+        .collection('tours')
+        .doc(tourId)
+        .collection('posts')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList());
+  }
+
+  Future<void> addPost({
+    required String tourId,
+    required String caption,
+    required List<String> images,
+    String? videoUrl,
+    bool isReel = false,
+    String location = 'Cox\'s Bazar',
+    String tourDay = 'day1',
+    String filterId = 'normal',
+  }) async {
+    final postId = _uuid.v4();
+    final post = TourPostItem(
+      id: postId,
+      tourId: tourId,
+      authorEmail: currentEmail ?? 'anonymous',
+      authorName: currentDisplayName,
+      authorPhoto: _auth.currentUser?.photoURL,
+      caption: caption,
+      images: images,
+      videoUrl: videoUrl,
+      isReel: isReel,
+      location: location,
+      tourDay: tourDay,
+      filterId: filterId,
+      likes: [],
+      commentCount: 0,
+      createdAt: DateTime.now(),
+    );
+
+    await _firestore
+        .collection('tours')
+        .doc(tourId)
+        .collection('posts')
+        .doc(postId)
+        .set(post.toMap());
+  }
+
+  Future<void> toggleLikePost(String tourId, String postId) async {
+    final email = currentEmail;
+    if (email == null) return;
+    final postRef = _firestore
+        .collection('tours')
+        .doc(tourId)
+        .collection('posts')
+        .doc(postId);
+
+    final snap = await postRef.get();
+    if (!snap.exists) return;
+
+    final data = snap.data() ?? {};
+    final likes = (data['likes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+
+    if (likes.contains(email)) {
+      likes.remove(email);
+    } else {
+      likes.add(email);
+    }
+    await postRef.update({'likes': likes});
+  }
+
+  Stream<List<TourCommentItem>> watchComments(String tourId, String postId) {
+    return _firestore
+        .collection('tours')
+        .doc(tourId)
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((s) => s.docs.map((d) => TourCommentItem.fromMap(d.id, d.data())).toList());
+  }
+
+  Future<void> addComment({
+    required String tourId,
+    required String postId,
+    required String text,
+    String? reaction,
+  }) async {
+    final commentId = _uuid.v4();
+    final comment = TourCommentItem(
+      id: commentId,
+      authorEmail: currentEmail ?? 'anonymous',
+      authorName: currentDisplayName,
+      authorPhoto: _auth.currentUser?.photoURL,
+      text: text,
+      reaction: reaction,
+      createdAt: DateTime.now(),
+    );
+
+    final postRef = _firestore
+        .collection('tours')
+        .doc(tourId)
+        .collection('posts')
+        .doc(postId);
+
+    final batch = _firestore.batch();
+    batch.set(postRef.collection('comments').doc(commentId), comment.toMap());
+    batch.update(postRef, {'commentCount': FieldValue.increment(1)});
+    await batch.commit();
+  }
+
+  // --- Tour Stories ---
+
+  Stream<List<TourStoryItem>> watchStories(String tourId) {
+    final cutoff = DateTime.now().subtract(const Duration(hours: 24));
+    return _firestore
+        .collection('tours')
+        .doc(tourId)
+        .collection('stories')
+        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map((d) => TourStoryItem.fromMap(d.id, d.data())).toList());
+  }
+
+  Future<void> addStory({
+    required String tourId,
+    required String mediaUrl,
+    String? caption,
+  }) async {
+    final storyId = _uuid.v4();
+    final story = TourStoryItem(
+      id: storyId,
+      authorEmail: currentEmail ?? 'anonymous',
+      authorName: currentDisplayName,
+      authorPhoto: _auth.currentUser?.photoURL,
+      mediaUrl: mediaUrl,
+      caption: caption,
+      createdAt: DateTime.now(),
+    );
+
+    await _firestore
+        .collection('tours')
+        .doc(tourId)
+        .collection('stories')
+        .doc(storyId)
+        .set(story.toMap());
+  }
+
+  // --- Member Management & Role Delegation ---
+
+  Future<void> updateMemberRole(String tourId, String email, TourRole newRole) async {
+    final membershipId = '${tourId}__$email';
+    await _firestore.collection('memberships').doc(membershipId).update({
+      'role': newRole.toValue(),
+    });
+  }
+
+  Future<void> removeMember(String tourId, String email) async {
+    final membershipId = '${tourId}__$email';
+    await _firestore.collection('memberships').doc(membershipId).delete();
+  }
+
+  Future<void> transferOwnership(String tourId, String newOwnerEmail) async {
+    final oldOwnerEmail = currentEmail;
+    final batch = _firestore.batch();
+
+    // 1. Update tour doc
+    batch.update(_firestore.collection('tours').doc(tourId), {
+      'ownerEmail': newOwnerEmail,
+    });
+
+    // 2. Update new owner membership
+    batch.update(_firestore.collection('memberships').doc('${tourId}__$newOwnerEmail'), {
+      'role': TourRole.owner.toValue(),
+    });
+
+    // 3. Demote old owner to admin
+    if (oldOwnerEmail != null) {
+      batch.update(_firestore.collection('memberships').doc('${tourId}__$oldOwnerEmail'), {
+        'role': TourRole.admin.toValue(),
+      });
+    }
+
+    await batch.commit();
+  }
+
+  // --- Full Tour Snapshot JSON Export ---
+
+  Future<Map<String, dynamic>> fetchFullTourSnapshot(String tourId) async {
+    final tourDoc = await _firestore.collection('tours').doc(tourId).get();
+    final membersSnap = await _firestore.collection('memberships').where('tourId', isEqualTo: tourId).get();
+    final expensesSnap = await _firestore.collection('tours').doc(tourId).collection('expenses').get();
+    final depositsSnap = await _firestore.collection('tours').doc(tourId).collection('deposits').get();
+    final noticesSnap = await _firestore.collection('tours').doc(tourId).collection('notices').get();
+    final postsSnap = await _firestore.collection('tours').doc(tourId).collection('posts').get();
+
+    return {
+      'exportedAt': DateTime.now().toIso8601String(),
+      'app': 'Bhromon / Family_Bhromon Hybrid 2026',
+      'tour': tourDoc.data() ?? {},
+      'members': membersSnap.docs.map((d) => d.data()).toList(),
+      'expenses': expensesSnap.docs.map((d) => d.data()).toList(),
+      'deposits': depositsSnap.docs.map((d) => d.data()).toList(),
+      'notices': noticesSnap.docs.map((d) => d.data()).toList(),
+      'posts': postsSnap.docs.map((d) => d.data()).toList(),
+    };
   }
 }

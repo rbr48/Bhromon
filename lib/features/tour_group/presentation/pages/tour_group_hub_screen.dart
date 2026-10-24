@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
@@ -31,6 +34,16 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.backup_rounded, color: AppColors.gold),
+            tooltip: 'JSON ব্যাকআপ ডাউনলোড',
+            onPressed: () {
+              final active = _activeGroup;
+              if (active != null) {
+                _exportTourJsonBackup(context, active);
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.group_add_outlined, color: AppColors.mintGreen),
             tooltip: 'Join with code',
@@ -280,6 +293,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   Widget _buildModulesGrid(BuildContext context, TourGroup group) {
     final modules = [
       _ModuleItem(
+        title: 'Tour InstaFeed 📸',
+        subtitle: 'ফটো, রিলস ও স্টোরিজ',
+        icon: Icons.camera_alt_rounded,
+        color: const Color(0xFFF43F5E),
+        onTap: () => context.push('/group/${group.id}/feed'),
+      ),
+      _ModuleItem(
         title: 'Shared Fund & Ledger',
         subtitle: 'Paisa-precise Splitwise',
         icon: Icons.account_balance_wallet_rounded,
@@ -301,25 +321,53 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         onTap: () => context.push('/group/${group.id}/tide'),
       ),
       _ModuleItem(
-        title: 'Family GameZone',
+        title: 'Notice Board 📌',
+        subtitle: 'মিটিং পয়েন্ট ও জরুরি নোটিশ',
+        icon: Icons.campaign_rounded,
+        color: const Color(0xFFEAB308),
+        onTap: () => context.push('/group/${group.id}/notices'),
+      ),
+      _ModuleItem(
+        title: 'Highway Roadmap 🛣️',
+        subtitle: '৮২০ কিমি জার্নি ট্র্যাকার',
+        icon: Icons.alt_route_rounded,
+        color: const Color(0xFF10B981),
+        onTap: () => context.push('/group/${group.id}/journey'),
+      ),
+      _ModuleItem(
+        title: 'Safety Hub & SOS 🚨',
+        subtitle: 'বিচ কম্পাস ও হেল্পলাইন',
+        icon: Icons.shield_rounded,
+        color: const Color(0xFFEF4444),
+        onTap: () => context.push('/group/${group.id}/safety'),
+      ),
+      _ModuleItem(
+        title: 'Family GameZone 🎮',
         subtitle: '29, Chess, Ludo & Teen Patti',
         icon: Icons.sports_esports_rounded,
         color: const Color(0xFFF59E0B),
         onTap: () => context.push('/game-zone'),
       ),
       _ModuleItem(
-        title: 'Discussion Channels',
+        title: 'Tour Quiz 🎯',
+        subtitle: 'কক্সবাজার ট্রাভেল কুইজ',
+        icon: Icons.quiz_rounded,
+        color: const Color(0xFF8B5CF6),
+        onTap: () => context.push('/group/${group.id}/quiz'),
+      ),
+      _ModuleItem(
+        title: 'Digital Scrapbook 📖',
+        subtitle: 'স্মৃতি অ্যালবাম ও ম্যাগাজিন',
+        icon: Icons.auto_stories_rounded,
+        color: const Color(0xFFD97706),
+        onTap: () => context.push('/group/${group.id}/scrapbook'),
+      ),
+      _ModuleItem(
+        title: 'Discussion Channels 💬',
         subtitle: '#general, #food, #emergency',
         icon: Icons.forum_rounded,
         color: const Color(0xFFEC4899),
         onTap: () => context.push('/group/${group.id}/channels'),
-      ),
-      _ModuleItem(
-        title: 'Safety Hub & SOS',
-        subtitle: 'Live group GPS on map',
-        icon: Icons.emergency_share_rounded,
-        color: const Color(0xFFEF4444),
-        onTap: () => context.push('/map'),
       ),
     ];
 
@@ -426,6 +474,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 itemBuilder: (context, i) {
                   final m = members[i];
                   return ListTile(
+                    onTap: () => _showManageMemberSheet(context, tourId, m),
                     leading: CircleAvatar(
                       backgroundColor: AppColors.midGreen,
                       backgroundImage:
@@ -620,6 +669,226 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               child: const Text('Join', style: TextStyle(color: Colors.white)),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  Future<void> _exportTourJsonBackup(BuildContext context, TourGroup group) async {
+    try {
+      final snapshot = await _repository.fetchFullTourSnapshot(group.id);
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(snapshot);
+      final fileName = '${group.name.replaceAll(' ', '_')}_Backup_${DateFormat('yyyyMMdd').format(DateTime.now())}.json';
+      // ignore: deprecated_member_use
+      await Share.share(
+        jsonStr,
+        subject: fileName,
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ব্যাকআপ তৈরিতে ত্রুটি: $e')),
+        );
+      }
+    }
+  }
+
+  void _showManageMemberSheet(
+      BuildContext context, String tourId, TourMember member) {
+    final currentEmail = _repository.currentEmail;
+    final isMe = currentEmail != null && currentEmail.toLowerCase() == member.email.toLowerCase();
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF14241B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: AppColors.midGreen,
+                    backgroundImage: member.photoUrl != null
+                        ? NetworkImage(member.photoUrl!)
+                        : null,
+                    child: member.photoUrl == null
+                        ? Text(
+                            member.displayName.isNotEmpty
+                                ? member.displayName[0].toUpperCase()
+                                : 'M',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          member.displayName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          member.email,
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: member.role.isAdminOrOwner
+                          ? AppColors.gold.withValues(alpha: 0.2)
+                          : Colors.white10,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      member.role.toValue().toUpperCase(),
+                      style: TextStyle(
+                        color: member.role.isAdminOrOwner
+                            ? AppColors.gold
+                            : Colors.white70,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Divider(color: Colors.white10),
+              if (!isMe && member.role != TourRole.owner) ...[
+                // Promote / Demote
+                ListTile(
+                  leading: Icon(
+                    member.role == TourRole.admin
+                        ? Icons.person_outline
+                        : Icons.admin_panel_settings_rounded,
+                    color: AppColors.mintGreen,
+                  ),
+                  title: Text(
+                    member.role == TourRole.admin
+                        ? 'Remove Admin Role'
+                        : 'Promote to Tour Admin',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final newRole = member.role == TourRole.admin
+                        ? TourRole.member
+                        : TourRole.admin;
+                    await _repository.updateMemberRole(tourId, member.email, newRole);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${member.displayName} এর রোল পরিবর্তন করা হয়েছে')),
+                      );
+                    }
+                  },
+                ),
+                // Transfer Ownership
+                ListTile(
+                  leading: const Icon(Icons.stars_rounded, color: AppColors.gold),
+                  title: const Text(
+                    'Transfer Tour Ownership',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        backgroundColor: const Color(0xFF14241B),
+                        title: const Text('মালিকানা হস্তান্তর করবেন?', style: TextStyle(color: Colors.white)),
+                        content: Text('আপনি কি নিশ্চিত যে ${member.displayName} কে এই ট্যুরের প্রধান মালিক করবেন?', style: const TextStyle(color: Colors.white70)),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('বাতিল')),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold, foregroundColor: Colors.black),
+                            onPressed: () => Navigator.pop(c, true),
+                            child: const Text('হস্তান্তর করুন'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await _repository.transferOwnership(tourId, member.email);
+                    }
+                  },
+                ),
+                // Remove Member
+                ListTile(
+                  leading: const Icon(Icons.person_remove_rounded, color: Colors.redAccent),
+                  title: const Text(
+                    'Remove from Tour',
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        backgroundColor: const Color(0xFF14241B),
+                        title: const Text('সদস্য অপসারণ', style: TextStyle(color: Colors.white)),
+                        content: Text('${member.displayName} কে ট্যুর গ্রুপ থেকে বাদ দিতে চান?', style: const TextStyle(color: Colors.white70)),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('বাতিল')),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+                            onPressed: () => Navigator.pop(c, true),
+                            child: const Text('অপসারণ করুন'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await _repository.removeMember(tourId, member.email);
+                    }
+                  },
+                ),
+              ] else if (isMe) ...[
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    'এটি আপনার প্রোফাইল। আপনি ট্যুরের সক্রিয় সদস্য।',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 10),
+            ],
+          ),
         );
       },
     );
