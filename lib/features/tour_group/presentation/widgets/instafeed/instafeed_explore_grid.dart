@@ -135,6 +135,54 @@ class InstafeedExploreGrid extends StatelessWidget {
                     shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
                   ),
                 ),
+
+              // Archived badge
+              if (post.isArchived)
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Icon(Icons.archive_outlined,
+                        color: Colors.white, size: 12),
+                  ),
+                ),
+
+              // Like counter on bottom right
+              if (post.likes.isNotEmpty)
+                Positioned(
+                  bottom: 6,
+                  right: 6,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.favorite,
+                            color: Colors.redAccent, size: 10),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${post.likes.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         );

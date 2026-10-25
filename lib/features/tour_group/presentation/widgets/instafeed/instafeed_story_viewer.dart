@@ -215,6 +215,12 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     final story = _currentStory;
     if (story == null) return;
 
+    widget.repository.addStoryReaction(widget.tourId, story.id, emoji);
+    final updatedReactions = Map<String, String>.from(story.reactions);
+    updatedReactions[widget.repository.currentEmail] = emoji;
+    _currentAuthorStories[_storyIndex] =
+        story.copyWith(reactions: updatedReactions);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('$emoji প্রতিক্রিয়া পাঠানো হয়েছে'),
@@ -352,6 +358,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                       itemCount: story.viewers.length,
                       itemBuilder: (context, idx) {
                         final email = story.viewers[idx];
+                        final reaction = story.reactions[email];
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(
@@ -366,6 +373,10 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                             style: const TextStyle(
                                 color: Colors.white, fontSize: 14),
                           ),
+                          trailing: reaction != null
+                              ? Text(reaction,
+                                  style: const TextStyle(fontSize: 22))
+                              : null,
                         );
                       },
                     ),

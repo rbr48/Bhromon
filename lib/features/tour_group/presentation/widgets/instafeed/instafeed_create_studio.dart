@@ -61,6 +61,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   double _brightness = 0.0; // -0.5 to 0.5
   double _contrast = 1.0; // 0.5 to 1.5
   double _saturation = 1.0; // 0.0 to 2.0
+  double _warmth = 0.0; // -0.4 to 0.4
+  double _vignette = 0.0; // 0.0 to 1.0
+  double? _selectedAspectRatio; // null = original, 1.0 = 1:1, 0.8 = 4:5, 16/9 = 16:9
 
   String _selectedDay = 'day1';
   String _selectedLandmark = 'অন্যান্য স্থান (Others)';
@@ -455,6 +458,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           audioTitle: _audioTitleCtrl.text.trim().isNotEmpty
               ? _audioTitleCtrl.text.trim()
               : null,
+          aspectRatio: _selectedAspectRatio,
         );
       }
 
@@ -515,33 +519,20 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     // For normal matrix, return null
     if (_selectedFilterId == 'normal' &&
         _brightness == 0.0 &&
-        _contrast == 1.0) {
+        _contrast == 1.0 &&
+        _warmth == 0.0) {
       return null;
     }
-    // High-performance color matrix for brightness & contrast
+    // High-performance color matrix for brightness, contrast & warmth
     final b = _brightness * 255;
     final c = _contrast;
+    final wR = 1.0 + (_warmth * 0.35);
+    final wB = 1.0 - (_warmth * 0.35);
     return ColorFilter.matrix([
-      c,
-      0,
-      0,
-      0,
-      b,
-      0,
-      c,
-      0,
-      0,
-      b,
-      0,
-      0,
-      c,
-      0,
-      b,
-      0,
-      0,
-      0,
-      1,
-      0,
+      c * wR, 0, 0, 0, b,
+      0, c, 0, 0, b,
+      0, 0, c * wB, 0, b,
+      0, 0, 0, 1, 0,
     ]);
   }
 
@@ -675,6 +666,36 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
               children: [
                 // Media Picker & Preview Area
                 _buildMediaPreviewArea(),
+                if (_photos.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.aspect_ratio,
+                          size: 16, color: Colors.white70),
+                      const SizedBox(width: 8),
+                      const Text('ফ্রেম:',
+                          style:
+                              TextStyle(color: Colors.white70, fontSize: 12)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildRatioChip('মূল ফ্রেম', null),
+                              const SizedBox(width: 6),
+                              _buildRatioChip('১:১ স্কয়ার', 1.0),
+                              const SizedBox(width: 6),
+                              _buildRatioChip('৪:৫ পোর্ট্রেট', 4.0 / 5.0),
+                              const SizedBox(width: 6),
+                              _buildRatioChip('১৬:৯ ল্যান্ডস্কেপ', 16.0 / 9.0),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 16),
 
                 // Caption input
@@ -801,7 +822,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   ],
                 ),
                 SizedBox(
-                  height: 100,
+                  height: 185,
                   child: TabBarView(
                     controller: _tabCtrl,
                     children: [
@@ -831,55 +852,113 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         }).toList(),
                       ),
 
-                      // Manual sliders (Brightness & Contrast)
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.brightness_6,
-                                  size: 16, color: Colors.white70),
-                              const SizedBox(width: 8),
-                              const Text('উজ্জ্বলতা',
-                                  style: TextStyle(
-                                      color: Colors.white70, fontSize: 12)),
-                              Expanded(
-                                child: Slider(
-                                  value: _brightness,
-                                  min: -0.4,
-                                  max: 0.4,
-                                  activeColor: const Color(0xFF00C853),
-                                  onChanged: (v) {
-                                    setState(() => _brightness = v);
-                                    _saveCurrentDraft();
-                                  },
+                      // Manual sliders (Brightness, Contrast, Warmth, Vignette)
+                      SingleChildScrollView(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.brightness_6,
+                                    size: 16, color: Colors.white70),
+                                const SizedBox(width: 8),
+                                const SizedBox(
+                                  width: 55,
+                                  child: Text('উজ্জ্বলতা',
+                                      style: TextStyle(
+                                          color: Colors.white70, fontSize: 12)),
                                 ),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              const Icon(Icons.contrast,
-                                  size: 16, color: Colors.white70),
-                              const SizedBox(width: 8),
-                              const Text('কনট্রাস্ট',
-                                  style: TextStyle(
-                                      color: Colors.white70, fontSize: 12)),
-                              Expanded(
-                                child: Slider(
-                                  value: _contrast,
-                                  min: 0.6,
-                                  max: 1.4,
-                                  activeColor: const Color(0xFF00C853),
-                                  onChanged: (v) {
-                                    setState(() => _contrast = v);
-                                    _saveCurrentDraft();
-                                  },
+                                Expanded(
+                                  child: Slider(
+                                    value: _brightness,
+                                    min: -0.4,
+                                    max: 0.4,
+                                    activeColor: const Color(0xFF00C853),
+                                    onChanged: (v) {
+                                      setState(() => _brightness = v);
+                                      _saveCurrentDraft();
+                                    },
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                const Icon(Icons.contrast,
+                                    size: 16, color: Colors.white70),
+                                const SizedBox(width: 8),
+                                const SizedBox(
+                                  width: 55,
+                                  child: Text('কনট্রাস্ট',
+                                      style: TextStyle(
+                                          color: Colors.white70, fontSize: 12)),
+                                ),
+                                Expanded(
+                                  child: Slider(
+                                    value: _contrast,
+                                    min: 0.6,
+                                    max: 1.4,
+                                    activeColor: const Color(0xFF00C853),
+                                    onChanged: (v) {
+                                      setState(() => _contrast = v);
+                                      _saveCurrentDraft();
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                const Icon(Icons.wb_sunny_outlined,
+                                    size: 16, color: Colors.amber),
+                                const SizedBox(width: 8),
+                                const SizedBox(
+                                  width: 55,
+                                  child: Text('উষ্ণতা',
+                                      style: TextStyle(
+                                          color: Colors.white70, fontSize: 12)),
+                                ),
+                                Expanded(
+                                  child: Slider(
+                                    value: _warmth,
+                                    min: -0.4,
+                                    max: 0.4,
+                                    activeColor: Colors.amber,
+                                    onChanged: (v) {
+                                      setState(() => _warmth = v);
+                                      _saveCurrentDraft();
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                const Icon(Icons.vignette,
+                                    size: 16, color: Colors.white70),
+                                const SizedBox(width: 8),
+                                const SizedBox(
+                                  width: 55,
+                                  child: Text('ভিগনেট',
+                                      style: TextStyle(
+                                          color: Colors.white70, fontSize: 12)),
+                                ),
+                                Expanded(
+                                  child: Slider(
+                                    value: _vignette,
+                                    min: 0.0,
+                                    max: 1.0,
+                                    activeColor: const Color(0xFF00C853),
+                                    onChanged: (v) {
+                                      setState(() => _vignette = v);
+                                      _saveCurrentDraft();
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -1126,9 +1205,30 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: _LocalPhotoThumbnail(
-                      photo: photo,
-                      colorFilter: _activeColorFilter,
+                    child: AspectRatio(
+                      aspectRatio: _selectedAspectRatio ?? 1.0,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _LocalPhotoThumbnail(
+                            photo: photo,
+                            colorFilter: _activeColorFilter,
+                          ),
+                          if (_vignette > 0)
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: RadialGradient(
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black
+                                        .withValues(alpha: _vignette * 0.85),
+                                  ],
+                                  radius: 0.85,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                   Positioned(
@@ -1336,6 +1436,22 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildRatioChip(String label, double? ratio) {
+    final isSelected = _selectedAspectRatio == ratio;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: const Color(0xFF00C853),
+      backgroundColor: const Color(0xFF222222),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.black : Colors.white,
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+      ),
+      onSelected: (_) => setState(() => _selectedAspectRatio = ratio),
     );
   }
 

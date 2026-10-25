@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:bhromon/features/tour_group/domain/models/tour_activity_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 
 void main() {
@@ -141,12 +142,15 @@ void main() {
         viewers: ['m1@x.com', 'm2@x.com'],
         poll: poll,
         sticker: sticker,
+        reactions: {'m1@x.com': '🔥', 'm2@x.com': '❤️'},
         createdAt: DateTime.now(),
       );
 
       expect(story.isVideo, isTrue);
       expect(story.isViewedBy('m1@x.com'), isTrue);
       expect(story.isViewedBy('m3@x.com'), isFalse);
+      expect(story.reactions['m1@x.com'], '🔥');
+      expect(story.reactions['m2@x.com'], '❤️');
       expect(story.poll?.question, 'Beach or Hills?');
       expect(story.sticker?.title, 'ভাটা (Low Tide)');
 
@@ -155,6 +159,8 @@ void main() {
       expect(restored.isVideo, isTrue);
       expect(restored.videoUrl, 'https://vps/media/s1.mp4');
       expect(restored.viewers, ['m1@x.com', 'm2@x.com']);
+      expect(restored.reactions['m1@x.com'], '🔥');
+      expect(restored.reactions['m2@x.com'], '❤️');
       expect(restored.poll?.question, 'Beach or Hills?');
       expect(restored.sticker?.type, 'tide');
     });
@@ -198,6 +204,40 @@ void main() {
       expect(restored.expenseAmount, 1850.0);
     });
 
+    test('post with editing state and archiving round-trips correctly', () {
+      final now = DateTime(2026, 10, 25, 14, 0);
+      final editedAt = DateTime(2026, 10, 25, 14, 30);
+      final post = TourPostItem(
+        id: 'p_archived_1',
+        tourId: 't1',
+        authorEmail: 'traveler@x.com',
+        authorName: 'Traveler',
+        caption: 'Edited Inani Sunset caption',
+        images: ['https://bhromon.fun/media/t1/images/inani.jpg'],
+        location: 'ইনানী বিচ (Inani Beach)',
+        tourDay: 'day2',
+        isEdited: true,
+        editedAt: editedAt,
+        isArchived: true,
+        createdAt: now,
+      );
+
+      expect(post.isEdited, isTrue);
+      expect(post.editedAt, editedAt);
+      expect(post.isArchived, isTrue);
+
+      final map = post.toMap();
+      expect(map['isEdited'], isTrue);
+      expect(map['isArchived'], isTrue);
+      expect(map['editedAt'], isNotNull);
+
+      final restored = TourPostItem.fromMap(post.id, map);
+      expect(restored.isEdited, isTrue);
+      expect(restored.isArchived, isTrue);
+      expect(restored.location, 'ইনানী বিচ (Inani Beach)');
+      expect(restored.caption, 'Edited Inani Sunset caption');
+    });
+
     test('reel post with custom coverUrl and videoUrl round-trips correctly',
         () {
       final reelPost = TourPostItem(
@@ -230,6 +270,25 @@ void main() {
       expect(restored.coverUrl,
           'https://bhromon.fun/media/t1/covers/sunset_thumb.jpg');
       expect(restored.aspectRatio, closeTo(0.5625, 0.001));
+    });
+  });
+
+  group('FeedPrefs Collections', () {
+    test('organizes bookmarks into named collections', () {
+      const prefs = FeedPrefs(
+        bookmarks: {'p1', 'p2', 'p3'},
+        seenStories: {'s1'},
+        collections: {
+          'খাবার': ['p1'],
+          'হোটেল': ['p2'],
+          'স্পট': ['p1', 'p3'],
+        },
+      );
+
+      expect(prefs.bookmarks.length, 3);
+      expect(prefs.collections['খাবার'], ['p1']);
+      expect(prefs.collections['হোটেল'], ['p2']);
+      expect(prefs.collections['স্পট'], ['p1', 'p3']);
     });
   });
 }
