@@ -369,35 +369,69 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
         children: [
           Positioned(
             top: tableSize * 0.07,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0x88000000),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Trump: ',
-                      style: TextStyle(color: Colors.white70, fontSize: 11)),
-                  if (_game.isTrumpRevealed && trump != null)
-                    Text(
-                      '${trump.symbol} ${trump.name}',
-                      style: TextStyle(
-                        color: _isRed(trump) ? Colors.redAccent : Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+            child: GestureDetector(
+              onTap: () {
+                if (_game.canRevealTrump(0)) {
+                  _userAction(() => _game.revealTrump(0), heavy: true);
+                } else if (_game.canAskTrump(0)) {
+                  _userAction(() => _game.askTrump(0), heavy: true);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: (_game.canRevealTrump(0) || _game.canAskTrump(0))
+                      ? Colors.amber.withValues(alpha: 0.25)
+                      : const Color(0x88000000),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: (_game.canRevealTrump(0) || _game.canAskTrump(0))
+                        ? Colors.amber
+                        : Colors.amber.withValues(alpha: 0.4),
+                    width: (_game.canRevealTrump(0) || _game.canAskTrump(0))
+                        ? 1.5
+                        : 1.0,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Trump: ',
+                        style: TextStyle(color: Colors.white70, fontSize: 11)),
+                    if (_game.isTrumpRevealed && trump != null)
+                      Text(
+                        '${trump.symbol} ${trump.name}',
+                        style: TextStyle(
+                          color: _isRed(trump) ? Colors.redAccent : Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      )
+                    else if (_game.canRevealTrump(0) && trump != null)
+                      Text(
+                        '🔓 Tap to Reveal (${trump.symbol})',
+                        style: const TextStyle(
+                            color: Colors.amber,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
+                      )
+                    else if (_game.canAskTrump(0))
+                      const Text(
+                        '❓ Tap to Ask',
+                        style: TextStyle(
+                            color: Colors.amber,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
+                      )
+                    else
+                      Text(
+                        userIsBidder
+                            ? '🔒 ${trump.symbol} (only you know)'
+                            : '🔒 Hidden',
+                        style: const TextStyle(color: Colors.amber, fontSize: 11),
                       ),
-                    )
-                  else
-                    Text(
-                      userIsBidder
-                          ? '🔒 ${trump.symbol} (only you know)'
-                          : '🔒 Hidden',
-                      style: const TextStyle(color: Colors.amber, fontSize: 11),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -580,11 +614,12 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
     );
   }
 
-  /// Ask Trump and Pair live here, outside the table, so they never cover the trick.
+  /// Reveal/Ask Trump and Pair live here, outside the table, so they never cover the trick.
   Widget _buildActionBar() {
+    final canReveal = _game.canRevealTrump(0);
     final canAsk = _game.canAskTrump(0);
     final canPair = _game.canClaimRoyalty(0);
-    if (!canAsk && !canPair) return const SizedBox(height: 6);
+    if (!canReveal && !canAsk && !canPair) return const SizedBox(height: 6);
     final pairEffect = Card29Game.teamOf(0) == _game.bidderTeam
         ? 'target −4'
         : 'their target +4';
@@ -595,9 +630,20 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
         runSpacing: 6,
         alignment: WrapAlignment.center,
         children: [
-          if (canAsk)
+          if (canReveal)
             ElevatedButton.icon(
               icon: const Icon(Icons.lock_open, size: 16),
+              label: const Text('Reveal Trump',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.black87),
+              onPressed: () =>
+                  _userAction(() => _game.revealTrump(0), heavy: true),
+            ),
+          if (canAsk)
+            ElevatedButton.icon(
+              icon: const Icon(Icons.help_outline, size: 16),
               label: const Text('Ask Trump',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
@@ -769,9 +815,8 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
               Text('Play:', style: TextStyle(fontWeight: FontWeight.bold)),
               Text(
                 '4. Follow the led suit if you can.\n'
-                '5. If you can\'t, you may Ask Trump. Once trump is revealed, anyone who can\'t follow suit '
-                'must play a trump if they have one.\n'
-                '6. The bidder reveals trump by playing it when void, and may not lead the hidden trump suit.\n'
+                '5. If you can\'t follow suit, you may Ask Trump (or Reveal Trump if you are the bidder). You can also tap the Trump badge on the table.\n'
+                '6. Once trump is revealed, anyone who can\'t follow suit must play a trump if they have one (unless their partner is winning the trick).\n'
                 '7. Pair (K & Q of trump): after trump is revealed, the holder may show it. It lowers the bidding '
                 'team\'s target by 4, or raises it by 4 if the opponents hold it.\n'
                 '8. The bidding team needs points ≥ its target to win the deal; otherwise the opponents win it.\n'

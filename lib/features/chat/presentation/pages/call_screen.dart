@@ -44,11 +44,20 @@ class _CallScreenState extends State<CallScreen> {
   bool _isSpeakerOn = false;
   bool _remoteVideoConnected = false;
   bool _controlsVisible = true;
+  bool _hasExited = false;
   String _callStatusText = 'Calling...';
 
   Duration _callDuration = Duration.zero;
   Timer? _durationTimer;
   Timer? _controlsHideTimer;
+
+  void _safeExit() {
+    if (!mounted || _hasExited) return;
+    _hasExited = true;
+    if (context.canPop()) {
+      context.pop();
+    }
+  }
 
   // Draggable PIP local video offset
   Offset _pipOffset = const Offset(20, 60);
@@ -103,14 +112,13 @@ class _CallScreenState extends State<CallScreen> {
           _startDurationTimer();
         } else if (state == 'ended' || state == 'declined') {
           _callStatusText = 'Call ended';
+          Future.delayed(const Duration(milliseconds: 300), _safeExit);
         }
       });
     };
 
     _signaling.onCallEnded = () {
-      if (mounted) {
-        context.pop();
-      }
+      _safeExit();
     };
 
     try {
@@ -137,7 +145,7 @@ class _CallScreenState extends State<CallScreen> {
             backgroundColor: Colors.redAccent,
           ),
         );
-        context.pop();
+        _safeExit();
       }
     }
   }
@@ -182,9 +190,7 @@ class _CallScreenState extends State<CallScreen> {
 
   void _endCall() {
     _signaling.endCall();
-    if (mounted) {
-      context.pop();
-    }
+    _safeExit();
   }
 
   String _formatDuration(Duration d) {
@@ -230,7 +236,15 @@ class _CallScreenState extends State<CallScreen> {
   Widget build(BuildContext context) {
     final isVideo = widget.isVideoCall;
 
-    return Scaffold(
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          _hasExited = true;
+          _signaling.endCall();
+        }
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFF0B141A), // WhatsApp dark background
       body: GestureDetector(
         onTap: isVideo ? _toggleControlsVisibility : null,
@@ -445,7 +459,7 @@ class _CallScreenState extends State<CallScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildAudioOrPlaceholderBackground() {

@@ -243,6 +243,37 @@ void main() {
         expect(g.phase, Card29Phase.matchOver, reason: 'seed $seed');
       }
     });
+
+    test('Bidder can reveal trump when void in lead suit', () {
+      final g = _playing(
+        hands: [
+          ['7H', '8H'], // Player 0 (bidder): holds trump hearts, void in clubs
+          ['7C', '8C'],
+          ['9C', 'KC'],
+          ['10C', 'JC'],
+        ],
+        bidder: 0,
+        trump: CardSuit.hearts,
+        leader: 1,
+      );
+      expect(g.isTrumpRevealed, isFalse);
+      expect(g.playCard(1, _c('7C')), isTrue);
+      expect(g.currentTurn, 2);
+      expect(g.playCard(2, _c('9C')), isTrue);
+      expect(g.currentTurn, 3);
+      expect(g.playCard(3, _c('10C')), isTrue);
+      expect(g.currentTurn, 0);
+
+      // Player 0 is bidder and void in clubs: canRevealTrump must be true, canAskTrump must be false
+      expect(g.canAskTrump(0), isFalse);
+      expect(g.canRevealTrump(0), isTrue);
+
+      expect(g.revealTrump(0), isTrue);
+      expect(g.isTrumpRevealed, isTrue);
+      expect(g.trumpRevealedBy, 0);
+      expect(g.canRevealTrump(0), isFalse);
+      expect(g.status, contains('You revealed trump: ♥ Hearts!'));
+    });
   });
 
   test('Engine: trick winner ignores a pre-reveal trump discard', () {

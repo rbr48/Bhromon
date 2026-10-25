@@ -88,36 +88,19 @@ service firebase.storage {
     }
 
     // ── Chat media ───────────────────────────────────────────────────────────
-    // Read: only participants of the chat (chatId contains participant UIDs)
-    // Write: only participants, with file type and size enforcement
+    // Read: authenticated users; write: authenticated users with file type & size cap
     match /chat_media/{chatId}/{fileName} {
-      function isChatParticipant() {
-        return isAuth() && (
-          chatId.matches('^' + request.auth.uid + '_.*') ||
-          chatId.matches('.*_' + request.auth.uid + '$') ||
-          chatId.matches('.*_' + request.auth.uid + '_.*') ||
-          chatId == request.auth.uid
-        );
-      }
-      allow read: if isChatParticipant();
-      allow write: if isChatParticipant()
+      allow read: if isAuth();
+      allow write: if isAuth()
                    && (isImage() || isVideo() || isAudio())
                    && (underImageLimit() || underVideoLimit());
-      allow delete: if isChatParticipant();
+      allow delete: if isAuth();
     }
 
     // ── Chat media thumbnails (written by Cloud Functions service account) ──
-    // Read: only participants; write is denied from client (CF writes via Admin SDK)
+    // Read: authenticated users; write is denied from client (CF writes via Admin SDK)
     match /chat_media_thumbs/{chatId}/{fileName} {
-      function isChatParticipant() {
-        return isAuth() && (
-          chatId.matches('^' + request.auth.uid + '_.*') ||
-          chatId.matches('.*_' + request.auth.uid + '$') ||
-          chatId.matches('.*_' + request.auth.uid + '_.*') ||
-          chatId == request.auth.uid
-        );
-      }
-      allow read:  if isChatParticipant();
+      allow read:  if isAuth();
       allow write: if false; // Cloud Function service account bypasses rules
     }
 
