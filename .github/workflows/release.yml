@@ -41,10 +41,10 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
   # ─────────────────────────────────────────────
-  # Job 2: Build Release Android App Bundle
+  # Job 2: Build Release Android App Bundle & APK
   # ─────────────────────────────────────────────
   build_release:
-    name: Build Release AAB
+    name: Build Release AAB & APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -56,12 +56,15 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Flutter 3.22.x
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.4'
           channel: stable
           cache: true
+
+      - name: Clean environment-specific Gradle settings
+        run: |
+          sed -i '/org.gradle.java.home/d' android/gradle.properties || true
 
       - name: Install Flutter dependencies
         run: flutter pub get
@@ -92,11 +95,25 @@ jobs:
             --build-name=${{ steps.version.outputs.VERSION }} \
             --build-number=${{ github.run_number }}
 
+      - name: Build Android APK (release)
+        run: |
+          flutter build apk \
+            --release \
+            --build-name=${{ steps.version.outputs.VERSION }} \
+            --build-number=${{ github.run_number }}
+
       - name: Upload release AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: bhromon-release-v${{ steps.version.outputs.VERSION }}-aab
           path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 90
+
+      - name: Upload release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bhromon-release-v${{ steps.version.outputs.VERSION }}-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 90
 
       - name: Upload debug symbols artifact
@@ -109,7 +126,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: build/app/outputs/bundle/release/app-release.aab
+          files: |
+            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/flutter-apk/app-release.apk
           name: Bhromon v${{ steps.version.outputs.VERSION }}
           generate_release_notes: true
         env:
