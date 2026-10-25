@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/models/tour_group.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
 import '../../../../core/theme/colors.dart';
 
@@ -48,7 +49,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     _snack(
         e is FormatException || e is TourAccessException
             ? e.toString()
-            : 'কাজটি সম্পন্ন হয়নি। আবার চেষ্টা করুন।',
+            : context.l10n.translate('hub_action_failed'),
         error: true);
   }
 
@@ -71,15 +72,19 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       builder: (c) => StatefulBuilder(
         builder: (c, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF14241B),
-          title: const Text('পরিবারের সদস্য সংখ্যা',
-              style: TextStyle(color: Colors.white)),
+          title: Text(context.l10n.translate('hub_family_count_label'),
+              style: const TextStyle(color: Colors.white)),
           content: DropdownButtonFormField<int>(
             initialValue: value,
             dropdownColor: const Color(0xFF1B4332),
-            decoration: const InputDecoration(labelText: 'কতজন (আপনি সহ)'),
+            decoration: InputDecoration(
+                labelText: context.l10n.translate('hub_family_count_hint')),
             items: [
               for (var n = 1; n <= 10; n++)
-                DropdownMenuItem(value: n, child: Text('$n জন')),
+                DropdownMenuItem(
+                    value: n,
+                    child: Text(context.l10n
+                        .translate('hub_people_count', args: {'count': n}))),
             ],
             onChanged: (v) {
               if (v != null) setDialogState(() => value = v);
@@ -87,10 +92,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(c), child: const Text('বাতিল')),
+                onPressed: () => Navigator.pop(c),
+                child: Text(context.l10n.translate('tour_cancel'))),
             TextButton(
                 onPressed: () => Navigator.pop(c, value),
-                child: const Text('সংরক্ষণ')),
+                child: Text(context.l10n.translate('tour_save'))),
           ],
         ),
       ),
@@ -107,11 +113,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
-              child: const Text('না')),
+              child: Text(context.l10n.translate('hub_no'))),
           TextButton(
               onPressed: () => Navigator.pop(c, true),
-              child: const Text('হ্যাঁ',
-                  style: TextStyle(color: Colors.redAccent))),
+              child: Text(context.l10n.translate('hub_yes'),
+                  style: const TextStyle(color: Colors.redAccent))),
         ],
       ),
     );
@@ -120,21 +126,22 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
   Future<void> _onGroupMenu(
       BuildContext context, TourGroup group, String action) async {
+    final l10n = context.l10n;
     switch (action) {
       case 'code':
-        final ok = await _confirm('আমন্ত্রণ কোড নতুন করবেন?',
-            'পুরোনো কোড আর কাজ করবে না। যাদের কাছে নতুন কোড আছে শুধু তারাই যোগ দিতে পারবেন।');
+        final ok = await _confirm(l10n.translate('hub_rotate_code_title'),
+            l10n.translate('hub_rotate_code_body'));
         if (!ok) return;
         try {
           final code =
               await _repository.rotateInviteCode(group.id, group.inviteCode);
-          _snack('নতুন আমন্ত্রণ কোড: $code');
+          _snack(l10n.translate('hub_new_code', args: {'code': code}));
         } catch (e) {
           _reportFailure(e);
         }
       case 'leave':
-        final ok = await _confirm(
-            'ট্যুর ছেড়ে যাবেন?', '${group.name} থেকে আপনি বাদ পড়বেন।');
+        final ok = await _confirm(l10n.translate('hub_leave_title'),
+            l10n.translate('hub_leave_body', args: {'name': group.name}));
         if (!ok) return;
         try {
           await _repository.leaveTour(group.id);
@@ -143,8 +150,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           _reportFailure(e);
         }
       case 'delete':
-        final ok = await _confirm('ট্যুরটি মুছবেন?',
-            '${group.name} এবং সব সদস্যের প্রবেশাধিকার চিরতরে মুছে যাবে। এটি ফেরানো যাবে না।');
+        final ok = await _confirm(l10n.translate('hub_delete_title'),
+            l10n.translate('hub_delete_body', args: {'name': group.name}));
         if (!ok) return;
         try {
           await _repository.deleteTour(group.id, inviteCode: group.inviteCode);
@@ -162,9 +169,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D1A12),
         elevation: 0,
-        title: const Text(
-          'Family & Tour Groups',
-          style: TextStyle(
+        title: Text(
+          context.l10n.translate('hub_title'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -173,7 +180,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.backup_rounded, color: AppColors.gold),
-            tooltip: 'JSON ব্যাকআপ ডাউনলোড',
+            tooltip: context.l10n.translate('hub_backup_download'),
             onPressed: () {
               final active = _displayedGroup;
               if (active != null) {
@@ -184,13 +191,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           IconButton(
             icon: const Icon(Icons.group_add_outlined,
                 color: AppColors.mintGreen),
-            tooltip: 'Join with code',
+            tooltip: context.l10n.translate('hub_join_with_code'),
             onPressed: () => _showJoinGroupDialog(context),
           ),
           IconButton(
             icon:
                 const Icon(Icons.add_circle_outline, color: AppColors.midGreen),
-            tooltip: 'Create new tour',
+            tooltip: context.l10n.translate('hub_create_new_tour'),
             onPressed: () => _showCreateGroupDialog(context),
           ),
         ],
@@ -216,9 +223,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     const Icon(Icons.cloud_off_rounded,
                         color: Colors.redAccent, size: 54),
                     const SizedBox(height: 16),
-                    const Text(
-                      'ট্যুর গ্রুপ লোড করতে সমস্যা হয়েছে',
-                      style: TextStyle(
+                    Text(
+                      context.l10n.translate('hub_groups_load_failed'),
+                      style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 18),
@@ -235,7 +242,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.midGreen),
                       onPressed: () => setState(() {}),
-                      child: const Text('আবার চেষ্টা করুন'),
+                      child: Text(context.l10n.translate('hub_try_again')),
                     ),
                   ],
                 ),
@@ -263,9 +270,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               const SizedBox(height: 24),
 
               // 2. Feature Launchpad Grid
-              const Text(
-                'Tour Modules & Operations',
-                style: TextStyle(
+              Text(
+                context.l10n.translate('hub_modules_heading'),
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -303,19 +310,19 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   size: 72, color: AppColors.mintGreen),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'No Active Tour Groups',
-              style: TextStyle(
+            Text(
+              context.l10n.translate('hub_empty_title'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
-              'Create a group for your family or friends, or join one with an invite code.',
+            Text(
+              context.l10n.translate('hub_empty_body'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 14),
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
             const SizedBox(height: 28),
             Row(
@@ -324,7 +331,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _showCreateGroupDialog(context),
                   icon: const Icon(Icons.add),
-                  label: const Text('Create Tour'),
+                  label: Text(context.l10n.translate('hub_create_tour')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.midGreen,
                     foregroundColor: Colors.white,
@@ -338,7 +345,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 OutlinedButton.icon(
                   onPressed: () => _showJoinGroupDialog(context),
                   icon: const Icon(Icons.key),
-                  label: const Text('Enter Code'),
+                  label: Text(context.l10n.translate('hub_enter_code')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.mintGreen,
                     side: const BorderSide(color: AppColors.mintGreen),
@@ -435,25 +442,29 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     onSelected: (v) => _onGroupMenu(context, group, v),
                     itemBuilder: (_) => [
                       if (group.ownerEmail == _repository.currentEmail) ...[
-                        const PopupMenuItem(
+                        PopupMenuItem(
                             value: 'code',
-                            child: Text('আমন্ত্রণ কোড নতুন করুন',
-                                style: TextStyle(color: Colors.white))),
-                        const PopupMenuItem(
+                            child: Text(
+                                context.l10n.translate('hub_renew_code'),
+                                style: const TextStyle(color: Colors.white))),
+                        PopupMenuItem(
                             value: 'delete',
-                            child: Text('ট্যুর মুছে ফেলুন',
-                                style: TextStyle(color: Colors.redAccent))),
+                            child: Text(
+                                context.l10n.translate('hub_delete_tour'),
+                                style:
+                                    const TextStyle(color: Colors.redAccent))),
                       ] else
-                        const PopupMenuItem(
+                        PopupMenuItem(
                             value: 'leave',
-                            child: Text('ট্যুর ছেড়ে যান',
-                                style: TextStyle(color: Colors.white))),
+                            child: Text(
+                                context.l10n.translate('hub_leave_tour'),
+                                style: const TextStyle(color: Colors.white))),
                     ],
                   ),
                   IconButton(
                     icon: const Icon(Icons.edit_calendar_rounded,
                         size: 20, color: AppColors.mintGreen),
-                    tooltip: 'ট্যুর সেটিংস ও দিন পরিবর্তন',
+                    tooltip: context.l10n.translate('hub_settings_dates'),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () => _showEditGroupDialog(context, group),
@@ -512,7 +523,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   size: 12, color: Colors.white60),
               const SizedBox(width: 4),
               Text(
-                'যাত্রা: ${group.originCity}',
+                context.l10n.translate('hub_origin_line',
+                    args: {'origin': group.originCity}),
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ],
@@ -541,7 +553,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         size: 14, color: AppColors.gold),
                     const SizedBox(width: 6),
                     Text(
-                      'Invite: ${group.inviteCode}',
+                      context.l10n.translate('hub_invite_line',
+                          args: {'code': group.inviteCode}),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -562,23 +575,23 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   Widget _buildModulesGrid(BuildContext context, TourGroup group) {
     final modules = [
       _ModuleItem(
-        title: 'Tour InstaFeed 📸',
-        subtitle: 'ফটো, রিলস ও স্টোরিজ',
+        title: context.l10n.translate('hub_module_feed'),
+        subtitle: context.l10n.translate('hub_module_feed_sub'),
         icon: Icons.camera_alt_rounded,
         color: const Color(0xFFF43F5E),
         onTap: () => context.push('/group/${group.id}/feed'),
       ),
       _ModuleItem(
-        title: 'Shared Fund & Ledger',
-        subtitle: 'Paisa-precise Splitwise',
+        title: context.l10n.translate('hub_module_ledger'),
+        subtitle: context.l10n.translate('hub_module_ledger_sub'),
         icon: Icons.account_balance_wallet_rounded,
         color: const Color(0xFF52B788),
         onTap: () => context.push('/group/${group.id}/ledger'),
       ),
       if (group.modules.seatsRooms)
         _ModuleItem(
-          title: 'Bus Seats & Rooms',
-          subtitle: 'Seat & room allocators',
+          title: context.l10n.translate('hub_module_seats'),
+          subtitle: context.l10n.translate('hub_module_seats_sub'),
           icon: Icons.airline_seat_recline_extra_rounded,
           color: const Color(0xFF6366F1),
           onTap: () => context.push('/group/${group.id}/logistics'),
@@ -586,11 +599,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       if (group.modules.tideSafety)
         _ModuleItem(
           title: group.tourType == TourType.beach
-              ? 'Tide & Beach Guide 🌊'
-              : 'Weather & Nature 🌤️',
+              ? context.l10n.translate('hub_module_tide')
+              : context.l10n.translate('hub_module_weather'),
           subtitle: group.tourType == TourType.beach
-              ? 'High/low tide & danger flags'
-              : 'আবহাওয়া ও ট্রেকিং সতর্কতা',
+              ? context.l10n.translate('hub_module_tide_sub')
+              : context.l10n.translate('hub_module_weather_sub'),
           icon: group.tourType == TourType.beach
               ? Icons.waves_rounded
               : Icons.wb_sunny_rounded,
@@ -598,59 +611,63 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           onTap: () => context.push('/group/${group.id}/tide'),
         ),
       _ModuleItem(
-        title: 'Notice Board 📌',
-        subtitle: 'মিটিং পয়েন্ট ও জরুরি নোটিশ',
+        title: context.l10n.translate('hub_module_notices'),
+        subtitle: context.l10n.translate('hub_module_notices_sub'),
         icon: Icons.campaign_rounded,
         color: const Color(0xFFEAB308),
         onTap: () => context.push('/group/${group.id}/notices'),
       ),
       _ModuleItem(
-        title: 'Highway Roadmap 🛣️',
-        subtitle: '${group.originCity} ➔ ${group.destination} জার্নি ট্র্যাকার',
+        title: context.l10n.translate('hub_module_journey'),
+        subtitle: context.l10n.translate('hub_journey_sub', args: {
+          'origin': group.originCity,
+          'destination': group.destination
+        }),
         icon: Icons.alt_route_rounded,
         color: const Color(0xFF10B981),
         onTap: () => context.push('/group/${group.id}/journey'),
       ),
       _ModuleItem(
-        title: 'Safety Hub & SOS 🚨',
-        subtitle: 'জরুরি কম্পাস ও হেল্পলাইন',
+        title: context.l10n.translate('hub_module_safety'),
+        subtitle: context.l10n.translate('hub_module_safety_sub'),
         icon: Icons.shield_rounded,
         color: const Color(0xFFEF4444),
         onTap: () => context.push('/group/${group.id}/safety'),
       ),
       if (group.modules.games)
         _ModuleItem(
-          title: 'Family GameZone 🎮',
-          subtitle: 'Card 29, Chess, Ludo, Teen Patti & Carrom',
+          title: context.l10n.translate('hub_module_games'),
+          subtitle: context.l10n.translate('hub_module_games_sub'),
           icon: Icons.sports_esports_rounded,
           color: const Color(0xFFF59E0B),
           onTap: () => context.push('/game-zone'),
         ),
       _ModuleItem(
-        title: 'Tour Quiz 🎯',
-        subtitle: '${group.destination} ট্রাভেল কুইজ',
+        title: context.l10n.translate('hub_module_quiz'),
+        subtitle: context.l10n.translate('hub_quiz_sub',
+            args: {'destination': group.destination}),
         icon: Icons.quiz_rounded,
         color: const Color(0xFF8B5CF6),
         onTap: () => context.push('/group/${group.id}/quiz'),
       ),
       _ModuleItem(
-        title: 'Digital Scrapbook 📖',
-        subtitle: 'স্মৃতি অ্যালবাম ও ম্যাগাজিন',
+        title: context.l10n.translate('hub_module_scrapbook'),
+        subtitle: context.l10n.translate('hub_module_scrapbook_sub'),
         icon: Icons.auto_stories_rounded,
         color: const Color(0xFFD97706),
         onTap: () => context.push('/group/${group.id}/scrapbook'),
       ),
       _ModuleItem(
-        title: 'Packing Checklist 🧳',
-        subtitle: 'প্যাকিং তালিকা — প্রত্যেকে নিজের আইটেম টিক দেবেন',
+        title: context.l10n.translate('hub_module_checklist'),
+        subtitle: context.l10n.translate('hub_module_checklist_sub'),
         icon: Icons.checklist_rtl_rounded,
         color: const Color(0xFF14B8A6),
         onTap: () => context.push('/group/${group.id}/checklist'),
       ),
       if (group.modules.chat)
         _ModuleItem(
-          title: 'Discussion Channels 💬',
-          subtitle: '#general, #food, #emergency',
+          title: context.l10n.translate('hub_module_channels'),
+          subtitle: context.l10n.translate('hub_module_channels_sub'),
           icon: Icons.forum_rounded,
           color: const Color(0xFFEC4899),
           onTap: () => context.push('/group/${group.id}/channels'),
@@ -727,9 +744,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Active Tour Members',
-          style: TextStyle(
+        Text(
+          context.l10n.translate('hub_members_heading'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 16,
@@ -743,8 +760,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             if (members.isEmpty) {
               return snapshot.connectionState == ConnectionState.waiting
                   ? const CircularProgressIndicator(color: AppColors.midGreen)
-                  : const Text('এখনও কোনো সদস্য নেই',
-                      style: TextStyle(color: Colors.white54));
+                  : Text(context.l10n.translate('hub_no_members'),
+                      style: const TextStyle(color: Colors.white54));
             }
 
             return Container(
@@ -785,7 +802,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     subtitle: Text(
                         _viewerIsAdmin(members)
                             ? m.email
-                            : (m.role.isAdminOrOwner ? 'প্রশাসক' : 'সদস্য'),
+                            : (m.role.isAdminOrOwner
+                                ? context.l10n.translate('hub_role_admin')
+                                : context.l10n.translate('hub_role_member')),
                         style: const TextStyle(
                             color: Colors.white54, fontSize: 12)),
                     trailing: Container(
@@ -819,6 +838,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   void _showCreateGroupDialog(BuildContext context) {
+    final l10n = context.l10n;
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     final destCtrl = TextEditingController();
@@ -835,32 +855,37 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
     final presets = [
       (
-        label: '🏖️ কক্সবাজার',
+        label: l10n.translate('hub_preset_coxs'),
         dest: "Cox's Bazar",
         type: TourType.beach,
         tide: true
       ),
       (
-        label: '⛰️ সাজেক ভ্যালি',
+        label: l10n.translate('hub_preset_sajek'),
         dest: 'Sajek Valley',
         type: TourType.hill,
         tide: false
       ),
       (
-        label: '🌿 সিলেট ও শ্রীমঙ্গল',
+        label: l10n.translate('hub_preset_sylhet'),
         dest: 'Sylhet',
         type: TourType.nature,
         tide: false
       ),
       (
-        label: '🏞️ বান্দরবান',
+        label: l10n.translate('hub_preset_bandarban'),
         dest: 'Bandarban',
         type: TourType.hill,
         tide: false
       ),
-      (label: '🌅 কুয়াকাটা', dest: 'Kuakata', type: TourType.beach, tide: true),
       (
-        label: '🐅 সুন্দরবন',
+        label: l10n.translate('hub_preset_kuakata'),
+        dest: 'Kuakata',
+        type: TourType.beach,
+        tide: true
+      ),
+      (
+        label: l10n.translate('hub_preset_sundarbans'),
         dest: 'Sundarbans',
         type: TourType.nature,
         tide: false
@@ -875,8 +900,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           builder: (dialogCtx, setDialogState) {
             final days = endDate.difference(startDate).inDays + 1;
             final nights = days > 1 ? days - 1 : 0;
-            final durationText =
-                nights == 0 ? '$days দিন (ডে-ট্যুর)' : '$days দিন $nights রাত';
+            final durationText = nights == 0
+                ? l10n.translate('hub_duration_day_trip', args: {'days': days})
+                : l10n.translate('hub_duration_nights',
+                    args: {'days': days, 'nights': nights});
 
             return AlertDialog(
               backgroundColor: const Color(0xFF14241B),
@@ -967,10 +994,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         controller: destCtrl,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          labelText: 'গন্তব্য বা স্থান (Destination)',
+                          labelText: l10n.translate('hub_destination_label'),
                           labelStyle: const TextStyle(
                               color: Colors.white70, fontSize: 13),
-                          hintText: 'e.g. Sajek, Sylhet, Darjeeling, etc.',
+                          hintText: l10n.translate('hub_destination_example'),
                           hintStyle: const TextStyle(
                               color: Colors.white30, fontSize: 12),
                           filled: true,
@@ -989,10 +1016,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               controller: originCtrl,
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
-                                labelText: 'যাত্রা শুরু (Origin)',
+                                labelText: l10n.translate('hub_origin_label'),
                                 labelStyle: const TextStyle(
                                     color: Colors.white70, fontSize: 12),
-                                hintText: 'ঢাকা / রংপুর',
+                                hintText: l10n.translate('hub_origin_hint'),
                                 hintStyle: const TextStyle(
                                     color: Colors.white30, fontSize: 11),
                                 filled: true,
@@ -1011,7 +1038,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               style: const TextStyle(
                                   color: Colors.white, fontSize: 12),
                               decoration: InputDecoration(
-                                labelText: 'ট্যুর ধরন',
+                                labelText:
+                                    l10n.translate('hub_tour_type_label'),
                                 labelStyle: const TextStyle(
                                     color: Colors.white70, fontSize: 12),
                                 filled: true,
@@ -1042,9 +1070,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       const SizedBox(height: 14),
 
                       // 5. Date Range Selector Button
-                      const Text(
-                        'ট্যুরের তারিখ ও মেয়াদ (Any Amount of Days):',
-                        style: TextStyle(
+                      Text(
+                        l10n.translate('hub_dates_heading'),
+                        style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 11,
                             fontWeight: FontWeight.bold),
@@ -1107,7 +1135,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                           fontSize: 12),
                                     ),
                                     Text(
-                                      'মেয়াদ: $durationText (ক্যালেন্ডার চাপুন)',
+                                      l10n.translate('hub_duration_hint',
+                                          args: {'duration': durationText}),
                                       style: const TextStyle(
                                           color: AppColors.mintGreen,
                                           fontSize: 11),
@@ -1123,26 +1152,30 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      const Text('মডিউল (ঐচ্ছিক):',
-                          style: TextStyle(
+                      Text(l10n.translate('hub_modules_optional'),
+                          style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 11,
                               fontWeight: FontWeight.bold)),
-                      _moduleSwitch('বাস সিট ও রুম', seatsRooms,
+                      _moduleSwitch(
+                          l10n.translate('hub_mod_seats_short'),
+                          seatsRooms,
                           (v) => setDialogState(() => seatsRooms = v)),
-                      _moduleSwitch('টাইড ও সৈকত গাইড', tideSafety,
+                      _moduleSwitch(
+                          l10n.translate('hub_mod_tide_short'),
+                          tideSafety,
                           (v) => setDialogState(() => tideSafety = v)),
-                      _moduleSwitch('গেম জোন', games,
-                          (v) => setDialogState(() => games = v)),
-                      _moduleSwitch('আলোচনা চ্যানেল', chat,
-                          (v) => setDialogState(() => chat = v)),
+                      _moduleSwitch(l10n.translate('hub_mod_games_short'),
+                          games, (v) => setDialogState(() => games = v)),
+                      _moduleSwitch(l10n.translate('hub_mod_channels_short'),
+                          chat, (v) => setDialogState(() => chat = v)),
                       const SizedBox(height: 8),
                       // 6. Description
                       TextField(
                         controller: descCtrl,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          labelText: 'বিবরণ (ঐচ্ছিক)',
+                          labelText: l10n.translate('hub_description_optional'),
                           labelStyle: const TextStyle(
                               color: Colors.white70, fontSize: 13),
                           filled: true,
@@ -1158,8 +1191,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               actions: [
                 TextButton(
                   onPressed: isCreating ? null : () => Navigator.pop(ctx),
-                  child: const Text('Cancel',
-                      style: TextStyle(color: Colors.white54)),
+                  child: Text(l10n.translate('tour_cancel'),
+                      style: const TextStyle(color: Colors.white54)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -1170,7 +1203,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           final name = nameCtrl.text.trim();
                           final dest = destCtrl.text.trim();
                           if (name.isEmpty) {
-                            _snack('ট্যুরের নাম লিখুন', error: true);
+                            _snack(l10n.translate('hub_name_hint'),
+                                error: true);
                             return;
                           }
                           final messenger = ScaffoldMessenger.of(context);
@@ -1202,8 +1236,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               navigator.pop();
                               messenger.showSnackBar(
                                 SnackBar(
-                                  content: Text(
-                                      'ট্যুর গ্রুপ "${newGroup.name}" (${newGroup.durationText}) সফলভাবে তৈরি হয়েছে!'),
+                                  content: Text(l10n.translate('hub_created',
+                                      args: {
+                                        'name': newGroup.name,
+                                        'duration': newGroup.durationText
+                                      })),
                                   backgroundColor: AppColors.midGreen,
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -1214,7 +1251,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             if (mounted) {
                               messenger.showSnackBar(
                                 SnackBar(
-                                  content: Text('গ্রুপ তৈরি করা যায়নি: $e'),
+                                  content: Text(l10n.translate(
+                                      'hub_create_failed',
+                                      args: {'error': e})),
                                   backgroundColor: Colors.redAccent,
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -1229,8 +1268,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2),
                         )
-                      : const Text('Create Tour',
-                          style: TextStyle(color: Colors.white)),
+                      : Text(l10n.translate('hub_create_tour'),
+                          style: const TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -1246,6 +1285,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   void _showEditGroupDialog(BuildContext context, TourGroup group) {
+    final l10n = context.l10n;
     final nameCtrl = TextEditingController(text: group.name);
     final descCtrl = TextEditingController(text: group.description);
     final destCtrl = TextEditingController(text: group.destination);
@@ -1267,15 +1307,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           builder: (dialogCtx, setDialogState) {
             final days = endDate.difference(startDate).inDays + 1;
             final nights = days > 1 ? days - 1 : 0;
-            final durationText =
-                nights == 0 ? '$days দিন (ডে-ট্যুর)' : '$days দিন $nights রাত';
+            final durationText = nights == 0
+                ? l10n.translate('hub_duration_day_trip', args: {'days': days})
+                : l10n.translate('hub_duration_nights',
+                    args: {'days': days, 'nights': nights});
 
             return AlertDialog(
               backgroundColor: const Color(0xFF14241B),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
-              title: const Text('ট্যুর সেটিংস ও দিন সম্পাদনা',
-                  style: TextStyle(
+              title: Text(l10n.translate('hub_edit_settings_title'),
+                  style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 17)),
@@ -1290,7 +1332,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         controller: nameCtrl,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          labelText: 'ট্যুরের নাম',
+                          labelText: l10n.translate('hub_name_label'),
                           labelStyle: const TextStyle(
                               color: Colors.white70, fontSize: 13),
                           filled: true,
@@ -1304,7 +1346,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         controller: destCtrl,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          labelText: 'গন্তব্য বা স্থান (Destination)',
+                          labelText: l10n.translate('hub_destination_label'),
                           labelStyle: const TextStyle(
                               color: Colors.white70, fontSize: 13),
                           filled: true,
@@ -1321,7 +1363,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               controller: originCtrl,
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
-                                labelText: 'যাত্রা শুরু (Origin)',
+                                labelText: l10n.translate('hub_origin_label'),
                                 labelStyle: const TextStyle(
                                     color: Colors.white70, fontSize: 12),
                                 filled: true,
@@ -1340,7 +1382,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               style: const TextStyle(
                                   color: Colors.white, fontSize: 12),
                               decoration: InputDecoration(
-                                labelText: 'ট্যুর ধরন',
+                                labelText:
+                                    l10n.translate('hub_tour_type_label'),
                                 labelStyle: const TextStyle(
                                     color: Colors.white70, fontSize: 12),
                                 filled: true,
@@ -1366,9 +1409,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      const Text(
-                        'ট্যুরের তারিখ ও মেয়াদ পরিবর্তন করুন:',
-                        style: TextStyle(
+                      Text(
+                        l10n.translate('hub_edit_dates_heading'),
+                        style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 11,
                             fontWeight: FontWeight.bold),
@@ -1431,7 +1474,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                           fontSize: 12),
                                     ),
                                     Text(
-                                      'নতুন মেয়াদ: $durationText',
+                                      l10n.translate('hub_new_duration',
+                                          args: {'duration': durationText}),
                                       style: const TextStyle(
                                           color: AppColors.mintGreen,
                                           fontSize: 11),
@@ -1446,25 +1490,29 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text('মডিউল:',
-                          style: TextStyle(
+                      Text(l10n.translate('hub_modules_label'),
+                          style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 11,
                               fontWeight: FontWeight.bold)),
-                      _moduleSwitch('বাস সিট ও রুম', seatsRooms,
+                      _moduleSwitch(
+                          l10n.translate('hub_mod_seats_short'),
+                          seatsRooms,
                           (v) => setDialogState(() => seatsRooms = v)),
-                      _moduleSwitch('টাইড ও সৈকত গাইড', tideSafety,
+                      _moduleSwitch(
+                          l10n.translate('hub_mod_tide_short'),
+                          tideSafety,
                           (v) => setDialogState(() => tideSafety = v)),
-                      _moduleSwitch('গেম জোন', games,
-                          (v) => setDialogState(() => games = v)),
-                      _moduleSwitch('আলোচনা চ্যানেল', chat,
-                          (v) => setDialogState(() => chat = v)),
+                      _moduleSwitch(l10n.translate('hub_mod_games_short'),
+                          games, (v) => setDialogState(() => games = v)),
+                      _moduleSwitch(l10n.translate('hub_mod_channels_short'),
+                          chat, (v) => setDialogState(() => chat = v)),
                       const SizedBox(height: 8),
                       TextField(
                         controller: descCtrl,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          labelText: 'বিবরণ',
+                          labelText: l10n.translate('hub_description'),
                           labelStyle: const TextStyle(
                               color: Colors.white70, fontSize: 13),
                           filled: true,
@@ -1480,8 +1528,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               actions: [
                 TextButton(
                   onPressed: isUpdating ? null : () => Navigator.pop(ctx),
-                  child: const Text('Cancel',
-                      style: TextStyle(color: Colors.white54)),
+                  child: Text(l10n.translate('tour_cancel'),
+                      style: const TextStyle(color: Colors.white54)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -1492,7 +1540,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           final name = nameCtrl.text.trim();
                           final dest = destCtrl.text.trim();
                           if (name.isEmpty) {
-                            _snack('ট্যুরের নাম লিখুন', error: true);
+                            _snack(l10n.translate('hub_name_hint'),
+                                error: true);
                             return;
                           }
                           final messenger = ScaffoldMessenger.of(context);
@@ -1532,9 +1581,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               });
                               navigator.pop();
                               messenger.showSnackBar(
-                                const SnackBar(
+                                SnackBar(
                                   content: Text(
-                                      'ট্যুর সেটিংস সফলভাবে আপডেট হয়েছে!'),
+                                      l10n.translate('hub_settings_saved')),
                                   backgroundColor: AppColors.midGreen,
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -1545,7 +1594,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             if (mounted) {
                               messenger.showSnackBar(
                                 SnackBar(
-                                  content: Text('আপডেট ব্যর্থ: $e'),
+                                  content: Text(l10n.translate(
+                                      'hub_update_failed',
+                                      args: {'error': e})),
                                   backgroundColor: Colors.redAccent,
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -1560,8 +1611,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2),
                         )
-                      : const Text('Save Changes',
-                          style: TextStyle(color: Colors.white)),
+                      : Text(l10n.translate('hub_save_changes'),
+                          style: const TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -1577,6 +1628,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   void _showJoinGroupDialog(BuildContext context) {
+    final l10n = context.l10n;
     final codeCtrl = TextEditingController();
     bool isJoining = false;
 
@@ -1590,15 +1642,15 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               backgroundColor: const Color(0xFF14241B),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
-              title: const Text('Join Tour Group',
-                  style: TextStyle(
+              title: Text(l10n.translate('hub_join_title'),
+                  style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Enter the invite code shared by your tour admin (8 characters).',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  Text(
+                    l10n.translate('hub_join_hint'),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                   const SizedBox(height: 14),
                   TextField(
@@ -1612,7 +1664,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     ),
                     textAlign: TextAlign.center,
                     decoration: InputDecoration(
-                      hintText: 'e.g. 7KQ2M9XB',
+                      hintText: l10n.translate('hub_join_code_example'),
                       hintStyle: const TextStyle(
                           color: Colors.white24, letterSpacing: 2),
                       filled: true,
@@ -1629,8 +1681,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               actions: [
                 TextButton(
                   onPressed: isJoining ? null : () => Navigator.pop(ctx),
-                  child: const Text('Cancel',
-                      style: TextStyle(color: Colors.white54)),
+                  child: Text(l10n.translate('tour_cancel'),
+                      style: const TextStyle(color: Colors.white54)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -1653,8 +1705,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               navigator.pop();
                               messenger.showSnackBar(
                                 SnackBar(
-                                  content: Text(
-                                      'গ্রুপ "${joinedGroup.name}" এ সফলভাবে যোগ দিয়েছেন!'),
+                                  content: Text(l10n.translate('hub_joined',
+                                      args: {'name': joinedGroup.name})),
                                   backgroundColor: AppColors.midGreen,
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -1682,8 +1734,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2),
                         )
-                      : const Text('Join',
-                          style: TextStyle(color: Colors.white)),
+                      : Text(l10n.translate('hub_join'),
+                          style: const TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -1714,7 +1766,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ব্যাকআপ তৈরিতে ত্রুটি: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('hub_backup_failed', args: {'error': e}))),
         );
       }
     }
@@ -1836,8 +1890,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     ),
                     title: Text(
                       member.role == TourRole.admin
-                          ? 'Remove Admin Role'
-                          : 'Promote to Tour Admin',
+                          ? context.l10n.translate('hub_remove_admin')
+                          : context.l10n.translate('hub_promote_admin'),
                       style: const TextStyle(color: Colors.white),
                     ),
                     onTap: () async {
@@ -1855,8 +1909,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text(
-                                  '${member.displayName} এর রোল পরিবর্তন করা হয়েছে')),
+                              content: Text(context.l10n.translate(
+                                  'hub_role_changed',
+                                  args: {'name': member.displayName}))),
                         );
                       }
                     },
@@ -1866,9 +1921,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ListTile(
                     leading:
                         const Icon(Icons.stars_rounded, color: AppColors.gold),
-                    title: const Text(
-                      'Transfer Tour Ownership',
-                      style: TextStyle(color: Colors.white),
+                    title: Text(
+                      context.l10n.translate('hub_transfer_title'),
+                      style: const TextStyle(color: Colors.white),
                     ),
                     onTap: () async {
                       Navigator.pop(ctx);
@@ -1876,21 +1931,25 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         context: context,
                         builder: (c) => AlertDialog(
                           backgroundColor: const Color(0xFF14241B),
-                          title: const Text('মালিকানা হস্তান্তর করবেন?',
-                              style: TextStyle(color: Colors.white)),
+                          title: Text(
+                              context.l10n.translate('hub_transfer_question'),
+                              style: const TextStyle(color: Colors.white)),
                           content: Text(
-                              'আপনি কি নিশ্চিত যে ${member.displayName} কে এই ট্যুরের প্রধান মালিক করবেন?',
+                              context.l10n.translate('hub_transfer_body',
+                                  args: {'name': member.displayName}),
                               style: const TextStyle(color: Colors.white70)),
                           actions: [
                             TextButton(
                                 onPressed: () => Navigator.pop(c, false),
-                                child: const Text('বাতিল')),
+                                child: Text(
+                                    context.l10n.translate('tour_cancel'))),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.gold,
                                   foregroundColor: Colors.black),
                               onPressed: () => Navigator.pop(c, true),
-                              child: const Text('হস্তান্তর করুন'),
+                              child: Text(context.l10n
+                                  .translate('hub_transfer_action')),
                             ),
                           ],
                         ),
@@ -1910,9 +1969,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ListTile(
                     leading: const Icon(Icons.person_remove_rounded,
                         color: Colors.redAccent),
-                    title: const Text(
-                      'Remove from Tour',
-                      style: TextStyle(color: Colors.redAccent),
+                    title: Text(
+                      context.l10n.translate('hub_remove_title'),
+                      style: const TextStyle(color: Colors.redAccent),
                     ),
                     onTap: () async {
                       Navigator.pop(ctx);
@@ -1920,21 +1979,25 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         context: context,
                         builder: (c) => AlertDialog(
                           backgroundColor: const Color(0xFF14241B),
-                          title: const Text('সদস্য অপসারণ',
-                              style: TextStyle(color: Colors.white)),
+                          title: Text(
+                              context.l10n.translate('hub_remove_question'),
+                              style: const TextStyle(color: Colors.white)),
                           content: Text(
-                              '${member.displayName} কে ট্যুর গ্রুপ থেকে বাদ দিতে চান?',
+                              context.l10n.translate('hub_remove_body',
+                                  args: {'name': member.displayName}),
                               style: const TextStyle(color: Colors.white70)),
                           actions: [
                             TextButton(
                                 onPressed: () => Navigator.pop(c, false),
-                                child: const Text('বাতিল')),
+                                child: Text(
+                                    context.l10n.translate('tour_cancel'))),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.redAccent,
                                   foregroundColor: Colors.white),
                               onPressed: () => Navigator.pop(c, true),
-                              child: const Text('অপসারণ করুন'),
+                              child: Text(
+                                  context.l10n.translate('hub_remove_action')),
                             ),
                           ],
                         ),
@@ -1953,12 +2016,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   leading: const Icon(Icons.family_restroom_rounded,
                       color: AppColors.mintGreen),
                   title: Text(
-                    'পরিবারের সদস্য সংখ্যা: ${member.familyCount}',
+                    context.l10n.translate('hub_family_count_line',
+                        args: {'count': member.familyCount}),
                     style: const TextStyle(color: Colors.white),
                   ),
-                  subtitle: const Text(
-                    'খরচ ভাগের সময় এই সংখ্যা অনুযায়ী ভাগ হবে',
-                    style: TextStyle(color: Colors.white38, fontSize: 11),
+                  subtitle: Text(
+                    context.l10n.translate('hub_family_count_note'),
+                    style: const TextStyle(color: Colors.white38, fontSize: 11),
                   ),
                   onTap: () async {
                     final count =
@@ -1972,12 +2036,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     }
                   },
                 ),
-                const Padding(
-                  padding: EdgeInsets.all(12),
+                Padding(
+                  padding: const EdgeInsets.all(12),
                   child: Text(
-                    'এটি আপনার প্রোফাইল। আপনি ট্যুরের সক্রিয় সদস্য।',
+                    context.l10n.translate('hub_own_profile_note'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                    style: const TextStyle(color: Colors.white54, fontSize: 13),
                   ),
                 ),
               ],
