@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:uuid/uuid.dart';
-import '../../data/tour_group_repository.dart';
+
 import '../../../../core/theme/colors.dart';
+import '../../data/tour_group_repository.dart';
+import '../../domain/models/tour_activity_models.dart';
 
 class GroupChannelsScreen extends StatefulWidget {
   final String tourId;
@@ -15,34 +15,41 @@ class GroupChannelsScreen extends StatefulWidget {
 
 class _GroupChannelsScreenState extends State<GroupChannelsScreen>
     with SingleTickerProviderStateMixin {
-  final TourGroupRepository _repository = TourGroupRepository();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final TextEditingController _msgController = TextEditingController();
-  final Uuid _uuid = const Uuid();
-
-  final List<String> _channels = [
+  static const List<String> _channels = [
     'general',
     'food',
     'sightseeing',
-    'emergency'
+    'emergency',
   ];
-  late TabController _tabController;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: _channels.length, vsync: this);
-  }
+  final TourGroupRepository _repository = TourGroupRepository();
+  late final TabController _tabController =
+      TabController(length: _channels.length, vsync: this);
+
+  // Each channel keeps its own draft and stream, so a draft typed in one
+  // channel never appears in another, and a rebuild does not re-subscribe.
+  final Map<String, TextEditingController> _drafts = {};
+  final Map<String, Stream<List<ChannelMessage>>> _streams = {};
+  final Set<String> _sending = {};
 
   @override
   void dispose() {
     _tabController.dispose();
-    _msgController.dispose();
+    for (final c in _drafts.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
-  String _getChannelTitle(String ch) {
-    switch (ch) {
+  TextEditingController _draftFor(String channel) =>
+      _drafts.putIfAbsent(channel, TextEditingController.new);
+
+  Stream<List<ChannelMessage>> _streamFor(String channel) =>
+      _streams.putIfAbsent(channel,
+          () => _repository.watchChannelMessages(widget.tourId, channel));
+
+  String _title(String channel) {
+    switch (channel) {
       case 'general':
         return '# সাধারণ আড্ডা';
       case 'food':
@@ -52,7 +59,31 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
       case 'emergency':
         return '# জরুরি ও নিরাপত্তা';
       default:
-        return '# $ch';
+        return '# $channel';
+    }
+  }
+
+  Future<void> _send(String channel) async {
+    final draft = _draftFor(channel);
+    final text = draft.text.trim();
+    if (text.isEmpty || _sending.contains(channel)) return;
+
+    setState(() => _sending.add(channel));
+    try {
+      await _repository.sendChannelMessage(widget.tourId, channel, text);
+      // Cleared only after the message is accepted, so a failure keeps the text.
+      if (draft.text.trim() == text) draft.clear();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('বার্তা পাঠানো যায়নি। লেখাটি রইল: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending.remove(channel));
     }
   }
 
@@ -66,7 +97,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
         title: const Text(
           'Group Channels (আলোচনা চ্যানেল)',
           style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -74,48 +105,44 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
           labelColor: AppColors.mintGreen,
           unselectedLabelColor: Colors.white60,
           isScrollable: true,
-          tabs: _channels.map((ch) => Tab(text: _getChannelTitle(ch))).toList(),
+          tabs: _channels.map((ch) => Tab(text: _title(ch))).toList(),
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: _channels.map((channelId) {
-          return _buildChannelChatView(channelId);
-        }).toList(),
+        children: _channels.map(_buildChannel).toList(),
       ),
     );
   }
 
-  Widget _buildChannelChatView(String channelId) {
-    final messagesStream = _firestore
-        .collection('tours')
-        .doc(widget.tourId)
-        .collection('channels')
-        .doc(channelId)
-        .collection('messages')
-        .orderBy('timestamp', descending: true)
-        .snapshots();
+  Widget _buildChannel(String channel) {
+    final draft = _draftFor(channel);
+    final me = _repository.currentEmail;
 
     return Column(
       children: [
-        // Message list
         Expanded(
-          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: messagesStream,
+          child: StreamBuilder<List<ChannelMessage>>(
+            stream: _streamFor(channel),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.hasError && !snapshot.hasData) {
+                return const Center(
+                  child: Text('বার্তা লোড করা যায়নি।',
+                      style: TextStyle(color: Colors.white54)),
+                );
+              }
+              if (!snapshot.hasData) {
                 return const Center(
                     child:
                         CircularProgressIndicator(color: AppColors.midGreen));
               }
-
-              final docs = snapshot.data?.docs ?? [];
-              if (docs.isEmpty) {
-                return Center(
+              final messages = snapshot.data!;
+              if (messages.isEmpty) {
+                return const Center(
                   child: Text(
-                    'No messages in ${_getChannelTitle(channelId)} yet.\nSay hello to everyone!',
+                    'এখনও কোনো বার্তা নেই। সবাইকে হ্যালো বলুন!',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white38),
+                    style: TextStyle(color: Colors.white38),
                   ),
                 );
               }
@@ -124,14 +151,10 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
                 reverse: true,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                itemCount: docs.length,
+                itemCount: messages.length,
                 itemBuilder: (context, i) {
-                  final data = docs[i].data();
-                  final senderEmail = data['senderEmail'] as String? ?? '';
-                  final senderName = data['senderName'] as String? ?? 'Member';
-                  final text = data['text'] as String? ?? '';
-                  final isMe = senderEmail == _repository.currentEmail;
-
+                  final m = messages[i];
+                  final isMe = m.isSentBy(me);
                   return Align(
                     alignment:
                         isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -156,16 +179,15 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
                         children: [
                           if (!isMe)
                             Text(
-                              senderName,
+                              m.senderName,
                               style: const TextStyle(
-                                color: AppColors.mintGreen,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
+                                  color: AppColors.gold,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold),
                             ),
                           const SizedBox(height: 2),
                           Text(
-                            text,
+                            m.text,
                             style: const TextStyle(
                                 color: Colors.white, fontSize: 14),
                           ),
@@ -178,42 +200,51 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
             },
           ),
         ),
-
-        // Input field bar
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: const BoxDecoration(
-            color: Color(0xFF14241B),
-            border: Border(top: BorderSide(color: Colors.white10)),
-          ),
-          child: SafeArea(
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
             child: Row(
               children: [
                 Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.black26,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: TextField(
-                      controller: _msgController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        hintText: 'Type a message...',
-                        hintStyle:
-                            TextStyle(color: Colors.white30, fontSize: 13),
-                        border: InputBorder.none,
+                  child: TextField(
+                    controller: draft,
+                    maxLength: 1000,
+                    minLines: 1,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _send(channel),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      hintText: 'বার্তা লিখুন...',
+                      hintStyle:
+                          const TextStyle(color: Colors.white30, fontSize: 13),
+                      filled: true,
+                      fillColor: Colors.black26,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide.none,
                       ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.send_rounded,
-                      color: AppColors.mintGreen),
-                  onPressed: () => _sendMessage(channelId),
+                  tooltip: 'পাঠান',
+                  icon: _sending.contains(channel)
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: AppColors.mintGreen, strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send_rounded,
+                          color: AppColors.mintGreen),
+                  onPressed:
+                      _sending.contains(channel) ? null : () => _send(channel),
                 ),
               ],
             ),
@@ -221,27 +252,5 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
         ),
       ],
     );
-  }
-
-  Future<void> _sendMessage(String channelId) async {
-    final text = _msgController.text.trim();
-    if (text.isEmpty) return;
-    _msgController.clear();
-
-    final msgId = _uuid.v4();
-    await _firestore
-        .collection('tours')
-        .doc(widget.tourId)
-        .collection('channels')
-        .doc(channelId)
-        .collection('messages')
-        .doc(msgId)
-        .set({
-      'id': msgId,
-      'text': text,
-      'senderEmail': _repository.currentEmail,
-      'senderName': _repository.currentDisplayName,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
   }
 }

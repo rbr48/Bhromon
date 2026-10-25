@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
@@ -17,6 +18,107 @@ class TourGroupHubScreen extends StatefulWidget {
 class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   final TourGroupRepository _repository = TourGroupRepository();
   TourGroup? _activeGroup;
+  // The group shown on screen, so the backup button works without a selection.
+  TourGroup? _displayedGroup;
+  late final Stream<List<TourGroup>> _groupsStream =
+      _repository.watchMyGroups();
+  final Map<String, Stream<List<TourMember>>> _memberStreams = {};
+
+  Stream<List<TourMember>> _membersOf(String tourId) => _memberStreams
+      .putIfAbsent(tourId, () => _repository.watchMembers(tourId));
+
+  bool _viewerIsOwner(List<TourMember> members) => members.any(
+      (m) => m.email == _repository.currentEmail && m.role == TourRole.owner);
+
+  bool _viewerIsAdmin(List<TourMember> members) => members
+      .any((m) => m.email == _repository.currentEmail && m.role.isAdminOrOwner);
+
+  void _snack(String text, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(text),
+      backgroundColor: error ? Colors.redAccent : AppColors.midGreen,
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  void _reportFailure(Object e) {
+    _snack(
+        e is FormatException || e is TourAccessException
+            ? e.toString()
+            : 'কাজটি সম্পন্ন হয়নি। আবার চেষ্টা করুন।',
+        error: true);
+  }
+
+  Widget _moduleSwitch(String label, bool value, ValueChanged<bool> onChanged) {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      title: Text(label,
+          style: const TextStyle(color: Colors.white, fontSize: 13)),
+      value: value,
+      activeThumbColor: AppColors.mintGreen,
+      onChanged: onChanged,
+    );
+  }
+
+  Future<bool> _confirm(String title, String body) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: const Color(0xFF14241B),
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        content: Text(body, style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('না')),
+          TextButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('হ্যাঁ',
+                  style: TextStyle(color: Colors.redAccent))),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  Future<void> _onGroupMenu(
+      BuildContext context, TourGroup group, String action) async {
+    switch (action) {
+      case 'code':
+        final ok = await _confirm('আমন্ত্রণ কোড নতুন করবেন?',
+            'পুরোনো কোড আর কাজ করবে না। যাদের কাছে নতুন কোড আছে শুধু তারাই যোগ দিতে পারবেন।');
+        if (!ok) return;
+        try {
+          final code =
+              await _repository.rotateInviteCode(group.id, group.inviteCode);
+          _snack('নতুন আমন্ত্রণ কোড: $code');
+        } catch (e) {
+          _reportFailure(e);
+        }
+      case 'leave':
+        final ok = await _confirm(
+            'ট্যুর ছেড়ে যাবেন?', '${group.name} থেকে আপনি বাদ পড়বেন।');
+        if (!ok) return;
+        try {
+          await _repository.leaveTour(group.id);
+          if (mounted) setState(() => _activeGroup = null);
+        } catch (e) {
+          _reportFailure(e);
+        }
+      case 'delete':
+        final ok = await _confirm('ট্যুরটি মুছবেন?',
+            '${group.name} এবং সব সদস্যের প্রবেশাধিকার চিরতরে মুছে যাবে। এটি ফেরানো যাবে না।');
+        if (!ok) return;
+        try {
+          await _repository.deleteTour(group.id, inviteCode: group.inviteCode);
+          if (mounted) setState(() => _activeGroup = null);
+        } catch (e) {
+          _reportFailure(e);
+        }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +140,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             icon: const Icon(Icons.backup_rounded, color: AppColors.gold),
             tooltip: 'JSON ব্যাকআপ ডাউনলোড',
             onPressed: () {
-              final active = _activeGroup;
+              final active = _displayedGroup;
               if (active != null) {
                 _exportTourJsonBackup(context, active);
               }
@@ -59,7 +161,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         ],
       ),
       body: StreamBuilder<List<TourGroup>>(
-        stream: _repository.watchMyGroups(),
+        stream: _groupsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting &&
               !snapshot.hasData) {
@@ -115,6 +217,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   groups.any((g) => g.id == _activeGroup!.id)
               ? groups.firstWhere((g) => g.id == _activeGroup!.id)
               : groups.first;
+
+          _displayedGroup = current;
 
           return ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -289,6 +393,28 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert,
+                        color: Colors.white70, size: 20),
+                    color: const Color(0xFF1B4332),
+                    onSelected: (v) => _onGroupMenu(context, group, v),
+                    itemBuilder: (_) => [
+                      if (group.ownerEmail == _repository.currentEmail) ...[
+                        const PopupMenuItem(
+                            value: 'code',
+                            child: Text('আমন্ত্রণ কোড নতুন করুন',
+                                style: TextStyle(color: Colors.white))),
+                        const PopupMenuItem(
+                            value: 'delete',
+                            child: Text('ট্যুর মুছে ফেলুন',
+                                style: TextStyle(color: Colors.redAccent))),
+                      ] else
+                        const PopupMenuItem(
+                            value: 'leave',
+                            child: Text('ট্যুর ছেড়ে যান',
+                                style: TextStyle(color: Colors.white))),
+                    ],
+                  ),
                   IconButton(
                     icon: const Icon(Icons.edit_calendar_rounded,
                         size: 20, color: AppColors.mintGreen),
@@ -414,26 +540,28 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         color: const Color(0xFF52B788),
         onTap: () => context.push('/group/${group.id}/ledger'),
       ),
-      _ModuleItem(
-        title: 'Bus Seats & Rooms',
-        subtitle: 'Seat & room allocators',
-        icon: Icons.airline_seat_recline_extra_rounded,
-        color: const Color(0xFF6366F1),
-        onTap: () => context.push('/group/${group.id}/logistics'),
-      ),
-      _ModuleItem(
-        title: group.tourType == TourType.beach
-            ? 'Tide & Beach Guide 🌊'
-            : 'Weather & Nature 🌤️',
-        subtitle: group.tourType == TourType.beach
-            ? 'High/low tide & danger flags'
-            : 'লাইভ আবহাওয়া ও ট্র্যাকিং সতর্কতা',
-        icon: group.tourType == TourType.beach
-            ? Icons.waves_rounded
-            : Icons.wb_sunny_rounded,
-        color: const Color(0xFF38BDF8),
-        onTap: () => context.push('/group/${group.id}/tide'),
-      ),
+      if (group.modules.seatsRooms)
+        _ModuleItem(
+          title: 'Bus Seats & Rooms',
+          subtitle: 'Seat & room allocators',
+          icon: Icons.airline_seat_recline_extra_rounded,
+          color: const Color(0xFF6366F1),
+          onTap: () => context.push('/group/${group.id}/logistics'),
+        ),
+      if (group.modules.tideSafety)
+        _ModuleItem(
+          title: group.tourType == TourType.beach
+              ? 'Tide & Beach Guide 🌊'
+              : 'Weather & Nature 🌤️',
+          subtitle: group.tourType == TourType.beach
+              ? 'High/low tide & danger flags'
+              : 'আবহাওয়া ও ট্রেকিং সতর্কতা',
+          icon: group.tourType == TourType.beach
+              ? Icons.waves_rounded
+              : Icons.wb_sunny_rounded,
+          color: const Color(0xFF38BDF8),
+          onTap: () => context.push('/group/${group.id}/tide'),
+        ),
       _ModuleItem(
         title: 'Notice Board 📌',
         subtitle: 'মিটিং পয়েন্ট ও জরুরি নোটিশ',
@@ -455,13 +583,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         color: const Color(0xFFEF4444),
         onTap: () => context.push('/group/${group.id}/safety'),
       ),
-      _ModuleItem(
-        title: 'Family GameZone 🎮',
-        subtitle: '29, Chess, Ludo & Teen Patti',
-        icon: Icons.sports_esports_rounded,
-        color: const Color(0xFFF59E0B),
-        onTap: () => context.push('/game-zone'),
-      ),
+      if (group.modules.games)
+        _ModuleItem(
+          title: 'Family GameZone 🎮',
+          subtitle: 'Card 29, Chess, Ludo, Teen Patti & Carrom',
+          icon: Icons.sports_esports_rounded,
+          color: const Color(0xFFF59E0B),
+          onTap: () => context.push('/game-zone'),
+        ),
       _ModuleItem(
         title: 'Tour Quiz 🎯',
         subtitle: '${group.destination} ট্রাভেল কুইজ',
@@ -477,12 +606,20 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         onTap: () => context.push('/group/${group.id}/scrapbook'),
       ),
       _ModuleItem(
-        title: 'Discussion Channels 💬',
-        subtitle: '#general, #food, #emergency',
-        icon: Icons.forum_rounded,
-        color: const Color(0xFFEC4899),
-        onTap: () => context.push('/group/${group.id}/channels'),
+        title: 'Packing Checklist 🧳',
+        subtitle: 'প্যাকিং তালিকা — প্রত্যেকে নিজের আইটেম টিক দেবেন',
+        icon: Icons.checklist_rtl_rounded,
+        color: const Color(0xFF14B8A6),
+        onTap: () => context.push('/group/${group.id}/checklist'),
       ),
+      if (group.modules.chat)
+        _ModuleItem(
+          title: 'Discussion Channels 💬',
+          subtitle: '#general, #food, #emergency',
+          icon: Icons.forum_rounded,
+          color: const Color(0xFFEC4899),
+          onTap: () => context.push('/group/${group.id}/channels'),
+        ),
     ];
 
     return GridView.builder(
@@ -565,12 +702,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         ),
         const SizedBox(height: 12),
         StreamBuilder<List<TourMember>>(
-          stream: _repository.watchMembers(tourId),
+          stream: _membersOf(tourId),
           builder: (context, snapshot) {
             final members = snapshot.data ?? [];
             if (members.isEmpty) {
-              return const Text('Loading members...',
-                  style: TextStyle(color: Colors.white54));
+              return snapshot.connectionState == ConnectionState.waiting
+                  ? const CircularProgressIndicator(color: AppColors.midGreen)
+                  : const Text('এখনও কোনো সদস্য নেই',
+                      style: TextStyle(color: Colors.white54));
             }
 
             return Container(
@@ -588,7 +727,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 itemBuilder: (context, i) {
                   final m = members[i];
                   return ListTile(
-                    onTap: () => _showManageMemberSheet(context, tourId, m),
+                    onTap: () => _showManageMemberSheet(
+                      context,
+                      tourId,
+                      m,
+                      viewerIsOwner: _viewerIsOwner(members),
+                      viewerIsAdmin: _viewerIsAdmin(members),
+                    ),
                     leading: CircleAvatar(
                       backgroundColor: AppColors.midGreen,
                       backgroundImage:
@@ -602,7 +747,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     title: Text(m.displayName,
                         style: const TextStyle(
                             color: Colors.white, fontWeight: FontWeight.w600)),
-                    subtitle: Text(m.email,
+                    subtitle: Text(
+                        _viewerIsAdmin(members)
+                            ? m.email
+                            : (m.role.isAdminOrOwner ? 'প্রশাসক' : 'সদস্য'),
                         style: const TextStyle(
                             color: Colors.white54, fontSize: 12)),
                     trailing: Container(
@@ -822,6 +970,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: DropdownButtonFormField<TourType>(
+                              key: ValueKey(selectedTourType),
                               initialValue: selectedTourType,
                               dropdownColor: const Color(0xFF14241B),
                               style: const TextStyle(
@@ -939,6 +1088,20 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       ),
                       const SizedBox(height: 12),
 
+                      const Text('মডিউল (ঐচ্ছিক):',
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
+                      _moduleSwitch('বাস সিট ও রুম', seatsRooms,
+                          (v) => setDialogState(() => seatsRooms = v)),
+                      _moduleSwitch('টাইড ও সৈকত গাইড', tideSafety,
+                          (v) => setDialogState(() => tideSafety = v)),
+                      _moduleSwitch('গেম জোন', games,
+                          (v) => setDialogState(() => games = v)),
+                      _moduleSwitch('আলোচনা চ্যানেল', chat,
+                          (v) => setDialogState(() => chat = v)),
+                      const SizedBox(height: 8),
                       // 6. Description
                       TextField(
                         controller: descCtrl,
@@ -971,7 +1134,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       : () async {
                           final name = nameCtrl.text.trim();
                           final dest = destCtrl.text.trim();
-                          if (name.isEmpty) return;
+                          if (name.isEmpty) {
+                            _snack('ট্যুরের নাম লিখুন', error: true);
+                            return;
+                          }
                           final messenger = ScaffoldMessenger.of(context);
                           final navigator = Navigator.of(ctx);
                           setDialogState(() => isCreating = true);
@@ -1036,7 +1202,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      nameCtrl.dispose();
+      descCtrl.dispose();
+      destCtrl.dispose();
+      originCtrl.dispose();
+    });
   }
 
   void _showEditGroupDialog(BuildContext context, TourGroup group) {
@@ -1048,6 +1219,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     DateTime startDate = group.startDate;
     DateTime endDate = group.endDate;
     bool isUpdating = false;
+    bool seatsRooms = group.modules.seatsRooms;
+    bool tideSafety = group.modules.tideSafety;
+    bool games = group.modules.games;
+    bool chat = group.modules.chat;
 
     showDialog<void>(
       context: context,
@@ -1124,6 +1299,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: DropdownButtonFormField<TourType>(
+                              key: ValueKey(selectedTourType),
                               initialValue: selectedTourType,
                               dropdownColor: const Color(0xFF14241B),
                               style: const TextStyle(
@@ -1235,6 +1411,20 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      const Text('মডিউল:',
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
+                      _moduleSwitch('বাস সিট ও রুম', seatsRooms,
+                          (v) => setDialogState(() => seatsRooms = v)),
+                      _moduleSwitch('টাইড ও সৈকত গাইড', tideSafety,
+                          (v) => setDialogState(() => tideSafety = v)),
+                      _moduleSwitch('গেম জোন', games,
+                          (v) => setDialogState(() => games = v)),
+                      _moduleSwitch('আলোচনা চ্যানেল', chat,
+                          (v) => setDialogState(() => chat = v)),
+                      const SizedBox(height: 8),
                       TextField(
                         controller: descCtrl,
                         style: const TextStyle(color: Colors.white),
@@ -1266,13 +1456,22 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       : () async {
                           final name = nameCtrl.text.trim();
                           final dest = destCtrl.text.trim();
-                          if (name.isEmpty) return;
+                          if (name.isEmpty) {
+                            _snack('ট্যুরের নাম লিখুন', error: true);
+                            return;
+                          }
                           final messenger = ScaffoldMessenger.of(context);
                           final navigator = Navigator.of(ctx);
                           setDialogState(() => isUpdating = true);
                           try {
                             await _repository.updateGroupSettings(
                               tourId: group.id,
+                              modules: TourModules(
+                                seatsRooms: seatsRooms,
+                                tideSafety: tideSafety,
+                                games: games,
+                                chat: chat,
+                              ),
                               name: name,
                               description: descCtrl.text.trim(),
                               destination:
@@ -1334,7 +1533,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      nameCtrl.dispose();
+      descCtrl.dispose();
+      destCtrl.dispose();
+      originCtrl.dispose();
+    });
   }
 
   void _showJoinGroupDialog(BuildContext context) {
@@ -1358,7 +1562,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Enter the 6-character tour invite code shared by your tour admin.',
+                    'Enter the invite code shared by your tour admin (8 characters).',
                     style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                   const SizedBox(height: 14),
@@ -1373,7 +1577,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     ),
                     textAlign: TextAlign.center,
                     decoration: InputDecoration(
-                      hintText: 'e.g. 7X9A2F',
+                      hintText: 'e.g. 7KQ2M9XB',
                       hintStyle: const TextStyle(
                           color: Colors.white24, letterSpacing: 2),
                       filled: true,
@@ -1426,7 +1630,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             if (mounted) {
                               messenger.showSnackBar(
                                 SnackBar(
-                                  content: Text(e.toString()),
+                                  content: Text(e is FormatException
+                                      ? e.message
+                                      : e.toString()),
                                   backgroundColor: Colors.redAccent,
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -1449,7 +1655,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           },
         );
       },
-    );
+    ).whenComplete(codeCtrl.dispose);
   }
 
   Future<void> _exportTourJsonBackup(
@@ -1460,8 +1666,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       final fileName =
           '${group.name.replaceAll(' ', '_')}_Backup_${DateFormat('yyyyMMdd').format(DateTime.now())}.json';
       // ignore: deprecated_member_use
-      await Share.share(
-        jsonStr,
+      await Share.shareXFiles(
+        [
+          XFile.fromData(
+            Uint8List.fromList(utf8.encode(jsonStr)),
+            mimeType: 'application/json',
+            name: fileName,
+          ),
+        ],
         subject: fileName,
       );
     } catch (e) {
@@ -1474,7 +1686,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   void _showManageMemberSheet(
-      BuildContext context, String tourId, TourMember member) {
+      BuildContext context, String tourId, TourMember member,
+      {required bool viewerIsOwner, required bool viewerIsAdmin}) {
     final currentEmail = _repository.currentEmail;
     final isMe = currentEmail.toLowerCase() == member.email.toLowerCase();
 
@@ -1576,113 +1789,130 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               ),
               const SizedBox(height: 20),
               const Divider(color: Colors.white10),
-              if (!isMe && member.role != TourRole.owner) ...[
+              if (!isMe && member.role != TourRole.owner && viewerIsAdmin) ...[
                 // Promote / Demote
-                ListTile(
-                  leading: Icon(
-                    member.role == TourRole.admin
-                        ? Icons.person_outline
-                        : Icons.admin_panel_settings_rounded,
-                    color: AppColors.mintGreen,
+                if (viewerIsOwner)
+                  ListTile(
+                    leading: Icon(
+                      member.role == TourRole.admin
+                          ? Icons.person_outline
+                          : Icons.admin_panel_settings_rounded,
+                      color: AppColors.mintGreen,
+                    ),
+                    title: Text(
+                      member.role == TourRole.admin
+                          ? 'Remove Admin Role'
+                          : 'Promote to Tour Admin',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final newRole = member.role == TourRole.admin
+                          ? TourRole.member
+                          : TourRole.admin;
+                      try {
+                        await _repository.updateMemberRole(
+                            tourId, member.email, newRole);
+                      } catch (e) {
+                        _reportFailure(e);
+                        return;
+                      }
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text(
+                                  '${member.displayName} এর রোল পরিবর্তন করা হয়েছে')),
+                        );
+                      }
+                    },
                   ),
-                  title: Text(
-                    member.role == TourRole.admin
-                        ? 'Remove Admin Role'
-                        : 'Promote to Tour Admin',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final newRole = member.role == TourRole.admin
-                        ? TourRole.member
-                        : TourRole.admin;
-                    await _repository.updateMemberRole(
-                        tourId, member.email, newRole);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text(
-                                '${member.displayName} এর রোল পরিবর্তন করা হয়েছে')),
-                      );
-                    }
-                  },
-                ),
                 // Transfer Ownership
-                ListTile(
-                  leading:
-                      const Icon(Icons.stars_rounded, color: AppColors.gold),
-                  title: const Text(
-                    'Transfer Tour Ownership',
-                    style: TextStyle(color: Colors.white),
+                if (viewerIsOwner)
+                  ListTile(
+                    leading:
+                        const Icon(Icons.stars_rounded, color: AppColors.gold),
+                    title: const Text(
+                      'Transfer Tour Ownership',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (c) => AlertDialog(
+                          backgroundColor: const Color(0xFF14241B),
+                          title: const Text('মালিকানা হস্তান্তর করবেন?',
+                              style: TextStyle(color: Colors.white)),
+                          content: Text(
+                              'আপনি কি নিশ্চিত যে ${member.displayName} কে এই ট্যুরের প্রধান মালিক করবেন?',
+                              style: const TextStyle(color: Colors.white70)),
+                          actions: [
+                            TextButton(
+                                onPressed: () => Navigator.pop(c, false),
+                                child: const Text('বাতিল')),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.gold,
+                                  foregroundColor: Colors.black),
+                              onPressed: () => Navigator.pop(c, true),
+                              child: const Text('হস্তান্তর করুন'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        try {
+                          await _repository.transferOwnership(
+                              tourId, member.email);
+                        } catch (e) {
+                          _reportFailure(e);
+                        }
+                      }
+                    },
                   ),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (c) => AlertDialog(
-                        backgroundColor: const Color(0xFF14241B),
-                        title: const Text('মালিকানা হস্তান্তর করবেন?',
-                            style: TextStyle(color: Colors.white)),
-                        content: Text(
-                            'আপনি কি নিশ্চিত যে ${member.displayName} কে এই ট্যুরের প্রধান মালিক করবেন?',
-                            style: const TextStyle(color: Colors.white70)),
-                        actions: [
-                          TextButton(
-                              onPressed: () => Navigator.pop(c, false),
-                              child: const Text('বাতিল')),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.gold,
-                                foregroundColor: Colors.black),
-                            onPressed: () => Navigator.pop(c, true),
-                            child: const Text('হস্তান্তর করুন'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirm == true) {
-                      await _repository.transferOwnership(tourId, member.email);
-                    }
-                  },
-                ),
                 // Remove Member
-                ListTile(
-                  leading: const Icon(Icons.person_remove_rounded,
-                      color: Colors.redAccent),
-                  title: const Text(
-                    'Remove from Tour',
-                    style: TextStyle(color: Colors.redAccent),
+                if (viewerIsOwner || member.role == TourRole.member)
+                  ListTile(
+                    leading: const Icon(Icons.person_remove_rounded,
+                        color: Colors.redAccent),
+                    title: const Text(
+                      'Remove from Tour',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (c) => AlertDialog(
+                          backgroundColor: const Color(0xFF14241B),
+                          title: const Text('সদস্য অপসারণ',
+                              style: TextStyle(color: Colors.white)),
+                          content: Text(
+                              '${member.displayName} কে ট্যুর গ্রুপ থেকে বাদ দিতে চান?',
+                              style: const TextStyle(color: Colors.white70)),
+                          actions: [
+                            TextButton(
+                                onPressed: () => Navigator.pop(c, false),
+                                child: const Text('বাতিল')),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.redAccent,
+                                  foregroundColor: Colors.white),
+                              onPressed: () => Navigator.pop(c, true),
+                              child: const Text('অপসারণ করুন'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        try {
+                          await _repository.removeMember(tourId, member.email);
+                        } catch (e) {
+                          _reportFailure(e);
+                        }
+                      }
+                    },
                   ),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (c) => AlertDialog(
-                        backgroundColor: const Color(0xFF14241B),
-                        title: const Text('সদস্য অপসারণ',
-                            style: TextStyle(color: Colors.white)),
-                        content: Text(
-                            '${member.displayName} কে ট্যুর গ্রুপ থেকে বাদ দিতে চান?',
-                            style: const TextStyle(color: Colors.white70)),
-                        actions: [
-                          TextButton(
-                              onPressed: () => Navigator.pop(c, false),
-                              child: const Text('বাতিল')),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent,
-                                foregroundColor: Colors.white),
-                            onPressed: () => Navigator.pop(c, true),
-                            child: const Text('অপসারণ করুন'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirm == true) {
-                      await _repository.removeMember(tourId, member.email);
-                    }
-                  },
-                ),
               ] else if (isMe) ...[
                 const Padding(
                   padding: EdgeInsets.all(12),

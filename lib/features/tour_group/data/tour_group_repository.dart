@@ -563,6 +563,20 @@ class TourGroupRepository {
   // Members & roles
   // ---------------------------------------------------------------------------
 
+  /// The signed-in person's role on [tourId], or null when they are not a member.
+  Future<TourRole?> myRole(String tourId) async {
+    final email = currentEmail;
+    if (email.isEmpty) return null;
+    try {
+      final row = await _memberships.doc(_membershipId(tourId, email)).get();
+      final data = row.data();
+      if (!row.exists || data == null) return null;
+      return TourRole.fromString(data['role'] as String?);
+    } on FirebaseException {
+      return null;
+    }
+  }
+
   /// Active members of a tour, owner first, then by join date.
   Stream<List<TourMember>> watchMembers(String tourId) {
     return _memberships

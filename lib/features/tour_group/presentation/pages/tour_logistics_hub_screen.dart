@@ -56,8 +56,8 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          BusSeatMapScreen(tourId: widget.tourId),
-          HotelRoomMapScreen(tourId: widget.tourId),
+          BusSeatMapScreen(tourId: widget.tourId, embedded: true),
+          HotelRoomMapScreen(tourId: widget.tourId, embedded: true),
         ],
       ),
     );

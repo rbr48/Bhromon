@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
+
+import '../../../../core/theme/colors.dart';
+import '../../data/tour_group_repository.dart';
 import '../../domain/models/logistics_models.dart';
 import '../../domain/models/tour_group.dart';
-import '../../data/tour_group_repository.dart';
-import '../../../../core/theme/colors.dart';
 
 class HotelRoomMapScreen extends StatefulWidget {
   final String tourId;
 
-  const HotelRoomMapScreen({super.key, required this.tourId});
+  /// When true, only the body is built (used inside the logistics tabs).
+  final bool embedded;
+
+  const HotelRoomMapScreen(
+      {super.key, required this.tourId, this.embedded = false});
 
   @override
   State<HotelRoomMapScreen> createState() => _HotelRoomMapScreenState();
@@ -17,16 +21,102 @@ class HotelRoomMapScreen extends StatefulWidget {
 
 class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
   final TourGroupRepository _repository = TourGroupRepository();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Uuid _uuid = const Uuid();
+  late final Stream<List<HotelRoom>> _rooms =
+      _repository.watchHotelRooms(widget.tourId);
+  TourRole? _myRole;
+
+  bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository.myRole(widget.tourId).then((role) {
+      if (mounted) setState(() => _myRole = role);
+    });
+  }
+
+  void _showError(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(text), backgroundColor: Colors.redAccent),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final roomCollection = _firestore
-        .collection('tours')
-        .doc(widget.tourId)
-        .collection('hotel_rooms');
+    final body = StreamBuilder<List<HotelRoom>>(
+      stream: _rooms,
+      builder: (context, snapshot) {
+        if (snapshot.hasError && !snapshot.hasData) {
+          return const Center(
+            child: Text('রুমের তথ্য দেখা যাচ্ছে না।',
+                style: TextStyle(color: Colors.white54)),
+          );
+        }
+        if (!snapshot.hasData) {
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.midGreen));
+        }
+        final rooms = snapshot.data!;
+        if (rooms.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.hotel_rounded,
+                    size: 64, color: Colors.white24),
+                const SizedBox(height: 16),
+                const Text('এখনও কোনো রুম যোগ করা হয়নি।',
+                    style: TextStyle(color: Colors.white70)),
+                if (_isAdmin) ...[
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => _showRoomDialog(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('প্রথম রুম যোগ করুন'),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.midGreen),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }
 
+        final capacity = rooms.fold<int>(0, (sum, r) => sum + r.capacity);
+        final assigned =
+            rooms.fold<int>(0, (sum, r) => sum + r.assignedMemberEmails.length);
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF14241B),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Text('রুম: ${rooms.length}',
+                      style: const TextStyle(color: Colors.white70)),
+                  Text('বরাদ্দ: $assigned / $capacity জন',
+                      style: const TextStyle(
+                          color: AppColors.gold, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final room in rooms) _roomCard(room),
+          ],
+        );
+      },
+    );
+
+    if (widget.embedded) return body;
     return Scaffold(
       backgroundColor: const Color(0xFF0D1A12),
       appBar: AppBar(
@@ -38,493 +128,371 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_home_work_rounded,
-                color: AppColors.mintGreen),
-            tooltip: 'Add Room',
-            onPressed: () => _showAddRoomDialog(context),
-          ),
+          if (_isAdmin)
+            IconButton(
+              icon: const Icon(Icons.add_home_work_rounded,
+                  color: AppColors.mintGreen),
+              tooltip: 'রুম যোগ করুন',
+              onPressed: () => _showRoomDialog(),
+            ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: roomCollection.snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(
-                child: CircularProgressIndicator(color: AppColors.midGreen));
-          }
-
-          final rooms = snapshot.data!.docs
-              .map((d) => HotelRoom.fromMap(d.id, d.data()))
-              .toList();
-
-          if (rooms.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.hotel_rounded,
-                      size: 64, color: Colors.white24),
-                  const SizedBox(height: 16),
-                  const Text('No hotel rooms configured yet.',
-                      style: TextStyle(color: Colors.white70)),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddRoomDialog(context),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add First Room'),
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.midGreen),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          int totalCapacity = rooms.fold(0, (acc, r) => acc + r.capacity);
-          int assignedCount =
-              rooms.fold(0, (acc, r) => acc + r.assignedMemberEmails.length);
-
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Summary Banner
-              Container(
-                padding: const EdgeInsets.all(14),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF14241B),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white10),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStat('Total Rooms', '${rooms.length}'),
-                    _buildStat('Total Beds', '$totalCapacity'),
-                    _buildStat(
-                        'Assigned Guests', '$assignedCount / $totalCapacity',
-                        color: AppColors.mintGreen),
-                  ],
-                ),
-              ),
-
-              // Room Cards
-              ...rooms.map((room) => _buildRoomCard(context, room)),
-            ],
-          );
-        },
-      ),
+      body: body,
     );
   }
 
-  Widget _buildStat(String label, String value, {Color color = Colors.white}) {
-    return Column(
-      children: [
-        Text(label,
-            style: const TextStyle(color: Colors.white54, fontSize: 11)),
-        const SizedBox(height: 4),
-        Text(value,
-            style: TextStyle(
-                color: color, fontSize: 16, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
-  Widget _buildRoomCard(BuildContext context, HotelRoom room) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF14241B),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: room.isFull
-              ? AppColors.mintGreen.withValues(alpha: 0.3)
-              : Colors.white12,
+  Widget _roomCard(HotelRoom room) {
+    final full = room.isFull;
+    return GestureDetector(
+      onTap: () => _showGuestSheet(room.id),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF14241B),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color: full
+                  ? Colors.redAccent.withValues(alpha: 0.4)
+                  : Colors.white10),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.midGreen.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Room ${room.roomNumber}',
-                      style: const TextStyle(
-                        color: AppColors.mintGreen,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    room.title,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  if (room.isAc)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 6),
-                      child: Icon(Icons.ac_unit_rounded,
-                          size: 16, color: Color(0xFF38BDF8)),
-                    ),
-                  if (room.hasSeaView)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 6),
-                      child: Icon(Icons.waves_rounded,
-                          size: 16, color: AppColors.gold),
-                    ),
-                  Text(
-                    'Floor ${room.floor}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Capacity and Assigned Members
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Occupancy: ${room.assignedMemberEmails.length} / ${room.capacity}',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-              TextButton(
-                onPressed: () => _showManageRoomGuestsSheet(context, room),
-                child: const Text('Manage Guests',
-                    style: TextStyle(color: AppColors.mintGreen, fontSize: 12)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-
-          // Assigned Member Badges
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              for (int i = 0; i < room.assignedMemberNames.length; i++)
-                Chip(
-                  backgroundColor: AppColors.midGreen.withValues(alpha: 0.2),
-                  avatar: CircleAvatar(
-                    backgroundColor: AppColors.midGreen,
-                    child: Text(room.assignedMemberNames[i].isNotEmpty
-                        ? room.assignedMemberNames[i][0]
-                        : 'G'),
-                  ),
-                  label: Text(room.assignedMemberNames[i],
-                      style:
-                          const TextStyle(color: Colors.white, fontSize: 12)),
-                ),
-              for (int i = 0; i < room.availableSlots; i++)
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.black26,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: Colors.white12, style: BorderStyle.solid),
+                    color: AppColors.midGreen.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text('Empty Bed',
-                      style: TextStyle(color: Colors.white30, fontSize: 11)),
+                  child: Text('রুম ${room.roomNumber}',
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(room.title.isEmpty ? 'রুম' : room.title,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13)),
+                ),
+                if (_isAdmin)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert,
+                        color: Colors.white54, size: 18),
+                    color: const Color(0xFF1B4332),
+                    onSelected: (v) {
+                      if (v == 'edit') _showRoomDialog(existing: room);
+                      if (v == 'delete') _deleteRoom(room);
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'edit', child: Text('রুম বদলান')),
+                      PopupMenuItem(
+                          value: 'delete',
+                          child: Text('রুম মুছুন',
+                              style: TextStyle(color: Colors.redAccent))),
+                    ],
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'তলা ${room.floor} • ${room.isAc ? 'AC' : 'নন-AC'}'
+              '${room.hasSeaView ? ' • সমুদ্র দৃশ্য' : ''} • ${room.assignedMemberEmails.length} / ${room.capacity} জন',
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            const SizedBox(height: 8),
+            if (room.assignedMemberEmails.isEmpty)
+              const Text('কেউ বরাদ্দ পাননি — ট্যাপ করে যোগ করুন',
+                  style: TextStyle(color: Colors.white38, fontSize: 12))
+            else
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (var i = 0; i < room.assignedMemberEmails.length; i++)
+                    Chip(
+                      visualDensity: VisualDensity.compact,
+                      backgroundColor:
+                          AppColors.midGreen.withValues(alpha: 0.25),
+                      label: Text(
+                        i < room.assignedMemberNames.length &&
+                                room.assignedMemberNames[i].isNotEmpty
+                            ? room.assignedMemberNames[i]
+                            : 'সদস্য',
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 11),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showAddRoomDialog(BuildContext context) {
-    final numberCtrl = TextEditingController();
-    final titleCtrl = TextEditingController(text: 'Standard Double Room');
-    int capacity = 2;
-    int floor = 2;
-    bool isAc = true;
-    bool hasSeaView = false;
+  Future<void> _deleteRoom(HotelRoom room) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: const Color(0xFF14241B),
+        title: Text('রুম ${room.roomNumber} মুছবেন?',
+            style: const TextStyle(color: Colors.white)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('না')),
+          TextButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('মুছুন',
+                  style: TextStyle(color: Colors.redAccent))),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _repository.deleteHotelRoom(widget.tourId, room.id);
+    } catch (e) {
+      _showError('রুম মোছা যায়নি: $e');
+    }
+  }
+
+  void _showRoomDialog({HotelRoom? existing}) {
+    final numberCtrl = TextEditingController(text: existing?.roomNumber ?? '');
+    final titleCtrl = TextEditingController(text: existing?.title ?? '');
+    final floorCtrl = TextEditingController(text: '${existing?.floor ?? 1}');
+    int capacity = existing?.capacity ?? 2;
+    bool isAc = existing?.isAc ?? true;
+    bool hasSeaView = existing?.hasSeaView ?? false;
+    String? error;
 
     showDialog<void>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.75),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF14241B),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18)),
-              title: const Text('Add Hotel Room',
-                  style: TextStyle(color: Colors.white)),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: numberCtrl,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        labelText: 'Room Number (e.g. 201)',
-                        labelStyle: TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: titleCtrl,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        labelText: 'Room Name / Category',
-                        labelStyle: TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<int>(
-                            initialValue: capacity,
-                            dropdownColor: const Color(0xFF1B4332),
-                            style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(
-                                labelText: 'Beds / Capacity'),
-                            items: [1, 2, 3, 4, 5, 6]
-                                .map((c) => DropdownMenuItem(
-                                    value: c, child: Text('$c Persons')))
-                                .toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setDialogState(() => capacity = val);
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DropdownButtonFormField<int>(
-                            initialValue: floor,
-                            dropdownColor: const Color(0xFF1B4332),
-                            style: const TextStyle(color: Colors.white),
-                            decoration:
-                                const InputDecoration(labelText: 'Floor'),
-                            items: [1, 2, 3, 4, 5, 6, 7]
-                                .map((f) => DropdownMenuItem(
-                                    value: f, child: Text('Floor $f')))
-                                .toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setDialogState(() => floor = val);
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Air Conditioned (AC)',
-                          style: TextStyle(color: Colors.white, fontSize: 13)),
-                      value: isAc,
-                      activeThumbColor: AppColors.mintGreen,
-                      onChanged: (val) => setDialogState(() => isAc = val),
-                    ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Sea View Balcony',
-                          style: TextStyle(color: Colors.white, fontSize: 13)),
-                      value: hasSeaView,
-                      activeThumbColor: AppColors.gold,
-                      onChanged: (val) =>
-                          setDialogState(() => hasSeaView = val),
-                    ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF14241B),
+          title: Text(existing == null ? 'নতুন রুম যোগ করুন' : 'রুম বদলান',
+              style: const TextStyle(color: Colors.white)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: numberCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'রুম নম্বর'),
+                ),
+                TextField(
+                  controller: titleCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                      labelText: 'রুমের ধরন (যেমন: Deluxe)'),
+                ),
+                DropdownButtonFormField<int>(
+                  initialValue: capacity,
+                  dropdownColor: const Color(0xFF1B4332),
+                  decoration: const InputDecoration(labelText: 'কতজন থাকবেন'),
+                  items: [
+                    for (var c = 1; c <= 6; c++)
+                      DropdownMenuItem(value: c, child: Text('$c জন')),
                   ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancel',
-                      style: TextStyle(color: Colors.white54)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.midGreen),
-                  onPressed: () async {
-                    final num = numberCtrl.text.trim();
-                    if (num.isEmpty) return;
-
-                    Navigator.pop(ctx);
-                    final roomId = _uuid.v4();
-                    final room = HotelRoom(
-                      id: roomId,
-                      roomNumber: num,
-                      title: titleCtrl.text.trim(),
-                      capacity: capacity,
-                      floor: floor,
-                      isAc: isAc,
-                      hasSeaView: hasSeaView,
-                    );
-
-                    await _firestore
-                        .collection('tours')
-                        .doc(widget.tourId)
-                        .collection('hotel_rooms')
-                        .doc(roomId)
-                        .set(room.toMap());
+                  onChanged: (v) {
+                    if (v != null) setDialogState(() => capacity = v);
                   },
-                  child: const Text('Add Room',
-                      style: TextStyle(color: Colors.white)),
                 ),
+                TextField(
+                  controller: floorCtrl,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'তলা'),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title:
+                      const Text('AC', style: TextStyle(color: Colors.white)),
+                  value: isAc,
+                  activeThumbColor: AppColors.mintGreen,
+                  onChanged: (v) => setDialogState(() => isAc = v),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('সমুদ্র দৃশ্য',
+                      style: TextStyle(color: Colors.white)),
+                  value: hasSeaView,
+                  activeThumbColor: AppColors.gold,
+                  onChanged: (v) => setDialogState(() => hasSeaView = v),
+                ),
+                if (error != null)
+                  Text(error!,
+                      style: const TextStyle(
+                          color: Colors.redAccent, fontSize: 12)),
               ],
-            );
-          },
-        );
-      },
-    );
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('বাতিল')),
+            ElevatedButton(
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
+              onPressed: () async {
+                final number = numberCtrl.text.trim();
+                final floor = int.tryParse(floorCtrl.text.trim());
+                if (number.isEmpty) {
+                  setDialogState(() => error = 'রুম নম্বর লিখুন।');
+                  return;
+                }
+                if (floor == null || floor < 0 || floor > 200) {
+                  setDialogState(() => error = 'সঠিক তলা লিখুন।');
+                  return;
+                }
+                final room = HotelRoom(
+                  id: existing?.id ?? _uuid.v4(),
+                  roomNumber: number,
+                  title: titleCtrl.text.trim(),
+                  capacity: capacity,
+                  floor: floor,
+                  isAc: isAc,
+                  hasSeaView: hasSeaView,
+                  assignedMemberEmails:
+                      existing?.assignedMemberEmails ?? const [],
+                  assignedMemberNames:
+                      existing?.assignedMemberNames ?? const [],
+                );
+                // Shrinking capacity below the current guests is refused.
+                if (room.assignedMemberEmails.length > room.capacity) {
+                  setDialogState(() => error =
+                      'এখানে ${room.assignedMemberEmails.length} জন আছেন, তাই ধারণক্ষমতা কমানো যাবে না।');
+                  return;
+                }
+                Navigator.pop(ctx);
+                try {
+                  await _repository.saveHotelRoom(widget.tourId, room);
+                } catch (e) {
+                  _showError(
+                      'রুম সংরক্ষণ করা যায়নি: শুধু অ্যাডমিন রুম যোগ বা বদলাতে পারবেন।');
+                }
+              },
+              child:
+                  const Text('সংরক্ষণ', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(() {
+      numberCtrl.dispose();
+      titleCtrl.dispose();
+      floorCtrl.dispose();
+    });
   }
 
-  void _showManageRoomGuestsSheet(BuildContext context, HotelRoom room) {
+  /// Guest list for one room, read live so it always shows the current state.
+  void _showGuestSheet(String roomId) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       barrierColor: Colors.black.withValues(alpha: 0.75),
       backgroundColor: const Color(0xFF14241B),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
-        return StreamBuilder<List<TourMember>>(
-          stream: _repository.watchMembers(widget.tourId),
-          builder: (context, snapshot) {
-            final members = snapshot.data ?? [];
-            final bottomPad = MediaQuery.of(ctx).padding.bottom;
-
-            return SafeArea(
-              top: false,
-              child: SizedBox(
-                height: MediaQuery.of(ctx).size.height * 0.75,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    top: 12,
-                    bottom: bottomPad + 12,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Room ${room.roomNumber} Guests (${room.assignedMemberEmails.length}/${room.capacity})',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18),
+        return StreamBuilder<List<HotelRoom>>(
+          stream: _rooms,
+          builder: (context, roomSnap) {
+            final room = (roomSnap.data ?? const <HotelRoom>[])
+                .where((r) => r.id == roomId)
+                .firstOrNull;
+            if (room == null) {
+              return const SizedBox(
+                  height: 120,
+                  child: Center(
+                      child: Text('রুমটি আর পাওয়া যাচ্ছে না।',
+                          style: TextStyle(color: Colors.white54))));
+            }
+            return StreamBuilder<List<TourMember>>(
+              stream: _repository.watchMembers(widget.tourId),
+              builder: (context, memberSnap) {
+                final members = memberSnap.data ?? const <TourMember>[];
+                return SafeArea(
+                  child: SizedBox(
+                    height: MediaQuery.of(ctx).size.height * 0.7,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'রুম ${room.roomNumber} — ${room.assignedMemberEmails.length} / ${room.capacity} জন',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15),
+                          ),
+                          const Divider(color: Colors.white12),
+                          Expanded(
+                            child: ListView(
+                              children: [
+                                for (final m in members) _guestTile(room, m),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const Divider(color: Colors.white12),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: members.length,
-                          itemBuilder: (context, i) {
-                            final m = members[i];
-                            final isAssigned =
-                                room.assignedMemberEmails.contains(m.email);
-
-                            return ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: AppColors.midGreen,
-                                child: Text(m.displayName.isNotEmpty
-                                    ? m.displayName[0]
-                                    : 'G'),
-                              ),
-                              title: Text(m.displayName,
-                                  style: const TextStyle(color: Colors.white)),
-                              subtitle: Text(m.email,
-                                  style: const TextStyle(
-                                      color: Colors.white54, fontSize: 12)),
-                              trailing: isAssigned
-                                  ? IconButton(
-                                      icon: const Icon(Icons.remove_circle,
-                                          color: Colors.redAccent),
-                                      onPressed: () async {
-                                        final updatedEmails = List<String>.from(
-                                            room.assignedMemberEmails)
-                                          ..remove(m.email);
-                                        final updatedNames = List<String>.from(
-                                            room.assignedMemberNames)
-                                          ..remove(m.displayName);
-
-                                        await _firestore
-                                            .collection('tours')
-                                            .doc(widget.tourId)
-                                            .collection('hotel_rooms')
-                                            .doc(room.id)
-                                            .update({
-                                          'assignedMemberEmails': updatedEmails,
-                                          'assignedMemberNames': updatedNames,
-                                        });
-                                      },
-                                    )
-                                  : IconButton(
-                                      icon: const Icon(Icons.add_circle,
-                                          color: AppColors.mintGreen),
-                                      onPressed: room.isFull
-                                          ? null
-                                          : () async {
-                                              final updatedEmails =
-                                                  List<String>.from(
-                                                      room.assignedMemberEmails)
-                                                    ..add(m.email);
-                                              final updatedNames =
-                                                  List<String>.from(
-                                                      room.assignedMemberNames)
-                                                    ..add(m.displayName);
-
-                                              await _firestore
-                                                  .collection('tours')
-                                                  .doc(widget.tourId)
-                                                  .collection('hotel_rooms')
-                                                  .doc(room.id)
-                                                  .update({
-                                                'assignedMemberEmails':
-                                                    updatedEmails,
-                                                'assignedMemberNames':
-                                                    updatedNames,
-                                              });
-                                            },
-                                    ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         );
       },
+    );
+  }
+
+  Widget _guestTile(HotelRoom room, TourMember m) {
+    final here = room.hasGuest(m.email);
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: AppColors.midGreen,
+        child: Text(m.displayName.isNotEmpty ? m.displayName[0] : 'G',
+            style: const TextStyle(color: Colors.white)),
+      ),
+      title: Text(m.displayName, style: const TextStyle(color: Colors.white)),
+      subtitle: Text(
+        here
+            ? 'এই রুমে'
+            : (room.isFull
+                ? 'রুমটি পূর্ণ'
+                : 'যোগ করলে আগের রুম থেকে সরে আসবেন'),
+        style: const TextStyle(color: Colors.white38, fontSize: 11),
+      ),
+      trailing: IconButton(
+        icon: Icon(here ? Icons.remove_circle : Icons.add_circle,
+            color: here
+                ? Colors.redAccent
+                : (room.isFull ? Colors.white24 : AppColors.mintGreen)),
+        onPressed: !here && room.isFull
+            ? null
+            : () async {
+                try {
+                  if (here) {
+                    await _repository.removeHotelGuest(
+                        widget.tourId, room.id, m.email);
+                  } else {
+                    await _repository.assignHotelGuest(widget.tourId, room.id,
+                        email: m.email, name: m.displayName);
+                  }
+                } on StateError catch (e) {
+                  _showError(e.message);
+                } catch (e) {
+                  _showError('বরাদ্দ বদলানো যায়নি: $e');
+                }
+              },
+      ),
     );
   }
 }
