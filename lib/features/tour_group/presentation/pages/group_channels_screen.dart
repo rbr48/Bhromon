@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/tour_activity_models.dart';
 
@@ -51,19 +52,20 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
   String _title(String channel) {
     switch (channel) {
       case 'general':
-        return '# সাধারণ আড্ডা';
+        return context.l10n.translate('tour_channel_general');
       case 'food':
-        return '# খাবার ও রেস্তোরাঁ';
+        return context.l10n.translate('tour_channel_food');
       case 'sightseeing':
-        return '# ঘোরাঘুরি ও স্পট';
+        return context.l10n.translate('tour_channel_places');
       case 'emergency':
-        return '# জরুরি ও নিরাপত্তা';
+        return context.l10n.translate('tour_channel_safety');
       default:
         return '# $channel';
     }
   }
 
   Future<void> _send(String channel) async {
+    final l10n = context.l10n;
     final draft = _draftFor(channel);
     final text = draft.text.trim();
     if (text.isEmpty || _sending.contains(channel)) return;
@@ -77,7 +79,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('বার্তা পাঠানো যায়নি। লেখাটি রইল: $e'),
+            content: Text(
+                l10n.translate('tour_message_send_failed', args: {'error': e})),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -94,9 +97,9 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D1A12),
         elevation: 0,
-        title: const Text(
-          'Group Channels (আলোচনা চ্যানেল)',
-          style: TextStyle(
+        title: Text(
+          context.l10n.translate('tour_channels_title'),
+          style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         bottom: TabBar(
@@ -126,9 +129,10 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
             stream: _streamFor(channel),
             builder: (context, snapshot) {
               if (snapshot.hasError && !snapshot.hasData) {
-                return const Center(
-                  child: Text('বার্তা লোড করা যায়নি।',
-                      style: TextStyle(color: Colors.white54)),
+                return Center(
+                  child: Text(
+                      context.l10n.translate('tour_messages_load_failed'),
+                      style: const TextStyle(color: Colors.white54)),
                 );
               }
               if (!snapshot.hasData) {
@@ -138,11 +142,11 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
               }
               final messages = snapshot.data!;
               if (messages.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
-                    'এখনও কোনো বার্তা নেই। সবাইকে হ্যালো বলুন!',
+                    context.l10n.translate('tour_no_messages'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white38),
+                    style: const TextStyle(color: Colors.white38),
                   ),
                 );
               }
@@ -217,7 +221,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       counterText: '',
-                      hintText: 'বার্তা লিখুন...',
+                      hintText: context.l10n.translate('tour_message_hint'),
                       hintStyle:
                           const TextStyle(color: Colors.white30, fontSize: 13),
                       filled: true,
@@ -233,7 +237,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  tooltip: 'পাঠান',
+                  tooltip: context.l10n.translate('tour_send'),
                   icon: _sending.contains(channel)
                       ? const SizedBox(
                           width: 18,

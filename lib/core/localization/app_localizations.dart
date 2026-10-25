@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'tour_translation_keys.dart';
 import 'translation_keys.dart';
 
 class AppLocalizations {
@@ -13,17 +14,20 @@ class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
-  String translate(String key) {
-    final values = TranslationKeys.localizedValues[locale.languageCode];
-    if (values != null && values.containsKey(key)) {
-      return values[key]!;
+  /// Looks up [key] in this language, then in English, then returns the key
+  /// itself. Each `{name}` in the text is replaced with `args['name']`.
+  String translate(String key, {Map<String, Object> args = const {}}) {
+    final text = _lookup(locale.languageCode, key) ?? _lookup('en', key) ?? key;
+    var filled = text;
+    for (final entry in args.entries) {
+      filled = filled.replaceAll('{${entry.key}}', '${entry.value}');
     }
-    // Fallback to English
-    final enValues = TranslationKeys.localizedValues['en'];
-    if (enValues != null && enValues.containsKey(key)) {
-      return enValues[key]!;
-    }
-    return key;
+    return filled;
+  }
+
+  static String? _lookup(String languageCode, String key) {
+    return TranslationKeys.localizedValues[languageCode]?[key] ??
+        TourTranslationKeys.localizedValues[languageCode]?[key];
   }
 }
 
