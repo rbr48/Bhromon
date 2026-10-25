@@ -125,3 +125,12 @@ class ChannelMessage {
     );
   }
 }
+
+/// Per-person feed state kept on this device: bookmarked posts and stories
+/// already viewed. Nothing here is shared with other members.
+class FeedPrefs {
+  final Set<String> bookmarks;
+  final Set<String> seenStories;
+
+  const FeedPrefs({this.bookmarks = const {}, this.seenStories = const {}});
+}
