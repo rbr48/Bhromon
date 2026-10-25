@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../common/game_zone_portrait_lock.dart';
 import 'chess_engine.dart';
+import 'chess_piece_painter.dart';
 
 /// Keeps the game in progress while the player visits other parts of the app.
 class _ChessSession {
@@ -538,12 +539,13 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     final squareSize = boardSize / 8;
     final labelSize = (squareSize * 0.2).clamp(9.0, 12.0);
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: const Color(0xFF2B1D14),
-        borderRadius: BorderRadius.circular(4),
+        color: const Color(0xFF2E1C11),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF4A311E), width: 3),
         boxShadow: const [
-          BoxShadow(color: Colors.black54, blurRadius: 10, offset: Offset(0, 4))
+          BoxShadow(color: Colors.black87, blurRadius: 14, offset: Offset(0, 6))
         ],
       ),
       child: SizedBox(
@@ -561,16 +563,19 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
             ...List.generate(8, (r) {
               return Positioned(
                 top: r * squareSize + 2,
-                left: 2,
+                left: 3,
                 child: IgnorePointer(
                   child: Text(
                     '${8 - r}',
                     style: TextStyle(
                       color: r % 2 == 0
-                          ? const Color(0xFF769656)
-                          : const Color(0xFFEEEED2),
+                          ? const Color(0xFFB58863)
+                          : const Color(0xFFF0D9B5),
                       fontSize: labelSize,
                       fontWeight: FontWeight.bold,
+                      shadows: const [
+                        Shadow(color: Colors.black45, blurRadius: 2)
+                      ],
                     ),
                   ),
                 ),
@@ -580,16 +585,19 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
               const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
               return Positioned(
                 bottom: 1,
-                left: c * squareSize + squareSize - labelSize - 1,
+                left: c * squareSize + squareSize - labelSize - 2,
                 child: IgnorePointer(
                   child: Text(
                     files[c],
                     style: TextStyle(
                       color: (7 + c) % 2 == 0
-                          ? const Color(0xFF769656)
-                          : const Color(0xFFEEEED2),
+                          ? const Color(0xFFB58863)
+                          : const Color(0xFFF0D9B5),
                       fontSize: labelSize,
                       fontWeight: FontWeight.bold,
+                      shadows: const [
+                        Shadow(color: Colors.black45, blurRadius: 2)
+                      ],
                     ),
                   ),
                 ),
@@ -676,20 +684,20 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
   Widget _buildSquare(int row, int col, double size) {
     final isLight = (row + col) % 2 == 0;
     Color squareColor =
-        isLight ? const Color(0xFFEEEED2) : const Color(0xFF769656);
+        isLight ? const Color(0xFFF0D9B5) : const Color(0xFFB58863);
 
     final last = _engine.lastMove;
     final isLastMove = last != null &&
         ((last.from.row == row && last.from.col == col) ||
             (last.to.row == row && last.to.col == col));
     if (isLastMove) {
-      squareColor = isLight ? const Color(0xFFF7EC7D) : const Color(0xFFBACA44);
+      squareColor = isLight ? const Color(0xFFCED26B) : const Color(0xFFAAA23B);
     }
 
     final pos = BoardPosition(row, col);
     final isSelected = _selectedPosition == pos;
     if (isSelected) {
-      squareColor = const Color(0xFFBBCE44);
+      squareColor = const Color(0xFFF6D04D);
     }
 
     final isLegalMoveDest = _currentLegalMoves.any((m) => m.to == pos);
@@ -714,11 +722,18 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
             children: [
               if (isKingInCheckSquare)
                 Container(
-                  width: size * 0.9,
-                  height: size * 0.9,
+                  width: size * 0.92,
+                  height: size * 0.92,
                   decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.red.withValues(alpha: 0.45)),
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.red.withValues(alpha: 0.85),
+                        Colors.red.withValues(alpha: 0.3),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
                 ),
               if (isLegalMoveDest)
                 Container(
@@ -727,14 +742,23 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: piece == null
-                        ? const Color(0x66000000)
+                        ? const Color(0x55000000)
                         : Colors.transparent,
                     border: piece != null
-                        ? Border.all(color: const Color(0xAAFF0000), width: 3.5)
+                        ? Border.all(color: const Color(0xEED32F2F), width: 3.5)
+                        : null,
+                    boxShadow: piece == null
+                        ? [
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.25),
+                              blurRadius: 2,
+                            ),
+                          ]
                         : null,
                   ),
                 ),
-              if (piece != null) _PieceGlyph(piece: piece, size: size),
+              if (piece != null)
+                _PieceGlyph(piece: piece, size: size * 0.88),
             ],
           ),
         ),
@@ -743,14 +767,7 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
   }
 }
 
-/// Draws a chess piece with a filled glyph and a contrasting outline so white
-/// pieces stay visible on the light squares and black pieces on the dark ones.
-///
-/// Note: Standard Unicode pawn (U+265F) was added to Emoji 11.0, so Android's
-/// font fallback can hijack it with NotoColorEmoji (ignoring Paint color and
-/// stroke). To ensure pawns are always rendered with pixel-perfect vector
-/// clarity and correct side coloring across all devices, pawns are painted
-/// via [_ChessPawnPainter].
+/// Renders authentic Staunton vector chess pieces across all devices.
 class _PieceGlyph extends StatelessWidget {
   const _PieceGlyph({required this.piece, required this.size});
 
@@ -760,111 +777,19 @@ class _PieceGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWhite = piece.color == PieceColor.white;
-    if (piece.type == PieceType.pawn) {
-      return ExcludeSemantics(
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: CustomPaint(
-            size: Size(size, size),
-            painter: _ChessPawnPainter(
-              isWhite: isWhite,
-              size: size,
-            ),
+    return ExcludeSemantics(
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: CustomPaint(
+          size: Size(size, size),
+          painter: ChessPiecePainter(
+            type: piece.type,
+            isWhite: isWhite,
+            size: size,
           ),
         ),
-      );
-    }
-
-    final fontSize = size * 0.74;
-    return ExcludeSemantics(
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Text(
-            piece.solidSymbol,
-            style: TextStyle(
-              fontSize: fontSize,
-              height: 1.0,
-              foreground: Paint()
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = max(1.2, size * 0.055)
-                ..strokeJoin = StrokeJoin.round
-                ..color =
-                    isWhite ? const Color(0xFF1B1B1B) : const Color(0xFFF2F2F2),
-            ),
-          ),
-          Text(
-            piece.solidSymbol,
-            style: TextStyle(
-              fontSize: fontSize,
-              height: 1.0,
-              color: isWhite ? Colors.white : const Color(0xFF1B1B1B),
-            ),
-          ),
-        ],
       ),
     );
   }
-}
-
-class _ChessPawnPainter extends CustomPainter {
-  final bool isWhite;
-  final double size;
-
-  const _ChessPawnPainter({required this.isWhite, required this.size});
-
-  @override
-  void paint(Canvas canvas, Size canvasSize) {
-    final s = canvasSize.width;
-    final strokeWidth = max(1.2, s * 0.055);
-    final fillPaint = Paint()
-      ..style = PaintingStyle.fill
-      ..color = isWhite ? Colors.white : const Color(0xFF1B1B1B);
-    final strokePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeJoin = StrokeJoin.round
-      ..strokeCap = StrokeCap.round
-      ..color = isWhite ? const Color(0xFF1B1B1B) : const Color(0xFFF2F2F2);
-
-    final cx = s * 0.5;
-
-    // Body & Base: continuous symmetrical Staunton silhouette
-    final body = Path();
-    body.moveTo(cx - s * 0.22, s * 0.81);
-    body.lineTo(cx + s * 0.22, s * 0.81);
-    body.quadraticBezierTo(cx + s * 0.22, s * 0.75, cx + s * 0.17, s * 0.74);
-    body.lineTo(cx + s * 0.15, s * 0.70);
-    body.quadraticBezierTo(cx + s * 0.08, s * 0.57, cx + s * 0.07, s * 0.49);
-    body.lineTo(cx + s * 0.12, s * 0.47);
-    body.quadraticBezierTo(cx + s * 0.12, s * 0.44, cx + s * 0.08, s * 0.44);
-    body.lineTo(cx - s * 0.08, s * 0.44);
-    body.quadraticBezierTo(cx - s * 0.12, s * 0.44, cx - s * 0.12, s * 0.47);
-    body.lineTo(cx - s * 0.07, s * 0.49);
-    body.quadraticBezierTo(cx - s * 0.08, s * 0.57, cx - s * 0.15, s * 0.70);
-    body.lineTo(cx - s * 0.17, s * 0.74);
-    body.quadraticBezierTo(cx - s * 0.22, s * 0.75, cx - s * 0.22, s * 0.81);
-    body.close();
-
-    // Head: spherical round top
-    final headCenter = Offset(cx, s * 0.33);
-    final headRadius = s * 0.12;
-
-    canvas.drawPath(body, fillPaint);
-    canvas.drawPath(body, strokePaint);
-
-    canvas.drawCircle(headCenter, headRadius, fillPaint);
-    canvas.drawCircle(headCenter, headRadius, strokePaint);
-
-    // Collar detail ring
-    final collar = Path()
-      ..moveTo(cx - s * 0.11, s * 0.46)
-      ..lineTo(cx + s * 0.11, s * 0.46);
-    canvas.drawPath(collar, strokePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _ChessPawnPainter oldDelegate) =>
-      oldDelegate.isWhite != isWhite || oldDelegate.size != size;
 }

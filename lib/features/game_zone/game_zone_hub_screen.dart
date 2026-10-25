@@ -24,23 +24,41 @@ class GameZoneHubScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF2C3E50), Color(0xFF000000)],
+                  colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white12),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.35), width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.amber.withValues(alpha: 0.12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.2),
+                      gradient: LinearGradient(
+                        colors: [Colors.amber.shade400, Colors.amber.shade800],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.amber.withValues(alpha: 0.35),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: const Icon(Icons.sports_esports,
-                        color: Colors.amber, size: 36),
+                        color: Colors.black87, size: 36),
                   ),
                   const SizedBox(width: 16),
                   const Expanded(
@@ -173,9 +191,14 @@ class GameZoneHubScreen extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
-        boxShadow: const [
-          BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 4)),
+        border: Border.all(color: tagColor.withValues(alpha: 0.28), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: tagColor.withValues(alpha: 0.14),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+          const BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       child: Material(
@@ -188,12 +211,27 @@ class GameZoneHubScreen extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(15),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    gradient: LinearGradient(
+                      colors: [
+                        tagColor.withValues(alpha: 0.28),
+                        Colors.white.withValues(alpha: 0.06),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: tagColor.withValues(alpha: 0.45)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: tagColor.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
-                  child: Icon(icon, color: Colors.white, size: 36),
+                  child: Icon(icon, color: tagColor, size: 34),
                 ),
                 const SizedBox(width: 16),
                 Expanded(

@@ -626,40 +626,75 @@ class _LudoScreenState extends State<LudoScreen>
           '${color.name} token ${t.id + 1}, ${_describeToken(t)}${tappable ? ', can move' : ''}',
       child: GestureDetector(
         onTap: tappable ? () => _moveToken(t) : null,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          transform: Matrix4.translationValues(0, movable ? -2.0 : 0.0, 0),
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: color.color,
             shape: BoxShape.circle,
+            gradient: RadialGradient(
+              center: const Alignment(-0.35, -0.35),
+              radius: 0.85,
+              colors: [
+                Color.lerp(color.color, Colors.white, 0.45)!,
+                color.color,
+                Color.lerp(color.color, Colors.black, 0.35)!,
+              ],
+            ),
             border: Border.all(
-              color: movable ? Colors.black : Colors.white,
-              width: movable ? max(2.0, size * 0.12) : 1.5,
+              color: movable ? Colors.amberAccent : Colors.white.withValues(alpha: 0.9),
+              width: movable ? max(2.2, size * 0.14) : 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: movable ? Colors.amberAccent : Colors.black45,
-                blurRadius: movable ? 6 : 2,
-                spreadRadius: movable ? 1.5 : 0,
+                color: movable
+                    ? Colors.amberAccent.withValues(alpha: 0.75)
+                    : Colors.black.withValues(alpha: 0.45),
+                blurRadius: movable ? 7 : 3,
+                spreadRadius: movable ? 2.0 : 0.5,
+                offset: Offset(0, movable ? 2.5 : 1.5),
               ),
             ],
           ),
-          child: Center(
-            child: ExcludeSemantics(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Padding(
-                  padding: const EdgeInsets.all(1),
-                  child: Text(
-                    t.state == TokenState.home ? '★' : '${t.id + 1}',
-                    style: TextStyle(
-                        color: color.onColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Specular shine dot
+              Positioned(
+                top: size * 0.12,
+                left: size * 0.16,
+                child: Container(
+                  width: size * 0.22,
+                  height: size * 0.15,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.5),
                   ),
                 ),
               ),
-            ),
+              Center(
+                child: ExcludeSemantics(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Padding(
+                      padding: const EdgeInsets.all(1),
+                      child: Text(
+                        t.state == TokenState.home ? '★' : '${t.id + 1}',
+                        style: TextStyle(
+                          color: color.onColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          shadows: const [
+                            Shadow(color: Colors.black45, blurRadius: 2, offset: Offset(0, 1))
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -840,7 +875,7 @@ class _LudoScreenState extends State<LudoScreen>
   }
 }
 
-/// Classic dice face with dark pips.
+/// Realistic 3D dice face with recessed pips.
 class _DiceFacePainter extends CustomPainter {
   _DiceFacePainter(this.value);
 
@@ -848,8 +883,7 @@ class _DiceFacePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0xFF212121);
-    final r = size.width * 0.09;
+    final r = size.width * 0.095;
     double x(double f) => size.width * f;
     double y(double f) => size.height * f;
     const lo = 0.27;
@@ -861,8 +895,24 @@ class _DiceFacePainter extends CustomPainter {
       if (value >= 4) ...[Offset(x(hi), y(lo)), Offset(x(lo), y(hi))],
       if (value == 6) ...[Offset(x(lo), y(mid)), Offset(x(hi), y(mid))],
     ];
+
+    final pipFill = Paint()
+      ..shader = const RadialGradient(
+        center: Alignment(-0.25, -0.25),
+        colors: [Color(0xFF374151), Color(0xFF1F2937), Color(0xFF111827)],
+      ).createShader(Offset.zero & size);
+
     for (final p in pips) {
-      canvas.drawCircle(p, r, paint);
+      // Recessed concave drop shadow
+      canvas.drawCircle(p + const Offset(0.5, 0.8), r, Paint()..color = const Color(0x33000000));
+      // Pip cavity
+      canvas.drawCircle(p, r, pipFill);
+      // Specular glint
+      canvas.drawCircle(
+        p + Offset(-r * 0.28, -r * 0.28),
+        r * 0.26,
+        Paint()..color = Colors.white.withValues(alpha: 0.4),
+      );
     }
   }
 
@@ -878,7 +928,15 @@ class _CenterHomePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
 
     void triangle(Color color, Offset a, Offset b) {
-      paint.color = color;
+      paint.shader = RadialGradient(
+        center: Alignment.center,
+        radius: 0.9,
+        colors: [
+          Color.lerp(color, Colors.white, 0.25)!,
+          color,
+          Color.lerp(color, Colors.black, 0.35)!,
+        ],
+      ).createShader(Rect.fromPoints(a, b));
       canvas.drawPath(
           Path()
             ..moveTo(a.dx, a.dy)
@@ -894,6 +952,23 @@ class _CenterHomePainter extends CustomPainter {
         Offset(size.width, size.height));
     triangle(LudoColor.blue.color, Offset(0, size.height),
         Offset(size.width, size.height));
+
+    // Central victory star medal
+    canvas.drawCircle(
+      center,
+      size.width * 0.18,
+      Paint()
+        ..color = const Color(0xFFFFD54F)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      center,
+      size.width * 0.18,
+      Paint()
+        ..color = const Color(0xFFB8860B)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2,
+    );
   }
 
   @override
@@ -972,6 +1047,8 @@ class _PathwayGridPainter extends CustomPainter {
       }
     }
     path.close();
+    // Drop shadow
+    canvas.drawPath(path.shift(const Offset(0.5, 0.8)), Paint()..color = const Color(0x33000000));
     canvas.drawPath(path, Paint()..color = color);
   }
 

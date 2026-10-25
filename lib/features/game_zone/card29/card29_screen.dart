@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../common/game_zone_portrait_lock.dart';
+import '../common/playing_card_view.dart';
 import 'card29_engine.dart';
 import 'card29_game.dart';
 
@@ -321,14 +322,14 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
               alignment: WrapAlignment.center,
               children: List.generate(
                 cardCount,
-                (_) => Container(
-                  width: 10,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade900,
-                    borderRadius: BorderRadius.circular(2),
-                    border: Border.all(color: Colors.white70, width: 0.5),
-                  ),
+                (_) => const PlayingCardView(
+                  rank: '',
+                  suitSymbol: '',
+                  isRed: false,
+                  isFaceUp: false,
+                  width: 11,
+                  height: 15,
+                  backColor: Color(0xFF8B0000),
                 ),
               ),
             ),
@@ -352,9 +353,16 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
       width: tableSize,
       height: tableSize,
       decoration: BoxDecoration(
-        color: const Color(0xFF134526),
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0x44FFFFFF), width: 3),
+        gradient: const RadialGradient(
+          center: Alignment.center,
+          radius: 0.95,
+          colors: [Color(0xFF1B6638), Color(0xFF134526), Color(0xFF092B15)],
+        ),
+        border: Border.all(color: const Color(0xFFD4AF37), width: 2.5),
+        boxShadow: const [
+          BoxShadow(color: Colors.black87, blurRadius: 14, offset: Offset(0, 6)),
+        ],
       ),
       child: Stack(
         alignment: Alignment.center,
@@ -721,44 +729,15 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
       {required double width,
       required double height,
       bool highlighted = false}) {
-    final color = _isRed(card.suit) ? Colors.red.shade700 : Colors.black87;
-    final corner = (width * 0.24).clamp(10.0, 13.0);
-
     return ExcludeSemantics(
-      child: Container(
+      child: PlayingCardView(
+        rank: card.rank.code,
+        suitSymbol: card.suit.symbol,
+        isRed: _isRed(card.suit),
         width: width,
         height: height,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: highlighted ? Colors.amber : const Color(0x66000000),
-            width: highlighted ? 2.5 : 0.8,
-          ),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x55000000), blurRadius: 4, offset: Offset(0, 2))
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: 2,
-              left: 4,
-              child: Text(
-                '${card.rank.code}\n${card.suit.symbol}',
-                style: TextStyle(
-                    color: color,
-                    fontSize: corner,
-                    height: 0.95,
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-            Center(
-                child: Text(card.suit.symbol,
-                    style: TextStyle(color: color, fontSize: corner * 1.6))),
-          ],
-        ),
+        highlighted: highlighted,
+        backColor: const Color(0xFF1B5E20),
       ),
     );
   }
