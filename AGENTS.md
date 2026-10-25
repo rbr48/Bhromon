@@ -22,7 +22,7 @@ This document serves as the persistent system memory, architectural guidelines, 
    - Do **NOT** request broad storage permissions `READ_MEDIA_IMAGES` or `READ_MEDIA_VIDEO`.
    - Use the Android system Photo Picker via `image_picker` / system pickers.
 3. **Version Numbering**:
-   - In `pubspec.yaml`, increment version and version code monotonically on each release (e.g., `1.8.1+53`).
+   - In `pubspec.yaml`, increment version and version code monotonically on each release (e.g., `1.8.2+54`).
 4. **Windows Gradle Build Contention**:
    - Always keep `org.gradle.vfs.watch=false` in `android/gradle.properties` to avoid Windows directory locks (`AccessDeniedException` during `mergeReleaseNativeLibs` or `packageRelease`).
    - In `android/app/build.gradle`, disable intermediate tasks: `artprofile`, `nativesymboltable`, `cleanmergereleaseassets`, and `cleanmergereleasenativelibs`.
