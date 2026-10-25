@@ -47,6 +47,10 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
   bool _isVideoLoading = false;
   bool _isPaused = false;
 
+  /// Bumped by every load. A video load that finishes after a newer one has
+  /// started is stale: it frees its own controller and leaves the screen alone.
+  int _loadId = 0;
+
   final TextEditingController _replyCtrl = TextEditingController();
 
   static const Duration _photoDuration = Duration(seconds: 5);
@@ -95,6 +99,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
   bool get _canDelete => _currentStory != null && (_isAuthor || widget.isAdmin);
 
   Future<void> _loadCurrentStory() async {
+    final loadId = ++_loadId;
     final story = _currentStory;
     if (story == null) return;
 
@@ -116,9 +121,11 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
       final videoUrl = story.videoUrl ?? story.mediaUrl;
       final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
 
+      bool isCurrent() => mounted && loadId == _loadId;
+
       try {
         await controller.initialize();
-        if (!mounted) {
+        if (!isCurrent()) {
           controller.dispose();
           return;
         }
@@ -135,10 +142,14 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
         _animCtrl.duration = animDuration;
         await controller.play();
-        _animCtrl.forward(from: 0.0);
+        if (isCurrent()) _animCtrl.forward(from: 0.0);
       } catch (e) {
         debugPrint('[StoryViewer] Error loading video: $e');
-        if (mounted) {
+        // A controller that failed before or while playing is not reachable
+        // from _videoCtrl alone, so it is freed here.
+        if (identical(_videoCtrl, controller)) _videoCtrl = null;
+        controller.dispose();
+        if (isCurrent()) {
           setState(() => _isVideoLoading = false);
           _animCtrl.duration = _photoDuration;
           _animCtrl.forward(from: 0.0);
