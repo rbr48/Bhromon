@@ -53,7 +53,8 @@ void main() {
       expect(g.teamPoints[1], 3); // 9 (2) + 10 (1)
     });
 
-    test('After trump is revealed every void player must trump, on every trick',
+    test(
+        'After trump is revealed a void player must trump if opponent is winning, but is not forced if partner is winning',
         () {
       final g = _playing(
         hands: [
@@ -70,8 +71,27 @@ void main() {
       expect(g.playCard(3, _c('9C')), isTrue);
       expect(g.legalCards(0).map((c) => c.code),
           ['7S', '8S']); // You hold no trump: anything
+
+      // Partner West (3) is winning: East is not forced to trump partner
       g.currentTurn = 1;
-      expect(g.legalCards(1).map((c) => c.code), ['7H']); // East must trump
+      expect(g.legalCards(1).map((c) => c.code), ['7H', '8D']);
+
+      // If North (opponent 2) leads and is winning, East MUST trump
+      final gOpp = _playing(
+        hands: [
+          ['7S', '8S'],
+          ['7H', '8D'], // East: void in clubs, holds a trump
+          ['JC', '8C'],
+          ['9C', 'KC'],
+        ],
+        bidder: 2,
+        trump: CardSuit.hearts,
+        leader: 2,
+      );
+      gOpp.isTrumpRevealed = true;
+      expect(gOpp.playCard(2, _c('JC')), isTrue);
+      gOpp.currentTurn = 1;
+      expect(gOpp.legalCards(1).map((c) => c.code), ['7H']);
     });
 
     test('A hidden trump discarded before the reveal does not trump the trick',

@@ -22,7 +22,7 @@ This document serves as the persistent system memory, architectural guidelines, 
    - Do **NOT** request broad storage permissions `READ_MEDIA_IMAGES` or `READ_MEDIA_VIDEO`.
    - Use the Android system Photo Picker via `image_picker` / system pickers.
 3. **Version Numbering**:
-   - In `pubspec.yaml`, increment version and version code monotonically on each release (e.g., `1.8.2+54`).
+   - In `pubspec.yaml`, increment version and version code monotonically on each release (e.g., `1.8.2+55`).
 4. **Windows Gradle Build Contention**:
    - Always keep `org.gradle.vfs.watch=false` in `android/gradle.properties` to avoid Windows directory locks (`AccessDeniedException` during `mergeReleaseNativeLibs` or `packageRelease`).
    - In `android/app/build.gradle`, disable intermediate tasks: `artprofile`, `nativesymboltable`, `cleanmergereleaseassets`, and `cleanmergereleasenativelibs`.
@@ -69,7 +69,7 @@ static session while the user visits other screens, and asks before discarding a
 1. **Card 29 (`card29/`, model `card29_game.dart`)**:
    - 32 cards (J:3, 9:2, A:1, 10:1, K:0, Q:0, 8:0, 7:0) + 1 for the last trick = 29.
    - Bidding 16–28 from the dealer's left, a pass is final, dealer rotates; all-pass → dealer plays at 16.
-   - Strict trump rule: once trump is revealed, any player who cannot follow lead suit MUST play trump if held (`mustPlayTrumpIfHeld: true`), on every trick. The bidder reveals trump by playing it while void and may not lead the hidden trump suit; a trump-suit discard before the reveal has no trump power (`PlayedCard.trumpEligible`).
+   - Strict trump rule with partnership immunity: once trump is revealed, any player who cannot follow lead suit MUST play trump if held when an opponent is winning the trick; if their partner is already winning, they are not forced to trump and may discard or feed points. The bidder reveals trump by playing it while void and may not lead the hidden trump suit; a trump-suit discard before the reveal has no trump power (PlayedCard.trumpEligible).
    - Pair (royalty, K+Q of trump, after reveal): bidding team target −4 (min 16), opponents' pair → target +4 (max 28). Bots claim it too.
    - A finished trick sits in `Card29Phase.trickComplete` until `resolveTrick()`, so no card can be played during the pause.
    - 6-pip match game tracking; a new round after `matchOver` starts a fresh match.
@@ -82,6 +82,7 @@ static session while the user visits other screens, and asks before discarding a
    - Draws: stalemate, insufficient material, 50-move rule, threefold repetition, draw offer; resign.
    - AI (negamax + alpha-beta + quiescence) runs via `compute(chessAiWorker, ChessAiRequest(...))`; depths Easy 1 / Medium 2 / Hard 4.
    - Board coordinate annotations (`a-h`, `1-8`) and last-move highlights.
+   - Crisp vector Staunton pawns (_ChessPawnPainter) immune to Android NotoColorEmoji font fallback hijacking, guaranteeing authentic side colors.
 3. **Ludo Express (`ludo/`)**:
    - Home tokens remain docked and visible inside central home triangles.
    - Tokens sharing a square split it as a 2×2 grid.
