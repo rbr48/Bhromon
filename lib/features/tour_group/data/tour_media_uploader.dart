@@ -228,7 +228,8 @@ class TourMediaUploader {
     try {
       final uri = Uri.parse(url);
       if (uri.path.startsWith('/media/')) {
-        final segments = uri.pathSegments; // ['media', tourId, folder, filename]
+        final segments =
+            uri.pathSegments; // ['media', tourId, folder, filename]
         if (segments.length >= 4) {
           final tourId = segments[1];
           final folder = segments[2];
