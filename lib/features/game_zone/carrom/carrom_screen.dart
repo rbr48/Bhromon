@@ -559,21 +559,37 @@ class _CarromPainter extends CustomPainter {
     // Wooden frame and playing surface.
     canvas.drawRRect(
       RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(s * 0.03)),
-      Paint()..color = const Color(0xFF5A3315),
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFF6D3B16), Color(0xFF43230C), Color(0xFF2A1507)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(Offset.zero & size),
     );
     canvas.drawRect(
       Rect.fromLTWH(
           frame * 0.55, frame * 0.55, s - frame * 1.1, s - frame * 1.1),
-      Paint()..color = const Color(0xFF3B200C),
+      Paint()..color = const Color(0xFF2C1607),
     );
+
+    // Mitred 45-degree frame corner joint lines
+    final joint = Paint()
+      ..color = const Color(0x44000000)
+      ..strokeWidth = 1.2;
+    canvas.drawLine(Offset.zero, Offset(frame, frame), joint);
+    canvas.drawLine(Offset(s, 0), Offset(s - frame, frame), joint);
+    canvas.drawLine(Offset(0, s), Offset(frame, s - frame), joint);
+    canvas.drawLine(Offset(s, s), Offset(s - frame, s - frame), joint);
+
+    // Lacquered English Birch plywood playing surface
     final surface = Rect.fromLTWH(frame, frame, play, play);
     canvas.drawRect(
       surface,
       Paint()
-        ..shader = const LinearGradient(
-          colors: [Color(0xFFF6E0B3), Color(0xFFEBCB91)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        ..shader = const RadialGradient(
+          center: Alignment.center,
+          radius: 0.95,
+          colors: [Color(0xFFFFF9EC), Color(0xFFF7E7C8), Color(0xFFE8C895)],
         ).createShader(surface),
     );
 
@@ -581,7 +597,7 @@ class _CarromPainter extends CustomPainter {
       ..color = const Color(0xFF5B3A1E)
       ..style = PaintingStyle.stroke
       ..strokeWidth = max(1.0, play * 0.0025);
-    final red = Paint()..color = const Color(0xFFB71C1C);
+    final red = Paint()..color = const Color(0xFFC62828);
 
     // Baselines with their end circles on all four sides; the current
     // player's baseline gets a soft highlight.
@@ -595,10 +611,13 @@ class _CarromPainter extends CustomPainter {
       final isActive = (side == 0 && game.currentPlayer == 0) ||
           (side == 2 && game.currentPlayer == 1);
       if (isActive && game.phase == CarromPhase.aiming) {
-        canvas.drawRect(
-          Rect.fromPoints(p(CarromBoard.baselineMin, y - half * 1.6),
-              p(CarromBoard.baselineMax, y + half * 1.6)),
-          Paint()..color = const Color(0x33FFC107),
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromPoints(p(CarromBoard.baselineMin - 0.02, y - half * 1.6),
+                p(CarromBoard.baselineMax + 0.02, y + half * 1.6)),
+            const Radius.circular(8),
+          ),
+          Paint()..color = const Color(0x35FFC107),
         );
       }
       canvas.drawLine(p(CarromBoard.baselineMin, y - half),
@@ -610,6 +629,8 @@ class _CarromPainter extends CustomPainter {
         CarromBoard.baselineMax
       ]) {
         canvas.drawCircle(p(x, y), half * play, red);
+        canvas.drawCircle(p(x, y), half * play * 0.45,
+            Paint()..color = const Color(0xFFFFF8E7));
         canvas.drawCircle(p(x, y), half * play, line);
       }
       // Corner arrow pointing from the pocket towards the centre.
@@ -618,18 +639,41 @@ class _CarromPainter extends CustomPainter {
       canvas.restore();
     }
 
-    // Centre circles.
-    canvas.drawCircle(p(0.5, 0.5), 0.09 * play, line);
-    canvas.drawCircle(p(0.5, 0.5), 0.075 * play, line);
-    canvas.drawCircle(p(0.5, 0.5), 0.018 * play, red);
+    // Centre circles with decorative tournament mandala rays.
+    final centerP = p(0.5, 0.5);
+    final mandalaR = 0.09 * play;
+    canvas.drawCircle(centerP, mandalaR, line);
+    canvas.drawCircle(centerP, 0.075 * play, line);
+    final rayPaint = Paint()
+      ..color = const Color(0x665B3A1E)
+      ..strokeWidth = 0.8;
+    for (int i = 0; i < 16; i++) {
+      final angle = i * pi / 8;
+      final r1 = centerP + Offset(cos(angle) * 0.075 * play, sin(angle) * 0.075 * play);
+      final r2 = centerP + Offset(cos(angle) * mandalaR, sin(angle) * mandalaR);
+      canvas.drawLine(r1, r2, rayPaint);
+    }
+    canvas.drawCircle(centerP, 0.018 * play, red);
+    canvas.drawCircle(centerP, 0.007 * play, Paint()..color = const Color(0xFFFFF8E7));
 
-    // Pockets.
+    // Pockets with brass bracket rim and woven string net depth.
     for (final pocket in CarromBoard.pockets) {
       final c = p(pocket.$1, pocket.$2);
-      canvas.drawCircle(c, CarromBoard.pocketRadius * play * 1.08,
-          Paint()..color = const Color(0xFF3B200C));
+      // Brass pocket bracket
+      canvas.drawCircle(c, CarromBoard.pocketRadius * play * 1.14,
+          Paint()..color = const Color(0xFF8D6E44));
+      canvas.drawCircle(c, CarromBoard.pocketRadius * play * 1.06,
+          Paint()..color = const Color(0xFF381F0E));
+      // Deep pocket drop hole
       canvas.drawCircle(c, CarromBoard.pocketRadius * play,
-          Paint()..color = const Color(0xFF0D0805));
+          Paint()..color = const Color(0xFF090604));
+      // Woven netting pattern
+      final netPaint = Paint()
+        ..color = const Color(0x338D6E63)
+        ..strokeWidth = 0.8;
+      final pr = CarromBoard.pocketRadius * play * 0.7;
+      canvas.drawLine(c - Offset(pr, 0), c + Offset(pr, 0), netPaint);
+      canvas.drawLine(c - Offset(0, pr), c + Offset(0, pr), netPaint);
     }
 
     // Coins and striker.
@@ -641,7 +685,7 @@ class _CarromPainter extends CustomPainter {
     if (showPlacementError) {
       canvas.drawCircle(
         p(game.striker.x, game.striker.y),
-        game.striker.radius * play * 1.25,
+        game.striker.radius * play * 1.35,
         Paint()
           ..color = Colors.redAccent
           ..style = PaintingStyle.stroke
@@ -653,70 +697,122 @@ class _CarromPainter extends CustomPainter {
     if (shot != null) {
       final start = p(game.striker.x, game.striker.y);
       final dir = Offset(cos(shot.$1), sin(shot.$1));
-      // Faint guide to the cushion, then a bold arrow sized by power.
+      // Faint guide line
       canvas.drawLine(
         start,
         start + dir * play * 1.4,
         Paint()
-          ..color = const Color(0x55FFFFFF)
-          ..strokeWidth = 1.5,
+          ..color = const Color(0x44FFFFFF)
+          ..strokeWidth = 1.2,
       );
-      final tip = start + dir * play * (0.08 + shot.$2 * 0.3);
+      final tip = start + dir * play * (0.08 + shot.$2 * 0.32);
+      final arrowColor = Color.lerp(
+        Colors.limeAccent.shade400,
+        Colors.deepOrangeAccent,
+        shot.$2,
+      )!;
       final arrow = Paint()
-        ..color = Color.lerp(Colors.amber, Colors.deepOrange, shot.$2)!
-        ..strokeWidth = 4
+        ..color = arrowColor
+        ..strokeWidth = 4.5
         ..strokeCap = StrokeCap.round;
       canvas.drawLine(start, tip, arrow);
       final side = Offset(-dir.dy, dir.dx);
-      final head = play * 0.025;
+      final head = play * 0.028;
       canvas.drawPath(
         Path()
           ..moveTo(tip.dx + dir.dx * head, tip.dy + dir.dy * head)
-          ..lineTo(tip.dx + side.dx * head * 0.7, tip.dy + side.dy * head * 0.7)
-          ..lineTo(tip.dx - side.dx * head * 0.7, tip.dy - side.dy * head * 0.7)
+          ..lineTo(tip.dx + side.dx * head * 0.75, tip.dy + side.dy * head * 0.75)
+          ..lineTo(tip.dx - side.dx * head * 0.75, tip.dy - side.dy * head * 0.75)
           ..close(),
-        Paint()..color = arrow.color,
+        Paint()..color = arrowColor,
       );
     }
   }
 
   void _drawPiece(Canvas canvas, CarromPiece piece, Offset c, double r) {
-    canvas.drawCircle(c + Offset(r * 0.12, r * 0.18), r,
-        Paint()..color = const Color(0x55000000));
-    final (Color fill, Color ring) = switch (piece.type) {
-      CarromPieceType.white => (
-          const Color(0xFFF4EBD0),
-          const Color(0xFFB59E6E)
-        ),
-      CarromPieceType.black => (
-          const Color(0xFF2A2A2A),
-          const Color(0xFF6B6B6B)
-        ),
-      CarromPieceType.queen => (
-          const Color(0xFFC62828),
-          const Color(0xFF7F0000)
-        ),
-      CarromPieceType.striker => (
-          const Color(0xFFE8EAF6),
-          const Color(0xFF3949AB)
-        ),
-    };
-    canvas.drawCircle(c, r, Paint()..color = fill);
+    // 3D Drop shadow
+    canvas.drawCircle(
+      c + Offset(r * 0.12, r * 0.18),
+      r,
+      Paint()..color = const Color(0x55000000),
+    );
+
+    final pieceRect = Rect.fromCircle(center: c, radius: r);
+    final Paint fillPaint = Paint();
+    Color ringColor;
+
+    switch (piece.type) {
+      case CarromPieceType.white:
+        fillPaint.shader = const RadialGradient(
+          center: Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: [Color(0xFFFFFFFF), Color(0xFFF3ECE0), Color(0xFFC7B18A)],
+        ).createShader(pieceRect);
+        ringColor = const Color(0xFF8D734B);
+        break;
+      case CarromPieceType.black:
+        fillPaint.shader = const RadialGradient(
+          center: Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: [Color(0xFF505050), Color(0xFF282828), Color(0xFF141414)],
+        ).createShader(pieceRect);
+        ringColor = const Color(0xFF757575);
+        break;
+      case CarromPieceType.queen:
+        fillPaint.shader = const RadialGradient(
+          center: Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: [Color(0xFFFF5252), Color(0xFFD32F2F), Color(0xFF7F0000)],
+        ).createShader(pieceRect);
+        ringColor = const Color(0xFFFFD54F);
+        break;
+      case CarromPieceType.striker:
+        fillPaint.shader = const RadialGradient(
+          center: Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: [Color(0xFFFFFFFF), Color(0xFFE8EAF6), Color(0xFF9FA8DA)],
+        ).createShader(pieceRect);
+        ringColor = const Color(0xFF283593);
+        break;
+    }
+
+    // Main piece body
+    canvas.drawCircle(c, r, fillPaint);
+
+    // Bevel outer ring
     canvas.drawCircle(
       c,
       r * 0.92,
       Paint()
-        ..color = ring
+        ..color = ringColor.withValues(alpha: 0.85)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = max(1.0, r * 0.14),
+        ..strokeWidth = max(1.0, r * 0.12),
     );
+
+    // Concentric lathe groove
     canvas.drawCircle(
       c,
       r * 0.45,
       Paint()
-        ..color = ring.withValues(alpha: 0.6)
+        ..color = ringColor.withValues(alpha: 0.6)
         ..style = PaintingStyle.stroke
         ..strokeWidth = max(0.8, r * 0.08),
+    );
+
+    // Center rosette for Queen and Striker
+    if (piece.type == CarromPieceType.queen) {
+      canvas.drawCircle(c, r * 0.22, Paint()..color = const Color(0xFFFFD54F));
+      canvas.drawCircle(c, r * 0.10, Paint()..color = const Color(0xFFB71C1C));
+    } else if (piece.type == CarromPieceType.striker) {
+      canvas.drawCircle(c, r * 0.25, Paint()..color = const Color(0xFF3949AB));
+      canvas.drawCircle(c, r * 0.12, Paint()..color = const Color(0xFFFFD54F));
+    }
+
+    // Top-left Specular gleam for physical glass/acrylic shine
+    canvas.drawCircle(
+      c + Offset(-r * 0.32, -r * 0.32),
+      r * 0.14,
+      Paint()..color = Colors.white.withValues(alpha: 0.45),
     );
   }
 

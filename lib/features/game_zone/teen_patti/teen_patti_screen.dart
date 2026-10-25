@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../common/game_zone_portrait_lock.dart';
+import '../common/playing_card_view.dart';
+import '../common/poker_chip_view.dart';
 import 'teen_patti_engine.dart';
 import 'teen_patti_game.dart';
 
@@ -459,15 +461,35 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
   }
 
   Widget _buildCardBack(double width, double height, {Widget? child}) {
-    return Container(
+    if (child != null) {
+      return SizedBox(
+        width: width,
+        height: height,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            PlayingCardView(
+              rank: '',
+              suitSymbol: '',
+              isRed: false,
+              isFaceUp: false,
+              width: width,
+              height: height,
+              backColor: const Color(0xFF8B0000),
+            ),
+            child,
+          ],
+        ),
+      );
+    }
+    return PlayingCardView(
+      rank: '',
+      suitSymbol: '',
+      isRed: false,
+      isFaceUp: false,
       width: width,
       height: height,
-      decoration: BoxDecoration(
-        color: Colors.red.shade900,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.white70, width: 0.8),
-      ),
-      child: child,
+      backColor: const Color(0xFF8B0000),
     );
   }
 
@@ -478,29 +500,40 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
       width: potSize,
       height: potSize,
       decoration: BoxDecoration(
-        color: const Color(0xFF134526),
         shape: BoxShape.circle,
-        border:
-            Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 2),
+        gradient: const RadialGradient(
+          center: Alignment.center,
+          radius: 0.95,
+          colors: [Color(0xFF1B6638), Color(0xFF134526), Color(0xFF092B15)],
+        ),
+        border: Border.all(color: const Color(0xFFD4AF37), width: 2),
+        boxShadow: const [
+          BoxShadow(color: Colors.black87, blurRadius: 10, offset: Offset(0, 4))
+        ],
       ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.monetization_on, color: Colors.amber, size: 26),
-              const SizedBox(height: 2),
-              Text('${_game.pot}',
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PokerChipView(value: _game.pot, size: 36),
+                const SizedBox(height: 3),
+                Text(
+                  'POT: ৳${_game.pot}',
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18)),
-              const Text('POT',
-                  style: TextStyle(
-                      color: Colors.white54, fontSize: 10, letterSpacing: 1.2)),
-            ],
+                    color: Colors.amberAccent,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                    shadows: [
+                      Shadow(color: Colors.black87, blurRadius: 2, offset: Offset(0, 1))
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -682,89 +715,31 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
     final isRed = c.suit == 'H' || c.suit == 'D';
     return Semantics(
       label: '${c.rank} of ${_suitName(c.suit)}',
-      child: Container(
+      child: PlayingCardView(
+        rank: c.rank,
+        suitSymbol: c.suitSymbol,
+        isRed: isRed,
         width: 26,
         height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: Colors.black38, width: 0.5),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Padding(
-            padding: const EdgeInsets.all(2),
-            child: Text(
-              '${c.rank}\n${c.suitSymbol}',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: isRed ? Colors.red.shade700 : Colors.black,
-                fontSize: 11,
-                height: 1.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
+        backColor: const Color(0xFF8B0000),
       ),
     );
   }
 
   Widget _buildFullCard(TeenPattiCard c, {bool dimmed = false}) {
     final isRed = c.suit == 'H' || c.suit == 'D';
-    final color = isRed ? Colors.red.shade700 : Colors.black87;
 
     return Semantics(
       label: '${c.rank} of ${_suitName(c.suit)}',
-      child: Opacity(
-        opacity: dimmed ? 0.5 : 1,
-        child: Container(
-          width: 52,
-          height: 76,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.amber, width: 1.5),
-            boxShadow: const [
-              BoxShadow(
-                  color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))
-            ],
-          ),
-          child: ExcludeSemantics(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 2, left: 4),
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: Text(
-                      '${c.rank}\n${c.suitSymbol}',
-                      style: TextStyle(
-                          color: color,
-                          fontSize: 12,
-                          height: 0.95,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                Text(c.suitSymbol,
-                    style: TextStyle(color: color, fontSize: 18)),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2, right: 4),
-                  child: Align(
-                    alignment: Alignment.bottomRight,
-                    child: Text(c.rank,
-                        style: TextStyle(
-                            color: color,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      child: PlayingCardView(
+        rank: c.rank,
+        suitSymbol: c.suitSymbol,
+        isRed: isRed,
+        width: 52,
+        height: 76,
+        dimmed: dimmed,
+        highlighted: true,
+        backColor: const Color(0xFF1E3A8A),
       ),
     );
   }
