@@ -7,12 +7,46 @@ import '../common/game_zone_portrait_lock.dart';
 import 'chess_engine.dart';
 import 'chess_piece_painter.dart';
 
+enum ChessBoardTheme {
+  tournamentGreen(
+    'Championship Green',
+    Color(0xFFEEEED2), // Soft ivory light
+    Color(0xFF769656), // Official tournament green
+    Color(0xFF273620), // Deep forest border
+  ),
+  classicWalnut(
+    'Walnut Wood',
+    Color(0xFFF0D9B5), // Maple light
+    Color(0xFFB58863), // Rich walnut
+    Color(0xFF382212), // Deep mahogany border
+  ),
+  midnightSlate(
+    'Midnight Slate',
+    Color(0xFFDEE3E8), // Crisp silver light
+    Color(0xFF6B7A8D), // Deep slate dark
+    Color(0xFF1B232D), // Obsidian charcoal border
+  );
+
+  final String label;
+  final Color lightSquare;
+  final Color darkSquare;
+  final Color borderWood;
+
+  const ChessBoardTheme(
+    this.label,
+    this.lightSquare,
+    this.darkSquare,
+    this.borderWood,
+  );
+}
+
 /// Keeps the game in progress while the player visits other parts of the app.
 class _ChessSession {
   static ChessEngine? engine;
   static int aiDepth = 2;
   static String? gameOverTitle;
   static String? gameOverMessage;
+  static ChessBoardTheme boardTheme = ChessBoardTheme.tournamentGreen;
 }
 
 class ChessScreen extends StatefulWidget {
@@ -406,6 +440,28 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                 ),
             ],
           ),
+          PopupMenuButton<ChessBoardTheme>(
+            icon: const Icon(Icons.palette_outlined),
+            tooltip: 'Board Theme',
+            onSelected: (theme) {
+              setState(() {
+                _ChessSession.boardTheme = theme;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text('Theme: ${theme.label}'),
+                    duration: const Duration(seconds: 1)),
+              );
+            },
+            itemBuilder: (ctx) => [
+              for (final theme in ChessBoardTheme.values)
+                CheckedPopupMenuItem(
+                  value: theme,
+                  checked: _ChessSession.boardTheme == theme,
+                  child: Text(theme.label),
+                ),
+            ],
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             tooltip: 'Game options',
@@ -536,74 +592,96 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
   }
 
   Widget _buildBoard(double boardSize) {
+    final theme = _ChessSession.boardTheme;
     final squareSize = boardSize / 8;
-    final labelSize = (squareSize * 0.2).clamp(9.0, 12.0);
+    final labelSize = (squareSize * 0.22).clamp(9.0, 13.0);
     return Container(
-      padding: const EdgeInsets.all(5),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: const Color(0xFF2E1C11),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF4A311E), width: 3),
+        color: theme.borderWood,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: const Color(0xFFD4AF37).withValues(alpha: 0.6),
+          width: 2.5,
+        ),
         boxShadow: const [
-          BoxShadow(color: Colors.black87, blurRadius: 14, offset: Offset(0, 6))
+          BoxShadow(
+            color: Colors.black87,
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
         ],
       ),
-      child: SizedBox(
-        width: boardSize,
-        height: boardSize,
-        child: Stack(
-          children: [
-            Column(
-              children: List.generate(8, (row) {
-                return Row(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: SizedBox(
+          width: boardSize,
+          height: boardSize,
+          child: Stack(
+            children: [
+              Column(
+                children: List.generate(8, (row) {
+                  return Row(
                     children: List.generate(
-                        8, (col) => _buildSquare(row, col, squareSize)));
+                      8,
+                      (col) => _buildSquare(row, col, squareSize, theme),
+                    ),
+                  );
+                }),
+              ),
+              ...List.generate(8, (r) {
+                final isLightSquare = r % 2 == 0;
+                return Positioned(
+                  top: r * squareSize + 2,
+                  left: 3,
+                  child: IgnorePointer(
+                    child: Text(
+                      '${8 - r}',
+                      style: TextStyle(
+                        color: isLightSquare
+                            ? theme.darkSquare
+                            : theme.lightSquare,
+                        fontSize: labelSize,
+                        fontWeight: FontWeight.w800,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
               }),
-            ),
-            ...List.generate(8, (r) {
-              return Positioned(
-                top: r * squareSize + 2,
-                left: 3,
-                child: IgnorePointer(
-                  child: Text(
-                    '${8 - r}',
-                    style: TextStyle(
-                      color: r % 2 == 0
-                          ? const Color(0xFFB58863)
-                          : const Color(0xFFF0D9B5),
-                      fontSize: labelSize,
-                      fontWeight: FontWeight.bold,
-                      shadows: const [
-                        Shadow(color: Colors.black45, blurRadius: 2)
-                      ],
+              ...List.generate(8, (c) {
+                const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+                final isLightSquare = (7 + c) % 2 == 0;
+                return Positioned(
+                  bottom: 1,
+                  left: c * squareSize + squareSize - labelSize - 2,
+                  child: IgnorePointer(
+                    child: Text(
+                      files[c],
+                      style: TextStyle(
+                        color: isLightSquare
+                            ? theme.darkSquare
+                            : theme.lightSquare,
+                        fontSize: labelSize,
+                        fontWeight: FontWeight.w800,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            }),
-            ...List.generate(8, (c) {
-              const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-              return Positioned(
-                bottom: 1,
-                left: c * squareSize + squareSize - labelSize - 2,
-                child: IgnorePointer(
-                  child: Text(
-                    files[c],
-                    style: TextStyle(
-                      color: (7 + c) % 2 == 0
-                          ? const Color(0xFFB58863)
-                          : const Color(0xFFF0D9B5),
-                      fontSize: labelSize,
-                      fontWeight: FontWeight.bold,
-                      shadows: const [
-                        Shadow(color: Colors.black45, blurRadius: 2)
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ],
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );
@@ -681,23 +759,27 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     );
   }
 
-  Widget _buildSquare(int row, int col, double size) {
+  Widget _buildSquare(
+      int row, int col, double size, ChessBoardTheme theme) {
     final isLight = (row + col) % 2 == 0;
-    Color squareColor =
-        isLight ? const Color(0xFFF0D9B5) : const Color(0xFFB58863);
+    Color squareColor = isLight ? theme.lightSquare : theme.darkSquare;
 
     final last = _engine.lastMove;
     final isLastMove = last != null &&
         ((last.from.row == row && last.from.col == col) ||
             (last.to.row == row && last.to.col == col));
     if (isLastMove) {
-      squareColor = isLight ? const Color(0xFFCED26B) : const Color(0xFFAAA23B);
+      squareColor = isLight
+          ? Color.alphaBlend(const Color(0x66FBC02D), theme.lightSquare)
+          : Color.alphaBlend(const Color(0x66FBC02D), theme.darkSquare);
     }
 
     final pos = BoardPosition(row, col);
     final isSelected = _selectedPosition == pos;
     if (isSelected) {
-      squareColor = const Color(0xFFF6D04D);
+      squareColor = isLight
+          ? Color.alphaBlend(const Color(0xAAFBC02D), theme.lightSquare)
+          : Color.alphaBlend(const Color(0xAAFBC02D), theme.darkSquare);
     }
 
     final isLegalMoveDest = _currentLegalMoves.any((m) => m.to == pos);
@@ -722,14 +804,14 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
             children: [
               if (isKingInCheckSquare)
                 Container(
-                  width: size * 0.92,
-                  height: size * 0.92,
+                  width: size * 0.94,
+                  height: size * 0.94,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        Colors.red.withValues(alpha: 0.85),
-                        Colors.red.withValues(alpha: 0.3),
+                        Colors.redAccent.withValues(alpha: 0.9),
+                        Colors.red.withValues(alpha: 0.4),
                         Colors.transparent,
                       ],
                     ),
@@ -737,28 +819,37 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                 ),
               if (isLegalMoveDest)
                 Container(
-                  width: piece == null ? size * 0.32 : size * 0.86,
-                  height: piece == null ? size * 0.32 : size * 0.86,
+                  width: piece == null ? size * 0.32 : size * 0.90,
+                  height: piece == null ? size * 0.32 : size * 0.90,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: piece == null
-                        ? const Color(0x55000000)
+                        ? (isLight
+                            ? const Color(0x40000000)
+                            : const Color(0x50000000))
                         : Colors.transparent,
                     border: piece != null
-                        ? Border.all(color: const Color(0xEED32F2F), width: 3.5)
-                        : null,
-                    boxShadow: piece == null
+                        ? Border.all(
+                            color:
+                                const Color(0xFFE53935).withValues(alpha: 0.9),
+                            width: 3.5,
+                          )
+                        : Border.all(
+                            color: Colors.white.withValues(alpha: 0.35),
+                            width: 1.2,
+                          ),
+                    boxShadow: piece != null
                         ? [
                             BoxShadow(
-                              color: Colors.white.withValues(alpha: 0.25),
-                              blurRadius: 2,
+                              color: const Color(0xFFE53935)
+                                  .withValues(alpha: 0.35),
+                              blurRadius: 6,
                             ),
                           ]
                         : null,
                   ),
                 ),
-              if (piece != null)
-                _PieceGlyph(piece: piece, size: size * 0.88),
+              if (piece != null) _PieceGlyph(piece: piece, size: size * 0.90),
             ],
           ),
         ),

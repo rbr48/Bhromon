@@ -277,13 +277,27 @@ class Card29Game {
     return true;
   }
 
+  /// The bidder can reveal the secret trump when they cannot follow the led suit.
+  bool canRevealTrump(int player) =>
+      phase == Card29Phase.playing &&
+      currentTurn == player &&
+      !isTrumpRevealed &&
+      player == highestBidder &&
+      _isVoidInLead(player);
+
+  bool revealTrump(int player) {
+    if (!canRevealTrump(player)) return false;
+    _reveal(player, asked: false);
+    return true;
+  }
+
   void _reveal(int player, {required bool asked}) {
     isTrumpRevealed = true;
     trumpRevealedBy = player;
     final suit = '${trumpSuit!.symbol} ${trumpSuit!.name}';
     status = asked
         ? '${player == 0 ? 'You' : nameOf(player)} asked for trump: $suit!'
-        : '${player == 0 ? 'You' : nameOf(player)} revealed trump by playing $suit.';
+        : '${player == 0 ? 'You' : nameOf(player)} revealed trump: $suit!';
   }
 
   bool canClaimRoyalty(int player) =>

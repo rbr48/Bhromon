@@ -532,8 +532,13 @@ class _ChatScreenState extends State<ChatScreen> {
           .ref('chat_media/${widget.chatId}/$uploadId.$ext');
 
       final UploadTask uploadTask;
-      if (kIsWeb || fileToUpload == null) {
-        final bytes = await xFile.readAsBytes();
+      if (type == 'image' || kIsWeb || fileToUpload == null) {
+        final Uint8List bytes;
+        if (fileToUpload != null && fileToUpload.existsSync()) {
+          bytes = await fileToUpload.readAsBytes();
+        } else {
+          bytes = await xFile.readAsBytes();
+        }
         uploadTask = storageRef.putData(
           bytes,
           SettableMetadata(contentType: mimeType),
@@ -610,11 +615,16 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       debugPrint('Media upload error: $e');
+      String msg = 'Failed to send media.';
+      if (e is FirebaseException && e.message != null && e.message!.isNotEmpty) {
+        msg = 'Failed to send media: ${e.message}';
+      } else {
+        msg = 'Failed to send media: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}';
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                'Failed to send media: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}'),
+            content: Text(msg),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -642,19 +652,18 @@ class _ChatScreenState extends State<ChatScreen> {
           .ref('chat_media/${widget.chatId}/$uploadId.m4a');
 
       final UploadTask uploadTask;
-      if (kIsWeb) {
-        final xFile = XFile(filePath);
-        final bytes = await xFile.readAsBytes();
-        uploadTask = storageRef.putData(
-          bytes,
-          SettableMetadata(contentType: 'audio/mp4'),
-        );
+      final voiceFile = File(filePath);
+      final Uint8List bytes;
+      if (!kIsWeb && voiceFile.existsSync()) {
+        bytes = await voiceFile.readAsBytes();
       } else {
-        uploadTask = storageRef.putFile(
-          File(filePath),
-          SettableMetadata(contentType: 'audio/mp4'),
-        );
+        final xFile = XFile(filePath);
+        bytes = await xFile.readAsBytes();
       }
+      uploadTask = storageRef.putData(
+        bytes,
+        SettableMetadata(contentType: 'audio/mp4'),
+      );
 
       await uploadTask;
       final downloadUrl = await storageRef.getDownloadURL();
