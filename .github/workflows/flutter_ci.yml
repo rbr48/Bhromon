@@ -130,6 +130,46 @@ jobs:
         run: |
           sed -i '/org.gradle.java.home/d' android/gradle.properties || true
 
+      - name: Configure google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          elif [ ! -f android/app/google-services.json ]; then
+            cat > android/app/google-services.json << 'EOF'
+          {
+            "project_info": {
+              "project_number": "919602851188",
+              "project_id": "bhromon-ff801",
+              "storage_bucket": "bhromon-ff801.firebasestorage.app"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:919602851188:android:89360212aea9ece4f61021",
+                  "android_client_info": {
+                    "package_name": "com.bhromon.app"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "AIzaSyADg43-_aGd8oVLHJAtaOVijhNqOqBzyjQ"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          fi
+
       - name: Install dependencies
         run: flutter pub get
 
