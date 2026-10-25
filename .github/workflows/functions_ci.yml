@@ -116,14 +116,16 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # Bounded workers + a larger heap: jest with ts-jest OOMs the default
-      # 2GB Node heap when it spawns a compiling worker per core.
-      - name: Run unit tests with coverage (under Firestore emulator)
+      # Serial jest + a larger heap. The rules suites share one emulator
+      # project and clear it, and Storage rules read memberships from the
+      # emulator's --project, so they cannot run in parallel. The CLI is pinned:
+      # firebase-tools 15.x fails the Storage rules' firestore lookups.
+      - name: Run unit tests with coverage (under Firestore and Storage emulators)
         working-directory: .
         run: >
-          npx firebase-tools emulators:exec --only firestore
+          npx firebase-tools@13.35.1 emulators:exec --only firestore,storage
           --project bhromon-rules-test-project
-          "cd functions && npm test -- --coverage --maxWorkers=2"
+          "cd functions && npm test -- --coverage --runInBand"
         env:
           NODE_OPTIONS: --max-old-space-size=4096
 
