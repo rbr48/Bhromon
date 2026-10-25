@@ -214,6 +214,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
               child: Row(
                 children: [
                   IconButton(
+                    tooltip: 'ফিরে যান',
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
@@ -282,6 +283,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                     ),
                   const SizedBox(width: 4),
                   IconButton(
+                    tooltip: 'বন্ধ করুন',
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
@@ -341,6 +343,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                   Row(
                     children: [
                       IconButton(
+                        tooltip: isLiked ? 'লাইক সরান' : 'লাইক করুন',
                         visualDensity: VisualDensity.compact,
                         icon: Icon(
                           isLiked ? Icons.favorite : Icons.favorite_border,
@@ -358,6 +361,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                       ),
                       const SizedBox(width: 12),
                       IconButton(
+                        tooltip: 'মন্তব্য করুন',
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.chat_bubble_outline,
                             color: Colors.white),
@@ -365,6 +369,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                             widget.onOpenComments?.call(widget.post),
                       ),
                       IconButton(
+                        tooltip: 'শেয়ার করুন',
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.send_outlined,
                             color: Colors.white),

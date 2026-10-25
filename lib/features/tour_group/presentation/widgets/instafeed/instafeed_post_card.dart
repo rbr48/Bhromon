@@ -1024,6 +1024,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   ),
 
                 IconButton(
+                  tooltip: 'আরও বিকল্প',
                   icon: const Icon(Icons.more_vert, color: Colors.white70),
                   onPressed: _showPostMenu,
                 ),
@@ -1127,6 +1128,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             child: Row(
               children: [
                 IconButton(
+                  tooltip: isLiked ? 'লাইক সরান' : 'লাইক করুন',
                   icon: Icon(
                     isLiked ? Icons.favorite : Icons.favorite_border,
                     color: isLiked ? Colors.redAccent : Colors.white,
@@ -1136,11 +1138,13 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 ),
                 if (!widget.post.disableComments)
                   IconButton(
+                    tooltip: 'মন্তব্য করুন',
                     icon: const Icon(Icons.chat_bubble_outline,
                         color: Colors.white, size: 24),
                     onPressed: () => widget.onOpenComments?.call(widget.post),
                   ),
                 IconButton(
+                  tooltip: 'শেয়ার করুন',
                   icon: const Icon(Icons.send_rounded,
                       color: Colors.white, size: 22),
                   onPressed: () => widget.onShare?.call(widget.post),
@@ -1161,6 +1165,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       ? () => widget.onSaveToCollection!(widget.post)
                       : null,
                   child: IconButton(
+                    tooltip:
+                        widget.isBookmarked ? 'সংরক্ষণ সরান' : 'সংরক্ষণ করুন',
                     icon: Icon(
                       widget.isBookmarked
                           ? Icons.bookmark

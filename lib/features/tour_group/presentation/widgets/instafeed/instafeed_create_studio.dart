@@ -614,6 +614,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
               child: Row(
                 children: [
                   IconButton(
+                    tooltip: 'বন্ধ করুন',
                     icon: const Icon(Icons.close, color: Colors.white70),
                     onPressed: () {
                       _saveCurrentDraft();
@@ -680,6 +681,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               fontWeight: FontWeight.bold)),
                     ),
                     IconButton(
+                      tooltip: 'বন্ধ করুন',
                       icon: const Icon(Icons.close,
                           size: 16, color: Colors.white54),
                       onPressed: _discardDraft,
@@ -1185,6 +1187,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     child: VideoPlayer(_videoCtrl!),
                   ),
                   IconButton(
+                    tooltip: _videoCtrl!.value.isPlaying ? 'থামান' : 'চালান',
                     icon: Icon(
                       _videoCtrl!.value.isPlaying
                           ? Icons.pause_circle
