@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -22,6 +24,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       _repository.watchNotices(widget.tourId);
 
   TourGroup? _group;
+  StreamSubscription<TourGroup?>? _groupSub;
   TourRole? _myRole;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
@@ -30,17 +33,25 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   void initState() {
     super.initState();
     _load();
+    _watchGroup();
   }
 
   Future<void> _load() async {
-    final group = await _repository.getGroup(widget.tourId);
     final role = await _repository.myRole(widget.tourId);
-    if (mounted) {
-      setState(() {
-        _group = group;
-        _myRole = role;
-      });
-    }
+    if (mounted) setState(() => _myRole = role);
+  }
+
+  void _watchGroup() {
+    _groupSub?.cancel();
+    _groupSub = _repository.watchGroup(widget.tourId).listen((g) {
+      if (mounted) setState(() => _group = g);
+    });
+  }
+
+  @override
+  void dispose() {
+    _groupSub?.cancel();
+    super.dispose();
   }
 
   void _showError(String text) {

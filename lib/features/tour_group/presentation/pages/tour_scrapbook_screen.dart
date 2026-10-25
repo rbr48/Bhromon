@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/tour_group_repository.dart';
@@ -17,6 +19,7 @@ class TourScrapbookScreen extends StatefulWidget {
 class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
   final TourGroupRepository _repository = TourGroupRepository();
   TourGroup? _tourGroup;
+  StreamSubscription<TourGroup?>? _groupSub;
   List<TourMember> _members = const [];
   List<TourPostItem> _posts = const [];
   bool _isLoading = true;
@@ -26,19 +29,25 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
   void initState() {
     super.initState();
     _loadScrapbookData();
+    _watchGroup();
+  }
+
+  void _watchGroup() {
+    _groupSub?.cancel();
+    _groupSub = _repository.watchGroup(widget.tourId).listen((g) {
+      if (mounted) setState(() => _tourGroup = g);
+    });
   }
 
   /// Everything the scrapbook shows comes from the tour itself: the group, its
   /// members and its posts. Nothing is invented when the data is missing.
   Future<void> _loadScrapbookData() async {
     try {
-      final group = await _repository.getGroup(widget.tourId);
       final members = await _repository.watchMembers(widget.tourId).first;
       final posts =
           await _repository.watchPosts(widget.tourId, limit: 60).first;
       if (!mounted) return;
       setState(() {
-        _tourGroup = group;
         _members = members;
         _posts = posts;
         _isLoading = false;
