@@ -33,7 +33,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
   Future<Either<Failure, List<ProTip>>> getTipsForPin(String pinId) async {
     try {
       if (!await _isOnline()) {
-        return _getCachedTipsForPin(pinId);
+        return await _getCachedTipsForPin(pinId);
       }
 
       final snapshot = await _firestore
@@ -50,7 +50,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
 
       return Right(tips);
     } catch (e) {
-      return _getCachedTipsForPin(pinId);
+      return await _getCachedTipsForPin(pinId);
     }
   }
 
@@ -229,7 +229,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
   Future<Either<Failure, List<ProTip>>> getLatestTips({int? limit}) async {
     try {
       if (!await _isOnline()) {
-        return _getCachedLatestTips(limit: limit);
+        return await _getCachedLatestTips(limit: limit);
       }
 
       // Sort and cut on the server instead of downloading every tip.
@@ -248,7 +248,7 @@ class ProTipRepositoryImpl implements IProTipRepository {
 
       return Right(tips);
     } catch (e) {
-      return _getCachedLatestTips(limit: limit);
+      return await _getCachedLatestTips(limit: limit);
     }
   }
 
