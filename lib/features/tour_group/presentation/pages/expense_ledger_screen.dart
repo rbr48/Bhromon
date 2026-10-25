@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -42,6 +43,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       _repository.watchExpenses(widget.tourId);
 
   TourGroup? _tourGroup;
+  StreamSubscription<TourGroup?>? _groupSub;
   TourRole? _myRole;
   List<TourMember> _latestMembers = const [];
   LedgerSummary? _latestSummary;
@@ -53,23 +55,26 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   void initState() {
     super.initState();
     _loadContext();
+    _watchGroup();
   }
 
   @override
   void dispose() {
+    _groupSub?.cancel();
     _tabController.dispose();
     super.dispose();
   }
 
   Future<void> _loadContext() async {
-    final group = await _repository.getGroup(widget.tourId);
     final role = await _repository.myRole(widget.tourId);
-    if (mounted) {
-      setState(() {
-        _tourGroup = group;
-        _myRole = role;
-      });
-    }
+    if (mounted) setState(() => _myRole = role);
+  }
+
+  void _watchGroup() {
+    _groupSub?.cancel();
+    _groupSub = _repository.watchGroup(widget.tourId).listen((g) {
+      if (mounted) setState(() => _tourGroup = g);
+    });
   }
 
   void _showError(String text) {

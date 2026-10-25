@@ -49,6 +49,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
 
   final TourGroupRepository _repository = TourGroupRepository();
   TourGroup? _tourGroup;
+  StreamSubscription<TourGroup?>? _groupSub;
   TourRole? _myRole;
   // The alert this device raised and has not resolved yet.
   String? _activeAlertId;
@@ -235,7 +236,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   @override
   void initState() {
     super.initState();
-    _loadGroup();
+    _watchGroup();
     _loadRole();
     _sirenAnimController = AnimationController(
       vsync: this,
@@ -245,9 +246,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     _initGps();
   }
 
-  Future<void> _loadGroup() async {
-    final g = await _repository.getGroup(widget.tourId);
-    if (mounted) setState(() => _tourGroup = g);
+  void _watchGroup() {
+    _groupSub?.cancel();
+    _groupSub = _repository.watchGroup(widget.tourId).listen((g) {
+      if (mounted) setState(() => _tourGroup = g);
+    });
   }
 
   Future<void> _loadRole() async {
@@ -257,6 +260,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
 
   @override
   void dispose() {
+    _groupSub?.cancel();
     _positionStream?.cancel();
     _alertTimer?.cancel();
     _sirenAnimController.dispose();

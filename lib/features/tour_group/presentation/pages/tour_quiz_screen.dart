@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -32,6 +33,7 @@ class TourQuizScreen extends StatefulWidget {
 class _TourQuizScreenState extends State<TourQuizScreen> {
   final TourGroupRepository _repository = TourGroupRepository();
   TourGroup? _tourGroup;
+  StreamSubscription<TourGroup?>? _groupSub;
   int _currentIndex = 0;
   int? _selectedOption;
   bool _isAnswered = false;
@@ -41,16 +43,26 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
   @override
   void initState() {
     super.initState();
-    _loadGroup();
+    _watchGroup();
   }
 
-  Future<void> _loadGroup() async {
-    final g = await _repository.getGroup(widget.tourId);
-    if (!mounted) return;
-    setState(() {
-      _tourGroup = g;
-      _prepareQuiz();
+  void _watchGroup() {
+    _groupSub?.cancel();
+    _groupSub = _repository.watchGroup(widget.tourId).listen((g) {
+      if (!mounted) return;
+      // Questions are shuffled once; later group changes must not reset a game.
+      final first = _tourGroup == null;
+      setState(() {
+        _tourGroup = g;
+        if (first) _prepareQuiz();
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _groupSub?.cancel();
+    super.dispose();
   }
 
   /// Question bank for the tour's destination. Destinations without a bank
