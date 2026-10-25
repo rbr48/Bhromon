@@ -156,24 +156,99 @@ void main() {
       expect(g3.queenCoveredBy, 0);
     });
 
-    test(
-        'Last coin before the queen is covered goes back; then the board is won',
+    test('ICF: pocketing your last coin before the Queen is covered is a foul',
         () {
       final g = CarromGame(random: Random(1));
       final whites =
           g.coins.where((c) => c.type == CarromPieceType.white).toList();
-      for (final w in whites) {
+      // Eight coins down legally.
+      for (final w in whites.take(8)) {
         w.pocketed = true;
       }
-      g.scoreShot(whites);
-      expect(g.remaining(0), 1);
-      expect(g.winner, isNull);
+      g.scoreShot(whites.take(8).toList());
+      expect(g.pocketed[0].length, 8);
+      expect(g.currentPlayer, 0);
 
-      // Cover the queen with that last coin: the board is won.
-      final last = whites.firstWhere((w) => !w.pocketed)..pocketed = true;
+      // The ninth goes down with the Queen still on the board: foul.
+      whites[8].pocketed = true;
+      g.scoreShot([whites[8]]);
+      expect(whites[8].pocketed, isFalse, reason: 'last coin returned');
+      expect(g.pocketed[0].length, 7, reason: 'plus one penalty coin');
+      expect(g.currentPlayer, 1);
+      expect(g.winner, isNull);
+    });
+
+    test('ICF: covering the Queen with your last coin in one shot is a foul',
+        () {
+      final g = CarromGame(random: Random(2));
+      final whites =
+          g.coins.where((c) => c.type == CarromPieceType.white).toList();
+      for (final w in whites.take(8)) {
+        w.pocketed = true;
+      }
+      g.scoreShot(whites.take(8).toList());
+      whites[8].pocketed = true;
       g.queen.pocketed = true;
+      g.scoreShot([g.queen, whites[8]]);
+      expect(g.queen.pocketed, isFalse);
+      expect(g.queenCoveredBy, isNull);
+      expect(whites[8].pocketed, isFalse);
+      expect(g.pocketed[0].length, 7);
+      expect(g.currentPlayer, 1);
+    });
+
+    test('ICF: pocketing the opponent\'s last coin is a foul', () {
+      final g = CarromGame(random: Random(3));
+      final whites =
+          g.coins.where((c) => c.type == CarromPieceType.white).toList();
+      final blacks =
+          g.coins.where((c) => c.type == CarromPieceType.black).toList();
+      whites[0].pocketed = true;
+      g.scoreShot([whites[0]]); // you have one coin to pay penalties with
+      g.pocketed[1].addAll(blacks.take(8));
+      for (final b in blacks.take(8)) {
+        b.pocketed = true;
+      }
+      blacks[8].pocketed = true;
+      g.scoreShot([blacks[8]]);
+      expect(blacks[8].pocketed, isFalse,
+          reason: 'opponent last coin returned');
+      expect(g.remaining(1), 1);
+      expect(g.pocketed[0], isEmpty, reason: 'penalty coin paid');
+      expect(g.currentPlayer, 1);
+    });
+
+    test('ICF: a penalty with nothing to pay is due from the next coin', () {
+      final g = CarromGame(random: Random(4));
+      g.striker.pocketed = true;
+      g.scoreShot([g.striker]);
+      expect(g.penaltyDue[0], 1);
+      expect(g.currentPlayer, 1);
+
       g.currentPlayer = 0;
-      g.scoreShot([g.queen, last]);
+      final white = g.coins.firstWhere((c) => c.type == CarromPieceType.white)
+        ..pocketed = true;
+      g.scoreShot([white]);
+      expect(g.penaltyDue[0], 0);
+      expect(white.pocketed, isFalse, reason: 'paid as the due penalty');
+      expect(g.pocketed[0], isEmpty);
+      expect(g.currentPlayer, 0, reason: 'a legal pocket still shoots again');
+    });
+
+    test('After covering the Queen, the last coin wins the board', () {
+      final g = CarromGame(random: Random(5));
+      final whites =
+          g.coins.where((c) => c.type == CarromPieceType.white).toList();
+      for (final w in whites.take(7)) {
+        w.pocketed = true;
+      }
+      g.scoreShot(whites.take(7).toList());
+      g.queen.pocketed = true;
+      whites[7].pocketed = true;
+      g.scoreShot([g.queen, whites[7]]);
+      expect(g.queenCoveredBy, 0);
+      whites[8].pocketed = true;
+      g.scoreShot([whites[8]]);
       expect(g.winner, 0);
       expect(g.winnerPoints, 9 + 3);
       expect(g.phase, CarromPhase.gameOver);

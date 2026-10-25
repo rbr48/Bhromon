@@ -92,8 +92,9 @@ static session while the user visits other screens, and asks before discarding a
 5. **Carrom (`carrom/`, physics `carrom_engine.dart`, rules `carrom_game.dart`)**:
    - Deterministic fixed-step physics (1/480 s) on a 0..1 board with ICF proportions: friction, cushion and coin restitution, a striker ~2.6× a coin's mass, 4 corner pockets.
    - You play white from the bottom baseline; the opponent (bot or Pass & Play) plays black from the top. Striker slides along the baseline (drag or slider) and may not touch a coin; drag back anywhere and release to shoot.
-   - Own coin pocketed → shoot again. Striker pocketed → foul: that shot's own coins return plus one penalty coin. Opponent-colour coins count for the opponent.
-   - Queen only after an own coin; must be covered on the same or next shot or she returns. The last coin can't drop before the queen is covered.
+   - Own coin pocketed → shoot again; opponent-colour coins stay down and count for the opponent.
+   - Strict ICF fouls: striker pocketed, own last coin before the queen is covered (including covering her with it in the same shot), or the opponent's last coin. On a foul the shot's own coins, the queen and the opponent's last coin return, one penalty coin is paid and the turn ends; with nothing to pay the penalty is due (`penaltyDue`) and taken from the next coin pocketed.
+   - Queen only after an own coin; must be covered on the same or next shot or she returns.
    - First to 9 coins wins the board: 1 point per opponent coin left, +3 for covering the queen.
    - Bot (`CarromBot`) builds cut shots from ghost-ball geometry with the minimum power that carries the coin (friction + momentum transfer), simulates each candidate, and adds aim noise per difficulty (Easy 0.035 / Medium 0.018 / Hard 0.008 rad). It runs via `compute(carromBotWorker, ...)`.
 
