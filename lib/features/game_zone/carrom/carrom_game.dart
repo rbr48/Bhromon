@@ -16,15 +16,19 @@ class CarromShot {
 /// Rules for a two-player board (You = white at the bottom, opponent = black
 /// at the top, either the bot or a second person passing the phone).
 ///
-/// - Pocket one of your own coins and you shoot again.
-/// - Pocketing the striker is a foul: coins of yours pocketed on that shot
-///   come back to the centre, plus one penalty coin, and your turn ends.
+/// Scoring follows the ICF foul rules:
+/// - Pocket one of your own coins and you shoot again; opponent coins you
+///   pocket stay down and count for the opponent.
+/// - Fouls: pocketing the striker, pocketing your own last coin before the
+///   queen is covered (covering her with it in the same shot included), and
+///   pocketing your opponent's last coin. On a foul your coins from that
+///   shot, the queen (if she went down or was awaiting cover) and the
+///   opponent's last coin come back to the centre, you pay one penalty coin,
+///   and your turn ends. With no coin to pay, the penalty becomes due and is
+///   taken from the next coin you pocket.
 /// - The queen may only be pocketed once you have pocketed a coin of your own;
 ///   she must be covered by pocketing one of your coins on the same or the
 ///   next shot, otherwise she returns to the centre.
-/// - Your last coin may not go down before the queen is covered; if it does,
-///   it is returned to the centre.
-/// - Opponent coins you pocket count for the opponent.
 /// - The first player to pocket all nine coins (with the queen covered) wins
 ///   the board, scoring 1 per opponent coin left plus 3 if they covered the queen.
 class CarromGame {
@@ -48,6 +52,10 @@ class CarromGame {
 
   /// Player who pocketed the queen and still has to cover her.
   int? queenPendingFor;
+
+  /// Penalty coins a player owes from fouls committed with nothing pocketed;
+  /// each is paid back from the next coin they pocket.
+  final List<int> penaltyDue = [0, 0];
 
   int? winner;
   int winnerPoints = 0;
@@ -91,6 +99,8 @@ class CarromGame {
     pocketed[1].clear();
     queenCoveredBy = null;
     queenPendingFor = null;
+    penaltyDue[0] = 0;
+    penaltyDue[1] = 0;
     winner = null;
     winnerPoints = 0;
     currentPlayer = 0;
@@ -222,50 +232,65 @@ class CarromGame {
 
   // --- SCORING ---
 
-  /// Applies the rules to the pieces that went down during the shot just played.
+  /// Applies the ICF rules to the pieces that went down during the shot just played.
   void scoreShot(List<CarromPiece> pocketedThisShot) {
     final player = currentPlayer;
     final opp = 1 - player;
     final messages = <String>[];
     final who = nameOf(player);
+    final whose = '$who${player == 0 ? 'r' : "'s"}';
 
-    final strikerFoul =
-        pocketedThisShot.any((p) => p.type == CarromPieceType.striker);
     final ownNow =
         pocketedThisShot.where((p) => p.type == colorOf(player)).toList();
     final oppNow =
         pocketedThisShot.where((p) => p.type == colorOf(opp)).toList();
     var queenNow = pocketedThisShot.any((p) => p.type == CarromPieceType.queen);
+    final queenWasCovered = queenCoveredBy != null;
 
     pocketed[player].addAll(ownNow);
     pocketed[opp].addAll(oppNow);
-    var foul = strikerFoul;
 
-    if (strikerFoul) {
+    // --- Fouls (ICF) ---
+    final fouls = <String>[];
+    if (pocketedThisShot.any((p) => p.type == CarromPieceType.striker)) {
+      fouls.add('striker pocketed');
+    }
+    if (ownNow.isNotEmpty && remaining(player) == 0 && !queenWasCovered) {
+      fouls.add('last coin pocketed before the Queen was covered');
+    }
+    if (oppNow.isNotEmpty && remaining(opp) == 0) {
+      fouls.add("${nameOf(opp)}${opp == 0 ? 'r' : "'s"} last coin pocketed");
+    }
+
+    if (fouls.isNotEmpty) {
+      // Everything of yours from this shot comes back, the Queen too, and
+      // the opponent's last coin if that was the foul.
       for (final c in ownNow) {
         pocketed[player].remove(c);
         _returnToCentre(c);
       }
-      ownNow.clear();
-      if (pocketed[player].isNotEmpty) {
-        _returnToCentre(pocketed[player].removeLast());
-        messages.add(
-            'Foul! Striker pocketed - one of $who${player == 0 ? 'r' : "'s"} coins goes back to the centre.');
-      } else {
-        messages.add('Foul! Striker pocketed.');
+      if (oppNow.isNotEmpty && remaining(opp) == 0) {
+        _returnToCentre(pocketed[opp].removeLast());
       }
-      if (queenNow) {
+      if (queenNow || queenPendingFor == player) {
         _returnToCentre(queen);
         queenNow = false;
+        queenPendingFor = null;
       }
+      final penalty = _takePenalty(player);
+      messages.add('Foul - ${fouls.join(', ')}! $penalty');
+      currentPlayer = opp;
+      _finishTurn(messages, continueTurn: false, shooter: player);
+      return;
     }
 
+    // --- Legal shot ---
     if (queenNow && pocketed[player].isEmpty) {
-      // You need a coin of your own pocketed (this shot counts) before taking the queen.
+      // You need a coin of your own pocketed (this shot counts) before taking the Queen.
       _returnToCentre(queen);
       queenNow = false;
       messages.add(
-          'The queen can only be taken after pocketing a coin of your own - she returns to the centre.');
+          'The Queen can only be taken after pocketing a coin of your own - she returns to the centre.');
     }
 
     if (queenNow) {
@@ -279,7 +304,7 @@ class CarromGame {
             'Queen pocketed! Pocket one of your coins next shot to cover her.');
       }
     } else if (queenPendingFor == player) {
-      if (!foul && ownNow.isNotEmpty) {
+      if (ownNow.isNotEmpty) {
         queenCoveredBy = player;
         messages.add('$who covered the Queen! (+3)');
       } else {
@@ -289,25 +314,28 @@ class CarromGame {
       queenPendingFor = null;
     }
 
-    if (ownNow.isNotEmpty && !foul) {
+    if (ownNow.isNotEmpty) {
       messages.add(
           '$who pocketed ${ownNow.length} coin${ownNow.length == 1 ? '' : 's'}.');
     }
     if (oppNow.isNotEmpty) {
       messages.add(
-          '${oppNow.length} ${opp == 0 ? 'white' : 'black'} coin${oppNow.length == 1 ? '' : 's'} went down for ${nameOf(opp)}.');
+          '${oppNow.length} ${opp == 0 ? 'white' : 'black'} coin${oppNow.length == 1 ? '' : 's'} '
+          'went down for ${nameOf(opp)}.');
     }
 
-    // A player's last coin can't go down before the queen is covered.
-    if (queenCoveredBy == null) {
-      for (final p in [player, opp]) {
-        if (remaining(p) == 0 && pocketed[p].isNotEmpty) {
-          _returnToCentre(pocketed[p].removeLast());
-          messages.add(
-              "The queen must be covered first - ${nameOf(p)}${p == 0 ? 'r' : "'s"} last coin goes back.");
-          if (p == player) foul = true;
-        }
-      }
+    // A penalty owed from an earlier foul is paid from the coins just pocketed.
+    var paid = 0;
+    while (penaltyDue[player] > 0 &&
+        ownNow.isNotEmpty &&
+        pocketed[player].isNotEmpty) {
+      _returnToCentre(pocketed[player].removeLast());
+      penaltyDue[player]--;
+      paid++;
+    }
+    if (paid > 0) {
+      messages.add(
+          '$paid due penalty coin${paid == 1 ? '' : 's'} of $whose returned to the centre.');
     }
 
     for (final p in [player, opp]) {
@@ -323,7 +351,7 @@ class CarromGame {
     }
 
     final continueTurn =
-        !foul && (ownNow.isNotEmpty || (queenNow && queenPendingFor == player));
+        ownNow.isNotEmpty || (queenNow && queenPendingFor == player);
     if (!continueTurn) {
       if (queenPendingFor == player) {
         _returnToCentre(queen);
@@ -333,12 +361,28 @@ class CarromGame {
       if (messages.isEmpty) messages.add('Nothing pocketed.');
       currentPlayer = opp;
     }
+    _finishTurn(messages, continueTurn: continueTurn, shooter: player);
+  }
 
+  /// Returns one of [player]'s pocketed coins to the centre, or records it as
+  /// due when they have none. Returns the message to show.
+  String _takePenalty(int player) {
+    final whose = '${nameOf(player)}${player == 0 ? 'r' : "'s"}';
+    if (pocketed[player].isNotEmpty) {
+      _returnToCentre(pocketed[player].removeLast());
+      return 'One of $whose coins goes back to the centre as a penalty.';
+    }
+    penaltyDue[player]++;
+    return 'A penalty coin is now due from $whose next pocketed coin.';
+  }
+
+  void _finishTurn(List<String> messages,
+      {required bool continueTurn, required int shooter}) {
     _setUpStriker();
     final next =
         currentPlayer == 0 ? 'Your turn.' : "${nameOf(currentPlayer)}'s turn.";
-    status =
-        '${messages.join(' ')} ${continueTurn ? '${nameOf(player)} ${player == 0 ? 'shoot' : 'shoots'} again!' : next}';
+    status = '${messages.join(' ')} '
+        '${continueTurn ? '${nameOf(shooter)} ${shooter == 0 ? 'shoot' : 'shoots'} again!' : next}';
   }
 
   /// Puts a coin back on the board as close to the centre as possible.
@@ -369,6 +413,7 @@ class CarromGame {
         coins: [for (final c in coins) c.copy()],
         player: currentPlayer,
         ownPocketed: pocketed[currentPlayer].length,
+        queenCovered: queenCoveredBy != null,
         aimNoise: aimNoise,
         seed: _random.nextInt(1 << 30),
       );
@@ -380,6 +425,7 @@ class CarromBotRequest {
     required this.coins,
     required this.player,
     required this.ownPocketed,
+    required this.queenCovered,
     required this.aimNoise,
     required this.seed,
   });
@@ -387,6 +433,7 @@ class CarromBotRequest {
   final List<CarromPiece> coins;
   final int player;
   final int ownPocketed;
+  final bool queenCovered;
   final double aimNoise;
   final int seed;
 }
@@ -441,9 +488,13 @@ class CarromBot {
       return true;
     }
 
+    final ownLeft = active.where((c) => c.type == own).length;
+    final oppLeft = active.where((c) => c.type == opp).length;
+    // Under ICF rules the last coin may only go down once the Queen is covered.
+    final lastCoinLocked = ownLeft == 1 && !request.queenCovered;
     final targets = active
         .where((c) =>
-            c.type == own ||
+            (c.type == own && !lastCoinLocked) ||
             (c.type == CarromPieceType.queen && request.ownPocketed > 0))
         .toList();
     final xs = [
@@ -546,7 +597,10 @@ class CarromBot {
       var score = ownDown * 10.0 -
           oppDown * 7.0 +
           (queenDown ? (request.ownPocketed > 0 ? 6.0 : -2.0) : 0);
-      if (strikerFoul) score -= 15;
+      final lastCoinFoul =
+          (ownDown > 0 && ownDown >= ownLeft && !request.queenCovered) ||
+              (oppDown > 0 && oppDown >= oppLeft);
+      if (strikerFoul || lastCoinFoul) score -= 15 + ownDown * 10.0;
       score += random.nextDouble() * 0.5;
       if (score > bestScore) {
         bestScore = score;

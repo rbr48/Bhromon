@@ -281,13 +281,14 @@ class _CarromScreenState extends State<CarromScreen>
             'You play the white coins from the bottom baseline; your opponent plays black from the top.\n\n'
             '• Slide the striker along your baseline (drag it or use the slider). It must not touch a coin.\n'
             '• Drag back anywhere on the board and release to shoot - the further you pull, the harder the shot.\n'
-            '• Pocket one of your own coins and you shoot again.\n'
-            '• Pocketing the striker is a foul: coins of yours pocketed on that shot come back, '
-            'plus one penalty coin, and your turn ends.\n'
+            '• Pocket one of your own coins and you shoot again. Coins of your opponent\'s colour that you '
+            'pocket stay down and count for them.\n'
             '• The Queen (red) can be taken once you have pocketed a coin of your own. Cover her by pocketing '
             'one of your coins on the same or the next shot, or she goes back to the centre.\n'
-            '• Your last coin can\'t go down before the Queen is covered.\n'
-            '• Coins of your opponent\'s colour that you pocket count for them.\n'
+            '• Fouls (ICF rules): pocketing the striker, pocketing your last coin before the Queen is covered, '
+            'or pocketing your opponent\'s last coin. Your coins from that shot, the Queen and the opponent\'s '
+            'last coin come back, you pay one penalty coin, and your turn ends.\n'
+            '• If you have no coin to pay, the penalty is due and comes out of the next coin you pocket.\n'
             '• First to pocket all 9 coins wins the board: 1 point per opponent coin left, +3 for covering the Queen.',
           ),
         ),
@@ -370,6 +371,8 @@ class _CarromScreenState extends State<CarromScreen>
       final queenNote = _game.queenCoveredBy == player
           ? ' · 👑 Queen'
           : (_game.queenPendingFor == player ? ' · 👑 cover!' : '');
+      final due = _game.penaltyDue[player];
+      final dueNote = due > 0 ? ' · $due due' : '';
       return Expanded(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -409,7 +412,7 @@ class _CarromScreenState extends State<CarromScreen>
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '${_game.pocketed[player].length}/${CarromGame.coinsPerPlayer} pocketed$queenNote',
+                        '${_game.pocketed[player].length}/${CarromGame.coinsPerPlayer} pocketed$queenNote$dueNote',
                         style: const TextStyle(
                             color: Colors.white70, fontSize: 12),
                       ),
