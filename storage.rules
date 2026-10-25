@@ -12,15 +12,15 @@ service firebase.storage {
 
     // Only allow image MIME types
     function isImage() {
-      return request.resource.contentType.matches('image/.*');
+      return request.resource.contentType != null && request.resource.contentType.matches('image/.*');
     }
     // Only allow video MIME types
     function isVideo() {
-      return request.resource.contentType.matches('video/.*');
+      return request.resource.contentType != null && request.resource.contentType.matches('video/.*');
     }
     // Only allow audio MIME types
     function isAudio() {
-      return request.resource.contentType.matches('audio/.*');
+      return request.resource.contentType != null && request.resource.contentType.matches('audio/.*');
     }
 
     // ── Tour Group media (posts, reels, stories, scrapbook) ─────────────────
@@ -88,13 +88,15 @@ service firebase.storage {
     }
 
     // ── Chat media ───────────────────────────────────────────────────────────
-    // Read: only participants of the chat (chatId is "{uid1}_{uid2}" sorted)
+    // Read: only participants of the chat (chatId contains participant UIDs)
     // Write: only participants, with file type and size enforcement
     match /chat_media/{chatId}/{fileName} {
       function isChatParticipant() {
         return isAuth() && (
-          request.auth.uid in chatId.split('_') ||
-          chatId.matches('.*' + request.auth.uid + '.*')
+          chatId.matches('^' + request.auth.uid + '_.*') ||
+          chatId.matches('.*_' + request.auth.uid + '$') ||
+          chatId.matches('.*_' + request.auth.uid + '_.*') ||
+          chatId == request.auth.uid
         );
       }
       allow read: if isChatParticipant();
@@ -108,7 +110,12 @@ service firebase.storage {
     // Read: only participants; write is denied from client (CF writes via Admin SDK)
     match /chat_media_thumbs/{chatId}/{fileName} {
       function isChatParticipant() {
-        return isAuth() && request.auth.uid in chatId.split('_');
+        return isAuth() && (
+          chatId.matches('^' + request.auth.uid + '_.*') ||
+          chatId.matches('.*_' + request.auth.uid + '$') ||
+          chatId.matches('.*_' + request.auth.uid + '_.*') ||
+          chatId == request.auth.uid
+        );
       }
       allow read:  if isChatParticipant();
       allow write: if false; // Cloud Function service account bypasses rules

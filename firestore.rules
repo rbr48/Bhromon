@@ -373,20 +373,7 @@ service cloud.firestore {
 
     // ── WebRTC Calling & Signaling ───────────────────────────────────────────
     match /calls/{callId} {
-      allow read: if isAuth() && (
-        resource == null ||
-        request.auth.uid == resource.data.callerId ||
-        request.auth.uid == resource.data.calleeId
-      );
-      allow create: if isAuth() && request.auth.uid == request.resource.data.callerId;
-      allow update: if isAuth() && (
-        request.auth.uid == resource.data.callerId ||
-        request.auth.uid == resource.data.calleeId
-      );
-      allow delete: if isAuth() && (
-        request.auth.uid == resource.data.callerId ||
-        request.auth.uid == resource.data.calleeId
-      );
+      allow read, write: if isAuth();
 
       match /offerCandidates/{candidateId} {
         allow read, write: if isAuth();
