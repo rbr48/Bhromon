@@ -10,7 +10,8 @@ mixin GameZonePortraitLock<T extends StatefulWidget> on State<T> {
   void initState() {
     super.initState();
     if (!kIsWeb) {
-      SystemChrome.setPreferredOrientations(const [DeviceOrientation.portraitUp]);
+      SystemChrome.setPreferredOrientations(
+          const [DeviceOrientation.portraitUp]);
     }
   }
 
@@ -34,15 +35,19 @@ Future<bool> confirmDiscardGame(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: const Color(0xFF1E2429),
-      title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      title: Text(title,
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold)),
       content: Text(message, style: const TextStyle(color: Colors.white70)),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Keep playing', style: TextStyle(color: Colors.white70)),
+          child: const Text('Keep playing',
+              style: TextStyle(color: Colors.white70)),
         ),
         ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
+          style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber, foregroundColor: Colors.black87),
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(confirmLabel),
         ),

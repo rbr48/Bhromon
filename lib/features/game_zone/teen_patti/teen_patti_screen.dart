@@ -19,7 +19,8 @@ class TeenPattiScreen extends StatefulWidget {
   State<TeenPattiScreen> createState() => _TeenPattiScreenState();
 }
 
-class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortraitLock {
+class _TeenPattiScreenState extends State<TeenPattiScreen>
+    with GameZonePortraitLock {
   late final TeenPattiGame _game;
   Timer? _botTimer;
   bool _dialogOpen = false;
@@ -65,7 +66,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
         break;
       case TeenPattiPhase.roundOver:
         final result = _game.result;
-        if (result != null && !identical(result, _TeenPattiSession.lastShownResult)) {
+        if (result != null &&
+            !identical(result, _TeenPattiSession.lastShownResult)) {
           _TeenPattiSession.lastShownResult = result;
           HapticFeedback.heavyImpact();
           _showResultDialog(result);
@@ -95,7 +97,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF092614),
-        title: const Text('Out of chips', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Out of chips',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: Text(
           'You have ${_game.user.chips} chips, but a hand needs at least ${TeenPattiGame.minimumBuyIn} '
           '(boot + one blind). Rebuy to keep playing?',
@@ -104,10 +107,12 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Leave table', style: TextStyle(color: Colors.white70)),
+            child: const Text('Leave table',
+                style: TextStyle(color: Colors.white70)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber, foregroundColor: Colors.black87),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Rebuy +${TeenPattiGame.rebuyAmount}'),
           ),
@@ -128,7 +133,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF092614),
-        title: const Text('Sideshow request', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Sideshow request',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: Text(
           '${_game.players[request.fromId].name} wants to compare cards with you privately. '
           'The weaker hand packs; if the hands tie, ${_game.players[request.fromId].name} packs.',
@@ -137,10 +143,13 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Decline', style: TextStyle(color: Colors.white70)),
+            child:
+                const Text('Decline', style: TextStyle(color: Colors.white70)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.purple.shade700, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple.shade700,
+                foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Accept'),
           ),
@@ -158,15 +167,20 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF092614),
-        title: Text('🏆 ${result.title}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Text(result.detail, style: const TextStyle(color: Colors.white70)),
+        title: Text('🏆 ${result.title}',
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold)),
+        content:
+            Text(result.detail, style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('View table', style: TextStyle(color: Colors.white70)),
+            child: const Text('View table',
+                style: TextStyle(color: Colors.white70)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber, foregroundColor: Colors.black87),
             onPressed: () {
               Navigator.pop(ctx);
               _dealNextHand();
@@ -183,7 +197,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
       final ok = await confirmDiscardGame(
         context,
         title: 'Leave this hand?',
-        message: 'You will pack and lose the chips you have already put in the pot. '
+        message:
+            'You will pack and lose the chips you have already put in the pot. '
             'The other players settle the hand now.',
         confirmLabel: 'Pack & deal again',
       );
@@ -192,7 +207,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
     _botTimer?.cancel();
     if (_game.isHandInProgress) {
       _game.forfeitUserAndFinish();
-      _TeenPattiSession.lastShownResult = _game.result; // no result popup for a hand you walked away from
+      _TeenPattiSession.lastShownResult =
+          _game.result; // no result popup for a hand you walked away from
     }
     _dealNextHand();
   }
@@ -232,7 +248,10 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
             '• At a pot of ${TeenPattiGame.potLimit} everyone still in is shown automatically.',
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Got it'))],
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Got it'))
+        ],
       ),
     );
   }
@@ -245,13 +264,20 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
     return Scaffold(
       backgroundColor: const Color(0xFF0F381E),
       appBar: AppBar(
-        title: const Text('Teen Patti (৩ পাত্তি)', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Teen Patti (৩ পাত্তি)',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF092614),
         foregroundColor: Colors.white,
         elevation: 2,
         actions: [
-          IconButton(icon: const Icon(Icons.help_outline), tooltip: 'Rules', onPressed: _showRulesDialog),
-          IconButton(icon: const Icon(Icons.refresh), tooltip: 'New Hand', onPressed: _onNewHandPressed),
+          IconButton(
+              icon: const Icon(Icons.help_outline),
+              tooltip: 'Rules',
+              onPressed: _showRulesDialog),
+          IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'New Hand',
+              onPressed: _onNewHandPressed),
         ],
       ),
       body: SafeArea(
@@ -270,21 +296,32 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(child: _buildPlayerSeat(_game.players[3], compact: compact)),
-                            Expanded(child: _buildPlayerSeat(_game.players[2], compact: compact)),
-                            Expanded(child: _buildPlayerSeat(_game.players[1], compact: compact)),
+                            Expanded(
+                                child: _buildPlayerSeat(_game.players[3],
+                                    compact: compact)),
+                            Expanded(
+                                child: _buildPlayerSeat(_game.players[2],
+                                    compact: compact)),
+                            Expanded(
+                                child: _buildPlayerSeat(_game.players[1],
+                                    compact: compact)),
                           ],
                         ),
                       ),
-                      Expanded(child: LayoutBuilder(builder: (context, c) => Center(child: _buildCenterPot(c)))),
+                      Expanded(
+                          child: LayoutBuilder(
+                              builder: (context, c) =>
+                                  Center(child: _buildCenterPot(c)))),
                     ],
                   );
                 },
               ),
             ),
             ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.5),
-              child: SingleChildScrollView(child: _buildUserControls(user, isUserTurn)),
+              constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.5),
+              child: SingleChildScrollView(
+                  child: _buildUserControls(user, isUserTurn)),
             ),
           ],
         ),
@@ -293,8 +330,10 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
   }
 
   Widget _buildPotHeader() {
-    TextStyle style(Color c, {bool bold = false}) =>
-        TextStyle(color: c, fontWeight: bold ? FontWeight.bold : FontWeight.normal, fontSize: 13);
+    TextStyle style(Color c, {bool bold = false}) => TextStyle(
+        color: c,
+        fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+        fontSize: 13);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       color: const Color(0xFF092614),
@@ -306,19 +345,25 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: Text('Your Chips: ${_game.user.chips}', style: style(Colors.amber, bold: true)),
+                  child: Text('Your Chips: ${_game.user.chips}',
+                      style: style(Colors.amber, bold: true)),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(color: Colors.amber.shade800, borderRadius: BorderRadius.circular(12)),
-                child: Text('Pot: ${_game.pot}', style: style(Colors.white, bold: true)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                    color: Colors.amber.shade800,
+                    borderRadius: BorderRadius.circular(12)),
+                child: Text('Pot: ${_game.pot}',
+                    style: style(Colors.white, bold: true)),
               ),
               Expanded(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerRight,
-                  child: Text('Base Bet: ${_game.baseBet}', style: style(Colors.white70)),
+                  child: Text('Base Bet: ${_game.baseBet}',
+                      style: style(Colors.white70)),
                 ),
               ),
             ],
@@ -329,7 +374,10 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
             textAlign: TextAlign.center,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFFE0E0E0), fontSize: 12, fontStyle: FontStyle.italic),
+            style: const TextStyle(
+                color: Color(0xFFE0E0E0),
+                fontSize: 12,
+                fontStyle: FontStyle.italic),
           ),
         ],
       ),
@@ -338,7 +386,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
 
   Widget _buildPlayerSeat(TeenPattiPlayer player, {bool compact = false}) {
     final isTurn = _game.isTurnOf(player.id);
-    final state = player.isFolded ? 'PACKED' : (player.isSeen ? 'Seen' : 'Blind');
+    final state =
+        player.isFolded ? 'PACKED' : (player.isSeen ? 'Seen' : 'Blind');
     final reveal = _game.isRoundOver && !player.isFolded;
 
     return Semantics(
@@ -357,7 +406,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.smart_toy, size: 13, color: isTurn ? Colors.black87 : Colors.white),
+                Icon(Icons.smart_toy,
+                    size: 13, color: isTurn ? Colors.black87 : Colors.white),
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
@@ -375,7 +425,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
             ),
           ),
           const SizedBox(height: 2),
-          Text('${player.chips} chips', style: const TextStyle(color: Colors.amberAccent, fontSize: 11)),
+          Text('${player.chips} chips',
+              style: const TextStyle(color: Colors.amberAccent, fontSize: 11)),
           Text(
             player.lastAction ?? state,
             maxLines: 1,
@@ -429,7 +480,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
       decoration: BoxDecoration(
         color: const Color(0xFF134526),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 2),
+        border:
+            Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 2),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -440,8 +492,14 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
             children: [
               const Icon(Icons.monetization_on, color: Colors.amber, size: 26),
               const SizedBox(height: 2),
-              Text('${_game.pot}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-              const Text('POT', style: TextStyle(color: Colors.white54, fontSize: 10, letterSpacing: 1.2)),
+              Text('${_game.pot}',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18)),
+              const Text('POT',
+                  style: TextStyle(
+                      color: Colors.white54, fontSize: 10, letterSpacing: 1.2)),
             ],
           ),
         ),
@@ -450,14 +508,16 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
   }
 
   Widget _buildUserControls(TeenPattiPlayer user, bool isUserTurn) {
-    final userEval = user.isSeen ? TeenPattiEngine.evaluateHand(user.hand) : null;
+    final userEval =
+        user.isSeen ? TeenPattiEngine.evaluateHand(user.hand) : null;
     final cost = _game.costFor(user);
     final raiseCost = _game.costFor(user, base: _game.baseBet * 2);
     final canAffordStake = user.chips >= cost;
 
     final buttonStyle = ButtonStyle(
       visualDensity: VisualDensity.compact,
-      padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+      padding: WidgetStateProperty.all(
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
     );
 
     return Container(
@@ -473,10 +533,15 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
             Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(color: Colors.amber.shade900, borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(
+                  color: Colors.amber.shade900,
+                  borderRadius: BorderRadius.circular(10)),
               child: Text(
                 'Your Hand: ${userEval.handType.banglaName}',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12),
               ),
             ),
           Row(
@@ -491,14 +556,20 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
                         button: true,
                         label: 'See your cards',
                         child: GestureDetector(
-                          onTap: user.isFolded ? null : () => _act(() => _game.see(0), haptic: _Haptic.selection),
+                          onTap: user.isFolded
+                              ? null
+                              : () => _act(() => _game.see(0),
+                                  haptic: _Haptic.selection),
                           child: _buildCardBack(
                             52,
                             76,
                             child: const Center(
                               child: Text(
                                 '👀 SEE',
-                                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
@@ -515,7 +586,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
                 child: Text(
                   'Not enough chips for ${user.isSeen ? 'Chaal' : 'Blind'} ($cost). You can only Pack.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.orangeAccent, fontSize: 12),
+                  style:
+                      const TextStyle(color: Colors.orangeAccent, fontSize: 12),
                 ),
               ),
             Wrap(
@@ -537,7 +609,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
                       backgroundColor: Colors.blueAccent,
                       foregroundColor: Colors.white,
                     )),
-                    onPressed: () => _act(() => _game.see(0), haptic: _Haptic.selection),
+                    onPressed: () =>
+                        _act(() => _game.see(0), haptic: _Haptic.selection),
                     child: const Text('See Cards'),
                   ),
                 ElevatedButton(
@@ -545,7 +618,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
                     backgroundColor: Colors.amber,
                     foregroundColor: Colors.black87,
                   )),
-                  onPressed: _game.canBet(0) ? () => _act(() => _game.bet(0)) : null,
+                  onPressed:
+                      _game.canBet(0) ? () => _act(() => _game.bet(0)) : null,
                   child: Text(user.isSeen ? 'Chaal ($cost)' : 'Blind ($cost)'),
                 ),
                 if (_game.baseBet < TeenPattiGame.maxBase)
@@ -554,7 +628,10 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
                       foregroundColor: Colors.amber,
                       side: const BorderSide(color: Colors.amber),
                     )),
-                    onPressed: _game.canRaise(0) ? () => _act(() => _game.raise(0), haptic: _Haptic.medium) : null,
+                    onPressed: _game.canRaise(0)
+                        ? () =>
+                            _act(() => _game.raise(0), haptic: _Haptic.medium)
+                        : null,
                     child: Text('Raise ($raiseCost)'),
                   ),
                 if (_game.canSideshow(0))
@@ -563,7 +640,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
                       backgroundColor: Colors.purple.shade700,
                       foregroundColor: Colors.white,
                     )),
-                    onPressed: () => _act(() => _game.requestSideshow(0), haptic: _Haptic.medium),
+                    onPressed: () => _act(() => _game.requestSideshow(0),
+                        haptic: _Haptic.medium),
                     child: Text('Sideshow ($cost)'),
                   ),
                 if (_game.activePlayers.length == 2)
@@ -572,20 +650,27 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
                       backgroundColor: Colors.green.shade700,
                       foregroundColor: Colors.white,
                     )),
-                    onPressed: _game.canShow(0) ? () => _act(() => _game.show(0), haptic: _Haptic.medium) : null,
+                    onPressed: _game.canShow(0)
+                        ? () =>
+                            _act(() => _game.show(0), haptic: _Haptic.medium)
+                        : null,
                     child: Text('Show ($cost)'),
                   ),
               ],
             ),
           ] else if (_game.isRoundOver)
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.black87),
               onPressed: _dealNextHand,
               child: const Text('Deal Next Hand'),
             )
           else
             Text(
-              user.isFolded ? 'You packed - watching the rest of the hand.' : 'Waiting for the other players...',
+              user.isFolded
+                  ? 'You packed - watching the rest of the hand.'
+                  : 'Waiting for the other players...',
               style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
         ],
@@ -640,7 +725,10 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
             color: Colors.white,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: Colors.amber, width: 1.5),
-            boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))],
+            boxShadow: const [
+              BoxShadow(
+                  color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))
+            ],
           ),
           child: ExcludeSemantics(
             child: Column(
@@ -652,16 +740,25 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
                     alignment: Alignment.topLeft,
                     child: Text(
                       '${c.rank}\n${c.suitSymbol}',
-                      style: TextStyle(color: color, fontSize: 12, height: 0.95, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: color,
+                          fontSize: 12,
+                          height: 0.95,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
-                Text(c.suitSymbol, style: TextStyle(color: color, fontSize: 18)),
+                Text(c.suitSymbol,
+                    style: TextStyle(color: color, fontSize: 18)),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 2, right: 4),
                   child: Align(
                     alignment: Alignment.bottomRight,
-                    child: Text(c.rank, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+                    child: Text(c.rank,
+                        style: TextStyle(
+                            color: color,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],

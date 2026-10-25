@@ -17,9 +17,10 @@ enum TeenPattiHandType {
 class TeenPattiCard {
   final String rank; // '2'-'10', 'J', 'Q', 'K', 'A'
   final String suit; // 'S', 'H', 'D', 'C'
-  final int value;   // 2..14 (A=14)
+  final int value; // 2..14 (A=14)
 
-  const TeenPattiCard({required this.rank, required this.suit, required this.value});
+  const TeenPattiCard(
+      {required this.rank, required this.suit, required this.value});
 
   String get code => '$rank$suit';
 
@@ -60,7 +61,9 @@ class TeenPattiCard {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is TeenPattiCard && runtimeType == other.runtimeType && code == other.code;
+      other is TeenPattiCard &&
+          runtimeType == other.runtimeType &&
+          code == other.code;
 
   @override
   int get hashCode => code.hashCode;
@@ -97,7 +100,21 @@ class HandEvaluation {
 class TeenPattiEngine {
   static List<TeenPattiCard> createDeck() {
     const suits = ['S', 'H', 'D', 'C'];
-    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    const ranks = [
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '10',
+      'J',
+      'Q',
+      'K',
+      'A'
+    ];
     final deck = <TeenPattiCard>[];
     for (final s in suits) {
       for (final r in ranks) {
@@ -121,11 +138,13 @@ class TeenPattiEngine {
     final v2 = sorted[1].value;
     final v3 = sorted[2].value;
 
-    final isFlush = sorted[0].suit == sorted[1].suit && sorted[1].suit == sorted[2].suit;
+    final isFlush =
+        sorted[0].suit == sorted[1].suit && sorted[1].suit == sorted[2].suit;
 
     // 1. Trail / Trio (Three of a Kind)
     if (v1 == v2 && v2 == v3) {
-      return HandEvaluation(handType: TeenPattiHandType.trail, primaryValue: v1);
+      return HandEvaluation(
+          handType: TeenPattiHandType.trail, primaryValue: v1);
     }
 
     // Check Sequence (Straight)
@@ -137,9 +156,11 @@ class TeenPattiEngine {
     if (isStandardSeq || isA23Seq) {
       final seqRank = isA23Seq ? 3 : v1;
       if (isFlush) {
-        return HandEvaluation(handType: TeenPattiHandType.pureSequence, primaryValue: seqRank);
+        return HandEvaluation(
+            handType: TeenPattiHandType.pureSequence, primaryValue: seqRank);
       } else {
-        return HandEvaluation(handType: TeenPattiHandType.sequence, primaryValue: seqRank);
+        return HandEvaluation(
+            handType: TeenPattiHandType.sequence, primaryValue: seqRank);
       }
     }
 
@@ -183,7 +204,8 @@ class TeenPattiEngine {
     );
   }
 
-  static int compareHands(List<TeenPattiCard> handA, List<TeenPattiCard> handB) {
+  static int compareHands(
+      List<TeenPattiCard> handA, List<TeenPattiCard> handB) {
     final evalA = evaluateHand(handA);
     final evalB = evaluateHand(handB);
     return evalA.compareTo(evalB);

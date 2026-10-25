@@ -15,7 +15,8 @@ void main() {
       expect(engine.currentTurn, equals(LudoColor.red));
       for (final color in LudoColor.values) {
         expect(engine.tokens[color]?.length, equals(4));
-        expect(engine.tokens[color]?.every((t) => t.state == TokenState.inYard), isTrue);
+        expect(engine.tokens[color]?.every((t) => t.state == TokenState.inYard),
+            isTrue);
       }
     });
 
@@ -58,7 +59,7 @@ void main() {
       // Red token should NOT be captured because 0 is safe
       expect(redToken.state, equals(TokenState.onTrack));
     });
-      test('A new turn starts with a fresh six counter', () {
+    test('A new turn starts with a fresh six counter', () {
       engine.consecutiveSixes = 2;
       engine.hasRolled = true;
       engine.currentDice = 6;
@@ -101,10 +102,12 @@ void main() {
       // Without a capture, prefer the move that does not land just ahead of an opponent.
       bot.tokens[LudoColor.red]![0]
         ..state = TokenState.onTrack
-        ..stepCount = 16; // index 16: green token 0 moving to 18 lands 2 ahead of it
+        ..stepCount =
+            16; // index 16: green token 0 moving to 18 lands 2 ahead of it
       bot.tokens[LudoColor.yellow]![0]
         ..state = TokenState.onTrack
-        ..stepCount = 4; // index 30: green token 1 at 33 is 3 ahead (threatened now)
+        ..stepCount =
+            4; // index 30: green token 1 at 33 is 3 ahead (threatened now)
       expect(bot.isThreatened(18, LudoColor.green), isTrue);
       expect(bot.getBestBotMove(), same(other));
     });

@@ -4,13 +4,16 @@ import 'package:bhromon/features/game_zone/teen_patti/teen_patti_engine.dart';
 import 'package:bhromon/features/game_zone/teen_patti/teen_patti_game.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-List<TeenPattiCard> _hand(List<String> codes) => codes.map(TeenPattiCard.fromCode).toList();
+List<TeenPattiCard> _hand(List<String> codes) =>
+    codes.map(TeenPattiCard.fromCode).toList();
 
-int _totalChips(TeenPattiGame g) => g.players.fold(0, (s, p) => s + p.chips) + g.pot;
+int _totalChips(TeenPattiGame g) =>
+    g.players.fold(0, (s, p) => s + p.chips) + g.pot;
 
 /// Packs every player except [keep] until the betting reaches one of them.
 void _packAllExcept(TeenPattiGame g, Set<int> keep) {
-  while (g.phase == TeenPattiPhase.betting && g.activePlayers.length > keep.length) {
+  while (g.phase == TeenPattiPhase.betting &&
+      g.activePlayers.length > keep.length) {
     final id = g.currentTurn;
     if (keep.contains(id)) {
       g.bet(id);
@@ -38,7 +41,9 @@ void main() {
         } else {
           game.playBotTurn();
         }
-        if (game.phase == TeenPattiPhase.awaitingSideshowReply) game.answerSideshow(true);
+        if (game.phase == TeenPattiPhase.awaitingSideshowReply) {
+          game.answerSideshow(true);
+        }
       }
       expect(_totalChips(game), total);
     });
@@ -52,7 +57,8 @@ void main() {
 
     test('Last-standing result names the bot that won, not "You"', () {
       game.user.isFolded = true;
-      final winner = game.players.firstWhere((p) => !p.isUser && p.id != game.currentTurn);
+      final winner =
+          game.players.firstWhere((p) => !p.isUser && p.id != game.currentTurn);
       _packAllExcept(game, {winner.id});
       expect(game.result!.winnerIds, [winner.id]);
       expect(game.result!.detail, contains(winner.name));
@@ -138,7 +144,9 @@ void main() {
       game.user.isFolded = true;
       for (int i = 0; i < 500 && !game.isRoundOver; i++) {
         game.playBotTurn();
-        if (game.phase == TeenPattiPhase.awaitingSideshowReply) game.answerSideshow(false);
+        if (game.phase == TeenPattiPhase.awaitingSideshowReply) {
+          game.answerSideshow(false);
+        }
       }
       expect(game.isRoundOver, isTrue);
     });

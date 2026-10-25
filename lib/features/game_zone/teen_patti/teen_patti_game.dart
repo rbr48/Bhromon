@@ -90,7 +90,8 @@ class TeenPattiGame {
   bool _handStarted = false;
 
   TeenPattiPlayer get user => players[0];
-  List<TeenPattiPlayer> get activePlayers => players.where((p) => !p.isFolded).toList();
+  List<TeenPattiPlayer> get activePlayers =>
+      players.where((p) => !p.isFolded).toList();
   bool get isRoundOver => phase == TeenPattiPhase.roundOver;
   bool get isHandInProgress => _handStarted && !isRoundOver;
   bool get hasDealt => _handStarted;
@@ -135,7 +136,10 @@ class TeenPattiGame {
     status = [
       'Boot of $boot collected from everyone (pot $pot).',
       ...notes,
-      if (currentTurn == 0) 'Your turn: play Blind or See your cards.' else '${players[currentTurn].name} acts first.',
+      if (currentTurn == 0)
+        'Your turn: play Blind or See your cards.'
+      else
+        '${players[currentTurn].name} acts first.',
     ].join(' ');
     return true;
   }
@@ -143,16 +147,26 @@ class TeenPattiGame {
   String displayName(TeenPattiPlayer p) => p.isUser ? 'You' : p.name;
 
   /// Stake this player pays to stay in: base bet blind, double base (chaal) when seen.
-  int costFor(TeenPattiPlayer p, {int? base}) => p.isSeen ? (base ?? baseBet) * 2 : (base ?? baseBet);
+  int costFor(TeenPattiPlayer p, {int? base}) =>
+      p.isSeen ? (base ?? baseBet) * 2 : (base ?? baseBet);
 
-  bool isTurnOf(int id) => phase == TeenPattiPhase.betting && currentTurn == id && !players[id].isFolded;
+  bool isTurnOf(int id) =>
+      phase == TeenPattiPhase.betting &&
+      currentTurn == id &&
+      !players[id].isFolded;
 
-  bool canBet(int id) => isTurnOf(id) && players[id].chips >= costFor(players[id]);
+  bool canBet(int id) =>
+      isTurnOf(id) && players[id].chips >= costFor(players[id]);
 
   bool canRaise(int id) =>
-      isTurnOf(id) && baseBet < maxBase && players[id].chips >= costFor(players[id], base: baseBet * 2);
+      isTurnOf(id) &&
+      baseBet < maxBase &&
+      players[id].chips >= costFor(players[id], base: baseBet * 2);
 
-  bool canShow(int id) => isTurnOf(id) && activePlayers.length == 2 && players[id].chips >= costFor(players[id]);
+  bool canShow(int id) =>
+      isTurnOf(id) &&
+      activePlayers.length == 2 &&
+      players[id].chips >= costFor(players[id]);
 
   /// The previous active player (the one who just acted before [id]).
   TeenPattiPlayer? sideshowTarget(int id) {
@@ -168,7 +182,11 @@ class TeenPattiGame {
     if (!isTurnOf(id)) return false;
     final p = players[id];
     final target = sideshowTarget(id);
-    return p.isSeen && activePlayers.length > 2 && target != null && target.isSeen && p.chips >= costFor(p);
+    return p.isSeen &&
+        activePlayers.length > 2 &&
+        target != null &&
+        target.isSeen &&
+        p.chips >= costFor(p);
   }
 
   /// Looking at your cards is free and does not use your turn.
@@ -177,7 +195,9 @@ class TeenPattiGame {
     if (isRoundOver || p.isFolded || p.isSeen) return;
     p.isSeen = true;
     p.lastAction = 'Seen';
-    status = p.isUser ? 'You saw your cards! Chaal is now ${costFor(p)}.' : '${p.name} looked at their cards.';
+    status = p.isUser
+        ? 'You saw your cards! Chaal is now ${costFor(p)}.'
+        : '${p.name} looked at their cards.';
   }
 
   bool bet(int id) {
@@ -209,7 +229,8 @@ class TeenPattiGame {
             : ' ${p.name} reached the blind limit and sees their cards.';
       }
     }
-    status = '${displayName(p)} ${p.isUser ? 'played' : 'plays'} $action ($cost chips).$note';
+    status =
+        '${displayName(p)} ${p.isUser ? 'played' : 'plays'} $action ($cost chips).$note';
     _advance();
   }
 
@@ -271,15 +292,19 @@ class TeenPattiGame {
 
   void _resolveSideshow(TeenPattiPlayer from, TeenPattiPlayer to) {
     final cmp = TeenPattiEngine.compareHands(from.hand, to.hand);
-    final loser = cmp > 0 ? to : from; // a tie goes against the player who asked
+    final loser =
+        cmp > 0 ? to : from; // a tie goes against the player who asked
     final winner = identical(loser, from) ? to : from;
     loser
       ..isFolded = true
       ..lastAction = 'Packed (sideshow)';
     if (from.isUser || to.isUser) {
-      status = winner.isUser ? 'Sideshow won! ${loser.name} packed.' : 'Sideshow lost - ${winner.name} had the better hand. You packed.';
+      status = winner.isUser
+          ? 'Sideshow won! ${loser.name} packed.'
+          : 'Sideshow lost - ${winner.name} had the better hand. You packed.';
     } else {
-      status = 'Sideshow: ${winner.name} kept their hand, ${loser.name} packed.';
+      status =
+          'Sideshow: ${winner.name} kept their hand, ${loser.name} packed.';
     }
     _advance();
   }
@@ -337,7 +362,8 @@ class TeenPattiGame {
     status = '${displayName(winner)} won the pot of $won chips!';
   }
 
-  void _showdown(List<TeenPattiPlayer> contenders, {TeenPattiPlayer? requestedBy, bool potLimitReached = false}) {
+  void _showdown(List<TeenPattiPlayer> contenders,
+      {TeenPattiPlayer? requestedBy, bool potLimitReached = false}) {
     HandEvaluation? best;
     var winners = <TeenPattiPlayer>[];
     for (final p in contenders) {
@@ -365,14 +391,17 @@ class TeenPattiGame {
     final handName = best!.handType.banglaName;
     final prefix = potLimitReached
         ? 'Pot limit reached - automatic show. '
-        : (requestedBy != null ? '${displayName(requestedBy)} asked for a show. ' : '');
+        : (requestedBy != null
+            ? '${displayName(requestedBy)} asked for a show. '
+            : '');
     if (winners.length > 1) {
       final names = winners.map(displayName).join(' & ');
       result = TeenPattiResult(
         winnerIds: winners.map((w) => w.id).toList(),
         potWon: won,
         title: 'Split Pot',
-        detail: '$prefix$names tie with $handName and split $won chips ($share each).',
+        detail:
+            '$prefix$names tie with $handName and split $won chips ($share each).',
         wasShowdown: true,
       );
       status = 'Showdown tie! $names split the pot.';
@@ -382,7 +411,8 @@ class TeenPattiGame {
         winnerIds: [w.id],
         potWon: won,
         title: w.isUser ? 'You win!' : '${w.name} wins',
-        detail: '$prefix${displayName(w)} ${w.isUser ? 'win' : 'wins'} the pot of $won chips with $handName.',
+        detail:
+            '$prefix${displayName(w)} ${w.isUser ? 'win' : 'wins'} the pot of $won chips with $handName.',
         wasShowdown: true,
       );
       status = '${displayName(w)} ${w.isUser ? 'win' : 'wins'} with $handName!';
@@ -418,7 +448,8 @@ class TeenPattiGame {
     if (bot.isUser || bot.isFolded) return;
     final id = bot.id;
 
-    if (!bot.isSeen && (bot.blindTurns >= 2 || pot > 120 || _random.nextDouble() < 0.15)) {
+    if (!bot.isSeen &&
+        (bot.blindTurns >= 2 || pot > 120 || _random.nextDouble() < 0.15)) {
       see(id);
     }
     if (!canBet(id)) {
@@ -435,14 +466,16 @@ class TeenPattiGame {
       return;
     }
 
-    final strength = handStrength(bot.hand) + (_random.nextDouble() - 0.5) * 0.1;
+    final strength =
+        handStrength(bot.hand) + (_random.nextDouble() - 0.5) * 0.1;
     final activeCount = activePlayers.length;
 
     if (activeCount == 2 && strength >= 0.55 && pot >= 100 && canShow(id)) {
       show(id);
       return;
     }
-    final foldBelow = 0.12 + (baseBet / maxBase) * 0.25 + (pot > 300 ? 0.05 : 0);
+    final foldBelow =
+        0.12 + (baseBet / maxBase) * 0.25 + (pot > 300 ? 0.05 : 0);
     if (strength < foldBelow) {
       pack(id);
       return;
@@ -451,7 +484,11 @@ class TeenPattiGame {
       raise(id);
       return;
     }
-    if (activeCount > 2 && strength >= 0.35 && strength <= 0.7 && canSideshow(id) && _random.nextDouble() < 0.25) {
+    if (activeCount > 2 &&
+        strength >= 0.35 &&
+        strength <= 0.7 &&
+        canSideshow(id) &&
+        _random.nextDouble() < 0.25) {
       requestSideshow(id);
       return;
     }

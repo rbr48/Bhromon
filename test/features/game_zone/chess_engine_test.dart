@@ -25,14 +25,16 @@ void main() {
     });
 
     test('White Pawn initial moves allow 1 or 2 steps forward', () {
-      final moves = engine.getLegalMovesForPosition(const BoardPosition(6, 4)); // e2 pawn
+      final moves =
+          engine.getLegalMovesForPosition(const BoardPosition(6, 4)); // e2 pawn
       expect(moves.length, equals(2));
       expect(moves.any((m) => m.to == const BoardPosition(5, 4)), isTrue);
       expect(moves.any((m) => m.to == const BoardPosition(4, 4)), isTrue);
     });
 
     test('Knight can jump over pieces', () {
-      final moves = engine.getLegalMovesForPosition(const BoardPosition(7, 1)); // b1 Knight
+      final moves = engine
+          .getLegalMovesForPosition(const BoardPosition(7, 1)); // b1 Knight
       expect(moves.length, equals(2));
       expect(moves.any((m) => m.to == const BoardPosition(5, 0)), isTrue); // a3
       expect(moves.any((m) => m.to == const BoardPosition(5, 2)), isTrue); // c3
@@ -60,8 +62,11 @@ void main() {
       engine.board[7][5] = null;
       engine.board[7][6] = null;
 
-      final kingMoves = engine.getLegalMovesForPosition(const BoardPosition(7, 4));
-      final castleMove = kingMoves.where((m) => m.isCastling && m.to == const BoardPosition(7, 6)).toList();
+      final kingMoves =
+          engine.getLegalMovesForPosition(const BoardPosition(7, 4));
+      final castleMove = kingMoves
+          .where((m) => m.isCastling && m.to == const BoardPosition(7, 6))
+          .toList();
       expect(castleMove.isNotEmpty, isTrue);
 
       final success = engine.makeMove(castleMove.first);
@@ -73,7 +78,8 @@ void main() {
     });
 
     test('Takeback undoMove reverts game state cleanly', () {
-      const e4Move = ChessMove(from: BoardPosition(6, 4), to: BoardPosition(4, 4));
+      const e4Move =
+          ChessMove(from: BoardPosition(6, 4), to: BoardPosition(4, 4));
       engine.makeMove(e4Move);
       expect(engine.currentTurn, equals(PieceColor.black));
       expect(engine.pieceAt(4, 4)?.type, equals(PieceType.pawn));
@@ -99,10 +105,13 @@ void main() {
       e.board[row][col] = ChessPiece(type, color);
     }
 
-    BoardPosition sq(String s) => BoardPosition(8 - int.parse(s[1]), 'abcdefgh'.indexOf(s[0]));
+    BoardPosition sq(String s) =>
+        BoardPosition(8 - int.parse(s[1]), 'abcdefgh'.indexOf(s[0]));
 
-    int count(ChessEngine e, PieceType t, PieceColor c) =>
-        e.board.expand((r) => r).where((p) => p != null && p.type == t && p.color == c).length;
+    int count(ChessEngine e, PieceType t, PieceColor c) => e.board
+        .expand((r) => r)
+        .where((p) => p != null && p.type == t && p.color == c)
+        .length;
 
     test('Generating en passant moves never duplicates the captured pawn', () {
       final e = emptyBoard();
@@ -129,10 +138,12 @@ void main() {
       final e = emptyBoard();
       put(e, 'e1', PieceType.king, PieceColor.white);
       put(e, 'a8', PieceType.king, PieceColor.black);
-      expect(e.getLegalMovesForPosition(sq('e1')).where((m) => m.isCastling), isEmpty);
+      expect(e.getLegalMovesForPosition(sq('e1')).where((m) => m.isCastling),
+          isEmpty);
 
       put(e, 'h1', PieceType.rook, PieceColor.black);
-      expect(e.getLegalMovesForPosition(sq('e1')).where((m) => m.isCastling), isEmpty);
+      expect(e.getLegalMovesForPosition(sq('e1')).where((m) => m.isCastling),
+          isEmpty);
     });
 
     test('Cannot castle through a square attacked by a pawn', () {
@@ -141,7 +152,8 @@ void main() {
       put(e, 'h1', PieceType.rook, PieceColor.white);
       put(e, 'a8', PieceType.king, PieceColor.black);
       put(e, 'e2', PieceType.pawn, PieceColor.black); // attacks d1 and f1
-      expect(e.getLegalMovesForPosition(sq('e1')).where((m) => m.isCastling), isEmpty);
+      expect(e.getLegalMovesForPosition(sq('e1')).where((m) => m.isCastling),
+          isEmpty);
     });
 
     test('Capturing a rook on its corner removes that castling right', () {
@@ -152,8 +164,10 @@ void main() {
       put(e, 'h8', PieceType.rook, PieceColor.black);
       expect(e.makeMove(ChessMove(from: sq('h1'), to: sq('h8'))), isTrue);
       expect(e.blackRook7Moved, isTrue);
-      e.board[0][7] = const ChessPiece(PieceType.rook, PieceColor.black); // put a rook back
-      expect(e.getAllLegalMoves(PieceColor.black).where((m) => m.isCastling), isEmpty);
+      e.board[0][7] =
+          const ChessPiece(PieceType.rook, PieceColor.black); // put a rook back
+      expect(e.getAllLegalMoves(PieceColor.black).where((m) => m.isCastling),
+          isEmpty);
     });
 
     test('Takeback restores castling rights and en passant target', () {
@@ -168,7 +182,8 @@ void main() {
       e.undoMove();
       e.undoMove();
       expect(e.whiteKingMoved, isFalse);
-      expect(e.getLegalMovesForPosition(sq('e1')).any((m) => m.isCastling), isTrue);
+      expect(e.getLegalMovesForPosition(sq('e1')).any((m) => m.isCastling),
+          isTrue);
 
       final ep = emptyBoard();
       put(ep, 'a1', PieceType.king, PieceColor.white);
@@ -179,7 +194,8 @@ void main() {
       ep.makeMove(ChessMove(from: sq('h8'), to: sq('g8')));
       ep.undoMove();
       expect(ep.enPassantTarget, sq('e3'));
-      expect(ep.getLegalMovesForPosition(sq('d4')).any((m) => m.isEnPassant), isTrue);
+      expect(ep.getLegalMovesForPosition(sq('d4')).any((m) => m.isEnPassant),
+          isTrue);
     });
 
     test('Promotion honours the chosen piece and undo restores the pawn', () {
@@ -187,7 +203,10 @@ void main() {
       put(e, 'a1', PieceType.king, PieceColor.white);
       put(e, 'h1', PieceType.king, PieceColor.black);
       put(e, 'b7', PieceType.pawn, PieceColor.white);
-      expect(e.makeMove(ChessMove(from: sq('b7'), to: sq('b8'), promotion: PieceType.knight)), isTrue);
+      expect(
+          e.makeMove(ChessMove(
+              from: sq('b7'), to: sq('b8'), promotion: PieceType.knight)),
+          isTrue);
       expect(e.pieceAt(0, 1)?.type, PieceType.knight);
       expect(e.moveNotation.last, 'b8=N');
       e.undoMove();
@@ -202,14 +221,20 @@ void main() {
 
     test('Notation, check and mate suffixes', () {
       final e = ChessEngine();
-      for (final m in [['f2', 'f3'], ['e7', 'e5'], ['g2', 'g4'], ['d8', 'h4']]) {
+      for (final m in [
+        ['f2', 'f3'],
+        ['e7', 'e5'],
+        ['g2', 'g4'],
+        ['d8', 'h4']
+      ]) {
         expect(e.makeMove(ChessMove(from: sq(m[0]), to: sq(m[1]))), isTrue);
       }
       expect(e.moveNotation, ['f3', 'e5', 'g4', 'Qh4#']);
       expect(e.isCheckmate(PieceColor.white), isTrue);
     });
 
-    test('Draw rules: insufficient material, fifty moves, threefold repetition', () {
+    test('Draw rules: insufficient material, fifty moves, threefold repetition',
+        () {
       final kk = emptyBoard();
       put(kk, 'e1', PieceType.king, PieceColor.white);
       put(kk, 'e8', PieceType.king, PieceColor.black);

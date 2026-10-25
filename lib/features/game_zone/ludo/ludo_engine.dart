@@ -12,10 +12,13 @@ enum LudoColor {
   final int startIndex;
   final int homeEntranceIndex;
 
-  const LudoColor(this.name, this.color, this.startIndex, this.homeEntranceIndex);
+  const LudoColor(
+      this.name, this.color, this.startIndex, this.homeEntranceIndex);
 
   /// Text/icon colour that stays readable on top of [color].
-  Color get onColor => this == LudoColor.yellow ? const Color(0xFF212121) : const Color(0xFFFFFFFF);
+  Color get onColor => this == LudoColor.yellow
+      ? const Color(0xFF212121)
+      : const Color(0xFFFFFFFF);
 }
 
 enum TokenState { inYard, onTrack, inHomeStretch, home }
@@ -52,7 +55,9 @@ class LudoEngine {
 
   /// Sixes rolled in a row by the player whose turn it is.
   int consecutiveSixes = 0;
-  final Set<LudoColor> humanPlayers = {LudoColor.red}; // Default: Red is User, others are Bots
+  final Set<LudoColor> humanPlayers = {
+    LudoColor.red
+  }; // Default: Red is User, others are Bots
   final Random _random;
 
   LudoEngine({Random? random}) : _random = random ?? Random() {
@@ -99,7 +104,9 @@ class LudoEngine {
 
   List<LudoToken> getMovableTokens() {
     if (!hasRolled || currentDice == null) return [];
-    return tokens[currentTurn]!.where((t) => canMoveToken(t, currentDice!)).toList();
+    return tokens[currentTurn]!
+        .where((t) => canMoveToken(t, currentDice!))
+        .toList();
   }
 
   bool canMoveToken(LudoToken token, int dice) {
@@ -141,7 +148,8 @@ class LudoEngine {
         for (final entry in tokens.entries) {
           if (entry.key == token.color) continue;
           for (final oppToken in entry.value) {
-            if (oppToken.state == TokenState.onTrack && oppToken.boardIndex == landingIndex) {
+            if (oppToken.state == TokenState.onTrack &&
+                oppToken.boardIndex == landingIndex) {
               // Captured! Send back to yard
               oppToken.state = TokenState.inYard;
               oppToken.stepCount = 0;
@@ -181,8 +189,11 @@ class LudoEngine {
       if (entry.key == own) continue;
       for (final opp in entry.value) {
         if (opp.state != TokenState.onTrack) continue;
-        final distance = (index - opp.boardIndex + totalTrackSteps) % totalTrackSteps;
-        if (distance >= 1 && distance <= 6 && opp.stepCount + distance <= stepsToHomeEntrance) {
+        final distance =
+            (index - opp.boardIndex + totalTrackSteps) % totalTrackSteps;
+        if (distance >= 1 &&
+            distance <= 6 &&
+            opp.stepCount + distance <= stepsToHomeEntrance) {
           return true;
         }
       }
@@ -217,11 +228,15 @@ class LudoEngine {
     if (target == stepsToHome) return 1000;
 
     final currentIndex = t.boardIndex;
-    final threatenedNow = t.state == TokenState.onTrack && isThreatened(currentIndex, t.color);
+    final threatenedNow =
+        t.state == TokenState.onTrack && isThreatened(currentIndex, t.color);
 
     if (target > stepsToHomeEntrance) {
       // Entering or moving up the home column: nobody can touch it there.
-      return 300.0 + (t.state == TokenState.onTrack ? 150 : 0) + (threatenedNow ? 250 : 0) + target;
+      return 300.0 +
+          (t.state == TokenState.onTrack ? 150 : 0) +
+          (threatenedNow ? 250 : 0) +
+          target;
     }
 
     final dest = (t.color.startIndex + target) % totalTrackSteps;

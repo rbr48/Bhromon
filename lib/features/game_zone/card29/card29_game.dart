@@ -2,7 +2,14 @@ import 'dart:math';
 
 import 'card29_engine.dart';
 
-enum Card29Phase { bidding, trumpSelection, playing, trickComplete, roundOver, matchOver }
+enum Card29Phase {
+  bidding,
+  trumpSelection,
+  playing,
+  trickComplete,
+  roundOver,
+  matchOver
+}
 
 /// Rules and table state for a 4-player game of 29. Seat 0 is you (South),
 /// 2 is your bot partner (North); 1 (East) and 3 (West) are the opponents.
@@ -21,7 +28,12 @@ enum Card29Phase { bidding, trumpSelection, playing, trickComplete, roundOver, m
 /// - The team that wins the deal gets a pip; first to [pipsToWin] wins.
 class Card29Game {
   static const int pipsToWin = 6;
-  static const List<String> playerNames = ['You', 'East (Bot)', 'North (Partner)', 'West (Bot)'];
+  static const List<String> playerNames = [
+    'You',
+    'East (Bot)',
+    'North (Partner)',
+    'West (Bot)'
+  ];
 
   Card29Game({Random? random}) : _random = random ?? Random();
 
@@ -63,7 +75,9 @@ class Card29Game {
   bool get hasStarted => _started;
   int get bidderTeam => teamOf(highestBidder);
   bool get isRoundInProgress =>
-      _started && phase != Card29Phase.roundOver && phase != Card29Phase.matchOver;
+      _started &&
+      phase != Card29Phase.roundOver &&
+      phase != Card29Phase.matchOver;
 
   String nameOf(int player) => playerNames[player];
 
@@ -143,7 +157,11 @@ class Card29Game {
   }
 
   bool pass(int player) {
-    if (phase != Card29Phase.bidding || currentTurn != player || passed.contains(player)) return false;
+    if (phase != Card29Phase.bidding ||
+        currentTurn != player ||
+        passed.contains(player)) {
+      return false;
+    }
     passed.add(player);
     status = player == 0 ? 'You pass.' : '${nameOf(player)} passes.';
     _advanceBidding();
@@ -154,11 +172,13 @@ class Card29Game {
     if (highestBidder == -1 && passed.length == 4) {
       highestBidder = dealer;
       highestBid = Card29Engine.minBid;
-      status = 'Everyone passed - ${nameOf(dealer)} (dealer) must play at ${Card29Engine.minBid}.';
+      status =
+          'Everyone passed - ${nameOf(dealer)} (dealer) must play at ${Card29Engine.minBid}.';
       _finishBidding();
       return;
     }
-    if (highestBidder != -1 && (passed.length >= 3 || highestBid >= Card29Engine.maxBid)) {
+    if (highestBidder != -1 &&
+        (passed.length >= 3 || highestBid >= Card29Engine.maxBid)) {
       _finishBidding();
       return;
     }
@@ -175,7 +195,8 @@ class Card29Game {
       status = 'You won the bid at $highestBid! Pick the secret trump suit.';
     } else {
       trumpSuit = Card29Bot.chooseTrump(hands[highestBidder]);
-      status = '${nameOf(highestBidder)} won the bid at $highestBid and set a secret trump.';
+      status =
+          '${nameOf(highestBidder)} won the bid at $highestBid and set a secret trump.';
       _dealSecondHalf();
     }
   }
@@ -195,12 +216,14 @@ class Card29Game {
     }
     phase = Card29Phase.playing;
     currentTurn = highestBidder;
-    status = '${status.trim()} ${highestBidder == 0 ? 'You lead' : '${nameOf(highestBidder)} leads'} the first trick.';
+    status =
+        '${status.trim()} ${highestBidder == 0 ? 'You lead' : '${nameOf(highestBidder)} leads'} the first trick.';
   }
 
   // --- PLAY ---
 
-  bool _isVoidInLead(int player) => leadSuit != null && !hands[player].any((c) => c.suit == leadSuit);
+  bool _isVoidInLead(int player) =>
+      leadSuit != null && !hands[player].any((c) => c.suit == leadSuit);
 
   /// Cards [player] may play right now (empty if it is not their turn).
   List<Card29> legalCards(int player) {
@@ -261,10 +284,12 @@ class Card29Game {
     final who = player == 0 ? 'You show' : '${nameOf(player)} shows';
     if (teamOf(player) == bidderTeam) {
       bidTarget = max(Card29Engine.minBid, bidTarget - 4);
-      status = '$who the Pair (K & Q of trump)! Bidding team target drops to $bidTarget.';
+      status =
+          '$who the Pair (K & Q of trump)! Bidding team target drops to $bidTarget.';
     } else {
       bidTarget = min(Card29Engine.maxBid, bidTarget + 4);
-      status = '$who the Pair (K & Q of trump)! Bidding team target rises to $bidTarget.';
+      status =
+          '$who the Pair (K & Q of trump)! Bidding team target rises to $bidTarget.';
     }
     return true;
   }
@@ -272,13 +297,17 @@ class Card29Game {
   bool playCard(int player, Card29 card) {
     if (!legalCards(player).contains(card)) return false;
 
-    if (!isTrumpRevealed && player == highestBidder && card.suit == trumpSuit && _isVoidInLead(player)) {
+    if (!isTrumpRevealed &&
+        player == highestBidder &&
+        card.suit == trumpSuit &&
+        _isVoidInLead(player)) {
       _reveal(player, asked: false);
     }
 
     hands[player].remove(card);
     playedCards.add(card);
-    currentTrick.add(PlayedCard(playerIndex: player, card: card, trumpEligible: isTrumpRevealed));
+    currentTrick.add(PlayedCard(
+        playerIndex: player, card: card, trumpEligible: isTrumpRevealed));
     leadSuit ??= card.suit;
 
     if (currentTrick.length == 4) {
@@ -288,8 +317,10 @@ class Card29Game {
         isTrumpRevealed: isTrumpRevealed,
       ).playerIndex;
       phase = Card29Phase.trickComplete;
-      final pts = currentTrick.fold<int>(0, (s, p) => s + p.card.points) + (trickCount == 7 ? 1 : 0);
-      status = '${trickWinner == 0 ? 'You win' : '${nameOf(trickWinner!)} wins'} the trick (+$pts pts).';
+      final pts = currentTrick.fold<int>(0, (s, p) => s + p.card.points) +
+          (trickCount == 7 ? 1 : 0);
+      status =
+          '${trickWinner == 0 ? 'You win' : '${nameOf(trickWinner!)} wins'} the trick (+$pts pts).';
     } else {
       currentTurn = (player + 1) % 4;
     }
@@ -326,11 +357,15 @@ class Card29Game {
 
     final bidders = team == 0 ? 'Your team' : 'Opponents';
     if (made) {
-      status = '$bidders made the bid ($score/$bidTarget). +1 pip to ${team == 0 ? 'your team' : 'the opponents'}.';
+      status =
+          '$bidders made the bid ($score/$bidTarget). +1 pip to ${team == 0 ? 'your team' : 'the opponents'}.';
     } else {
-      status = '$bidders fell short ($score/$bidTarget). +1 pip to ${team == 0 ? 'the opponents' : 'your team'}.';
+      status =
+          '$bidders fell short ($score/$bidTarget). +1 pip to ${team == 0 ? 'the opponents' : 'your team'}.';
     }
-    phase = matchPips.any((p) => p >= pipsToWin) ? Card29Phase.matchOver : Card29Phase.roundOver;
+    phase = matchPips.any((p) => p >= pipsToWin)
+        ? Card29Phase.matchOver
+        : Card29Phase.roundOver;
   }
 
   // --- BOTS ---
@@ -343,7 +378,8 @@ class Card29Game {
     if (phase == Card29Phase.bidding) {
       final limit = Card29Bot.bidLimit(hands[p]);
       final next = minimumNextBid;
-      final partnerHolds = highestBidder != -1 && teamOf(highestBidder) == teamOf(p);
+      final partnerHolds =
+          highestBidder != -1 && teamOf(highestBidder) == teamOf(p);
       if (next <= limit && (!partnerHolds || limit >= next + 2)) {
         placeBid(p, next);
       } else {
@@ -354,7 +390,9 @@ class Card29Game {
 
     if (phase != Card29Phase.playing) return;
     if (canClaimRoyalty(p)) claimRoyalty(p);
-    if (canAskTrump(p) && Card29Bot.shouldAskTrump(this, p, _random)) askTrump(p);
+    if (canAskTrump(p) && Card29Bot.shouldAskTrump(this, p, _random)) {
+      askTrump(p);
+    }
     playCard(p, Card29Bot.chooseCard(this, p));
     if (canClaimRoyalty(p)) claimRoyalty(p);
   }
@@ -389,7 +427,8 @@ class Card29Bot {
     for (final suit in CardSuit.values) {
       final cards = hand.where((c) => c.suit == suit);
       if (cards.isEmpty) continue;
-      final score = cards.length * 2.0 + cards.fold<double>(0, (s, c) => s + c.points + c.power / 10);
+      final score = cards.length * 2.0 +
+          cards.fold<double>(0, (s, c) => s + c.points + c.power / 10);
       if (score > bestScore) {
         bestScore = score;
         best = suit;
@@ -403,14 +442,19 @@ class Card29Bot {
     for (final rank in CardRank.values) {
       if (rank.power <= card.power) continue;
       final higher = Card29(suit: card.suit, rank: rank);
-      if (!g.playedCards.contains(higher) && !g.hands[player].contains(higher)) return false;
+      if (!g.playedCards.contains(higher) &&
+          !g.hands[player].contains(higher)) {
+        return false;
+      }
     }
     return true;
   }
 
-  static int _trickPoints(Card29Game g) => g.currentTrick.fold<int>(0, (s, p) => s + p.card.points);
+  static int _trickPoints(Card29Game g) =>
+      g.currentTrick.fold<int>(0, (s, p) => s + p.card.points);
 
-  static PlayedCard _currentWinner(Card29Game g) => Card29Engine.determineTrickWinner(
+  static PlayedCard _currentWinner(Card29Game g) =>
+      Card29Engine.determineTrickWinner(
         trickCards: g.currentTrick,
         trumpSuit: g.trumpSuit,
         isTrumpRevealed: g.isTrumpRevealed,
@@ -428,15 +472,22 @@ class Card29Bot {
       ...g.currentTrick,
       PlayedCard(playerIndex: player, card: card, trumpEligible: revealed),
     ];
-    return Card29Engine.determineTrickWinner(trickCards: trick, trumpSuit: g.trumpSuit, isTrumpRevealed: revealed)
+    return Card29Engine.determineTrickWinner(
+                trickCards: trick,
+                trumpSuit: g.trumpSuit,
+                isTrumpRevealed: revealed)
             .playerIndex ==
         player;
   }
 
   static bool shouldAskTrump(Card29Game g, int player, Random random) {
     final winner = _currentWinner(g);
-    if (Card29Game.teamOf(winner.playerIndex) == Card29Game.teamOf(player)) return false;
-    return _trickPoints(g) >= 1 || g.currentTrick.length == 3 || random.nextDouble() < 0.3;
+    if (Card29Game.teamOf(winner.playerIndex) == Card29Game.teamOf(player)) {
+      return false;
+    }
+    return _trickPoints(g) >= 1 ||
+        g.currentTrick.length == 3 ||
+        random.nextDouble() < 0.3;
   }
 
   static Card29 chooseCard(Card29Game g, int player) {
@@ -473,21 +524,26 @@ class Card29Bot {
       for (final c in legal) {
         counts[c.suit] = (counts[c.suit] ?? 0) + 1;
       }
-      final sideCards = legal.where((c) => c.suit != g.trumpSuit || !g.isTrumpRevealed).toList();
+      final sideCards = legal
+          .where((c) => c.suit != g.trumpSuit || !g.isTrumpRevealed)
+          .toList();
       final pool = sideCards.isEmpty ? legal : sideCards;
       final longest = pool.map((c) => counts[c.suit]!).reduce(max);
       return cheapest(pool.where((c) => counts[c.suit] == longest));
     }
 
     final winner = _currentWinner(g);
-    final partnerWinning = Card29Game.teamOf(winner.playerIndex) == Card29Game.teamOf(player);
+    final partnerWinning =
+        Card29Game.teamOf(winner.playerIndex) == Card29Game.teamOf(player);
     final isLast = g.currentTrick.length == 3;
 
     if (partnerWinning) {
       final partnerSafe = isLast || isMaster(g, player, winner.card);
       if (partnerSafe) {
         // Feed points to the partner's trick.
-        final feedable = hidingTrump ? legal.where((c) => c.suit != g.trumpSuit).toList() : legal;
+        final feedable = hidingTrump
+            ? legal.where((c) => c.suit != g.trumpSuit).toList()
+            : legal;
         final pool = feedable.isEmpty ? legal : feedable;
         return pool.reduce((a, b) {
           if (a.points != b.points) return a.points > b.points ? a : b;
@@ -499,8 +555,12 @@ class Card29Bot {
 
     final winners = legal.where((c) => _wouldWin(g, player, c)).toList();
     if (winners.isNotEmpty) {
-      final cheapestWinner = winners.reduce((a, b) => a.power <= b.power ? a : b);
-      if (isLast || _trickPoints(g) > 0 || isMaster(g, player, cheapestWinner) || cheapestWinner.points > 0) {
+      final cheapestWinner =
+          winners.reduce((a, b) => a.power <= b.power ? a : b);
+      if (isLast ||
+          _trickPoints(g) > 0 ||
+          isMaster(g, player, cheapestWinner) ||
+          cheapestWinner.points > 0) {
         return cheapestWinner;
       }
     }

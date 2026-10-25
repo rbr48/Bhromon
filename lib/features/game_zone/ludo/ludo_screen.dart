@@ -14,18 +14,58 @@ class _LudoSession {
 
 /// 52-step coordinates around the outer track as (col, row) on the 15x15 grid.
 const List<List<int>> _trackCoordinates = [
-  [1, 6], [2, 6], [3, 6], [4, 6], [5, 6],
-  [6, 5], [6, 4], [6, 3], [6, 2], [6, 1], [6, 0],
-  [7, 0], [8, 0],
-  [8, 1], [8, 2], [8, 3], [8, 4], [8, 5],
-  [9, 6], [10, 6], [11, 6], [12, 6], [13, 6], [14, 6],
-  [14, 7], [14, 8],
-  [13, 8], [12, 8], [11, 8], [10, 8], [9, 8],
-  [8, 9], [8, 10], [8, 11], [8, 12], [8, 13], [8, 14],
-  [7, 14], [6, 14],
-  [6, 13], [6, 12], [6, 11], [6, 10], [6, 9],
-  [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8],
-  [0, 7], [0, 6],
+  [1, 6],
+  [2, 6],
+  [3, 6],
+  [4, 6],
+  [5, 6],
+  [6, 5],
+  [6, 4],
+  [6, 3],
+  [6, 2],
+  [6, 1],
+  [6, 0],
+  [7, 0],
+  [8, 0],
+  [8, 1],
+  [8, 2],
+  [8, 3],
+  [8, 4],
+  [8, 5],
+  [9, 6],
+  [10, 6],
+  [11, 6],
+  [12, 6],
+  [13, 6],
+  [14, 6],
+  [14, 7],
+  [14, 8],
+  [13, 8],
+  [12, 8],
+  [11, 8],
+  [10, 8],
+  [9, 8],
+  [8, 9],
+  [8, 10],
+  [8, 11],
+  [8, 12],
+  [8, 13],
+  [8, 14],
+  [7, 14],
+  [6, 14],
+  [6, 13],
+  [6, 12],
+  [6, 11],
+  [6, 10],
+  [6, 9],
+  [5, 8],
+  [4, 8],
+  [3, 8],
+  [2, 8],
+  [1, 8],
+  [0, 8],
+  [0, 7],
+  [0, 6],
 ];
 
 class LudoScreen extends StatefulWidget {
@@ -35,7 +75,8 @@ class LudoScreen extends StatefulWidget {
   State<LudoScreen> createState() => _LudoScreenState();
 }
 
-class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateMixin, GameZonePortraitLock {
+class _LudoScreenState extends State<LudoScreen>
+    with SingleTickerProviderStateMixin, GameZonePortraitLock {
   late final LudoEngine _engine;
   late final AnimationController _diceAnimController;
   late final Animation<double> _diceScale;
@@ -49,10 +90,17 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _engine = _LudoSession.engine ??= LudoEngine();
-    _diceAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 320));
+    _diceAnimController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 320));
     _diceScale = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.18).chain(CurveTween(curve: Curves.easeOut)), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: 1.18, end: 1.0).chain(CurveTween(curve: Curves.easeIn)), weight: 1),
+      TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 1.18)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 1),
+      TweenSequenceItem(
+          tween: Tween(begin: 1.18, end: 1.0)
+              .chain(CurveTween(curve: Curves.easeIn)),
+          weight: 1),
     ]).animate(_diceAnimController);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _resumeTurnFlow();
@@ -67,7 +115,8 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  String _playerLabel(LudoColor color) => '${color.name}${_engine.humanPlayers.contains(color) ? '' : ' bot'}';
+  String _playerLabel(LudoColor color) =>
+      '${color.name}${_engine.humanPlayers.contains(color) ? '' : ' bot'}';
 
   void _schedule(Duration delay, VoidCallback action) {
     _turnTimer?.cancel();
@@ -92,7 +141,11 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
   }
 
   void _onDiceTapped() {
-    if (_engine.hasRolled || !_engine.isCurrentTurnHuman() || _LudoSession.winner != null) return;
+    if (_engine.hasRolled ||
+        !_engine.isCurrentTurnHuman() ||
+        _LudoSession.winner != null) {
+      return;
+    }
     HapticFeedback.lightImpact();
     _roll();
   }
@@ -105,7 +158,8 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
     if (rolled == -1) {
       HapticFeedback.heavyImpact();
       setState(() {
-        _statusMessage = '${_playerLabel(roller)} rolled 3 sixes in a row - turn forfeited.';
+        _statusMessage =
+            '${_playerLabel(roller)} rolled 3 sixes in a row - turn forfeited.';
       });
       _schedule(const Duration(milliseconds: 700), _resumeTurnFlow);
       return;
@@ -122,7 +176,8 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
     if (movable.isEmpty) {
       _schedule(const Duration(milliseconds: 800), () {
         setState(() {
-          _statusMessage = 'No valid moves for ${_playerLabel(_engine.currentTurn)}. Passing turn.';
+          _statusMessage =
+              'No valid moves for ${_playerLabel(_engine.currentTurn)}. Passing turn.';
           _engine.passTurn();
         });
         _resumeTurnFlow();
@@ -163,12 +218,15 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
     _resumeTurnFlow();
   }
 
-  bool get _hasGameStarted =>
-      _engine.tokens.values.expand((t) => t).any((t) => t.state != TokenState.inYard);
+  bool get _hasGameStarted => _engine.tokens.values
+      .expand((t) => t)
+      .any((t) => t.state != TokenState.inYard);
 
   Future<void> _onResetPressed() async {
     if (_hasGameStarted && _LudoSession.winner == null) {
-      final ok = await confirmDiscardGame(context, title: 'Start a new game?', message: 'The current race will be lost.');
+      final ok = await confirmDiscardGame(context,
+          title: 'Start a new game?',
+          message: 'The current race will be lost.');
       if (!ok || !mounted) return;
     }
     _resetGame();
@@ -190,7 +248,8 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF262A30),
-        title: const Text('🎉 Victory!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('🎉 Victory!',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: Text(
           '${_playerLabel(winner)} has brought all 4 tokens home!',
           style: const TextStyle(color: Colors.white70),
@@ -198,10 +257,12 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('View board', style: TextStyle(color: Colors.white70)),
+            child: const Text('View board',
+                style: TextStyle(color: Colors.white70)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber, foregroundColor: Colors.black87),
             onPressed: () {
               Navigator.pop(ctx);
               _resetGame();
@@ -220,24 +281,40 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
         builder: (context, setModalState) {
           return AlertDialog(
             backgroundColor: const Color(0xFF262A30),
-            title: const Text('Player Mode & Pass-and-Play', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            title: const Text('Player Mode & Pass-and-Play',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 ...LudoColor.values.map((color) {
                   final isHuman = _engine.humanPlayers.contains(color);
-                  final isLastHuman = isHuman && _engine.humanPlayers.length == 1;
+                  final isLastHuman =
+                      isHuman && _engine.humanPlayers.length == 1;
                   return CheckboxListTile(
                     title: Row(
                       children: [
-                        Container(width: 14, height: 14, decoration: BoxDecoration(color: color.color, shape: BoxShape.circle)),
+                        Container(
+                            width: 14,
+                            height: 14,
+                            decoration: BoxDecoration(
+                                color: color.color, shape: BoxShape.circle)),
                         const SizedBox(width: 10),
-                        Text(color.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        Text(color.name,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
                       ],
                     ),
                     subtitle: Text(
-                      isHuman ? (isLastHuman ? 'Human (at least one human is required)' : 'Human (Pass & Play)') : 'AI Bot',
-                      style: TextStyle(color: isHuman ? Colors.amber : Colors.white54, fontSize: 12),
+                      isHuman
+                          ? (isLastHuman
+                              ? 'Human (at least one human is required)'
+                              : 'Human (Pass & Play)')
+                          : 'AI Bot',
+                      style: TextStyle(
+                          color: isHuman ? Colors.amber : Colors.white54,
+                          fontSize: 12),
                     ),
                     value: isHuman,
                     activeColor: Colors.amber,
@@ -259,7 +336,8 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Save & Close', style: TextStyle(color: Colors.amber)),
+                child: const Text('Save & Close',
+                    style: TextStyle(color: Colors.amber)),
               ),
             ],
           );
@@ -277,13 +355,20 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
     return Scaffold(
       backgroundColor: const Color(0xFF1E2125),
       appBar: AppBar(
-        title: const Text('Ludo Express', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Ludo Express',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF14171A),
         foregroundColor: Colors.white,
         elevation: 2,
         actions: [
-          IconButton(icon: const Icon(Icons.group), tooltip: 'Pass & Play Mode', onPressed: _showPlayerModeDialog),
-          IconButton(icon: const Icon(Icons.refresh), tooltip: 'New Game', onPressed: _onResetPressed),
+          IconButton(
+              icon: const Icon(Icons.group),
+              tooltip: 'Pass & Play Mode',
+              onPressed: _showPlayerModeDialog),
+          IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'New Game',
+              onPressed: _onResetPressed),
         ],
       ),
       body: SafeArea(
@@ -293,7 +378,9 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final boardSize = min(constraints.maxWidth - 24, constraints.maxHeight - 16).clamp(240.0, 520.0);
+                  final boardSize =
+                      min(constraints.maxWidth - 24, constraints.maxHeight - 16)
+                          .clamp(240.0, 520.0);
                   return Center(
                     child: Container(
                       width: boardSize,
@@ -301,7 +388,12 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 4))],
+                        boxShadow: const [
+                          BoxShadow(
+                              color: Colors.black45,
+                              blurRadius: 10,
+                              offset: Offset(0, 4))
+                        ],
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -334,7 +426,10 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
               Container(
                 width: 14,
                 height: 14,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: turn.color, border: Border.all(color: Colors.white54)),
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: turn.color,
+                    border: Border.all(color: Colors.white54)),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -344,7 +439,10 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
                       : 'Turn: ${turn.name} (${isHuman ? "Human" : "Bot"})',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
                 ),
               ),
             ],
@@ -402,7 +500,9 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
           ],
         ),
         Positioned.fill(
-          child: IgnorePointer(child: CustomPaint(painter: _PathwayGridPainter(cellSize: cellSize))),
+          child: IgnorePointer(
+              child: CustomPaint(
+                  painter: _PathwayGridPainter(cellSize: cellSize))),
         ),
         ..._buildTokenOverlays(cellSize),
       ],
@@ -410,7 +510,9 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildYard(LudoColor color) {
-    final yardTokens = _engine.tokens[color]!.where((t) => t.state == TokenState.inYard).toList();
+    final yardTokens = _engine.tokens[color]!
+        .where((t) => t.state == TokenState.inYard)
+        .toList();
     final isHuman = _engine.humanPlayers.contains(color);
 
     return Expanded(
@@ -422,11 +524,14 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
           decoration: BoxDecoration(
             color: color.color,
             borderRadius: BorderRadius.circular(10),
-            border: _engine.currentTurn == color ? Border.all(color: Colors.black87, width: 2) : null,
+            border: _engine.currentTurn == color
+                ? Border.all(color: Colors.black87, width: 2)
+                : null,
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final boxSize = (constraints.biggest.shortestSide * 0.62).clamp(40.0, 96.0);
+              final boxSize =
+                  (constraints.biggest.shortestSide * 0.62).clamp(40.0, 96.0);
               final tokenSize = (boxSize - 18) / 2;
               return Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -435,13 +540,17 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
                     width: boxSize,
                     height: boxSize,
                     padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8)),
                     child: Wrap(
                       alignment: WrapAlignment.center,
                       runAlignment: WrapAlignment.center,
                       spacing: 4,
                       runSpacing: 4,
-                      children: yardTokens.map((t) => _buildTokenWidget(t, tokenSize)).toList(),
+                      children: yardTokens
+                          .map((t) => _buildTokenWidget(t, tokenSize))
+                          .toList(),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -450,7 +559,10 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
                       fit: BoxFit.scaleDown,
                       child: Text(
                         '${color.name.toUpperCase()} · ${isHuman ? 'YOU' : 'BOT'}',
-                        style: TextStyle(color: color.onColor, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: color.onColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -464,7 +576,8 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildPathwaySection({required int flex}) {
-    return Expanded(flex: flex, child: Container(color: const Color(0xFFFAF9F6)));
+    return Expanded(
+        flex: flex, child: Container(color: const Color(0xFFFAF9F6)));
   }
 
   Widget _buildCenterHome() {
@@ -502,7 +615,8 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
     final tappable = movable && _engine.isCurrentTurnHuman();
     return Semantics(
       button: tappable,
-      label: '${color.name} token ${t.id + 1}, ${_describeToken(t)}${tappable ? ', can move' : ''}',
+      label:
+          '${color.name} token ${t.id + 1}, ${_describeToken(t)}${tappable ? ', can move' : ''}',
       child: GestureDetector(
         onTap: tappable ? () => _moveToken(t) : null,
         child: Container(
@@ -531,7 +645,10 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
                   padding: const EdgeInsets.all(1),
                   child: Text(
                     t.state == TokenState.home ? '★' : '${t.id + 1}',
-                    style: TextStyle(color: color.onColor, fontSize: 11, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: color.onColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -618,7 +735,8 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
           top = row * cellSize + (quadrant ~/ 2) * cellSize * 0.5;
         }
 
-        widgets.add(Positioned(left: left, top: top, child: _buildTokenWidget(t, size)));
+        widgets.add(Positioned(
+            left: left, top: top, child: _buildTokenWidget(t, size)));
       }
     });
 
@@ -627,14 +745,17 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
 
   Widget _buildBottomControls() {
     final isHuman = _engine.isCurrentTurnHuman();
-    final canRoll = !_engine.hasRolled && isHuman && _LudoSession.winner == null;
+    final canRoll =
+        !_engine.hasRolled && isHuman && _LudoSession.winner == null;
     final turnColor = _engine.currentTurn;
 
     final prompt = _LudoSession.winner != null
         ? 'Game over - tap ↻ for a new game'
         : canRoll
             ? 'TAP DICE TO ROLL'
-            : (!isHuman ? '${turnColor.name} bot thinking...' : 'Select a highlighted token');
+            : (!isHuman
+                ? '${turnColor.name} bot thinking...'
+                : 'Select a highlighted token');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -646,7 +767,9 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
         children: [
           Semantics(
             button: canRoll,
-            label: _engine.currentDice != null ? 'Dice showing ${_engine.currentDice}' : 'Roll dice',
+            label: _engine.currentDice != null
+                ? 'Dice showing ${_engine.currentDice}'
+                : 'Roll dice',
             child: GestureDetector(
               onTap: canRoll ? _onDiceTapped : null,
               child: ScaleTransition(
@@ -657,18 +780,25 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: canRoll ? Colors.amberAccent : turnColor.color, width: 3),
+                    border: Border.all(
+                        color: canRoll ? Colors.amberAccent : turnColor.color,
+                        width: 3),
                     boxShadow: [
                       BoxShadow(
-                        color: canRoll ? Colors.amberAccent.withValues(alpha: 0.4) : Colors.black26,
+                        color: canRoll
+                            ? Colors.amberAccent.withValues(alpha: 0.4)
+                            : Colors.black26,
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
                     ],
                   ),
                   child: _engine.currentDice != null
-                      ? CustomPaint(painter: _DiceFacePainter(_engine.currentDice!))
-                      : Icon(Icons.casino, size: 36, color: canRoll ? Colors.amber.shade800 : Colors.grey),
+                      ? CustomPaint(
+                          painter: _DiceFacePainter(_engine.currentDice!))
+                      : Icon(Icons.casino,
+                          size: 36,
+                          color: canRoll ? Colors.amber.shade800 : Colors.grey),
                 ),
               ),
             ),
@@ -730,7 +860,8 @@ class _DiceFacePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _DiceFacePainter oldDelegate) => oldDelegate.value != value;
+  bool shouldRepaint(covariant _DiceFacePainter oldDelegate) =>
+      oldDelegate.value != value;
 }
 
 class _CenterHomePainter extends CustomPainter {
@@ -741,13 +872,21 @@ class _CenterHomePainter extends CustomPainter {
 
     void triangle(Color color, Offset a, Offset b) {
       paint.color = color;
-      canvas.drawPath(Path()..moveTo(a.dx, a.dy)..lineTo(center.dx, center.dy)..lineTo(b.dx, b.dy)..close(), paint);
+      canvas.drawPath(
+          Path()
+            ..moveTo(a.dx, a.dy)
+            ..lineTo(center.dx, center.dy)
+            ..lineTo(b.dx, b.dy)
+            ..close(),
+          paint);
     }
 
     triangle(LudoColor.red.color, Offset.zero, Offset(0, size.height));
     triangle(LudoColor.green.color, Offset.zero, Offset(size.width, 0));
-    triangle(LudoColor.yellow.color, Offset(size.width, 0), Offset(size.width, size.height));
-    triangle(LudoColor.blue.color, Offset(0, size.height), Offset(size.width, size.height));
+    triangle(LudoColor.yellow.color, Offset(size.width, 0),
+        Offset(size.width, size.height));
+    triangle(LudoColor.blue.color, Offset(0, size.height),
+        Offset(size.width, size.height));
   }
 
   @override
@@ -759,7 +898,8 @@ class _PathwayGridPainter extends CustomPainter {
 
   _PathwayGridPainter({required this.cellSize});
 
-  Rect _cell(num col, num row) => Rect.fromLTWH(col * cellSize, row * cellSize, cellSize, cellSize);
+  Rect _cell(num col, num row) =>
+      Rect.fromLTWH(col * cellSize, row * cellSize, cellSize, cellSize);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -798,7 +938,12 @@ class _PathwayGridPainter extends CustomPainter {
       }
       canvas.drawRect(rect, borderPaint);
       if (LudoEngine.safeIndices.contains(i)) {
-        _drawStar(canvas, rect, owner == LudoColor.yellow || owner == null ? const Color(0x99000000) : const Color(0xCCFFFFFF));
+        _drawStar(
+            canvas,
+            rect,
+            owner == LudoColor.yellow || owner == null
+                ? const Color(0x99000000)
+                : const Color(0xCCFFFFFF));
       }
     }
   }
@@ -811,7 +956,8 @@ class _PathwayGridPainter extends CustomPainter {
     for (int i = 0; i < 10; i++) {
       final radius = i.isEven ? outer : inner;
       final angle = -pi / 2 + i * pi / 5;
-      final point = Offset(center.dx + radius * cos(angle), center.dy + radius * sin(angle));
+      final point = Offset(
+          center.dx + radius * cos(angle), center.dy + radius * sin(angle));
       if (i == 0) {
         path.moveTo(point.dx, point.dy);
       } else {
@@ -823,5 +969,6 @@ class _PathwayGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _PathwayGridPainter oldDelegate) => oldDelegate.cellSize != cellSize;
+  bool shouldRepaint(covariant _PathwayGridPainter oldDelegate) =>
+      oldDelegate.cellSize != cellSize;
 }
