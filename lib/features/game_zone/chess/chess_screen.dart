@@ -30,7 +30,11 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
   String _statusText = 'Your move (White)';
   final ScrollController _moveListController = ScrollController();
 
-  static const _depthLabels = {1: 'Easy / Casual', 2: 'Medium (Recommended)', 4: 'Hard'};
+  static const _depthLabels = {
+    1: 'Easy / Casual',
+    2: 'Medium (Recommended)',
+    4: 'Hard'
+  };
 
   bool get _isGameOver => _ChessSession.gameOverTitle != null;
 
@@ -47,7 +51,9 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
         if (mounted) _triggerAiMove();
       });
     } else {
-      _statusText = _engine.isCheck(PieceColor.white) ? '⚠️ CHECK! Your King is under attack!' : 'Your move (White)';
+      _statusText = _engine.isCheck(PieceColor.white)
+          ? '⚠️ CHECK! Your King is under attack!'
+          : 'Your move (White)';
     }
   }
 
@@ -65,7 +71,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     final tappedPos = BoardPosition(row, col);
 
     if (_selectedPosition != null) {
-      final matchingMoves = _currentLegalMoves.where((m) => m.to == tappedPos).toList();
+      final matchingMoves =
+          _currentLegalMoves.where((m) => m.to == tappedPos).toList();
       if (matchingMoves.isNotEmpty) {
         final move = matchingMoves.first;
         if (move.promotion != null) {
@@ -101,7 +108,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E2429),
-        title: const Text('Promote Pawn', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Promote Pawn',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: Wrap(
           alignment: WrapAlignment.center,
           spacing: 4,
@@ -138,7 +146,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
             children: [
               _PieceGlyph(piece: ChessPiece(type, PieceColor.white), size: 44),
               const SizedBox(height: 4),
-              Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(label,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ],
           ),
         ),
@@ -167,9 +176,11 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     if (_engine.isCheckmate(side)) {
       HapticFeedback.heavyImpact();
       if (side == PieceColor.black) {
-        _finishGame('Checkmate! 🏆', 'Congratulations, you defeated the AI!', 'Checkmate! You win!');
+        _finishGame('Checkmate! 🏆', 'Congratulations, you defeated the AI!',
+            'Checkmate! You win!');
       } else {
-        _finishGame('Checkmate!', 'AI won this round. Better luck next time!', 'Checkmate! DeepTravel AI wins.');
+        _finishGame('Checkmate!', 'AI won this round. Better luck next time!',
+            'Checkmate! DeepTravel AI wins.');
       }
       return true;
     }
@@ -218,7 +229,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     await Future<void>.delayed(const Duration(milliseconds: 450));
     if (!mounted || generation != _aiGeneration) return;
 
-    final request = ChessAiRequest(_engine, PieceColor.black, _ChessSession.aiDepth);
+    final request =
+        ChessAiRequest(_engine, PieceColor.black, _ChessSession.aiDepth);
     final aiMove = await compute(chessAiWorker, request);
     if (!mounted || generation != _aiGeneration) return;
 
@@ -231,7 +243,9 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     _scrollMoveListToEnd();
     if (_checkGameEnd()) return;
     setState(() {
-      _statusText = _engine.isCheck(PieceColor.white) ? '⚠️ CHECK! Your King is under attack!' : 'Your move (White)';
+      _statusText = _engine.isCheck(PieceColor.white)
+          ? '⚠️ CHECK! Your King is under attack!'
+          : 'Your move (White)';
     });
   }
 
@@ -243,7 +257,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
       // Take back until it is White's turn again: the AI reply plus your move,
       // or just your move if the game ended right after it.
       _engine.undoMove();
-      while (_engine.currentTurn == PieceColor.black && _engine.moveHistory.isNotEmpty) {
+      while (_engine.currentTurn == PieceColor.black &&
+          _engine.moveHistory.isNotEmpty) {
         _engine.undoMove();
       }
       _ChessSession.gameOverTitle = null;
@@ -290,7 +305,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     );
     if (!ok || !mounted) return;
     _aiGeneration++;
-    _finishGame('You resigned', 'DeepTravel AI wins by resignation.', 'You resigned. DeepTravel AI wins.');
+    _finishGame('You resigned', 'DeepTravel AI wins by resignation.',
+        'You resigned. DeepTravel AI wins.');
   }
 
   void _offerDraw() {
@@ -298,10 +314,13 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     // The AI accepts only when its own position is clearly worse.
     final aiAdvantage = _engine.evaluateFor(PieceColor.black);
     if (aiAdvantage <= -150) {
-      _finishGame('Draw 🤝', 'DeepTravel AI accepted your draw offer.', 'Draw agreed.');
+      _finishGame(
+          'Draw 🤝', 'DeepTravel AI accepted your draw offer.', 'Draw agreed.');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('DeepTravel AI declines the draw offer.'), duration: Duration(seconds: 2)),
+        const SnackBar(
+            content: Text('DeepTravel AI declines the draw offer.'),
+            duration: Duration(seconds: 2)),
       );
     }
   }
@@ -311,15 +330,19 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E2429),
-        title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(title,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold)),
         content: Text(message, style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Review board', style: TextStyle(color: Colors.white70)),
+            child: const Text('Review board',
+                style: TextStyle(color: Colors.white70)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber, foregroundColor: Colors.black87),
             onPressed: () {
               Navigator.pop(ctx);
               _resetGame();
@@ -334,7 +357,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
   void _scrollMoveListToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_moveListController.hasClients) {
-        _moveListController.jumpTo(_moveListController.position.maxScrollExtent);
+        _moveListController
+            .jumpTo(_moveListController.position.maxScrollExtent);
       }
     });
   }
@@ -348,7 +372,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     return Scaffold(
       backgroundColor: const Color(0xFF1E2429),
       appBar: AppBar(
-        title: const Text('Travel Chess AI', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Travel Chess AI',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF14181B),
         foregroundColor: Colors.white,
         elevation: 2,
@@ -366,7 +391,9 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                 _ChessSession.aiDepth = depth;
               });
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('AI: ${_depthLabels[depth]}'), duration: const Duration(seconds: 1)),
+                SnackBar(
+                    content: Text('AI: ${_depthLabels[depth]}'),
+                    duration: const Duration(seconds: 1)),
               );
             },
             itemBuilder: (ctx) => [
@@ -390,7 +417,9 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
               const PopupMenuItem(value: 'new', child: Text('New game')),
               PopupMenuItem(
                 value: 'draw',
-                enabled: !_isGameOver && !_isAiThinking && _engine.moveHistory.isNotEmpty,
+                enabled: !_isGameOver &&
+                    !_isAiThinking &&
+                    _engine.moveHistory.isNotEmpty,
                 child: const Text('Offer draw'),
               ),
               PopupMenuItem(
@@ -415,7 +444,9 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-              color: isWhiteInCheck && !_isGameOver ? Colors.red.shade900 : const Color(0xFF262D34),
+              color: isWhiteInCheck && !_isGameOver
+                  ? Colors.red.shade900
+                  : const Color(0xFF262D34),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -423,7 +454,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                     const SizedBox(
                       width: 14,
                       height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.amber),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.amber),
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -434,7 +466,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                       style: TextStyle(
                         color: isWhiteInCheck ? Colors.white : Colors.white70,
                         fontSize: 13,
-                        fontWeight: isWhiteInCheck ? FontWeight.bold : FontWeight.w500,
+                        fontWeight:
+                            isWhiteInCheck ? FontWeight.bold : FontWeight.w500,
                       ),
                     ),
                   ),
@@ -445,7 +478,9 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final boardSize = min(constraints.maxWidth - 24, constraints.maxHeight - 16).clamp(200.0, 520.0);
+                  final boardSize =
+                      min(constraints.maxWidth - 24, constraints.maxHeight - 16)
+                          .clamp(200.0, 520.0);
                   return Center(child: _buildBoard(boardSize));
                 },
               ),
@@ -475,7 +510,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
       color: const Color(0xFF181D22),
       child: entries.isEmpty
           ? const Center(
-              child: Text('Moves will appear here', style: TextStyle(color: Colors.white38, fontSize: 12)),
+              child: Text('Moves will appear here',
+                  style: TextStyle(color: Colors.white38, fontSize: 12)),
             )
           : ListView.separated(
               controller: _moveListController,
@@ -487,7 +523,8 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                 child: Text(
                   entries[i],
                   style: TextStyle(
-                    color: i == entries.length - 1 ? Colors.amber : Colors.white70,
+                    color:
+                        i == entries.length - 1 ? Colors.amber : Colors.white70,
                     fontSize: 12,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
@@ -505,7 +542,9 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
       decoration: BoxDecoration(
         color: const Color(0xFF2B1D14),
         borderRadius: BorderRadius.circular(4),
-        boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10, offset: Offset(0, 4))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black54, blurRadius: 10, offset: Offset(0, 4))
+        ],
       ),
       child: SizedBox(
         width: boardSize,
@@ -514,7 +553,9 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
           children: [
             Column(
               children: List.generate(8, (row) {
-                return Row(children: List.generate(8, (col) => _buildSquare(row, col, squareSize)));
+                return Row(
+                    children: List.generate(
+                        8, (col) => _buildSquare(row, col, squareSize)));
               }),
             ),
             ...List.generate(8, (r) {
@@ -525,7 +566,9 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                   child: Text(
                     '${8 - r}',
                     style: TextStyle(
-                      color: r % 2 == 0 ? const Color(0xFF769656) : const Color(0xFFEEEED2),
+                      color: r % 2 == 0
+                          ? const Color(0xFF769656)
+                          : const Color(0xFFEEEED2),
                       fontSize: labelSize,
                       fontWeight: FontWeight.bold,
                     ),
@@ -542,7 +585,9 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                   child: Text(
                     files[c],
                     style: TextStyle(
-                      color: (7 + c) % 2 == 0 ? const Color(0xFF769656) : const Color(0xFFEEEED2),
+                      color: (7 + c) % 2 == 0
+                          ? const Color(0xFF769656)
+                          : const Color(0xFFEEEED2),
                       fontSize: labelSize,
                       fontWeight: FontWeight.bold,
                     ),
@@ -563,13 +608,15 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     required bool inCheck,
     required List<ChessPiece> capturedPieces,
   }) {
-    final gained = capturedPieces.fold<int>(0, (s, p) => s + p.baseValue) ~/ 100;
+    final gained =
+        capturedPieces.fold<int>(0, (s, p) => s + p.baseValue) ~/ 100;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: isTurn ? const Color(0xFF2D3843) : const Color(0xFF181D22),
       child: Row(
         children: [
-          Icon(isAi ? Icons.psychology : Icons.person, color: isTurn ? Colors.amber : Colors.white60, size: 20),
+          Icon(isAi ? Icons.psychology : Icons.person,
+              color: isTurn ? Colors.amber : Colors.white60, size: 20),
           const SizedBox(width: 8),
           Flexible(
             flex: 3,
@@ -588,8 +635,13 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
-              child: const Text('CHECK', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+              decoration: BoxDecoration(
+                  color: Colors.red, borderRadius: BorderRadius.circular(4)),
+              child: const Text('CHECK',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold)),
             ),
           ],
           const SizedBox(width: 8),
@@ -603,11 +655,14 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                 alignment: WrapAlignment.end,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  for (final p in capturedPieces) _PieceGlyph(piece: p, size: 18),
+                  for (final p in capturedPieces)
+                    _PieceGlyph(piece: p, size: 18),
                   if (gained > 0)
                     Padding(
                       padding: const EdgeInsets.only(left: 4),
-                      child: Text('+$gained', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                      child: Text('+$gained',
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 11)),
                     ),
                 ],
               ),
@@ -620,11 +675,13 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
 
   Widget _buildSquare(int row, int col, double size) {
     final isLight = (row + col) % 2 == 0;
-    Color squareColor = isLight ? const Color(0xFFEEEED2) : const Color(0xFF769656);
+    Color squareColor =
+        isLight ? const Color(0xFFEEEED2) : const Color(0xFF769656);
 
     final last = _engine.lastMove;
     final isLastMove = last != null &&
-        ((last.from.row == row && last.from.col == col) || (last.to.row == row && last.to.col == col));
+        ((last.from.row == row && last.from.col == col) ||
+            (last.to.row == row && last.to.col == col));
     if (isLastMove) {
       squareColor = isLight ? const Color(0xFFF7EC7D) : const Color(0xFFBACA44);
     }
@@ -637,12 +694,15 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
 
     final isLegalMoveDest = _currentLegalMoves.any((m) => m.to == pos);
     final piece = _engine.pieceAt(row, col);
-    final isKingInCheckSquare = piece != null && piece.type == PieceType.king && _engine.isCheck(piece.color);
+    final isKingInCheckSquare = piece != null &&
+        piece.type == PieceType.king &&
+        _engine.isCheck(piece.color);
 
     return Semantics(
       button: true,
       selected: isSelected,
-      label: '${pos.name}, ${piece?.name ?? 'empty'}${isLegalMoveDest ? ', legal move' : ''}',
+      label:
+          '${pos.name}, ${piece?.name ?? 'empty'}${isLegalMoveDest ? ', legal move' : ''}',
       child: GestureDetector(
         onTap: () => _onSquareTapped(row, col),
         child: Container(
@@ -656,7 +716,9 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                 Container(
                   width: size * 0.9,
                   height: size * 0.9,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.red.withValues(alpha: 0.45)),
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.red.withValues(alpha: 0.45)),
                 ),
               if (isLegalMoveDest)
                 Container(
@@ -664,8 +726,12 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                   height: piece == null ? size * 0.32 : size * 0.86,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: piece == null ? const Color(0x66000000) : Colors.transparent,
-                    border: piece != null ? Border.all(color: const Color(0xAAFF0000), width: 3.5) : null,
+                    color: piece == null
+                        ? const Color(0x66000000)
+                        : Colors.transparent,
+                    border: piece != null
+                        ? Border.all(color: const Color(0xAAFF0000), width: 3.5)
+                        : null,
                   ),
                 ),
               if (piece != null) _PieceGlyph(piece: piece, size: size),
@@ -702,7 +768,8 @@ class _PieceGlyph extends StatelessWidget {
                 ..style = PaintingStyle.stroke
                 ..strokeWidth = max(1.2, size * 0.055)
                 ..strokeJoin = StrokeJoin.round
-                ..color = isWhite ? const Color(0xFF1B1B1B) : const Color(0xFFF2F2F2),
+                ..color =
+                    isWhite ? const Color(0xFF1B1B1B) : const Color(0xFFF2F2F2),
             ),
           ),
           Text(

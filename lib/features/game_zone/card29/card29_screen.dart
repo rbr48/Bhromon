@@ -58,10 +58,14 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
     _timer?.cancel();
     switch (_game.phase) {
       case Card29Phase.bidding:
-        if (_game.currentTurn != 0) _schedule(const Duration(milliseconds: 700), _game.playBotTurn);
+        if (_game.currentTurn != 0) {
+          _schedule(const Duration(milliseconds: 700), _game.playBotTurn);
+        }
         break;
       case Card29Phase.playing:
-        if (_game.currentTurn != 0) _schedule(const Duration(milliseconds: 850), _game.playBotTurn);
+        if (_game.currentTurn != 0) {
+          _schedule(const Duration(milliseconds: 850), _game.playBotTurn);
+        }
         break;
       case Card29Phase.trickComplete:
         _schedule(const Duration(milliseconds: 1100), _game.resolveTrick);
@@ -104,20 +108,28 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
     _afterChange();
   }
 
-  bool get _isUserTurnToPlay => _game.phase == Card29Phase.playing && _game.currentTurn == 0;
+  bool get _isUserTurnToPlay =>
+      _game.phase == Card29Phase.playing && _game.currentTurn == 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F381E),
       appBar: AppBar(
-        title: const Text('29 Card Game (টুয়েন্টি নাইন)', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('29 Card Game (টুয়েন্টি নাইন)',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF092614),
         foregroundColor: Colors.white,
         elevation: 2,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), tooltip: 'New Round', onPressed: _onNewRoundPressed),
-          IconButton(icon: const Icon(Icons.help_outline), tooltip: '29 Rules', onPressed: _showRulesDialog),
+          IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'New Round',
+              onPressed: _onNewRoundPressed),
+          IconButton(
+              icon: const Icon(Icons.help_outline),
+              tooltip: '29 Rules',
+              onPressed: _showRulesDialog),
         ],
       ),
       body: SafeArea(
@@ -134,12 +146,26 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
                       Positioned(left: 6, child: _buildPlayerSeat(3)),
                       Positioned(right: 6, child: _buildPlayerSeat(1)),
                       _buildCenterTable(constraints),
-                      if (_game.phase == Card29Phase.bidding && _game.currentTurn == 0)
-                        Positioned(left: 8, right: 8, bottom: 8, child: Center(child: _buildBiddingControls())),
+                      if (_game.phase == Card29Phase.bidding &&
+                          _game.currentTurn == 0)
+                        Positioned(
+                            left: 8,
+                            right: 8,
+                            bottom: 8,
+                            child: Center(child: _buildBiddingControls())),
                       if (_game.phase == Card29Phase.trumpSelection)
-                        Positioned(left: 8, right: 8, bottom: 8, child: Center(child: _buildTrumpSelector())),
-                      if (_game.phase == Card29Phase.roundOver || _game.phase == Card29Phase.matchOver)
-                        Positioned(left: 8, right: 8, bottom: 8, child: Center(child: _buildRoundOverBanner())),
+                        Positioned(
+                            left: 8,
+                            right: 8,
+                            bottom: 8,
+                            child: Center(child: _buildTrumpSelector())),
+                      if (_game.phase == Card29Phase.roundOver ||
+                          _game.phase == Card29Phase.matchOver)
+                        Positioned(
+                            left: 8,
+                            right: 8,
+                            bottom: 8,
+                            child: Center(child: _buildRoundOverBanner())),
                     ],
                   );
                 },
@@ -160,14 +186,17 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
             ? 'Bid ${_game.highestBid} by ${_shortName(_game.highestBidder)} · target ${_game.bidTarget}'
             : 'Bid ${_game.highestBid} by ${_shortName(_game.highestBidder)}';
 
-    Widget teamScore(String label, int team, Color color, CrossAxisAlignment align) {
+    Widget teamScore(
+        String label, int team, Color color, CrossAxisAlignment align) {
       return Expanded(
         child: Column(
           crossAxisAlignment: align,
           children: [
             FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+              child: Text(label,
+                  style: TextStyle(
+                      color: color, fontWeight: FontWeight.bold, fontSize: 12)),
             ),
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -191,24 +220,32 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
         children: [
           Row(
             children: [
-              teamScore('🛡 Your team', 0, Colors.amber, CrossAxisAlignment.start),
+              teamScore(
+                  '🛡 Your team', 0, Colors.amber, CrossAxisAlignment.start),
               const SizedBox(width: 6),
               Flexible(
                 flex: 2,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(color: Colors.amber.shade800, borderRadius: BorderRadius.circular(12)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: Colors.amber.shade800,
+                      borderRadius: BorderRadius.circular(12)),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
                       bidText,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 6),
-              teamScore('Opponents 🔥', 1, Colors.redAccent.shade100, CrossAxisAlignment.end),
+              teamScore('Opponents 🔥', 1, Colors.redAccent.shade100,
+                  CrossAxisAlignment.end),
             ],
           ),
           const SizedBox(height: 4),
@@ -217,25 +254,32 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFFE0E0E0), fontSize: 12, fontStyle: FontStyle.italic),
+            style: const TextStyle(
+                color: Color(0xFFE0E0E0),
+                fontSize: 12,
+                fontStyle: FontStyle.italic),
           ),
         ],
       ),
     );
   }
 
-  String _shortName(int player) => player == 0 ? 'You' : Card29Game.playerNames[player].split(' ').first;
+  String _shortName(int player) =>
+      player == 0 ? 'You' : Card29Game.playerNames[player].split(' ').first;
 
   Widget _buildPlayerSeat(int playerIdx) {
     final isTurn = _game.currentTurn == playerIdx &&
-        (_game.phase == Card29Phase.bidding || _game.phase == Card29Phase.playing);
-    final isTrickWinner = _game.phase == Card29Phase.trickComplete && _game.trickWinner == playerIdx;
+        (_game.phase == Card29Phase.bidding ||
+            _game.phase == Card29Phase.playing);
+    final isTrickWinner = _game.phase == Card29Phase.trickComplete &&
+        _game.trickWinner == playerIdx;
     final cardCount = _game.hands[playerIdx].length;
     final isPartner = playerIdx == 2;
     final highlight = isTurn || isTrickWinner;
 
     return Semantics(
-      label: '${Card29Game.playerNames[playerIdx]}, $cardCount cards${isTurn ? ', their turn' : ''}',
+      label:
+          '${Card29Game.playerNames[playerIdx]}, $cardCount cards${isTurn ? ', their turn' : ''}',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -244,15 +288,20 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
             decoration: BoxDecoration(
               color: highlight ? Colors.amber : const Color(0x66000000),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: highlight ? Colors.white : Colors.white24, width: highlight ? 2 : 1),
+              border: Border.all(
+                  color: highlight ? Colors.white : Colors.white24,
+                  width: highlight ? 2 : 1),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.smart_toy, size: 14, color: highlight ? Colors.black87 : Colors.white),
+                Icon(Icons.smart_toy,
+                    size: 14, color: highlight ? Colors.black87 : Colors.white),
                 const SizedBox(width: 4),
                 Text(
-                  isPartner ? 'North · Partner' : Card29Game.playerNames[playerIdx].split(' ').first,
+                  isPartner
+                      ? 'North · Partner'
+                      : Card29Game.playerNames[playerIdx].split(' ').first,
                   style: TextStyle(
                     color: highlight ? Colors.black87 : Colors.white,
                     fontWeight: FontWeight.bold,
@@ -290,7 +339,9 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
   }
 
   Widget _buildCenterTable(BoxConstraints constraints) {
-    final tableSize = min(constraints.maxWidth * 0.56, constraints.maxHeight - 110).clamp(150.0, 250.0);
+    final tableSize =
+        min(constraints.maxWidth * 0.56, constraints.maxHeight - 110)
+            .clamp(150.0, 250.0);
     final cardW = tableSize * 0.2;
     final cardH = cardW * 1.45;
     final offset = tableSize * 0.15;
@@ -320,7 +371,8 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Trump: ', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                  const Text('Trump: ',
+                      style: TextStyle(color: Colors.white70, fontSize: 11)),
                   if (_game.isTrumpRevealed && trump != null)
                     Text(
                       '${trump.symbol} ${trump.name}',
@@ -332,7 +384,9 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
                     )
                   else
                     Text(
-                      userIsBidder ? '🔒 ${trump.symbol} (only you know)' : '🔒 Hidden',
+                      userIsBidder
+                          ? '🔒 ${trump.symbol} (only you know)'
+                          : '🔒 Hidden',
                       style: const TextStyle(color: Colors.amber, fontSize: 11),
                     ),
                 ],
@@ -341,8 +395,13 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
           ),
           if (_game.currentTrick.isEmpty)
             Text(
-              _game.phase == Card29Phase.playing ? 'Trick #${_game.trickCount + 1}' : '29',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 26, fontWeight: FontWeight.bold),
+              _game.phase == Card29Phase.playing
+                  ? 'Trick #${_game.trickCount + 1}'
+                  : '29',
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold),
             )
           else
             ..._game.currentTrick.map((play) {
@@ -352,10 +411,13 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
                 2: Offset(0, -offset),
                 3: Offset(-offset, 0),
               };
-              final isWinner = _game.phase == Card29Phase.trickComplete && _game.trickWinner == play.playerIndex;
+              final isWinner = _game.phase == Card29Phase.trickComplete &&
+                  _game.trickWinner == play.playerIndex;
               return Transform.translate(
-                offset: positions[play.playerIndex]! + Offset(0, tableSize * 0.04),
-                child: _buildCardView(play.card, width: cardW, height: cardH, highlighted: isWinner),
+                offset:
+                    positions[play.playerIndex]! + Offset(0, tableSize * 0.04),
+                child: _buildCardView(play.card,
+                    width: cardW, height: cardH, highlighted: isWinner),
               );
             }),
         ],
@@ -380,14 +442,19 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
   }
 
   Widget _buildBiddingControls() {
-    final bids = [for (int b = _game.minimumNextBid; b <= Card29Engine.maxBid; b++) b];
+    final bids = [
+      for (int b = _game.minimumNextBid; b <= Card29Engine.maxBid; b++) b
+    ];
     return _panel(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            _game.highestBidder == -1 ? 'Your turn to bid' : 'Your turn · current bid ${_game.highestBid}',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+            _game.highestBidder == -1
+                ? 'Your turn to bid'
+                : 'Your turn · current bid ${_game.highestBid}',
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -415,7 +482,9 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
                       visualDensity: VisualDensity.compact,
                     ),
                     onPressed: () => _userAction(() => _game.placeBid(0, b)),
-                    child: Text('$b', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    child: Text('$b',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13)),
                   ),
                 ),
             ],
@@ -432,7 +501,8 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
         children: [
           const Text(
             'Pick the secret Trump suit',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -444,11 +514,16 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
               return ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: _isRed(s) ? Colors.red.shade700 : Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  foregroundColor:
+                      _isRed(s) ? Colors.red.shade700 : Colors.black,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 ),
-                onPressed: () => _userAction(() => _game.selectTrump(s), heavy: true),
-                child: Text('${s.symbol} ${s.name} ($count)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                onPressed: () =>
+                    _userAction(() => _game.selectTrump(s), heavy: true),
+                child: Text('${s.symbol} ${s.name} ($count)',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13)),
               );
             }).toList(),
           ),
@@ -466,19 +541,25 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
         children: [
           Text(
             isMatchOver
-                ? (youWonMatch ? '🏆 Grand Victory! Your team won the match!' : 'Match lost - the opponents reached 6 pips.')
+                ? (youWonMatch
+                    ? '🏆 Grand Victory! Your team won the match!'
+                    : 'Match lost - the opponents reached 6 pips.')
                 : _game.status,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
           ),
           const SizedBox(height: 10),
           ElevatedButton.icon(
             icon: Icon(isMatchOver ? Icons.emoji_events : Icons.play_arrow),
             label: Text(
-              isMatchOver ? 'Start New Match (First to ${Card29Game.pipsToWin})' : 'Next Deal',
+              isMatchOver
+                  ? 'Start New Match (First to ${Card29Game.pipsToWin})'
+                  : 'Next Deal',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber, foregroundColor: Colors.black87),
             onPressed: isMatchOver
                 ? _startNewMatch
                 : () {
@@ -496,7 +577,9 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
     final canAsk = _game.canAskTrump(0);
     final canPair = _game.canClaimRoyalty(0);
     if (!canAsk && !canPair) return const SizedBox(height: 6);
-    final pairEffect = Card29Game.teamOf(0) == _game.bidderTeam ? 'target −4' : 'their target +4';
+    final pairEffect = Card29Game.teamOf(0) == _game.bidderTeam
+        ? 'target −4'
+        : 'their target +4';
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
       child: Wrap(
@@ -507,16 +590,24 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
           if (canAsk)
             ElevatedButton.icon(
               icon: const Icon(Icons.lock_open, size: 16),
-              label: const Text('Ask Trump', style: TextStyle(fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
-              onPressed: () => _userAction(() => _game.askTrump(0), heavy: true),
+              label: const Text('Ask Trump',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.black87),
+              onPressed: () =>
+                  _userAction(() => _game.askTrump(0), heavy: true),
             ),
           if (canPair)
             ElevatedButton.icon(
               icon: const Icon(Icons.star, color: Colors.amber, size: 16),
-              label: Text('Show Pair (K & Q) · $pairEffect', style: const TextStyle(fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.purple.shade900, foregroundColor: Colors.white),
-              onPressed: () => _userAction(() => _game.claimRoyalty(0), heavy: true),
+              label: Text('Show Pair (K & Q) · $pairEffect',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple.shade900,
+                  foregroundColor: Colors.white),
+              onPressed: () =>
+                  _userAction(() => _game.claimRoyalty(0), heavy: true),
             ),
         ],
       ),
@@ -549,7 +640,9 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
               Flexible(
                 child: Text(
                   isUserTurn
-                      ? (mustTrump ? "You can't follow suit - you must play Trump!" : 'YOUR TURN - Play a card')
+                      ? (mustTrump
+                          ? "You can't follow suit - you must play Trump!"
+                          : 'YOUR TURN - Play a card')
                       : 'Your Cards (South)',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -574,7 +667,10 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
                 const cardH = 74.0;
                 final count = max(userHand.length, 1);
                 // Overlap the cards when the full fan would not fit.
-                final step = count == 1 ? cardW : min(cardW + 6, (constraints.maxWidth - cardW) / (count - 1));
+                final step = count == 1
+                    ? cardW
+                    : min(cardW + 6,
+                        (constraints.maxWidth - cardW) / (count - 1));
                 final totalWidth = cardW + step * (count - 1);
                 return Center(
                   child: SizedBox(
@@ -587,7 +683,8 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
                             left: i * step,
                             top: 0,
                             bottom: 0,
-                            child: _buildHandCard(userHand[i], isUserTurn, legal.contains(userHand[i]), cardW),
+                            child: _buildHandCard(userHand[i], isUserTurn,
+                                legal.contains(userHand[i]), cardW),
                           ),
                       ],
                     ),
@@ -601,22 +698,29 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
     );
   }
 
-  Widget _buildHandCard(Card29 card, bool isUserTurn, bool isLegal, double width) {
+  Widget _buildHandCard(
+      Card29 card, bool isUserTurn, bool isLegal, double width) {
     final tappable = isUserTurn && isLegal;
     return Semantics(
       button: tappable,
-      label: '${card.rank.code} of ${card.suit.name}${tappable ? ', playable' : ''}',
+      label:
+          '${card.rank.code} of ${card.suit.name}${tappable ? ', playable' : ''}',
       child: GestureDetector(
-        onTap: tappable ? () => _userAction(() => _game.playCard(0, card)) : null,
+        onTap:
+            tappable ? () => _userAction(() => _game.playCard(0, card)) : null,
         child: Opacity(
           opacity: (isUserTurn && !isLegal) ? 0.4 : 1.0,
-          child: _buildCardView(card, width: width, height: 74, highlighted: tappable),
+          child: _buildCardView(card,
+              width: width, height: 74, highlighted: tappable),
         ),
       ),
     );
   }
 
-  Widget _buildCardView(Card29 card, {required double width, required double height, bool highlighted = false}) {
+  Widget _buildCardView(Card29 card,
+      {required double width,
+      required double height,
+      bool highlighted = false}) {
     final color = _isRed(card.suit) ? Colors.red.shade700 : Colors.black87;
     final corner = (width * 0.24).clamp(10.0, 13.0);
 
@@ -631,7 +735,10 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
             color: highlighted ? Colors.amber : const Color(0x66000000),
             width: highlighted ? 2.5 : 0.8,
           ),
-          boxShadow: const [BoxShadow(color: Color(0x55000000), blurRadius: 4, offset: Offset(0, 2))],
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x55000000), blurRadius: 4, offset: Offset(0, 2))
+          ],
         ),
         child: Stack(
           children: [
@@ -640,10 +747,16 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
               left: 4,
               child: Text(
                 '${card.rank.code}\n${card.suit.symbol}',
-                style: TextStyle(color: color, fontSize: corner, height: 0.95, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: color,
+                    fontSize: corner,
+                    height: 0.95,
+                    fontWeight: FontWeight.bold),
               ),
             ),
-            Center(child: Text(card.suit.symbol, style: TextStyle(color: color, fontSize: corner * 1.6))),
+            Center(
+                child: Text(card.suit.symbol,
+                    style: TextStyle(color: color, fontSize: corner * 1.6))),
           ],
         ),
       ),
@@ -659,13 +772,15 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Point Values:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('Point Values:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               Text(
                 '• Jack (J) = 3 points\n• Nine (9) = 2 points\n• Ace (A) = 1 point\n• Ten (10) = 1 point\n'
                 '• K, Q, 8, 7 = 0 points\n• Last trick bonus = 1 point\nTotal = 29 points',
               ),
               SizedBox(height: 12),
-              Text('Bidding & Trump:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('Bidding & Trump:',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               Text(
                 '1. Bidding goes round from the dealer\'s left, 16 up to 28. Once you pass you are out.\n'
                 '2. If everyone passes, the dealer plays at 16.\n'
@@ -686,7 +801,10 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
             ],
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Got it'))],
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Got it'))
+        ],
       ),
     );
   }

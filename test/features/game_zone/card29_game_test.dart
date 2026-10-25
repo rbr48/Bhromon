@@ -53,7 +53,8 @@ void main() {
       expect(g.teamPoints[1], 3); // 9 (2) + 10 (1)
     });
 
-    test('After trump is revealed every void player must trump, on every trick', () {
+    test('After trump is revealed every void player must trump, on every trick',
+        () {
       final g = _playing(
         hands: [
           ['7S', '8S'],
@@ -67,12 +68,14 @@ void main() {
       );
       g.isTrumpRevealed = true;
       expect(g.playCard(3, _c('9C')), isTrue);
-      expect(g.legalCards(0).map((c) => c.code), ['7S', '8S']); // You hold no trump: anything
+      expect(g.legalCards(0).map((c) => c.code),
+          ['7S', '8S']); // You hold no trump: anything
       g.currentTurn = 1;
       expect(g.legalCards(1).map((c) => c.code), ['7H']); // East must trump
     });
 
-    test('A hidden trump discarded before the reveal does not trump the trick', () {
+    test('A hidden trump discarded before the reveal does not trump the trick',
+        () {
       final g = _playing(
         hands: [
           ['7C', '8C'],
@@ -123,7 +126,8 @@ void main() {
       expect(g.legalCards(0).map((c) => c.code), ['7S']);
     });
 
-    test('Pair lowers the bidding team target and raises it for the opponents', () {
+    test('Pair lowers the bidding team target and raises it for the opponents',
+        () {
       final mine = _playing(hands: [
         ['KH', 'QH'],
         ['7C'],
@@ -196,8 +200,12 @@ void main() {
                 // The card played must have been legal (after any trump ask).
                 final played = g.phase == Card29Phase.trickComplete
                     ? g.currentTrick.last.card
-                    : (g.currentTrick.length > trickBefore ? g.currentTrick.last.card : null);
-                if (played != null && !g.isTrumpRevealed) expect(legal, contains(played));
+                    : (g.currentTrick.length > trickBefore
+                        ? g.currentTrick.last.card
+                        : null);
+                if (played != null && !g.isTrumpRevealed) {
+                  expect(legal, contains(played));
+                }
               }
               expect(g.hands[p].length, before - 1);
               break;

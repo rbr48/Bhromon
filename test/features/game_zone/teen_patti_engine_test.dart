@@ -39,7 +39,8 @@ void main() {
       expect(evalSeq.handType, equals(TeenPattiHandType.sequence));
     });
 
-    test('Hand ranking: Trail beats Pure Sequence, Pure Sequence beats Flush', () {
+    test('Hand ranking: Trail beats Pure Sequence, Pure Sequence beats Flush',
+        () {
       final trail = [
         TeenPattiCard.fromCode('2S'),
         TeenPattiCard.fromCode('2H'),
@@ -64,17 +65,25 @@ void main() {
   sequenceOrderingTests();
 }
 
-List<TeenPattiCard> _hand(List<String> codes) => codes.map(TeenPattiCard.fromCode).toList();
+List<TeenPattiCard> _hand(List<String> codes) =>
+    codes.map(TeenPattiCard.fromCode).toList();
 
 void sequenceOrderingTests() {
   group('TeenPattiEngine sequence order', () {
     test('A-2-3 is the lowest run, below 4-3-2, and A-K-Q the highest', () {
       final a23 = _hand(['AS', '2H', '3D']);
-      expect(TeenPattiEngine.compareHands(a23, _hand(['4S', '3H', '2D'])), lessThan(0));
-      expect(TeenPattiEngine.compareHands(a23, _hand(['QS', 'JH', '10D'])), lessThan(0));
-      expect(TeenPattiEngine.compareHands(a23, _hand(['KS', 'QH', 'JD'])), lessThan(0));
-      expect(TeenPattiEngine.compareHands(_hand(['AS', 'KH', 'QD']), _hand(['KS', 'QH', 'JD'])), greaterThan(0));
-      expect(TeenPattiEngine.evaluateHand(a23).handType, TeenPattiHandType.sequence);
+      expect(TeenPattiEngine.compareHands(a23, _hand(['4S', '3H', '2D'])),
+          lessThan(0));
+      expect(TeenPattiEngine.compareHands(a23, _hand(['QS', 'JH', '10D'])),
+          lessThan(0));
+      expect(TeenPattiEngine.compareHands(a23, _hand(['KS', 'QH', 'JD'])),
+          lessThan(0));
+      expect(
+          TeenPattiEngine.compareHands(
+              _hand(['AS', 'KH', 'QD']), _hand(['KS', 'QH', 'JD'])),
+          greaterThan(0));
+      expect(TeenPattiEngine.evaluateHand(a23).handType,
+          TeenPattiHandType.sequence);
     });
   });
 }

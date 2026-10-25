@@ -19,7 +19,8 @@ Future<void> _pumpScreen(WidgetTester tester, Size size, Widget screen) async {
 Future<void> _play(WidgetTester tester, {int steps = 40}) async {
   for (int i = 0; i < steps; i++) {
     await tester.pump(const Duration(milliseconds: 600));
-    final dialogButtons = find.descendant(of: find.byType(AlertDialog), matching: find.byType(ElevatedButton));
+    final dialogButtons = find.descendant(
+        of: find.byType(AlertDialog), matching: find.byType(ElevatedButton));
     if (dialogButtons.evaluate().isNotEmpty) {
       await tester.tap(dialogButtons.last);
       await tester.pump();
@@ -36,7 +37,8 @@ void main() {
   for (final size in _sizes) {
     final label = '${size.width.toInt()}x${size.height.toInt()}';
 
-    testWidgets('Card 29 lays out and plays without overflow at $label', (tester) async {
+    testWidgets('Card 29 lays out and plays without overflow at $label',
+        (tester) async {
       await _pumpScreen(tester, size, const Card29Screen());
       for (int i = 0; i < 60; i++) {
         await tester.pump(const Duration(milliseconds: 500));
@@ -53,19 +55,25 @@ void main() {
       await _dispose(tester);
     });
 
-    testWidgets('Teen Patti lays out and plays without overflow at $label', (tester) async {
+    testWidgets('Teen Patti lays out and plays without overflow at $label',
+        (tester) async {
       await _pumpScreen(tester, size, const TeenPattiScreen());
       for (int i = 0; i < 30; i++) {
         await tester.pump(const Duration(milliseconds: 900));
         final blind = find.textContaining(RegExp(r'^(Blind|Chaal) \('));
         if (blind.evaluate().isNotEmpty) await tester.tap(blind.first);
-        final dialogButtons = find.descendant(of: find.byType(AlertDialog), matching: find.byType(ElevatedButton));
-        if (dialogButtons.evaluate().isNotEmpty) await tester.tap(dialogButtons.last);
+        final dialogButtons = find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(ElevatedButton));
+        if (dialogButtons.evaluate().isNotEmpty) {
+          await tester.tap(dialogButtons.last);
+        }
       }
       await _dispose(tester);
     });
 
-    testWidgets('Ludo lays out and plays without overflow at $label', (tester) async {
+    testWidgets('Ludo lays out and plays without overflow at $label',
+        (tester) async {
       await _pumpScreen(tester, size, const LudoScreen());
       for (int i = 0; i < 40; i++) {
         await tester.pump(const Duration(milliseconds: 700));
@@ -98,7 +106,8 @@ void main() {
       }
       await tester.tap(find.bySemanticsLabel(RegExp(r'^e2, ')));
       await tester.pump();
-      expect(find.bySemanticsLabel(RegExp(r'^e4, empty, legal move')), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp(r'^e4, empty, legal move')),
+          findsOneWidget);
       await tester.tap(find.bySemanticsLabel(RegExp(r'^e4, ')));
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.textContaining('thinking'), findsWidgets);
@@ -129,7 +138,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600)); // thinking delay
     var answered = false;
     for (int i = 0; i < 40 && !answered; i++) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)));
       await tester.pump();
       answered = find.text('Your move (White)').evaluate().isNotEmpty;
     }
@@ -138,7 +148,9 @@ void main() {
     await _dispose(tester);
   });
 
-  testWidgets('Ludo keeps playing after the current colour is switched to a bot', (tester) async {
+  testWidgets(
+      'Ludo keeps playing after the current colour is switched to a bot',
+      (tester) async {
     await _pumpScreen(tester, const Size(411, 891), const LudoScreen());
     await tester.tap(find.byTooltip('Pass & Play Mode'));
     await tester.pumpAndSettle();
@@ -153,7 +165,11 @@ void main() {
     var botActed = false;
     for (int i = 0; i < 10 && !botActed; i++) {
       await tester.pump(const Duration(milliseconds: 400));
-      botActed = find.textContaining(RegExp(r'Red bot (rolled|earned)|No valid moves for Red|Green')).evaluate().isNotEmpty;
+      botActed = find
+          .textContaining(
+              RegExp(r'Red bot (rolled|earned)|No valid moves for Red|Green'))
+          .evaluate()
+          .isNotEmpty;
     }
     expect(botActed, isTrue);
     await _dispose(tester);

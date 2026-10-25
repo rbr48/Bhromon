@@ -13,7 +13,8 @@ enum CardSuit {
   const CardSuit(this.code, this.symbol, this.name);
 
   static CardSuit fromCode(String code) {
-    return CardSuit.values.firstWhere((s) => s.code == code, orElse: () => CardSuit.spades);
+    return CardSuit.values
+        .firstWhere((s) => s.code == code, orElse: () => CardSuit.spades);
   }
 }
 
@@ -34,7 +35,8 @@ enum CardRank {
   const CardRank(this.code, this.points, this.power);
 
   static CardRank fromCode(String code) {
-    return CardRank.values.firstWhere((r) => r.code == code, orElse: () => CardRank.seven);
+    return CardRank.values
+        .firstWhere((r) => r.code == code, orElse: () => CardRank.seven);
   }
 }
 
@@ -67,14 +69,18 @@ class Card29 {
 }
 
 class PlayedCard {
-  final int playerIndex; // 0: South (User), 1: East, 2: North (Partner), 3: West
+  final int
+      playerIndex; // 0: South (User), 1: East, 2: North (Partner), 3: West
   final Card29 card;
 
   /// Whether trump was already revealed when this card was played. A card of
   /// the hidden trump suit discarded before the reveal is an ordinary card.
   final bool trumpEligible;
 
-  const PlayedCard({required this.playerIndex, required this.card, this.trumpEligible = true});
+  const PlayedCard(
+      {required this.playerIndex,
+      required this.card,
+      this.trumpEligible = true});
 }
 
 class Card29Engine {
@@ -113,7 +119,8 @@ class Card29Engine {
         play.card.suit == trumpSuit &&
         (play.trumpEligible || play.card.suit == leadCard.suit);
 
-    int highestTrumpPower = countsAsTrump(trickCards.first) ? leadCard.power : -1;
+    int highestTrumpPower =
+        countsAsTrump(trickCards.first) ? leadCard.power : -1;
 
     for (int i = 1; i < trickCards.length; i++) {
       final play = trickCards[i];
@@ -137,8 +144,10 @@ class Card29Engine {
   /// Checks if a player's hand contains Royalty (King and Queen of the Trump suit).
   static bool hasRoyalty(List<Card29> hand, CardSuit? trumpSuit) {
     if (trumpSuit == null) return false;
-    final hasKing = hand.any((c) => c.suit == trumpSuit && c.rank == CardRank.king);
-    final hasQueen = hand.any((c) => c.suit == trumpSuit && c.rank == CardRank.queen);
+    final hasKing =
+        hand.any((c) => c.suit == trumpSuit && c.rank == CardRank.king);
+    final hasQueen =
+        hand.any((c) => c.suit == trumpSuit && c.rank == CardRank.queen);
     return hasKing && hasQueen;
   }
 
