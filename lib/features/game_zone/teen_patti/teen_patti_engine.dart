@@ -129,13 +129,13 @@ class TeenPattiEngine {
     }
 
     // Check Sequence (Straight)
-    // In Teen Patti, AKQ is highest (value 14), A23 is second highest (treated as 13.5 or evaluated as 13.5),
-    // then KQJ (13), etc. down to 432 (4).
+    // A-K-Q is the highest run (14), then K-Q-J (13) and so on down to 4-3-2 (4).
+    // A-2-3 plays the ace low, so it is the lowest run of all (3).
     bool isStandardSeq = (v1 - v2 == 1 && v2 - v3 == 1);
     bool isA23Seq = (v1 == 14 && v2 == 3 && v3 == 2);
 
     if (isStandardSeq || isA23Seq) {
-      final seqRank = isA23Seq ? 13 : v1; // A-2-3 ranked just below A-K-Q
+      final seqRank = isA23Seq ? 3 : v1;
       if (isFlush) {
         return HandEvaluation(handType: TeenPattiHandType.pureSequence, primaryValue: seqRank);
       } else {
