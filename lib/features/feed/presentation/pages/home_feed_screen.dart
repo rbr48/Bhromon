@@ -527,6 +527,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     final uid = authState is Authenticated ? authState.profile.uid : '';
     final displayName =
         authState is Authenticated ? authState.profile.displayName : 'Guest';
+    final double bottomPadding = MediaQuery.of(context).padding.bottom;
+    final double bottomSpacerHeight = 78.0 + bottomPadding;
 
     // Specific colors from the ultra mockup
     const Color mockBackground = Color(0xFFF6F5F1);
@@ -586,7 +588,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                       ] else if (_selectedTab == 'Archive') ...[
                         _buildArchiveTabSliver(),
                       ],
-                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                      SliverToBoxAdapter(
+                          child: SizedBox(height: bottomSpacerHeight)),
                     ],
                   ),
                 ),
@@ -4302,12 +4305,22 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            // 1. Discover Icon (active)
+            // 1. Discover Icon (active when Discover tab is selected)
             _buildBottomNavItem(
               icon: Icons.explore,
               label: 'Discover',
-              isActive: true,
-              onTap: () => setState(() => _selectedTab = 'Discover'),
+              isActive: _selectedTab == 'Discover',
+              onTap: () {
+                if (_selectedTab != 'Discover') {
+                  _selectTab('Discover');
+                } else if (_scrollController.hasClients) {
+                  _scrollController.animateTo(
+                    0,
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOut,
+                  );
+                }
+              },
             ),
 
             // 2. Map Icon
@@ -4445,8 +4458,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                     ),
                     _buildNavMenuItem(
                       icon: Icons.style_outlined,
-                      title: 'Discover',
-                      subtitle: 'Swipe destination',
+                      title: 'Discover Cards',
+                      subtitle: 'Swipe hidden gems',
                       color: const Color(0xFFEC4899),
                       onTap: () {
                         Navigator.pop(ctx);

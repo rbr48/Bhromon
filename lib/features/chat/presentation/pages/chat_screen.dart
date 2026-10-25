@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +9,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:math' as math;
 import '../../../../core/localization/app_localizations.dart';
@@ -15,6 +17,8 @@ import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../widgets/chat_media_picker.dart';
 import '../widgets/chat_media_bubble.dart';
+import '../widgets/voice_message_recorder.dart';
+import '../widgets/voice_message_bubble.dart';
 import '../../../../core/utils/image_sizing.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -30,13 +34,13 @@ class ChatScreen extends StatefulWidget {
 /// Represents an in-progress media upload shown optimistically in the chat list.
 class _PendingUpload {
   final String id;
-  final File file;
+  final File? file;
   final String type;
   double progress = 0.0;
 
   _PendingUpload({
     required this.id,
-    required this.file,
+    this.file,
     required this.type,
   });
 }
@@ -49,6 +53,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
   bool _isTyping = false;
   Timer? _typingTimer;
+
+  bool _isRecordingVoice = false;
+  StreamSubscription<QuerySnapshot>? _incomingCallSub;
+  String? _activeIncomingCallId;
+  String? _listenedCallUid;
 
   // Pending uploads shown optimistically before Firestore write completes.
   final List<_PendingUpload> _pendingUploads = [];
@@ -260,6 +269,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollController.removeListener(_onScroll);
     _typingTimer?.cancel();
     _messagesSub?.cancel();
+    _incomingCallSub?.cancel();
     final authState = context.read<AuthCubit>().state;
     if (authState is Authenticated) {
       _updateTypingStatus(authState.profile.uid, false);
@@ -319,8 +329,6 @@ class _ChatScreenState extends State<ChatScreen> {
         {
           'lastMessage': text,
           'lastMessageTime': FieldValue.serverTimestamp(),
-          'participants':
-              FieldValue.arrayUnion([currentUid, resolvedOtherUid ?? 'guest']),
         },
         SetOptions(merge: true));
 
@@ -464,19 +472,20 @@ class _ChatScreenState extends State<ChatScreen> {
     return "That sounds like an amazing trip! To explore spots in Bangladesh, ask me about Sajek, Cox's Bazar, St. Martin's, Sylhet, Sundarbans, or Lalbagh Fort!";
   }
 
-  /// Uploads [file] to Firebase Storage and writes a media message to Firestore.
+  /// Uploads media picked via [pickResult] to Firebase Storage and writes a message.
   Future<void> _sendMediaMessage(
-    File file,
-    String type,
+    MediaPickResult pickResult,
     String currentUid,
     String currentName,
   ) async {
     final uploadId = const Uuid().v4();
-    final pending = _PendingUpload(id: uploadId, file: file, type: type);
+    final type = pickResult.type;
+    final file = pickResult.file;
+    final xFile = pickResult.xFile;
 
+    final pending = _PendingUpload(id: uploadId, file: file, type: type);
     setState(() => _pendingUploads.add(pending));
 
-    // Start Firebase Performance trace for media upload
     Trace? uploadTrace;
     try {
       uploadTrace = FirebasePerformance.instance.newTrace('media_upload');
@@ -485,13 +494,14 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (_) {}
 
     try {
-      // ── Compress images before upload ───────────────────────────────────
-      File fileToUpload = file;
-      if (type == 'image') {
+      File? fileToUpload = file;
+      if (!kIsWeb && type == 'image' && fileToUpload != null) {
         try {
+          final tempDir = await getTemporaryDirectory();
+          final compressedPath = '${tempDir.path}/${uploadId}_compressed.jpg';
           final compressed = await FlutterImageCompress.compressAndGetFile(
-            file.absolute.path,
-            '${file.parent.path}/${uploadId}_compressed.jpg',
+            fileToUpload.absolute.path,
+            compressedPath,
             minWidth: 1200,
             minHeight: 1200,
             quality: 82,
@@ -500,23 +510,32 @@ class _ChatScreenState extends State<ChatScreen> {
           if (compressed != null) {
             fileToUpload = File(compressed.path);
             debugPrint(
-                'Image compressed: ${file.lengthSync()} → ${fileToUpload.lengthSync()} bytes');
+                'Image compressed: ${fileToUpload.lengthSync()} bytes');
           }
         } catch (e) {
           debugPrint('Compression failed, using original: $e');
         }
       }
 
-      // ── Upload to Firebase Storage ──────────────────────────────────────
       final ext = type == 'video' ? 'mp4' : 'jpg';
+      final mimeType =
+          type == 'video' ? 'video/mp4' : 'image/jpeg';
       final storageRef = FirebaseStorage.instance
           .ref('chat_media/${widget.chatId}/$uploadId.$ext');
 
-      final uploadTask = storageRef.putFile(
-        fileToUpload,
-        SettableMetadata(
-            contentType: type == 'video' ? 'video/mp4' : 'image/jpeg'),
-      );
+      final UploadTask uploadTask;
+      if (kIsWeb) {
+        final bytes = await xFile.readAsBytes();
+        uploadTask = storageRef.putData(
+          bytes,
+          SettableMetadata(contentType: mimeType),
+        );
+      } else {
+        uploadTask = storageRef.putFile(
+          fileToUpload!,
+          SettableMetadata(contentType: mimeType),
+        );
+      }
 
       uploadTask.snapshotEvents.listen((snap) {
         if (!mounted) return;
@@ -528,7 +547,6 @@ class _ChatScreenState extends State<ChatScreen> {
       await uploadTask;
       final downloadUrl = await storageRef.getDownloadURL();
 
-      // ── Write Firestore message ─────────────────────────────────────────
       final resolvedOtherUid = _resolveOtherUid(currentUid);
       final batch = FirebaseFirestore.instance.batch();
 
@@ -544,7 +562,7 @@ class _ChatScreenState extends State<ChatScreen> {
         'text': '',
         'mediaUrl': downloadUrl,
         'seen': false,
-        'status': 'sent', // delivery states: sent → delivered → read
+        'status': 'sent',
         'timestamp': FieldValue.serverTimestamp(),
       });
 
@@ -556,8 +574,6 @@ class _ChatScreenState extends State<ChatScreen> {
           {
             'lastMessage': lastMsg,
             'lastMessageTime': FieldValue.serverTimestamp(),
-            'participants': FieldValue.arrayUnion(
-                [currentUid, resolvedOtherUid ?? 'guest']),
           },
           SetOptions(merge: true));
 
@@ -590,7 +606,6 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     } finally {
-      // Stop the performance trace
       try {
         await uploadTrace?.stop();
       } catch (_) {}
@@ -600,11 +615,230 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// Uploads a recorded voice message to Firebase Storage and records it in Firestore.
+  Future<void> _sendVoiceMessage(
+    String filePath,
+    Duration duration,
+    String currentUid,
+    String currentName,
+  ) async {
+    final uploadId = const Uuid().v4();
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref('chat_media/${widget.chatId}/$uploadId.m4a');
+
+      final UploadTask uploadTask;
+      if (kIsWeb) {
+        final xFile = XFile(filePath);
+        final bytes = await xFile.readAsBytes();
+        uploadTask = storageRef.putData(
+          bytes,
+          SettableMetadata(contentType: 'audio/mp4'),
+        );
+      } else {
+        uploadTask = storageRef.putFile(
+          File(filePath),
+          SettableMetadata(contentType: 'audio/mp4'),
+        );
+      }
+
+      await uploadTask;
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      final resolvedOtherUid = _resolveOtherUid(currentUid);
+      final batch = FirebaseFirestore.instance.batch();
+
+      final msgRef = FirebaseFirestore.instance
+          .collection('chats')
+          .doc(widget.chatId)
+          .collection('messages')
+          .doc();
+
+      batch.set(msgRef, {
+        'senderId': currentUid,
+        'type': 'audio',
+        'text': '',
+        'mediaUrl': downloadUrl,
+        'durationSeconds': duration.inSeconds,
+        'seen': false,
+        'status': 'sent',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      final chatRef =
+          FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+      batch.set(
+          chatRef,
+          {
+            'lastMessage': '🎤 Voice message',
+            'lastMessageTime': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true));
+
+      if (resolvedOtherUid != null &&
+          resolvedOtherUid != 'guest' &&
+          resolvedOtherUid != currentUid) {
+        final notifRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(resolvedOtherUid)
+            .collection('notifications')
+            .doc();
+        batch.set(notifRef, {
+          'title': 'New voice message from $currentName',
+          'body': '🎤 Voice message (${duration.inSeconds}s)',
+          'action': 'chat',
+          'uid': currentUid,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+    } catch (e) {
+      debugPrint('Error sending voice message: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to send voice message.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
   /// Opens the media picker bottom sheet and starts an upload if the user picks media.
   Future<void> _openMediaPicker(String currentUid, String currentName) async {
     final result = await showChatMediaPicker(context);
     if (result == null || !mounted) return;
-    await _sendMediaMessage(result.file, result.type, currentUid, currentName);
+    await _sendMediaMessage(result, currentUid, currentName);
+  }
+
+  /// Initiates an outgoing WebRTC P2P audio or video call.
+  void _initiateCall({
+    required bool isVideo,
+    required String currentUid,
+    required String otherUid,
+    required String otherName,
+    required String? avatarUrl,
+  }) {
+    if (otherUid == 'bhromon_ai_advisor') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Voice and Video calls with the AI Guide are coming soon! Chat with text anytime.'),
+          backgroundColor: Color(0xFF1F2C34),
+        ),
+      );
+      return;
+    }
+
+    final callId = const Uuid().v4();
+    context.push(
+      '/call/$callId',
+      extra: {
+        'localUid': currentUid,
+        'remoteUid': otherUid,
+        'remoteUserName': otherName,
+        'remoteAvatarUrl': avatarUrl,
+        'isCaller': true,
+        'isVideoCall': isVideo,
+      },
+    );
+  }
+
+  /// Listens for incoming WebRTC call invitations where the callee is [currentUid].
+  void _listenForIncomingCalls(String currentUid) {
+    if (_listenedCallUid == currentUid || currentUid.isEmpty) return;
+    _listenedCallUid = currentUid;
+    _incomingCallSub?.cancel();
+    _incomingCallSub = FirebaseFirestore.instance
+        .collection('calls')
+        .where('calleeId', isEqualTo: currentUid)
+        .where('status', isEqualTo: 'calling')
+        .snapshots()
+        .listen((snap) {
+      if (!mounted || snap.docs.isEmpty) return;
+      final callDoc = snap.docs.first;
+      final callId = callDoc.id;
+      if (_activeIncomingCallId == callId) return;
+      _activeIncomingCallId = callId;
+
+      final data = callDoc.data();
+      final callerId = data['callerId'] as String? ?? '';
+      final offerMap = data['offer'] as Map<String, dynamic>?;
+      final sdp = offerMap?['sdp'] as String? ?? '';
+      final bool isVideo = sdp.contains('m=video');
+
+      _showIncomingCallDialog(callId, callerId, isVideo);
+    });
+  }
+
+  /// Displays an interactive popup allowing the user to Accept or Decline the call.
+  void _showIncomingCallDialog(
+      String callId, String callerId, bool isVideo) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1F2C34),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              isVideo ? Icons.videocam : Icons.call,
+              color: const Color(0xFF00A884),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              isVideo ? 'Incoming Video Call' : 'Incoming Audio Call',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Someone is calling you via WebRTC P2P.',
+          style: TextStyle(color: Colors.white70, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              FirebaseFirestore.instance
+                  .collection('calls')
+                  .doc(callId)
+                  .update({'status': 'declined'});
+              _activeIncomingCallId = null;
+            },
+            child: const Text('DECLINE',
+                style: TextStyle(color: Colors.redAccent)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00A884),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _activeIncomingCallId = null;
+              final authState = context.read<AuthCubit>().state;
+              final currentUid =
+                  authState is Authenticated ? authState.profile.uid : '';
+              context.push(
+                '/call/$callId',
+                extra: {
+                  'localUid': currentUid,
+                  'remoteUid': callerId,
+                  'remoteUserName': 'Traveler',
+                  'isCaller': false,
+                  'isVideoCall': isVideo,
+                },
+              );
+            },
+            child:
+                const Text('ACCEPT', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Marks all unread incoming messages as seen and updates delivery status to 'read'.
@@ -734,6 +968,9 @@ class _ChatScreenState extends State<ChatScreen> {
         authState is Authenticated ? authState.profile.displayName : 'Explorer';
     final resolvedOtherUid = _resolveOtherUid(currentUid) ?? 'guest';
 
+    // ── Listen for incoming WebRTC calls ────────────────
+    _listenForIncomingCalls(currentUid);
+
     // ── Stream: Retrieve profile of the other explorer ──
     final profileStream = _otherProfileStream(resolvedOtherUid);
 
@@ -824,6 +1061,28 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.call, color: Colors.white, size: 21),
+                tooltip: 'Audio Call',
+                onPressed: () => _initiateCall(
+                  isVideo: false,
+                  currentUid: currentUid,
+                  otherUid: resolvedOtherUid,
+                  otherName: otherName,
+                  avatarUrl: avatarUrl,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.videocam, color: Colors.white, size: 23),
+                tooltip: 'Video Call',
+                onPressed: () => _initiateCall(
+                  isVideo: true,
+                  currentUid: currentUid,
+                  otherUid: resolvedOtherUid,
+                  otherName: otherName,
+                  avatarUrl: avatarUrl,
+                ),
+              ),
               IconButton(
                 icon:
                     const Icon(Icons.more_vert, color: Colors.white, size: 20),
@@ -1012,6 +1271,82 @@ class _ChatScreenState extends State<ChatScreen> {
                             );
                           }
 
+                          // ── Voice / Audio message bubble ────────────────
+                          if (msgType == 'audio') {
+                            final semanticLabel =
+                                'Voice message ${isMe ? 'sent by you' : 'from $otherName'} at $timeStr.';
+                            return Semantics(
+                              label: semanticLabel,
+                              child: Align(
+                                alignment: isMe
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    bottom: 8,
+                                    left: isMe ? 48 : 0,
+                                    right: isMe ? 0 : 48,
+                                  ),
+                                  child: GestureDetector(
+                                    onLongPress: () => _showDeleteMessageDialog(
+                                        docs[realIndex], isMe),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: isMe
+                                            ? const Color(0xFF005C4B)
+                                            : const Color(0xFF202C33),
+                                        borderRadius: BorderRadius.only(
+                                          topLeft: const Radius.circular(12),
+                                          topRight: const Radius.circular(12),
+                                          bottomLeft: isMe
+                                              ? const Radius.circular(12)
+                                              : Radius.zero,
+                                          bottomRight: isMe
+                                              ? Radius.zero
+                                              : const Radius.circular(12),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: isMe
+                                            ? CrossAxisAlignment.end
+                                            : CrossAxisAlignment.start,
+                                        children: [
+                                          VoiceMessageBubble(
+                                            audioUrl: mediaUrl,
+                                            durationSeconds:
+                                                (data['durationSeconds']
+                                                        as num?)
+                                                    ?.toInt(),
+                                            isMe: isMe,
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(
+                                                10, 0, 10, 6),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  timeStr,
+                                                  style: const TextStyle(
+                                                      color: Colors.white38,
+                                                      fontSize: 9.5),
+                                                ),
+                                                if (isMe) ...[
+                                                  const SizedBox(width: 4),
+                                                  deliveryIcon(),
+                                                ],
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
                           // ── Text bubble ─────────────────────────────────
                           final statusLabel = isMe
                               ? (status == 'read' || seen
@@ -1190,10 +1525,25 @@ class _ChatScreenState extends State<ChatScreen> {
                               ),
                             ),
                           )
-                        : Container(
-                            padding: EdgeInsets.fromLTRB(8, 6, 8,
-                                8 + MediaQuery.of(context).padding.bottom),
-                            color: Colors.transparent, // Floating look
+                        : _isRecordingVoice
+                            ? Container(
+                                padding: EdgeInsets.fromLTRB(8, 6, 8,
+                                    8 + MediaQuery.of(context).padding.bottom),
+                                child: VoiceMessageRecorder(
+                                  onVoiceSent: (path, dur) {
+                                    setState(() => _isRecordingVoice = false);
+                                    _sendVoiceMessage(
+                                        path, dur, currentUid, currentName);
+                                  },
+                                  onCancel: () {
+                                    setState(() => _isRecordingVoice = false);
+                                  },
+                                ),
+                              )
+                            : Container(
+                                padding: EdgeInsets.fromLTRB(8, 6, 8,
+                                    8 + MediaQuery.of(context).padding.bottom),
+                                color: Colors.transparent, // Floating look
                             child: Row(
                               children: [
                                 // WhatsApp left rounded input container
@@ -1288,15 +1638,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                         if (hasText) {
                                           _sendMessage(currentUid, currentName);
                                         } else {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                  'Hold button to record voice note (mock mode).'),
-                                              duration:
-                                                  Duration(milliseconds: 1500),
-                                            ),
-                                          );
+                                          setState(() =>
+                                              _isRecordingVoice = true);
                                         }
                                       },
                                       child: CircleAvatar(
