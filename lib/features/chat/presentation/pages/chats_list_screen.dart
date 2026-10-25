@@ -97,13 +97,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   decoration: InputDecoration(
                     hintText: 'Search chats or messages...',
                     hintStyle:
-                        const TextStyle(color: Colors.white30, fontSize: 13),
+                        const TextStyle(color: Colors.white54, fontSize: 13),
                     prefixIcon: const Icon(Icons.search,
-                        color: Colors.white30, size: 18),
+                        color: Colors.white54, size: 18),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear,
-                                color: Colors.white30, size: 16),
+                                color: Colors.white54, size: 16),
                             onPressed: () => setState(() => _searchQuery = ''),
                           )
                         : null,
@@ -200,7 +200,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                               const Text(
                                 'No conversations here yet.',
                                 style: TextStyle(
-                                    color: Colors.white24, fontSize: 13),
+                                    color: Colors.white54, fontSize: 13),
                               ),
                               const SizedBox(height: 8),
                               const Text(
@@ -387,9 +387,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         decoration: const InputDecoration(
                           hintText: 'Search traveler name or division...',
                           hintStyle:
-                              TextStyle(color: Colors.white30, fontSize: 12),
+                              TextStyle(color: Colors.white54, fontSize: 12),
                           prefixIcon: Icon(Icons.search,
-                              color: Colors.white30, size: 18),
+                              color: Colors.white54, size: 18),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(vertical: 10),
                         ),
@@ -477,7 +477,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           return const Center(
                             child: Text('No other travelers registered yet.',
                                 style: TextStyle(
-                                    color: Colors.white24, fontSize: 12)),
+                                    color: Colors.white54, fontSize: 12)),
                           );
                         }
 
@@ -525,7 +525,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       fontSize: 13)),
                               subtitle: Text(division,
                                   style: const TextStyle(
-                                      color: Colors.white30, fontSize: 11)),
+                                      color: Colors.white54, fontSize: 11)),
                               onTap: () {
                                 Navigator.pop(context); // close sheet
                                 final uids = [currentUid, targetUid]..sort();

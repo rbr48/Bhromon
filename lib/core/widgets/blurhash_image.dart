@@ -49,7 +49,7 @@ class BlurHashImage extends StatelessWidget {
         color: context.surfaceElevated,
         child: const Center(
           child: Icon(Icons.image_not_supported_outlined,
-              color: Colors.white24, size: 28),
+              color: Colors.white54, size: 28),
         ),
       ),
     );

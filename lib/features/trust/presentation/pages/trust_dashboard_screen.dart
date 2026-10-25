@@ -151,7 +151,7 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                                 const Text(
                                   'TRUST SCORE',
                                   style: TextStyle(
-                                    color: Colors.white38,
+                                    color: Colors.white54,
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1.2,
@@ -176,7 +176,7 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                           'Moderation authority is active. Maintain your score above 500 to keep verified status.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                              color: Colors.white38, fontSize: 11, height: 1.4),
+                              color: Colors.white54, fontSize: 11, height: 1.4),
                         ),
                       ],
                     ),
@@ -307,7 +307,7 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Describe the validity of your post...',
-                hintStyle: const TextStyle(color: Colors.white24),
+                hintStyle: const TextStyle(color: Colors.white54),
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 focusedBorder: OutlineInputBorder(

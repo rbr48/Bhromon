@@ -128,7 +128,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
                   widget.existingTripLog != null
                       ? 'Edit Diary'
                       : 'Write New Diary',
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ],
             ),
@@ -311,7 +311,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
                               letterSpacing: -0.5),
                           decoration: const InputDecoration(
                             hintText: 'শিরোনাম দিন (যেমন: সুন্দরবনের গল্প)',
-                            hintStyle: TextStyle(color: Colors.white24),
+                            hintStyle: TextStyle(color: Colors.white54),
                             border: InputBorder.none,
                             contentPadding: EdgeInsets.symmetric(vertical: 8),
                           ),
@@ -555,7 +555,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
             ),
             const Text(
               'Who can see your diary?',
-              style: TextStyle(color: Colors.white38, fontSize: 13),
+              style: TextStyle(color: Colors.white54, fontSize: 13),
             ),
             const SizedBox(height: 24),
             PrivacyToggleWidget(
@@ -581,7 +581,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
                                   fontWeight: FontWeight.bold)),
                           Text(v.labelEn,
                               style: const TextStyle(
-                                  color: Colors.white38, fontSize: 12)),
+                                  color: Colors.white54, fontSize: 12)),
                         ],
                       ),
                     ],
@@ -841,7 +841,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
                           _buildBlockHeader(block),
                           PopupMenuButton<String>(
                             icon: const Icon(Icons.more_horiz_rounded,
-                                color: Colors.white30, size: 18),
+                                color: Colors.white54, size: 18),
                             color: AppColors.cardDark,
                             elevation: 8,
                             padding: EdgeInsets.zero,
@@ -1063,7 +1063,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
                   localPath != null
                       ? '📱 স্থানীয়ভাবে সংরক্ষিত'
                       : '☁️ আপলোড হয়েছে',
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
               ),
             ],
@@ -1413,7 +1413,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
               title: const Text('Paste YouTube Link',
                   style: TextStyle(color: Colors.white, fontSize: 14)),
               subtitle: const Text('Embed a video from YouTube',
-                  style: TextStyle(color: Colors.white30, fontSize: 11)),
+                  style: TextStyle(color: Colors.white54, fontSize: 11)),
               onTap: () {
                 Navigator.pop(context);
                 _showYouTubeLinkDialog();
@@ -1426,7 +1426,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
               title: const Text('Upload Local Video',
                   style: TextStyle(color: Colors.white, fontSize: 14)),
               subtitle: const Text('Select a video file from gallery',
-                  style: TextStyle(color: Colors.white30, fontSize: 11)),
+                  style: TextStyle(color: Colors.white54, fontSize: 11)),
               onTap: () {
                 Navigator.pop(context);
                 _pickAndAddVideo();
@@ -1465,7 +1465,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
               style: const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'https://www.youtube.com/watch?v=...',
-                hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
+                hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
@@ -1567,7 +1567,7 @@ class _TextBlockEditorState extends State<TextBlockEditor> {
       style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.5),
       decoration: const InputDecoration(
         hintText: 'Share details of your experience...',
-        hintStyle: TextStyle(color: Colors.white24, fontSize: 15),
+        hintStyle: TextStyle(color: Colors.white54, fontSize: 15),
         border: InputBorder.none,
         isDense: true,
         contentPadding: EdgeInsets.zero,
@@ -1656,7 +1656,7 @@ class _ImageBlockEditorState extends State<ImageBlockEditor> {
                     height: 200,
                     color: Colors.white10,
                     child:
-                        const Icon(Icons.broken_image, color: Colors.white24),
+                        const Icon(Icons.broken_image, color: Colors.white54),
                   ),
                 ),
         ),
@@ -1666,7 +1666,7 @@ class _ImageBlockEditorState extends State<ImageBlockEditor> {
           style: const TextStyle(color: Colors.white70, fontSize: 13),
           decoration: const InputDecoration(
             hintText: 'Add a caption to this photo...',
-            hintStyle: TextStyle(color: Colors.white24, fontSize: 13),
+            hintStyle: TextStyle(color: Colors.white54, fontSize: 13),
             border: InputBorder.none,
             isDense: true,
             contentPadding: EdgeInsets.symmetric(vertical: 4),
@@ -1749,11 +1749,11 @@ class _VideoBlockEditorState extends State<VideoBlockEditor> {
                         fit: BoxFit.cover,
                         errorWidget: (context, url, error) => const Icon(
                             Icons.video_collection_rounded,
-                            color: Colors.white24,
+                            color: Colors.white54,
                             size: 48),
                       )
                     : const Icon(Icons.video_collection_rounded,
-                        color: Colors.white24, size: 48),
+                        color: Colors.white54, size: 48),
               ),
             ),
             Container(
@@ -1773,7 +1773,7 @@ class _VideoBlockEditorState extends State<VideoBlockEditor> {
           style: const TextStyle(color: Colors.white70, fontSize: 13),
           decoration: const InputDecoration(
             hintText: 'Add a caption to this video...',
-            hintStyle: TextStyle(color: Colors.white24, fontSize: 13),
+            hintStyle: TextStyle(color: Colors.white54, fontSize: 13),
             border: InputBorder.none,
             isDense: true,
             contentPadding: EdgeInsets.symmetric(vertical: 4),
@@ -1858,7 +1858,6 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                           icon: const Icon(Icons.remove_circle_outline_rounded,
                               color: Colors.redAccent, size: 16),
                           padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
                           onPressed: () {
                             final updated = List<CostItem>.from(widget.items)
                               ..removeAt(idx);
@@ -1907,7 +1906,7 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                 decoration: InputDecoration(
                   hintText: 'Expense item (e.g. Bus fare)',
                   hintStyle:
-                      const TextStyle(color: Colors.white24, fontSize: 13),
+                      const TextStyle(color: Colors.white54, fontSize: 13),
                   isDense: true,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1929,7 +1928,7 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                 decoration: InputDecoration(
                   hintText: 'Amount',
                   hintStyle:
-                      const TextStyle(color: Colors.white24, fontSize: 13),
+                      const TextStyle(color: Colors.white54, fontSize: 13),
                   isDense: true,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -2098,7 +2097,7 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
             decoration: const InputDecoration(
               hintText:
                   'Describe safety warnings (e.g. steep slopes, heavy tides)',
-              hintStyle: TextStyle(color: Colors.white24, fontSize: 14),
+              hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
               border: InputBorder.none,
               isDense: true,
               contentPadding: EdgeInsets.zero,
@@ -2224,7 +2223,7 @@ class _RouteBlockEditorState extends State<RouteBlockEditor> {
                         decoration: InputDecoration(
                           hintText: 'Latitude, Longitude (e.g. 23.68, 90.35)',
                           hintStyle: const TextStyle(
-                              color: Colors.white24, fontSize: 13),
+                              color: Colors.white54, fontSize: 13),
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 8),
@@ -2281,7 +2280,7 @@ class _RouteBlockEditorState extends State<RouteBlockEditor> {
           decoration: const InputDecoration(
             hintText:
                 'Describe the route path (e.g. "Take the hiking path towards the waterfall")',
-            hintStyle: TextStyle(color: Colors.white24, fontSize: 14),
+            hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
             border: InputBorder.none,
             isDense: true,
             contentPadding: EdgeInsets.zero,

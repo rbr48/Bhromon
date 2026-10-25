@@ -245,11 +245,11 @@ class _InAppYoutubePlayerState extends State<InAppYoutubePlayer> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.play_circle_outline,
-              color: Colors.white38, size: 52),
+              color: Colors.white54, size: 52),
           const SizedBox(height: 8),
           Text(
             widget.caption.isNotEmpty ? widget.caption : 'YouTube Video',
-            style: const TextStyle(color: Colors.white38, fontSize: 11),
+            style: const TextStyle(color: Colors.white54, fontSize: 11),
             textAlign: TextAlign.center,
             maxLines: 2,
           ),

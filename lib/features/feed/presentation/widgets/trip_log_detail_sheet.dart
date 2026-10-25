@@ -699,7 +699,6 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                                       icon: const Icon(Icons.delete_outline,
                                           size: 16, color: Colors.redAccent),
                                       padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
                                       onPressed: () async {
                                         await FirebaseFirestore.instance
                                             .collection(log.isArchived
@@ -951,7 +950,6 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                                 currentUserId != log.authorId) ...[
                               const SizedBox(width: 8),
                               IconButton(
-                                constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
                                 icon: const Icon(
                                     Icons.report_gmailerrorred_rounded,
@@ -1248,13 +1246,13 @@ class _TravelLogReportDialogState extends State<TravelLogReportDialog> {
             style: const TextStyle(color: Colors.white, fontSize: 12),
             decoration: InputDecoration(
               hintText: 'Describe why you are reporting this log...',
-              hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+              hintStyle: const TextStyle(color: Colors.white54, fontSize: 12),
               filled: true,
               fillColor: Colors.white.withValues(alpha: 0.06),
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none),
-              counterStyle: const TextStyle(color: Colors.white38, fontSize: 9),
+              counterStyle: const TextStyle(color: Colors.white54, fontSize: 9),
               contentPadding: const EdgeInsets.all(12),
             ),
           ),

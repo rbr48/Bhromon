@@ -316,7 +316,7 @@ class _ChallengesScreenState extends State<ChallengesScreen>
                     Text(
                       'Progress: ${challenge.currentCount}/${challenge.requiredCount}',
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 11),
+                          const TextStyle(color: Colors.white54, fontSize: 11),
                     ),
                     Text(
                       '🏆 +${challenge.rewardPoints} pts',
@@ -391,7 +391,7 @@ class _ChallengesScreenState extends State<ChallengesScreen>
               const SizedBox(height: 4),
               Text(
                 'Earned ${date.day}/${date.month}/${date.year}',
-                style: const TextStyle(color: Colors.white38, fontSize: 9),
+                style: const TextStyle(color: Colors.white54, fontSize: 9),
               ),
             ],
           ),

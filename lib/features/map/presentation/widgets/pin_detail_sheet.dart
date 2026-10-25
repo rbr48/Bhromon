@@ -590,12 +590,12 @@ class _PinDetailSheetState extends State<PinDetailSheet>
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.white38, size: 16),
+                  Icon(Icons.info_outline, color: Colors.white54, size: 16),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'No description yet. Be the first to add one by creating a trip log!',
-                      style: TextStyle(color: Colors.white38, fontSize: 12),
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                   ),
                 ],
@@ -736,12 +736,12 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                     Text(
                       'Last confirmed: ${_formatDate(pin.lastConfirmed)}',
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 10),
+                          const TextStyle(color: Colors.white54, fontSize: 10),
                     ),
                     Text(
                       '${pin.linkedTripIds.length} logs • ${pin.linkedTipIds.length} tips',
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 10),
+                          const TextStyle(color: Colors.white54, fontSize: 10),
                     ),
                   ],
                 ),
@@ -998,16 +998,16 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                                 fontWeight: FontWeight.bold)),
                         const SizedBox(width: 10),
                         const Icon(Icons.thumb_up_outlined,
-                            color: Colors.white38, size: 12),
+                            color: Colors.white54, size: 12),
                         const SizedBox(width: 3),
                         Text('${log.helpfulVotes}',
                             style: const TextStyle(
-                                color: Colors.white38, fontSize: 11)),
+                                color: Colors.white54, fontSize: 11)),
                         const Spacer(),
                         Text(
                           _formatDate(log.publishedAt ?? log.lastConfirmed),
                           style: const TextStyle(
-                              color: Colors.white30, fontSize: 10),
+                              color: Colors.white54, fontSize: 10),
                         ),
                       ],
                     ),
@@ -1015,7 +1015,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.white24, size: 18),
+            const Icon(Icons.chevron_right, color: Colors.white54, size: 18),
             const SizedBox(width: 8),
           ],
         ),
@@ -1070,7 +1070,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
           const SizedBox(width: 12),
           Text('${score.toInt()}',
               style: const TextStyle(
-                  color: Colors.white38,
+                  color: Colors.white54,
                   fontSize: 13,
                   fontWeight: FontWeight.bold)),
         ],
@@ -1195,7 +1195,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                               Text(
                                 _formatDate(ts.toDate()),
                                 style: const TextStyle(
-                                    color: Colors.white30, fontSize: 9),
+                                    color: Colors.white54, fontSize: 9),
                               ),
                           ],
                         ),
@@ -1239,7 +1239,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                         null,
                     decoration: const InputDecoration(
                       hintText: 'Share a tip (max 140 chars)...',
-                      hintStyle: TextStyle(color: Colors.white38, fontSize: 11),
+                      hintStyle: TextStyle(color: Colors.white54, fontSize: 11),
                       border: InputBorder.none,
                       counterText: '',
                     ),
@@ -1392,7 +1392,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white24, size: 40),
+          Icon(icon, color: Colors.white54, size: 40),
           const SizedBox(height: 10),
           Text(title,
               style: const TextStyle(
@@ -1405,7 +1405,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
             child: Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white38, fontSize: 11),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
             ),
           ),
         ],
@@ -1529,7 +1529,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                   const Spacer(),
                   Text(
                     '${docs.length} explorer${docs.length == 1 ? '' : 's'}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 10),
+                    style: const TextStyle(color: Colors.white54, fontSize: 10),
                   ),
                 ],
               ),

@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
+import '../../../../../core/theme/colors.dart';
 
 /// Full-featured Story Viewer supporting both Photos and Videos, interactive
 /// Poll stickers with real-time percentages, quick emoji reactions, author
@@ -371,7 +372,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.remove_red_eye, color: Color(0xFF00C853)),
+                    const Icon(Icons.remove_red_eye,
+                        color: AppColors.mintGreen),
                     const SizedBox(width: 8),
                     Text(
                       'দর্শকের তালিকা (${story.viewers.length} জন দেখেছেন)',
@@ -421,7 +423,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                                 Text(
                                   '$count ভোট (${pct.toStringAsFixed(0)}%)',
                                   style: const TextStyle(
-                                      color: Color(0xFF00C853),
+                                      color: AppColors.mintGreen,
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold),
                                 ),
@@ -442,7 +444,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                     child: Center(
                       child: Text(
                         'এখনও কেউ স্টোরিটি দেখেনি।',
-                        style: TextStyle(color: Colors.white38),
+                        style: TextStyle(color: Colors.white54),
                       ),
                     ),
                   )
@@ -458,10 +460,11 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(
-                            backgroundColor: const Color(0xFF00C853),
+                            backgroundColor: AppColors.mintGreen,
                             child: Text(
                               email.isNotEmpty ? email[0].toUpperCase() : 'M',
-                              style: const TextStyle(color: Colors.white),
+                              style:
+                                  const TextStyle(color: AppColors.darkGreen),
                             ),
                           ),
                           title: Text(
@@ -512,8 +515,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
             child: const Text('বাতিল'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF00C853)),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
             onPressed: () => Navigator.pop(ctx, titleCtrl.text.trim()),
             child: const Text('যোগ করুন'),
           ),
@@ -598,7 +600,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                         ),
                         errorWidget: (context, _, __) => const Center(
                           child: Icon(Icons.broken_image,
-                              color: Colors.white38, size: 48),
+                              color: Colors.white54, size: 48),
                         ),
                       ),
               ),
@@ -698,7 +700,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                       children: [
                         CircleAvatar(
                           radius: 16,
-                          backgroundColor: const Color(0xFF00C853),
+                          backgroundColor: AppColors.mintGreen,
                           backgroundImage: story.authorPhoto != null
                               ? NetworkImage(story.authorPhoto!)
                               : null,
@@ -898,9 +900,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                     color: Colors.white12,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isChosen
-                          ? const Color(0xFF00C853)
-                          : Colors.transparent,
+                      color:
+                          isChosen ? AppColors.mintGreen : Colors.transparent,
                       width: 1.5,
                     ),
                   ),
@@ -913,8 +914,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                           child: Container(
                             decoration: BoxDecoration(
                               color: isChosen
-                                  ? const Color(0xFF00C853)
-                                      .withValues(alpha: 0.4)
+                                  ? AppColors.mintGreen.withValues(alpha: 0.4)
                                   : Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),

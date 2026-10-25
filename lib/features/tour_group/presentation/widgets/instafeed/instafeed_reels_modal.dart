@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_zoomable_media.dart';
+import '../../../../../core/theme/colors.dart';
 
 /// Full-screen vertical Reels player modal with video pre-caching, hold-to-pause
 /// clean screen mode, interactive draggable timeline scrubber, rotating vinyl
@@ -408,14 +409,14 @@ class _ReelPageItemState extends State<_ReelPageItem>
                     // Unique Travel Superpower: Add to Trip Ledger
                     IconButton(
                       icon: const Icon(Icons.receipt_long_rounded,
-                          color: Color(0xFF00C853), size: 28),
+                          color: AppColors.mintGreen, size: 28),
                       tooltip: 'ট্রিপ লেজারে যোগ করুন',
                       onPressed: widget.onAddToLedger,
                     ),
                     const Text(
                       'লেজার',
                       style: TextStyle(
-                        color: Color(0xFF00C853),
+                        color: AppColors.mintGreen,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
@@ -454,7 +455,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
                       children: [
                         CircleAvatar(
                           radius: 16,
-                          backgroundColor: const Color(0xFF00C853),
+                          backgroundColor: AppColors.mintGreen,
                           backgroundImage: widget.post.authorPhoto != null
                               ? NetworkImage(widget.post.authorPhoto!)
                               : null,
@@ -564,9 +565,9 @@ class _ReelPageItemState extends State<_ReelPageItem>
                           thumbShape: const RoundSliderThumbShape(
                               enabledThumbRadius: 4),
                           trackHeight: 2,
-                          activeTrackColor: const Color(0xFF00C853),
+                          activeTrackColor: AppColors.mintGreen,
                           inactiveTrackColor: Colors.white24,
-                          thumbColor: const Color(0xFF00C853),
+                          thumbColor: AppColors.mintGreen,
                           overlayShape: SliderComponentShape.noOverlay,
                         ),
                         child: Slider(

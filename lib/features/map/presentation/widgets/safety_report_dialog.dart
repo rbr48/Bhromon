@@ -106,13 +106,13 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
             style: const TextStyle(color: Colors.white, fontSize: 12),
             decoration: InputDecoration(
               hintText: 'Describe the safety issue...',
-              hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+              hintStyle: const TextStyle(color: Colors.white54, fontSize: 12),
               filled: true,
               fillColor: Colors.white.withValues(alpha: 0.06),
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none),
-              counterStyle: const TextStyle(color: Colors.white38, fontSize: 9),
+              counterStyle: const TextStyle(color: Colors.white54, fontSize: 9),
               contentPadding: const EdgeInsets.all(12),
             ),
           ),

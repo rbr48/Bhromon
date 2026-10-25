@@ -126,7 +126,7 @@ class ChatMediaBubble extends StatelessWidget {
           height: 200,
           color: const Color(0xFF1A2730),
           child: const Center(
-            child: Icon(Icons.movie_outlined, color: Colors.white24, size: 48),
+            child: Icon(Icons.movie_outlined, color: Colors.white54, size: 48),
           ),
         );
       } else {
@@ -161,7 +161,7 @@ class ChatMediaBubble extends StatelessWidget {
             color: const Color(0xFF1A2730),
             child: const Center(
               child: Icon(Icons.broken_image_outlined,
-                  color: Colors.white38, size: 36),
+                  color: Colors.white54, size: 36),
             ),
           ),
         );

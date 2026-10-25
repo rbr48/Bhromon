@@ -145,7 +145,7 @@ class ChannelComposer extends StatelessWidget {
                       counterText: '',
                       hintText: hint,
                       hintStyle:
-                          const TextStyle(color: Colors.white30, fontSize: 13),
+                          const TextStyle(color: Colors.white54, fontSize: 13),
                       filled: true,
                       fillColor: Colors.black26,
                       border: OutlineInputBorder(

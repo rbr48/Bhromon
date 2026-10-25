@@ -243,7 +243,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                             ? 'Verified'
                             : 'Community',
                         style:
-                            const TextStyle(color: Colors.white38, fontSize: 9),
+                            const TextStyle(color: Colors.white54, fontSize: 9),
                       ),
                     ],
                   ),
