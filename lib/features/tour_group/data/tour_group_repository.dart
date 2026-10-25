@@ -51,7 +51,17 @@ class TourGroupRepository {
   /// Empty when signed out. There is no shared guest identity any more.
   String get currentUid => _auth.currentUser?.uid ?? '';
 
-  String get currentEmail => normalizeEmail(_auth.currentUser?.email ?? '');
+  String get currentEmail {
+    final email = _auth.currentUser?.email;
+    if (email != null && email.trim().isNotEmpty) {
+      return normalizeEmail(email);
+    }
+    final uid = _auth.currentUser?.uid;
+    if (uid != null && uid.isNotEmpty) {
+      return '$uid@bhromon.app';
+    }
+    return '';
+  }
 
   String get currentDisplayName {
     final name = _auth.currentUser?.displayName;

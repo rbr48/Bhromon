@@ -388,12 +388,14 @@ service cloud.firestore {
       return /databases/$(database)/documents/memberships/$(tId + '__' + tourUserEmail());
     }
     function isActiveMember(tId) {
-      return isAuth() && exists(tourMemberPath(tId)) &&
-             get(tourMemberPath(tId)).data.status == 'active';
+      return isAuth() && (
+        isOwnerOfTour(tId) ||
+        (exists(tourMemberPath(tId)) && get(tourMemberPath(tId)).data.status == 'active')
+      );
     }
     function isTourAdmin(tId) {
-      return isActiveMember(tId) &&
-             get(tourMemberPath(tId)).data.role in ['admin', 'owner'];
+      return isOwnerOfTour(tId) ||
+             (isActiveMember(tId) && exists(tourMemberPath(tId)) && get(tourMemberPath(tId)).data.role in ['admin', 'owner']);
     }
     function isOwnerOfTour(tId) {
       return isAuth() && exists(/databases/$(database)/documents/tours/$(tId)) &&

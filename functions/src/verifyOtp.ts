@@ -109,7 +109,9 @@ export const verifyOtp = functions
     // Generate Custom Token
     try {
       const auth = tokenSignerApp ? tokenSignerApp.auth() : admin.auth();
-      const customToken = await auth.createCustomToken(userRecord.uid);
+      const customToken = await auth.createCustomToken(userRecord.uid, {
+        email: normalizedEmail,
+      });
       return { success: true, customToken: customToken };
     } catch (e: any) {
       throw new functions.https.HttpsError(

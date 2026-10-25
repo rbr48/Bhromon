@@ -28,28 +28,41 @@ service firebase.storage {
     // must carry uploadedByEmail metadata, which lets the uploader (or an
     // admin) delete their own files later.
     function tourEmail() {
-      return request.auth.token.email != null ? request.auth.token.email.lower() : '';
+      return request.auth.token.email != null
+        ? request.auth.token.email.lower()
+        : (request.auth.uid + '@bhromon.app');
     }
     function tourMembership(tourId) {
       return firestore.get(/databases/(default)/documents/memberships/$(tourId + '__' + tourEmail()));
     }
-    function isTourMember(tourId) {
+    function isTourOwner(tourId) {
       return isAuth() &&
-             firestore.exists(/databases/(default)/documents/memberships/$(tourId + '__' + tourEmail())) &&
-             tourMembership(tourId).data.status == 'active';
+             firestore.exists(/databases/(default)/documents/tours/$(tourId)) &&
+             firestore.get(/databases/(default)/documents/tours/$(tourId)).data.ownerEmail == tourEmail();
+    }
+    function isTourMember(tourId) {
+      return isAuth() && (
+        isTourOwner(tourId) ||
+        (firestore.exists(/databases/(default)/documents/memberships/$(tourId + '__' + tourEmail())) &&
+         tourMembership(tourId).data.status == 'active')
+      );
     }
     function isTourAdmin(tourId) {
-      return isTourMember(tourId) && tourMembership(tourId).data.role in ['admin', 'owner'];
+      return isTourOwner(tourId) ||
+        (isAuth() &&
+         firestore.exists(/databases/(default)/documents/memberships/$(tourId + '__' + tourEmail())) &&
+         tourMembership(tourId).data.role in ['admin', 'owner']);
     }
 
     match /tours/{tourId}/{allPaths=**} {
       allow read: if isTourMember(tourId);
       // Images up to 10 MB, videos up to 100 MB; the size limit follows the type.
       allow create, update: if isTourMember(tourId)
+                            && request.resource.metadata != null
                             && request.resource.metadata.get('uploadedByEmail', '') == tourEmail()
                             && ((isImage() && underImageLimit()) || (isVideo() && underVideoLimit()));
       allow delete: if isTourMember(tourId)
-                    && (resource.metadata.get('uploadedByEmail', '') == tourEmail() || isTourAdmin(tourId));
+                    && ((resource.metadata != null && resource.metadata.get('uploadedByEmail', '') == tourEmail()) || isTourAdmin(tourId));
     }
 
     // ── Trip Log media ───────────────────────────────────────────────────────
