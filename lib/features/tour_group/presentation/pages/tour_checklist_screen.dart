@@ -24,6 +24,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
   late final Stream<List<ChecklistItem>> _items =
       _repository.watchChecklist(widget.tourId);
   TourGroup? _group;
+  StreamSubscription<TourGroup?>? _groupSub;
 
   // Default items keep stable ids so each person's ticks survive re-ordering.
   static String _defaultId(int index) => 'default_$index';
@@ -31,12 +32,20 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
   @override
   void initState() {
     super.initState();
-    _loadGroup();
+    _watchGroup();
   }
 
-  Future<void> _loadGroup() async {
-    final group = await _repository.getGroup(widget.tourId);
-    if (mounted) setState(() => _group = group);
+  void _watchGroup() {
+    _groupSub?.cancel();
+    _groupSub = _repository.watchGroup(widget.tourId).listen((g) {
+      if (mounted) setState(() => _group = g);
+    });
+  }
+
+  @override
+  void dispose() {
+    _groupSub?.cancel();
+    super.dispose();
   }
 
   /// Default items for this tour. Beach items are left out of hill and city tours.

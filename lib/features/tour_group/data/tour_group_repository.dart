@@ -14,6 +14,7 @@ import '../domain/models/tour_activity_models.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
 import '../domain/services/invite_code.dart';
+import 'tour_media_journal.dart';
 import 'tour_media_uploader.dart';
 
 /// Thrown when an action needs a signed-in member. The message is shown to users.
@@ -1190,6 +1191,62 @@ class TourGroupRepository {
             s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList());
   }
 
+  /// Posts created before [upper] (any time when null) and not before [lower]
+  /// (any time when null), newest first. Live: a post added or deleted in the
+  /// range shows at once.
+  Stream<List<TourPostItem>> watchPostRange(
+    String tourId, {
+    DateTime? upper,
+    DateTime? lower,
+  }) {
+    Query<Map<String, dynamic>> query =
+        _sub(tourId, 'posts').orderBy('createdAt', descending: true);
+    if (upper != null) {
+      query = query.where('createdAt', isLessThan: Timestamp.fromDate(upper));
+    }
+    if (lower != null) {
+      query = query.where('createdAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(lower));
+    }
+    return query.snapshots().map((s) =>
+        s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList());
+  }
+
+  /// Where the next page of the feed starts: the creation time of the [limit]th
+  /// newest post older than [upper]. Null when fewer than [limit] posts are, so
+  /// that page is the last one.
+  Future<DateTime?> feedPageBoundary(
+    String tourId, {
+    DateTime? upper,
+    int limit = 60,
+  }) async {
+    Query<Map<String, dynamic>> query =
+        _sub(tourId, 'posts').orderBy('createdAt', descending: true);
+    if (upper != null) {
+      query = query.where('createdAt', isLessThan: Timestamp.fromDate(upper));
+    }
+    final snap = await query.limit(limit).get();
+    if (snap.docs.length < limit) return null;
+    return readDate(snap.docs.last.data()['createdAt']);
+  }
+
+  /// Fetches posts by id, such as bookmarks older than the loaded feed. An id
+  /// whose post was deleted is left out of the result.
+  Future<List<TourPostItem>> getPostsByIds(
+      String tourId, Iterable<String> ids) async {
+    final unique = ids.toSet().toList();
+    final posts = <TourPostItem>[];
+    // Each `in` query takes at most 10 ids, a limit every Firestore version accepts.
+    for (var i = 0; i < unique.length; i += 10) {
+      final chunk = unique.skip(i).take(10).toList();
+      final snap = await _sub(tourId, 'posts')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      posts.addAll(snap.docs.map((d) => TourPostItem.fromMap(d.id, d.data())));
+    }
+    return posts;
+  }
+
   Stream<TourPostItem?> watchPost(String tourId, String postId) {
     return _sub(tourId, 'posts').doc(postId).snapshots().map((doc) {
       final data = doc.data();
@@ -1257,7 +1314,8 @@ class TourGroupRepository {
       expenseCategory: expenseCategory,
       coverUrl: coverUrl,
     );
-    await _sub(tourId, 'posts').doc(id).set(post.toMap());
+    final map = post.toMap()..['createdAt'] = FieldValue.serverTimestamp();
+    await _sub(tourId, 'posts').doc(id).set(map);
   }
 
   Future<void> updatePostCaption(
@@ -1324,11 +1382,15 @@ class TourGroupRepository {
     }
   }
 
-  /// Deletes a post with its comments, then removes its files from Storage
-  /// (best effort: the post is removed even if a file cannot be deleted).
+  /// Deletes a post. The post goes first, so it leaves every feed at once; its
+  /// comments and files are unreachable after that. Each file is journaled
+  /// before its delete is sent, and the comments are removed in batches.
   Future<void> deletePost(TourPostItem post) async {
     _requireEmail();
     final postRef = _sub(post.tourId, 'posts').doc(post.id);
+
+    // Comments go first. Their delete rules read the post, so it must still
+    // exist; if this fails the post stays and can be deleted again.
     final comments = await postRef.collection('comments').get();
     for (var i = 0; i < comments.docs.length; i += _batchLimit) {
       final batch = _firestore.batch();
@@ -1337,17 +1399,98 @@ class TourGroupRepository {
       }
       await batch.commit();
     }
+
     await postRef.delete();
-    for (final url in [
+    await _deleteMediaFiles([
       ...post.images,
-      if (post.videoUrl != null) post.videoUrl!
-    ]) {
-      if (!isRemoteMediaUrl(url)) continue;
-      try {
-        await TourMediaUploader.deleteMedia(url);
-      } catch (e) {
-        debugPrint('[TourGroupRepository] Could not delete media: $e');
+      post.videoUrl,
+      post.coverUrl,
+    ]);
+  }
+
+  /// Deletes a story, and the files it uploaded unless a highlight still shows
+  /// its image as the cover.
+  Future<void> deleteStory(String tourId, TourStoryItem story) async {
+    _requireEmail();
+    await _sub(tourId, 'stories').doc(story.id).delete();
+
+    final coverInUse = await _isHighlightCover(tourId, story.mediaUrl);
+    await _deleteMediaFiles([
+      if (!coverInUse) story.mediaUrl,
+      story.videoUrl,
+    ]);
+  }
+
+  /// Journals each remote media file in [urls] and removes it from the server.
+  /// A file the server refuses to remove stays journaled for the sweep.
+  Future<void> _deleteMediaFiles(Iterable<String?> urls) async {
+    final refs = <TourMediaRef>[];
+    for (final url in urls) {
+      if (url == null || !isRemoteMediaUrl(url)) continue;
+      final ref = TourMediaRef.tryParse(url);
+      if (ref != null) refs.add(ref);
+    }
+
+    final journal = TourMediaJournal.instance;
+    for (final ref in refs) {
+      await journal.markDelete(ref);
+    }
+    for (final ref in refs) {
+      if (await TourMediaUploader.deleteMedia(ref.url)) {
+        await journal.resolve(ref.url);
       }
+    }
+  }
+
+  /// Whether a highlight uses [url] as its cover. Unknown counts as in use, so
+  /// the file is kept.
+  Future<bool> _isHighlightCover(String tourId, String url) async {
+    try {
+      final match = await _sub(tourId, 'highlights')
+          .where('coverUrl', isEqualTo: url)
+          .limit(1)
+          .get();
+      return match.docs.isNotEmpty;
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Could not check highlight covers: $e');
+      return true;
+    }
+  }
+
+  /// Folders the sweep may clean up. Every URL field that can hold one of
+  /// these files is checked by [isMediaReferenced].
+  static const Set<String> _sweptFolders = {
+    'posts',
+    'reels',
+    'covers',
+    'stories'
+  };
+
+  /// Whether a post, story or highlight still uses the file. Null when this
+  /// cannot be decided, which keeps the file.
+  Future<bool?> isMediaReferenced(JournalEntry entry) async {
+    if (!_sweptFolders.contains(entry.folder)) return null;
+    final url = entry.url;
+    final posts = _sub(entry.tourId, 'posts');
+    final stories = _sub(entry.tourId, 'stories');
+    final highlights = _sub(entry.tourId, 'highlights');
+    Future<bool> used(Query<Map<String, dynamic>> query) async {
+      return (await query.limit(1).get()).docs.isNotEmpty;
+    }
+
+    try {
+      final results = await Future.wait<bool>([
+        used(posts.where('images', arrayContains: url)),
+        used(posts.where('videoUrl', isEqualTo: url)),
+        used(posts.where('coverUrl', isEqualTo: url)),
+        used(stories.where('mediaUrl', isEqualTo: url)),
+        used(stories.where('videoUrl', isEqualTo: url)),
+        used(highlights.where('coverUrl', isEqualTo: url)),
+      ]);
+      return results.any((r) => r);
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Could not check media use: $e');
+      return null;
     }
   }
 
@@ -1390,7 +1533,8 @@ class TourGroupRepository {
     );
     final postRef = _sub(tourId, 'posts').doc(postId);
     final batch = _firestore.batch();
-    batch.set(postRef.collection('comments').doc(commentId), comment.toMap());
+    final map = comment.toMap()..['createdAt'] = FieldValue.serverTimestamp();
+    batch.set(postRef.collection('comments').doc(commentId), map);
     batch.update(postRef, {'commentCount': FieldValue.increment(1)});
     await batch.commit();
   }
@@ -1476,12 +1620,8 @@ class TourGroupRepository {
       sticker: sticker,
       highlightId: highlightId,
     );
-    await _sub(tourId, 'stories').doc(id).set(story.toMap());
-  }
-
-  Future<void> deleteStory(String tourId, String storyId) async {
-    _requireEmail();
-    await _sub(tourId, 'stories').doc(storyId).delete();
+    final map = story.toMap()..['createdAt'] = FieldValue.serverTimestamp();
+    await _sub(tourId, 'stories').doc(id).set(map);
   }
 
   Future<void> recordStoryView(String tourId, String storyId) async {
@@ -1495,11 +1635,13 @@ class TourGroupRepository {
     } catch (_) {}
   }
 
+  // The keys are FieldPaths, not dotted strings: an email's dots would
+  // otherwise split it into nested maps.
   Future<void> voteStoryPoll(
       String tourId, String storyId, int optionIndex) async {
     final email = _requireEmail();
     await _sub(tourId, 'stories').doc(storyId).update({
-      'poll.votes.$email': optionIndex,
+      FieldPath(['poll', 'votes', email]): optionIndex,
     });
   }
 
@@ -1507,7 +1649,7 @@ class TourGroupRepository {
       String tourId, String storyId, String emoji) async {
     final email = _requireEmail();
     await _sub(tourId, 'stories').doc(storyId).update({
-      'reactions.$email': emoji,
+      FieldPath(['reactions', email]): emoji,
     });
   }
 
@@ -1530,7 +1672,7 @@ class TourGroupRepository {
     required String coverUrl,
     required List<String> storyIds,
   }) async {
-    _requireEmail();
+    final email = _requireEmail();
     final id = _uuid.v4();
     final highlight = TourStoryHighlight(
       id: id,
@@ -1540,7 +1682,8 @@ class TourGroupRepository {
       storyIds: storyIds,
       createdAt: DateTime.now(),
     );
-    await _sub(tourId, 'highlights').doc(id).set(highlight.toMap());
+    final map = highlight.toMap()..['createdByEmail'] = email;
+    await _sub(tourId, 'highlights').doc(id).set(map);
   }
 
   Future<void> deleteHighlight(String tourId, String highlightId) async {

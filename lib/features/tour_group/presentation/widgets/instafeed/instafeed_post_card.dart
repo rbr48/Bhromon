@@ -32,6 +32,12 @@ class InstafeedPostCard extends StatefulWidget {
   final String? seatNumber;
   final String? roomNumber;
 
+  /// The feed picks one video to play. Only that card holds a player.
+  final bool videoPlaying;
+
+  /// Selects this card's video, from its play button.
+  final VoidCallback? onVideoTap;
+
   const InstafeedPostCard({
     super.key,
     required this.repository,
@@ -50,6 +56,8 @@ class InstafeedPostCard extends StatefulWidget {
     this.onPostChanged,
     this.seatNumber,
     this.roomNumber,
+    this.videoPlaying = false,
+    this.onVideoTap,
   });
 
   @override
@@ -74,9 +82,19 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
 
   void _checkAndInitVideo() {
     final vUrl = widget.post.videoUrl;
+    if (!widget.videoPlaying || _videoCtrl != null) return;
     if (vUrl != null && isRemoteMediaUrl(vUrl)) {
       _initVideoController(vUrl);
     }
+  }
+
+  /// Frees the player. A card without its video selected holds none.
+  void _disposeVideo() {
+    _videoCtrl?.removeListener(_onVideoStateChanged);
+    _videoCtrl?.dispose();
+    _videoCtrl = null;
+    _isVideoInitialized = false;
+    _isVideoPlaying = false;
   }
 
   void _initVideoController(String url) {
@@ -108,19 +126,20 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   void didUpdateWidget(InstafeedPostCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.post.videoUrl != widget.post.videoUrl) {
-      _videoCtrl?.removeListener(_onVideoStateChanged);
-      _videoCtrl?.dispose();
-      _videoCtrl = null;
-      _isVideoInitialized = false;
-      _isVideoPlaying = false;
+      _disposeVideo();
       _checkAndInitVideo();
+    } else if (oldWidget.videoPlaying != widget.videoPlaying) {
+      if (widget.videoPlaying) {
+        _checkAndInitVideo();
+      } else {
+        _disposeVideo();
+      }
     }
   }
 
   @override
   void dispose() {
-    _videoCtrl?.removeListener(_onVideoStateChanged);
-    _videoCtrl?.dispose();
+    _disposeVideo();
     super.dispose();
   }
 
@@ -668,11 +687,22 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 ),
               ),
             )
-          else
+          else if (widget.videoPlaying)
             const Center(
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
+              ),
+            )
+          else if (widget.onVideoTap != null)
+            GestureDetector(
+              onTap: widget.onVideoTap,
+              child: Container(
+                color: Colors.black26,
+                child: const Center(
+                  child: Icon(Icons.play_arrow_rounded,
+                      size: 48, color: Colors.white),
+                ),
               ),
             ),
 
@@ -994,6 +1024,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   ),
 
                 IconButton(
+                  tooltip: 'আরও বিকল্প',
                   icon: const Icon(Icons.more_vert, color: Colors.white70),
                   onPressed: _showPostMenu,
                 ),
@@ -1097,6 +1128,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             child: Row(
               children: [
                 IconButton(
+                  tooltip: isLiked ? 'লাইক সরান' : 'লাইক করুন',
                   icon: Icon(
                     isLiked ? Icons.favorite : Icons.favorite_border,
                     color: isLiked ? Colors.redAccent : Colors.white,
@@ -1106,11 +1138,13 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 ),
                 if (!widget.post.disableComments)
                   IconButton(
+                    tooltip: 'মন্তব্য করুন',
                     icon: const Icon(Icons.chat_bubble_outline,
                         color: Colors.white, size: 24),
                     onPressed: () => widget.onOpenComments?.call(widget.post),
                   ),
                 IconButton(
+                  tooltip: 'শেয়ার করুন',
                   icon: const Icon(Icons.send_rounded,
                       color: Colors.white, size: 22),
                   onPressed: () => widget.onShare?.call(widget.post),
@@ -1131,6 +1165,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       ? () => widget.onSaveToCollection!(widget.post)
                       : null,
                   child: IconButton(
+                    tooltip:
+                        widget.isBookmarked ? 'সংরক্ষণ সরান' : 'সংরক্ষণ করুন',
                     icon: Icon(
                       widget.isBookmarked
                           ? Icons.bookmark

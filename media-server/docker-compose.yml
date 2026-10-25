@@ -9,7 +9,14 @@ services:
       - "127.0.0.1:8210:8000"
     volumes:
       - /var/www/bhromon-media:/data/media
+      - /var/www/bhromon-media-meta:/data/media-meta
+      # Firebase Admin service account, read-only. Keep this file out of git.
+      - /etc/bhromon/firebase-admin.json:/run/secrets/firebase-admin.json:ro
     environment:
       - MEDIA_ROOT=/data/media
-      - MEDIA_UPLOAD_KEY=bhromon_vps_media_2026_sec
+      - MEDIA_META_ROOT=/data/media-meta
+      - FIREBASE_CREDENTIALS=/run/secrets/firebase-admin.json
+      # Transition only: set to the old key while app builds without token auth
+      # are still in use. Leave empty once they are gone.
+      - LEGACY_UPLOAD_KEY=${LEGACY_UPLOAD_KEY:-}
       - BASE_URL=https://bhromon.fun/media

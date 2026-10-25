@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../data/paged_post_feed.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/tour_media_journal.dart';
+import '../../data/tour_media_uploader.dart';
 import '../../domain/models/safety_alert_models.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
@@ -59,13 +62,34 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   String? _selectedBookmarkCollection;
   Set<String> _seenStoryIds = {};
   List<TourPostItem> _latestPosts = const [];
+
+  /// Bookmarked posts that are older than the loaded page. Fetched when the
+  /// Saved view opens, so a bookmark from months ago still shows there.
+  List<TourPostItem> _savedOutsidePage = const [];
+
+  // Feed video: one card holds a player, the one nearest the middle of the
+  // screen once scrolling has stopped. A scroll releases it.
+  final Map<String, GlobalKey> _videoCardKeys = {};
+  String? _playingVideoId;
+  bool _isScrolling = false;
+  bool _settleScheduled = false;
   TourGroup? _tourGroup;
+  StreamSubscription<TourGroup?>? _groupSub;
 
   // Logistics cache (Seat & Room mappings: email -> seat/room)
   final Map<String, String> _seatMap = {};
   final Map<String, String> _roomMap = {};
 
-  int _postLimit = _pageSize;
+  late PagedPostFeed _feed;
+
+  // Filtered pages can come back empty, so the feed pages in more posts while
+  // nothing matches. Capped, so a filter that never matches stops on its own.
+  static const int _maxEmptyAutoLoads = 3;
+  int _emptyAutoLoads = 0;
+  bool _autoLoadScheduled = false;
+  String _autoLoadFilterKey = '';
+
+  TourRole? _myRole;
   late Stream<List<TourStoryItem>> _storiesStream;
   late Stream<List<TourPostItem>> _postsStream;
   late Stream<List<TourStoryHighlight>> _highlightsStream;
@@ -75,18 +99,46 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   void initState() {
     super.initState();
     _storiesStream = _repository.watchStories(widget.tourId);
-    _postsStream = _repository.watchPosts(widget.tourId, limit: _postLimit);
+    _feed = PagedPostFeed(
+      repository: _repository,
+      tourId: widget.tourId,
+      pageSize: _pageSize,
+    );
+    _postsStream = _feed.stream;
     _highlightsStream = _repository.watchHighlights(widget.tourId);
     _alertsStream = _repository.watchSafetyAlerts(widget.tourId);
 
-    _loadGroup();
+    _watchGroup();
+    _loadMyRole();
     _loadFeedPrefs();
     _loadLogistics();
+    unawaited(TourMediaJournal.instance.sweep(
+      isReferenced: _repository.isMediaReferenced,
+      deleteRemote: TourMediaUploader.deleteMedia,
+    ));
   }
 
-  Future<void> _loadGroup() async {
-    final g = await _repository.getGroup(widget.tourId);
-    if (mounted) setState(() => _tourGroup = g);
+  @override
+  void dispose() {
+    _groupSub?.cancel();
+    unawaited(_feed.close());
+    super.dispose();
+  }
+
+  /// Keeps the tour's details live, so a trip change by an admin shows at once
+  /// (days, destination, live status) without reopening the feed.
+  void _watchGroup() {
+    _groupSub = _repository.watchGroup(widget.tourId).listen(
+      (g) {
+        if (mounted) setState(() => _tourGroup = g);
+      },
+      onError: (Object e) => debugPrint('[TourInstaFeed] group watch: $e'),
+    );
+  }
+
+  Future<void> _loadMyRole() async {
+    final role = await _repository.myRole(widget.tourId);
+    if (mounted) setState(() => _myRole = role);
   }
 
   Future<void> _loadFeedPrefs() async {
@@ -253,8 +305,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           controller: newCollectionCtrl,
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
-                            hintText:
-                                'নতুন ফোল্ডারের নাম (যেমন: খাবার, হোটেল)',
+                            hintText: 'নতুন ফোল্ডারের নাম (যেমন: খাবার, হোটেল)',
                             hintStyle: const TextStyle(
                                 color: Colors.white38, fontSize: 13),
                             filled: true,
@@ -466,17 +517,140 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     );
   }
 
-  void _loadMorePosts() {
-    setState(() {
-      _postLimit += _pageSize;
-      _postsStream = _repository.watchPosts(widget.tourId, limit: _postLimit);
+  void _loadMorePosts() => unawaited(_feed.loadMore());
+
+  /// Owners and admins moderate the feed. The membership role is checked first;
+  /// the group's owner email is a fallback for a missing membership row.
+  bool get _isAdmin {
+    if (_myRole == TourRole.owner || _myRole == TourRole.admin) return true;
+    final email = _repository.currentEmail;
+    return _tourGroup != null &&
+        email.isNotEmpty &&
+        _tourGroup!.ownerEmail == email;
+  }
+
+  String get _filterKey => [
+        _selectedDayFilter,
+        _selectedMediaFilter,
+        _selectedBookmarkCollection,
+        _selectedLandmarkFilter,
+        _activeHashtagFilter,
+      ].join('|');
+
+  /// Handles the feed's own scrolling. A scroll releases the playing video, and
+  /// the one nearest the middle is picked when it stops. Nested scrollers, such
+  /// as the stories tray, are ignored.
+  bool _onFeedScroll(ScrollNotification n) {
+    if (n.depth != 0) return false;
+    if (n is ScrollStartNotification) {
+      _isScrolling = true;
+      if (_playingVideoId != null) setState(() => _playingVideoId = null);
+    } else if (n is ScrollEndNotification) {
+      _isScrolling = false;
+      _scheduleSettle();
+    }
+    return false;
+  }
+
+  /// Picks the video once the frame has laid out, so the cards have positions.
+  void _scheduleSettle() {
+    if (_settleScheduled) return;
+    _settleScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _settleScheduled = false;
+      if (mounted) _settleVideos();
     });
   }
 
-  bool get _isAdmin {
-    if (_tourGroup == null) return false;
-    final email = _repository.currentEmail;
-    return _tourGroup!.ownerEmail == email;
+  /// Chooses the built video card nearest the middle of the screen. Does
+  /// nothing while the feed is scrolling.
+  void _settleVideos() {
+    if (_isScrolling) return;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final middle = screenHeight / 2;
+
+    String? nearest;
+    var nearestGap = double.infinity;
+    for (final entry in _videoCardKeys.entries) {
+      final box = entry.value.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize) continue;
+      final top = box.localToGlobal(Offset.zero).dy;
+      final bottom = top + box.size.height;
+      if (bottom <= 0 || top >= screenHeight) continue;
+      final gap = ((top + bottom) / 2 - middle).abs();
+      if (gap < nearestGap) {
+        nearestGap = gap;
+        nearest = entry.key;
+      }
+    }
+    if (nearest != _playingVideoId) {
+      setState(() => _playingVideoId = nearest);
+    }
+  }
+
+  /// The posts the feed filters: the loaded page, plus bookmarks from outside
+  /// it while the Saved view is open.
+  List<TourPostItem> _feedSource(List<TourPostItem> posts) {
+    if (_selectedMediaFilter != 'saved' || _savedOutsidePage.isEmpty) {
+      return posts;
+    }
+    final loaded = posts.map((p) => p.id).toSet();
+    return [
+      ...posts,
+      ..._savedOutsidePage.where((p) => !loaded.contains(p.id)),
+    ];
+  }
+
+  /// Fetches the bookmarks that are not on the loaded page.
+  Future<void> _refreshSavedPosts() async {
+    final loaded = _latestPosts.map((p) => p.id).toSet();
+    final missing = _bookmarkedPostIds.where((id) => !loaded.contains(id));
+    try {
+      final fetched = await _repository.getPostsByIds(widget.tourId, missing);
+      if (mounted) setState(() => _savedOutsidePage = fetched);
+    } catch (e) {
+      debugPrint('[TourInstaFeed] Could not load saved posts: $e');
+    }
+  }
+
+  /// Drops bookmarks and collection entries for posts that no longer exist,
+  /// such as a post deleted by its author. Called only with the whole feed
+  /// loaded, so an id that is missing really is gone.
+  void _pruneMissingBookmarks(List<TourPostItem> posts) {
+    int entryCount() =>
+        _bookmarkedPostIds.length +
+        _bookmarkCollections.values.fold(0, (n, list) => n + list.length);
+
+    final before = entryCount();
+    final live = posts.map((p) => p.id).toSet();
+    _bookmarkedPostIds.removeWhere((id) => !live.contains(id));
+    for (final name in _bookmarkCollections.keys.toList()) {
+      _bookmarkCollections[name] =
+          _bookmarkCollections[name]!.where(live.contains).toList();
+    }
+    if (entryCount() != before) _saveFeedPrefs();
+  }
+
+  /// Loads the next page while the active filters match nothing on the loaded
+  /// page. The budget starts again whenever the filters change.
+  void _maybeAutoLoadForFilter({required bool needsMore}) {
+    final key = _filterKey;
+    if (key != _autoLoadFilterKey) {
+      _autoLoadFilterKey = key;
+      _emptyAutoLoads = 0;
+    }
+    if (!needsMore ||
+        _autoLoadScheduled ||
+        _emptyAutoLoads >= _maxEmptyAutoLoads) {
+      return;
+    }
+
+    _autoLoadScheduled = true;
+    _emptyAutoLoads++;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoLoadScheduled = false;
+      if (mounted) _loadMorePosts();
+    });
   }
 
   List<TourDayInfo> get _tourDays => _tourGroup?.daysList ?? const [];
@@ -788,9 +962,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     builder: (context, postsSnap) {
                       final posts = postsSnap.data ?? const <TourPostItem>[];
                       _latestPosts = posts;
+                      if (postsSnap.hasData) _scheduleSettle();
 
                       // Apply filtering
-                      var filteredPosts = posts.where((p) {
+                      var filteredPosts = _feedSource(posts).where((p) {
                         // Archive filter
                         if (_selectedMediaFilter == 'archived') {
                           if (!p.isArchived) return false;
@@ -845,269 +1020,300 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         });
                       }
 
-                      final hasMore = posts.length >= _postLimit;
+                      final hasMore = _feed.hasMore;
+                      // Only with the whole feed loaded is a missing id known to be gone.
+                      if (postsSnap.hasData && !hasMore) {
+                        _pruneMissingBookmarks(posts);
+                      }
+                      _maybeAutoLoadForFilter(
+                          needsMore: filteredPosts.isEmpty && hasMore);
                       final reelsList = posts.where((p) => p.isReel).toList();
 
-                      return CustomScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(
-                          parent: BouncingScrollPhysics(),
-                        ),
-                        slivers: [
-                          // 1. Live SOS Alert Banner (if active)
-                          if (openAlerts.isNotEmpty)
-                            SliverToBoxAdapter(
-                              child: InstafeedSosBanner(
-                                tourId: widget.tourId,
-                                alert: openAlerts.first,
-                              ),
-                            ),
-
-                          // 2. Beach Tide & Ocean Safety Banner
-                          SliverToBoxAdapter(
-                            child: InstafeedTideBanner(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => TideBeachGuideScreen(
-                                      tourId: widget.tourId,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                      return NotificationListener<ScrollNotification>(
+                        onNotification: _onFeedScroll,
+                        child: CustomScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
                           ),
-
-                          // 3. Stories & Story Highlights Tray
-                          SliverToBoxAdapter(
-                            child: _buildStoriesAndHighlightsBar(
-                              context,
-                              authorGroups,
-                              highlights,
-                            ),
-                          ),
-
-                          // 4. Hashtag Filter Chip (if active)
-                          if (_activeHashtagFilter != null)
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 4),
-                                child: Row(
-                                  children: [
-                                    Chip(
-                                      backgroundColor: const Color(0xFF00C853)
-                                          .withValues(alpha: 0.2),
-                                      avatar: const Icon(Icons.tag,
-                                          size: 16, color: Color(0xFF00C853)),
-                                      label: Text(
-                                        _activeHashtagFilter!,
-                                        style: const TextStyle(
-                                            color: Color(0xFF00C853),
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      deleteIcon: const Icon(Icons.close,
-                                          size: 16, color: Colors.white70),
-                                      onDeleted: () => setState(
-                                          () => _activeHashtagFilter = null),
-                                    ),
-                                  ],
+                          slivers: [
+                            // 1. Live SOS Alert Banner (if active)
+                            if (openAlerts.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: InstafeedSosBanner(
+                                  tourId: widget.tourId,
+                                  alert: openAlerts.first,
                                 ),
                               ),
-                            ),
 
-                          // 4b. Landmark Filter Chip (if active)
-                          if (_selectedLandmarkFilter != null)
+                            // 2. Beach Tide & Ocean Safety Banner
                             SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 4),
-                                child: Row(
-                                  children: [
-                                    Chip(
-                                      backgroundColor: const Color(0xFF00C853)
-                                          .withValues(alpha: 0.2),
-                                      avatar: const Icon(Icons.location_on,
-                                          size: 16, color: Color(0xFF00C853)),
-                                      label: Text(
-                                        _selectedLandmarkFilter!,
-                                        style: const TextStyle(
-                                            color: Color(0xFF00C853),
-                                            fontWeight: FontWeight.bold),
+                              child: InstafeedTideBanner(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => TideBeachGuideScreen(
+                                        tourId: widget.tourId,
                                       ),
-                                      deleteIcon: const Icon(Icons.close,
-                                          size: 16, color: Colors.white70),
-                                      onDeleted: () => setState(
-                                          () => _selectedLandmarkFilter = null),
                                     ),
-                                  ],
-                                ),
+                                  );
+                                },
                               ),
                             ),
 
-                          // 5. Media Filter Tabs (All, Photos, Reels, Saved, Archived)
-                          SliverToBoxAdapter(
-                            child: _buildMediaFilterTabs(),
-                          ),
-
-                          // 5b. Bookmark Collection Chips (When Saved Tab is active)
-                          if (_selectedMediaFilter == 'saved')
+                            // 3. Stories & Story Highlights Tray
                             SliverToBoxAdapter(
-                              child: Container(
-                                height: 40,
-                                margin: const EdgeInsets.only(top: 4, bottom: 4),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                child: ListView(
-                                  scrollDirection: Axis.horizontal,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 6),
-                                      child: ChoiceChip(
-                                        label: const Text('সব সেভ করা'),
-                                        selected:
-                                            _selectedBookmarkCollection == null,
-                                        selectedColor: Colors.amber,
-                                        backgroundColor:
-                                            const Color(0xFF1E1E1E),
-                                        labelStyle: TextStyle(
-                                          color: _selectedBookmarkCollection ==
-                                                  null
-                                              ? Colors.black
-                                              : Colors.white70,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
+                              child: _buildStoriesAndHighlightsBar(
+                                context,
+                                authorGroups,
+                                highlights,
+                              ),
+                            ),
+
+                            // 4. Hashtag Filter Chip (if active)
+                            if (_activeHashtagFilter != null)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 4),
+                                  child: Row(
+                                    children: [
+                                      Chip(
+                                        backgroundColor: const Color(0xFF00C853)
+                                            .withValues(alpha: 0.2),
+                                        avatar: const Icon(Icons.tag,
+                                            size: 16, color: Color(0xFF00C853)),
+                                        label: Text(
+                                          _activeHashtagFilter!,
+                                          style: const TextStyle(
+                                              color: Color(0xFF00C853),
+                                              fontWeight: FontWeight.bold),
                                         ),
-                                        onSelected: (_) => setState(() =>
-                                            _selectedBookmarkCollection = null),
+                                        deleteIcon: const Icon(Icons.close,
+                                            size: 16, color: Colors.white70),
+                                        onDeleted: () => setState(
+                                            () => _activeHashtagFilter = null),
                                       ),
-                                    ),
-                                    ..._bookmarkCollections.keys.map((name) {
-                                      final isSel =
-                                          _selectedBookmarkCollection == name;
-                                      return Padding(
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                            // 4b. Landmark Filter Chip (if active)
+                            if (_selectedLandmarkFilter != null)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 4),
+                                  child: Row(
+                                    children: [
+                                      Chip(
+                                        backgroundColor: const Color(0xFF00C853)
+                                            .withValues(alpha: 0.2),
+                                        avatar: const Icon(Icons.location_on,
+                                            size: 16, color: Color(0xFF00C853)),
+                                        label: Text(
+                                          _selectedLandmarkFilter!,
+                                          style: const TextStyle(
+                                              color: Color(0xFF00C853),
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        deleteIcon: const Icon(Icons.close,
+                                            size: 16, color: Colors.white70),
+                                        onDeleted: () => setState(() =>
+                                            _selectedLandmarkFilter = null),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                            // 5. Media Filter Tabs (All, Photos, Reels, Saved, Archived)
+                            SliverToBoxAdapter(
+                              child: _buildMediaFilterTabs(),
+                            ),
+
+                            // 5b. Bookmark Collection Chips (When Saved Tab is active)
+                            if (_selectedMediaFilter == 'saved')
+                              SliverToBoxAdapter(
+                                child: Container(
+                                  height: 40,
+                                  margin:
+                                      const EdgeInsets.only(top: 4, bottom: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16),
+                                  child: ListView(
+                                    scrollDirection: Axis.horizontal,
+                                    children: [
+                                      Padding(
                                         padding:
                                             const EdgeInsets.only(right: 6),
                                         child: ChoiceChip(
-                                          label: Text(name),
-                                          selected: isSel,
+                                          label: const Text('সব সেভ করা'),
+                                          selected:
+                                              _selectedBookmarkCollection ==
+                                                  null,
                                           selectedColor: Colors.amber,
                                           backgroundColor:
                                               const Color(0xFF1E1E1E),
                                           labelStyle: TextStyle(
-                                            color: isSel
-                                                ? Colors.black
-                                                : Colors.white70,
+                                            color:
+                                                _selectedBookmarkCollection ==
+                                                        null
+                                                    ? Colors.black
+                                                    : Colors.white70,
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
                                           ),
                                           onSelected: (_) => setState(() =>
                                               _selectedBookmarkCollection =
-                                                  name),
+                                                  null),
                                         ),
-                                      );
-                                    }),
-                                  ],
+                                      ),
+                                      ..._bookmarkCollections.keys.map((name) {
+                                        final isSel =
+                                            _selectedBookmarkCollection == name;
+                                        return Padding(
+                                          padding:
+                                              const EdgeInsets.only(right: 6),
+                                          child: ChoiceChip(
+                                            label: Text(name),
+                                            selected: isSel,
+                                            selectedColor: Colors.amber,
+                                            backgroundColor:
+                                                const Color(0xFF1E1E1E),
+                                            labelStyle: TextStyle(
+                                              color: isSel
+                                                  ? Colors.black
+                                                  : Colors.white70,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            onSelected: (_) => setState(() =>
+                                                _selectedBookmarkCollection =
+                                                    name),
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                  ),
                                 ),
                               ),
+
+                            // 6. Day-wise Filter Chips
+                            SliverToBoxAdapter(
+                              child: _buildDayFilterChips(),
                             ),
 
-                          // 6. Day-wise Filter Chips
-                          SliverToBoxAdapter(
-                            child: _buildDayFilterChips(),
-                          ),
-
-                          // 7. Posts: Grid View vs Feed List View
-                          if (postsSnap.hasError && !postsSnap.hasData)
-                            SliverFillRemaining(child: _buildFeedError(context))
-                          else if (!postsSnap.hasData)
-                            const SliverFillRemaining(
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                    color: AppColors.mintGreen),
-                              ),
-                            )
-                          else if (filteredPosts.isEmpty)
-                            SliverFillRemaining(
-                                child: _buildEmptyFeedState(context))
-                          else if (_isGridView)
-                            SliverFillRemaining(
-                              child: InstafeedExploreGrid(
-                                posts: filteredPosts,
-                                onPostTap: (post) {
-                                  if (post.isReel) {
-                                    final reelIdx = reelsList.indexOf(post);
-                                    _openReelsModal(context, reelsList,
-                                        reelIdx >= 0 ? reelIdx : 0);
-                                  } else {
-                                    InstafeedImageViewerModal.show(
-                                      context,
-                                      repository: _repository,
-                                      tourId: widget.tourId,
+                            // 7. Posts: Grid View vs Feed List View
+                            if (postsSnap.hasError && !postsSnap.hasData)
+                              SliverFillRemaining(
+                                  child: _buildFeedError(context))
+                            else if (!postsSnap.hasData)
+                              const SliverFillRemaining(
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                      color: AppColors.mintGreen),
+                                ),
+                              )
+                            else if (filteredPosts.isEmpty)
+                              SliverFillRemaining(
+                                  child: posts.isEmpty
+                                      ? _buildEmptyFeedState(context)
+                                      : _buildFilteredEmptyState(
+                                          hasMore: hasMore))
+                            else if (_isGridView)
+                              SliverFillRemaining(
+                                child: InstafeedExploreGrid(
+                                  posts: filteredPosts,
+                                  onPostTap: (post) {
+                                    if (post.isReel) {
+                                      final reelIdx = reelsList.indexOf(post);
+                                      _openReelsModal(context, reelsList,
+                                          reelIdx >= 0 ? reelIdx : 0);
+                                    } else {
+                                      InstafeedImageViewerModal.show(
+                                        context,
+                                        repository: _repository,
+                                        tourId: widget.tourId,
+                                        post: post,
+                                        onOpenComments: (p) =>
+                                            _showCommentsModal(context, p),
+                                        onShare: (p) =>
+                                            _showShareModal(context, p),
+                                        onAddToLedger: (p) =>
+                                            _showAddToLedgerDialog(p),
+                                      );
+                                    }
+                                  },
+                                ),
+                              )
+                            else
+                              SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    if (index == filteredPosts.length) {
+                                      return Center(
+                                        child: TextButton(
+                                          onPressed: _loadMorePosts,
+                                          child: const Text('আরও পোস্ট দেখুন'),
+                                        ),
+                                      );
+                                    }
+                                    final post = filteredPosts[index];
+                                    final isVideo = post.videoUrl != null;
+                                    return InstafeedPostCard(
+                                      // Video cards keep a GlobalKey, so the feed can find
+                                      // their position when it picks one to play.
+                                      key: isVideo
+                                          ? _videoCardKeys.putIfAbsent(
+                                              post.id, () => GlobalKey())
+                                          : ValueKey(post.id),
                                       post: post,
+                                      videoPlaying: post.id == _playingVideoId,
+                                      onVideoTap: isVideo
+                                          ? () => setState(
+                                              () => _playingVideoId = post.id)
+                                          : null,
+                                      tourId: widget.tourId,
+                                      repository: _repository,
+                                      isAdmin: _isAdmin,
+                                      seatNumber: _seatMap[post.authorEmail],
+                                      roomNumber: _roomMap[post.authorEmail],
+                                      isBookmarked:
+                                          _bookmarkedPostIds.contains(post.id),
+                                      onBookmarkToggle: () =>
+                                          _toggleBookmark(post.id),
+                                      onSaveToCollection:
+                                          _showSaveToCollectionSheet,
                                       onOpenComments: (p) =>
                                           _showCommentsModal(context, p),
                                       onShare: (p) =>
                                           _showShareModal(context, p),
                                       onAddToLedger: (p) =>
                                           _showAddToLedgerDialog(p),
+                                      onReelTap: (p) {
+                                        final reelIdx = reelsList.indexOf(p);
+                                        _openReelsModal(
+                                          context,
+                                          reelsList,
+                                          reelIdx >= 0 ? reelIdx : 0,
+                                        );
+                                      },
+                                      onHashtagTap: (tag) => setState(
+                                          () => _activeHashtagFilter = tag),
+                                      onPostChanged: () => setState(() {}),
                                     );
-                                  }
-                                },
+                                  },
+                                  childCount:
+                                      filteredPosts.length + (hasMore ? 1 : 0),
+                                ),
                               ),
-                            )
-                          else
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  if (index == filteredPosts.length) {
-                                    return Center(
-                                      child: TextButton(
-                                        onPressed: _loadMorePosts,
-                                        child: const Text('আরও পোস্ট দেখুন'),
-                                      ),
-                                    );
-                                  }
-                                  final post = filteredPosts[index];
-                                  return InstafeedPostCard(
-                                    key: ValueKey(post.id),
-                                    post: post,
-                                    tourId: widget.tourId,
-                                    repository: _repository,
-                                    isAdmin: _isAdmin,
-                                    seatNumber: _seatMap[post.authorEmail],
-                                    roomNumber: _roomMap[post.authorEmail],
-                                    isBookmarked:
-                                        _bookmarkedPostIds.contains(post.id),
-                                    onBookmarkToggle: () =>
-                                        _toggleBookmark(post.id),
-                                    onSaveToCollection:
-                                        _showSaveToCollectionSheet,
-                                    onOpenComments: (p) =>
-                                        _showCommentsModal(context, p),
-                                    onShare: (p) => _showShareModal(context, p),
-                                    onAddToLedger: (p) =>
-                                        _showAddToLedgerDialog(p),
-                                    onReelTap: (p) {
-                                      final reelIdx = reelsList.indexOf(p);
-                                      _openReelsModal(
-                                        context,
-                                        reelsList,
-                                        reelIdx >= 0 ? reelIdx : 0,
-                                      );
-                                    },
-                                    onHashtagTap: (tag) => setState(
-                                        () => _activeHashtagFilter = tag),
-                                    onPostChanged: () => setState(() {}),
-                                  );
-                                },
-                                childCount:
-                                    filteredPosts.length + (hasMore ? 1 : 0),
-                              ),
-                            ),
 
-                          const SliverToBoxAdapter(child: SizedBox(height: 80)),
-                        ],
+                            const SliverToBoxAdapter(
+                                child: SizedBox(height: 80)),
+                          ],
+                        ),
                       );
                     },
                   );
@@ -1120,11 +1326,42 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     );
   }
 
+  /// Opens the story viewer at one author's group, and marks its stories seen.
+  void _openStoryViewer(
+    BuildContext context,
+    List<List<TourStoryItem>> authorGroups,
+    int idx,
+  ) {
+    for (final s in authorGroups[idx]) {
+      _seenStoryIds.add(s.id);
+    }
+    _saveFeedPrefs();
+
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => InstafeedStoryViewer(
+          repository: _repository,
+          tourId: widget.tourId,
+          authorStoryGroups: authorGroups,
+          initialGroupIndex: idx,
+          isAdmin: _isAdmin,
+        ),
+      ),
+    );
+  }
+
   Widget _buildStoriesAndHighlightsBar(
     BuildContext context,
     List<List<TourStoryItem>> authorGroups,
     List<TourStoryHighlight> highlights,
   ) {
+    // Your own stories open from the Your Story bubble, so they are not listed twice.
+    final me = _repository.currentEmail;
+    final ownIndex = me.isEmpty
+        ? -1
+        : authorGroups.indexWhere((g) => g.first.authorEmail == me);
+
     return Container(
       height: 110,
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1136,7 +1373,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: GestureDetector(
-              onTap: () => _showCreatePostModal(context),
+              onTap: () => ownIndex >= 0
+                  ? _openStoryViewer(context, authorGroups, ownIndex)
+                  : _showCreatePostModal(context),
               child: Column(
                 children: [
                   Stack(
@@ -1154,14 +1393,17 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       Positioned(
                         bottom: 0,
                         right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF00C853),
-                            shape: BoxShape.circle,
+                        child: GestureDetector(
+                          onTap: () => _showCreatePostModal(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF00C853),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.add,
+                                size: 14, color: Colors.black),
                           ),
-                          child: const Icon(Icons.add,
-                              size: 14, color: Colors.black),
                         ),
                       ),
                     ],
@@ -1176,6 +1418,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
           // Author Stories Bubbles
           ...List.generate(authorGroups.length, (idx) {
+            if (idx == ownIndex) return const SizedBox.shrink();
             final group = authorGroups[idx];
             final first = group.first;
             final isUnseen = group.any((s) => !_seenStoryIds.contains(s.id));
@@ -1183,24 +1426,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: GestureDetector(
-                onTap: () {
-                  for (final s in group) {
-                    _seenStoryIds.add(s.id);
-                  }
-                  _saveFeedPrefs();
-
-                  Navigator.push<void>(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => InstafeedStoryViewer(
-                        repository: _repository,
-                        tourId: widget.tourId,
-                        authorStoryGroups: authorGroups,
-                        initialGroupIndex: idx,
-                      ),
-                    ),
-                  );
-                },
+                onTap: () => _openStoryViewer(context, authorGroups, idx),
                 child: Column(
                   children: [
                     Container(
@@ -1333,8 +1559,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 12,
               ),
-              onSelected: (_) =>
-                  setState(() => _selectedMediaFilter = f['id']!),
+              onSelected: (_) {
+                setState(() => _selectedMediaFilter = f['id']!);
+                if (f['id'] == 'saved') unawaited(_refreshSavedPosts());
+              },
             ),
           );
         }).toList(),
@@ -1400,13 +1628,53 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             const SizedBox(height: 12),
             FilledButton.tonal(
               onPressed: () => setState(() {
-                _postsStream =
-                    _repository.watchPosts(widget.tourId, limit: _postLimit);
+                unawaited(_feed.close());
+                _feed = PagedPostFeed(
+                  repository: _repository,
+                  tourId: widget.tourId,
+                  pageSize: _pageSize,
+                );
+                _postsStream = _feed.stream;
               }),
               child: const Text('পুনরায় চেষ্টা করুন'),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Shown when posts are loaded but the active filters hide all of them.
+  Widget _buildFilteredEmptyState({required bool hasMore}) {
+    final autoLoading = hasMore && _emptyAutoLoads < _maxEmptyAutoLoads;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: autoLoading
+            ? const CircularProgressIndicator(color: AppColors.mintGreen)
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.filter_alt_off_outlined,
+                      size: 54, color: Colors.white24),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'এই ফিল্টারে কোনো পোস্ট নেই',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  if (hasMore) ...[
+                    const SizedBox(height: 16),
+                    FilledButton.tonal(
+                      onPressed: _loadMorePosts,
+                      child: const Text('আরও পোস্ট দেখুন'),
+                    ),
+                  ],
+                ],
+              ),
       ),
     );
   }

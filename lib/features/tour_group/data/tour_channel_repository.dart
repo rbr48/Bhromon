@@ -7,6 +7,7 @@ import '../domain/models/channel_models.dart';
 import '../domain/models/date_codec.dart';
 import '../domain/services/media_rules.dart';
 import 'tour_group_repository.dart';
+import 'tour_media_journal.dart';
 import 'tour_media_uploader.dart';
 
 /// Firestore batches hold at most 500 writes; stay well under that.
@@ -446,7 +447,7 @@ class TourChannelRepository {
     XFile file, {
     required bool isVideo,
   }) {
-    final email = _groups.requireEmail();
+    _groups.requireEmail();
     final name = file.name;
     final contentType =
         isVideo ? videoContentType(name) : imageContentType(name);
@@ -455,6 +456,8 @@ class TourChannelRepository {
           ? 'এই ধরনের ভিডিও পাঠানো যাবে না।'
           : 'এই ধরনের ছবি পাঠানো যাবে না।');
     }
+    // Channel files are not journaled for the sweep, which cannot yet see
+    // channel messages. The message commits or discards them instead.
     return TourMediaUploader.start(
       tourId: tourId,
       folder: 'channels',
@@ -462,7 +465,7 @@ class TourChannelRepository {
       contentType: contentType,
       extension: storedExtension(name, isVideo ? 'mp4' : 'jpg'),
       maxBytes: isVideo ? kMaxVideoBytes : kMaxImageBytes,
-      uploaderEmail: email,
+      journal: TourMediaJournal.untracked,
     );
   }
 

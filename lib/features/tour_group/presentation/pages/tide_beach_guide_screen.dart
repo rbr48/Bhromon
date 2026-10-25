@@ -17,6 +17,7 @@ class TideBeachGuideScreen extends StatefulWidget {
 class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
   final TourGroupRepository _repository = TourGroupRepository();
   TourGroup? _tourGroup;
+  StreamSubscription<TourGroup?>? _groupSub;
   bool _isBeachView = true;
   // Refreshes "now" each minute so the safety banner does not go stale.
   Timer? _ticker;
@@ -24,7 +25,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
   @override
   void initState() {
     super.initState();
-    _loadGroup();
+    _watchGroup();
     _ticker = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() {});
     });
@@ -32,20 +33,22 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
 
   @override
   void dispose() {
+    _groupSub?.cancel();
     _ticker?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadGroup() async {
-    final g = await _repository.getGroup(widget.tourId);
-    if (mounted) {
+  void _watchGroup() {
+    _groupSub?.cancel();
+    _groupSub = _repository.watchGroup(widget.tourId).listen((g) {
+      if (!mounted) return;
       setState(() {
         _tourGroup = g;
         _isBeachView = g?.tourType == TourType.beach ||
             (g?.destination.toLowerCase().contains('cox') ?? true) ||
             (g?.destination.toLowerCase().contains('kuakata') ?? false);
       });
-    }
+    });
   }
 
   @override
