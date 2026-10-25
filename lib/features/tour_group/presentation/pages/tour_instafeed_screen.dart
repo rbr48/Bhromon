@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../data/paged_post_feed.dart';
 import '../../data/tour_group_repository.dart';
 import '../../data/tour_media_journal.dart';
 import '../../data/tour_media_uploader.dart';
@@ -79,7 +80,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   final Map<String, String> _seatMap = {};
   final Map<String, String> _roomMap = {};
 
-  int _postLimit = _pageSize;
+  late PagedPostFeed _feed;
 
   // Filtered pages can come back empty, so the feed pages in more posts while
   // nothing matches. Capped, so a filter that never matches stops on its own.
@@ -98,7 +99,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   void initState() {
     super.initState();
     _storiesStream = _repository.watchStories(widget.tourId);
-    _postsStream = _repository.watchPosts(widget.tourId, limit: _postLimit);
+    _feed = PagedPostFeed(
+      repository: _repository,
+      tourId: widget.tourId,
+      pageSize: _pageSize,
+    );
+    _postsStream = _feed.stream;
     _highlightsStream = _repository.watchHighlights(widget.tourId);
     _alertsStream = _repository.watchSafetyAlerts(widget.tourId);
 
@@ -115,6 +121,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   @override
   void dispose() {
     _groupSub?.cancel();
+    unawaited(_feed.close());
     super.dispose();
   }
 
@@ -510,12 +517,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     );
   }
 
-  void _loadMorePosts() {
-    setState(() {
-      _postLimit += _pageSize;
-      _postsStream = _repository.watchPosts(widget.tourId, limit: _postLimit);
-    });
-  }
+  void _loadMorePosts() => unawaited(_feed.loadMore());
 
   /// Owners and admins moderate the feed. The membership role is checked first;
   /// the group's owner email is a fallback for a missing membership row.
@@ -1018,7 +1020,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         });
                       }
 
-                      final hasMore = posts.length >= _postLimit;
+                      final hasMore = _feed.hasMore;
                       // Only with the whole feed loaded is a missing id known to be gone.
                       if (postsSnap.hasData && !hasMore) {
                         _pruneMissingBookmarks(posts);
@@ -1626,8 +1628,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             const SizedBox(height: 12),
             FilledButton.tonal(
               onPressed: () => setState(() {
-                _postsStream =
-                    _repository.watchPosts(widget.tourId, limit: _postLimit);
+                unawaited(_feed.close());
+                _feed = PagedPostFeed(
+                  repository: _repository,
+                  tourId: widget.tourId,
+                  pageSize: _pageSize,
+                );
+                _postsStream = _feed.stream;
               }),
               child: const Text('পুনরায় চেষ্টা করুন'),
             ),

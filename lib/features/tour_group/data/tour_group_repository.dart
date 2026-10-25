@@ -1191,6 +1191,45 @@ class TourGroupRepository {
             s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList());
   }
 
+  /// Posts created before [upper] (any time when null) and not before [lower]
+  /// (any time when null), newest first. Live: a post added or deleted in the
+  /// range shows at once.
+  Stream<List<TourPostItem>> watchPostRange(
+    String tourId, {
+    DateTime? upper,
+    DateTime? lower,
+  }) {
+    Query<Map<String, dynamic>> query =
+        _sub(tourId, 'posts').orderBy('createdAt', descending: true);
+    if (upper != null) {
+      query = query.where('createdAt', isLessThan: Timestamp.fromDate(upper));
+    }
+    if (lower != null) {
+      query = query.where('createdAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(lower));
+    }
+    return query.snapshots().map((s) =>
+        s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList());
+  }
+
+  /// Where the next page of the feed starts: the creation time of the [limit]th
+  /// newest post older than [upper]. Null when fewer than [limit] posts are, so
+  /// that page is the last one.
+  Future<DateTime?> feedPageBoundary(
+    String tourId, {
+    DateTime? upper,
+    int limit = 60,
+  }) async {
+    Query<Map<String, dynamic>> query =
+        _sub(tourId, 'posts').orderBy('createdAt', descending: true);
+    if (upper != null) {
+      query = query.where('createdAt', isLessThan: Timestamp.fromDate(upper));
+    }
+    final snap = await query.limit(limit).get();
+    if (snap.docs.length < limit) return null;
+    return readDate(snap.docs.last.data()['createdAt']);
+  }
+
   /// Fetches posts by id, such as bookmarks older than the loaded feed. An id
   /// whose post was deleted is left out of the result.
   Future<List<TourPostItem>> getPostsByIds(
