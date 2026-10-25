@@ -60,14 +60,15 @@ void main() {
 
     test('constants point to the production VPS media domain', () {
       expect(TourMediaUploader.baseUrl, 'https://bhromon.fun');
-      expect(TourMediaUploader.uploadUrl,
-          'https://bhromon.fun/api/media/upload');
+      expect(
+          TourMediaUploader.uploadUrl, 'https://bhromon.fun/api/media/upload');
       expect(TourMediaUploader.deleteBaseUrl,
           'https://bhromon.fun/api/media/media');
       expect(TourMediaUploader.uploadKey, isNotEmpty);
     });
 
-    test('deleteMedia gracefully ignores non-remote or invalid URLs without throwing',
+    test(
+        'deleteMedia gracefully ignores non-remote or invalid URLs without throwing',
         () async {
       // Should not throw
       await TourMediaUploader.deleteMedia('');
