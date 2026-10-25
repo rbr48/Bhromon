@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'teen_patti_engine.dart';
 
 class TeenPattiPlayer {
@@ -10,6 +11,7 @@ class TeenPattiPlayer {
   bool isSeen;
   bool isFolded;
   int chips;
+  int blindTurns;
 
   TeenPattiPlayer({
     required this.id,
@@ -19,6 +21,7 @@ class TeenPattiPlayer {
     this.isSeen = false,
     this.isFolded = false,
     this.chips = 500,
+    this.blindTurns = 0,
   });
 }
 
@@ -38,10 +41,18 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
   String _statusMessage = 'Welcome to 3 Patti (তিন পাত্তি)! Place boot.';
   bool _isBotThinking = false;
 
+  Timer? _botTimer;
+
   @override
   void initState() {
     super.initState();
     _initGame();
+  }
+
+  @override
+  void dispose() {
+    _botTimer?.cancel();
+    super.dispose();
   }
 
   void _initGame() {
@@ -57,12 +68,28 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
   }
 
   void _startNewRound() {
+    _botTimer?.cancel();
+
+    // Check if user needs rebuy
+    if (_players[0].chips < 10) {
+      _players[0].chips = 500;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rebuy! Added +500 chips to your balance.')),
+      );
+    }
+
     final deck = TeenPattiEngine.createDeck();
 
     for (int i = 0; i < 4; i++) {
       _players[i].hand = deck.sublist(i * 3, (i + 1) * 3);
       _players[i].isFolded = false;
       _players[i].isSeen = false;
+      _players[i].blindTurns = 0;
+
+      // Rebuy bots if broke
+      if (_players[i].chips < 10) {
+        _players[i].chips = 500;
+      }
     }
 
     // Collect boot of 10 from each
@@ -83,6 +110,7 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
   }
 
   void _userSeeCards() {
+    HapticFeedback.selectionClick();
     setState(() {
       _players[0].isSeen = true;
       _statusMessage = 'You saw your cards! Current chaal is ${_currentBet * 2}.';
@@ -90,12 +118,20 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
   }
 
   void _userBet() {
+    HapticFeedback.lightImpact();
     final player = _players[0];
     final cost = player.isSeen ? _currentBet * 2 : _currentBet;
 
     if (player.chips < cost) {
       _userFold();
       return;
+    }
+
+    if (!player.isSeen) {
+      player.blindTurns++;
+      if (player.blindTurns >= 4) {
+        player.isSeen = true; // Auto see cards after 4 blinds
+      }
     }
 
     setState(() {
@@ -107,7 +143,20 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
     _advanceTurn();
   }
 
+  void _userRaiseBet() {
+    HapticFeedback.mediumImpact();
+    if (_currentBet >= 40) return; // Cap at 40 (chaal 80)
+
+    setState(() {
+      _currentBet *= 2;
+      _statusMessage = 'Stakes raised! Base bet is now $_currentBet chips.';
+    });
+
+    _userBet();
+  }
+
   void _userFold() {
+    HapticFeedback.lightImpact();
     setState(() {
       _players[0].isFolded = true;
       _statusMessage = 'You packed (folded).';
@@ -116,7 +165,42 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
     _checkRoundState();
   }
 
+  void _userSideshow() {
+    HapticFeedback.mediumImpact();
+    final previousPlayer = _getPreviousActivePlayer();
+    if (previousPlayer == null || !previousPlayer.isSeen || !_players[0].isSeen) return;
+
+    final cost = _currentBet * 2;
+    _players[0].chips -= cost;
+    _pot += cost;
+
+    // Private compare
+    final cmp = TeenPattiEngine.compareHands(_players[0].hand, previousPlayer.hand);
+
+    setState(() {
+      if (cmp >= 0) {
+        previousPlayer.isFolded = true;
+        _statusMessage = 'Sideshow won! ${previousPlayer.name} was packed.';
+      } else {
+        _players[0].isFolded = true;
+        _statusMessage = 'Sideshow lost! You had weaker cards and were packed.';
+      }
+    });
+
+    _checkRoundState();
+  }
+
+  TeenPattiPlayer? _getPreviousActivePlayer() {
+    int idx = (_currentTurn + 3) % 4;
+    while (_players[idx].isFolded) {
+      idx = (idx + 3) % 4;
+      if (idx == _currentTurn) return null;
+    }
+    return _players[idx];
+  }
+
   void _userShow() {
+    HapticFeedback.heavyImpact();
     final active = _players.where((p) => !p.isFolded).toList();
     if (active.length != 2) return;
 
@@ -147,22 +231,27 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
 
   void _runBotTurn() {
     _isBotThinking = true;
-    Timer(const Duration(milliseconds: 900), () {
+    _botTimer?.cancel();
+    _botTimer = Timer(const Duration(milliseconds: 750), () {
       if (!mounted) return;
       _isBotThinking = false;
 
       final bot = _players[_currentTurn];
       final eval = TeenPattiEngine.evaluateHand(bot.hand);
 
-      // Bot decides whether to see cards after first round
-      if (!bot.isSeen && _pot > 80) {
+      // Bot sees cards after 2 blinds or high pot
+      if (!bot.isSeen && (_pot > 80 || bot.blindTurns >= 2)) {
         bot.isSeen = true;
+      }
+
+      if (!bot.isSeen) {
+        bot.blindTurns++;
       }
 
       final active = _players.where((p) => !p.isFolded).toList();
 
       // Bot asks for show if only 2 players left and hand is high
-      if (active.length == 2 && eval.handType.score >= 3 && _pot > 120) {
+      if (active.length == 2 && eval.handType.score >= 2 && _pot > 120) {
         final cost = bot.isSeen ? _currentBet * 2 : _currentBet;
         bot.chips -= cost;
         _pot += cost;
@@ -174,7 +263,7 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
       }
 
       // Fold if weak hand and seen
-      if (bot.isSeen && eval.handType == TeenPattiHandType.highCard && eval.primaryValue < 11 && _pot > 100) {
+      if (bot.isSeen && eval.handType == TeenPattiHandType.highCard && eval.primaryValue < 11 && _pot > 90) {
         setState(() {
           bot.isFolded = true;
           _statusMessage = '${bot.name} packed (folded).';
@@ -220,25 +309,47 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
   void _resolveShowdown() {
     final active = _players.where((p) => !p.isFolded).toList();
 
+    // Check tie or best
     TeenPattiPlayer best = active.first;
+    bool isTie = false;
     for (int i = 1; i < active.length; i++) {
-      if (TeenPattiEngine.compareHands(active[i].hand, best.hand) > 0) {
+      final cmp = TeenPattiEngine.compareHands(active[i].hand, best.hand);
+      if (cmp > 0) {
         best = active[i];
+        isTie = false;
+      } else if (cmp == 0) {
+        isTie = true;
       }
     }
 
-    best.chips += _pot;
-    final bestEval = TeenPattiEngine.evaluateHand(best.hand);
-
-    setState(() {
-      _isRoundOver = true;
-      for (final p in _players) {
-        p.isSeen = true; // Reveal all
+    if (isTie) {
+      // Split pot
+      final split = _pot ~/ active.length;
+      for (final p in active) {
+        p.chips += split;
       }
-      _statusMessage = '${best.name} wins with ${bestEval.handType.banglaName}!';
-    });
+      setState(() {
+        _isRoundOver = true;
+        for (final p in _players) {
+          p.isSeen = true;
+        }
+        _statusMessage = 'Showdown Tie! Pot of $_pot chips was split evenly.';
+      });
+      _showResultDialog('Split Pot', 'Equal hands! Pot was split evenly ($split chips each).');
+    } else {
+      best.chips += _pot;
+      final bestEval = TeenPattiEngine.evaluateHand(best.hand);
 
-    _showResultDialog(best.name, '${best.name} won the pot of $_pot chips with ${bestEval.handType.banglaName}!');
+      setState(() {
+        _isRoundOver = true;
+        for (final p in _players) {
+          p.isSeen = true;
+        }
+        _statusMessage = '${best.name} wins with ${bestEval.handType.banglaName}!';
+      });
+
+      _showResultDialog(best.name, '${best.name} won the pot of $_pot chips with ${bestEval.handType.banglaName}!');
+    }
   }
 
   void _showResultDialog(String winnerName, String detail) {
@@ -246,10 +357,12 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: Text('🏆 $winnerName Wins!', style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Text(detail),
+        backgroundColor: const Color(0xFF092614),
+        title: Text('🏆 $winnerName', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text(detail, style: const TextStyle(color: Colors.white70)),
         actions: [
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
             onPressed: () {
               Navigator.pop(ctx);
               _startNewRound();
@@ -265,9 +378,15 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
   Widget build(BuildContext context) {
     final activeRemaining = _players.where((p) => !p.isFolded).length;
     final isUserTurn = _currentTurn == 0 && !_players[0].isFolded && !_isBotThinking && !_isRoundOver;
+    final prevPlayer = _getPreviousActivePlayer();
+    final canSideshow = isUserTurn &&
+        _players[0].isSeen &&
+        prevPlayer != null &&
+        prevPlayer.isSeen &&
+        activeRemaining > 2;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F381E), // Classic casino felt
+      backgroundColor: const Color(0xFF0F381E), // Emerald casino felt
       appBar: AppBar(
         title: const Text('Teen Patti (৩ পাত্তি)', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF092614),
@@ -296,17 +415,17 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
                     children: [
                       // North Seat
                       Positioned(
-                        top: 12,
+                        top: 10,
                         child: _buildPlayerSeat(_players[2]),
                       ),
                       // West Seat
                       Positioned(
-                        left: 8,
+                        left: 6,
                         child: _buildPlayerSeat(_players[3]),
                       ),
                       // East Seat
                       Positioned(
-                        right: 8,
+                        right: 6,
                         child: _buildPlayerSeat(_players[1]),
                       ),
 
@@ -319,7 +438,7 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
             ),
 
             // User Cards & Controls (South)
-            _buildUserControls(isUserTurn, activeRemaining),
+            _buildUserControls(isUserTurn, activeRemaining, canSideshow),
           ],
         ),
       ),
@@ -346,7 +465,7 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
                 child: Text('Pot: $_pot chips',
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
               ),
-              Text('Current Bet: $_currentBet',
+              Text('Base Bet: $_currentBet',
                   style: const TextStyle(color: Colors.white70, fontSize: 13)),
             ],
           ),
@@ -366,7 +485,7 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: isTurn ? Colors.amber : const Color(0x66000000),
             borderRadius: BorderRadius.circular(12),
@@ -401,12 +520,12 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
             mainAxisSize: MainAxisSize.min,
             children: player.hand.map((c) {
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 1.5),
                 child: player.isSeen || _isRoundOver
                     ? _buildMiniCard(c)
                     : Container(
-                        width: 18,
-                        height: 26,
+                        width: 22,
+                        height: 32,
                         decoration: BoxDecoration(
                           color: Colors.red.shade900,
                           borderRadius: BorderRadius.circular(3),
@@ -434,7 +553,7 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.monetization_on, color: Colors.amber, size: 28),
+            const Icon(Icons.monetization_on, color: Colors.amber, size: 26),
             const SizedBox(height: 2),
             Text('$_pot', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
             const Text('CHIPS', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1.2)),
@@ -444,11 +563,12 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
     );
   }
 
-  Widget _buildUserControls(bool isUserTurn, int activeRemaining) {
+  Widget _buildUserControls(bool isUserTurn, int activeRemaining, bool canSideshow) {
     final user = _players[0];
+    final userEval = user.isSeen ? TeenPattiEngine.evaluateHand(user.hand) : null;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
         color: Color(0xFF092614),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -456,90 +576,125 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
       child: SafeArea(
         top: false,
         child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Hand cards
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: user.hand.map((c) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: user.isSeen || _isRoundOver
-                    ? _buildFullCard(c)
-                    : GestureDetector(
-                        onTap: _userSeeCards,
-                        child: Container(
-                          width: 52,
-                          height: 76,
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade900,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          child: const Center(
-                            child: Text('👀 SEE', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Hand rank indicator when seen
+            if (userEval != null && !user.isFolded)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade900,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Your Hand: ${userEval.handType.banglaName}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                ),
+              ),
+
+            // Hand cards
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: user.hand.map((c) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: user.isSeen || _isRoundOver
+                      ? _buildFullCard(c)
+                      : GestureDetector(
+                          onTap: _userSeeCards,
+                          child: Container(
+                            width: 52,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade900,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.white, width: 1.5),
+                            ),
+                            child: const Center(
+                              child: Text('👀 SEE', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                            ),
                           ),
                         ),
-                      ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-
-          // Action Buttons (Wrap to prevent horizontal overflow on all screen widths)
-          if (isUserTurn && !user.isFolded)
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: [
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.redAccent,
-                    side: const BorderSide(color: Colors.redAccent),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  ),
-                  onPressed: _userFold,
-                  child: const Text('Pack (Fold)'),
-                ),
-                if (!user.isSeen)
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    ),
-                    onPressed: _userSeeCards,
-                    child: const Text('See Cards'),
-                  ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    foregroundColor: Colors.black87,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  ),
-                  onPressed: _userBet,
-                  child: Text(user.isSeen ? 'Chaal (${_currentBet * 2})' : 'Blind ($_currentBet)'),
-                ),
-                if (activeRemaining == 2)
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.greenAccent.shade700,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    ),
-                    onPressed: _userShow,
-                    child: const Text('Show'),
-                  ),
-              ],
-            )
-          else if (_isRoundOver)
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
-              onPressed: _startNewRound,
-              child: const Text('Deal Next Hand'),
+                );
+              }).toList(),
             ),
-        ],
+            const SizedBox(height: 10),
+
+            // Action Buttons
+            if (isUserTurn && !user.isFolded)
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                alignment: WrapAlignment.center,
+                children: [
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                      side: const BorderSide(color: Colors.redAccent),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    onPressed: _userFold,
+                    child: const Text('Pack (Fold)'),
+                  ),
+                  if (!user.isSeen)
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onPressed: _userSeeCards,
+                      child: const Text('See Cards'),
+                    ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.black87,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    onPressed: _userBet,
+                    child: Text(user.isSeen ? 'Chaal (${_currentBet * 2})' : 'Blind ($_currentBet)'),
+                  ),
+                  if (_currentBet < 40)
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.amber,
+                        side: const BorderSide(color: Colors.amber),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
+                      onPressed: _userRaiseBet,
+                      child: const Text('Raise (2x)'),
+                    ),
+                  if (canSideshow)
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
+                      onPressed: _userSideshow,
+                      child: const Text('Sideshow'),
+                    ),
+                  if (activeRemaining == 2)
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.greenAccent.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onPressed: _userShow,
+                      child: const Text('Show'),
+                    ),
+                ],
+              )
+            else if (_isRoundOver)
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
+                onPressed: _startNewRound,
+                child: const Text('Deal Next Hand'),
+              ),
+          ],
         ),
       ),
     );
@@ -548,8 +703,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
   Widget _buildMiniCard(TeenPattiCard c) {
     final isRed = c.suit == 'H' || c.suit == 'D';
     return Container(
-      width: 18,
-      height: 26,
+      width: 22,
+      height: 32,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(3),
@@ -560,7 +715,7 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> {
           '${c.rank}${c.suitSymbol}',
           style: TextStyle(
             color: isRed ? Colors.red : Colors.black,
-            fontSize: 8,
+            fontSize: 9,
             fontWeight: FontWeight.bold,
           ),
         ),
