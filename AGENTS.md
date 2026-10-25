@@ -56,31 +56,39 @@ This document serves as the persistent system memory, architectural guidelines, 
 - Vertical reels video feed (`tour_instafeed_screen.dart`) matching Family Bhromon with video playback controls, aspect ratio fitting, upload flows, and media filters.
 
 ### D. Family Game Zone (`lib/features/game_zone/`)
-1. **Card 29 (`card29/`)**:
-   - 32 cards (J:3, 9:2, A:1, 10:1, K:0, Q:0, 8:0, 7:0).
-   - Dynamic bidding up to 28 (not capped at 21).
-   - Strict trump rule: if trump is asked and player cannot follow lead suit, they MUST play trump if held (`mustPlayTrumpIfHeld: true`).
-   - Royalty pair bonus (+4 declarer points).
-   - 6-pip match game tracking.
+Game rules live in pure-Dart models/engines (unit-tested); screens only render and drive timers.
+Every game screen locks portrait (`common/game_zone_portrait_lock.dart`), keeps its game in a
+static session while the user visits other screens, and asks before discarding a game in progress.
+1. **Card 29 (`card29/`, model `card29_game.dart`)**:
+   - 32 cards (J:3, 9:2, A:1, 10:1, K:0, Q:0, 8:0, 7:0) + 1 for the last trick = 29.
+   - Bidding 16–28 from the dealer's left, a pass is final, dealer rotates; all-pass → dealer plays at 16.
+   - Strict trump rule: once trump is revealed, any player who cannot follow lead suit MUST play trump if held (`mustPlayTrumpIfHeld: true`), on every trick. The bidder reveals trump by playing it while void and may not lead the hidden trump suit; a trump-suit discard before the reveal has no trump power (`PlayedCard.trumpEligible`).
+   - Pair (royalty, K+Q of trump, after reveal): bidding team target −4 (min 16), opponents' pair → target +4 (max 28). Bots claim it too.
+   - A finished trick sits in `Card29Phase.trickComplete` until `resolveTrick()`, so no card can be played during the pause.
+   - 6-pip match game tracking; a new round after `matchOver` starts a fresh match.
 2. **Travel Chess AI (`chess/`)**:
-   - Complete Kingside (`O-O`) and Queenside (`O-O-O`) castling.
-   - En Passant capture logic.
-   - Interactive promotion selector modal (Queen, Rook, Bishop, Knight).
+   - Complete Kingside (`O-O`) and Queenside (`O-O-O`) castling (needs the own rook on its corner; moving or capturing on a corner revokes the right).
+   - En Passant capture logic; search uses exact make/unmake (`_doMove`/`_undoRecord`), never ad-hoc board edits.
+   - Interactive promotion selector modal (Queen, Rook, Bishop, Knight); dismissing it cancels the move.
    - King check visual alert and halo highlight.
-   - Move history stack with Takeback (`undoMove()`).
+   - Move history with SAN notation and Takeback (`undoMove()` restores castling rights, en passant and clocks).
+   - Draws: stalemate, insufficient material, 50-move rule, threefold repetition, draw offer; resign.
+   - AI (negamax + alpha-beta + quiescence) runs via `compute(chessAiWorker, ChessAiRequest(...))`; depths Easy 1 / Medium 2 / Hard 4.
    - Board coordinate annotations (`a-h`, `1-8`) and last-move highlights.
 3. **Ludo Express (`ludo/`)**:
    - Home tokens remain docked and visible inside central home triangles.
-   - Co-located tokens are displayed with clean visual offsets.
-   - Three consecutive sixes forfeits the turn.
-   - Pass & Play mode supporting any combination of Human and Bot players.
-4. **Teen Patti (`teen_patti/`)**:
-   - Sideshow / Back-Ask private comparison between adjacent seen players.
-   - Dynamic bet raising up to 40 base / 80 chaal.
+   - Tokens sharing a square split it as a 2×2 grid.
+   - Three consecutive sixes forfeits the turn; the counter resets on every turn change (`passTurn()`).
+   - Pass & Play mode supporting any combination of Human and Bot players (at least one human); any mode change restarts the turn flow.
+   - Board grid is 6:3:6 in every band; track cells are outlined, start squares tinted, safe squares starred.
+4. **Teen Patti (`teen_patti/`, model `teen_patti_game.dart`)**:
+   - Ranking: Trail > Pure sequence > Sequence > Colour > Pair > High card; A-K-Q is the top run, A-2-3 the lowest.
+   - Sideshow (Back-Ask): a seen player asks the previous seen player to compare privately; the target may decline; a tie packs the asker.
+   - Dynamic bet raising up to 40 base / 80 chaal; every stake checks the player's chips first (no negative balances).
    - Blind turn limit (max 4).
-   - Split pot on hand ties.
+   - Show ties split the pot between the tied players only; the pot is cleared on payout; pot limit 1280 forces a show.
    - Real-time hand rank badge for seen cards.
-   - Chip rebuy popup (+500 chips).
+   - Chip rebuy popup (+500 chips) when you can't cover boot + one blind.
 
 ---
 
