@@ -546,6 +546,25 @@ service cloud.firestore {
                          (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
+      // Safety alerts (SOS). A member raises one for themselves, stamped with the
+      // server time. The sender or an admin resolves it, and resolving may change
+      // only the resolution fields.
+      match /sos/{alertId} {
+        allow read: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) &&
+                         request.resource.data.senderEmail == tourUserEmail() &&
+                         request.resource.data.resolved == false &&
+                         request.resource.data.createdAt == request.time;
+        allow update: if isActiveMember(tourId) &&
+                         (resource.data.senderEmail == tourUserEmail() || isTourAdmin(tourId)) &&
+                         request.resource.data.senderEmail == resource.data.senderEmail &&
+                         request.resource.data.resolved == true &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['resolved', 'resolvedByEmail', 'resolvedAt']);
+        allow delete: if isActiveMember(tourId) &&
+                         (resource.data.senderEmail == tourUserEmail() || isTourAdmin(tourId));
+      }
+
       match /bus_seats/{seatId} {
         allow read, write: if isActiveMember(tourId);
       }
