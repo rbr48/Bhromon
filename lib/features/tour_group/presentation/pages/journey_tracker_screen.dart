@@ -47,6 +47,7 @@ class JourneyTrackerScreen extends StatefulWidget {
 class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   final TourGroupRepository _repository = TourGroupRepository();
   TourGroup? _tourGroup;
+  StreamSubscription<TourGroup?>? _groupSub;
   TourRole? _myRole;
   Position? _currentPosition;
   int _activeFilterIndex = 0; // 0: All, 1: Rest/Food, 2: Prayer, 3: Fuel
@@ -65,7 +66,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   @override
   void initState() {
     super.initState();
-    _loadGroup();
+    _watchGroup();
     _loadRole();
     _fetchGps();
     _checkpointSub = _repository.watchCheckpoints(widget.tourId).listen(
@@ -79,12 +80,15 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   @override
   void dispose() {
     _checkpointSub?.cancel();
+    _groupSub?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadGroup() async {
-    final g = await _repository.getGroup(widget.tourId);
-    if (mounted) setState(() => _tourGroup = g);
+  void _watchGroup() {
+    _groupSub?.cancel();
+    _groupSub = _repository.watchGroup(widget.tourId).listen((g) {
+      if (mounted) setState(() => _tourGroup = g);
+    });
   }
 
   Future<void> _loadRole() async {

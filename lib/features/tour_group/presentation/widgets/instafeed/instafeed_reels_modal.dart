@@ -93,6 +93,23 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
     return controller;
   }
 
+  Future<void> _toggleLike(TourPostItem post) async {
+    final isLiked = post.isLikedBy(widget.repository.currentEmail);
+    try {
+      await widget.repository.setPostLiked(
+        widget.tourId,
+        post.id,
+        liked: !isLiked,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('লাইক করা যায়নি: $e')),
+        );
+      }
+    }
+  }
+
   void _onPageChanged(int newIndex) {
     // Pause previous
     _controllerPool[_currentIndex]?.pause();
@@ -163,14 +180,7 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
             onOpenComments: () => widget.onOpenComments?.call(post),
             onShare: () => widget.onShare?.call(post),
             onAddToLedger: () => widget.onAddToLedger?.call(post),
-            onLikeToggle: () async {
-              final isLiked = post.isLikedBy(widget.repository.currentEmail);
-              await widget.repository.setPostLiked(
-                widget.tourId,
-                post.id,
-                liked: !isLiked,
-              );
-            },
+            onLikeToggle: () => _toggleLike(post),
             currentEmail: widget.repository.currentEmail,
           );
         },
@@ -314,6 +324,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
                 child: Row(
                   children: [
                     IconButton(
+                      tooltip: 'ফিরে যান',
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.pop(context),
                     ),
@@ -328,6 +339,8 @@ class _ReelPageItemState extends State<_ReelPageItem>
                     ),
                     const Spacer(),
                     IconButton(
+                      tooltip:
+                          widget.isMuted ? 'শব্দ চালু করুন' : 'শব্দ বন্ধ করুন',
                       icon: Icon(
                         widget.isMuted
                             ? Icons.volume_off_rounded
@@ -348,6 +361,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
                   children: [
                     // Like button
                     IconButton(
+                      tooltip: isLiked ? 'লাইক সরান' : 'লাইক করুন',
                       icon: Icon(
                         isLiked ? Icons.favorite : Icons.favorite_border,
                         color: isLiked ? Colors.redAccent : Colors.white,
@@ -367,6 +381,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
 
                     // Comments button
                     IconButton(
+                      tooltip: 'মন্তব্য করুন',
                       icon: const Icon(Icons.chat_bubble_outline,
                           color: Colors.white, size: 30),
                       onPressed: widget.onOpenComments,
@@ -383,6 +398,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
 
                     // Share button
                     IconButton(
+                      tooltip: 'শেয়ার করুন',
                       icon: const Icon(Icons.send_rounded,
                           color: Colors.white, size: 28),
                       onPressed: widget.onShare,

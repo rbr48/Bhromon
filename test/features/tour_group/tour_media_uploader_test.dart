@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:bhromon/features/tour_group/data/tour_media_journal.dart';
 import 'package:bhromon/features/tour_group/data/tour_media_uploader.dart';
 
 void main() {
@@ -19,7 +20,6 @@ void main() {
           contentType: 'image/jpeg',
           extension: 'jpg',
           maxBytes: 10 * 1024 * 1024,
-          uploaderEmail: 'test@bhromon.fun',
         ),
         throwsA(
           isA<TourUploadException>().having(
@@ -46,7 +46,6 @@ void main() {
           contentType: 'image/jpeg',
           extension: 'jpg',
           maxBytes: 2,
-          uploaderEmail: 'test@bhromon.fun',
         ),
         throwsA(
           isA<TourUploadException>().having(
@@ -64,7 +63,16 @@ void main() {
           TourMediaUploader.uploadUrl, 'https://bhromon.fun/api/media/upload');
       expect(TourMediaUploader.deleteBaseUrl,
           'https://bhromon.fun/api/media/media');
-      expect(TourMediaUploader.uploadKey, isNotEmpty);
+    });
+
+    test('a file is addressed by the URL the server will return', () {
+      const ref = TourMediaRef(
+        tourId: 'tour_123',
+        folder: 'posts',
+        filename: '0123456789abcdef0123456789abcdef.jpg',
+      );
+      expect(ref.url,
+          'https://bhromon.fun/media/tour_123/posts/0123456789abcdef0123456789abcdef.jpg');
     });
 
     test(
@@ -74,6 +82,11 @@ void main() {
       await TourMediaUploader.deleteMedia('');
       await TourMediaUploader.deleteMedia('/local/path/img.jpg');
       await TourMediaUploader.deleteMedia('blob:http://localhost/xyz');
+    });
+
+    test('deleteMedia reports a non-remote URL as nothing to remove', () async {
+      expect(
+          await TourMediaUploader.deleteMedia('/local/path/img.jpg'), isTrue);
     });
   });
 }

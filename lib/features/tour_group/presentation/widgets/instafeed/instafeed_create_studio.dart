@@ -63,7 +63,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   double _saturation = 1.0; // 0.0 to 2.0
   double _warmth = 0.0; // -0.4 to 0.4
   double _vignette = 0.0; // 0.0 to 1.0
-  double? _selectedAspectRatio; // null = original, 1.0 = 1:1, 0.8 = 4:5, 16/9 = 16:9
+  double?
+      _selectedAspectRatio; // null = original, 1.0 = 1:1, 0.8 = 4:5, 16/9 = 16:9
 
   String _selectedDay = 'day1';
   String _selectedLandmark = 'অন্যান্য স্থান (Others)';
@@ -123,8 +124,11 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     _pollQuestionCtrl.dispose();
     _pollOpt1Ctrl.dispose();
     _pollOpt2Ctrl.dispose();
-    _videoCtrl?.removeListener(_onVideoTick);
-    _videoCtrl?.dispose();
+    // Leaving the sheet mid-compression stops the transcode too.
+    if (_isCompressing) TourVideoCompressor.cancel();
+    _releaseVideoPreview();
+    // A compressed copy is only needed while its post is uploading.
+    if (!_isCompressing && !_isPublishing) TourVideoCompressor.clearCache();
     super.dispose();
   }
 
@@ -202,8 +206,11 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         await widget.picker.pickMultiImage(imageQuality: 85, maxWidth: 1920);
     if (picked.isEmpty || !mounted) return;
 
+    // Photos replace the reel, so its preview stops playing and is freed.
+    _releaseVideoPreview();
     setState(() {
       _isReel = false;
+      _selectedVideo = null;
       _photos.addAll(picked.take(remaining));
     });
     _saveCurrentDraft();
@@ -234,6 +241,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
               if (mounted) setState(() => _compressionProgress = p);
             },
           );
+        } on TourVideoCompressionCancelled {
+          if (mounted) setState(() => _isCompressing = false);
+          return;
         } catch (e) {
           if (!mounted) return;
           setState(() => _isCompressing = false);
@@ -248,10 +258,14 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       }
 
       final controller = createLocalVideoController(fileToUse);
-
-      await controller.initialize();
-      await controller.setLooping(true);
-      await controller.play();
+      try {
+        await controller.initialize();
+        await controller.setLooping(true);
+        await controller.play();
+      } catch (_) {
+        controller.dispose();
+        rethrow;
+      }
 
       if (!mounted) {
         controller.dispose();
@@ -266,8 +280,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         _selectedVideo = fileToUse;
         _videoPosition = 0.0;
         _videoDuration = controller.value.duration.inMilliseconds.toDouble();
-        _videoCtrl?.removeListener(_onVideoTick);
-        _videoCtrl?.dispose();
+        _releaseVideoPreview();
         _videoCtrl = controller;
       });
       _saveCurrentDraft();
@@ -278,6 +291,13 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         );
       }
     }
+  }
+
+  /// Stops and frees the reel preview, if one is loaded.
+  void _releaseVideoPreview() {
+    _videoCtrl?.removeListener(_onVideoTick);
+    _videoCtrl?.dispose();
+    _videoCtrl = null;
   }
 
   void _onVideoTick() {
@@ -342,7 +362,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       _uploadStatusText = 'আপলোড শুরু হচ্ছে...';
     });
 
+    final uploads = <TourMediaUpload>[];
     final uploadedUrls = <String>[];
+    var postSaved = false;
     try {
       if (_isReel && _selectedVideo != null) {
         setState(() => _uploadStatusText = 'ভিডিও আপলোড হচ্ছে...');
@@ -355,8 +377,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           contentType: cType,
           extension: ext,
           maxBytes: kMaxVideoBytes,
-          uploaderEmail: widget.repository.currentEmail,
         );
+        uploads.add(upload);
         final sub = upload.progress.listen((p) {
           if (mounted) {
             final scale = _coverImage != null ? 0.8 : 1.0;
@@ -383,8 +405,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
             contentType: cContentType,
             extension: cExt,
             maxBytes: kMaxImageBytes,
-            uploaderEmail: widget.repository.currentEmail,
           );
+          uploads.add(coverUpload);
           final coverSub = coverUpload.progress.listen((p) {
             if (mounted) {
               setState(() => _uploadProgress = 0.8 + (p * 0.2));
@@ -430,8 +452,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
             contentType: cType,
             extension: ext,
             maxBytes: kMaxImageBytes,
-            uploaderEmail: widget.repository.currentEmail,
           );
+          uploads.add(upload);
           final sub = upload.progress.listen((p) {
             if (mounted) {
               final base = i / _photos.length;
@@ -462,30 +484,49 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         );
       }
 
+      // The post is saved, so its files are no longer orphans.
+      postSaved = true;
+      for (final upload in uploads) {
+        await upload.commit();
+      }
+
       // If poll sticker is enabled, also create a story with the poll!
       if (_includePoll &&
           _pollQuestionCtrl.text.trim().isNotEmpty &&
           uploadedUrls.isNotEmpty) {
-        await widget.repository.addStory(
-          tourId: widget.tourId,
-          mediaUrl: uploadedUrls.first,
-          caption: _pollQuestionCtrl.text.trim(),
-          poll: TourStoryPoll(
-            question: _pollQuestionCtrl.text.trim(),
-            options: [
-              _pollOpt1Ctrl.text.trim().isNotEmpty
-                  ? _pollOpt1Ctrl.text.trim()
-                  : 'হ্যাঁ',
-              _pollOpt2Ctrl.text.trim().isNotEmpty
-                  ? _pollOpt2Ctrl.text.trim()
-                  : 'না',
-            ],
-          ),
-        );
+        try {
+          await widget.repository.addStory(
+            tourId: widget.tourId,
+            mediaUrl: uploadedUrls.first,
+            caption: _pollQuestionCtrl.text.trim(),
+            poll: TourStoryPoll(
+              question: _pollQuestionCtrl.text.trim(),
+              options: [
+                _pollOpt1Ctrl.text.trim().isNotEmpty
+                    ? _pollOpt1Ctrl.text.trim()
+                    : 'হ্যাঁ',
+                _pollOpt2Ctrl.text.trim().isNotEmpty
+                    ? _pollOpt2Ctrl.text.trim()
+                    : 'না',
+              ],
+            ),
+          );
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text('পোস্ট হয়েছে, কিন্তু পোল যোগ করা যায়নি: $e')),
+            );
+          }
+        }
       }
 
       // Clear draft upon success
       await widget.repository.clearPostDraft(widget.tourId);
+
+      // The reel is saved, so its compressed copy is no longer needed.
+      _releaseVideoPreview();
+      TourVideoCompressor.clearCache();
 
       if (mounted) {
         Navigator.pop(context);
@@ -498,11 +539,11 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         );
       }
     } catch (e) {
-      // Clean up uploaded files if posting failed
-      for (final u in uploadedUrls) {
-        try {
-          await TourMediaUploader.deleteMedia(u);
-        } catch (_) {}
+      // The post is not saved, so the files it would have used are removed.
+      if (!postSaved) {
+        for (final upload in uploads) {
+          await upload.discard();
+        }
       }
 
       if (mounted) {
@@ -529,552 +570,598 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     final wR = 1.0 + (_warmth * 0.35);
     final wB = 1.0 - (_warmth * 0.35);
     return ColorFilter.matrix([
-      c * wR, 0, 0, 0, b,
-      0, c, 0, 0, b,
-      0, 0, c * wB, 0, b,
-      0, 0, 0, 1, 0,
+      c * wR,
+      0,
+      0,
+      0,
+      b,
+      0,
+      c,
+      0,
+      0,
+      b,
+      0,
+      0,
+      c * wB,
+      0,
+      b,
+      0,
+      0,
+      0,
+      1,
+      0,
     ]);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.90,
-      decoration: const BoxDecoration(
-        color: Color(0xFF141414),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          // Header Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white70),
-                  onPressed: () {
-                    _saveCurrentDraft();
-                    Navigator.pop(context);
-                  },
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _isReel ? 'নতুন রিলস তৈরি' : 'নতুন পোস্ট তৈরি',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF00C853),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                  ),
-                  onPressed: _isPublishing || _isCompressing ? null : _publish,
-                  child: _isPublishing
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text('পোস্ট করুন',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: Colors.white10),
-
-          // Unsaved Draft Recovery Prompt
-          if (_hasDraftBanner)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: Colors.amber.withValues(alpha: 0.15),
+    final media = MediaQuery.of(context);
+    // The keyboard takes room from the sheet, so its bottom controls stay above
+    // it while the caption is being typed.
+    return Padding(
+      padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+      child: Container(
+        height: (media.size.height - media.viewInsets.bottom) * 0.90,
+        decoration: const BoxDecoration(
+          color: Color(0xFF141414),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Header Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  const Icon(Icons.history, color: Colors.amber, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'পূর্বের অসম্পূর্ণ ড্রাফট পাওয়া গেছে।',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _restoreDraft,
-                    child: const Text('পুনরুদ্ধার',
-                        style: TextStyle(
-                            color: Colors.amber, fontWeight: FontWeight.bold)),
-                  ),
                   IconButton(
-                    icon: const Icon(Icons.close,
-                        size: 16, color: Colors.white54),
-                    onPressed: _discardDraft,
+                    tooltip: 'বন্ধ করুন',
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () {
+                      _saveCurrentDraft();
+                      Navigator.pop(context);
+                    },
                   ),
-                ],
-              ),
-            ),
-
-          // Upload / Compress Progress Banner
-          if (_isPublishing || _isCompressing)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: const Color(0xFF1E3A24),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        _uploadStatusText ?? 'প্রক্রিয়াকরণ চলছে...',
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${((_isCompressing ? _compressionProgress : _uploadProgress) * 100).toStringAsFixed(0)}%',
-                        style: const TextStyle(
-                            color: Color(0xFF00C853),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  LinearProgressIndicator(
-                    value:
-                        _isCompressing ? _compressionProgress : _uploadProgress,
-                    backgroundColor: Colors.white12,
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(Color(0xFF00C853)),
-                  ),
-                ],
-              ),
-            ),
-
-          // Content Body
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              children: [
-                // Media Picker & Preview Area
-                _buildMediaPreviewArea(),
-                if (_photos.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.aspect_ratio,
-                          size: 16, color: Colors.white70),
-                      const SizedBox(width: 8),
-                      const Text('ফ্রেম:',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 12)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              _buildRatioChip('মূল ফ্রেম', null),
-                              const SizedBox(width: 6),
-                              _buildRatioChip('১:১ স্কয়ার', 1.0),
-                              const SizedBox(width: 6),
-                              _buildRatioChip('৪:৫ পোর্ট্রেট', 4.0 / 5.0),
-                              const SizedBox(width: 6),
-                              _buildRatioChip('১৬:৯ ল্যান্ডস্কেপ', 16.0 / 9.0),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: 16),
-
-                // Caption input
-                TextField(
-                  controller: _captionCtrl,
-                  maxLines: 3,
-                  style: const TextStyle(color: Colors.white),
-                  onChanged: (_) => _saveCurrentDraft(),
-                  decoration: InputDecoration(
-                    hintText: 'ক্যাপশন লিখুন... (#হ্যাশট্যাগ যোগ করতে পারেন)',
-                    hintStyle: const TextStyle(color: Colors.white38),
-                    filled: true,
-                    fillColor: const Color(0xFF1E1E1E),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                  const SizedBox(width: 8),
+                  Text(
+                    _isReel ? 'নতুন রিলস তৈরি' : 'নতুন পোস্ট তৈরি',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const Spacer(),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF00C853),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 8),
+                    ),
+                    onPressed:
+                        _isPublishing || _isCompressing ? null : _publish,
+                    child: _isPublishing
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text('পোস্ট করুন',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: Colors.white10),
 
-                // Tour Day & Landmark Selector Row
-                Row(
+            // Unsaved Draft Recovery Prompt
+            if (_hasDraftBanner)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: Colors.amber.withValues(alpha: 0.15),
+                child: Row(
                   children: [
-                    Expanded(
-                      flex: 2,
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _selectedDay,
-                        dropdownColor: const Color(0xFF222222),
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 13),
-                        decoration: InputDecoration(
-                          labelText: 'ট্যুর দিবস',
-                          labelStyle: const TextStyle(
-                              color: Colors.white70, fontSize: 12),
-                          filled: true,
-                          fillColor: const Color(0xFF1E1E1E),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none),
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                              value: 'day1', child: Text('দিন ১ (Day 1)')),
-                          DropdownMenuItem(
-                              value: 'day2', child: Text('দিন ২ (Day 2)')),
-                          DropdownMenuItem(
-                              value: 'day3', child: Text('দিন ৩ (Day 3)')),
-                          DropdownMenuItem(
-                              value: 'day4', child: Text('দিন ৪ (Day 4)')),
-                          DropdownMenuItem(
-                              value: 'day5', child: Text('দিন ৫ (Day 5)')),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() => _selectedDay = val);
-                            _saveCurrentDraft();
-                          }
-                        },
+                    const Icon(Icons.history, color: Colors.amber, size: 20),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'পূর্বের অসম্পূর্ণ ড্রাফট পাওয়া গেছে।',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 3,
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _selectedLandmark,
-                        dropdownColor: const Color(0xFF222222),
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 13),
-                        decoration: InputDecoration(
-                          labelText: 'দর্শনীয় স্থান',
-                          labelStyle: const TextStyle(
-                              color: Colors.white70, fontSize: 12),
-                          filled: true,
-                          fillColor: const Color(0xFF1E1E1E),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none),
-                        ),
-                        items: (widget.group?.allSpots ?? _kTourLandmarks)
-                            .map((spot) => DropdownMenuItem(
-                                value: spot,
-                                child: Text(spot,
-                                    overflow: TextOverflow.ellipsis)))
-                            .toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() => _selectedLandmark = val);
-                            _saveCurrentDraft();
-                          }
-                        },
-                      ),
+                    TextButton(
+                      onPressed: _restoreDraft,
+                      child: const Text('পুনরুদ্ধার',
+                          style: TextStyle(
+                              color: Colors.amber,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                    IconButton(
+                      tooltip: 'বন্ধ করুন',
+                      icon: const Icon(Icons.close,
+                          size: 16, color: Colors.white54),
+                      onPressed: _discardDraft,
                     ),
                   ],
                 ),
-                if (_isCustomSpot) ...[
-                  const SizedBox(height: 8),
+              ),
+
+            // Upload / Compress Progress Banner
+            if (_isPublishing || _isCompressing)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: const Color(0xFF1E3A24),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          _uploadStatusText ?? 'প্রক্রিয়াকরণ চলছে...',
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${((_isCompressing ? _compressionProgress : _uploadProgress) * 100).toStringAsFixed(0)}%',
+                          style: const TextStyle(
+                              color: Color(0xFF00C853),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12),
+                        ),
+                        if (_isCompressing)
+                          IconButton(
+                            tooltip: 'বাতিল',
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.close,
+                                color: Colors.white70, size: 18),
+                            onPressed: () => TourVideoCompressor.cancel(),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: _isCompressing
+                          ? _compressionProgress
+                          : _uploadProgress,
+                      backgroundColor: Colors.white12,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          Color(0xFF00C853)),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Content Body
+            Expanded(
+              child: ListView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                children: [
+                  // Media Picker & Preview Area
+                  _buildMediaPreviewArea(),
+                  if (_photos.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(Icons.aspect_ratio,
+                            size: 16, color: Colors.white70),
+                        const SizedBox(width: 8),
+                        const Text('ফ্রেম:',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 12)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _buildRatioChip('মূল ফ্রেম', null),
+                                const SizedBox(width: 6),
+                                _buildRatioChip('১:১ স্কয়ার', 1.0),
+                                const SizedBox(width: 6),
+                                _buildRatioChip('৪:৫ পোর্ট্রেট', 4.0 / 5.0),
+                                const SizedBox(width: 6),
+                                _buildRatioChip(
+                                    '১৬:৯ ল্যান্ডস্কেপ', 16.0 / 9.0),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+
+                  // Caption input
                   TextField(
-                    controller: _customSpotCtrl,
+                    controller: _captionCtrl,
+                    maxLines: 3,
                     style: const TextStyle(color: Colors.white),
+                    onChanged: (_) => _saveCurrentDraft(),
                     decoration: InputDecoration(
-                      hintText: 'নির্দিষ্ট স্থানের নাম লিখুন...',
+                      hintText: 'ক্যাপশন লিখুন... (#হ্যাশট্যাগ যোগ করতে পারেন)',
                       hintStyle: const TextStyle(color: Colors.white38),
                       filled: true,
                       fillColor: const Color(0xFF1E1E1E),
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none),
-                    ),
-                    onChanged: (_) => _saveCurrentDraft(),
-                  ),
-                ],
-                const SizedBox(height: 16),
-
-                // Image Tuning & Filter Tab
-                TabBar(
-                  controller: _tabCtrl,
-                  indicatorColor: const Color(0xFF00C853),
-                  labelColor: const Color(0xFF00C853),
-                  unselectedLabelColor: Colors.white54,
-                  tabs: const [
-                    Tab(text: 'কালার প্রিসেট'),
-                    Tab(text: 'ম্যানুয়াল টিউনিং'),
-                  ],
-                ),
-                SizedBox(
-                  height: 185,
-                  child: TabBarView(
-                    controller: _tabCtrl,
-                    children: [
-                      // Preset filters row
-                      ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        children: _filterLabels.entries.map((e) {
-                          final isSelected = _selectedFilterId == e.key;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(e.value),
-                              selected: isSelected,
-                              selectedColor: const Color(0xFF00C853),
-                              backgroundColor: const Color(0xFF222222),
-                              labelStyle: TextStyle(
-                                color: isSelected ? Colors.black : Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              onSelected: (_) {
-                                setState(() => _selectedFilterId = e.key);
-                                _saveCurrentDraft();
-                              },
-                            ),
-                          );
-                        }).toList(),
-                      ),
-
-                      // Manual sliders (Brightness, Contrast, Warmth, Vignette)
-                      SingleChildScrollView(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.brightness_6,
-                                    size: 16, color: Colors.white70),
-                                const SizedBox(width: 8),
-                                const SizedBox(
-                                  width: 55,
-                                  child: Text('উজ্জ্বলতা',
-                                      style: TextStyle(
-                                          color: Colors.white70, fontSize: 12)),
-                                ),
-                                Expanded(
-                                  child: Slider(
-                                    value: _brightness,
-                                    min: -0.4,
-                                    max: 0.4,
-                                    activeColor: const Color(0xFF00C853),
-                                    onChanged: (v) {
-                                      setState(() => _brightness = v);
-                                      _saveCurrentDraft();
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                const Icon(Icons.contrast,
-                                    size: 16, color: Colors.white70),
-                                const SizedBox(width: 8),
-                                const SizedBox(
-                                  width: 55,
-                                  child: Text('কনট্রাস্ট',
-                                      style: TextStyle(
-                                          color: Colors.white70, fontSize: 12)),
-                                ),
-                                Expanded(
-                                  child: Slider(
-                                    value: _contrast,
-                                    min: 0.6,
-                                    max: 1.4,
-                                    activeColor: const Color(0xFF00C853),
-                                    onChanged: (v) {
-                                      setState(() => _contrast = v);
-                                      _saveCurrentDraft();
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                const Icon(Icons.wb_sunny_outlined,
-                                    size: 16, color: Colors.amber),
-                                const SizedBox(width: 8),
-                                const SizedBox(
-                                  width: 55,
-                                  child: Text('উষ্ণতা',
-                                      style: TextStyle(
-                                          color: Colors.white70, fontSize: 12)),
-                                ),
-                                Expanded(
-                                  child: Slider(
-                                    value: _warmth,
-                                    min: -0.4,
-                                    max: 0.4,
-                                    activeColor: Colors.amber,
-                                    onChanged: (v) {
-                                      setState(() => _warmth = v);
-                                      _saveCurrentDraft();
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                const Icon(Icons.vignette,
-                                    size: 16, color: Colors.white70),
-                                const SizedBox(width: 8),
-                                const SizedBox(
-                                  width: 55,
-                                  child: Text('ভিগনেট',
-                                      style: TextStyle(
-                                          color: Colors.white70, fontSize: 12)),
-                                ),
-                                Expanded(
-                                  child: Slider(
-                                    value: _vignette,
-                                    min: 0.0,
-                                    max: 1.0,
-                                    activeColor: const Color(0xFF00C853),
-                                    onChanged: (v) {
-                                      setState(() => _vignette = v);
-                                      _saveCurrentDraft();
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Audio Track Input
-                TextField(
-                  controller: _audioTitleCtrl,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    prefixIcon:
-                        const Icon(Icons.music_note, color: Color(0xFF00C853)),
-                    hintText: 'ব্যাকগ্রাউন্ড গানের নাম (ঐচ্ছিক)',
-                    hintStyle: const TextStyle(color: Colors.white38),
-                    filled: true,
-                    fillColor: const Color(0xFF1E1E1E),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Interactive Poll Sticker Toggle
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('স্টোরি পোল স্টিকার যোগ করুন',
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
-                  subtitle: const Text('ভ্রমণসঙ্গীদের মতামত ও ভোট সংগ্রহ করুন',
-                      style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  value: _includePoll,
-                  activeThumbColor: const Color(0xFF00C853),
-                  onChanged: (v) => setState(() => _includePoll = v),
-                ),
-
-                if (_includePoll) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: TextField(
-                      controller: _pollQuestionCtrl,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'পোলের প্রশ্ন (উদা: রাতের খাবারে কী খাবেন?)',
-                        hintStyle: const TextStyle(color: Colors.white38),
-                        filled: true,
-                        fillColor: const Color(0xFF222222),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none,
-                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // Tour Day & Landmark Selector Row
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: _pollOpt1Ctrl,
-                          style: const TextStyle(color: Colors.white),
+                        flex: 2,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _selectedDay,
+                          dropdownColor: const Color(0xFF222222),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 13),
                           decoration: InputDecoration(
-                            hintText: 'বিকল্প ১',
+                            labelText: 'ট্যুর দিবস',
+                            labelStyle: const TextStyle(
+                                color: Colors.white70, fontSize: 12),
                             filled: true,
-                            fillColor: const Color(0xFF222222),
+                            fillColor: const Color(0xFF1E1E1E),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none),
                           ),
+                          items: const [
+                            DropdownMenuItem(
+                                value: 'day1', child: Text('দিন ১ (Day 1)')),
+                            DropdownMenuItem(
+                                value: 'day2', child: Text('দিন ২ (Day 2)')),
+                            DropdownMenuItem(
+                                value: 'day3', child: Text('দিন ৩ (Day 3)')),
+                            DropdownMenuItem(
+                                value: 'day4', child: Text('দিন ৪ (Day 4)')),
+                            DropdownMenuItem(
+                                value: 'day5', child: Text('দিন ৫ (Day 5)')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _selectedDay = val);
+                              _saveCurrentDraft();
+                            }
+                          },
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: TextField(
-                          controller: _pollOpt2Ctrl,
-                          style: const TextStyle(color: Colors.white),
+                        flex: 3,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _selectedLandmark,
+                          dropdownColor: const Color(0xFF222222),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 13),
                           decoration: InputDecoration(
-                            hintText: 'বিকল্প ২',
+                            labelText: 'দর্শনীয় স্থান',
+                            labelStyle: const TextStyle(
+                                color: Colors.white70, fontSize: 12),
                             filled: true,
-                            fillColor: const Color(0xFF222222),
+                            fillColor: const Color(0xFF1E1E1E),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none),
                           ),
+                          items: (widget.group?.allSpots ?? _kTourLandmarks)
+                              .map((spot) => DropdownMenuItem(
+                                  value: spot,
+                                  child: Text(spot,
+                                      overflow: TextOverflow.ellipsis)))
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _selectedLandmark = val);
+                              _saveCurrentDraft();
+                            }
+                          },
                         ),
                       ),
                     ],
                   ),
+                  if (_isCustomSpot) ...[
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _customSpotCtrl,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'নির্দিষ্ট স্থানের নাম লিখুন...',
+                        hintStyle: const TextStyle(color: Colors.white38),
+                        filled: true,
+                        fillColor: const Color(0xFF1E1E1E),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none),
+                      ),
+                      onChanged: (_) => _saveCurrentDraft(),
+                    ),
+                  ],
                   const SizedBox(height: 16),
-                ],
 
-                // Post Preferences: Hide Like Count & Disable Comments
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('লাইক সংখ্যা লুকান',
-                      style: TextStyle(color: Colors.white, fontSize: 14)),
-                  value: _hideLikeCount,
-                  activeThumbColor: const Color(0xFF00C853),
-                  onChanged: (v) => setState(() => _hideLikeCount = v),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('মন্তব্য বন্ধ রাখুন',
-                      style: TextStyle(color: Colors.white, fontSize: 14)),
-                  value: _disableComments,
-                  activeThumbColor: const Color(0xFF00C853),
-                  onChanged: (v) => setState(() => _disableComments = v),
-                ),
-                const SizedBox(height: 24),
-              ],
+                  // Image Tuning & Filter Tab
+                  TabBar(
+                    controller: _tabCtrl,
+                    indicatorColor: const Color(0xFF00C853),
+                    labelColor: const Color(0xFF00C853),
+                    unselectedLabelColor: Colors.white54,
+                    tabs: const [
+                      Tab(text: 'কালার প্রিসেট'),
+                      Tab(text: 'ম্যানুয়াল টিউনিং'),
+                    ],
+                  ),
+                  SizedBox(
+                    height: 185,
+                    child: TabBarView(
+                      controller: _tabCtrl,
+                      children: [
+                        // Preset filters row
+                        ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          children: _filterLabels.entries.map((e) {
+                            final isSelected = _selectedFilterId == e.key;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(e.value),
+                                selected: isSelected,
+                                selectedColor: const Color(0xFF00C853),
+                                backgroundColor: const Color(0xFF222222),
+                                labelStyle: TextStyle(
+                                  color:
+                                      isSelected ? Colors.black : Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                onSelected: (_) {
+                                  setState(() => _selectedFilterId = e.key);
+                                  _saveCurrentDraft();
+                                },
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        // Manual sliders (Brightness, Contrast, Warmth, Vignette)
+                        SingleChildScrollView(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.brightness_6,
+                                      size: 16, color: Colors.white70),
+                                  const SizedBox(width: 8),
+                                  const SizedBox(
+                                    width: 55,
+                                    child: Text('উজ্জ্বলতা',
+                                        style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12)),
+                                  ),
+                                  Expanded(
+                                    child: Slider(
+                                      value: _brightness,
+                                      min: -0.4,
+                                      max: 0.4,
+                                      activeColor: const Color(0xFF00C853),
+                                      onChanged: (v) {
+                                        setState(() => _brightness = v);
+                                        _saveCurrentDraft();
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  const Icon(Icons.contrast,
+                                      size: 16, color: Colors.white70),
+                                  const SizedBox(width: 8),
+                                  const SizedBox(
+                                    width: 55,
+                                    child: Text('কনট্রাস্ট',
+                                        style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12)),
+                                  ),
+                                  Expanded(
+                                    child: Slider(
+                                      value: _contrast,
+                                      min: 0.6,
+                                      max: 1.4,
+                                      activeColor: const Color(0xFF00C853),
+                                      onChanged: (v) {
+                                        setState(() => _contrast = v);
+                                        _saveCurrentDraft();
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  const Icon(Icons.wb_sunny_outlined,
+                                      size: 16, color: Colors.amber),
+                                  const SizedBox(width: 8),
+                                  const SizedBox(
+                                    width: 55,
+                                    child: Text('উষ্ণতা',
+                                        style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12)),
+                                  ),
+                                  Expanded(
+                                    child: Slider(
+                                      value: _warmth,
+                                      min: -0.4,
+                                      max: 0.4,
+                                      activeColor: Colors.amber,
+                                      onChanged: (v) {
+                                        setState(() => _warmth = v);
+                                        _saveCurrentDraft();
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  const Icon(Icons.vignette,
+                                      size: 16, color: Colors.white70),
+                                  const SizedBox(width: 8),
+                                  const SizedBox(
+                                    width: 55,
+                                    child: Text('ভিগনেট',
+                                        style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 12)),
+                                  ),
+                                  Expanded(
+                                    child: Slider(
+                                      value: _vignette,
+                                      min: 0.0,
+                                      max: 1.0,
+                                      activeColor: const Color(0xFF00C853),
+                                      onChanged: (v) {
+                                        setState(() => _vignette = v);
+                                        _saveCurrentDraft();
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Audio Track Input
+                  TextField(
+                    controller: _audioTitleCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.music_note,
+                          color: Color(0xFF00C853)),
+                      hintText: 'ব্যাকগ্রাউন্ড গানের নাম (ঐচ্ছিক)',
+                      hintStyle: const TextStyle(color: Colors.white38),
+                      filled: true,
+                      fillColor: const Color(0xFF1E1E1E),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Interactive Poll Sticker Toggle
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('স্টোরি পোল স্টিকার যোগ করুন',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                    subtitle: const Text(
+                        'ভ্রমণসঙ্গীদের মতামত ও ভোট সংগ্রহ করুন',
+                        style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    value: _includePoll,
+                    activeThumbColor: const Color(0xFF00C853),
+                    onChanged: (v) => setState(() => _includePoll = v),
+                  ),
+
+                  if (_includePoll) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: TextField(
+                        controller: _pollQuestionCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText:
+                              'পোলের প্রশ্ন (উদা: রাতের খাবারে কী খাবেন?)',
+                          hintStyle: const TextStyle(color: Colors.white38),
+                          filled: true,
+                          fillColor: const Color(0xFF222222),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _pollOpt1Ctrl,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              hintText: 'বিকল্প ১',
+                              filled: true,
+                              fillColor: const Color(0xFF222222),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _pollOpt2Ctrl,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              hintText: 'বিকল্প ২',
+                              filled: true,
+                              fillColor: const Color(0xFF222222),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Post Preferences: Hide Like Count & Disable Comments
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('লাইক সংখ্যা লুকান',
+                        style: TextStyle(color: Colors.white, fontSize: 14)),
+                    value: _hideLikeCount,
+                    activeThumbColor: const Color(0xFF00C853),
+                    onChanged: (v) => setState(() => _hideLikeCount = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('মন্তব্য বন্ধ রাখুন',
+                        style: TextStyle(color: Colors.white, fontSize: 14)),
+                    value: _disableComments,
+                    activeThumbColor: const Color(0xFF00C853),
+                    onChanged: (v) => setState(() => _disableComments = v),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1100,6 +1187,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     child: VideoPlayer(_videoCtrl!),
                   ),
                   IconButton(
+                    tooltip: _videoCtrl!.value.isPlaying ? 'থামান' : 'চালান',
                     icon: Icon(
                       _videoCtrl!.value.isPlaying
                           ? Icons.pause_circle

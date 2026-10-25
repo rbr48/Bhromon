@@ -7,7 +7,7 @@ const {
 } = require('@firebase/rules-unit-testing');
 const fs = require('fs');
 const path = require('path');
-const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp, FieldPath } = require('firebase/firestore');
 
 const PROJECT_ID = 'bhromon-rules-test-project';
 const TOUR = 't1';
@@ -211,7 +211,16 @@ describe('Tour Group Firestore rules', () => {
 
   describe('feed', () => {
     const postPath = ['tours', TOUR, 'posts', 'p1'];
-    const post = (author) => ({ tourId: TOUR, authorEmail: author, caption: 'hi', images: [], likes: [], commentCount: 0 });
+    const post = (author) => ({
+      tourId: TOUR,
+      authorEmail: author,
+      caption: 'hi',
+      images: [],
+      likes: [],
+      commentCount: 0,
+      createdAt: serverTimestamp(),
+    });
+    const comment = (author, text = 'nice') => ({ authorEmail: author, text, createdAt: serverTimestamp() });
 
     beforeEach(async () => {
       await env.withSecurityRulesDisabled(async (ctx) => {
@@ -224,25 +233,126 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(updateDoc(doc(db('outsider'), ...postPath), { likes: ['eve@x.com'] }));
     });
 
-    test('only the author edits the caption', async () => {
-      await assertFails(updateDoc(doc(db('admin'), ...postPath), { caption: 'changed' }));
+    test('a member adds or removes only their own like', async () => {
+      await assertFails(updateDoc(doc(db('admin'), ...postPath), { likes: ['oth@x.com'] }));
+      await assertSucceeds(updateDoc(doc(db('admin'), ...postPath), { likes: ['adm@x.com'] }));
+      await assertSucceeds(updateDoc(doc(db('other'), ...postPath), { likes: ['adm@x.com', 'oth@x.com'] }));
+      await assertSucceeds(updateDoc(doc(db('other'), ...postPath), { likes: ['adm@x.com'] }));
+      await assertFails(updateDoc(doc(db('other'), ...postPath), { likes: [] }));
+      await assertSucceeds(updateDoc(doc(db('admin'), ...postPath), { likes: [] }));
+    });
+
+    test('a new post is stamped by the server and starts with no likes or comments', async () => {
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'posts', 'p2'), { ...post(people.member.email), createdAt: new Date() }));
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'posts', 'p2'), { ...post(people.member.email), likes: ['adm@x.com'] }));
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'posts', 'p2'), { ...post(people.member.email), commentCount: 5 }));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', TOUR, 'posts', 'p2'), post(people.member.email)));
+    });
+
+    test('the comment count moves by one at a time', async () => {
+      await assertSucceeds(updateDoc(doc(db('admin'), ...postPath), { commentCount: 1 }));
+      await assertFails(updateDoc(doc(db('admin'), ...postPath), { commentCount: 9 }));
+      await assertSucceeds(updateDoc(doc(db('other'), ...postPath), { commentCount: 0 }));
+    });
+
+    test('only the author or an admin edits the caption; other members cannot', async () => {
+      await assertFails(updateDoc(doc(db('other'), ...postPath), { caption: 'changed' }));
+      await assertSucceeds(updateDoc(doc(db('admin'), ...postPath), { caption: 'changed' }));
       await assertSucceeds(updateDoc(doc(db('member'), ...postPath), { caption: 'changed' }));
     });
 
+    test('the author may archive and edit the listed post fields, but not the author or media', async () => {
+      await assertSucceeds(updateDoc(doc(db('member'), ...postPath), { isArchived: true, isEdited: true, editedAt: serverTimestamp() }));
+      await assertSucceeds(updateDoc(doc(db('member'), ...postPath), { tags: ['beach'], location: 'Kuakata' }));
+      await assertFails(updateDoc(doc(db('member'), ...postPath), { authorEmail: 'adm@x.com' }));
+      await assertFails(updateDoc(doc(db('member'), ...postPath), { images: ['https://evil.example/x.jpg'] }));
+      await assertFails(updateDoc(doc(db('other'), ...postPath), { caption: 'hijack' }));
+    });
+
     test('post author can delete comments on their post; other members cannot', async () => {
-      await setDoc(doc(db('admin'), ...postPath, 'comments', 'c1'), { authorEmail: 'adm@x.com', text: 'nice' });
+      await setDoc(doc(db('admin'), ...postPath, 'comments', 'c1'), comment('adm@x.com'));
       await assertFails(deleteDoc(doc(db('other'), ...postPath, 'comments', 'c1')));
       await assertSucceeds(deleteDoc(doc(db('member'), ...postPath, 'comments', 'c1')));
     });
 
-    test('comments are tied to the commenter and deleted by author or admin', async () => {
+    test('comments are tied to the commenter, stamped by the server, and deleted by author or admin', async () => {
       const comments = collection(db('admin'), ...postPath, 'comments');
-      await assertSucceeds(addDoc(comments, { authorEmail: 'adm@x.com', text: 'nice' }));
-      await assertFails(addDoc(collection(db('admin'), ...postPath, 'comments'), { authorEmail: 'mem@x.com', text: 'spoof' }));
+      await assertSucceeds(addDoc(comments, comment('adm@x.com')));
+      await assertFails(addDoc(collection(db('admin'), ...postPath, 'comments'), comment('mem@x.com', 'spoof')));
+      await assertFails(addDoc(collection(db('admin'), ...postPath, 'comments'), { authorEmail: 'adm@x.com', text: 'no time' }));
+      await assertFails(addDoc(collection(db('admin'), ...postPath, 'comments'), comment('adm@x.com', 'x'.repeat(501))));
     });
 
-    test('cannot post as someone else', async () => {
-      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'posts', 'p2'), post(people.owner.email)));
+    test('comment likes change only the liker\'s own entry', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), ...postPath, 'comments', 'c2'), comment('mem@x.com', 'hello'));
+      });
+      const ref = doc(db('other'), ...postPath, 'comments', 'c2');
+      await assertSucceeds(updateDoc(ref, { likes: ['oth@x.com'] }));
+      await assertFails(updateDoc(ref, { likes: ['oth@x.com', 'adm@x.com'] }));
+      await assertFails(updateDoc(ref, { text: 'edited' }));
+      await assertSucceeds(updateDoc(ref, { likes: [] }));
+    });
+  });
+
+  describe('stories and highlights', () => {
+    const storyPath = ['tours', TOUR, 'stories', 's1'];
+    const story = (author) => ({
+      authorEmail: author,
+      authorName: 'x',
+      mediaUrl: 'https://bhromon.fun/media/t1/stories/a.jpg',
+      createdAt: serverTimestamp(),
+      viewers: [],
+      poll: { question: 'Beach?', options: ['Yes', 'No'], votes: {} },
+      reactions: {},
+    });
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), ...storyPath), story(people.member.email));
+      });
+    });
+
+    test('a story is stamped by the server and made under your own email', async () => {
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'stories', 's2'), { ...story(people.member.email), createdAt: new Date() }));
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'stories', 's2'), story(people.owner.email)));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', TOUR, 'stories', 's2'), story(people.member.email)));
+    });
+
+    test('members record only their own view', async () => {
+      const ref = doc(db('other'), ...storyPath);
+      await assertSucceeds(updateDoc(ref, { viewers: ['oth@x.com'] }));
+      await assertFails(updateDoc(ref, { viewers: ['oth@x.com', 'adm@x.com'] }));
+      await assertFails(updateDoc(ref, { viewers: ['adm@x.com'] }));
+    });
+
+    test('each member votes once in a poll, for an option that exists', async () => {
+      const ref = doc(db('other'), ...storyPath);
+      await assertSucceeds(updateDoc(ref, new FieldPath('poll', 'votes', 'oth@x.com'), 1));
+      await assertFails(updateDoc(ref, new FieldPath('poll', 'votes', 'oth@x.com'), 0));
+      await assertFails(updateDoc(doc(db('admin'), ...storyPath), new FieldPath('poll', 'votes', 'oth@x.com'), 0));
+      await assertFails(updateDoc(doc(db('admin'), ...storyPath), new FieldPath('poll', 'votes', 'adm@x.com'), 5));
+      await assertSucceeds(updateDoc(doc(db('admin'), ...storyPath), new FieldPath('poll', 'votes', 'adm@x.com'), 1));
+    });
+
+    test('a reaction is keyed by the reacting email as one field, and is their own', async () => {
+      const ref = doc(db('other'), ...storyPath);
+      await assertSucceeds(updateDoc(ref, new FieldPath('reactions', 'oth@x.com'), '❤️'));
+      await assertFails(updateDoc(ref, new FieldPath('reactions', 'adm@x.com'), '❤️'));
+      await assertFails(updateDoc(ref, new FieldPath('reactions', 'oth@x.com'), 'x'.repeat(17)));
+    });
+
+    test('the author or an admin deletes a story; other members cannot', async () => {
+      await assertFails(deleteDoc(doc(db('other'), ...storyPath)));
+      await assertSucceeds(deleteDoc(doc(db('admin'), ...storyPath)));
+    });
+
+    test('highlights are kept by the member who made them, and by admins', async () => {
+      const path = ['tours', TOUR, 'highlights', 'h1'];
+      await assertFails(setDoc(doc(db('member'), ...path), { title: 'x', coverUrl: 'u', createdByEmail: 'oth@x.com' }));
+      await assertSucceeds(setDoc(doc(db('member'), ...path), { title: 'x', coverUrl: 'u', createdByEmail: 'mem@x.com' }));
+      await assertFails(deleteDoc(doc(db('other'), ...path)));
+      await assertSucceeds(deleteDoc(doc(db('admin'), ...path)));
     });
   });
 

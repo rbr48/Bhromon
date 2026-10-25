@@ -213,6 +213,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                 ),
                 const Spacer(),
                 IconButton(
+                  tooltip: 'বন্ধ করুন',
                   icon: const Icon(Icons.close, color: Colors.white70),
                   onPressed: () => Navigator.pop(context),
                 ),
@@ -367,6 +368,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                   ),
                   const Spacer(),
                   IconButton(
+                    tooltip: 'বন্ধ করুন',
                     icon: const Icon(Icons.close,
                         size: 18, color: Colors.white54),
                     onPressed: _cancelReply,
@@ -431,6 +433,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                   ),
                   const SizedBox(width: 8),
                   IconButton(
+                    tooltip: 'মন্তব্য পাঠান',
                     onPressed: _isSubmitting ? null : () => _submitComment(),
                     icon: _isSubmitting
                         ? const SizedBox(
@@ -623,6 +626,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
+                tooltip: isLiked ? 'লাইক সরান' : 'লাইক করুন',
                 icon: Icon(
                   isLiked ? Icons.favorite : Icons.favorite_border,
                   size: 18,

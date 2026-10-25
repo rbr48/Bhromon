@@ -405,6 +405,25 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/tours/$(tId)/bans/$(tourUserEmail()));
     }
 
+    // A list of member emails (likes, viewers) changes by one entry: the caller's
+    // own. Either nothing changes, the caller is added, or the caller is removed.
+    function ownEntryOnly(before, after) {
+      return after == before ||
+        (!before.hasAll([tourUserEmail()]) &&
+          after.size() == before.size() + 1 &&
+          after.hasAll(before) &&
+          after.hasAll([tourUserEmail()])) ||
+        (before.hasAll([tourUserEmail()]) &&
+          after.size() == before.size() - 1 &&
+          before.hasAll(after) &&
+          !after.hasAll([tourUserEmail()]));
+    }
+
+    // A count (comments on a post) moves by one at a time, or not at all.
+    function movesByOneAtMost(before, after) {
+      return (after - before) in [-1, 0, 1];
+    }
+
     // ---- Tours (members only) ----
     match /tours/{tourId} {
       allow get: if isAuth() &&
@@ -478,31 +497,53 @@ service cloud.firestore {
 
       match /posts/{postId} {
         allow read: if isActiveMember(tourId);
+        // The server stamps the time. A new post starts with no likes or comments.
         allow create: if isActiveMember(tourId) &&
-                         request.resource.data.authorEmail == tourUserEmail();
-        // Any member likes or comments; author or admin can edit caption, pin, or adjust settings.
+                         request.resource.data.authorEmail == tourUserEmail() &&
+                         request.resource.data.createdAt == request.time &&
+                         request.resource.data.get('likes', []).size() == 0 &&
+                         request.resource.data.get('commentCount', 0) == 0 &&
+                         request.resource.data.get('images', []).size() <= 10 &&
+                         request.resource.data.get('caption', '').size() <= 2200;
+
+        // Any member likes or unlikes the post (their own entry only). Adding or
+        // removing a comment moves the count by one.
         allow update: if isActiveMember(tourId) &&
                          request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['likes', 'commentCount']);
+                           .hasOnly(['likes', 'commentCount']) &&
+                         ownEntryOnly(resource.data.get('likes', []), request.resource.data.get('likes', [])) &&
+                         movesByOneAtMost(resource.data.get('commentCount', 0), request.resource.data.get('commentCount', 0));
+
+        // The author or an admin edits the post's text, tags and settings.
         allow update: if isActiveMember(tourId) &&
                          (resource.data.get('authorEmail', '') == tourUserEmail() || isTourAdmin(tourId)) &&
                          request.resource.data.diff(resource.data).affectedKeys()
-                           .hasAny(['caption', 'isPinned', 'hideLikeCount', 'disableComments']);
+                           .hasOnly(['caption', 'location', 'tourDay', 'tags', 'isEdited', 'editedAt',
+                                     'isArchived', 'isPinned', 'hideLikeCount', 'disableComments']) &&
+                         request.resource.data.get('caption', '').size() <= 2200;
+
         allow delete: if isActiveMember(tourId) &&
                          (resource.data.get('authorEmail', '') == tourUserEmail() || isTourAdmin(tourId));
 
         match /comments/{commentId} {
           allow read: if isActiveMember(tourId);
           allow create: if isActiveMember(tourId) &&
-                           request.resource.data.authorEmail == tourUserEmail();
-          // Any member can like/unlike comments; author or admin can pin or mark author liked
+                           request.resource.data.authorEmail == tourUserEmail() &&
+                           request.resource.data.createdAt == request.time &&
+                           request.resource.data.get('text', '').size() <= 500;
+
+          // Any member likes or unlikes a comment (their own entry only).
           allow update: if isActiveMember(tourId) &&
                            request.resource.data.diff(resource.data).affectedKeys()
-                             .hasOnly(['likes']);
+                             .hasOnly(['likes']) &&
+                           ownEntryOnly(resource.data.get('likes', []), request.resource.data.get('likes', []));
+
+          // The post's author or an admin pins a comment or marks the author's like.
           allow update: if isActiveMember(tourId) &&
                            (get(/databases/$(database)/documents/tours/$(tourId)/posts/$(postId)).data.get('authorEmail', '') == tourUserEmail() || isTourAdmin(tourId)) &&
                            request.resource.data.diff(resource.data).affectedKeys()
-                             .hasAny(['isPinned', 'isAuthorLiked']);
+                             .hasOnly(['isPinned', 'isAuthorLiked']);
+
           // The comment's author, the post's author, or an admin may delete it.
           allow delete: if isActiveMember(tourId) &&
                            (resource.data.get('authorEmail', '') == tourUserEmail() ||
@@ -514,18 +555,46 @@ service cloud.firestore {
       match /stories/{storyId} {
         allow read: if isActiveMember(tourId);
         allow create: if isActiveMember(tourId) &&
-                         request.resource.data.authorEmail == tourUserEmail();
-        // Any member viewing or voting on poll
+                         request.resource.data.authorEmail == tourUserEmail() &&
+                         request.resource.data.createdAt == request.time;
+
+        // A member records their own view.
         allow update: if isActiveMember(tourId) &&
                          request.resource.data.diff(resource.data).affectedKeys()
-                           .hasAny(['viewers', 'poll']);
+                           .hasOnly(['viewers']) &&
+                         ownEntryOnly(resource.data.get('viewers', []), request.resource.data.get('viewers', []));
+
+        // A member votes once in a poll, for an option that exists.
+        allow update: if isActiveMember(tourId) &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['poll']) &&
+                         request.resource.data.poll.diff(resource.data.poll).affectedKeys()
+                           .hasOnly(['votes']) &&
+                         request.resource.data.poll.votes.diff(resource.data.poll.get('votes', {})).affectedKeys()
+                           .hasOnly([tourUserEmail()]) &&
+                         !(tourUserEmail() in resource.data.poll.get('votes', {})) &&
+                         request.resource.data.poll.votes.get(tourUserEmail(), -1) >= 0 &&
+                         request.resource.data.poll.votes.get(tourUserEmail(), -1) < resource.data.poll.options.size();
+
+        // A member sets or clears their own reaction.
+        allow update: if isActiveMember(tourId) &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['reactions']) &&
+                         request.resource.data.reactions.diff(resource.data.get('reactions', {})).affectedKeys()
+                           .hasOnly([tourUserEmail()]) &&
+                         request.resource.data.reactions.get(tourUserEmail(), '').size() <= 16;
+
         allow delete: if isActiveMember(tourId) &&
                          (resource.data.get('authorEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
+      // Highlights are kept by the member who made them, and by admins.
       match /highlights/{highlightId} {
         allow read: if isActiveMember(tourId);
-        allow create, update, delete: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) &&
+                         request.resource.data.createdByEmail == tourUserEmail();
+        allow update, delete: if isActiveMember(tourId) &&
+                                 (resource.data.get('createdByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
       // Discussion channels. The four built-in channels need no document; admins
