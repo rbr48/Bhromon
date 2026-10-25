@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
@@ -2233,7 +2234,9 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
       await _discardStartedUploads();
       final reason = e is TourUploadException || e is TourAccessException
           ? e.toString()
-          : 'সংযোগ বা সার্ভারের সমস্যা। আবার চেষ্টা করুন।';
+          : (e is FirebaseException
+              ? (e.message ?? e.code)
+              : 'সংযোগ বা সার্ভারের সমস্যা। আবার চেষ্টা করুন।');
       _showError(reel ? 'রিলস পাবলিশ হয়নি: $reason' : 'পোস্ট হয়নি: $reason');
     } finally {
       if (mounted) {
@@ -3091,7 +3094,7 @@ class _AddStorySheetState extends State<_AddStorySheet> {
       if (mounted) {
         final reason = e is TourUploadException || e is TourAccessException
             ? e.toString()
-            : 'অজানা সমস্যা';
+            : (e is FirebaseException ? (e.message ?? e.code) : 'অজানা সমস্যা');
         _showMessage('স্টোরি যোগ করা যায়নি: $reason', color: Colors.redAccent);
       }
     } finally {
