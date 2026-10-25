@@ -493,8 +493,11 @@ service cloud.firestore {
           allow read: if isActiveMember(tourId);
           allow create: if isActiveMember(tourId) &&
                            request.resource.data.authorEmail == tourUserEmail();
+          // The comment's author, the post's author, or an admin may delete it.
           allow delete: if isActiveMember(tourId) &&
-                           (resource.data.get('authorEmail', '') == tourUserEmail() || isTourAdmin(tourId));
+                           (resource.data.get('authorEmail', '') == tourUserEmail() ||
+                            get(/databases/$(database)/documents/tours/$(tourId)/posts/$(postId)).data.get('authorEmail', '') == tourUserEmail() ||
+                            isTourAdmin(tourId));
         }
       }
 
@@ -590,10 +593,15 @@ service cloud.firestore {
                             .hasOnly(['displayName', 'photoUrl', 'tourName']))
                        );
       // The owner row can't be removed; ownership moves first. Members can leave.
-      allow delete: if isAuth() && resource.data.role != 'owner' && (
-                       resource.data.email == tourUserEmail() ||
-                       isOwnerOfTour(resource.data.tourId) ||
-                       (isTourAdmin(resource.data.tourId) && resource.data.role == 'member')
+      allow delete: if isAuth() && (
+                       (resource.data.role != 'owner' && (
+                         resource.data.email == tourUserEmail() ||
+                         isOwnerOfTour(resource.data.tourId) ||
+                         (isTourAdmin(resource.data.tourId) && resource.data.role == 'member')
+                       )) ||
+                       // The owner's own row can only be cleared once the tour is gone.
+                       (resource.data.role == 'owner' && resource.data.email == tourUserEmail() &&
+                        !exists(/databases/$(database)/documents/tours/$(resource.data.tourId)))
                      );
     }
 
