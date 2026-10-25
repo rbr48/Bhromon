@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bhromon/features/game_zone/ludo/ludo_engine.dart';
 
@@ -56,5 +58,64 @@ void main() {
       // Red token should NOT be captured because 0 is safe
       expect(redToken.state, equals(TokenState.onTrack));
     });
+      test('A new turn starts with a fresh six counter', () {
+      engine.consecutiveSixes = 2;
+      engine.hasRolled = true;
+      engine.currentDice = 6;
+      engine.passTurn();
+      expect(engine.currentTurn, LudoColor.green);
+      expect(engine.consecutiveSixes, 0);
+      expect(engine.hasRolled, isFalse);
+      expect(engine.currentDice, isNull);
+    });
+
+    test('Third six in a row forfeits and resets for the next player', () {
+      final seeded = LudoEngine(random: _SixesRandom());
+      seeded.rollDice();
+      seeded.hasRolled = false;
+      seeded.rollDice();
+      seeded.hasRolled = false;
+      expect(seeded.rollDice(), -1);
+      expect(seeded.currentTurn, LudoColor.green);
+      expect(seeded.consecutiveSixes, 0);
+      expect(seeded.rollDice(), 6);
+      expect(seeded.consecutiveSixes, 1);
+    });
+
+    test('Bot captures when it can and avoids stepping into danger', () {
+      final bot = LudoEngine(random: Random(1));
+      bot.currentTurn = LudoColor.green;
+      final capturer = bot.tokens[LudoColor.green]![0]
+        ..state = TokenState.onTrack
+        ..stepCount = 2; // index 15
+      final other = bot.tokens[LudoColor.green]![1]
+        ..state = TokenState.onTrack
+        ..stepCount = 20; // index 33
+      bot.tokens[LudoColor.red]![0]
+        ..state = TokenState.onTrack
+        ..stepCount = 18; // index 18, three squares ahead of the capturer
+      bot.currentDice = 3;
+      bot.hasRolled = true;
+      expect(bot.getBestBotMove(), same(capturer));
+
+      // Without a capture, prefer the move that does not land just ahead of an opponent.
+      bot.tokens[LudoColor.red]![0]
+        ..state = TokenState.onTrack
+        ..stepCount = 16; // index 16: green token 0 moving to 18 lands 2 ahead of it
+      bot.tokens[LudoColor.yellow]![0]
+        ..state = TokenState.onTrack
+        ..stepCount = 4; // index 30: green token 1 at 33 is 3 ahead (threatened now)
+      expect(bot.isThreatened(18, LudoColor.green), isTrue);
+      expect(bot.getBestBotMove(), same(other));
+    });
   });
+}
+
+class _SixesRandom implements Random {
+  @override
+  int nextInt(int max) => 5;
+  @override
+  double nextDouble() => 0;
+  @override
+  bool nextBool() => false;
 }
