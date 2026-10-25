@@ -1191,6 +1191,23 @@ class TourGroupRepository {
             s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList());
   }
 
+  /// Fetches posts by id, such as bookmarks older than the loaded feed. An id
+  /// whose post was deleted is left out of the result.
+  Future<List<TourPostItem>> getPostsByIds(
+      String tourId, Iterable<String> ids) async {
+    final unique = ids.toSet().toList();
+    final posts = <TourPostItem>[];
+    // Each `in` query takes at most 10 ids, a limit every Firestore version accepts.
+    for (var i = 0; i < unique.length; i += 10) {
+      final chunk = unique.skip(i).take(10).toList();
+      final snap = await _sub(tourId, 'posts')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      posts.addAll(snap.docs.map((d) => TourPostItem.fromMap(d.id, d.data())));
+    }
+    return posts;
+  }
+
   Stream<TourPostItem?> watchPost(String tourId, String postId) {
     return _sub(tourId, 'posts').doc(postId).snapshots().map((doc) {
       final data = doc.data();
