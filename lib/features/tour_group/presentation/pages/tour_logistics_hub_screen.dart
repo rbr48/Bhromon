@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'bus_seat_map_screen.dart';
 import 'hotel_room_map_screen.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 
 class TourLogisticsHubScreen extends StatefulWidget {
@@ -35,9 +36,9 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D1A12),
         elevation: 0,
-        title: const Text(
-          'Logistics (সিট ও রুম বণ্টন)',
-          style: TextStyle(
+        title: Text(
+          context.l10n.translate('tour_logistics_title'),
+          style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         bottom: TabBar(
@@ -45,11 +46,13 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
           indicatorColor: AppColors.mintGreen,
           labelColor: AppColors.mintGreen,
           unselectedLabelColor: Colors.white60,
-          tabs: const [
+          tabs: [
             Tab(
-                icon: Icon(Icons.directions_bus_rounded),
-                text: 'Bus Seats (বাস)'),
-            Tab(icon: Icon(Icons.hotel_rounded), text: 'Hotel Rooms (রুম)'),
+                icon: const Icon(Icons.directions_bus_rounded),
+                text: context.l10n.translate('tour_tab_bus')),
+            Tab(
+                icon: const Icon(Icons.hotel_rounded),
+                text: context.l10n.translate('tour_tab_hotel')),
           ],
         ),
       ),

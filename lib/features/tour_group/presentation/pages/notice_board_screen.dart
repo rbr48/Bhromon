@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
@@ -49,9 +50,12 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     );
   }
 
-  String get _meetingTitle =>
+  String _meetingTitle(BuildContext context) =>
       _group?.meetingPointTitle ??
-      '${_group?.destination ?? 'ট্যুর'} প্রধান মিটিং পয়েন্ট (হোটেল লবি)';
+      context.l10n.translate('tour_meeting_point_default', args: {
+        'destination': _group?.destination ??
+            context.l10n.translate('tour_default_destination'),
+      });
 
   String get _meetingMapUrl =>
       _group?.meetingPointMapUrl ??
@@ -65,6 +69,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   }
 
   Future<void> _editMeetingPoint() async {
+    final l10n = context.l10n;
     final titleCtrl =
         TextEditingController(text: _group?.meetingPointTitle ?? '');
     final noteCtrl =
@@ -75,8 +80,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF142428),
-        title: const Text('মিটিং পয়েন্ট বদলান',
-            style: TextStyle(color: Colors.white)),
+        title: Text(l10n.translate('tour_edit_meeting_point'),
+            style: const TextStyle(color: Colors.white)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -84,18 +89,20 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               TextField(
                 controller: titleCtrl,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'স্থানের নাম'),
+                decoration: InputDecoration(
+                    labelText: l10n.translate('tour_place_name')),
               ),
               TextField(
                 controller: noteCtrl,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'বিস্তারিত'),
+                decoration:
+                    InputDecoration(labelText: l10n.translate('tour_details')),
               ),
               TextField(
                 controller: urlCtrl,
                 style: const TextStyle(color: Colors.white),
-                decoration:
-                    const InputDecoration(labelText: 'ম্যাপের লিংক (https://)'),
+                decoration: InputDecoration(
+                    labelText: l10n.translate('tour_map_link_label')),
               ),
             ],
           ),
@@ -103,10 +110,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('বাতিল')),
+              child: Text(l10n.translate('tour_cancel'))),
           ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('সংরক্ষণ')),
+              child: Text(l10n.translate('tour_save'))),
         ],
       ),
     );
@@ -118,7 +125,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     urlCtrl.dispose();
     if (saved != true) return;
     if (url.isNotEmpty && !url.startsWith('https://')) {
-      _showError('ম্যাপের লিংক https:// দিয়ে শুরু হতে হবে।');
+      _showError(l10n.translate('tour_map_link_needs_https'));
       return;
     }
     try {
@@ -126,12 +133,14 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
           title: title, note: note, mapUrl: url);
       await _load();
     } catch (e) {
-      _showError('মিটিং পয়েন্ট সংরক্ষণ করা যায়নি: $e');
+      _showError(
+          l10n.translate('tour_meeting_point_save_failed', args: {'error': e}));
     }
   }
 
   /// Posts a new notice, or edits [existing] when it is given.
   void _showNoticeDialog({TourNotice? existing}) {
+    final l10n = context.l10n;
     final titleCtrl = TextEditingController(text: existing?.title ?? '');
     final contentCtrl = TextEditingController(text: existing?.content ?? '');
     bool isUrgent = existing?.urgent ?? false;
@@ -143,7 +152,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF142428),
           title: Text(
-              existing == null ? 'নতুন নোটিশ জারি করুন' : 'নোটিশ সম্পাদনা',
+              existing == null
+                  ? l10n.translate('tour_notice_new_title')
+                  : l10n.translate('tour_notice_edit_title'),
               style: const TextStyle(color: Colors.white)),
           content: SingleChildScrollView(
             child: Column(
@@ -153,19 +164,21 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                   controller: titleCtrl,
                   maxLength: 100,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'শিরোনাম'),
+                  decoration: InputDecoration(
+                      labelText: l10n.translate('tour_notice_heading')),
                 ),
                 TextField(
                   controller: contentCtrl,
                   maxLines: 4,
                   maxLength: 1000,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'বিস্তারিত'),
+                  decoration: InputDecoration(
+                      labelText: l10n.translate('tour_details')),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('জরুরি নোটিশ',
-                      style: TextStyle(color: Colors.white)),
+                  title: Text(l10n.translate('tour_notice_urgent'),
+                      style: const TextStyle(color: Colors.white)),
                   value: isUrgent,
                   onChanged: (v) => setDialogState(() => isUrgent = v),
                 ),
@@ -175,8 +188,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child:
-                  const Text('বাতিল', style: TextStyle(color: Colors.white54)),
+              child: Text(l10n.translate('tour_cancel'),
+                  style: const TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -206,12 +219,12 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                   }
                 } catch (e) {
                   _showError(existing == null
-                      ? 'নোটিশ পাঠানো যায়নি: শুধু অ্যাডমিন নোটিশ দিতে পারেন।'
-                      : 'নোটিশ বদলানো যায়নি: শুধু অ্যাডমিন বদলাতে পারেন।');
+                      ? l10n.translate('tour_notice_post_admin_only')
+                      : l10n.translate('tour_notice_update_admin_only'));
                 }
               },
-              child: const Text('পোস্ট করুন',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(l10n.translate('tour_post'),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -223,10 +236,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   }
 
   Future<void> _deleteNotice(TourNotice notice) async {
+    final l10n = context.l10n;
     try {
       await _repository.deleteNotice(widget.tourId, notice.id);
     } catch (_) {
-      _showError('নোটিশ মোছা যায়নি।');
+      _showError(l10n.translate('tour_notice_delete_failed'));
     }
   }
 
@@ -236,8 +250,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F1A1C),
       appBar: AppBar(
-        title: const Text('Notice Board & Meeting Point',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(context.l10n.translate('tour_notice_board_title'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         backgroundColor: const Color(0xFF142428),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -245,7 +259,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
           if (_isAdmin)
             IconButton(
               icon: const Icon(Icons.add_alert),
-              tooltip: 'নতুন নোটিশ',
+              tooltip: context.l10n.translate('tour_notice_new'),
               onPressed: () => _showNoticeDialog(),
             ),
         ],
@@ -256,8 +270,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
           children: [
             _buildMeetingPointCard(),
             const SizedBox(height: 20),
-            const Text('নোটিশ বোর্ড',
-                style: TextStyle(
+            Text(context.l10n.translate('tour_notice_board'),
+                style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 15)),
@@ -266,8 +280,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               stream: _notices,
               builder: (context, snapshot) {
                 if (snapshot.hasError && !snapshot.hasData) {
-                  return const Text('নোটিশ লোড করা যায়নি।',
-                      style: TextStyle(color: Colors.white54));
+                  return Text(
+                      context.l10n.translate('tour_notices_load_failed'),
+                      style: const TextStyle(color: Colors.white54));
                 }
                 if (!snapshot.hasData) {
                   return const Center(
@@ -280,11 +295,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 }
                 final notices = snapshot.data!;
                 if (notices.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Text('এখনও কোনো নোটিশ নেই।',
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(context.l10n.translate('tour_no_notices'),
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white38)),
+                        style: const TextStyle(color: Colors.white38)),
                   );
                 }
                 return Column(
@@ -320,19 +335,19 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
             children: [
               const Icon(Icons.place, color: Colors.amber, size: 14),
               const SizedBox(width: 4),
-              const Text('লাইভ মিটিং পয়েন্ট',
-                  style: TextStyle(color: Colors.amber, fontSize: 11)),
+              Text(context.l10n.translate('tour_live_meeting_point'),
+                  style: const TextStyle(color: Colors.amber, fontSize: 11)),
               const Spacer(),
               if (_isAdmin)
                 IconButton(
-                  tooltip: 'মিটিং পয়েন্ট বদলান',
+                  tooltip: context.l10n.translate('tour_edit_meeting_point'),
                   icon: const Icon(Icons.edit, size: 18, color: Colors.white70),
                   onPressed: _editMeetingPoint,
                 ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(_meetingTitle,
+          Text(_meetingTitle(context),
               style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -345,7 +360,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
           const SizedBox(height: 10),
           OutlinedButton.icon(
             icon: const Icon(Icons.navigation, size: 16),
-            label: const Text('ম্যাপে দেখুন'),
+            label: Text(context.l10n.translate('tour_view_on_map')),
             onPressed: _openMap,
           ),
         ],
@@ -388,14 +403,14 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               ),
               if (canDelete)
                 IconButton(
-                  tooltip: 'নোটিশ সম্পাদনা',
+                  tooltip: context.l10n.translate('tour_notice_edit_title'),
                   icon: const Icon(Icons.edit_outlined,
                       color: Colors.white38, size: 18),
                   onPressed: () => _showNoticeDialog(existing: notice),
                 ),
               if (canDelete)
                 IconButton(
-                  tooltip: 'নোটিশ মুছুন',
+                  tooltip: context.l10n.translate('tour_delete_notice'),
                   icon: const Icon(Icons.delete_outline,
                       color: Colors.white38, size: 18),
                   onPressed: () => _deleteNotice(notice),
@@ -408,7 +423,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 style: const TextStyle(color: Colors.white70, fontSize: 13)),
           ],
           const SizedBox(height: 8),
-          Text('প্রেরক: ${notice.author} • $dateText',
+          Text(
+              context.l10n.translate('tour_notice_sender',
+                  args: {'author': notice.author, 'date': dateText}),
               style: const TextStyle(color: Colors.white38, fontSize: 11)),
         ],
       ),
