@@ -739,6 +739,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
                         // Highlight button
                         IconButton(
+                          tooltip: 'হাইলাইটে যোগ করুন',
                           icon: const Icon(Icons.bookmark_add_outlined,
                               color: Colors.white),
                           onPressed: _saveToHighlight,
@@ -746,6 +747,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
                         // Close button
                         IconButton(
+                          tooltip: 'বন্ধ করুন',
                           icon: const Icon(Icons.close, color: Colors.white),
                           onPressed: () => Navigator.pop(context),
                         ),
