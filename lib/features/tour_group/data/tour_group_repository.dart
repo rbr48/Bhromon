@@ -205,6 +205,41 @@ class TourGroupRepository {
     }
   }
 
+  String _postDraftKey(String tourId) =>
+      'post_draft_${currentUid.isEmpty ? 'anon' : currentUid}_$tourId';
+
+  Future<TourPostDraft?> loadPostDraft(String tourId) async {
+    try {
+      final box = await _openBox();
+      final raw = box.get(_postDraftKey(tourId));
+      if (raw is Map) {
+        return TourPostDraft.fromMap(Map<String, dynamic>.from(raw));
+      }
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Could not read post draft: $e');
+    }
+    return null;
+  }
+
+  Future<void> savePostDraft(String tourId, TourPostDraft draft) async {
+    try {
+      final box = await _openBox();
+      await box.put(_postDraftKey(tourId), draft.toMap());
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Could not save post draft: $e');
+    }
+  }
+
+  Future<void> clearPostDraft(String tourId) async {
+    try {
+      final box = await _openBox();
+      await box.delete(_postDraftKey(tourId));
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Could not clear post draft: $e');
+    }
+  }
+
+
   // ---------------------------------------------------------------------------
   // Groups
   // ---------------------------------------------------------------------------
@@ -1196,6 +1231,16 @@ class TourGroupRepository {
     String location = '',
     String tourDay = 'day1',
     String filterId = 'normal',
+    List<String> tags = const [],
+    bool isPinned = false,
+    bool hideLikeCount = false,
+    bool disableComments = false,
+    String? audioTitle,
+    String? audioUrl,
+    double? aspectRatio,
+    double? expenseAmount,
+    String? expenseCategory,
+    String? coverUrl,
   }) async {
     final email = _requireEmail();
     final mediaUrls = [...images, if (videoUrl != null) videoUrl];
@@ -1223,6 +1268,16 @@ class TourGroupRepository {
       likes: const [],
       commentCount: 0,
       createdAt: DateTime.now(),
+      tags: tags,
+      isPinned: isPinned,
+      hideLikeCount: hideLikeCount,
+      disableComments: disableComments,
+      audioTitle: audioTitle,
+      audioUrl: audioUrl,
+      aspectRatio: aspectRatio,
+      expenseAmount: expenseAmount,
+      expenseCategory: expenseCategory,
+      coverUrl: coverUrl,
     );
     await _sub(tourId, 'posts').doc(id).set(post.toMap());
   }
@@ -1244,6 +1299,24 @@ class TourGroupRepository {
           : FieldValue.arrayRemove([email]),
     });
   }
+
+  Future<void> setPostPinned(String tourId, String postId,
+      {required bool isPinned}) async {
+    _requireEmail();
+    await _sub(tourId, 'posts').doc(postId).update({'isPinned': isPinned});
+  }
+
+  Future<void> setPostSettings(String tourId, String postId,
+      {bool? hideLikeCount, bool? disableComments}) async {
+    _requireEmail();
+    final updates = <String, dynamic>{};
+    if (hideLikeCount != null) updates['hideLikeCount'] = hideLikeCount;
+    if (disableComments != null) updates['disableComments'] = disableComments;
+    if (updates.isNotEmpty) {
+      await _sub(tourId, 'posts').doc(postId).update(updates);
+    }
+  }
+
 
   /// Deletes a post with its comments, then removes its files from Storage
   /// (best effort: the post is removed even if a file cannot be deleted).
@@ -1290,6 +1363,7 @@ class TourGroupRepository {
     required String postId,
     required String text,
     String? reaction,
+    String? parentId,
   }) async {
     final email = _requireEmail();
     final trimmed = text.trim();
@@ -1306,6 +1380,7 @@ class TourGroupRepository {
       text: trimmed,
       reaction: reaction,
       createdAt: DateTime.now(),
+      parentId: parentId,
     );
     final postRef = _sub(tourId, 'posts').doc(postId);
     final batch = _firestore.batch();
@@ -1323,6 +1398,35 @@ class TourGroupRepository {
     batch.update(postRef, {'commentCount': FieldValue.increment(-1)});
     await batch.commit();
   }
+
+  Future<void> setCommentLiked(
+      String tourId, String postId, String commentId,
+      {required bool liked}) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .update({
+      'likes': liked
+          ? FieldValue.arrayUnion([email])
+          : FieldValue.arrayRemove([email]),
+    });
+  }
+
+  Future<void> setCommentPinned(
+      String tourId, String postId, String commentId,
+      {required bool isPinned, bool? isAuthorLiked}) async {
+    _requireEmail();
+    final updates = <String, dynamic>{'isPinned': isPinned};
+    if (isAuthorLiked != null) updates['isAuthorLiked'] = isAuthorLiked;
+    await _sub(tourId, 'posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .update(updates);
+  }
+
 
   // ---------------------------------------------------------------------------
   // Stories
@@ -1343,6 +1447,11 @@ class TourGroupRepository {
     required String tourId,
     required String mediaUrl,
     String? caption,
+    bool isVideo = false,
+    String? videoUrl,
+    TourStoryPoll? poll,
+    TourStorySticker? sticker,
+    String? highlightId,
   }) async {
     final email = _requireEmail();
     if (!isRemoteMediaUrl(mediaUrl)) {
@@ -1358,6 +1467,11 @@ class TourGroupRepository {
       mediaUrl: mediaUrl,
       caption: caption?.trim().isEmpty ?? true ? null : caption!.trim(),
       createdAt: DateTime.now(),
+      isVideo: isVideo,
+      videoUrl: videoUrl,
+      poll: poll,
+      sticker: sticker,
+      highlightId: highlightId,
     );
     await _sub(tourId, 'stories').doc(id).set(story.toMap());
   }
@@ -1366,6 +1480,63 @@ class TourGroupRepository {
     _requireEmail();
     await _sub(tourId, 'stories').doc(storyId).delete();
   }
+
+  Future<void> recordStoryView(String tourId, String storyId) async {
+    if (!isSignedIn) return;
+    final email = currentEmail;
+    if (email.isEmpty) return;
+    try {
+      await _sub(tourId, 'stories').doc(storyId).update({
+        'viewers': FieldValue.arrayUnion([email]),
+      });
+    } catch (_) {}
+  }
+
+  Future<void> voteStoryPoll(
+      String tourId, String storyId, int optionIndex) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'stories').doc(storyId).update({
+      'poll.votes.$email': optionIndex,
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Highlights
+  // ---------------------------------------------------------------------------
+
+  Stream<List<TourStoryHighlight>> watchHighlights(String tourId) {
+    return _sub(tourId, 'highlights')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs
+            .map((d) => TourStoryHighlight.fromMap(d.id, d.data()))
+            .toList());
+  }
+
+  Future<void> addHighlight(
+    String tourId, {
+    required String title,
+    required String coverUrl,
+    required List<String> storyIds,
+  }) async {
+    _requireEmail();
+    final id = _uuid.v4();
+    final highlight = TourStoryHighlight(
+      id: id,
+      tourId: tourId,
+      title: title.trim().isEmpty ? 'স্মৃতি' : title.trim(),
+      coverUrl: coverUrl,
+      storyIds: storyIds,
+      createdAt: DateTime.now(),
+    );
+    await _sub(tourId, 'highlights').doc(id).set(highlight.toMap());
+  }
+
+  Future<void> deleteHighlight(String tourId, String highlightId) async {
+    _requireEmail();
+    await _sub(tourId, 'highlights').doc(highlightId).delete();
+  }
+
 
   // ---------------------------------------------------------------------------
   // Live locations & safety
