@@ -332,24 +332,6 @@ class _ChatScreenState extends State<ChatScreen> {
         },
         SetOptions(merge: true));
 
-    // Write in-app notification for the recipient
-    if (resolvedOtherUid != null &&
-        resolvedOtherUid != 'guest' &&
-        resolvedOtherUid != currentUid) {
-      final notifRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(resolvedOtherUid)
-          .collection('notifications')
-          .doc();
-      batch.set(notifRef, {
-        'title': 'New message from $currentName',
-        'body': text,
-        'action': 'chat',
-        'uid': currentUid,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-    }
-
     try {
       await batch.commit();
       _scrollController.animateTo(
@@ -357,6 +339,30 @@ class _ChatScreenState extends State<ChatScreen> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
+
+      // Send in-app notification in background without blocking the message
+      if (resolvedOtherUid != null &&
+          resolvedOtherUid != 'guest' &&
+          resolvedOtherUid != currentUid &&
+          resolvedOtherUid != 'bhromon_ai_advisor') {
+        try {
+          final notifRef = FirebaseFirestore.instance
+              .collection('users')
+              .doc(resolvedOtherUid)
+              .collection('notifications')
+              .doc();
+          await notifRef.set({
+            'title': 'New message from $currentName',
+            'body': text,
+            'action': 'chat',
+            'uid': currentUid,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+        } catch (e) {
+          debugPrint('Notification dispatch skipped: $e');
+        }
+      }
+
       if (resolvedOtherUid == 'bhromon_ai_advisor') {
         _processAiResponse(currentUid, text);
       }
@@ -494,8 +500,12 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (_) {}
 
     try {
-      File? fileToUpload = file;
-      if (!kIsWeb && type == 'image' && fileToUpload != null) {
+      File? fileToUpload =
+          file ?? (!kIsWeb && xFile.path.isNotEmpty ? File(xFile.path) : null);
+      if (!kIsWeb &&
+          type == 'image' &&
+          fileToUpload != null &&
+          fileToUpload.existsSync()) {
         try {
           final tempDir = await getTemporaryDirectory();
           final compressedPath = '${tempDir.path}/${uploadId}_compressed.jpg';
@@ -509,8 +519,7 @@ class _ChatScreenState extends State<ChatScreen> {
           );
           if (compressed != null) {
             fileToUpload = File(compressed.path);
-            debugPrint(
-                'Image compressed: ${fileToUpload.lengthSync()} bytes');
+            debugPrint('Image compressed: ${fileToUpload.lengthSync()} bytes');
           }
         } catch (e) {
           debugPrint('Compression failed, using original: $e');
@@ -518,13 +527,12 @@ class _ChatScreenState extends State<ChatScreen> {
       }
 
       final ext = type == 'video' ? 'mp4' : 'jpg';
-      final mimeType =
-          type == 'video' ? 'video/mp4' : 'image/jpeg';
+      final mimeType = type == 'video' ? 'video/mp4' : 'image/jpeg';
       final storageRef = FirebaseStorage.instance
           .ref('chat_media/${widget.chatId}/$uploadId.$ext');
 
       final UploadTask uploadTask;
-      if (kIsWeb) {
+      if (kIsWeb || fileToUpload == null) {
         final bytes = await xFile.readAsBytes();
         uploadTask = storageRef.putData(
           bytes,
@@ -532,7 +540,7 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       } else {
         uploadTask = storageRef.putFile(
-          fileToUpload!,
+          fileToUpload,
           SettableMetadata(contentType: mimeType),
         );
       }
@@ -577,30 +585,36 @@ class _ChatScreenState extends State<ChatScreen> {
           },
           SetOptions(merge: true));
 
+      await batch.commit();
+
       if (resolvedOtherUid != null &&
           resolvedOtherUid != 'guest' &&
-          resolvedOtherUid != currentUid) {
-        final notifRef = FirebaseFirestore.instance
-            .collection('users')
-            .doc(resolvedOtherUid)
-            .collection('notifications')
-            .doc();
-        batch.set(notifRef, {
-          'title': 'New message from $currentName',
-          'body': lastMsg,
-          'action': 'chat',
-          'uid': currentUid,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
+          resolvedOtherUid != currentUid &&
+          resolvedOtherUid != 'bhromon_ai_advisor') {
+        try {
+          final notifRef = FirebaseFirestore.instance
+              .collection('users')
+              .doc(resolvedOtherUid)
+              .collection('notifications')
+              .doc();
+          await notifRef.set({
+            'title': 'New message from $currentName',
+            'body': lastMsg,
+            'action': 'chat',
+            'uid': currentUid,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+        } catch (e) {
+          debugPrint('Notification dispatch skipped: $e');
+        }
       }
-
-      await batch.commit();
     } catch (e) {
       debugPrint('Media upload error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to send media. Please try again.'),
+          SnackBar(
+            content: Text(
+                'Failed to send media: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -675,30 +689,36 @@ class _ChatScreenState extends State<ChatScreen> {
           },
           SetOptions(merge: true));
 
+      await batch.commit();
+
       if (resolvedOtherUid != null &&
           resolvedOtherUid != 'guest' &&
-          resolvedOtherUid != currentUid) {
-        final notifRef = FirebaseFirestore.instance
-            .collection('users')
-            .doc(resolvedOtherUid)
-            .collection('notifications')
-            .doc();
-        batch.set(notifRef, {
-          'title': 'New voice message from $currentName',
-          'body': '🎤 Voice message (${duration.inSeconds}s)',
-          'action': 'chat',
-          'uid': currentUid,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
+          resolvedOtherUid != currentUid &&
+          resolvedOtherUid != 'bhromon_ai_advisor') {
+        try {
+          final notifRef = FirebaseFirestore.instance
+              .collection('users')
+              .doc(resolvedOtherUid)
+              .collection('notifications')
+              .doc();
+          await notifRef.set({
+            'title': 'New voice message from $currentName',
+            'body': '🎤 Voice message (${duration.inSeconds}s)',
+            'action': 'chat',
+            'uid': currentUid,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+        } catch (e) {
+          debugPrint('Notification dispatch skipped: $e');
+        }
       }
-
-      await batch.commit();
     } catch (e) {
       debugPrint('Error sending voice message: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to send voice message.'),
+          SnackBar(
+            content: Text(
+                'Failed to send voice message: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}'),
             backgroundColor: Colors.redAccent,
           ),
         );
