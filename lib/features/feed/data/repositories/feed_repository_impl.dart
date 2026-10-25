@@ -111,7 +111,7 @@ class FeedRepositoryImpl implements IFeedRepository {
     }
 
     try {
-      if (!await _isOnline()) return fromCache();
+      if (!await _isOnline()) return await fromCache();
 
       Query<Map<String, dynamic>> query = _firestore
           .collection(collection)

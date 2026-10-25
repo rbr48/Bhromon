@@ -65,7 +65,7 @@ class MapRepositoryImpl implements IMapRepository {
 
   Future<Either<Failure, List<LocationPin>>> _fetchPins() async {
     try {
-      if (!await _isOnline()) return _getCachedPins();
+      if (!await _isOnline()) return await _getCachedPins();
 
       final snapshot = await _firestore.collection('location_pins').get();
 
