@@ -70,7 +70,11 @@ class PlayedCard {
   final int playerIndex; // 0: South (User), 1: East, 2: North (Partner), 3: West
   final Card29 card;
 
-  const PlayedCard({required this.playerIndex, required this.card});
+  /// Whether trump was already revealed when this card was played. A card of
+  /// the hidden trump suit discarded before the reveal is an ordinary card.
+  final bool trumpEligible;
+
+  const PlayedCard({required this.playerIndex, required this.card, this.trumpEligible = true});
 }
 
 class Card29Engine {
@@ -100,13 +104,22 @@ class Card29Engine {
 
     final leadCard = trickCards.first.card;
     PlayedCard bestPlay = trickCards.first;
-    int highestTrumpPower = (isTrumpRevealed && leadCard.suit == trumpSuit) ? leadCard.power : -1;
+
+    // Cards of the led suit always compare by rank; other trump-suit cards
+    // only trump if they were played after the reveal.
+    bool countsAsTrump(PlayedCard play) =>
+        isTrumpRevealed &&
+        trumpSuit != null &&
+        play.card.suit == trumpSuit &&
+        (play.trumpEligible || play.card.suit == leadCard.suit);
+
+    int highestTrumpPower = countsAsTrump(trickCards.first) ? leadCard.power : -1;
 
     for (int i = 1; i < trickCards.length; i++) {
       final play = trickCards[i];
       final card = play.card;
 
-      if (isTrumpRevealed && trumpSuit != null && card.suit == trumpSuit) {
+      if (countsAsTrump(play)) {
         if (card.power > highestTrumpPower) {
           highestTrumpPower = card.power;
           bestPlay = play;

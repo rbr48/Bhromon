@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../common/game_zone_portrait_lock.dart';
@@ -258,24 +259,33 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
           children: [
             _buildPotHeader(),
             Expanded(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(6, 8, 6, 0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: _buildPlayerSeat(_game.players[3])),
-                        Expanded(child: _buildPlayerSeat(_game.players[2])),
-                        Expanded(child: _buildPlayerSeat(_game.players[1])),
-                      ],
-                    ),
-                  ),
-                  Expanded(child: LayoutBuilder(builder: (context, c) => Center(child: _buildCenterPot(c)))),
-                ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // On short screens the seats drop their card row so the table never overflows.
+                  final compact = constraints.maxHeight < 190;
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildPlayerSeat(_game.players[3], compact: compact)),
+                            Expanded(child: _buildPlayerSeat(_game.players[2], compact: compact)),
+                            Expanded(child: _buildPlayerSeat(_game.players[1], compact: compact)),
+                          ],
+                        ),
+                      ),
+                      Expanded(child: LayoutBuilder(builder: (context, c) => Center(child: _buildCenterPot(c)))),
+                    ],
+                  );
+                },
               ),
             ),
-            _buildUserControls(user, isUserTurn),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.5),
+              child: SingleChildScrollView(child: _buildUserControls(user, isUserTurn)),
+            ),
           ],
         ),
       ),
@@ -326,7 +336,7 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
     );
   }
 
-  Widget _buildPlayerSeat(TeenPattiPlayer player) {
+  Widget _buildPlayerSeat(TeenPattiPlayer player, {bool compact = false}) {
     final isTurn = _game.isTurnOf(player.id);
     final state = player.isFolded ? 'PACKED' : (player.isSeen ? 'Seen' : 'Blind');
     final reveal = _game.isRoundOver && !player.isFolded;
@@ -376,10 +386,12 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
               fontWeight: player.isFolded ? FontWeight.bold : FontWeight.normal,
             ),
           ),
-          const SizedBox(height: 4),
-          if (player.isFolded)
-            const SizedBox(height: 38)
-          else
+          if (compact)
+            const SizedBox.shrink()
+          else if (player.isFolded)
+            const SizedBox(height: 42)
+          else ...[
+            const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: player.hand.map((c) {
@@ -389,6 +401,7 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
                 );
               }).toList(),
             ),
+          ],
         ],
       ),
     );
@@ -408,7 +421,8 @@ class _TeenPattiScreenState extends State<TeenPattiScreen> with GameZonePortrait
   }
 
   Widget _buildCenterPot(BoxConstraints constraints) {
-    final potSize = (constraints.biggest.shortestSide * 0.8).clamp(70.0, 125.0);
+    final potSize = min(constraints.biggest.shortestSide * 0.85, 125.0);
+    if (potSize < 36) return const SizedBox.shrink();
     return Container(
       width: potSize,
       height: potSize,
