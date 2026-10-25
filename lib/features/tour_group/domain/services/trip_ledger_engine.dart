@@ -160,6 +160,25 @@ class TripLedgerEngine {
     return '$sign৳$grouped$decimals';
   }
 
+  /// The amount as a plain number the input box accepts: "1250" or "1250.50".
+  static String plainTakaInput(int paisa) {
+    final whole = paisa ~/ 100;
+    final cents = paisa % 100;
+    return cents == 0 ? '$whole' : '$whole.${cents.toString().padLeft(2, '0')}';
+  }
+
+  /// The participant list to store for a split. Null means every current
+  /// member shares it, so members who join later are included. Former members
+  /// stay in the list while they are selected.
+  static List<String>? participantSelection({
+    required Set<String> selected,
+    required List<String> memberEmails,
+  }) {
+    final everyone = memberEmails.every(selected.contains) &&
+        selected.length == memberEmails.length;
+    return everyone ? null : selected.toList();
+  }
+
   static double toTaka(int paisa) => paisa / 100.0;
 
   /// Splits `total` integer paisa proportionally by `weights` using the largest-remainder method.

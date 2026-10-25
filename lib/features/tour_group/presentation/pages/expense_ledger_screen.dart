@@ -298,10 +298,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         for (final exp in expenses)
           _card(
             onLongPress: _canEdit(exp.addedByEmail)
-                ? () => _confirmDelete(
-                      'খরচটি মুছবেন?',
-                      exp.title,
-                      () => _repository.deleteExpense(widget.tourId, exp.id),
+                ? () => _showItemActions(
+                      onEdit: () => _showExpenseDialog(existing: exp),
+                      deleteTitle: 'খরচটি মুছবেন?',
+                      subject: exp.title,
+                      delete: () =>
+                          _repository.deleteExpense(widget.tourId, exp.id),
                     )
                 : null,
             child: Row(
@@ -363,10 +365,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         for (final d in deposits)
           _card(
             onLongPress: _canEdit(d.addedByEmail)
-                ? () => _confirmDelete(
-                      'জমাটি মুছবেন?',
-                      '${d.memberName} — ${_money(d.amountPaisa)}',
-                      () => _repository.deleteDeposit(widget.tourId, d.id),
+                ? () => _showItemActions(
+                      onEdit: () => _showDepositDialog(existing: d),
+                      deleteTitle: 'জমাটি মুছবেন?',
+                      subject: '${d.memberName} — ${_money(d.amountPaisa)}',
+                      delete: () =>
+                          _repository.deleteDeposit(widget.tourId, d.id),
                     )
                 : null,
             child: Row(
@@ -476,6 +480,56 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     }
   }
 
+  /// Long press on an entry you may change: edit it or delete it.
+  void _showItemActions({
+    required VoidCallback onEdit,
+    required String deleteTitle,
+    required String subject,
+    required Future<void> Function() delete,
+  }) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF142428),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading:
+                  const Icon(Icons.edit_rounded, color: AppColors.mintGreen),
+              title: const Text('সম্পাদনা করুন',
+                  style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(ctx);
+                onEdit();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded,
+                  color: Colors.redAccent),
+              title: const Text('মুছুন', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _confirmDelete(deleteTitle, subject, delete);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Members to pick from. A former member already on a row stays selectable,
+  /// so editing that row does not force a different name.
+  Map<String, String> _memberOptions(
+      String? currentEmail, String? currentName) {
+    final options = {for (final m in _latestMembers) m.email: m.displayName};
+    if (currentEmail != null && currentName != null) {
+      options.putIfAbsent(currentEmail, () => currentName);
+    }
+    return options;
+  }
+
   void _showAddEntryMenu(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
@@ -493,7 +547,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   style: TextStyle(color: Colors.white54)),
               onTap: () {
                 Navigator.pop(ctx);
-                _showAddExpenseDialog();
+                _showExpenseDialog();
               },
             ),
             ListTile(
@@ -504,7 +558,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   style: TextStyle(color: Colors.white54)),
               onTap: () {
                 Navigator.pop(ctx);
-                _showAddDepositDialog();
+                _showDepositDialog();
               },
             ),
           ],
@@ -513,18 +567,31 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     );
   }
 
-  void _showAddExpenseDialog() {
-    final titleCtrl = TextEditingController();
-    final amountCtrl = TextEditingController();
-    String category = 'Food';
-    DateTime date = DateTime.now();
-    bool paidFromFund = true;
-    final me = _repository.currentEmail;
+  /// Adds an expense, or edits [existing] when it is given.
+  void _showExpenseDialog({ExpenseItem? existing}) {
+    final titleCtrl = TextEditingController(text: existing?.title ?? '');
+    final amountCtrl = TextEditingController(
+        text: existing == null
+            ? ''
+            : TripLedgerEngine.plainTakaInput(existing.amountPaisa));
     final members = _latestMembers;
-    String? payerEmail = members.any((m) => m.email == me)
-        ? me
-        : (members.isNotEmpty ? members.first.email : null);
-    final participants = {for (final m in members) m.email};
+    final me = _repository.currentEmail;
+    final payers = _memberOptions(existing?.paidById, existing?.paidByName);
+    final categories = [
+      ..._expenseCategories,
+      if (existing != null && !_expenseCategories.contains(existing.category))
+        existing.category,
+    ];
+    String category = existing?.category ?? 'Food';
+    DateTime date = existing?.date ?? DateTime.now();
+    bool paidFromFund = existing == null || existing.paidById == null;
+    String? payerEmail = existing?.paidById ??
+        (members.any((m) => m.email == me)
+            ? me
+            : (members.isNotEmpty ? members.first.email : null));
+    final participants = {
+      ...(existing?.participantIds ?? [for (final m in members) m.email]),
+    };
     String? error;
 
     showDialog<void>(
@@ -533,8 +600,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF142428),
-          title:
-              const Text('খরচ যোগ করুন', style: TextStyle(color: Colors.white)),
+          title: Text(existing == null ? 'খরচ যোগ করুন' : 'খরচ সম্পাদনা',
+              style: const TextStyle(color: Colors.white)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -557,7 +624,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   initialValue: category,
                   dropdownColor: const Color(0xFF1B4332),
                   decoration: const InputDecoration(labelText: 'খাত'),
-                  items: _expenseCategories
+                  items: categories
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
                   onChanged: (v) {
@@ -567,11 +634,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
+                    // An older saved date must stay inside the picker's range.
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: date,
-                      firstDate: DateTime(2022),
-                      lastDate: DateTime(2035),
+                      firstDate:
+                          date.isBefore(DateTime(2022)) ? date : DateTime(2022),
+                      lastDate:
+                          date.isAfter(DateTime(2035)) ? date : DateTime(2035),
                     );
                     if (picked != null) setDialogState(() => date = picked);
                   },
@@ -595,18 +665,18 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   activeThumbColor: AppColors.mintGreen,
                   onChanged: (v) => setDialogState(() => paidFromFund = v),
                 ),
-                if (!paidFromFund && members.isNotEmpty)
+                if (!paidFromFund && payers.isNotEmpty)
                   DropdownButtonFormField<String>(
                     initialValue: payerEmail,
                     dropdownColor: const Color(0xFF1B4332),
                     decoration: const InputDecoration(labelText: 'কে দিয়েছেন'),
-                    items: members
-                        .map((m) => DropdownMenuItem(
-                              value: m.email,
-                              child: Text(m.displayName,
-                                  overflow: TextOverflow.ellipsis),
-                            ))
-                        .toList(),
+                    items: [
+                      for (final e in payers.entries)
+                        DropdownMenuItem(
+                          value: e.key,
+                          child: Text(e.value, overflow: TextOverflow.ellipsis),
+                        ),
+                    ],
                     onChanged: (v) => setDialogState(() => payerEmail = v),
                   ),
                 const SizedBox(height: 12),
@@ -665,27 +735,45 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       () => error = 'অন্তত একজন সদস্য নির্বাচন করুন।');
                   return;
                 }
-                final payer = paidFromFund
-                    ? null
-                    : members.where((m) => m.email == payerEmail).firstOrNull;
-                if (!paidFromFund && payer == null) {
+                final payerKey = paidFromFund ? null : payerEmail;
+                if (!paidFromFund &&
+                    (payerKey == null || !payers.containsKey(payerKey))) {
                   setDialogState(() => error = 'কে দিয়েছেন তা নির্বাচন করুন।');
                   return;
                 }
+                final payerName = payerKey == null ? null : payers[payerKey];
+                final selection = TripLedgerEngine.participantSelection(
+                  selected: participants,
+                  memberEmails: [for (final m in members) m.email],
+                );
                 Navigator.pop(ctx);
                 try {
-                  await _repository.addExpense(
-                    tourId: widget.tourId,
-                    title: title,
-                    amountPaisa: paisa,
-                    paidById: payer?.email,
-                    paidByName: payer?.displayName,
-                    category: category,
-                    date: date,
-                    participantIds: participants.length == members.length
-                        ? null
-                        : participants.toList(),
-                  );
+                  if (existing == null) {
+                    await _repository.addExpense(
+                      tourId: widget.tourId,
+                      title: title,
+                      amountPaisa: paisa,
+                      paidById: payerKey,
+                      paidByName: payerName,
+                      category: category,
+                      date: date,
+                      participantIds: selection,
+                    );
+                  } else {
+                    await _repository.updateExpense(ExpenseItem(
+                      id: existing.id,
+                      tourId: widget.tourId,
+                      title: title,
+                      amountPaisa: paisa,
+                      paidById: payerKey,
+                      paidByName: payerName,
+                      category: category,
+                      date: date,
+                      notes: existing.notes,
+                      addedByEmail: existing.addedByEmail,
+                      participantIds: selection,
+                    ));
+                  }
                 } catch (e) {
                   _showError('খরচ সংরক্ষণ করা যায়নি: $e');
                 }
@@ -702,13 +790,19 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     });
   }
 
-  void _showAddDepositDialog() {
-    final amountCtrl = TextEditingController();
+  /// Adds a deposit, or edits [existing] when it is given.
+  void _showDepositDialog({DepositItem? existing}) {
+    final amountCtrl = TextEditingController(
+        text: existing == null
+            ? ''
+            : TripLedgerEngine.plainTakaInput(existing.amountPaisa));
     final members = _latestMembers;
     final me = _repository.currentEmail;
-    String? memberEmail = members.any((m) => m.email == me)
-        ? me
-        : (members.isNotEmpty ? members.first.email : null);
+    final options = _memberOptions(existing?.memberId, existing?.memberName);
+    String? memberEmail = existing?.memberId ??
+        (members.any((m) => m.email == me)
+            ? me
+            : (members.isNotEmpty ? members.first.email : null));
     String? error;
 
     showDialog<void>(
@@ -717,24 +811,24 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF142428),
-          title:
-              const Text('ফান্ডে জমা', style: TextStyle(color: Colors.white)),
+          title: Text(existing == null ? 'ফান্ডে জমা' : 'জমা সম্পাদনা',
+              style: const TextStyle(color: Colors.white)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (members.isNotEmpty)
+              if (options.isNotEmpty)
                 DropdownButtonFormField<String>(
                   initialValue: memberEmail,
                   dropdownColor: const Color(0xFF1B4332),
                   decoration:
                       const InputDecoration(labelText: 'কে জমা দিচ্ছেন'),
-                  items: members
-                      .map((m) => DropdownMenuItem(
-                            value: m.email,
-                            child: Text(m.displayName,
-                                overflow: TextOverflow.ellipsis),
-                          ))
-                      .toList(),
+                  items: [
+                    for (final e in options.entries)
+                      DropdownMenuItem(
+                        value: e.key,
+                        child: Text(e.value, overflow: TextOverflow.ellipsis),
+                      ),
+                  ],
                   onChanged: (v) => setDialogState(() => memberEmail = v),
                 ),
               TextField(
@@ -761,25 +855,38 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             ElevatedButton(
               onPressed: () async {
                 final paisa = TripLedgerEngine.parseTakaInput(amountCtrl.text);
-                final member =
-                    members.where((m) => m.email == memberEmail).firstOrNull;
+                final email = memberEmail;
+                final name = email == null ? null : options[email];
                 if (paisa == null) {
                   setDialogState(() => error =
                       'সঠিক পরিমাণ লিখুন (০ এর বেশি, সর্বোচ্চ ১ কোটি)।');
                   return;
                 }
-                if (member == null) {
+                if (email == null || name == null) {
                   setDialogState(() => error = 'সদস্য নির্বাচন করুন।');
                   return;
                 }
                 Navigator.pop(ctx);
                 try {
-                  await _repository.addDeposit(
-                    tourId: widget.tourId,
-                    memberId: member.email,
-                    memberName: member.displayName,
-                    amountPaisa: paisa,
-                  );
+                  if (existing == null) {
+                    await _repository.addDeposit(
+                      tourId: widget.tourId,
+                      memberId: email,
+                      memberName: name,
+                      amountPaisa: paisa,
+                    );
+                  } else {
+                    await _repository.updateDeposit(DepositItem(
+                      id: existing.id,
+                      tourId: widget.tourId,
+                      memberId: email,
+                      memberName: name,
+                      amountPaisa: paisa,
+                      date: existing.date,
+                      notes: existing.notes,
+                      addedByEmail: existing.addedByEmail,
+                    ));
+                  }
                 } catch (e) {
                   _showError('জমা সংরক্ষণ করা যায়নি: $e');
                 }
