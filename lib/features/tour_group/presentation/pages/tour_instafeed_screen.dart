@@ -62,6 +62,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   Set<String> _seenStoryIds = {};
   List<TourPostItem> _latestPosts = const [];
   TourGroup? _tourGroup;
+  StreamSubscription<TourGroup?>? _groupSub;
 
   // Logistics cache (Seat & Room mappings: email -> seat/room)
   final Map<String, String> _seatMap = {};
@@ -90,7 +91,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     _highlightsStream = _repository.watchHighlights(widget.tourId);
     _alertsStream = _repository.watchSafetyAlerts(widget.tourId);
 
-    _loadGroup();
+    _watchGroup();
     _loadMyRole();
     _loadFeedPrefs();
     _loadLogistics();
@@ -100,9 +101,21 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     ));
   }
 
-  Future<void> _loadGroup() async {
-    final g = await _repository.getGroup(widget.tourId);
-    if (mounted) setState(() => _tourGroup = g);
+  @override
+  void dispose() {
+    _groupSub?.cancel();
+    super.dispose();
+  }
+
+  /// Keeps the tour's details live, so a trip change by an admin shows at once
+  /// (days, destination, live status) without reopening the feed.
+  void _watchGroup() {
+    _groupSub = _repository.watchGroup(widget.tourId).listen(
+      (g) {
+        if (mounted) setState(() => _tourGroup = g);
+      },
+      onError: (Object e) => debugPrint('[TourInstaFeed] group watch: $e'),
+    );
   }
 
   Future<void> _loadMyRole() async {
