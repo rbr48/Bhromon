@@ -381,97 +381,220 @@ service cloud.firestore {
         : (request.auth.uid + '@bhromon.app');
     }
 
-    function isMemberOf(tId) {
-      return isAuth() && (
-        exists(/databases/$(database)/documents/memberships/$(tId + '__' + tourUserEmail())) ||
-        exists(/databases/$(database)/documents/memberships/$(tId + '__' + request.auth.uid))
-      );
+    // ---- Tour Group helpers ----
+    // Membership docs are keyed `{tourId}__{email}`. get() and exists() bypass
+    // read rules, so these helpers can inspect any tour's membership.
+    function tourMemberPath(tId) {
+      return /databases/$(database)/documents/memberships/$(tId + '__' + tourUserEmail());
+    }
+    function isActiveMember(tId) {
+      return isAuth() && exists(tourMemberPath(tId)) &&
+             get(tourMemberPath(tId)).data.status == 'active';
+    }
+    function isTourAdmin(tId) {
+      return isActiveMember(tId) &&
+             get(tourMemberPath(tId)).data.role in ['admin', 'owner'];
+    }
+    function isOwnerOfTour(tId) {
+      return isAuth() && exists(/databases/$(database)/documents/tours/$(tId)) &&
+             get(/databases/$(database)/documents/tours/$(tId)).data.ownerEmail == tourUserEmail();
+    }
+    function isBanned(tId) {
+      return exists(/databases/$(database)/documents/tours/$(tId)/bans/$(tourUserEmail()));
     }
 
-    function isGroupAdmin(tId) {
-      return isAuth() && (
-        (exists(/databases/$(database)/documents/tours/$(tId)) &&
-         (get(/databases/$(database)/documents/tours/$(tId)).data.get('ownerEmail', null) == tourUserEmail() ||
-          get(/databases/$(database)/documents/tours/$(tId)).data.get('ownerUid', null) == request.auth.uid)) ||
-        (exists(/databases/$(database)/documents/memberships/$(tId + '__' + tourUserEmail())) &&
-         get(/databases/$(database)/documents/memberships/$(tId + '__' + tourUserEmail())).data.role in ['admin', 'owner']) ||
-        (exists(/databases/$(database)/documents/memberships/$(tId + '__' + request.auth.uid)) &&
-         get(/databases/$(database)/documents/memberships/$(tId + '__' + request.auth.uid)).data.role in ['admin', 'owner'])
-      );
-    }
-
-    match /memberships/{membershipId} {
-      allow read: if isAuth();
-      allow create: if isAuth();
-      allow update: if isAuth();
-      allow delete: if isAuth();
-    }
-
+    // ---- Tours (members only) ----
     match /tours/{tourId} {
-      allow read: if isAuth();
-      allow create: if isAuth();
-      allow update: if isAuth();
-      allow delete: if isAuth() && (
-        resource.data.get('ownerEmail', null) == tourUserEmail() ||
-        resource.data.get('ownerUid', null) == request.auth.uid ||
-        isGroupAdmin(tourId)
-      );
+      allow get: if isAuth() &&
+                    (resource.data.ownerEmail == tourUserEmail() || isActiveMember(tourId));
+      allow list: if false;
+      allow create: if isAuth()
+                    && request.resource.data.ownerEmail == tourUserEmail()
+                    && request.resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.inviteCode.size() >= 6;
+      // Admins edit trip details; only the owner changes ownership or the invite code.
+      allow update: if isOwnerOfTour(tourId) ||
+                    (isTourAdmin(tourId) &&
+                     !request.resource.data.diff(resource.data).affectedKeys()
+                       .hasAny(['ownerEmail', 'ownerUid', 'inviteCode']));
+      allow delete: if isOwnerOfTour(tourId);
 
       match /private/{docId} {
-        allow read, write: if isAuth();
+        allow read, write: if isOwnerOfTour(tourId);
       }
 
+      // Removed members. Admins write these; joining checks them.
+      match /bans/{email} {
+        allow read, create, delete: if isTourAdmin(tourId);
+      }
+
+      // Expenses & deposits: any member adds; only the author or an admin edits.
       match /expenses/{expenseId} {
-        allow read, write: if isAuth();
+        allow read: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) &&
+                         request.resource.data.addedByEmail == tourUserEmail();
+        allow update: if isActiveMember(tourId) &&
+                         request.resource.data.addedByEmail == resource.data.get('addedByEmail', '') &&
+                         (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
+        allow delete: if isActiveMember(tourId) &&
+                         (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
       match /deposits/{depositId} {
-        allow read, write: if isAuth();
+        allow read: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) &&
+                         request.resource.data.addedByEmail == tourUserEmail();
+        allow update: if isActiveMember(tourId) &&
+                         request.resource.data.addedByEmail == resource.data.get('addedByEmail', '') &&
+                         (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
+        allow delete: if isActiveMember(tourId) &&
+                         (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
+      // Official notices are posted by admins.
       match /notices/{noticeId} {
-        allow read, write: if isAuth();
+        allow read: if isActiveMember(tourId);
+        allow create, update, delete: if isTourAdmin(tourId);
       }
 
+      // Packing checklist: members tick items; admins remove them.
       match /checklist/{itemId} {
-        allow read, write: if isAuth();
+        allow read, create, update: if isActiveMember(tourId);
+        allow delete: if isTourAdmin(tourId);
       }
 
       match /itinerary/{itemId} {
-        allow read, write: if isAuth();
+        allow read: if isActiveMember(tourId);
+        allow write: if isTourAdmin(tourId);
       }
 
+      // Legacy collection kept for reads only.
       match /members/{memberId} {
-        allow read, write: if isAuth();
+        allow read: if isActiveMember(tourId);
+        allow write: if false;
       }
 
       match /posts/{postId} {
-        allow read, write: if isAuth();
+        allow read: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) &&
+                         request.resource.data.authorEmail == tourUserEmail();
+        // Any member likes or comments; only the author edits the caption.
+        allow update: if isActiveMember(tourId) &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['likes', 'commentCount']);
+        allow update: if isActiveMember(tourId) &&
+                         resource.data.get('authorEmail', '') == tourUserEmail() &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['caption']);
+        allow delete: if isActiveMember(tourId) &&
+                         (resource.data.get('authorEmail', '') == tourUserEmail() || isTourAdmin(tourId));
 
         match /comments/{commentId} {
-          allow read, write: if isAuth();
+          allow read: if isActiveMember(tourId);
+          allow create: if isActiveMember(tourId) &&
+                           request.resource.data.authorEmail == tourUserEmail();
+          allow delete: if isActiveMember(tourId) &&
+                           (resource.data.get('authorEmail', '') == tourUserEmail() || isTourAdmin(tourId));
         }
       }
 
       match /stories/{storyId} {
-        allow read, write: if isAuth();
+        allow read: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) &&
+                         request.resource.data.authorEmail == tourUserEmail();
+        allow delete: if isActiveMember(tourId) &&
+                         (resource.data.get('authorEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
       match /channels/{channelId}/messages/{messageId} {
-        allow read, write: if isAuth();
+        allow read: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) &&
+                         request.resource.data.senderEmail == tourUserEmail();
+        allow delete: if isActiveMember(tourId) &&
+                         (resource.data.get('senderEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
+      // Live family locations: members read them; each person writes their own.
       match /locations/{locId} {
-        allow read, write: if isAuth();
+        allow read: if isActiveMember(tourId);
+        allow write: if isActiveMember(tourId) &&
+                        request.resource.data.get('email', '') == tourUserEmail();
       }
 
       match /profiles/{profId} {
-        allow read, write: if isAuth();
+        allow read: if isActiveMember(tourId);
+        allow write: if isActiveMember(tourId) &&
+                        request.resource.data.get('uid', '') == request.auth.uid;
       }
 
       match /meta/{metaId} {
-        allow read, write: if isAuth();
+        allow read: if isActiveMember(tourId);
+        allow write: if isTourAdmin(tourId);
       }
+
+      // Shared route stops added on the highway roadmap.
+      match /checkpoints/{checkpointId} {
+        allow read: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) &&
+                         request.resource.data.addedByEmail == tourUserEmail();
+        allow delete: if isActiveMember(tourId) &&
+                         (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
+      }
+
+      match /bus_seats/{seatId} {
+        allow read, write: if isActiveMember(tourId);
+      }
+
+      // Rooms are created and removed by admins; members update guest lists.
+      match /hotel_rooms/{roomId} {
+        allow read: if isActiveMember(tourId);
+        allow create, delete: if isTourAdmin(tourId);
+        allow update: if isActiveMember(tourId);
+      }
+    }
+
+    // ---- Invite codes: looked up by exact code only (no listing) ----
+    match /invites/{code} {
+      allow get: if isAuth();
+      allow create: if isAuth() && isOwnerOfTour(request.resource.data.tourId) &&
+                       request.resource.data.code == code;
+      allow update, delete: if isAuth() && isOwnerOfTour(resource.data.tourId);
+    }
+
+    // ---- Memberships ----
+    // Each person can read their own rows; members see the roster of their tour.
+    match /memberships/{membershipId} {
+      allow get, list: if isAuth() &&
+                          (resource.data.email == tourUserEmail() || isActiveMember(resource.data.tourId));
+      // Owners are created with the tour; members join with a valid invite code.
+      allow create: if isAuth() &&
+                       request.resource.data.email == tourUserEmail() &&
+                       membershipId == request.resource.data.tourId + '__' + tourUserEmail() &&
+                       request.resource.data.status == 'active' && (
+                         (request.resource.data.role == 'owner' &&
+                          isOwnerOfTour(request.resource.data.tourId)) ||
+                         (request.resource.data.role == 'member' &&
+                          get(/databases/$(database)/documents/tours/$(request.resource.data.tourId)).data.inviteCode == request.resource.data.joinCode &&
+                          !isBanned(request.resource.data.tourId))
+                       );
+      allow update: if isAuth() &&
+                       request.resource.data.tourId == resource.data.tourId &&
+                       request.resource.data.email == resource.data.email && (
+                         isOwnerOfTour(resource.data.tourId) ||
+                         (isTourAdmin(resource.data.tourId) &&
+                          resource.data.role == 'member' && request.resource.data.role == 'member') ||
+                         (resource.data.email == tourUserEmail() &&
+                          request.resource.data.role == resource.data.role &&
+                          request.resource.data.status == resource.data.status &&
+                          request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['displayName', 'photoUrl', 'tourName']))
+                       );
+      // The owner row can't be removed; ownership moves first. Members can leave.
+      allow delete: if isAuth() && resource.data.role != 'owner' && (
+                       resource.data.email == tourUserEmail() ||
+                       isOwnerOfTour(resource.data.tourId) ||
+                       (isTourAdmin(resource.data.tourId) && resource.data.role == 'member')
+                     );
     }
 
   }

@@ -24,11 +24,32 @@ service firebase.storage {
     }
 
     // ── Tour Group media (posts, reels, stories, scrapbook) ─────────────────
+    // Only active members of the tour can read or upload its media. Uploads
+    // must carry uploadedByEmail metadata, which lets the uploader (or an
+    // admin) delete their own files later.
+    function tourEmail() {
+      return request.auth.token.email != null ? request.auth.token.email.lower() : '';
+    }
+    function tourMembership(tourId) {
+      return firestore.get(/databases/(default)/documents/memberships/$(tourId + '__' + tourEmail()));
+    }
+    function isTourMember(tourId) {
+      return isAuth() &&
+             firestore.exists(/databases/(default)/documents/memberships/$(tourId + '__' + tourEmail())) &&
+             tourMembership(tourId).data.status == 'active';
+    }
+    function isTourAdmin(tourId) {
+      return isTourMember(tourId) && tourMembership(tourId).data.role in ['admin', 'owner'];
+    }
+
     match /tours/{tourId}/{allPaths=**} {
-      allow read: if isAuth();
-      allow write: if isAuth()
-                   && (isImage() || isVideo() || isAudio())
-                   && (underImageLimit() || underVideoLimit());
+      allow read: if isTourMember(tourId);
+      // Images up to 10 MB, videos up to 100 MB; the size limit follows the type.
+      allow create, update: if isTourMember(tourId)
+                            && request.resource.metadata.get('uploadedByEmail', '') == tourEmail()
+                            && ((isImage() && underImageLimit()) || (isVideo() && underVideoLimit()));
+      allow delete: if isTourMember(tourId)
+                    && (resource.metadata.get('uploadedByEmail', '') == tourEmail() || isTourAdmin(tourId));
     }
 
     // ── Trip Log media ───────────────────────────────────────────────────────
