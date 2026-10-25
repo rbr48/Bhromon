@@ -124,8 +124,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     _pollQuestionCtrl.dispose();
     _pollOpt1Ctrl.dispose();
     _pollOpt2Ctrl.dispose();
-    _videoCtrl?.removeListener(_onVideoTick);
-    _videoCtrl?.dispose();
+    _releaseVideoPreview();
     super.dispose();
   }
 
@@ -203,8 +202,11 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         await widget.picker.pickMultiImage(imageQuality: 85, maxWidth: 1920);
     if (picked.isEmpty || !mounted) return;
 
+    // Photos replace the reel, so its preview stops playing and is freed.
+    _releaseVideoPreview();
     setState(() {
       _isReel = false;
+      _selectedVideo = null;
       _photos.addAll(picked.take(remaining));
     });
     _saveCurrentDraft();
@@ -249,10 +251,14 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       }
 
       final controller = createLocalVideoController(fileToUse);
-
-      await controller.initialize();
-      await controller.setLooping(true);
-      await controller.play();
+      try {
+        await controller.initialize();
+        await controller.setLooping(true);
+        await controller.play();
+      } catch (_) {
+        controller.dispose();
+        rethrow;
+      }
 
       if (!mounted) {
         controller.dispose();
@@ -267,8 +273,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         _selectedVideo = fileToUse;
         _videoPosition = 0.0;
         _videoDuration = controller.value.duration.inMilliseconds.toDouble();
-        _videoCtrl?.removeListener(_onVideoTick);
-        _videoCtrl?.dispose();
+        _releaseVideoPreview();
         _videoCtrl = controller;
       });
       _saveCurrentDraft();
@@ -279,6 +284,13 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         );
       }
     }
+  }
+
+  /// Stops and frees the reel preview, if one is loaded.
+  void _releaseVideoPreview() {
+    _videoCtrl?.removeListener(_onVideoTick);
+    _videoCtrl?.dispose();
+    _videoCtrl = null;
   }
 
   void _onVideoTick() {
