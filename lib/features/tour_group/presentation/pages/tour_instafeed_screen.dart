@@ -1244,11 +1244,42 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     );
   }
 
+  /// Opens the story viewer at one author's group, and marks its stories seen.
+  void _openStoryViewer(
+    BuildContext context,
+    List<List<TourStoryItem>> authorGroups,
+    int idx,
+  ) {
+    for (final s in authorGroups[idx]) {
+      _seenStoryIds.add(s.id);
+    }
+    _saveFeedPrefs();
+
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => InstafeedStoryViewer(
+          repository: _repository,
+          tourId: widget.tourId,
+          authorStoryGroups: authorGroups,
+          initialGroupIndex: idx,
+          isAdmin: _isAdmin,
+        ),
+      ),
+    );
+  }
+
   Widget _buildStoriesAndHighlightsBar(
     BuildContext context,
     List<List<TourStoryItem>> authorGroups,
     List<TourStoryHighlight> highlights,
   ) {
+    // Your own stories open from the Your Story bubble, so they are not listed twice.
+    final me = _repository.currentEmail;
+    final ownIndex = me.isEmpty
+        ? -1
+        : authorGroups.indexWhere((g) => g.first.authorEmail == me);
+
     return Container(
       height: 110,
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1260,7 +1291,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: GestureDetector(
-              onTap: () => _showCreatePostModal(context),
+              onTap: () => ownIndex >= 0
+                  ? _openStoryViewer(context, authorGroups, ownIndex)
+                  : _showCreatePostModal(context),
               child: Column(
                 children: [
                   Stack(
@@ -1278,14 +1311,17 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       Positioned(
                         bottom: 0,
                         right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF00C853),
-                            shape: BoxShape.circle,
+                        child: GestureDetector(
+                          onTap: () => _showCreatePostModal(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF00C853),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.add,
+                                size: 14, color: Colors.black),
                           ),
-                          child: const Icon(Icons.add,
-                              size: 14, color: Colors.black),
                         ),
                       ),
                     ],
@@ -1300,6 +1336,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
           // Author Stories Bubbles
           ...List.generate(authorGroups.length, (idx) {
+            if (idx == ownIndex) return const SizedBox.shrink();
             final group = authorGroups[idx];
             final first = group.first;
             final isUnseen = group.any((s) => !_seenStoryIds.contains(s.id));
@@ -1307,25 +1344,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: GestureDetector(
-                onTap: () {
-                  for (final s in group) {
-                    _seenStoryIds.add(s.id);
-                  }
-                  _saveFeedPrefs();
-
-                  Navigator.push<void>(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => InstafeedStoryViewer(
-                        repository: _repository,
-                        tourId: widget.tourId,
-                        authorStoryGroups: authorGroups,
-                        initialGroupIndex: idx,
-                        isAdmin: _isAdmin,
-                      ),
-                    ),
-                  );
-                },
+                onTap: () => _openStoryViewer(context, authorGroups, idx),
                 child: Column(
                   children: [
                     Container(
