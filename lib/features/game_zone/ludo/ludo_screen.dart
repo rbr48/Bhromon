@@ -1,7 +1,32 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../common/game_zone_portrait_lock.dart';
 import 'ludo_engine.dart';
+
+/// Keeps the race in progress while the player visits other screens.
+class _LudoSession {
+  static LudoEngine? engine;
+  static LudoColor? winner;
+  static String statusMessage = 'Your turn! Tap the dice to roll.';
+}
+
+/// 52-step coordinates around the outer track as (col, row) on the 15x15 grid.
+const List<List<int>> _trackCoordinates = [
+  [1, 6], [2, 6], [3, 6], [4, 6], [5, 6],
+  [6, 5], [6, 4], [6, 3], [6, 2], [6, 1], [6, 0],
+  [7, 0], [8, 0],
+  [8, 1], [8, 2], [8, 3], [8, 4], [8, 5],
+  [9, 6], [10, 6], [11, 6], [12, 6], [13, 6], [14, 6],
+  [14, 7], [14, 8],
+  [13, 8], [12, 8], [11, 8], [10, 8], [9, 8],
+  [8, 9], [8, 10], [8, 11], [8, 12], [8, 13], [8, 14],
+  [7, 14], [6, 14],
+  [6, 13], [6, 12], [6, 11], [6, 10], [6, 9],
+  [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8],
+  [0, 7], [0, 6],
+];
 
 class LudoScreen extends StatefulWidget {
   const LudoScreen({super.key});
@@ -10,175 +35,171 @@ class LudoScreen extends StatefulWidget {
   State<LudoScreen> createState() => _LudoScreenState();
 }
 
-class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateMixin {
-  final LudoEngine _engine = LudoEngine();
-  String _statusMessage = 'Your turn! Tap the dice to roll.';
-  late AnimationController _diceAnimController;
-  Timer? _botTimer;
-  Timer? _autoMoveTimer;
+class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateMixin, GameZonePortraitLock {
+  late final LudoEngine _engine;
+  late final AnimationController _diceAnimController;
+  late final Animation<double> _diceScale;
+  Timer? _turnTimer;
+  int _flowGeneration = 0;
+
+  String get _statusMessage => _LudoSession.statusMessage;
+  set _statusMessage(String value) => _LudoSession.statusMessage = value;
 
   @override
   void initState() {
     super.initState();
-    _diceAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
+    _engine = _LudoSession.engine ??= LudoEngine();
+    _diceAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 320));
+    _diceScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.18).chain(CurveTween(curve: Curves.easeOut)), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 1.18, end: 1.0).chain(CurveTween(curve: Curves.easeIn)), weight: 1),
+    ]).animate(_diceAnimController);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _resumeTurnFlow();
+    });
   }
 
   @override
   void dispose() {
-    _botTimer?.cancel();
-    _autoMoveTimer?.cancel();
+    _flowGeneration++;
+    _turnTimer?.cancel();
     _diceAnimController.dispose();
     super.dispose();
   }
 
-  void _onDiceTapped() {
-    if (_engine.hasRolled || !_engine.isCurrentTurnHuman()) return;
-    HapticFeedback.lightImpact();
+  String _playerLabel(LudoColor color) => '${color.name}${_engine.humanPlayers.contains(color) ? '' : ' bot'}';
 
+  void _schedule(Duration delay, VoidCallback action) {
+    _turnTimer?.cancel();
+    final generation = _flowGeneration;
+    _turnTimer = Timer(delay, () {
+      if (!mounted || generation != _flowGeneration) return;
+      action();
+    });
+  }
+
+  /// Decides what happens next for the current player. Safe to call at any
+  /// time: after a move, a reset, a player-mode change, or on re-entry.
+  void _resumeTurnFlow() {
+    _turnTimer?.cancel();
+    if (_LudoSession.winner != null) return;
+    if (_engine.hasRolled) {
+      _afterRoll();
+    } else if (!_engine.isCurrentTurnHuman()) {
+      _schedule(const Duration(milliseconds: 650), _roll);
+    }
+    setState(() {});
+  }
+
+  void _onDiceTapped() {
+    if (_engine.hasRolled || !_engine.isCurrentTurnHuman() || _LudoSession.winner != null) return;
+    HapticFeedback.lightImpact();
+    _roll();
+  }
+
+  void _roll() {
+    final roller = _engine.currentTurn;
     _diceAnimController.forward(from: 0.0);
     final rolled = _engine.rollDice();
 
     if (rolled == -1) {
       HapticFeedback.heavyImpact();
       setState(() {
-        _statusMessage = '3 consecutive 6s! Turn forfeited.';
+        _statusMessage = '${_playerLabel(roller)} rolled 3 sixes in a row - turn forfeited.';
       });
-      _checkBotTurn();
+      _schedule(const Duration(milliseconds: 700), _resumeTurnFlow);
       return;
     }
 
     setState(() {
-      _statusMessage = '${_engine.currentTurn.name} rolled a $rolled!';
+      _statusMessage = '${_playerLabel(roller)} rolled a $rolled!';
     });
+    _afterRoll();
+  }
 
+  void _afterRoll() {
     final movable = _engine.getMovableTokens();
     if (movable.isEmpty) {
-      _autoMoveTimer?.cancel();
-      _autoMoveTimer = Timer(const Duration(milliseconds: 800), () {
-        if (!mounted) return;
+      _schedule(const Duration(milliseconds: 800), () {
         setState(() {
-          _statusMessage = 'No valid moves. Passing turn.';
-          _engine.hasRolled = false;
-          _engine.currentDice = null;
-          final nextIdx = (_engine.currentTurn.index + 1) % LudoColor.values.length;
-          _engine.currentTurn = LudoColor.values[nextIdx];
+          _statusMessage = 'No valid moves for ${_playerLabel(_engine.currentTurn)}. Passing turn.';
+          _engine.passTurn();
         });
-        _checkBotTurn();
+        _resumeTurnFlow();
       });
-    } else if (movable.length == 1 && !_engine.isCurrentTurnHuman()) {
-      // Auto move single option for bot only
-      _autoMoveTimer?.cancel();
-      _autoMoveTimer = Timer(const Duration(milliseconds: 400), () {
-        if (!mounted) return;
-        _selectTokenToMove(movable.first);
+    } else if (!_engine.isCurrentTurnHuman()) {
+      _schedule(const Duration(milliseconds: 600), () {
+        // The player may have switched this colour to human meanwhile.
+        if (_engine.isCurrentTurnHuman()) {
+          setState(() {});
+          return;
+        }
+        final best = _engine.getBestBotMove();
+        if (best != null) _moveToken(best);
       });
     }
   }
 
-  void _selectTokenToMove(LudoToken token) {
+  void _moveToken(LudoToken token) {
     HapticFeedback.mediumImpact();
+    final mover = token.color;
     final extra = _engine.moveToken(token);
 
-    if (_engine.hasPlayerWon(token.color)) {
+    if (_engine.hasPlayerWon(mover)) {
       HapticFeedback.heavyImpact();
-      _showWinnerDialog(token.color.name);
+      setState(() {
+        _LudoSession.winner = mover;
+        _statusMessage = '${mover.name} brought all 4 tokens home!';
+      });
+      _showWinnerDialog(mover);
       return;
     }
 
     setState(() {
-      if (extra) {
-        _statusMessage = '${token.color.name} earned a bonus roll!';
-      } else {
-        _statusMessage = "${_engine.currentTurn.name}'s turn.";
-      }
+      _statusMessage = extra
+          ? '${_playerLabel(mover)} earned a bonus roll!'
+          : "${_playerLabel(_engine.currentTurn)}'s turn.";
     });
-
-    _checkBotTurn();
+    _resumeTurnFlow();
   }
 
-  void _checkBotTurn() {
-    if (!_engine.isCurrentTurnHuman()) {
-      _runBotSequence();
+  bool get _hasGameStarted =>
+      _engine.tokens.values.expand((t) => t).any((t) => t.state != TokenState.inYard);
+
+  Future<void> _onResetPressed() async {
+    if (_hasGameStarted && _LudoSession.winner == null) {
+      final ok = await confirmDiscardGame(context, title: 'Start a new game?', message: 'The current race will be lost.');
+      if (!ok || !mounted) return;
     }
-  }
-
-  void _runBotSequence() {
-    _botTimer?.cancel();
-    _botTimer = Timer(const Duration(milliseconds: 650), () {
-      if (!mounted || _engine.isCurrentTurnHuman()) return;
-
-      _diceAnimController.forward(from: 0.0);
-      final rolled = _engine.rollDice();
-
-      if (rolled == -1) {
-        setState(() {
-          _statusMessage = '${_engine.currentTurn.name} rolled 3 sixes! Turn passed.';
-        });
-        _checkBotTurn();
-        return;
-      }
-
-      setState(() {
-        _statusMessage = '${_engine.currentTurn.name} bot rolled a $rolled!';
-      });
-
-      _botTimer = Timer(const Duration(milliseconds: 600), () {
-        if (!mounted || _engine.isCurrentTurnHuman()) return;
-
-        final bestToken = _engine.getBestBotMove();
-        if (bestToken != null) {
-          final extra = _engine.moveToken(bestToken);
-
-          if (_engine.hasPlayerWon(bestToken.color)) {
-            _showWinnerDialog(bestToken.color.name);
-            return;
-          }
-
-          setState(() {
-            if (extra) {
-              _statusMessage = '${bestToken.color.name} bot earned a bonus roll!';
-            } else {
-              _statusMessage = "${_engine.currentTurn.name}'s turn.";
-            }
-          });
-
-          _checkBotTurn();
-        } else {
-          // No moves for bot
-          setState(() {
-            _statusMessage = '${_engine.currentTurn.name} has no valid moves.';
-            _engine.hasRolled = false;
-            _engine.currentDice = null;
-            final nextIdx = (_engine.currentTurn.index + 1) % LudoColor.values.length;
-            _engine.currentTurn = LudoColor.values[nextIdx];
-          });
-          _checkBotTurn();
-        }
-      });
-    });
+    _resetGame();
   }
 
   void _resetGame() {
-    _botTimer?.cancel();
-    _autoMoveTimer?.cancel();
+    _flowGeneration++;
+    _turnTimer?.cancel();
     setState(() {
       _engine.reset();
-      _statusMessage = 'New Game! Tap dice to roll.';
+      _LudoSession.winner = null;
+      _statusMessage = 'New Game! ${_playerLabel(_engine.currentTurn)} starts.';
     });
+    _resumeTurnFlow();
   }
 
-  void _showWinnerDialog(String winnerColor) {
+  void _showWinnerDialog(LudoColor winner) {
     showDialog<void>(
       context: context,
-      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF262A30),
         title: const Text('🎉 Victory!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Text('$winnerColor player has brought all 4 tokens home!', style: const TextStyle(color: Colors.white70)),
+        content: Text(
+          '${_playerLabel(winner)} has brought all 4 tokens home!',
+          style: const TextStyle(color: Colors.white70),
+        ),
         actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('View board', style: TextStyle(color: Colors.white70)),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
             onPressed: () {
@@ -192,8 +213,8 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
     );
   }
 
-  void _showPlayerModeDialog() {
-    showDialog<void>(
+  Future<void> _showPlayerModeDialog() async {
+    await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
@@ -202,32 +223,38 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
             title: const Text('Player Mode & Pass-and-Play', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
-              children: LudoColor.values.map((color) {
-                final isHuman = _engine.humanPlayers.contains(color);
-                return CheckboxListTile(
-                  title: Row(
-                    children: [
-                      Container(width: 14, height: 14, decoration: BoxDecoration(color: color.color, shape: BoxShape.circle)),
-                      const SizedBox(width: 10),
-                      Text(color.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  subtitle: Text(isHuman ? 'Human (Pass & Play)' : 'AI Bot', style: TextStyle(color: isHuman ? Colors.amber : Colors.white54, fontSize: 11)),
-                  value: isHuman,
-                  activeColor: Colors.amber,
-                  onChanged: (val) {
-                    if (val == true) {
-                      _engine.humanPlayers.add(color);
-                    } else {
-                      if (_engine.humanPlayers.length > 1) {
-                        _engine.humanPlayers.remove(color);
-                      }
-                    }
-                    setModalState(() {});
-                    setState(() {});
-                  },
-                );
-              }).toList(),
+              children: [
+                ...LudoColor.values.map((color) {
+                  final isHuman = _engine.humanPlayers.contains(color);
+                  final isLastHuman = isHuman && _engine.humanPlayers.length == 1;
+                  return CheckboxListTile(
+                    title: Row(
+                      children: [
+                        Container(width: 14, height: 14, decoration: BoxDecoration(color: color.color, shape: BoxShape.circle)),
+                        const SizedBox(width: 10),
+                        Text(color.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    subtitle: Text(
+                      isHuman ? (isLastHuman ? 'Human (at least one human is required)' : 'Human (Pass & Play)') : 'AI Bot',
+                      style: TextStyle(color: isHuman ? Colors.amber : Colors.white54, fontSize: 12),
+                    ),
+                    value: isHuman,
+                    activeColor: Colors.amber,
+                    onChanged: isLastHuman
+                        ? null
+                        : (val) {
+                            if (val == true) {
+                              _engine.humanPlayers.add(color);
+                            } else {
+                              _engine.humanPlayers.remove(color);
+                            }
+                            setModalState(() {});
+                            setState(() {});
+                          },
+                  );
+                }),
+              ],
             ),
             actions: [
               TextButton(
@@ -239,13 +266,14 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
         },
       ),
     );
+    if (!mounted) return;
+    // A colour may have switched between human and bot: restart the turn flow.
+    _flowGeneration++;
+    _resumeTurnFlow();
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final boardSize = (screenWidth - 24).clamp(300.0, 440.0);
-
     return Scaffold(
       backgroundColor: const Color(0xFF1E2125),
       appBar: AppBar(
@@ -254,48 +282,36 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
         foregroundColor: Colors.white,
         elevation: 2,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.group),
-            tooltip: 'Pass & Play Mode',
-            onPressed: _showPlayerModeDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'New Game',
-            onPressed: _resetGame,
-          ),
+          IconButton(icon: const Icon(Icons.group), tooltip: 'Pass & Play Mode', onPressed: _showPlayerModeDialog),
+          IconButton(icon: const Icon(Icons.refresh), tooltip: 'New Game', onPressed: _onResetPressed),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // Status bar & Turn Indicator
             _buildStatusBar(),
-
-            const Spacer(),
-
-            // Interactive Ludo Board
-            Center(
-              child: Container(
-                width: boardSize,
-                height: boardSize,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 4)),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: _buildLudoBoard(boardSize),
-                ),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final boardSize = min(constraints.maxWidth - 24, constraints.maxHeight - 16).clamp(240.0, 520.0);
+                  return Center(
+                    child: Container(
+                      width: boardSize,
+                      height: boardSize,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 4))],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: _buildLudoBoard(boardSize),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
-
-            const Spacer(),
-
-            // Bottom Control Area: Dice Roller & Turn Action
             _buildBottomControls(),
           ],
         ),
@@ -305,32 +321,40 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
 
   Widget _buildStatusBar() {
     final isHuman = _engine.isCurrentTurnHuman();
+    final turn = _engine.currentTurn;
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: const Color(0xFF262A30),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
                 width: 14,
                 height: 14,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _engine.currentTurn.color,
-                ),
+                decoration: BoxDecoration(shape: BoxShape.circle, color: turn.color, border: Border.all(color: Colors.white54)),
               ),
               const SizedBox(width: 8),
-              Text(
-                'Turn: ${_engine.currentTurn.name} (${isHuman ? "Human" : "Bot"})',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+              Expanded(
+                child: Text(
+                  _LudoSession.winner != null
+                      ? 'Winner: ${_LudoSession.winner!.name}'
+                      : 'Turn: ${turn.name} (${isHuman ? "Human" : "Bot"})',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                ),
               ),
             ],
           ),
+          const SizedBox(height: 2),
           Text(
             _statusMessage,
-            style: const TextStyle(color: Colors.white70, fontSize: 11),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
       ),
@@ -342,150 +366,177 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
 
     return Stack(
       children: [
-        // Background Grid: Bases, pathways & home triangles
+        // Background: yards (6x6), track arms (3x6 / 6x3) and the 3x3 home centre.
         Column(
           children: [
-            // Top Row: Red Yard (6x6) | Top Pathway (3x6) | Green Yard (6x6)
             Expanded(
               flex: 6,
               child: Row(
                 children: [
                   _buildYard(LudoColor.red),
-                  _buildPathwaySection(isVertical: true, sectionIndex: 0),
+                  _buildPathwaySection(flex: 3),
                   _buildYard(LudoColor.green),
                 ],
               ),
             ),
-            // Middle Row: Left Pathway (6x3) | Center Home (3x3) | Right Pathway (6x3)
             Expanded(
               flex: 3,
               child: Row(
                 children: [
-                  _buildPathwaySection(isVertical: false, sectionIndex: 0),
+                  _buildPathwaySection(flex: 6),
                   _buildCenterHome(),
-                  _buildPathwaySection(isVertical: false, sectionIndex: 1),
+                  _buildPathwaySection(flex: 6),
                 ],
               ),
             ),
-            // Bottom Row: Blue Yard (6x6) | Bottom Pathway (3x6) | Yellow Yard (6x6)
             Expanded(
               flex: 6,
               child: Row(
                 children: [
                   _buildYard(LudoColor.blue),
-                  _buildPathwaySection(isVertical: true, sectionIndex: 1),
+                  _buildPathwaySection(flex: 3),
                   _buildYard(LudoColor.yellow),
                 ],
               ),
             ),
           ],
         ),
-
-        // Grid lines overlay for pathway cells
         Positioned.fill(
-          child: CustomPaint(
-            painter: _PathwayGridPainter(cellSize: cellSize),
-          ),
+          child: IgnorePointer(child: CustomPaint(painter: _PathwayGridPainter(cellSize: cellSize))),
         ),
-
-        // Active Tokens Overlay on Track, Stretch, and Home Box
         ..._buildTokenOverlays(cellSize),
       ],
     );
   }
 
   Widget _buildYard(LudoColor color) {
-    final playerTokens = _engine.tokens[color]!;
-    final yardTokens = playerTokens.where((t) => t.state == TokenState.inYard).toList();
+    final yardTokens = _engine.tokens[color]!.where((t) => t.state == TokenState.inYard).toList();
+    final isHuman = _engine.humanPlayers.contains(color);
 
     return Expanded(
       flex: 6,
       child: Container(
         color: color.color.withValues(alpha: 0.15),
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(8),
         child: Container(
           decoration: BoxDecoration(
             color: color.color,
             borderRadius: BorderRadius.circular(10),
+            border: _engine.currentTurn == color ? Border.all(color: Colors.black87, width: 2) : null,
           ),
-          child: Center(
-            child: Container(
-              width: 68,
-              height: 68,
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                runAlignment: WrapAlignment.center,
-                spacing: 6,
-                runSpacing: 6,
-                children: yardTokens.map((t) {
-                  final isMovable = _engine.currentTurn == color &&
-                      _engine.hasRolled &&
-                      _engine.canMoveToken(t, _engine.currentDice ?? 0);
-
-                  final isHuman = _engine.isCurrentTurnHuman();
-
-                  return GestureDetector(
-                    onTap: (isMovable && isHuman) ? () => _selectTokenToMove(t) : null,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: color.color,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isMovable ? Colors.amberAccent : Colors.white,
-                          width: isMovable ? 2.5 : 1.5,
-                        ),
-                        boxShadow: isMovable
-                            ? [
-                                const BoxShadow(
-                                  color: Colors.amberAccent,
-                                  blurRadius: 6,
-                                  spreadRadius: 1,
-                                )
-                              ]
-                            : null,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${t.id + 1}',
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final boxSize = (constraints.biggest.shortestSide * 0.62).clamp(40.0, 96.0);
+              final tokenSize = (boxSize - 18) / 2;
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: boxSize,
+                    height: boxSize,
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      runAlignment: WrapAlignment.center,
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: yardTokens.map((t) => _buildTokenWidget(t, tokenSize)).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '${color.name.toUpperCase()} · ${isHuman ? 'YOU' : 'BOT'}',
+                        style: TextStyle(color: color.onColor, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-            ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
 
-  Widget _buildPathwaySection({required bool isVertical, required int sectionIndex}) {
-    return Expanded(
-      flex: 3,
-      child: Container(
-        color: const Color(0xFFFAF9F6),
-      ),
-    );
+  Widget _buildPathwaySection({required int flex}) {
+    return Expanded(flex: flex, child: Container(color: const Color(0xFFFAF9F6)));
   }
 
   Widget _buildCenterHome() {
     return Expanded(
       flex: 3,
       child: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFFEDEDED),
-        ),
-        child: CustomPaint(
-          painter: _CenterHomePainter(),
+        color: const Color(0xFFEDEDED),
+        child: CustomPaint(painter: _CenterHomePainter()),
+      ),
+    );
+  }
+
+  bool _isMovable(LudoToken t) =>
+      _LudoSession.winner == null &&
+      _engine.currentTurn == t.color &&
+      _engine.hasRolled &&
+      _engine.canMoveToken(t, _engine.currentDice ?? 0);
+
+  String _describeToken(LudoToken t) {
+    switch (t.state) {
+      case TokenState.inYard:
+        return 'in yard';
+      case TokenState.onTrack:
+        return 'on track, ${t.stepCount} steps from start';
+      case TokenState.inHomeStretch:
+        return 'in home column, ${LudoEngine.stepsToHome - t.stepCount} steps from home';
+      case TokenState.home:
+        return 'home';
+    }
+  }
+
+  Widget _buildTokenWidget(LudoToken t, double size) {
+    final color = t.color;
+    final movable = _isMovable(t);
+    final tappable = movable && _engine.isCurrentTurnHuman();
+    return Semantics(
+      button: tappable,
+      label: '${color.name} token ${t.id + 1}, ${_describeToken(t)}${tappable ? ', can move' : ''}',
+      child: GestureDetector(
+        onTap: tappable ? () => _moveToken(t) : null,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: color.color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: movable ? Colors.black : Colors.white,
+              width: movable ? max(2.0, size * 0.12) : 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: movable ? Colors.amberAccent : Colors.black45,
+                blurRadius: movable ? 6 : 2,
+                spreadRadius: movable ? 1.5 : 0,
+              ),
+            ],
+          ),
+          child: Center(
+            child: ExcludeSemantics(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Padding(
+                  padding: const EdgeInsets.all(1),
+                  child: Text(
+                    t.state == TokenState.home ? '★' : '${t.id + 1}',
+                    style: TextStyle(color: color.onColor, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -494,152 +545,96 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
   List<Widget> _buildTokenOverlays(double cellSize) {
     final widgets = <Widget>[];
 
-    // Group active tokens by position to offset co-located tokens
+    // Group tokens that share a square so they can be laid out side by side.
     final Map<String, List<LudoToken>> positionBuckets = {};
-
     for (final color in LudoColor.values) {
       for (final t in _engine.tokens[color]!) {
         if (t.state == TokenState.inYard) continue;
-
-        String key;
-        if (t.state == TokenState.home) {
-          key = 'home_${color.name}';
-        } else if (t.state == TokenState.inHomeStretch) {
-          key = 'stretch_${color.name}_${t.stepCount}';
-        } else {
-          key = 'track_${t.boardIndex}';
-        }
-
+        final key = switch (t.state) {
+          TokenState.home => 'home_${color.name}',
+          TokenState.inHomeStretch => 'stretch_${color.name}_${t.stepCount}',
+          _ => 'track_${t.boardIndex}',
+        };
         positionBuckets.putIfAbsent(key, () => []).add(t);
       }
     }
 
-    positionBuckets.forEach((key, tokenGroup) {
-      for (int i = 0; i < tokenGroup.length; i++) {
-        final t = tokenGroup[i];
+    positionBuckets.forEach((key, group) {
+      for (int i = 0; i < group.length; i++) {
+        final t = group[i];
         final color = t.color;
 
-        double top = 0;
-        double left = 0;
-
+        // Top-left corner of the (col,row) cell the group occupies.
+        double col;
+        double row;
         if (t.state == TokenState.home) {
-          // Home triangle coordinates inside center 3x3 (row 6..8, col 6..8)
-          if (color == LudoColor.red) {
-            top = 7.15 * cellSize;
-            left = 6.45 * cellSize;
-          } else if (color == LudoColor.green) {
-            top = 6.45 * cellSize;
-            left = 7.15 * cellSize;
-          } else if (color == LudoColor.yellow) {
-            top = 7.15 * cellSize;
-            left = 7.85 * cellSize;
-          } else {
-            top = 7.85 * cellSize;
-            left = 7.15 * cellSize;
-          }
+          // A one-cell spot inside each colour's triangle of the 3x3 centre (cols/rows 6..8).
+          const spots = {
+            LudoColor.red: [6.15, 7.0],
+            LudoColor.green: [7.0, 6.15],
+            LudoColor.yellow: [7.85, 7.0],
+            LudoColor.blue: [7.0, 7.85],
+          };
+          col = spots[color]![0];
+          row = spots[color]![1];
         } else if (t.state == TokenState.inHomeStretch) {
           final stretchIdx = t.stepCount - 51; // 0 to 4
-          if (color == LudoColor.red) {
-            top = 7 * cellSize;
-            left = (1 + stretchIdx) * cellSize;
-          } else if (color == LudoColor.green) {
-            top = (1 + stretchIdx) * cellSize;
-            left = 7 * cellSize;
-          } else if (color == LudoColor.yellow) {
-            top = 7 * cellSize;
-            left = (13 - stretchIdx) * cellSize;
-          } else {
-            top = (13 - stretchIdx) * cellSize;
-            left = 7 * cellSize;
+          switch (color) {
+            case LudoColor.red:
+              col = 1.0 + stretchIdx;
+              row = 7;
+              break;
+            case LudoColor.green:
+              col = 7;
+              row = 1.0 + stretchIdx;
+              break;
+            case LudoColor.yellow:
+              col = 13.0 - stretchIdx;
+              row = 7;
+              break;
+            case LudoColor.blue:
+              col = 7;
+              row = 13.0 - stretchIdx;
+              break;
           }
         } else {
-          final idx = t.boardIndex;
-          final coords = _getTrackCoordinates(idx);
-          left = coords[0] * cellSize;
-          top = coords[1] * cellSize;
+          final coords = _trackCoordinates[t.boardIndex];
+          col = coords[0].toDouble();
+          row = coords[1].toDouble();
         }
 
-        // Apply slight offset if multiple tokens share the same space
-        if (tokenGroup.length > 1) {
-          final offsets = [
-            const Offset(-3, -3),
-            const Offset(3, 3),
-            const Offset(3, -3),
-            const Offset(-3, 3),
-          ];
-          final off = offsets[i % offsets.length];
-          left += off.dx;
-          top += off.dy;
+        double size;
+        double left;
+        double top;
+        if (group.length == 1) {
+          size = cellSize - 4;
+          left = col * cellSize + 2;
+          top = row * cellSize + 2;
+        } else {
+          // Share the cell as a 2x2 grid so every token and number stays visible.
+          size = cellSize * 0.5;
+          final quadrant = i % 4;
+          left = col * cellSize + (quadrant % 2) * cellSize * 0.5;
+          top = row * cellSize + (quadrant ~/ 2) * cellSize * 0.5;
         }
 
-        final isMovable = _engine.currentTurn == color &&
-            _engine.hasRolled &&
-            _engine.canMoveToken(t, _engine.currentDice ?? 0);
-        final isHuman = _engine.isCurrentTurnHuman();
-
-        widgets.add(
-          Positioned(
-            left: left + 2,
-            top: top + 2,
-            child: GestureDetector(
-              onTap: (isMovable && isHuman) ? () => _selectTokenToMove(t) : null,
-              child: Container(
-                width: cellSize - 4,
-                height: cellSize - 4,
-                decoration: BoxDecoration(
-                  color: color.color,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isMovable ? Colors.amberAccent : Colors.white,
-                    width: isMovable ? 2.5 : 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isMovable ? Colors.amberAccent : Colors.black45,
-                      blurRadius: isMovable ? 6 : 2,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    t.state == TokenState.home ? '★' : '${t.id + 1}',
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
+        widgets.add(Positioned(left: left, top: top, child: _buildTokenWidget(t, size)));
       }
     });
 
     return widgets;
   }
 
-  List<int> _getTrackCoordinates(int idx) {
-    // 52-step coordinates around outer track (col, row)
-    const track = [
-      [1, 6], [2, 6], [3, 6], [4, 6], [5, 6],
-      [6, 5], [6, 4], [6, 3], [6, 2], [6, 1], [6, 0],
-      [7, 0], [8, 0],
-      [8, 1], [8, 2], [8, 3], [8, 4], [8, 5],
-      [9, 6], [10, 6], [11, 6], [12, 6], [13, 6], [14, 6],
-      [14, 7], [14, 8],
-      [13, 8], [12, 8], [11, 8], [10, 8], [9, 8],
-      [8, 9], [8, 10], [8, 11], [8, 12], [8, 13], [8, 14],
-      [7, 14], [6, 14],
-      [6, 13], [6, 12], [6, 11], [6, 10], [6, 9],
-      [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8],
-      [0, 7], [0, 6],
-    ];
-
-    if (idx < 0 || idx >= track.length) return [0, 0];
-    return track[idx];
-  }
-
   Widget _buildBottomControls() {
     final isHuman = _engine.isCurrentTurnHuman();
-    final canRoll = !_engine.hasRolled && isHuman;
+    final canRoll = !_engine.hasRolled && isHuman && _LudoSession.winner == null;
+    final turnColor = _engine.currentTurn;
+
+    final prompt = _LudoSession.winner != null
+        ? 'Game over - tap ↻ for a new game'
+        : canRoll
+            ? 'TAP DICE TO ROLL'
+            : (!isHuman ? '${turnColor.name} bot thinking...' : 'Select a highlighted token');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -648,74 +643,59 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // Dice Widget
-          GestureDetector(
-            onTap: canRoll ? _onDiceTapped : null,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: 1.0, end: 1.15).animate(
-                CurvedAnimation(parent: _diceAnimController, curve: Curves.easeInOut),
-              ),
-              child: Container(
-                width: 62,
-                height: 62,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: canRoll ? Colors.amberAccent : Colors.grey.shade400,
-                    width: canRoll ? 3 : 1,
+          Semantics(
+            button: canRoll,
+            label: _engine.currentDice != null ? 'Dice showing ${_engine.currentDice}' : 'Roll dice',
+            child: GestureDetector(
+              onTap: canRoll ? _onDiceTapped : null,
+              child: ScaleTransition(
+                scale: _diceScale,
+                child: Container(
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: canRoll ? Colors.amberAccent : turnColor.color, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: canRoll ? Colors.amberAccent.withValues(alpha: 0.4) : Colors.black26,
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: canRoll ? Colors.amberAccent.withValues(alpha: 0.4) : Colors.black26,
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Center(
                   child: _engine.currentDice != null
-                      ? Text(
-                          '${_engine.currentDice}',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: _engine.currentTurn.color,
-                          ),
-                        )
-                      : Icon(
-                          Icons.casino,
-                          size: 36,
-                          color: canRoll ? Colors.amber.shade800 : Colors.grey,
-                        ),
+                      ? CustomPaint(painter: _DiceFacePainter(_engine.currentDice!))
+                      : Icon(Icons.casino, size: 36, color: canRoll ? Colors.amber.shade800 : Colors.grey),
                 ),
               ),
             ),
           ),
-
-          // Action prompt & Home Counter
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                canRoll
-                    ? 'TAP DICE TO ROLL'
-                    : (!isHuman ? '${_engine.currentTurn.name} bot thinking...' : 'Select a token to move'),
-                style: TextStyle(
-                  color: canRoll ? Colors.amberAccent : Colors.white70,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  prompt,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: canRoll ? Colors.amberAccent : Colors.white70,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Tokens Home: ${_engine.tokens[_engine.currentTurn]!.where((t) => t.state == TokenState.home).length}/4',
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  'Tokens Home: ${_engine.tokens[turnColor]!.where((t) => t.state == TokenState.home).length}/4',
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -723,46 +703,51 @@ class _LudoScreenState extends State<LudoScreen> with SingleTickerProviderStateM
   }
 }
 
+/// Classic dice face with dark pips.
+class _DiceFacePainter extends CustomPainter {
+  _DiceFacePainter(this.value);
+
+  final int value;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0xFF212121);
+    final r = size.width * 0.09;
+    double x(double f) => size.width * f;
+    double y(double f) => size.height * f;
+    const lo = 0.27;
+    const mid = 0.5;
+    const hi = 0.73;
+    final pips = <Offset>[
+      if (value.isOdd) Offset(x(mid), y(mid)),
+      if (value >= 2) ...[Offset(x(lo), y(lo)), Offset(x(hi), y(hi))],
+      if (value >= 4) ...[Offset(x(hi), y(lo)), Offset(x(lo), y(hi))],
+      if (value == 6) ...[Offset(x(lo), y(mid)), Offset(x(hi), y(mid))],
+    ];
+    for (final p in pips) {
+      canvas.drawCircle(p, r, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiceFacePainter oldDelegate) => oldDelegate.value != value;
+}
+
 class _CenterHomePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
+    final center = Offset(size.width / 2, size.height / 2);
 
-    // Red Left Triangle
-    paint.color = const Color(0xFFE53935);
-    final redPath = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width / 2, size.height / 2)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(redPath, paint);
+    void triangle(Color color, Offset a, Offset b) {
+      paint.color = color;
+      canvas.drawPath(Path()..moveTo(a.dx, a.dy)..lineTo(center.dx, center.dy)..lineTo(b.dx, b.dy)..close(), paint);
+    }
 
-    // Green Top Triangle
-    paint.color = const Color(0xFF43A047);
-    final greenPath = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width / 2, size.height / 2)
-      ..lineTo(size.width, 0)
-      ..close();
-    canvas.drawPath(greenPath, paint);
-
-    // Yellow Right Triangle
-    paint.color = const Color(0xFFFDD835);
-    final yellowPath = Path()
-      ..moveTo(size.width, 0)
-      ..lineTo(size.width / 2, size.height / 2)
-      ..lineTo(size.width, size.height)
-      ..close();
-    canvas.drawPath(yellowPath, paint);
-
-    // Blue Bottom Triangle
-    paint.color = const Color(0xFF1E88E5);
-    final bluePath = Path()
-      ..moveTo(0, size.height)
-      ..lineTo(size.width / 2, size.height / 2)
-      ..lineTo(size.width, size.height)
-      ..close();
-    canvas.drawPath(bluePath, paint);
+    triangle(LudoColor.red.color, Offset.zero, Offset(0, size.height));
+    triangle(LudoColor.green.color, Offset.zero, Offset(size.width, 0));
+    triangle(LudoColor.yellow.color, Offset(size.width, 0), Offset(size.width, size.height));
+    triangle(LudoColor.blue.color, Offset(0, size.height), Offset(size.width, size.height));
   }
 
   @override
@@ -774,51 +759,69 @@ class _PathwayGridPainter extends CustomPainter {
 
   _PathwayGridPainter({required this.cellSize});
 
+  Rect _cell(num col, num row) => Rect.fromLTWH(col * cellSize, row * cellSize, cellSize, cellSize);
+
   @override
   void paint(Canvas canvas, Size size) {
     final borderPaint = Paint()
-      ..color = const Color(0x33000000)
+      ..color = const Color(0x55000000)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.8;
-
     final fillPaint = Paint()..style = PaintingStyle.fill;
 
-    // Safe indices coordinates on 15x15 grid
-    const safeGridSpots = [
-      [1, 6], [6, 2], [8, 1], [12, 6], [13, 8], [8, 12], [6, 13], [2, 8]
-    ];
+    // Home columns in each player's colour.
+    void homeColumn(LudoColor color, Iterable<Rect> cells) {
+      fillPaint.color = color.color.withValues(alpha: 0.45);
+      for (final rect in cells) {
+        canvas.drawRect(rect, fillPaint);
+        canvas.drawRect(rect, borderPaint);
+      }
+    }
 
-    // Highlight safe spots with subtle gray-gold tint and a star
-    fillPaint.color = const Color(0xFFE8E8E8);
-    for (final spot in safeGridSpots) {
-      final rect = Rect.fromLTWH(spot[0] * cellSize, spot[1] * cellSize, cellSize, cellSize);
-      canvas.drawRect(rect, fillPaint);
+    homeColumn(LudoColor.red, [for (int c = 1; c <= 5; c++) _cell(c, 7)]);
+    homeColumn(LudoColor.green, [for (int r = 1; r <= 5; r++) _cell(7, r)]);
+    homeColumn(LudoColor.yellow, [for (int c = 9; c <= 13; c++) _cell(c, 7)]);
+    homeColumn(LudoColor.blue, [for (int r = 9; r <= 13; r++) _cell(7, r)]);
+
+    // Every track square gets an outline; start squares are tinted with
+    // their owner's colour and all safe squares carry a star.
+    final startColors = {for (final c in LudoColor.values) c.startIndex: c};
+    for (int i = 0; i < _trackCoordinates.length; i++) {
+      final rect = _cell(_trackCoordinates[i][0], _trackCoordinates[i][1]);
+      final owner = startColors[i];
+      if (owner != null) {
+        fillPaint.color = owner.color.withValues(alpha: 0.75);
+        canvas.drawRect(rect, fillPaint);
+      } else if (LudoEngine.safeIndices.contains(i)) {
+        fillPaint.color = const Color(0xFFE8E8E8);
+        canvas.drawRect(rect, fillPaint);
+      }
       canvas.drawRect(rect, borderPaint);
-    }
-
-    // Paint colored home column pathways
-    // Red home column (row 7, col 1..5)
-    fillPaint.color = const Color(0xFFFFCDD2);
-    for (int c = 1; c <= 5; c++) {
-      canvas.drawRect(Rect.fromLTWH(c * cellSize, 7 * cellSize, cellSize, cellSize), fillPaint);
-    }
-    // Green home column (row 1..5, col 7)
-    fillPaint.color = const Color(0xFFC8E6C9);
-    for (int r = 1; r <= 5; r++) {
-      canvas.drawRect(Rect.fromLTWH(7 * cellSize, r * cellSize, cellSize, cellSize), fillPaint);
-    }
-    // Yellow home column (row 7, col 9..13)
-    fillPaint.color = const Color(0xFFFFF9C4);
-    for (int c = 9; c <= 13; c++) {
-      canvas.drawRect(Rect.fromLTWH(c * cellSize, 7 * cellSize, cellSize, cellSize), fillPaint);
-    }
-    // Blue home column (row 9..13, col 7)
-    fillPaint.color = const Color(0xFFBBDEFB);
-    for (int r = 9; r <= 13; r++) {
-      canvas.drawRect(Rect.fromLTWH(7 * cellSize, r * cellSize, cellSize, cellSize), fillPaint);
+      if (LudoEngine.safeIndices.contains(i)) {
+        _drawStar(canvas, rect, owner == LudoColor.yellow || owner == null ? const Color(0x99000000) : const Color(0xCCFFFFFF));
+      }
     }
   }
 
+  void _drawStar(Canvas canvas, Rect rect, Color color) {
+    final center = rect.center;
+    final outer = rect.width * 0.32;
+    final inner = outer * 0.45;
+    final path = Path();
+    for (int i = 0; i < 10; i++) {
+      final radius = i.isEven ? outer : inner;
+      final angle = -pi / 2 + i * pi / 5;
+      final point = Offset(center.dx + radius * cos(angle), center.dy + radius * sin(angle));
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _PathwayGridPainter oldDelegate) => oldDelegate.cellSize != cellSize;
 }

@@ -13,6 +13,9 @@ enum LudoColor {
   final int homeEntranceIndex;
 
   const LudoColor(this.name, this.color, this.startIndex, this.homeEntranceIndex);
+
+  /// Text/icon colour that stays readable on top of [color].
+  Color get onColor => this == LudoColor.yellow ? const Color(0xFF212121) : const Color(0xFFFFFFFF);
 }
 
 enum TokenState { inYard, onTrack, inHomeStretch, home }
@@ -46,11 +49,13 @@ class LudoEngine {
   LudoColor currentTurn = LudoColor.red;
   int? currentDice;
   bool hasRolled = false;
+
+  /// Sixes rolled in a row by the player whose turn it is.
   int consecutiveSixes = 0;
   final Set<LudoColor> humanPlayers = {LudoColor.red}; // Default: Red is User, others are Bots
-  final Random _random = Random();
+  final Random _random;
 
-  LudoEngine() {
+  LudoEngine({Random? random}) : _random = random ?? Random() {
     reset();
   }
 
@@ -70,6 +75,8 @@ class LudoEngine {
 
   bool isCurrentTurnHuman() => humanPlayers.contains(currentTurn);
 
+  /// Rolls for the current player. Returns -1 when a third six in a row
+  /// forfeits the turn (the turn has already passed on).
   int rollDice() {
     currentDice = _random.nextInt(6) + 1;
     hasRolled = true;
@@ -77,12 +84,8 @@ class LudoEngine {
     if (currentDice == 6) {
       consecutiveSixes++;
       if (consecutiveSixes >= 3) {
-        // Triple sixes penalty: forfeit turn!
-        consecutiveSixes = 0;
-        hasRolled = false;
-        currentDice = null;
-        _nextTurn();
-        return -1; // Special indicator for triple sixes penalty
+        passTurn();
+        return -1;
       }
     } else {
       consecutiveSixes = 0;
@@ -91,18 +94,12 @@ class LudoEngine {
     return currentDice!;
   }
 
+  /// Ends the current player's turn (no legal move, or a forfeit).
+  void passTurn() => _nextTurn();
+
   List<LudoToken> getMovableTokens() {
     if (!hasRolled || currentDice == null) return [];
-
-    final playerTokens = tokens[currentTurn]!;
-    final movable = <LudoToken>[];
-
-    for (final t in playerTokens) {
-      if (canMoveToken(t, currentDice!)) {
-        movable.add(t);
-      }
-    }
-    return movable;
+    return tokens[currentTurn]!.where((t) => canMoveToken(t, currentDice!)).toList();
   }
 
   bool canMoveToken(LudoToken token, int dice) {
@@ -168,40 +165,82 @@ class LudoEngine {
   void _nextTurn() {
     final nextIdx = (currentTurn.index + 1) % LudoColor.values.length;
     currentTurn = LudoColor.values[nextIdx];
+    consecutiveSixes = 0;
+    hasRolled = false;
+    currentDice = null;
   }
 
   bool hasPlayerWon(LudoColor color) {
     return tokens[color]!.every((t) => t.state == TokenState.home);
   }
 
+  /// True if an opponent token on the track could land on [index] with one roll.
+  bool isThreatened(int index, LudoColor own) {
+    if (safeIndices.contains(index)) return false;
+    for (final entry in tokens.entries) {
+      if (entry.key == own) continue;
+      for (final opp in entry.value) {
+        if (opp.state != TokenState.onTrack) continue;
+        final distance = (index - opp.boardIndex + totalTrackSteps) % totalTrackSteps;
+        if (distance >= 1 && distance <= 6 && opp.stepCount + distance <= stepsToHomeEntrance) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /// Picks the move with the best mix of finishing, capturing, safety and progress.
   LudoToken? getBestBotMove() {
     final movable = getMovableTokens();
     if (movable.isEmpty) return null;
 
-    // Prioritize: 1) Reaching home, 2) Capturing opponent, 3) Leaving yard, 4) Furthest token
+    LudoToken? best;
+    var bestScore = double.negativeInfinity;
     for (final t in movable) {
-      if (t.stepCount + currentDice! == stepsToHome) return t;
+      final score = _scoreMove(t, currentDice!) + _random.nextDouble() * 0.5;
+      if (score > bestScore) {
+        bestScore = score;
+        best = t;
+      }
+    }
+    return best;
+  }
+
+  double _scoreMove(LudoToken t, int dice) {
+    if (t.state == TokenState.inYard) {
+      // Leaving the yard lands on the (safe) start square.
+      return 420;
     }
 
-    for (final t in movable) {
-      if (t.state == TokenState.onTrack) {
-        final destIndex = (t.color.startIndex + t.stepCount + currentDice!) % 52;
-        if (!safeIndices.contains(destIndex)) {
-          for (final entry in tokens.entries) {
-            if (entry.key == t.color) continue;
-            if (entry.value.any((opp) => opp.state == TokenState.onTrack && opp.boardIndex == destIndex)) {
-              return t;
-            }
+    final target = t.stepCount + dice;
+    if (target == stepsToHome) return 1000;
+
+    final currentIndex = t.boardIndex;
+    final threatenedNow = t.state == TokenState.onTrack && isThreatened(currentIndex, t.color);
+
+    if (target > stepsToHomeEntrance) {
+      // Entering or moving up the home column: nobody can touch it there.
+      return 300.0 + (t.state == TokenState.onTrack ? 150 : 0) + (threatenedNow ? 250 : 0) + target;
+    }
+
+    final dest = (t.color.startIndex + target) % totalTrackSteps;
+    var score = target.toDouble();
+
+    if (!safeIndices.contains(dest)) {
+      for (final entry in tokens.entries) {
+        if (entry.key == t.color) continue;
+        for (final opp in entry.value) {
+          if (opp.state == TokenState.onTrack && opp.boardIndex == dest) {
+            score += 600 + opp.stepCount * 4;
           }
         }
       }
     }
 
-    for (final t in movable) {
-      if (t.state == TokenState.inYard && currentDice == 6) return t;
-    }
-
-    movable.sort((a, b) => b.stepCount.compareTo(a.stepCount));
-    return movable.first;
+    if (threatenedNow) score += 220;
+    if (safeIndices.contains(dest)) score += 120;
+    if (isThreatened(dest, t.color)) score -= 260;
+    return score;
   }
 }
