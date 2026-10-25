@@ -158,6 +158,43 @@ class TourGroupRepository {
   }
 
   // ---------------------------------------------------------------------------
+  // Feed preferences (bookmarks and seen stories), kept on this device only
+  // ---------------------------------------------------------------------------
+
+  String _feedPrefsKey(String tourId) =>
+      'feed_prefs_${currentUid.isEmpty ? 'anon' : currentUid}_$tourId';
+
+  Future<FeedPrefs> loadFeedPrefs(String tourId) async {
+    try {
+      final box = await _openBox();
+      final raw = box.get(_feedPrefsKey(tourId));
+      if (raw is Map) {
+        return FeedPrefs(
+          bookmarks: Set<String>.from((raw['bookmarks'] as List?) ?? const []),
+          seenStories:
+              Set<String>.from((raw['seenStories'] as List?) ?? const []),
+        );
+      }
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Could not read feed prefs: $e');
+    }
+    return const FeedPrefs();
+  }
+
+  Future<void> saveFeedPrefs(String tourId, FeedPrefs prefs) async {
+    try {
+      final box = await _openBox();
+      await box.put(_feedPrefsKey(tourId), {
+        'bookmarks': prefs.bookmarks.toList(),
+        // Keep only the most recent 500 so the box does not grow forever.
+        'seenStories': prefs.seenStories.toList().reversed.take(500).toList(),
+      });
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Could not save feed prefs: $e');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Groups
   // ---------------------------------------------------------------------------
 
