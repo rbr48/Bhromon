@@ -130,10 +130,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     }
   }
 
-  void _showAddNoticeDialog() {
-    final titleCtrl = TextEditingController();
-    final contentCtrl = TextEditingController();
-    bool isUrgent = false;
+  /// Posts a new notice, or edits [existing] when it is given.
+  void _showNoticeDialog({TourNotice? existing}) {
+    final titleCtrl = TextEditingController(text: existing?.title ?? '');
+    final contentCtrl = TextEditingController(text: existing?.content ?? '');
+    bool isUrgent = existing?.urgent ?? false;
 
     showDialog<void>(
       context: context,
@@ -141,8 +142,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: const Color(0xFF142428),
-          title: const Text('নতুন নোটিশ জারি করুন',
-              style: TextStyle(color: Colors.white)),
+          title: Text(
+              existing == null ? 'নতুন নোটিশ জারি করুন' : 'নোটিশ সম্পাদনা',
+              style: const TextStyle(color: Colors.white)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -186,15 +188,26 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 final content = contentCtrl.text.trim();
                 Navigator.pop(ctx);
                 try {
-                  await _repository.postNotice(
-                    tourId: widget.tourId,
-                    title: title,
-                    content: content,
-                    urgent: isUrgent,
-                  );
+                  if (existing == null) {
+                    await _repository.postNotice(
+                      tourId: widget.tourId,
+                      title: title,
+                      content: content,
+                      urgent: isUrgent,
+                    );
+                  } else {
+                    await _repository.updateNotice(
+                      tourId: widget.tourId,
+                      noticeId: existing.id,
+                      title: title,
+                      content: content,
+                      urgent: isUrgent,
+                    );
+                  }
                 } catch (e) {
-                  _showError(
-                      'নোটিশ পাঠানো যায়নি: শুধু অ্যাডমিন নোটিশ দিতে পারেন।');
+                  _showError(existing == null
+                      ? 'নোটিশ পাঠানো যায়নি: শুধু অ্যাডমিন নোটিশ দিতে পারেন।'
+                      : 'নোটিশ বদলানো যায়নি: শুধু অ্যাডমিন বদলাতে পারেন।');
                 }
               },
               child: const Text('পোস্ট করুন',
@@ -233,7 +246,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
             IconButton(
               icon: const Icon(Icons.add_alert),
               tooltip: 'নতুন নোটিশ',
-              onPressed: _showAddNoticeDialog,
+              onPressed: () => _showNoticeDialog(),
             ),
         ],
       ),
@@ -373,6 +386,13 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         fontWeight: FontWeight.bold,
                         fontSize: 14)),
               ),
+              if (canDelete)
+                IconButton(
+                  tooltip: 'নোটিশ সম্পাদনা',
+                  icon: const Icon(Icons.edit_outlined,
+                      color: Colors.white38, size: 18),
+                  onPressed: () => _showNoticeDialog(existing: notice),
+                ),
               if (canDelete)
                 IconButton(
                   tooltip: 'নোটিশ মুছুন',

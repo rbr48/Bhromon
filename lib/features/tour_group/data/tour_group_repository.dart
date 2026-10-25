@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../domain/models/date_codec.dart';
 import '../domain/models/expense_models.dart';
 import '../domain/models/logistics_models.dart';
+import '../domain/models/safety_alert_models.dart';
 import '../domain/models/tour_activity_models.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
@@ -856,6 +857,24 @@ class TourGroupRepository {
     });
   }
 
+  /// Edits a notice's text and urgency. The author and original time stay as
+  /// they were; only the edit time is added.
+  Future<void> updateNotice({
+    required String tourId,
+    required String noticeId,
+    required String title,
+    required String content,
+    required bool urgent,
+  }) async {
+    _requireEmail();
+    await _sub(tourId, 'notices').doc(noticeId).update({
+      'title': title,
+      'content': content,
+      'urgent': urgent,
+      'editedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Future<void> deleteNotice(String tourId, String noticeId) async {
     _requireEmail();
     await _sub(tourId, 'notices').doc(noticeId).delete();
@@ -936,6 +955,54 @@ class TourGroupRepository {
   Future<void> deleteCheckpoint(String tourId, String checkpointId) async {
     _requireEmail();
     await _sub(tourId, 'checkpoints').doc(checkpointId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Safety alerts (SOS)
+  // ---------------------------------------------------------------------------
+
+  /// Id for an alert about to be raised. The caller keeps it so the alert can
+  /// be resolved later, even if the raise is still queued.
+  String newSafetyAlertId() => _uuid.v4();
+
+  /// Raises an alert the whole tour can see. Returns false when the network is
+  /// down: the alert stays queued and reaches the others once it connects.
+  Future<bool> raiseSafetyAlert({
+    required String tourId,
+    required String alertId,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final email = _requireEmail();
+    return _awaitServer(_sub(tourId, 'sos').doc(alertId).set({
+      'id': alertId,
+      'senderEmail': email,
+      'senderName': currentDisplayName,
+      'resolved': false,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      'createdAt': FieldValue.serverTimestamp(),
+    }));
+  }
+
+  /// Marks an alert resolved. Only the sender or an admin may do this.
+  Future<bool> resolveSafetyAlert(String tourId, String alertId) async {
+    final email = _requireEmail();
+    return _awaitServer(_sub(tourId, 'sos').doc(alertId).update({
+      'resolved': true,
+      'resolvedByEmail': email,
+      'resolvedAt': FieldValue.serverTimestamp(),
+    }));
+  }
+
+  /// The most recent alerts, newest first. Callers pick out the open ones.
+  Stream<List<SafetyAlert>> watchSafetyAlerts(String tourId, {int limit = 30}) {
+    return _sub(tourId, 'sos')
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((s) =>
+            s.docs.map((d) => SafetyAlert.fromMap(d.id, d.data())).toList());
   }
 
   // ---------------------------------------------------------------------------

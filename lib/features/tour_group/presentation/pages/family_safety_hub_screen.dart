@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../domain/models/safety_alert_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
 import 'package:geolocator/geolocator.dart';
@@ -47,6 +49,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
 
   final TourGroupRepository _repository = TourGroupRepository();
   TourGroup? _tourGroup;
+  TourRole? _myRole;
+  // The alert this device raised and has not resolved yet.
+  String? _activeAlertId;
+  late final Stream<List<SafetyAlert>> _alerts =
+      _repository.watchSafetyAlerts(widget.tourId);
 
   List<TourLandmark> get _landmarks {
     final dest = _tourGroup?.destination.toLowerCase() ?? '';
@@ -229,6 +236,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   void initState() {
     super.initState();
     _loadGroup();
+    _loadRole();
     _sirenAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -240,6 +248,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   Future<void> _loadGroup() async {
     final g = await _repository.getGroup(widget.tourId);
     if (mounted) setState(() => _tourGroup = g);
+  }
+
+  Future<void> _loadRole() async {
+    final role = await _repository.myRole(widget.tourId);
+    if (mounted) setState(() => _myRole = role);
   }
 
   @override
@@ -297,7 +310,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     return heading >= 0 ? heading : 0;
   }
 
-  /// Starts or stops the alert: a repeating vibration and the pulsing banner.
+  /// Starts or stops the alert: a repeating vibration, the pulsing banner, and
+  /// a safety alert that every member of the tour can see.
   void _toggleAlert() {
     setState(() => _isSirenActive = !_isSirenActive);
     _alertTimer?.cancel();
@@ -306,10 +320,64 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       HapticFeedback.heavyImpact();
       _alertTimer = Timer.periodic(const Duration(milliseconds: 900),
           (_) => HapticFeedback.heavyImpact());
+      _raiseAlert();
     } else {
       _sirenAnimController.stop();
       _sirenAnimController.value = 0;
+      _resolveAlert();
     }
+  }
+
+  void _raiseAlert() {
+    final alertId = _repository.newSafetyAlertId();
+    _activeAlertId = alertId;
+    final pos = _currentPosition;
+    unawaited(_repository
+        .raiseSafetyAlert(
+      tourId: widget.tourId,
+      alertId: alertId,
+      latitude: pos?.latitude,
+      longitude: pos?.longitude,
+    )
+        .then(
+      (synced) {
+        if (!synced) {
+          _showMessage(
+              'এলার্ট এখনও সার্ভারে পৌঁছায়নি। নেটওয়ার্ক পেলে গ্রুপে যাবে।');
+        }
+      },
+      onError: (Object e) => _showMessage('গ্রুপে এলার্ট পাঠানো যায়নি: $e'),
+    ));
+  }
+
+  /// Resolves the alert this device raised, if any. Used when the siren stops.
+  void _resolveAlert() {
+    final alertId = _activeAlertId;
+    _activeAlertId = null;
+    if (alertId == null) return;
+    _resolveById(alertId);
+  }
+
+  void _resolveById(String alertId) {
+    unawaited(_repository.resolveSafetyAlert(widget.tourId, alertId).then(
+          (_) {},
+          onError: (Object e) => _showMessage('এলার্ট বন্ধ করা যায়নি: $e'),
+        ));
+  }
+
+  /// Closes an alert from its card. Closing this device's own live alert also
+  /// stops the siren, so the two never disagree.
+  void _resolveFromCard(SafetyAlert alert) {
+    if (alert.id == _activeAlertId && _isSirenActive) {
+      _toggleAlert();
+      return;
+    }
+    _resolveById(alert.id);
+  }
+
+  void _showMessage(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
   /// Shares the current position as a map link, for the family to find you.
@@ -362,6 +430,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             _buildSosBeacon(),
 
             const SizedBox(height: 16),
+
+            // Alerts raised by the group, until someone resolves them.
+            _buildGroupAlerts(),
 
             // Emergency Contacts
             _buildEmergencyContactsSection(),
@@ -455,8 +526,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                         const SizedBox(height: 2),
                         Text(
                           _isSirenActive
-                              ? 'ভাইব্রেশনের মাধ্যমে এলার্ট চলছে। অবস্থানসহ বার্তা পাঠাতে বোতাম চেপে ধরুন।'
-                              : 'বিপদে পড়লে এলার্ট চালু করুন, অবস্থান শেয়ার করুন, অথবা ৯৯৯ কল করুন।',
+                              ? 'গ্রুপের সবাই এলার্ট দেখছেন। বন্ধ করতে বোতাম চাপুন। অবস্থান পাঠাতে বোতাম চেপে ধরুন।'
+                              : 'বিপদে পড়লে এলার্ট চালু করুন, গ্রুপের সবাই দেখতে পাবেন। অবস্থান শেয়ার করতে চেপে ধরুন, অথবা ৯৯৯ কল করুন।',
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 12),
                         ),
@@ -495,6 +566,98 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           ),
         );
       },
+    );
+  }
+
+  /// Open alerts from everyone in the tour. Empty when nothing is open.
+  Widget _buildGroupAlerts() {
+    return StreamBuilder<List<SafetyAlert>>(
+      stream: _alerts,
+      builder: (context, snapshot) {
+        final now = DateTime.now();
+        final open = (snapshot.data ?? const <SafetyAlert>[])
+            .where((alert) => alert.isOpenAt(now))
+            .toList();
+        if (open.isEmpty) return const SizedBox.shrink();
+
+        final me = _repository.currentEmail;
+        final isAdmin = _myRole?.isAdminOrOwner ?? false;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'গ্রুপের জরুরি এলার্ট',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15),
+            ),
+            const SizedBox(height: 10),
+            for (final alert in open)
+              _buildAlertCard(
+                alert,
+                canResolve: alert.senderEmail == me || isAdmin,
+              ),
+            const SizedBox(height: 10),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAlertCard(SafetyAlert alert, {required bool canResolve}) {
+    final raised = alert.createdAt;
+    final when =
+        raised == null ? 'এইমাত্র' : DateFormat('dd MMM, HH:mm').format(raised);
+    final lat = alert.latitude;
+    final lng = alert.longitude;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3B1F1F),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.redAccent),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '${alert.senderName} এলার্ট পাঠিয়েছেন',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Text(when,
+                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (lat != null && lng != null)
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.map_rounded, size: 16),
+                  label: const Text('অবস্থান দেখুন'),
+                  onPressed: () => _openMapNavigation(lat, lng),
+                ),
+              if (canResolve)
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.check_circle_outline, size: 16),
+                  label: const Text('নিরাপদ, বন্ধ করুন'),
+                  onPressed: () => _resolveFromCard(alert),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

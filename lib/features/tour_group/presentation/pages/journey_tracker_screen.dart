@@ -47,6 +47,7 @@ class JourneyTrackerScreen extends StatefulWidget {
 class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   final TourGroupRepository _repository = TourGroupRepository();
   TourGroup? _tourGroup;
+  TourRole? _myRole;
   Position? _currentPosition;
   int _activeFilterIndex = 0; // 0: All, 1: Rest/Food, 2: Prayer, 3: Fuel
   // Stops that group members added; shared by everyone on the tour.
@@ -65,6 +66,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   void initState() {
     super.initState();
     _loadGroup();
+    _loadRole();
     _fetchGps();
     _checkpointSub = _repository.watchCheckpoints(widget.tourId).listen(
       (cps) {
@@ -83,6 +85,52 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   Future<void> _loadGroup() async {
     final g = await _repository.getGroup(widget.tourId);
     if (mounted) setState(() => _tourGroup = g);
+  }
+
+  Future<void> _loadRole() async {
+    final role = await _repository.myRole(widget.tourId);
+    if (mounted) setState(() => _myRole = role);
+  }
+
+  /// Only the member who added a stop, or an admin, may remove it. Route stops
+  /// from the built-in itinerary are never removable.
+  bool _canDeleteStop(HighwayMilestone m) {
+    final checkpoint = _checkpoints.where((c) => c.id == m.id).firstOrNull;
+    if (checkpoint == null) return false;
+    return checkpoint.addedByEmail == _repository.currentEmail ||
+        (_myRole?.isAdminOrOwner ?? false);
+  }
+
+  Future<void> _confirmDeleteStop(HighwayMilestone m) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF142428),
+        title:
+            const Text('স্টপটি মুছবেন?', style: TextStyle(color: Colors.white)),
+        content: Text(m.name, style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('না')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('মুছুন',
+                  style: TextStyle(color: Colors.redAccent))),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _repository.deleteCheckpoint(widget.tourId, m.id);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+            'স্টপ মোছা যায়নি। শুধু যিনি যোগ করেছেন বা অ্যাডমিন মুছতে পারবেন।'),
+        backgroundColor: Colors.redAccent,
+      ));
+    }
   }
 
   Future<void> _fetchGps() async {
@@ -669,8 +717,13 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 itemCount: visible.length,
                 itemBuilder: (context, index) {
-                  return _buildMilestoneTile(
-                      visible[index], index, visible.length);
+                  final stop = visible[index];
+                  return GestureDetector(
+                    onLongPress: _canDeleteStop(stop)
+                        ? () => _confirmDeleteStop(stop)
+                        : null,
+                    child: _buildMilestoneTile(stop, index, visible.length),
+                  );
                 },
               ),
             ),
