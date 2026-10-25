@@ -1,4 +1,4 @@
-// Notices, packing checklist, route checkpoints and channel messages.
+// Notices, packing checklist and route checkpoints.
 
 import 'date_codec.dart';
 
@@ -94,34 +94,6 @@ class RouteCheckpoint {
       lat: (map['lat'] as num?)?.toDouble(),
       lng: (map['lng'] as num?)?.toDouble(),
       addedByEmail: normalizeEmail(map['addedByEmail'] as String? ?? ''),
-    );
-  }
-}
-
-class ChannelMessage {
-  final String id;
-  final String senderEmail;
-  final String senderName;
-  final String text;
-  final DateTime timestamp;
-
-  const ChannelMessage({
-    required this.id,
-    required this.senderEmail,
-    required this.senderName,
-    required this.text,
-    required this.timestamp,
-  });
-
-  bool isSentBy(String email) => senderEmail == normalizeEmail(email);
-
-  factory ChannelMessage.fromMap(String id, Map<String, dynamic> map) {
-    return ChannelMessage(
-      id: id,
-      senderEmail: normalizeEmail(map['senderEmail'] as String? ?? ''),
-      senderName: map['senderName'] as String? ?? 'Member',
-      text: map['text'] as String? ?? '',
-      timestamp: readDate(map['timestamp']) ?? DateTime.now(),
     );
   }
 }

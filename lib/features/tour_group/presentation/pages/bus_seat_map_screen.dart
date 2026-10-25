@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/logistics_models.dart';
 import '../../domain/models/tour_group.dart';
@@ -37,11 +38,12 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
   }
 
   Future<void> _assign(String seatNumber, {String? email, String? name}) async {
+    final l10n = context.l10n;
     try {
       await _repository.assignBusSeat(widget.tourId, seatNumber,
           email: email, name: name);
     } catch (e) {
-      _showError('সিট বদলানো যায়নি: $e');
+      _showError(l10n.translate('tour_seat_change_failed', args: {'error': e}));
     }
   }
 
@@ -51,13 +53,13 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
       stream: _seats,
       builder: (context, snapshot) {
         if (snapshot.hasError && !snapshot.hasData) {
-          return const Center(
+          return Center(
             child: Padding(
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               child: Text(
-                'সিটের তথ্য দেখা যাচ্ছে না। আপনি এই ট্যুরের সদস্য কি না দেখুন।',
+                context.l10n.translate('tour_seats_unavailable'),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white54),
+                style: const TextStyle(color: Colors.white54),
               ),
             ),
           );
@@ -83,9 +85,15 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _legend('খালি', Colors.white24),
-                  _legend('বুকড', AppColors.mintGreen),
-                  Text('বুকড: $booked / ${_seatLabels.length}',
+                  _legend(
+                      context.l10n.translate('tour_seat_free'), Colors.white24),
+                  _legend(context.l10n.translate('tour_seat_booked'),
+                      AppColors.mintGreen),
+                  Text(
+                      context.l10n.translate('tour_seats_booked_count', args: {
+                        'booked': booked,
+                        'total': _seatLabels.length
+                      }),
                       style: const TextStyle(
                           color: AppColors.gold,
                           fontWeight: FontWeight.bold,
@@ -107,15 +115,15 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _CabinTag(
                             icon: Icons.directions_bus_rounded,
-                            label: 'DOOR (দরজা)'),
+                            label: context.l10n.translate('tour_door')),
                         _CabinTag(
                             icon: Icons.sports_motorsports_rounded,
-                            label: 'DRIVER'),
+                            label: context.l10n.translate('tour_driver')),
                       ],
                     ),
                     const Divider(color: Colors.white12, height: 16),
@@ -167,9 +175,9 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D1A12),
         elevation: 0,
-        title: const Text(
-          'Bus Seat Allocator (বাসের সিট)',
-          style: TextStyle(
+        title: Text(
+          context.l10n.translate('tour_bus_seats_title'),
+          style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
@@ -235,7 +243,10 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              occupied ? (seat.assignedMemberName ?? 'বুকড') : 'খালি',
+              occupied
+                  ? (seat.assignedMemberName ??
+                      context.l10n.translate('tour_seat_booked'))
+                  : context.l10n.translate('tour_seat_free'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -279,7 +290,9 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('সিট ${seat.seatNumber}',
+                        Text(
+                            context.l10n.translate('tour_seat_label',
+                                args: {'number': seat.seatNumber}),
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
@@ -288,8 +301,10 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
                           TextButton.icon(
                             icon: const Icon(Icons.clear,
                                 color: Colors.redAccent, size: 16),
-                            label: const Text('সিট খালি করুন',
-                                style: TextStyle(color: Colors.redAccent)),
+                            label: Text(
+                                context.l10n.translate('tour_free_seat'),
+                                style:
+                                    const TextStyle(color: Colors.redAccent)),
                             onPressed: () {
                               Navigator.pop(ctx);
                               _assign(seat.seatNumber);
@@ -298,8 +313,9 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
                       ],
                     ),
                     const Divider(color: Colors.white12),
-                    const Text('যাত্রী বাছাই করুন:',
-                        style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    Text(context.l10n.translate('tour_pick_passenger'),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12)),
                     const SizedBox(height: 8),
                     Flexible(
                       child: ListView.builder(
@@ -322,8 +338,9 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
                                 style: const TextStyle(color: Colors.white)),
                             subtitle: Text(
                               isHere
-                                  ? 'এই সিটে'
-                                  : 'অন্য সিট বাছাই করলে এখানকার সিট ছেড়ে দেওয়া হবে',
+                                  ? context.l10n.translate('tour_on_this_seat')
+                                  : context.l10n
+                                      .translate('tour_seat_release_warning'),
                               style: const TextStyle(
                                   color: Colors.white38, fontSize: 11),
                             ),

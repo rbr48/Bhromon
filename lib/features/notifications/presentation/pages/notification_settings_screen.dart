@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../../core/localization/locale_controller.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/theme_context.dart';
 
@@ -55,6 +58,19 @@ class _NotificationSettingsScreenState
             ListView(
               padding: const EdgeInsets.all(24),
               children: [
+                const Text(
+                  'Language / ভাষা',
+                  style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5),
+                ),
+                const SizedBox(height: 12),
+                _buildLanguagePicker(),
+                const SizedBox(height: 12),
+                const Divider(color: Colors.white10),
+                const SizedBox(height: 16),
                 const Text(
                   'Push Notification Preferences',
                   style: TextStyle(
@@ -152,6 +168,31 @@ class _NotificationSettingsScreenState
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Bengali or English for the whole app. The choice is saved on this device.
+  Widget _buildLanguagePicker() {
+    return AnimatedBuilder(
+      animation: LocaleController.instance,
+      builder: (context, _) => SizedBox(
+        width: double.infinity,
+        child: SegmentedButton<String>(
+          style: SegmentedButton.styleFrom(
+            selectedBackgroundColor: AppColors.midGreen,
+            selectedForegroundColor: Colors.white,
+            foregroundColor: Colors.white70,
+          ),
+          segments: const [
+            ButtonSegment(value: 'bn', label: Text('বাংলা')),
+            ButtonSegment(value: 'en', label: Text('English')),
+          ],
+          selected: {LocaleController.instance.locale.languageCode},
+          onSelectionChanged: (selection) {
+            unawaited(LocaleController.instance.setLanguage(selection.first));
+          },
         ),
       ),
     );
