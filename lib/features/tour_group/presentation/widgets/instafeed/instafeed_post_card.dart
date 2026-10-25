@@ -1,10 +1,13 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_carousel.dart';
+import 'instafeed_image_viewer_modal.dart';
 import 'instafeed_travel_banners.dart';
 import 'instafeed_zoomable_media.dart';
 
@@ -21,6 +24,7 @@ class InstafeedPostCard extends StatefulWidget {
   final void Function(TourPostItem post)? onOpenComments;
   final void Function(TourPostItem post)? onShare;
   final void Function(TourPostItem post)? onAddToLedger;
+  final void Function(TourPostItem post)? onReelTap;
   final void Function(String hashtag)? onHashtagTap;
   final VoidCallback onBookmarkToggle;
   final VoidCallback? onPostChanged;
@@ -38,6 +42,7 @@ class InstafeedPostCard extends StatefulWidget {
     this.onOpenComments,
     this.onShare,
     this.onAddToLedger,
+    this.onReelTap,
     this.onHashtagTap,
     required this.onBookmarkToggle,
     this.onPostChanged,
@@ -53,6 +58,87 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   bool _showHeartBurst = false;
   bool _showTags = false;
   bool _isPlayingAudio = false;
+
+  VideoPlayerController? _videoCtrl;
+  bool _isVideoInitialized = false;
+  bool _isVideoMuted = true;
+  bool _isVideoPlaying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAndInitVideo();
+  }
+
+  void _checkAndInitVideo() {
+    final vUrl = widget.post.videoUrl;
+    if (vUrl != null && isRemoteMediaUrl(vUrl)) {
+      _initVideoController(vUrl);
+    }
+  }
+
+  void _initVideoController(String url) {
+    final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+    _videoCtrl = ctrl;
+    ctrl.initialize().then((_) {
+      if (!mounted || _videoCtrl != ctrl) return;
+      ctrl.setLooping(true);
+      ctrl.setVolume(0.0);
+      setState(() {
+        _isVideoInitialized = true;
+      });
+    }).catchError((Object e) {
+      debugPrint('[InstafeedPostCard] Video init error: $e');
+    });
+    ctrl.addListener(_onVideoStateChanged);
+  }
+
+  void _onVideoStateChanged() {
+    if (!mounted || _videoCtrl == null) return;
+    final isPlaying = _videoCtrl!.value.isPlaying;
+    if (isPlaying != _isVideoPlaying) {
+      setState(() => _isVideoPlaying = isPlaying);
+    }
+  }
+
+  @override
+  void didUpdateWidget(InstafeedPostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.videoUrl != widget.post.videoUrl) {
+      _videoCtrl?.removeListener(_onVideoStateChanged);
+      _videoCtrl?.dispose();
+      _videoCtrl = null;
+      _isVideoInitialized = false;
+      _isVideoPlaying = false;
+      _checkAndInitVideo();
+    }
+  }
+
+  @override
+  void dispose() {
+    _videoCtrl?.removeListener(_onVideoStateChanged);
+    _videoCtrl?.dispose();
+    super.dispose();
+  }
+
+  void _toggleVideoPlayback() {
+    if (_videoCtrl == null || !_isVideoInitialized) return;
+    setState(() {
+      if (_videoCtrl!.value.isPlaying) {
+        _videoCtrl!.pause();
+      } else {
+        _videoCtrl!.play();
+      }
+    });
+  }
+
+  void _toggleVideoMute() {
+    if (_videoCtrl == null) return;
+    setState(() {
+      _isVideoMuted = !_isVideoMuted;
+      _videoCtrl!.setVolume(_isVideoMuted ? 0.0 : 1.0);
+    });
+  }
 
   bool get _isAuthor =>
       widget.post.authorEmail == widget.repository.currentEmail;
@@ -328,12 +414,234 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     return spans;
   }
 
+  Widget _buildVideoViewport(BuildContext context) {
+    final rawAspect = widget.post.aspectRatio ??
+        (_isVideoInitialized && _videoCtrl != null
+            ? _videoCtrl!.value.aspectRatio
+            : 16 / 9);
+    final aspect = rawAspect.clamp(0.65, 1.8);
+
+    return AspectRatio(
+      aspectRatio: aspect,
+      child: Stack(
+        alignment: Alignment.center,
+        fit: StackFit.expand,
+        children: [
+          // 1. Poster background / Cover / Placeholder
+          if (widget.post.coverUrl != null &&
+              isRemoteMediaUrl(widget.post.coverUrl!))
+            CachedNetworkImage(
+              imageUrl: widget.post.coverUrl!,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => Container(color: const Color(0xFF1B1B1B)),
+              errorWidget: (_, __, ___) => Container(
+                color: const Color(0xFF1B1B1B),
+                child: const Center(
+                  child: Icon(Icons.slow_motion_video,
+                      size: 40, color: Colors.white24),
+                ),
+              ),
+            )
+          else
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF262626), Color(0xFF121212)],
+                ),
+              ),
+              child: const Center(
+                child: Icon(Icons.slow_motion_video,
+                    size: 40, color: Colors.white24),
+              ),
+            ),
+
+          // 2. Video Player when initialized
+          if (_isVideoInitialized && _videoCtrl != null)
+            GestureDetector(
+              onTap: _toggleVideoPlayback,
+              onDoubleTap: _onDoubleTap,
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: _videoCtrl!.value.aspectRatio,
+                  child: VideoPlayer(_videoCtrl!),
+                ),
+              ),
+            )
+          else
+            const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
+              ),
+            ),
+
+          // 3. Play Icon Overlay when paused
+          if (!_isVideoPlaying && _isVideoInitialized)
+            GestureDetector(
+              onTap: _toggleVideoPlayback,
+              child: Container(
+                color: Colors.black26,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      size: 40,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // 4. "রিল দেখুন" (Watch Reel) Button on Top-Right
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => widget.onReelTap?.call(widget.post),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFE1306C), Color(0xFF833AB4)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.slow_motion_video,
+                          size: 14, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text(
+                        'রিল দেখুন',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // 5. Mute / Unmute Button on Bottom-Right
+          if (_isVideoInitialized && _videoCtrl != null)
+            Positioned(
+              bottom: 12,
+              right: 12,
+              child: GestureDetector(
+                onTap: _toggleVideoMute,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white30),
+                  ),
+                  child: Icon(
+                    _isVideoMuted ? Icons.volume_off : Icons.volume_up,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+
+          // 6. Double-tap Heart Burst Animation
+          Positioned.fill(
+            child: InstafeedHeartBurst(
+              show: _showHeartBurst,
+              onComplete: () => setState(() => _showHeartBurst = false),
+            ),
+          ),
+
+          // 7. Tagged Members Icon on bottom left (if tags present)
+          if (widget.post.tags.isNotEmpty)
+            Positioned(
+              bottom: 12,
+              left: 12,
+              child: GestureDetector(
+                onTap: () => setState(() => _showTags = !_showTags),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white30),
+                  ),
+                  child: Icon(
+                    _showTags ? Icons.person : Icons.person_outline,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+
+          // Tagged members popup overlay
+          if (_showTags && widget.post.tags.isNotEmpty)
+            Positioned(
+              bottom: 44,
+              left: 12,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: widget.post.tags.map((tagEmail) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text(
+                        '@$tagEmail',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLiked = widget.post.isLikedBy(widget.repository.currentEmail);
-    final mediaList = widget.post.images.isNotEmpty
-        ? widget.post.images
-        : (widget.post.videoUrl != null ? [widget.post.videoUrl!] : <String>[]);
+    final isVideoPost =
+        widget.post.videoUrl != null && widget.post.videoUrl!.isNotEmpty;
+    final mediaList = widget.post.images;
     final timeStr = DateFormat('MMM d, h:mm a').format(widget.post.createdAt);
 
     return Container(
@@ -494,80 +802,95 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             ),
           ),
 
-          // Media Viewport with Pinch-to-Zoom, Carousel & Double Tap Heart Pop
-          Stack(
-            children: [
-              InstafeedCarousel(
-                imageUrls: mediaList,
-                aspectRatio: widget.post.aspectRatio ?? 1.0,
-                colorFilter: widget.colorFilter,
-                onDoubleTap: _onDoubleTap,
-              ),
-
-              // Double-tap heart burst animation
-              Positioned.fill(
-                child: InstafeedHeartBurst(
-                  show: _showHeartBurst,
-                  onComplete: () => setState(() => _showHeartBurst = false),
+          // Media Viewport with Video Player / Pinch-to-Zoom Carousel & Heart Pop
+          if (isVideoPost)
+            _buildVideoViewport(context)
+          else
+            Stack(
+              children: [
+                InstafeedCarousel(
+                  imageUrls: mediaList,
+                  aspectRatio: widget.post.aspectRatio ?? 1.0,
+                  colorFilter: widget.colorFilter,
+                  onDoubleTap: _onDoubleTap,
+                  onImageTap: (idx) {
+                    InstafeedImageViewerModal.show(
+                      context,
+                      repository: widget.repository,
+                      tourId: widget.tourId,
+                      post: widget.post,
+                      initialIndex: idx,
+                      onOpenComments: widget.onOpenComments,
+                      onShare: widget.onShare,
+                      onAddToLedger: widget.onAddToLedger,
+                    );
+                  },
                 ),
-              ),
 
-              // Tagged Members Icon on bottom left
-              if (widget.post.tags.isNotEmpty)
-                Positioned(
-                  bottom: 12,
-                  left: 12,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _showTags = !_showTags),
+                // Double-tap heart burst animation
+                Positioned.fill(
+                  child: InstafeedHeartBurst(
+                    show: _showHeartBurst,
+                    onComplete: () => setState(() => _showHeartBurst = false),
+                  ),
+                ),
+
+                // Tagged Members Icon on bottom left
+                if (widget.post.tags.isNotEmpty)
+                  Positioned(
+                    bottom: 12,
+                    left: 12,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _showTags = !_showTags),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white30),
+                        ),
+                        child: Icon(
+                          _showTags ? Icons.person : Icons.person_outline,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Tagged members popup overlay
+                if (_showTags && widget.post.tags.isNotEmpty)
+                  Positioned(
+                    bottom: 44,
+                    left: 12,
                     child: Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white30),
+                        color: Colors.black87,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white24),
                       ),
-                      child: Icon(
-                        _showTags ? Icons.person : Icons.person_outline,
-                        size: 18,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-
-              // Tagged members popup overlay
-              if (_showTags && widget.post.tags.isNotEmpty)
-                Positioned(
-                  bottom: 44,
-                  left: 12,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black87,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: widget.post.tags.map((tagEmail) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Text(
-                            '@$tagEmail',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: widget.post.tags.map((tagEmail) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text(
+                              '@$tagEmail',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
+              ],
+            ),
 
           // Action Buttons Bar: Like, Comment, Share, Ledger, Bookmark
           Padding(

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
+import 'package:bhromon/features/tour_group/data/tour_media_upload.dart';
 import 'package:bhromon/features/tour_group/data/tour_media_uploader.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
@@ -51,6 +52,10 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   final List<XFile> _photos = [];
   XFile? _selectedVideo;
   VideoPlayerController? _videoCtrl;
+  XFile? _coverImage;
+  Uint8List? _coverBytes;
+  double _videoPosition = 0.0;
+  double _videoDuration = 1.0;
 
   String _selectedFilterId = 'normal';
   double _brightness = 0.0; // -0.5 to 0.5
@@ -115,6 +120,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     _pollQuestionCtrl.dispose();
     _pollOpt1Ctrl.dispose();
     _pollOpt2Ctrl.dispose();
+    _videoCtrl?.removeListener(_onVideoTick);
     _videoCtrl?.dispose();
     super.dispose();
   }
@@ -238,9 +244,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         setState(() => _isCompressing = false);
       }
 
-      final controller = kIsWeb
-          ? VideoPlayerController.networkUrl(Uri.parse(fileToUse.path))
-          : VideoPlayerController.contentUri(Uri.parse(fileToUse.path));
+      final controller = createLocalVideoController(fileToUse);
 
       await controller.initialize();
       await controller.setLooping(true);
@@ -251,10 +255,15 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         return;
       }
 
+      controller.addListener(_onVideoTick);
+
       setState(() {
         _isReel = true;
         _photos.clear();
         _selectedVideo = fileToUse;
+        _videoPosition = 0.0;
+        _videoDuration = controller.value.duration.inMilliseconds.toDouble();
+        _videoCtrl?.removeListener(_onVideoTick);
         _videoCtrl?.dispose();
         _videoCtrl = controller;
       });
@@ -266,6 +275,54 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         );
       }
     }
+  }
+
+  void _onVideoTick() {
+    if (!mounted || _videoCtrl == null) return;
+    final pos = _videoCtrl!.value.position.inMilliseconds.toDouble();
+    final dur = _videoCtrl!.value.duration.inMilliseconds.toDouble();
+    if (dur > 0 && (_videoPosition != pos || _videoDuration != dur)) {
+      setState(() {
+        _videoPosition = pos;
+        _videoDuration = dur;
+      });
+    }
+  }
+
+  String _formatMs(double ms) {
+    final s = (ms / 1000).floor();
+    final mins = (s ~/ 60).toString().padLeft(2, '0');
+    final secs = (s % 60).toString().padLeft(2, '0');
+    return '$mins:$secs';
+  }
+
+  Future<void> _pickCoverImage() async {
+    try {
+      final picked = await widget.picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1440,
+        imageQuality: 85,
+      );
+      if (picked == null || !mounted) return;
+      final bytes = await picked.readAsBytes();
+      setState(() {
+        _coverImage = picked;
+        _coverBytes = bytes;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('কভার ছবি বাছাই ত্রুটি: $e')),
+        );
+      }
+    }
+  }
+
+  void _clearCoverImage() {
+    setState(() {
+      _coverImage = null;
+      _coverBytes = null;
+    });
   }
 
   Future<void> _publish() async {
@@ -299,18 +356,49 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         );
         final sub = upload.progress.listen((p) {
           if (mounted) {
-            setState(() => _uploadProgress = p);
+            final scale = _coverImage != null ? 0.8 : 1.0;
+            setState(() => _uploadProgress = p * scale);
           }
         });
         final url = await upload.finish();
         await sub.cancel();
         uploadedUrls.add(url);
 
+        String? coverUrl;
+        if (_coverImage != null) {
+          setState(() {
+            _uploadStatusText = 'কভার থাম্বনেইল আপলোড হচ্ছে...';
+            _uploadProgress = 0.8;
+          });
+          final cExt = storedExtension(_coverImage!.name, 'jpg');
+          final cContentType =
+              imageContentType(_coverImage!.name) ?? 'image/jpeg';
+          final coverUpload = await TourMediaUploader.start(
+            tourId: widget.tourId,
+            folder: 'covers',
+            file: _coverImage!,
+            contentType: cContentType,
+            extension: cExt,
+            maxBytes: kMaxImageBytes,
+            uploaderEmail: widget.repository.currentEmail,
+          );
+          final coverSub = coverUpload.progress.listen((p) {
+            if (mounted) {
+              setState(() => _uploadProgress = 0.8 + (p * 0.2));
+            }
+          });
+          coverUrl = await coverUpload.finish();
+          await coverSub.cancel();
+          uploadedUrls.add(coverUrl);
+        }
+
         await widget.repository.addPost(
           tourId: widget.tourId,
           caption: _captionCtrl.text.trim(),
           images: const [],
           videoUrl: url,
+          coverUrl: coverUrl,
+          aspectRatio: _videoCtrl?.value.aspectRatio,
           isReel: true,
           location: _spotToSave,
           tourDay: _selectedDay,
@@ -914,42 +1002,98 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
 
   Widget _buildMediaPreviewArea() {
     if (_isReel && _videoCtrl != null && _videoCtrl!.value.isInitialized) {
-      return Container(
-        height: 240,
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              AspectRatio(
-                aspectRatio: _videoCtrl!.value.aspectRatio,
-                child: VideoPlayer(_videoCtrl!),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 220,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  AspectRatio(
+                    aspectRatio: _videoCtrl!.value.aspectRatio,
+                    child: VideoPlayer(_videoCtrl!),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      _videoCtrl!.value.isPlaying
+                          ? Icons.pause_circle
+                          : Icons.play_circle,
+                      color: Colors.white70,
+                      size: 48,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        if (_videoCtrl!.value.isPlaying) {
+                          _videoCtrl!.pause();
+                        } else {
+                          _videoCtrl!.play();
+                        }
+                      });
+                    },
+                  ),
+                ],
               ),
-              IconButton(
-                icon: Icon(
-                  _videoCtrl!.value.isPlaying
-                      ? Icons.pause_circle
-                      : Icons.play_circle,
-                  color: Colors.white70,
-                  size: 48,
-                ),
-                onPressed: () {
-                  setState(() {
-                    if (_videoCtrl!.value.isPlaying) {
-                      _videoCtrl!.pause();
-                    } else {
-                      _videoCtrl!.play();
-                    }
-                  });
-                },
-              ),
-            ],
+            ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 2),
+            child: Row(
+              children: [
+                Text(
+                  _formatMs(_videoPosition),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                ),
+                Expanded(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 3,
+                      thumbShape:
+                          const RoundSliderThumbShape(enabledThumbRadius: 6),
+                      overlayShape:
+                          const RoundSliderOverlayShape(overlayRadius: 10),
+                      activeTrackColor: const Color(0xFF00C853),
+                      inactiveTrackColor: Colors.white24,
+                      thumbColor: const Color(0xFF00C853),
+                    ),
+                    child: Slider(
+                      value: _videoPosition.clamp(
+                          0.0, _videoDuration > 0 ? _videoDuration : 1.0),
+                      min: 0.0,
+                      max: _videoDuration > 0 ? _videoDuration : 1.0,
+                      onChanged: (val) {
+                        _videoCtrl?.seekTo(Duration(milliseconds: val.toInt()));
+                      },
+                    ),
+                  ),
+                ),
+                Text(
+                  _formatMs(_videoDuration),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white54,
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                  ),
+                  onPressed: () => _pickVideo(ImageSource.gallery),
+                  icon: const Icon(Icons.sync, size: 14),
+                  label:
+                      const Text('ভিডিও বদলান', style: TextStyle(fontSize: 11)),
+                ),
+              ],
+            ),
+          ),
+          _buildReelCoverSelector(),
+        ],
       );
     }
 
@@ -982,19 +1126,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: ColorFiltered(
-                      colorFilter: _activeColorFilter ??
-                          const ColorFilter.mode(
-                              Colors.transparent, BlendMode.multiply),
-                      child: kIsWeb
-                          ? Image.network(photo.path,
-                              width: 140, height: 164, fit: BoxFit.cover)
-                          : Image.asset(photo.path,
-                              width: 140,
-                              height: 164,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                  width: 140, color: Colors.grey.shade900)),
+                    child: _LocalPhotoThumbnail(
+                      photo: photo,
+                      colorFilter: _activeColorFilter,
                     ),
                   ),
                   Positioned(
@@ -1051,6 +1185,160 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     );
   }
 
+  Widget _buildReelCoverSelector() {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _coverImage != null
+              ? const Color(0xFF00C853).withValues(alpha: 0.5)
+              : Colors.white12,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.image_outlined,
+                size: 18,
+                color: _coverImage != null
+                    ? const Color(0xFF00C853)
+                    : Colors.white70,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'রিল কভার থাম্বনেইল (Cover Thumbnail)',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              const Spacer(),
+              if (_coverImage != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00C853).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'নির্বাচিত',
+                    style: TextStyle(
+                      color: Color(0xFF00C853),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'ফিড এবং এক্সপ্লোর গ্রিডে রিলটি যে ছবিতে দেখা যাবে তা বেছে নিন।',
+            style: TextStyle(color: Colors.white54, fontSize: 11),
+          ),
+          const SizedBox(height: 10),
+          if (_coverImage != null && _coverBytes != null) ...[
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                    _coverBytes!,
+                    width: 60,
+                    height: 80,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _coverImage!.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white70,
+                              side: const BorderSide(color: Colors.white24),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            onPressed: _pickCoverImage,
+                            icon: const Icon(Icons.edit, size: 14),
+                            label: const Text('পরিবর্তন',
+                                style: TextStyle(fontSize: 11)),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.redAccent,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            onPressed: _clearCoverImage,
+                            icon: const Icon(Icons.delete_outline, size: 14),
+                            label: const Text('মুছুন',
+                                style: TextStyle(fontSize: 11)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF00C853),
+                      side: const BorderSide(color: Color(0xFF00C853)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    onPressed: _pickCoverImage,
+                    icon: const Icon(Icons.add_photo_alternate_outlined,
+                        size: 18),
+                    label: const Text(
+                      'গ্যালারি থেকে কভার ছবি বাছুন',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildSelectTile({
     required IconData icon,
     required String label,
@@ -1078,6 +1366,54 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Robust local photo thumbnail builder that safely loads bytes from picked XFile
+/// across all platforms (Android, iOS, Web, Desktop) without asset errors.
+class _LocalPhotoThumbnail extends StatelessWidget {
+  final XFile photo;
+  final ColorFilter? colorFilter;
+
+  const _LocalPhotoThumbnail({
+    required this.photo,
+    this.colorFilter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List>(
+      future: photo.readAsBytes(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Container(
+            width: 140,
+            height: 164,
+            color: Colors.grey.shade900,
+            child: const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00C853)),
+                ),
+              ),
+            ),
+          );
+        }
+        return ColorFiltered(
+          colorFilter: colorFilter ??
+              const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+          child: Image.memory(
+            snapshot.data!,
+            width: 140,
+            height: 164,
+            fit: BoxFit.cover,
+          ),
+        );
+      },
     );
   }
 }

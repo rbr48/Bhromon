@@ -44,30 +44,59 @@ class InstafeedExploreGrid extends StatelessWidget {
       itemCount: posts.length,
       itemBuilder: (context, index) {
         final post = posts[index];
-        final thumbnail = post.coverUrl ??
-            (post.images.isNotEmpty ? post.images.first : post.videoUrl);
+        final hasValidCover = post.coverUrl != null &&
+            isRemoteMediaUrl(post.coverUrl!) &&
+            !post.coverUrl!.toLowerCase().endsWith('.mp4');
+        final hasValidImage = post.images.isNotEmpty &&
+            isRemoteMediaUrl(post.images.first) &&
+            !post.images.first.toLowerCase().endsWith('.mp4');
+        final thumbnail = hasValidCover
+            ? post.coverUrl
+            : (hasValidImage ? post.images.first : null);
 
         return GestureDetector(
           onTap: () => onPostTap(post),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (thumbnail != null && isRemoteMediaUrl(thumbnail))
+              if (thumbnail != null)
                 CachedNetworkImage(
                   imageUrl: thumbnail,
                   fit: BoxFit.cover,
                   placeholder: (context, _) =>
                       Container(color: Colors.grey.shade900),
                   errorWidget: (context, _, __) => Container(
-                    color: Colors.grey.shade900,
-                    child:
-                        const Icon(Icons.broken_image, color: Colors.white24),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF2A2A2A), Color(0xFF141414)],
+                      ),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.slow_motion_video,
+                          color: Color(0xFF00C853), size: 28),
+                    ),
                   ),
                 )
               else
                 Container(
-                  color: Colors.grey.shade900,
-                  child: const Icon(Icons.videocam, color: Colors.white38),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF2A2A2A), Color(0xFF141414)],
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      post.isReel ? Icons.slow_motion_video : Icons.image,
+                      color: post.isReel
+                          ? const Color(0xFF00C853)
+                          : Colors.white24,
+                      size: 28,
+                    ),
+                  ),
                 ),
 
               // Reel / Video Indicator

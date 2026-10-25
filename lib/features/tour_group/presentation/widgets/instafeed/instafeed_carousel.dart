@@ -9,6 +9,7 @@ class InstafeedCarousel extends StatefulWidget {
   final List<String> imageUrls;
   final double aspectRatio;
   final VoidCallback? onDoubleTap;
+  final void Function(int index)? onImageTap;
   final ColorFilter? colorFilter;
 
   const InstafeedCarousel({
@@ -16,6 +17,7 @@ class InstafeedCarousel extends StatefulWidget {
     required this.imageUrls,
     this.aspectRatio = 1.0,
     this.onDoubleTap,
+    this.onImageTap,
     this.colorFilter,
   });
 
@@ -64,6 +66,9 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
           // Media PageView
           PageView.builder(
             controller: _pageCtrl,
+            physics: isMulti
+                ? const PageScrollPhysics()
+                : const NeverScrollableScrollPhysics(),
             itemCount: widget.imageUrls.length,
             onPageChanged: (idx) {
               setState(() => _currentIndex = idx);
@@ -99,6 +104,7 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
               }
 
               return InstafeedZoomableMedia(
+                onTap: () => widget.onImageTap?.call(index),
                 onDoubleTap: widget.onDoubleTap,
                 child: imageWidget,
               );
@@ -166,6 +172,32 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
                 ),
               ),
             ),
+
+          // Fullscreen view icon button on bottom-right
+          Positioned(
+            bottom: 12,
+            right: 12,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => widget.onImageTap?.call(_currentIndex),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white24, width: 0.5),
+                  ),
+                  child: const Icon(
+                    Icons.fullscreen,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

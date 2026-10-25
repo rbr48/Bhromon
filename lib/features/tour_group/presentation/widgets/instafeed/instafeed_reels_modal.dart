@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -269,11 +270,25 @@ class _ReelPageItemState extends State<_ReelPageItem>
                       child: VideoPlayer(ctrl),
                     ),
                   )
-                : const Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
-                    ),
+                : Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (widget.post.coverUrl != null &&
+                          isRemoteMediaUrl(widget.post.coverUrl!))
+                        CachedNetworkImage(
+                          imageUrl: widget.post.coverUrl!,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) =>
+                              Container(color: Colors.black),
+                        ),
+                      const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white38),
+                        ),
+                      ),
+                    ],
                   ),
           ),
         ),

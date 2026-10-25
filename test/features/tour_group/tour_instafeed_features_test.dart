@@ -197,5 +197,39 @@ void main() {
       expect(restored.aspectRatio, 0.8);
       expect(restored.expenseAmount, 1850.0);
     });
+
+    test('reel post with custom coverUrl and videoUrl round-trips correctly',
+        () {
+      final reelPost = TourPostItem(
+        id: 'reel_1',
+        tourId: 't1',
+        authorEmail: 'creator@x.com',
+        authorName: 'Creator',
+        caption: 'Sunset waves reel #reels',
+        images: const [],
+        videoUrl: 'https://bhromon.fun/media/t1/reels/sunset.mp4',
+        coverUrl: 'https://bhromon.fun/media/t1/covers/sunset_thumb.jpg',
+        isReel: true,
+        aspectRatio: 9 / 16,
+        createdAt: DateTime.now(),
+      );
+
+      expect(reelPost.isReel, isTrue);
+      expect(
+          reelPost.videoUrl, 'https://bhromon.fun/media/t1/reels/sunset.mp4');
+      expect(reelPost.coverUrl,
+          'https://bhromon.fun/media/t1/covers/sunset_thumb.jpg');
+      expect(reelPost.aspectRatio, closeTo(0.5625, 0.001));
+
+      final map = reelPost.toMap();
+      final restored = TourPostItem.fromMap(reelPost.id, map);
+
+      expect(restored.isReel, isTrue);
+      expect(
+          restored.videoUrl, 'https://bhromon.fun/media/t1/reels/sunset.mp4');
+      expect(restored.coverUrl,
+          'https://bhromon.fun/media/t1/covers/sunset_thumb.jpg');
+      expect(restored.aspectRatio, closeTo(0.5625, 0.001));
+    });
   });
 }
