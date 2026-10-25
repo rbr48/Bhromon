@@ -804,6 +804,12 @@ class TourGroupRepository {
     await _sub(tourId, 'deposits').doc(deposit.id).set(deposit.toMap());
   }
 
+  /// Saves an edited deposit. [deposit] must keep its original addedByEmail.
+  Future<void> updateDeposit(DepositItem deposit) async {
+    _requireEmail();
+    await _sub(deposit.tourId, 'deposits').doc(deposit.id).set(deposit.toMap());
+  }
+
   Future<void> deleteDeposit(String tourId, String depositId) async {
     _requireEmail();
     await _sub(tourId, 'deposits').doc(depositId).delete();

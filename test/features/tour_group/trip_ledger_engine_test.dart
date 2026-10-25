@@ -88,4 +88,55 @@ void main() {
       }
     });
   });
+
+  group('expense edit helpers', () {
+    test('plainTakaInput drops empty cents and keeps two decimals', () {
+      expect(TripLedgerEngine.plainTakaInput(125000), equals('1250'));
+      expect(TripLedgerEngine.plainTakaInput(125050), equals('1250.50'));
+      expect(TripLedgerEngine.plainTakaInput(5), equals('0.05'));
+      expect(TripLedgerEngine.plainTakaInput(100), equals('1'));
+    });
+
+    test('plainTakaInput round-trips through parseTakaInput', () {
+      for (final paisa in [1, 5, 99, 100, 101, 1250, 125050, 10000000 * 100]) {
+        expect(
+          TripLedgerEngine.parseTakaInput(
+              TripLedgerEngine.plainTakaInput(paisa)),
+          equals(paisa),
+        );
+      }
+    });
+
+    test('participantSelection stores null when every current member is in',
+        () {
+      expect(
+        TripLedgerEngine.participantSelection(
+          selected: {'a@x.com', 'b@x.com'},
+          memberEmails: ['a@x.com', 'b@x.com'],
+        ),
+        isNull,
+      );
+    });
+
+    test('participantSelection stores the list when someone is left out', () {
+      final stored = TripLedgerEngine.participantSelection(
+        selected: {'a@x.com'},
+        memberEmails: ['a@x.com', 'b@x.com'],
+      );
+      expect(stored, equals(['a@x.com']));
+    });
+
+    test('participantSelection keeps a former member who is still selected',
+        () {
+      // One current member is missing and a former member is selected. The
+      // counts match (two and two), which a length-only check would wrongly
+      // treat as "everyone" and store as null, dropping the split.
+      final stored = TripLedgerEngine.participantSelection(
+        selected: {'a@x.com', 'gone@x.com'},
+        memberEmails: ['a@x.com', 'b@x.com'],
+      );
+      expect(stored, isNotNull);
+      expect(stored, containsAll(['a@x.com', 'gone@x.com']));
+    });
+  });
 }
