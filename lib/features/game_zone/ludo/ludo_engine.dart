@@ -46,6 +46,8 @@ class LudoEngine {
   LudoColor currentTurn = LudoColor.red;
   int? currentDice;
   bool hasRolled = false;
+  int consecutiveSixes = 0;
+  final Set<LudoColor> humanPlayers = {LudoColor.red}; // Default: Red is User, others are Bots
   final Random _random = Random();
 
   LudoEngine() {
@@ -63,11 +65,29 @@ class LudoEngine {
     currentTurn = LudoColor.red;
     currentDice = null;
     hasRolled = false;
+    consecutiveSixes = 0;
   }
+
+  bool isCurrentTurnHuman() => humanPlayers.contains(currentTurn);
 
   int rollDice() {
     currentDice = _random.nextInt(6) + 1;
     hasRolled = true;
+
+    if (currentDice == 6) {
+      consecutiveSixes++;
+      if (consecutiveSixes >= 3) {
+        // Triple sixes penalty: forfeit turn!
+        consecutiveSixes = 0;
+        hasRolled = false;
+        currentDice = null;
+        _nextTurn();
+        return -1; // Special indicator for triple sixes penalty
+      }
+    } else {
+      consecutiveSixes = 0;
+    }
+
     return currentDice!;
   }
 
@@ -97,9 +117,9 @@ class LudoEngine {
     return targetStep <= stepsToHome;
   }
 
-  /// Moves the token and returns true if an extra turn is awarded (rolled 6 or captured piece).
+  /// Moves the token and returns true if an extra turn is awarded (rolled 6 or captured piece or reached home).
   bool moveToken(LudoToken token) {
-    if (!canMoveToken(token, currentDice!)) return false;
+    if (currentDice == null || !canMoveToken(token, currentDice!)) return false;
 
     final dice = currentDice!;
     bool extraTurn = (dice == 6);
@@ -181,7 +201,6 @@ class LudoEngine {
       if (t.state == TokenState.inYard && currentDice == 6) return t;
     }
 
-    // Otherwise move the furthest forward token
     movable.sort((a, b) => b.stepCount.compareTo(a.stepCount));
     return movable.first;
   }

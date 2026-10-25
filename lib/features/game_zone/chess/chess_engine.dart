@@ -84,12 +84,18 @@ class ChessMove {
   final BoardPosition to;
   final ChessPiece? capturedPiece;
   final PieceType? promotion;
+  final bool isCastling;
+  final bool isEnPassant;
+  final BoardPosition? enPassantCapturedPos;
 
   const ChessMove({
     required this.from,
     required this.to,
     this.capturedPiece,
     this.promotion,
+    this.isCastling = false,
+    this.isEnPassant = false,
+    this.enPassantCapturedPos,
   });
 
   @override
@@ -103,6 +109,17 @@ class ChessEngine {
   final List<ChessPiece> capturedByWhite = [];
   final List<ChessPiece> capturedByBlack = [];
 
+  // Castling rights tracking
+  bool whiteKingMoved = false;
+  bool whiteRook0Moved = false;
+  bool whiteRook7Moved = false;
+  bool blackKingMoved = false;
+  bool blackRook0Moved = false;
+  bool blackRook7Moved = false;
+
+  // En Passant target square (row, col)
+  BoardPosition? enPassantTarget;
+
   ChessEngine() {
     reset();
   }
@@ -113,6 +130,14 @@ class ChessEngine {
     capturedByWhite.clear();
     capturedByBlack.clear();
     currentTurn = PieceColor.white;
+
+    whiteKingMoved = false;
+    whiteRook0Moved = false;
+    whiteRook7Moved = false;
+    blackKingMoved = false;
+    blackRook0Moved = false;
+    blackRook7Moved = false;
+    enPassantTarget = null;
 
     // Black pieces (row 0 & 1)
     board[0][0] = const ChessPiece(PieceType.rook, PieceColor.black);
@@ -141,10 +166,26 @@ class ChessEngine {
     board[7][7] = const ChessPiece(PieceType.rook, PieceColor.white);
   }
 
+  ChessMove? get lastMove => moveHistory.isNotEmpty ? moveHistory.last : null;
+
   ChessPiece? pieceAt(int row, int col) {
     if (row < 0 || row >= 8 || col < 0 || col >= 8) return null;
     return board[row][col];
   }
+
+  BoardPosition? getKingPosition(PieceColor kingColor) {
+    for (int r = 0; r < 8; r++) {
+      for (int c = 0; c < 8; c++) {
+        final p = board[r][c];
+        if (p != null && p.type == PieceType.king && p.color == kingColor) {
+          return BoardPosition(r, c);
+        }
+      }
+    }
+    return null;
+  }
+
+  bool isCheck(PieceColor color) => _isKingInCheck(color);
 
   List<ChessMove> getLegalMovesForPosition(BoardPosition pos) {
     final piece = pieceAt(pos.row, pos.col);
@@ -197,7 +238,11 @@ class ChessEngine {
     final piece = board[move.from.row][move.from.col];
     if (piece == null || piece.color != currentTurn) return false;
 
-    final target = board[move.to.row][move.to.col];
+    // Handle captures
+    final target = move.isEnPassant && move.enPassantCapturedPos != null
+        ? board[move.enPassantCapturedPos!.row][move.enPassantCapturedPos!.col]
+        : board[move.to.row][move.to.col];
+
     if (target != null) {
       if (currentTurn == PieceColor.white) {
         capturedByWhite.add(target);
@@ -211,51 +256,148 @@ class ChessEngine {
     if (piece.type == PieceType.pawn) {
       if ((piece.color == PieceColor.white && move.to.row == 0) ||
           (piece.color == PieceColor.black && move.to.row == 7)) {
-        finalPiece = ChessPiece(PieceType.queen, piece.color);
+        finalPiece = ChessPiece(move.promotion ?? PieceType.queen, piece.color);
       }
+    }
+
+    // Castling rook movement
+    if (move.isCastling) {
+      final r = move.from.row;
+      if (move.to.col == 6) {
+        // Kingside: Rook moves from 7 to 5
+        board[r][5] = board[r][7];
+        board[r][7] = null;
+      } else if (move.to.col == 2) {
+        // Queenside: Rook moves from 0 to 3
+        board[r][3] = board[r][0];
+        board[r][0] = null;
+      }
+    }
+
+    // En Passant capture cleanup
+    if (move.isEnPassant && move.enPassantCapturedPos != null) {
+      board[move.enPassantCapturedPos!.row][move.enPassantCapturedPos!.col] = null;
     }
 
     board[move.to.row][move.to.col] = finalPiece;
     board[move.from.row][move.from.col] = null;
-    moveHistory.add(move);
 
+    // Update castling rights
+    if (piece.type == PieceType.king) {
+      if (piece.color == PieceColor.white) whiteKingMoved = true;
+      if (piece.color == PieceColor.black) blackKingMoved = true;
+    } else if (piece.type == PieceType.rook) {
+      if (piece.color == PieceColor.white) {
+        if (move.from.col == 0) whiteRook0Moved = true;
+        if (move.from.col == 7) whiteRook7Moved = true;
+      } else {
+        if (move.from.col == 0) blackRook0Moved = true;
+        if (move.from.col == 7) blackRook7Moved = true;
+      }
+    }
+
+    // Update En Passant target
+    if (piece.type == PieceType.pawn && (move.from.row - move.to.row).abs() == 2) {
+      enPassantTarget = BoardPosition((move.from.row + move.to.row) ~/ 2, move.from.col);
+    } else {
+      enPassantTarget = null;
+    }
+
+    moveHistory.add(move);
     currentTurn = currentTurn == PieceColor.white ? PieceColor.black : PieceColor.white;
     return true;
+  }
+
+  void undoMove() {
+    if (moveHistory.isEmpty) return;
+    final move = moveHistory.removeLast();
+
+    final prevTurn = currentTurn == PieceColor.white ? PieceColor.black : PieceColor.white;
+    final piece = board[move.to.row][move.to.col];
+
+    // Revert piece
+    ChessPiece restoredPiece = piece ?? const ChessPiece(PieceType.pawn, PieceColor.white);
+    if (move.promotion != null) {
+      restoredPiece = ChessPiece(PieceType.pawn, prevTurn);
+    }
+
+    board[move.from.row][move.from.col] = restoredPiece;
+    board[move.to.row][move.to.col] = move.isEnPassant ? null : move.capturedPiece;
+
+    if (move.isCastling) {
+      final r = move.from.row;
+      if (move.to.col == 6) {
+        board[r][7] = board[r][5];
+        board[r][5] = null;
+      } else if (move.to.col == 2) {
+        board[r][0] = board[r][3];
+        board[r][3] = null;
+      }
+    }
+
+    if (move.isEnPassant && move.enPassantCapturedPos != null) {
+      board[move.enPassantCapturedPos!.row][move.enPassantCapturedPos!.col] = move.capturedPiece;
+    }
+
+    // Remove from captured lists
+    if (move.capturedPiece != null) {
+      if (prevTurn == PieceColor.white) {
+        capturedByWhite.remove(move.capturedPiece);
+      } else {
+        capturedByBlack.remove(move.capturedPiece);
+      }
+    }
+
+    currentTurn = prevTurn;
   }
 
   void _applyRawMove(ChessMove move) {
     board[move.to.row][move.to.col] = board[move.from.row][move.from.col];
     board[move.from.row][move.from.col] = null;
+
+    if (move.isCastling) {
+      final r = move.from.row;
+      if (move.to.col == 6) {
+        board[r][5] = board[r][7];
+        board[r][7] = null;
+      } else if (move.to.col == 2) {
+        board[r][3] = board[r][0];
+        board[r][0] = null;
+      }
+    }
   }
 
   void _undoRawMove(ChessMove move) {
     board[move.from.row][move.from.col] = board[move.to.row][move.to.col];
     board[move.to.row][move.to.col] = move.capturedPiece;
+
+    if (move.isCastling) {
+      final r = move.from.row;
+      if (move.to.col == 6) {
+        board[r][7] = board[r][5];
+        board[r][5] = null;
+      } else if (move.to.col == 2) {
+        board[r][0] = board[r][3];
+        board[r][3] = null;
+      }
+    }
   }
 
   bool _isKingInCheck(PieceColor kingColor) {
-    BoardPosition? kingPos;
-    for (int r = 0; r < 8; r++) {
-      for (int c = 0; c < 8; c++) {
-        final p = board[r][c];
-        if (p != null && p.type == PieceType.king && p.color == kingColor) {
-          kingPos = BoardPosition(r, c);
-          break;
-        }
-      }
-      if (kingPos != null) break;
-    }
-
+    final kingPos = getKingPosition(kingColor);
     if (kingPos == null) return true; // King missing
 
     final opponentColor = kingColor == PieceColor.white ? PieceColor.black : PieceColor.white;
+    return _isSquareAttacked(kingPos, opponentColor);
+  }
 
+  bool _isSquareAttacked(BoardPosition pos, PieceColor byColor) {
     for (int r = 0; r < 8; r++) {
       for (int c = 0; c < 8; c++) {
         final p = board[r][c];
-        if (p != null && p.color == opponentColor) {
-          final moves = _generatePseudoMoves(BoardPosition(r, c), p);
-          if (moves.any((m) => m.to == kingPos)) {
+        if (p != null && p.color == byColor) {
+          final moves = _generatePseudoMoves(BoardPosition(r, c), p, ignoreCastling: true);
+          if (moves.any((m) => m.to == pos)) {
             return true;
           }
         }
@@ -264,7 +406,7 @@ class ChessEngine {
     return false;
   }
 
-  List<ChessMove> _generatePseudoMoves(BoardPosition pos, ChessPiece piece) {
+  List<ChessMove> _generatePseudoMoves(BoardPosition pos, ChessPiece piece, {bool ignoreCastling = false}) {
     final moves = <ChessMove>[];
     final r = pos.row;
     final c = pos.col;
@@ -293,6 +435,19 @@ class ChessEngine {
             final target = board[capPos.row][capPos.col];
             if (target != null && target.color != piece.color) {
               moves.add(ChessMove(from: pos, to: capPos, capturedPiece: target));
+            } else if (enPassantTarget != null && capPos == enPassantTarget) {
+              // En Passant capture
+              final epPawnPos = BoardPosition(r, c + dc);
+              final epPawn = board[epPawnPos.row][epPawnPos.col];
+              if (epPawn != null && epPawn.color != piece.color) {
+                moves.add(ChessMove(
+                  from: pos,
+                  to: capPos,
+                  capturedPiece: epPawn,
+                  isEnPassant: true,
+                  enPassantCapturedPos: epPawnPos,
+                ));
+              }
             }
           }
         }
@@ -342,6 +497,36 @@ class ChessEngine {
             }
           }
         }
+
+        // Castling moves
+        if (!ignoreCastling) {
+          final isWhite = piece.color == PieceColor.white;
+          final kingMoved = isWhite ? whiteKingMoved : blackKingMoved;
+          final rk0Moved = isWhite ? whiteRook0Moved : blackRook0Moved;
+          final rk7Moved = isWhite ? whiteRook7Moved : blackRook7Moved;
+          final oppColor = isWhite ? PieceColor.black : PieceColor.white;
+
+          if (!kingMoved && !_isSquareAttacked(pos, oppColor)) {
+            // Kingside castling (col 4 -> 6)
+            if (!rk7Moved &&
+                board[r][5] == null &&
+                board[r][6] == null &&
+                !_isSquareAttacked(BoardPosition(r, 5), oppColor) &&
+                !_isSquareAttacked(BoardPosition(r, 6), oppColor)) {
+              moves.add(ChessMove(from: pos, to: BoardPosition(r, 6), isCastling: true));
+            }
+
+            // Queenside castling (col 4 -> 2)
+            if (!rk0Moved &&
+                board[r][1] == null &&
+                board[r][2] == null &&
+                board[r][3] == null &&
+                !_isSquareAttacked(BoardPosition(r, 3), oppColor) &&
+                !_isSquareAttacked(BoardPosition(r, 2), oppColor)) {
+              moves.add(ChessMove(from: pos, to: BoardPosition(r, 2), isCastling: true));
+            }
+          }
+        }
         break;
     }
 
@@ -374,7 +559,7 @@ class ChessEngine {
     final moves = getAllLegalMoves(aiColor);
     if (moves.isEmpty) return null;
 
-    moves.shuffle(Random()); // Non-deterministic equal moves
+    moves.shuffle(Random());
     ChessMove? bestMove;
     int bestVal = -999999;
 
@@ -400,7 +585,7 @@ class ChessEngine {
     final moves = getAllLegalMoves(turn);
     if (moves.isEmpty) {
       if (_isKingInCheck(turn)) {
-        return -50000; // Checkmate loss
+        return -50000;
       }
       return 0; // Stalemate
     }
@@ -418,7 +603,7 @@ class ChessEngine {
         alpha = maxScore;
       }
       if (alpha >= beta) {
-        break; // Alpha-beta cutoff
+        break;
       }
     }
     return maxScore;

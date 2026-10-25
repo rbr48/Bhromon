@@ -121,12 +121,22 @@ class Card29Engine {
     return bestPlay;
   }
 
+  /// Checks if a player's hand contains Royalty (King and Queen of the Trump suit).
+  static bool hasRoyalty(List<Card29> hand, CardSuit? trumpSuit) {
+    if (trumpSuit == null) return false;
+    final hasKing = hand.any((c) => c.suit == trumpSuit && c.rank == CardRank.king);
+    final hasQueen = hand.any((c) => c.suit == trumpSuit && c.rank == CardRank.queen);
+    return hasKing && hasQueen;
+  }
+
   /// Validates whether a card can be legally played according to 29 rules.
   static bool isCardLegal({
     required Card29 card,
     required List<Card29> hand,
     required CardSuit? leadSuit,
     required bool isTrumpRevealed,
+    CardSuit? trumpSuit,
+    bool mustPlayTrumpIfHeld = false,
   }) {
     if (!hand.contains(card)) return false;
     if (leadSuit == null) return true; // First card in trick can be any card
@@ -137,7 +147,15 @@ class Card29Engine {
       return card.suit == leadSuit;
     }
 
-    // If player does not have lead suit, any card can be played (trumping or discarding)
+    // If player cannot follow suit and trump is revealed:
+    if (isTrumpRevealed && trumpSuit != null && mustPlayTrumpIfHeld) {
+      final hasTrump = hand.any((c) => c.suit == trumpSuit);
+      if (hasTrump) {
+        return card.suit == trumpSuit;
+      }
+    }
+
+    // If player does not have lead suit (and no trump restriction), any card can be played
     return true;
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'card29_engine.dart';
 
 enum GamePhase {
@@ -7,6 +8,7 @@ enum GamePhase {
   trumpSelection,
   playing,
   roundOver,
+  matchOver,
 }
 
 class Card29Screen extends StatefulWidget {
@@ -33,6 +35,9 @@ class _Card29ScreenState extends State<Card29Screen> {
   // Trump
   CardSuit? _trumpSuit;
   bool _isTrumpRevealed = false;
+  int _trumpRevealedBy = -1;
+  bool _mustPlayTrumpOnThisTurn = false;
+  bool _royaltyClaimed = false;
   
   // Current trick
   final List<PlayedCard> _currentTrick = [];
@@ -41,12 +46,15 @@ class _Card29ScreenState extends State<Card29Screen> {
   // Points & Trumps
   int _team1Points = 0; // South (0) + North (2)
   int _team2Points = 0; // East (1) + West (3)
-  int _team1GamesWon = 0;
-  int _team2GamesWon = 0;
+  int _team1MatchPips = 0; // First to 6 wins the Grand Tour match!
+  int _team2MatchPips = 0;
   int _trickCount = 0;
   
   String _statusMessage = 'Welcome to 29! Dealing cards...';
   bool _isBotThinking = false;
+
+  Timer? _botTimer;
+  Timer? _trickTimer;
 
   final List<String> _playerNames = ['You (South)', 'East (Bot)', 'North (Partner)', 'West (Bot)'];
 
@@ -56,7 +64,17 @@ class _Card29ScreenState extends State<Card29Screen> {
     _startNewRound();
   }
 
+  @override
+  void dispose() {
+    _botTimer?.cancel();
+    _trickTimer?.cancel();
+    super.dispose();
+  }
+
   void _startNewRound() {
+    _botTimer?.cancel();
+    _trickTimer?.cancel();
+
     final deck = Card29Engine.createDeck();
     _fullDeck.clear();
     _fullDeck.addAll(deck);
@@ -76,6 +94,9 @@ class _Card29ScreenState extends State<Card29Screen> {
       _currentTurn = 0;
       _trumpSuit = null;
       _isTrumpRevealed = false;
+      _trumpRevealedBy = -1;
+      _mustPlayTrumpOnThisTurn = false;
+      _royaltyClaimed = false;
       _currentTrick.clear();
       _currentLeadSuit = null;
       _team1Points = 0;
@@ -83,6 +104,14 @@ class _Card29ScreenState extends State<Card29Screen> {
       _trickCount = 0;
       _statusMessage = 'Place your bid (16-28) or Pass';
     });
+  }
+
+  void _resetGrandMatch() {
+    setState(() {
+      _team1MatchPips = 0;
+      _team2MatchPips = 0;
+    });
+    _startNewRound();
   }
 
   void _sortHand(List<Card29> hand) {
@@ -97,6 +126,7 @@ class _Card29ScreenState extends State<Card29Screen> {
   // --- BIDDING LOGIC ---
   void _submitBid(int bid) {
     if (bid <= _highestBid || bid > Card29Engine.maxBid) return;
+    HapticFeedback.selectionClick();
 
     setState(() {
       _highestBid = bid;
@@ -109,6 +139,7 @@ class _Card29ScreenState extends State<Card29Screen> {
   }
 
   void _submitPass() {
+    HapticFeedback.selectionClick();
     setState(() {
       _consecutivePasses++;
       _statusMessage = '${_playerNames[_currentTurn]} passes.';
@@ -129,7 +160,7 @@ class _Card29ScreenState extends State<Card29Screen> {
       setState(() {
         _highestBid = 16;
         _highestBidder = 0;
-        _statusMessage = 'All passed. You must play for 16!';
+        _statusMessage = 'All passed. You must lead the bid for 16!';
       });
       _endBidding();
       return;
@@ -146,12 +177,12 @@ class _Card29ScreenState extends State<Card29Screen> {
 
   void _triggerBotBid() {
     _isBotThinking = true;
-    Timer(const Duration(milliseconds: 700), () {
+    _botTimer?.cancel();
+    _botTimer = Timer(const Duration(milliseconds: 650), () {
       if (!mounted) return;
       _isBotThinking = false;
       
       final botHand = _hands[_currentTurn];
-      // Simple heuristic: count Jack and Nines in bot's hand
       int highPoints = 0;
       for (final c in botHand) {
         if (c.rank == CardRank.jack) highPoints += 3;
@@ -161,14 +192,16 @@ class _Card29ScreenState extends State<Card29Screen> {
 
       int maxBotBid = 15;
       if (highPoints >= 7) {
-        maxBotBid = 19;
+        maxBotBid = 22;
       } else if (highPoints >= 5) {
-        maxBotBid = 17;
+        maxBotBid = 19;
       } else if (highPoints >= 4) {
+        maxBotBid = 17;
+      } else if (highPoints >= 3) {
         maxBotBid = 16;
       }
 
-      if (maxBotBid > _highestBid && maxBotBid <= 20) {
+      if (maxBotBid > _highestBid && maxBotBid <= 24) {
         _submitBid(_highestBid + 1);
       } else {
         _submitPass();
@@ -180,7 +213,7 @@ class _Card29ScreenState extends State<Card29Screen> {
     if (_highestBidder == 0) {
       setState(() {
         _phase = GamePhase.trumpSelection;
-        _statusMessage = 'You won the bid at $_highestBid! Select a Trump suit.';
+        _statusMessage = 'You won the bid at $_highestBid! Select the secret Trump suit.';
       });
     } else {
       // Bot chooses trump
@@ -201,7 +234,7 @@ class _Card29ScreenState extends State<Card29Screen> {
       _trumpSuit = bestSuit;
 
       setState(() {
-        _statusMessage = '${_playerNames[_highestBidder]} won at $_highestBid and set the trump card.';
+        _statusMessage = '${_playerNames[_highestBidder]} won the bid at $_highestBid and set the trump card.';
       });
 
       _dealSecondBatch();
@@ -209,13 +242,13 @@ class _Card29ScreenState extends State<Card29Screen> {
   }
 
   void _selectTrump(CardSuit suit) {
+    HapticFeedback.mediumImpact();
     _trumpSuit = suit;
-
     _dealSecondBatch();
   }
 
   void _dealSecondBatch() {
-    // Deal next 4 cards to each player
+    // Deal remaining 4 cards to each player
     for (int i = 0; i < 4; i++) {
       _hands[i].addAll(_fullDeck.sublist(16 + i * 4, 16 + (i + 1) * 4));
       _sortHand(_hands[i]);
@@ -224,7 +257,7 @@ class _Card29ScreenState extends State<Card29Screen> {
     setState(() {
       _phase = GamePhase.playing;
       _currentTurn = _highestBidder;
-      _statusMessage = 'Game starts! ${_playerNames[_currentTurn]} leads the first trick.';
+      _statusMessage = 'Cards dealt! ${_playerNames[_currentTurn]} leads the first trick.';
     });
 
     if (_currentTurn != 0) {
@@ -234,10 +267,13 @@ class _Card29ScreenState extends State<Card29Screen> {
 
   // --- PLAY LOGIC ---
   void _playCard(int playerIdx, Card29 card) {
+    HapticFeedback.lightImpact();
+
     setState(() {
       _hands[playerIdx].remove(card);
       _currentTrick.add(PlayedCard(playerIndex: playerIdx, card: card));
       _currentLeadSuit ??= card.suit;
+      _mustPlayTrumpOnThisTurn = false; // Fulfilled
     });
 
     if (_currentTrick.length == 4) {
@@ -253,7 +289,8 @@ class _Card29ScreenState extends State<Card29Screen> {
   }
 
   void _resolveTrick() {
-    Timer(const Duration(milliseconds: 1200), () {
+    _trickTimer?.cancel();
+    _trickTimer = Timer(const Duration(milliseconds: 1100), () {
       if (!mounted) return;
 
       final winnerPlay = Card29Engine.determineTrickWinner(
@@ -271,7 +308,7 @@ class _Card29ScreenState extends State<Card29Screen> {
       final isTeam1 = (winner == 0 || winner == 2);
       
       _trickCount++;
-      // Last trick gets +1 bonus point
+      // Last trick gets +1 bonus point in 29
       if (_trickCount == 8) {
         trickPts += 1;
       }
@@ -307,33 +344,61 @@ class _Card29ScreenState extends State<Card29Screen> {
     bool bidderWon = bidderScore >= target;
 
     setState(() {
-      _phase = GamePhase.roundOver;
       if (bidderWon) {
         if (bidderIsTeam1) {
-          _team1GamesWon++;
-          _statusMessage = 'Victory! Team 1 made the bid ($bidderScore/$_highestBid). +1 Game Point!';
+          _team1MatchPips++;
+          _statusMessage = 'Victory! Team 1 made the bid ($bidderScore/$_highestBid). +1 Match Pip!';
         } else {
-          _team2GamesWon++;
-          _statusMessage = 'Team 2 made the bid ($bidderScore/$_highestBid). +1 Game Point to opponents!';
+          _team2MatchPips++;
+          _statusMessage = 'Team 2 made the bid ($bidderScore/$_highestBid). +1 Match Pip to opponents!';
         }
       } else {
         if (bidderIsTeam1) {
-          _team2GamesWon++;
-          _statusMessage = 'Set! Team 1 failed bid ($bidderScore/$_highestBid). +1 Point to opponents!';
+          _team2MatchPips++;
+          _statusMessage = 'Set! Team 1 fell short ($bidderScore/$_highestBid). +1 Match Pip to opponents!';
         } else {
-          _team1GamesWon++;
-          _statusMessage = 'Opponents set! Team 2 failed bid ($bidderScore/$_highestBid). +1 Point to you!';
+          _team1MatchPips++;
+          _statusMessage = 'Opponents set! Team 2 failed bid ($bidderScore/$_highestBid). +1 Match Pip to you!';
         }
+      }
+
+      if (_team1MatchPips >= 6 || _team2MatchPips >= 6) {
+        _phase = GamePhase.matchOver;
+      } else {
+        _phase = GamePhase.roundOver;
       }
     });
   }
 
   void _revealTrump() {
     if (_isTrumpRevealed || _trumpSuit == null) return;
+    HapticFeedback.heavyImpact();
 
     setState(() {
       _isTrumpRevealed = true;
+      _trumpRevealedBy = _currentTurn;
+      // If current player has trump, they must play it
+      if (_hands[_currentTurn].any((c) => c.suit == _trumpSuit)) {
+        _mustPlayTrumpOnThisTurn = true;
+      }
       _statusMessage = '${_playerNames[_currentTurn]} revealed Trump: ${_trumpSuit!.name} (${_trumpSuit!.symbol})!';
+    });
+  }
+
+  void _claimRoyalty() {
+    if (_royaltyClaimed || !_isTrumpRevealed || _trumpSuit == null) return;
+    HapticFeedback.mediumImpact();
+
+    final isBidderTeam = (_highestBidder == 0 || _highestBidder == 2);
+    setState(() {
+      _royaltyClaimed = true;
+      if (isBidderTeam) {
+        _team1Points += 4;
+        _statusMessage = 'Royalty (K & Q of Trump) claimed! +4 Points to Team 1!';
+      } else {
+        _team2Points = (_team2Points - 4).clamp(0, 29);
+        _statusMessage = 'Royalty (K & Q of Trump) claimed! -4 Points from opponents!';
+      }
     });
   }
 
@@ -341,7 +406,8 @@ class _Card29ScreenState extends State<Card29Screen> {
     if (_phase != GamePhase.playing) return;
     _isBotThinking = true;
 
-    Timer(const Duration(milliseconds: 900), () {
+    _botTimer?.cancel();
+    _botTimer = Timer(const Duration(milliseconds: 850), () {
       if (!mounted) return;
       _isBotThinking = false;
 
@@ -349,26 +415,28 @@ class _Card29ScreenState extends State<Card29Screen> {
       if (botHand.isEmpty) return;
 
       // Check if bot can follow suit
+      final cannotFollowSuit = _currentLeadSuit != null && !botHand.any((c) => c.suit == _currentLeadSuit);
+
+      // If cannot follow suit and trump is not revealed, bot reveals trump
+      if (cannotFollowSuit && !_isTrumpRevealed) {
+        _revealTrump();
+      }
+
+      // Filter legal cards
       final legalCards = botHand.where((c) {
         return Card29Engine.isCardLegal(
           card: c,
           hand: botHand,
           leadSuit: _currentLeadSuit,
           isTrumpRevealed: _isTrumpRevealed,
+          trumpSuit: _trumpSuit,
+          mustPlayTrumpIfHeld: _mustPlayTrumpOnThisTurn && _currentTurn == _trumpRevealedBy,
         );
       }).toList();
 
-      // If cannot follow suit and trump not revealed, bot reveals trump
-      if (_currentLeadSuit != null && 
-          !_isTrumpRevealed && 
-          !botHand.any((c) => c.suit == _currentLeadSuit)) {
-        _revealTrump();
-      }
-
-      // Pick best legal card
-      Card29 chosenCard = legalCards.first;
+      Card29 chosenCard = legalCards.isNotEmpty ? legalCards.first : botHand.first;
       if (legalCards.length > 1) {
-        // Simple strategy: play lowest power unless partner can't win
+        // Strategy: play lowest power card unless trumping
         legalCards.sort((a, b) => a.power.compareTo(b.power));
         chosenCard = legalCards.first;
       }
@@ -379,8 +447,13 @@ class _Card29ScreenState extends State<Card29Screen> {
 
   @override
   Widget build(BuildContext context) {
+    final canClaimRoyalty = !_royaltyClaimed &&
+        _isTrumpRevealed &&
+        _phase == GamePhase.playing &&
+        Card29Engine.hasRoyalty(_hands[0], _trumpSuit);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F381E), // Emerald casino felt
+      backgroundColor: const Color(0xFF0F381E), // Classic emerald casino felt
       appBar: AppBar(
         title: const Text('29 Card Game (টুয়েন্টি নাইন)', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF092614),
@@ -402,69 +475,89 @@ class _Card29ScreenState extends State<Card29Screen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Top Bar: Score & Round Info
+            // Top Bar: Score, Match Pips & Round Info
             _buildScoreHeader(),
 
             // Table Felt Canvas
             Expanded(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // North (Partner) Seat
-                  Positioned(
-                    top: 12,
-                    child: _buildPlayerSeat(
-                      playerIdx: 2,
-                      name: 'North (Partner)',
-                      cardCount: _hands[2].length,
-                      isTurn: _currentTurn == 2,
-                    ),
-                  ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // North (Partner) Seat
+                      Positioned(
+                        top: 10,
+                        child: _buildPlayerSeat(
+                          playerIdx: 2,
+                          name: 'North (Partner)',
+                          cardCount: _hands[2].length,
+                          isTurn: _currentTurn == 2,
+                        ),
+                      ),
 
-                  // West Seat
-                  Positioned(
-                    left: 12,
-                    child: _buildPlayerSeat(
-                      playerIdx: 3,
-                      name: 'West',
-                      cardCount: _hands[3].length,
-                      isTurn: _currentTurn == 3,
-                    ),
-                  ),
+                      // West Seat
+                      Positioned(
+                        left: 10,
+                        child: _buildPlayerSeat(
+                          playerIdx: 3,
+                          name: 'West',
+                          cardCount: _hands[3].length,
+                          isTurn: _currentTurn == 3,
+                        ),
+                      ),
 
-                  // East Seat
-                  Positioned(
-                    right: 12,
-                    child: _buildPlayerSeat(
-                      playerIdx: 1,
-                      name: 'East',
-                      cardCount: _hands[1].length,
-                      isTurn: _currentTurn == 1,
-                    ),
-                  ),
+                      // East Seat
+                      Positioned(
+                        right: 10,
+                        child: _buildPlayerSeat(
+                          playerIdx: 1,
+                          name: 'East',
+                          cardCount: _hands[1].length,
+                          isTurn: _currentTurn == 1,
+                        ),
+                      ),
 
-                  // Center Felt Table: Trick Area + Trump Indicator
-                  _buildCenterTable(),
+                      // Center Felt Table: Trick Area + Trump Indicator
+                      _buildCenterTable(constraints.maxWidth),
 
-                  // Bottom: Trump Reveal Button & Bidding Controls
-                  if (_phase == GamePhase.bidding && _currentTurn == 0)
-                    Positioned(
-                      bottom: 120,
-                      child: _buildBiddingControls(),
-                    ),
+                      // Royalty Banner
+                      if (canClaimRoyalty)
+                        Positioned(
+                          top: 80,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.star, color: Colors.amber),
+                            label: const Text('Claim Royalty (K & Q of Trump) +4', style: TextStyle(fontWeight: FontWeight.bold)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.purple.shade900,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            ),
+                            onPressed: _claimRoyalty,
+                          ),
+                        ),
 
-                  if (_phase == GamePhase.trumpSelection && _highestBidder == 0)
-                    Positioned(
-                      bottom: 110,
-                      child: _buildTrumpSelector(),
-                    ),
+                      // Bidding Controls
+                      if (_phase == GamePhase.bidding && _currentTurn == 0)
+                        Positioned(
+                          bottom: 110,
+                          child: _buildBiddingControls(),
+                        ),
 
-                  if (_phase == GamePhase.roundOver)
-                    Positioned(
-                      bottom: 110,
-                      child: _buildRoundOverBanner(),
-                    ),
-                ],
+                      if (_phase == GamePhase.trumpSelection && _highestBidder == 0)
+                        Positioned(
+                          bottom: 100,
+                          child: _buildTrumpSelector(),
+                        ),
+
+                      if (_phase == GamePhase.roundOver || _phase == GamePhase.matchOver)
+                        Positioned(
+                          bottom: 90,
+                          child: _buildRoundOverBanner(),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -478,7 +571,7 @@ class _Card29ScreenState extends State<Card29Screen> {
 
   Widget _buildScoreHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: const BoxDecoration(
         color: Color(0xFF092614),
         border: Border(bottom: BorderSide(color: Color(0x33FFFFFF))),
@@ -491,11 +584,11 @@ class _Card29ScreenState extends State<Card29Screen> {
               // Team 1 (You & North)
               Row(
                 children: [
-                  const Icon(Icons.shield, color: Colors.amber, size: 18),
-                  const SizedBox(width: 6),
+                  const Icon(Icons.shield, color: Colors.amber, size: 16),
+                  const SizedBox(width: 4),
                   Text(
-                    'You & North: $_team1Points pts ($_team1GamesWon wins)',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                    'You: $_team1Points pts (Match: $_team1MatchPips/6)',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                   ),
                 ],
               ),
@@ -510,28 +603,27 @@ class _Card29ScreenState extends State<Card29Screen> {
                   _highestBidder != -1
                       ? 'Bid: $_highestBid by ${_playerNames[_highestBidder].split(' ').first}'
                       : 'Bidding...',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
                 ),
               ),
               // Team 2 (East & West)
               Row(
                 children: [
                   Text(
-                    'Opponents: $_team2Points pts ($_team2GamesWon wins)',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    'Opp: $_team2Points pts (Match: $_team2MatchPips/6)',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
-                  const SizedBox(width: 6),
-                  const Icon(Icons.local_fire_department, color: Colors.redAccent, size: 18),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.local_fire_department, color: Colors.redAccent, size: 16),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 4),
-          // Status Notification Banner
           Text(
             _statusMessage,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFFE0E0E0), fontSize: 12, fontStyle: FontStyle.italic),
+            style: const TextStyle(color: Color(0xFFE0E0E0), fontSize: 11, fontStyle: FontStyle.italic),
           ),
         ],
       ),
@@ -548,10 +640,10 @@ class _Card29ScreenState extends State<Card29Screen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             color: isTurn ? Colors.amber : const Color(0x66000000),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isTurn ? Colors.white : Colors.white24,
               width: isTurn ? 2 : 1,
@@ -571,7 +663,7 @@ class _Card29ScreenState extends State<Card29Screen> {
             children: [
               Icon(
                 playerIdx == 0 || playerIdx == 2 ? Icons.person : Icons.smart_toy,
-                size: 14,
+                size: 13,
                 color: isTurn ? Colors.black87 : Colors.white,
               ),
               const SizedBox(width: 4),
@@ -608,10 +700,12 @@ class _Card29ScreenState extends State<Card29Screen> {
     );
   }
 
-  Widget _buildCenterTable() {
+  Widget _buildCenterTable(double maxWidth) {
+    final tableSize = (maxWidth * 0.58).clamp(180.0, 240.0);
+
     return Container(
-      width: 240,
-      height: 240,
+      width: tableSize,
+      height: tableSize,
       decoration: BoxDecoration(
         color: const Color(0xFF134526),
         shape: BoxShape.circle,
@@ -622,7 +716,7 @@ class _Card29ScreenState extends State<Card29Screen> {
         children: [
           // Trump Suit Box
           Positioned(
-            top: 24,
+            top: 16,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
@@ -656,16 +750,15 @@ class _Card29ScreenState extends State<Card29Screen> {
           if (_currentTrick.isEmpty)
             Text(
               _phase == GamePhase.playing ? 'Trick #${_trickCount + 1}' : '29',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.15), fontSize: 28, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.15), fontSize: 26, fontWeight: FontWeight.bold),
             )
           else
             ..._currentTrick.map((play) {
-              // Offset card based on who played it
               Offset offset = Offset.zero;
-              if (play.playerIndex == 0) offset = const Offset(0, 36); // South
-              if (play.playerIndex == 1) offset = const Offset(36, 0); // East
-              if (play.playerIndex == 2) offset = const Offset(0, -36); // North
-              if (play.playerIndex == 3) offset = const Offset(-36, 0); // West
+              if (play.playerIndex == 0) offset = const Offset(0, 32); // South
+              if (play.playerIndex == 1) offset = const Offset(32, 0); // East
+              if (play.playerIndex == 2) offset = const Offset(0, -32); // North
+              if (play.playerIndex == 3) offset = const Offset(-32, 0); // West
 
               return Transform.translate(
                 offset: offset,
@@ -680,7 +773,7 @@ class _Card29ScreenState extends State<Card29Screen> {
               _currentLeadSuit != null &&
               !_hands[0].any((c) => c.suit == _currentLeadSuit))
             Positioned(
-              bottom: 24,
+              bottom: 16,
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.lock_open, size: 14),
                 label: const Text('Ask Trump', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
@@ -698,46 +791,82 @@ class _Card29ScreenState extends State<Card29Screen> {
   }
 
   Widget _buildBiddingControls() {
+    // Generate legal bid increments up to 28
+    final availableBids = <int>[];
+    for (int b = _highestBid + 1; b <= Card29Engine.maxBid; b++) {
+      availableBids.add(b);
+    }
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: 320,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xEE092614),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.amber, width: 1.5),
+        boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10)],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Your Bid:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-          const SizedBox(height: 8),
           Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white70,
-                  side: const BorderSide(color: Colors.white30),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                onPressed: _submitPass,
-                child: const Text('Pass'),
-              ),
-              const SizedBox(width: 8),
-              ...[16, 17, 18, 19, 20].where((b) => b > _highestBid).take(3).map((b) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      foregroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    onPressed: () => _submitBid(b),
-                    child: Text('$b', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                );
-              }),
+              const Text('Your Turn to Bid:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              Text('Current: $_highestBid', style: const TextStyle(color: Colors.amber, fontSize: 11)),
             ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    side: const BorderSide(color: Colors.white30),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  onPressed: _submitPass,
+                  child: const Text('Pass'),
+                ),
+                const SizedBox(width: 6),
+                // Show immediate 4 increments
+                ...availableBids.take(4).map((b) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
+                      onPressed: () => _submitBid(b),
+                      child: Text('$b', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                  );
+                }),
+                // High Bid Quick Picker (up to 28)
+                if (availableBids.length > 4)
+                  PopupMenuButton<int>(
+                    color: const Color(0xFF1B3822),
+                    icon: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(color: Colors.amber.shade700, borderRadius: BorderRadius.circular(6)),
+                      child: const Icon(Icons.more_horiz, color: Colors.black87, size: 18),
+                    ),
+                    tooltip: 'Higher Bids (up to 28)',
+                    onSelected: _submitBid,
+                    itemBuilder: (ctx) => availableBids.skip(4).map((b) {
+                      return PopupMenuItem<int>(
+                        value: b,
+                        child: Text('Bid $b', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      );
+                    }).toList(),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -781,6 +910,7 @@ class _Card29ScreenState extends State<Card29Screen> {
   }
 
   Widget _buildRoundOverBanner() {
+    final isMatchOver = _phase == GamePhase.matchOver;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
@@ -792,16 +922,18 @@ class _Card29ScreenState extends State<Card29Screen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            _statusMessage,
+            isMatchOver
+                ? (_team1MatchPips >= 6 ? '🏆 Grand Victory! Team 1 won the match!' : 'Match Defeat! Opponents won the match.')
+                : _statusMessage,
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
           ),
           const SizedBox(height: 10),
           ElevatedButton.icon(
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Next Deal', style: TextStyle(fontWeight: FontWeight.bold)),
+            icon: Icon(isMatchOver ? Icons.emoji_events : Icons.play_arrow),
+            label: Text(isMatchOver ? 'Start New Match (First to 6)' : 'Next Deal', style: const TextStyle(fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black87),
-            onPressed: _startNewRound,
+            onPressed: isMatchOver ? _resetGrandMatch : _startNewRound,
           ),
         ],
       ),
@@ -813,9 +945,9 @@ class _Card29ScreenState extends State<Card29Screen> {
     final isUserTurn = (_phase == GamePhase.playing && _currentTurn == 0 && !_isBotThinking);
 
     return Container(
-      height: 120,
+      height: 125,
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
       decoration: const BoxDecoration(
         color: Color(0xFF092614),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -827,7 +959,9 @@ class _Card29ScreenState extends State<Card29Screen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                isUserTurn ? 'YOUR TURN - Play a card' : 'Your Cards (South)',
+                isUserTurn
+                    ? (_mustPlayTrumpOnThisTurn ? 'TRUMP REVEALED - Must play Trump!' : 'YOUR TURN - Play a card')
+                    : 'Your Cards (South)',
                 style: TextStyle(
                   color: isUserTurn ? Colors.amber : Colors.white70,
                   fontWeight: FontWeight.bold,
@@ -853,6 +987,8 @@ class _Card29ScreenState extends State<Card29Screen> {
                         hand: userHand,
                         leadSuit: _currentLeadSuit,
                         isTrumpRevealed: _isTrumpRevealed,
+                        trumpSuit: _trumpSuit,
+                        mustPlayTrumpIfHeld: _mustPlayTrumpOnThisTurn && _currentTurn == _trumpRevealedBy,
                       );
 
                   return Padding(
@@ -860,7 +996,7 @@ class _Card29ScreenState extends State<Card29Screen> {
                     child: GestureDetector(
                       onTap: (isUserTurn && isLegal) ? () => _playCard(0, card) : null,
                       child: Opacity(
-                        opacity: (isUserTurn && !isLegal) ? 0.4 : 1.0,
+                        opacity: (isUserTurn && !isLegal) ? 0.35 : 1.0,
                         child: _buildCardView(card, width: 48, height: 72, isInteractive: isLegal),
                       ),
                     ),
@@ -886,7 +1022,7 @@ class _Card29ScreenState extends State<Card29Screen> {
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: isInteractive ? Colors.amber : const Color(0x66000000),
-          width: isInteractive ? 1.5 : 0.8,
+          width: isInteractive ? 2.0 : 0.8,
         ),
         boxShadow: const [
           BoxShadow(
@@ -951,10 +1087,10 @@ class _Card29ScreenState extends State<Card29Screen> {
               Text('• Jack (J) = 3 points\n• Nine (9) = 2 points\n• Ace (A) = 1 point\n• Ten (10) = 1 point\n• K, Q, 8, 7 = 0 points\n• Last trick bonus = 1 point\nTotal = 29 points'),
               SizedBox(height: 12),
               Text(
-                'Gameplay:',
+                'Gameplay & Trump:',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              Text('1. Bidding starts at 16 up to 28.\n2. Highest bidder picks a trump suit card (kept hidden).\n3. Players must follow the lead suit if they possess it.\n4. If unable to follow suit, players can reveal the trump card.\n5. Trumps beat all non-trump cards.'),
+              Text('1. Bidding starts at 16 up to 28.\n2. Highest bidder picks a secret trump suit.\n3. Players must follow lead suit. If without lead suit, players can Ask Trump.\n4. Once Trump is revealed, players must play Trump if they possess it.\n5. Holding King & Queen of Trump allows claiming "Royalty" (+4 points).\n6. First team to 6 match pips wins the Grand Tour Match!'),
             ],
           ),
         ),

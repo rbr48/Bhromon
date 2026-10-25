@@ -54,5 +54,34 @@ void main() {
       expect(aiMove!.from.isValid, isTrue);
       expect(aiMove.to.isValid, isTrue);
     });
+
+    test('Kingside Castling executes and moves both King and Rook', () {
+      // Clear path for white kingside castling: clear f1 (7,5) and g1 (7,6)
+      engine.board[7][5] = null;
+      engine.board[7][6] = null;
+
+      final kingMoves = engine.getLegalMovesForPosition(const BoardPosition(7, 4));
+      final castleMove = kingMoves.where((m) => m.isCastling && m.to == const BoardPosition(7, 6)).toList();
+      expect(castleMove.isNotEmpty, isTrue);
+
+      final success = engine.makeMove(castleMove.first);
+      expect(success, isTrue);
+      expect(engine.pieceAt(7, 6)?.type, equals(PieceType.king));
+      expect(engine.pieceAt(7, 5)?.type, equals(PieceType.rook));
+      expect(engine.pieceAt(7, 4), isNull);
+      expect(engine.pieceAt(7, 7), isNull);
+    });
+
+    test('Takeback undoMove reverts game state cleanly', () {
+      const e4Move = ChessMove(from: BoardPosition(6, 4), to: BoardPosition(4, 4));
+      engine.makeMove(e4Move);
+      expect(engine.currentTurn, equals(PieceColor.black));
+      expect(engine.pieceAt(4, 4)?.type, equals(PieceType.pawn));
+
+      engine.undoMove();
+      expect(engine.currentTurn, equals(PieceColor.white));
+      expect(engine.pieceAt(4, 4), isNull);
+      expect(engine.pieceAt(6, 4)?.type, equals(PieceType.pawn));
+    });
   });
 }
