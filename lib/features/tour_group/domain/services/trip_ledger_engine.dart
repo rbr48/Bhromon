@@ -25,6 +25,10 @@ class LedgerMemberRow {
   final int sharePaisa;
   final int netPaisa;
 
+  /// Someone who paid or deposited but has since left the tour. They keep
+  /// their balance so the books still add up, but they owe no share.
+  final bool isFormerMember;
+
   const LedgerMemberRow({
     required this.id,
     required this.name,
@@ -34,6 +38,7 @@ class LedgerMemberRow {
     required this.contributedPaisa,
     required this.sharePaisa,
     required this.netPaisa,
+    this.isFormerMember = false,
   });
 
   double get depositTaka => depositPaisa / 100.0;
@@ -100,16 +105,59 @@ class LedgerSummary {
 }
 
 /// Pure Dart financial ledger engine operating in whole integer paisa.
-/// Eliminates floating-point rounding errors and minimizes cash settlement transfers.
+/// Eliminates floating-point rounding errors and keeps the books balanced to
+/// the paisa: every expense share and every deposit lands somewhere.
 class TripLedgerEngine {
   static const String fundLabel = 'ট্যুর ফান্ড';
   static const int maxSafeAmountTaka = 10000000;
 
+  /// Converts taka to paisa. Throws [ArgumentError] for negative, non-finite
+  /// or above-cap amounts. Null and zero both return 0.
   static int toPaisa(num? taka) {
-    if (taka == null || taka.isNaN || taka.isInfinite) return 0;
-    final clamped =
-        max(0.0, min(maxSafeAmountTaka.toDouble(), taka.toDouble()));
-    return (clamped * 100).round();
+    if (taka == null) return 0;
+    if (taka.isNaN || taka.isInfinite) {
+      throw ArgumentError.value(taka, 'taka', 'must be a finite number');
+    }
+    if (taka < 0) {
+      throw ArgumentError.value(taka, 'taka', 'must not be negative');
+    }
+    if (taka > maxSafeAmountTaka) {
+      throw ArgumentError.value(taka, 'taka', 'exceeds the ledger limit');
+    }
+    return (taka * 100).round();
+  }
+
+  /// Parses an amount typed by a user. Accepts Bengali digits, commas, the ৳
+  /// sign and up to two decimal places. Returns null when the input is not a
+  /// positive amount within the limit.
+  static int? parseTakaInput(String raw) {
+    const bengaliDigits = '০১২৩৪৫৬৭৮৯';
+    var text = raw.trim().replaceAll(RegExp(r'[,\s৳]'), '');
+    for (var i = 0; i < 10; i++) {
+      text = text.replaceAll(bengaliDigits[i], '$i');
+    }
+    final match = RegExp(r'^(\d{1,8})(?:\.(\d{1,2}))?$').firstMatch(text);
+    if (match == null) return null;
+    final whole = int.parse(match.group(1)!);
+    final fraction = (match.group(2) ?? '').padRight(2, '0');
+    final paisa = whole * 100 + int.parse(fraction);
+    if (paisa <= 0 || paisa > maxSafeAmountTaka * 100) return null;
+    return paisa;
+  }
+
+  /// Formats paisa as "৳1,250" or "৳1,250.50" (two decimals only when needed).
+  static String formatTaka(int paisa) {
+    final sign = paisa < 0 ? '-' : '';
+    final absolute = paisa.abs();
+    final whole = (absolute ~/ 100).toString();
+    final grouped = StringBuffer();
+    for (var i = 0; i < whole.length; i++) {
+      if (i > 0 && (whole.length - i) % 3 == 0) grouped.write(',');
+      grouped.write(whole[i]);
+    }
+    final cents = absolute % 100;
+    final decimals = cents == 0 ? '' : '.${cents.toString().padLeft(2, '0')}';
+    return '$sign৳$grouped$decimals';
   }
 
   static double toTaka(int paisa) => paisa / 100.0;
@@ -140,7 +188,9 @@ class TripLedgerEngine {
     return parts;
   }
 
-  /// Calculates settlements that balance all debts and credits with minimum transactions.
+  /// Pairs the largest debtor with the largest creditor, repeatedly, until
+  /// all balances are cleared. This greedy method is simple and usually close
+  /// to the fewest transfers possible, but it is not guaranteed to be minimal.
   static List<SettlementTransaction> settle(
       List<({String name, int netPaisa, bool fund})> parties) {
     final balanceSum = parties.fold<int>(0, (sum, p) => sum + p.netPaisa);
@@ -196,19 +246,51 @@ class TripLedgerEngine {
     return transactions;
   }
 
+  static String _key(String id) => id.trim().toLowerCase();
+
   /// Computes the complete multi-member ledger summary.
+  ///
+  /// Each expense is split only among its [ExpenseItem.participantIds] (or all
+  /// current members when that is null), weighted by family size. Payers and
+  /// depositors who are no longer members still appear, with no share, so no
+  /// money disappears from the books.
   static LedgerSummary computeLedger({
     required List<LedgerMemberInput> members,
     required List<ExpenseItem> expenses,
+    List<DepositItem> deposits = const [],
   }) {
+    final memberIndex = <String, int>{};
+    for (var i = 0; i < members.length; i++) {
+      memberIndex.putIfAbsent(_key(members[i].id), () => i);
+    }
     final weights = members.map((m) => max(1, m.familyCount)).toList();
     final headcount = weights.fold<int>(0, (sum, w) => sum + w);
+    final allMemberIdx = List.generate(members.length, (i) => i);
+
+    // Everyone who has money in the books, including former members.
+    final extraNames = <String, String>{};
+    final depositByKey = <String, int>{};
+    int totalDepositsPaisa = 0;
+
+    // Pre-totalled deposits per member, plus individual deposit records.
+    for (final m in members) {
+      final key = _key(m.id);
+      totalDepositsPaisa += m.depositPaisa;
+      depositByKey[key] = (depositByKey[key] ?? 0) + m.depositPaisa;
+    }
+    for (final dep in deposits) {
+      final key = _key(dep.memberId);
+      totalDepositsPaisa += dep.amountPaisa;
+      depositByKey[key] = (depositByKey[key] ?? 0) + dep.amountPaisa;
+      if (!memberIndex.containsKey(key)) {
+        extraNames.putIfAbsent(key, () => dep.memberName);
+      }
+    }
 
     int totalExpensePaisa = 0;
     int fundPaidPaisa = 0;
-    final directPaisaMap = <String, int>{for (var m in members) m.id: 0};
-
-    // Category tracking
+    final directPaisa = <String, int>{};
+    final sharePaisa = List<int>.filled(members.length, 0);
     final categoryMap = <String, int>{};
 
     for (final exp in expenses) {
@@ -222,35 +304,70 @@ class TripLedgerEngine {
       if (payerId == null || payerId.isEmpty) {
         fundPaidPaisa += paisa;
       } else {
-        directPaisaMap[payerId] = (directPaisaMap[payerId] ?? 0) + paisa;
+        final key = _key(payerId);
+        directPaisa[key] = (directPaisa[key] ?? 0) + paisa;
+        if (!memberIndex.containsKey(key)) {
+          extraNames.putIfAbsent(key, () => exp.paidByName ?? payerId);
+        }
+      }
+
+      // Pick who shares this expense: the named participants who are still
+      // members, or everyone when none are named.
+      var sharers = exp.participantIds == null
+          ? allMemberIdx
+          : exp.participantIds!
+              .map((id) => memberIndex[_key(id)])
+              .whereType<int>()
+              .toSet()
+              .toList();
+      if (sharers.isEmpty) sharers = allMemberIdx;
+      if (sharers.isEmpty) continue; // No members yet, so nothing to share.
+
+      final parts = allocate(paisa, sharers.map((i) => weights[i]).toList());
+      for (var k = 0; k < sharers.length; k++) {
+        sharePaisa[sharers[k]] += parts[k];
       }
     }
 
-    final shares = allocate(totalExpensePaisa, weights);
     final rows = <LedgerMemberRow>[];
-
-    for (int i = 0; i < members.length; i++) {
+    for (var i = 0; i < members.length; i++) {
       final m = members[i];
-      final direct = directPaisaMap[m.id] ?? 0;
-      final contributed = m.depositPaisa + direct;
-      final net = contributed - shares[i];
-
+      final key = _key(m.id);
+      final deposit = depositByKey[key] ?? 0;
+      final direct = directPaisa[key] ?? 0;
+      final contributed = deposit + direct;
       rows.add(
         LedgerMemberRow(
           id: m.id,
           name: m.name,
           familyCount: weights[i],
-          depositPaisa: m.depositPaisa,
+          depositPaisa: deposit,
           directPaidPaisa: direct,
           contributedPaisa: contributed,
-          sharePaisa: shares[i],
-          netPaisa: net,
+          sharePaisa: sharePaisa[i],
+          netPaisa: contributed - sharePaisa[i],
         ),
       );
     }
 
-    final totalDepositsPaisa =
-        members.fold<int>(0, (sum, m) => sum + m.depositPaisa);
+    for (final key in extraNames.keys) {
+      final deposit = depositByKey[key] ?? 0;
+      final direct = directPaisa[key] ?? 0;
+      rows.add(
+        LedgerMemberRow(
+          id: key,
+          name: extraNames[key]!,
+          familyCount: 0,
+          depositPaisa: deposit,
+          directPaidPaisa: direct,
+          contributedPaisa: deposit + direct,
+          sharePaisa: 0,
+          netPaisa: deposit + direct,
+          isFormerMember: true,
+        ),
+      );
+    }
+
     final fundBalancePaisa = totalDepositsPaisa - fundPaidPaisa;
     final netSumPaisa = rows.fold<int>(0, (sum, r) => sum + r.netPaisa);
 

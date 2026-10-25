@@ -87,6 +87,12 @@ describe('Tour Group Firestore rules', () => {
       await assertSucceeds(updateDoc(doc(db('owner'), 'tours', TOUR), { inviteCode: 'NEWCODE1' }));
     });
 
+    test('a removed tour leaves only its owner row, which the owner may clear', async () => {
+      await assertFails(deleteDoc(doc(db('member'), 'memberships', `${TOUR}__${people.owner.email}`)));
+      await assertSucceeds(deleteDoc(doc(db('owner'), 'tours', TOUR)));
+      await assertSucceeds(deleteDoc(doc(db('owner'), 'memberships', `${TOUR}__${people.owner.email}`)));
+    });
+
     test('admin cannot delete the tour, owner can', async () => {
       await assertFails(deleteDoc(doc(db('admin'), 'tours', TOUR)));
       await assertSucceeds(deleteDoc(doc(db('owner'), 'tours', TOUR)));
@@ -216,6 +222,12 @@ describe('Tour Group Firestore rules', () => {
     test('only the author edits the caption', async () => {
       await assertFails(updateDoc(doc(db('admin'), ...postPath), { caption: 'changed' }));
       await assertSucceeds(updateDoc(doc(db('member'), ...postPath), { caption: 'changed' }));
+    });
+
+    test('post author can delete comments on their post; other members cannot', async () => {
+      await setDoc(doc(db('admin'), ...postPath, 'comments', 'c1'), { authorEmail: 'adm@x.com', text: 'nice' });
+      await assertFails(deleteDoc(doc(db('other'), ...postPath, 'comments', 'c1')));
+      await assertSucceeds(deleteDoc(doc(db('member'), ...postPath, 'comments', 'c1')));
     });
 
     test('comments are tied to the commenter and deleted by author or admin', async () => {

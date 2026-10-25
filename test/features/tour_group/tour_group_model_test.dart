@@ -29,7 +29,7 @@ void main() {
       expect(map['destination'], "Cox's Bazar");
       expect(map['originCity'], 'ঢাকা');
       expect(map['tourType'], 'beach');
-      expect(map['schemaVersion'], 3);
+      expect(map['schemaVersion'], 4);
 
       final deserialized = TourGroup.fromMap('tour_123', map);
       expect(deserialized.id, 'tour_123');
@@ -92,8 +92,7 @@ void main() {
       expect(group.allSpots, contains('কংলাক পাহাড় চূড়া (Konglak Peak)'));
     });
 
-    test(
-        'TourMember serializes role owner as admin for Firestore rule compliance',
+    test('TourMember serializes the owner role as owner, matching the rules',
         () {
       final now = DateTime.now();
       final member = TourMember(
@@ -110,14 +109,14 @@ void main() {
       expect(map['tourId'], 'tour_123');
       expect(map['tourName'], 'Cox Bazar Retreat');
       expect(map['email'], 'owner@example.com');
-      expect(map['role'], 'admin');
+      expect(map['role'], 'owner');
       expect(map['status'], 'active');
 
       final deserialized = TourMember.fromMap(map);
       expect(deserialized.tourId, 'tour_123');
       expect(deserialized.tourName, 'Cox Bazar Retreat');
       expect(deserialized.email, 'owner@example.com');
-      expect(deserialized.role, TourRole.admin);
+      expect(deserialized.role, TourRole.owner);
       expect(deserialized.status, TourMemberStatus.active);
     });
 
