@@ -361,7 +361,8 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
         ),
         border: Border.all(color: const Color(0xFFD4AF37), width: 2.5),
         boxShadow: const [
-          BoxShadow(color: Colors.black87, blurRadius: 14, offset: Offset(0, 6)),
+          BoxShadow(
+              color: Colors.black87, blurRadius: 14, offset: Offset(0, 6)),
         ],
       ),
       child: Stack(
