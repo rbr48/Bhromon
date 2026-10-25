@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../pages/full_screen_media_viewer.dart';
@@ -108,7 +109,7 @@ class ChatMediaBubble extends StatelessWidget {
 
   Widget _buildMediaContent(bool isUploading, int decodeWidth) {
     // While uploading, show local file preview
-    if (isUploading && localFile != null) {
+    if (isUploading && !kIsWeb && localFile != null) {
       return Image.file(
         localFile!,
         cacheWidth: decodeWidth,

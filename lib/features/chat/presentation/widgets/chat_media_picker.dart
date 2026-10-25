@@ -1,14 +1,20 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// Result of a media pick operation.
 class MediaPickResult {
-  final File file;
+  final XFile xFile;
+  final File? file;
   final String type; // 'image' | 'video'
 
-  const MediaPickResult({required this.file, required this.type});
+  const MediaPickResult({
+    required this.xFile,
+    this.file,
+    required this.type,
+  });
 }
 
 /// Shows a WhatsApp-style bottom sheet to pick an image or video.
@@ -149,7 +155,8 @@ class _ChatMediaPickerSheet extends StatelessWidget {
     }
 
     final result = MediaPickResult(
-      file: File(xfile.path),
+      xFile: xfile,
+      file: !kIsWeb ? File(xfile.path) : null,
       type: (mode == _PickMode.video) ? 'video' : 'image',
     );
 

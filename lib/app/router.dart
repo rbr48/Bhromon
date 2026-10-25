@@ -28,6 +28,7 @@ import '../features/notifications/presentation/pages/notification_settings_scree
 import '../features/auth/presentation/pages/account_deletion_page.dart';
 import '../features/chat/presentation/pages/chats_list_screen.dart';
 import '../features/chat/presentation/pages/chat_screen.dart';
+import '../features/chat/presentation/pages/call_screen.dart';
 
 import '../features/tour_group/presentation/pages/tour_group_hub_screen.dart';
 import '../features/tour_group/presentation/pages/expense_ledger_screen.dart';
@@ -205,6 +206,24 @@ class AppRouter {
             ChatScreen(
               chatId: state.pathParameters['chatId']!,
               otherUid: otherUid,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/call/:callId',
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return _customPageTransition(
+            state,
+            CallScreen(
+              callId: state.pathParameters['callId']!,
+              localUid: extra['localUid'] as String? ?? '',
+              remoteUid: extra['remoteUid'] as String? ?? '',
+              remoteUserName: extra['remoteUserName'] as String? ?? 'Traveler',
+              remoteAvatarUrl: extra['remoteAvatarUrl'] as String?,
+              isCaller: extra['isCaller'] as bool? ?? false,
+              isVideoCall: extra['isVideoCall'] as bool? ?? true,
             ),
           );
         },

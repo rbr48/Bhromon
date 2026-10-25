@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:bhromon/core/theme/colors.dart';
@@ -24,6 +25,7 @@ class DiscoverScreen extends StatefulWidget {
 class _DiscoverScreenState extends State<DiscoverScreen> {
   final CardSwiperController _swiperController = CardSwiperController();
   bool _loading = true;
+  bool _isDeckFinished = false;
   List<LocationPin> _pins = [];
   final List<LocationPin> _wishlist = [];
   int _currentIndex = 0;
@@ -44,8 +46,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Future<List<LocationPin>> _fetchAllPins() async {
     // Shares the map's pin cache, so opening Discover after the map (or the
     // other way round) costs no extra Firestore reads.
+    double lat = 23.6850;
+    double lng = 90.3563;
+    try {
+      final pos = await Geolocator.getLastKnownPosition();
+      if (pos != null) {
+        lat = pos.latitude;
+        lng = pos.longitude;
+      }
+    } catch (_) {}
+
     final result = await getIt<GetNearbyPinsUseCase>()(
-        GetNearbyPinsParams(lat: 23.6850, lng: 90.3563, radiusKm: 500));
+        GetNearbyPinsParams(lat: lat, lng: lng, radiusKm: 500));
     return result.getOrElse(() => const []);
   }
 
@@ -112,6 +124,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       if (mounted) {
         setState(() {
           _loading = false;
+          _isDeckFinished = false;
+          _currentIndex = 0;
         });
       }
     } catch (e) {
@@ -119,6 +133,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       if (mounted) {
         setState(() {
           _loading = false;
+          _isDeckFinished = false;
+          _currentIndex = 0;
         });
       }
     }
@@ -211,13 +227,21 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     int? currentIndex,
     CardSwiperDirection direction,
   ) {
-    final pin = _pins[previousIndex];
-    if (direction == CardSwiperDirection.right) {
-      _addToWishlist(pin);
+    if (previousIndex >= 0 && previousIndex < _pins.length) {
+      final pin = _pins[previousIndex];
+      if (direction == CardSwiperDirection.right) {
+        _addToWishlist(pin);
+      }
     }
-    setState(() {
-      _currentIndex = currentIndex ?? 0;
-    });
+    if (currentIndex != null) {
+      setState(() {
+        _currentIndex = currentIndex;
+      });
+    } else {
+      setState(() {
+        _isDeckFinished = true;
+      });
+    }
     return true;
   }
 
@@ -312,6 +336,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       );
     }
 
+    final double bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D14),
       appBar: AppBar(
@@ -336,137 +362,197 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           ),
         ],
       ),
-      body: _pins.isEmpty
-          ? _buildEmptyState()
-          : Column(
-              children: [
-                const SizedBox(height: 16),
-                Expanded(
-                  child: CardSwiper(
-                    controller: _swiperController,
-                    cardsCount: _pins.length,
-                    onSwipe: _onSwipe,
-                    numberOfCardsDisplayed: 3,
-                    backCardOffset: const Offset(0, 40),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                    cardBuilder: (context, index, percentX, percentY) {
-                      return _buildCard(_pins[index]);
-                    },
+      // SafeArea prevents the Android 3-button navigation bar and iOS home bar
+      // from overlapping with the action buttons row.
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        child: (_pins.isEmpty || _isDeckFinished)
+            ? _buildEmptyState()
+            : Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: CardSwiper(
+                      controller: _swiperController,
+                      cardsCount: _pins.length,
+                      onSwipe: _onSwipe,
+                      onUndo: (previousIndex, currentIndex, direction) {
+                        setState(() {
+                          _isDeckFinished = false;
+                          _currentIndex = currentIndex;
+                        });
+                        return true;
+                      },
+                      onEnd: () {
+                        setState(() {
+                          _isDeckFinished = true;
+                        });
+                      },
+                      numberOfCardsDisplayed:
+                          _pins.length >= 3 ? 3 : _pins.length,
+                      backCardOffset: const Offset(0, 20),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 8),
+                      cardBuilder: (context, index, percentX, percentY) {
+                        return _buildCard(_pins[index]);
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                _buildActionRow(),
-                const SizedBox(height: 24),
-              ],
-            ),
+                  const SizedBox(height: 16),
+                  _buildActionRow(),
+                  SizedBox(height: bottomPadding > 0 ? 8 : 18),
+                ],
+              ),
+      ),
     );
   }
 
   Widget _buildCard(LocationPin pin) {
     final hasImg = pin.imageUrl != null && pin.imageUrl!.isNotEmpty;
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F1F3D),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white10),
-        boxShadow: const [
-          BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 4))
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          children: [
-            // Card image/gradient
-            if (hasImg)
-              Image.network(
-                pin.imageUrl!,
-                cacheWidth: context.decodeWidth(),
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _gradientFallback(),
-              )
-            else
-              _gradientFallback(),
+    final score = DiscoveryScoreService.compute(pin);
+    final scoreLabel = DiscoveryScoreService.label(score);
 
-            // Gradient overlay
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.transparent, Colors.black87],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: [0.5, 0.95],
+    return GestureDetector(
+      onTap: () => PinDetailSheet.show(context, pin),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F1F3D),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white12),
+          boxShadow: const [
+            BoxShadow(
+                color: Colors.black54, blurRadius: 14, offset: Offset(0, 6))
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              // Card image/gradient
+              if (hasImg)
+                Image.network(
+                  pin.imageUrl!,
+                  cacheWidth: context.decodeWidth(),
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _gradientFallback(),
+                )
+              else
+                _gradientFallback(),
+
+              // Gradient overlay ensuring high text readability
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      Color(0x33000000),
+                      Color(0xCC000000),
+                      Colors.black,
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0.0, 0.4, 0.75, 1.0],
+                  ),
                 ),
               ),
-            ),
 
-            // Card content
-            Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          pin.name,
+              // Card content
+              Positioned(
+                bottom: 20,
+                left: 20,
+                right: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            pin.name,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 9, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.mintGreen.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color:
+                                    AppColors.mintGreen.withValues(alpha: 0.4)),
+                          ),
+                          child: Text(
+                            '💎 ${score.toInt()}',
+                            style: const TextStyle(
+                                color: AppColors.mintGreen,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          '${pin.category.toUpperCase()} • ${pin.district}',
                           style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold),
+                              color: Colors.white70,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.mintGreen.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color:
-                                  AppColors.mintGreen.withValues(alpha: 0.4)),
-                        ),
-                        child: Text(
-                          '💎 ${DiscoveryScoreService.compute(pin).toInt()}',
+                        const SizedBox(width: 8),
+                        Text(
+                          scoreLabel,
                           style: const TextStyle(
-                              color: AppColors.mintGreen,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11),
+                              color: AppColors.gold,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600),
                         ),
+                      ],
+                    ),
+                    if (pin.description != null &&
+                        pin.description!.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        pin.description!,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12, height: 1.4),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${pin.category.toUpperCase()} • ${pin.district}',
-                    style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500),
-                  ),
-                  if (pin.description != null &&
-                      pin.description!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      pin.description!,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.white54, fontSize: 12, height: 1.4),
+                    const SizedBox(height: 8),
+                    const Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Tap for full details',
+                          style: TextStyle(
+                            color: AppColors.mintGreen,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(Icons.arrow_forward,
+                            size: 12, color: AppColors.mintGreen),
+                      ],
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -491,82 +577,141 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // Rewind / Undo
+        _actionButton(
+          icon: Icons.undo_rounded,
+          color: AppColors.gold,
+          size: 48,
+          iconSize: 22,
+          tooltip: 'Rewind',
+          onTap: () => _swiperController.undo(),
+        ),
+        const SizedBox(width: 18),
         // Left (Skip)
         _actionButton(
           icon: Icons.close_rounded,
           color: Colors.redAccent,
+          size: 56,
+          iconSize: 26,
+          tooltip: 'Skip',
           onTap: () => _swiperController.swipeLeft(),
         ),
-        const SizedBox(width: 24),
+        const SizedBox(width: 18),
         // Center (Info)
         _actionButton(
           icon: Icons.info_outline_rounded,
           color: Colors.blueAccent,
+          size: 48,
+          iconSize: 22,
+          tooltip: 'Details',
           onTap: () {
             if (_currentIndex >= 0 && _currentIndex < _pins.length) {
               PinDetailSheet.show(context, _pins[_currentIndex]);
             }
           },
         ),
-        const SizedBox(width: 24),
+        const SizedBox(width: 18),
         // Right (Save)
         _actionButton(
           icon: Icons.bookmark_add_outlined,
-          color: Colors.greenAccent,
+          color: AppColors.mintGreen,
+          size: 56,
+          iconSize: 26,
+          tooltip: 'Save to Wishlist',
           onTap: () => _swiperController.swipeRight(),
         ),
       ],
     );
   }
 
-  Widget _actionButton(
-      {required IconData icon,
-      required Color color,
-      required VoidCallback onTap}) {
-    return InkWell(
+  Widget _actionButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    double size = 56,
+    double iconSize = 24,
+    String? tooltip,
+  }) {
+    Widget button = InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(32),
+      borderRadius: BorderRadius.circular(size / 2),
       child: Container(
-        width: 56,
-        height: 56,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withValues(alpha: 0.12),
           shape: BoxShape.circle,
-          border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
+          border: Border.all(color: color.withValues(alpha: 0.35), width: 1.5),
         ),
-        child: Icon(icon, color: color, size: 24),
+        child: Icon(icon, color: color, size: iconSize),
       ),
     );
+
+    if (tooltip != null) {
+      button = Tooltip(message: tooltip, child: button);
+    }
+    return button;
   }
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.explore_outlined, size: 64, color: Colors.white30),
-          const SizedBox(height: 16),
-          const Text(
-            "You've explored all destinations!",
-            style: TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "Check back later for new hidden gems.",
-            style: TextStyle(color: Colors.white38, fontSize: 13),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.mintGreen,
-              foregroundColor: Colors.black,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.explore_outlined, size: 64, color: Colors.white30),
+            const SizedBox(height: 16),
+            const Text(
+              "You've explored all destinations!",
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17),
             ),
-            onPressed: () => context.pop(),
-            child: const Text('Back to Home',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+            const SizedBox(height: 8),
+            const Text(
+              "Check back later for new hidden gems, or restart the deck to review them again.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.mintGreen,
+                    side: const BorderSide(color: AppColors.mintGreen),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                  ),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Restart Deck',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    setState(() {
+                      _loading = true;
+                    });
+                    _loadPins();
+                  },
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.mintGreen,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 12),
+                  ),
+                  onPressed: () => context.pop(),
+                  child: const Text('Back to Home',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -92,12 +92,16 @@ service firebase.storage {
     // Write: only participants, with file type and size enforcement
     match /chat_media/{chatId}/{fileName} {
       function isChatParticipant() {
-        return isAuth() && request.auth.uid in chatId.split('_');
+        return isAuth() && (
+          request.auth.uid in chatId.split('_') ||
+          chatId.matches('.*' + request.auth.uid + '.*')
+        );
       }
       allow read: if isChatParticipant();
       allow write: if isChatParticipant()
-                   && (isImage() || isVideo())
+                   && (isImage() || isVideo() || isAudio())
                    && (underImageLimit() || underVideoLimit());
+      allow delete: if isChatParticipant();
     }
 
     // ── Chat media thumbnails (written by Cloud Functions service account) ──
