@@ -511,12 +511,70 @@ service cloud.firestore {
                          (resource.data.get('authorEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
-      match /channels/{channelId}/messages/{messageId} {
+      // Discussion channels. The four built-in channels need no document; admins
+      // add more, change a channel's topic, and can limit posting to admins.
+      match /channels/{channelId} {
         allow read: if isActiveMember(tourId);
-        allow create: if isActiveMember(tourId) &&
-                         request.resource.data.senderEmail == tourUserEmail();
-        allow delete: if isActiveMember(tourId) &&
-                         (resource.data.get('senderEmail', '') == tourUserEmail() || isTourAdmin(tourId));
+        allow create, update: if isTourAdmin(tourId) &&
+                                 request.resource.data.name is string &&
+                                 request.resource.data.name.size() <= 40 &&
+                                 request.resource.data.topic is string &&
+                                 request.resource.data.topic.size() <= 200 &&
+                                 request.resource.data.adminOnly is bool;
+        allow delete: if isTourAdmin(tourId);
+
+        // Typing signal: each member writes only their own entry.
+        match /typing/{typingEmail} {
+          allow read: if isActiveMember(tourId);
+          allow write: if isActiveMember(tourId) && typingEmail == tourUserEmail();
+        }
+
+        match /messages/{messageId} {
+          allow read: if isActiveMember(tourId);
+
+          // Post as yourself, within the text and photo limits. In an admin-only
+          // channel, only admins post.
+          allow create: if isActiveMember(tourId) &&
+                           request.resource.data.senderEmail == tourUserEmail() &&
+                           request.resource.data.kind in ['text', 'poll', 'expense'] &&
+                           request.resource.data.text is string &&
+                           request.resource.data.text.size() <= 1000 &&
+                           request.resource.data.get('attachments', []).size() <= 4 &&
+                           (isTourAdmin(tourId) ||
+                            !(exists(/databases/$(database)/documents/tours/$(tourId)/channels/$(channelId)) &&
+                              get(/databases/$(database)/documents/tours/$(tourId)/channels/$(channelId)).data.get('adminOnly', false) == true));
+
+          // The author edits the text and its mentions only.
+          allow update: if isActiveMember(tourId) &&
+                           resource.data.get('senderEmail', '') == tourUserEmail() &&
+                           request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['text', 'mentions', 'editedAt']) &&
+                           request.resource.data.text.size() <= 1000;
+
+          // Admins pin and unpin, and change nothing else.
+          allow update: if isTourAdmin(tourId) &&
+                           request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['isPinned', 'pinnedByEmail']);
+
+          // Any member sets or clears their own reaction. Other entries must not change.
+          allow update: if isActiveMember(tourId) &&
+                           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']) &&
+                           request.resource.data.reactions.diff(resource.data.get('reactions', {})).affectedKeys()
+                             .hasOnly([tourUserEmail()]) &&
+                           request.resource.data.reactions.get(tourUserEmail(), '').size() <= 16;
+
+          // Any member votes in a poll, once per poll. Only their own vote changes.
+          allow update: if isActiveMember(tourId) &&
+                           resource.data.get('pollOptions', []).size() > 0 &&
+                           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes']) &&
+                           request.resource.data.votes.diff(resource.data.get('votes', {})).affectedKeys()
+                             .hasOnly([tourUserEmail()]) &&
+                           request.resource.data.votes.get(tourUserEmail(), 0) >= 0 &&
+                           request.resource.data.votes.get(tourUserEmail(), 0) < resource.data.get('pollOptions', []).size();
+
+          allow delete: if isActiveMember(tourId) &&
+                           (resource.data.get('senderEmail', '') == tourUserEmail() || isTourAdmin(tourId));
+        }
       }
 
       // Live family locations: members read them; each person writes their own.
