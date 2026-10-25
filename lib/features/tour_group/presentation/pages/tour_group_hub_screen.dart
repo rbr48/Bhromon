@@ -45,12 +45,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.group_add_outlined, color: AppColors.mintGreen),
+            icon: const Icon(Icons.group_add_outlined,
+                color: AppColors.mintGreen),
             tooltip: 'Join with code',
             onPressed: () => _showJoinGroupDialog(context),
           ),
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: AppColors.midGreen),
+            icon:
+                const Icon(Icons.add_circle_outline, color: AppColors.midGreen),
             tooltip: 'Create new tour',
             onPressed: () => _showCreateGroupDialog(context),
           ),
@@ -88,8 +90,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     Text(
                       '${snapshot.error}',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: Colors.white70, fontSize: 13),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
@@ -250,7 +252,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   runSpacing: 4,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.mintGreen.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
@@ -265,7 +268,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -286,7 +290,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.edit_calendar_rounded, size: 20, color: AppColors.mintGreen),
+                    icon: const Icon(Icons.edit_calendar_rounded,
+                        size: 20, color: AppColors.mintGreen),
                     tooltip: 'ট্যুর সেটিংস ও দিন পরিবর্তন',
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -297,19 +302,22 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     DropdownButton<String>(
                       value: group.id,
                       dropdownColor: const Color(0xFF1B4332),
-                      icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
+                      icon: const Icon(Icons.arrow_drop_down,
+                          color: Colors.white70),
                       underline: const SizedBox(),
                       items: allGroups.map((g) {
                         return DropdownMenuItem(
                           value: g.id,
                           child: Text(g.name,
-                              style: const TextStyle(color: Colors.white, fontSize: 13)),
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 13)),
                         );
                       }).toList(),
                       onChanged: (id) {
                         if (id != null) {
                           setState(() {
-                            _activeGroup = allGroups.firstWhere((g) => g.id == id);
+                            _activeGroup =
+                                allGroups.firstWhere((g) => g.id == id);
                           });
                         }
                       },
@@ -331,14 +339,16 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           const SizedBox(height: 4),
           Row(
             children: [
-              const Icon(Icons.calendar_today_rounded, size: 12, color: Colors.white60),
+              const Icon(Icons.calendar_today_rounded,
+                  size: 12, color: Colors.white60),
               const SizedBox(width: 5),
               Text(
                 '${DateFormat('d MMM yyyy').format(group.startDate)} – ${DateFormat('d MMM yyyy').format(group.endDate)}',
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
               const SizedBox(width: 12),
-              const Icon(Icons.near_me_rounded, size: 12, color: Colors.white60),
+              const Icon(Icons.near_me_rounded,
+                  size: 12, color: Colors.white60),
               const SizedBox(width: 4),
               Text(
                 'যাত্রা: ${group.originCity}',
@@ -357,7 +367,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
@@ -411,11 +422,15 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         onTap: () => context.push('/group/${group.id}/logistics'),
       ),
       _ModuleItem(
-        title: group.tourType == TourType.beach ? 'Tide & Beach Guide 🌊' : 'Weather & Nature 🌤️',
+        title: group.tourType == TourType.beach
+            ? 'Tide & Beach Guide 🌊'
+            : 'Weather & Nature 🌤️',
         subtitle: group.tourType == TourType.beach
             ? 'High/low tide & danger flags'
             : 'লাইভ আবহাওয়া ও ট্র্যাকিং সতর্কতা',
-        icon: group.tourType == TourType.beach ? Icons.waves_rounded : Icons.wb_sunny_rounded,
+        icon: group.tourType == TourType.beach
+            ? Icons.waves_rounded
+            : Icons.wb_sunny_rounded,
         color: const Color(0xFF38BDF8),
         onTap: () => context.push('/group/${group.id}/tide'),
       ),
@@ -627,7 +642,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     final originCtrl = TextEditingController(text: 'ঢাকা');
     TourType selectedTourType = TourType.beach;
     DateTime startDate = DateTime.now();
-    DateTime endDate = DateTime.now().add(const Duration(days: 3)); // 4 days 3 nights by default
+    DateTime endDate = DateTime.now()
+        .add(const Duration(days: 3)); // 4 days 3 nights by default
     bool seatsRooms = true;
     bool tideSafety = true;
     bool games = true;
@@ -635,12 +651,37 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     bool isCreating = false;
 
     final presets = [
-      (label: '🏖️ কক্সবাজার', dest: "Cox's Bazar", type: TourType.beach, tide: true),
-      (label: '⛰️ সাজেক ভ্যালি', dest: 'Sajek Valley', type: TourType.hill, tide: false),
-      (label: '🌿 সিলেট ও শ্রীমঙ্গল', dest: 'Sylhet', type: TourType.nature, tide: false),
-      (label: '🏞️ বান্দরবান', dest: 'Bandarban', type: TourType.hill, tide: false),
+      (
+        label: '🏖️ কক্সবাজার',
+        dest: "Cox's Bazar",
+        type: TourType.beach,
+        tide: true
+      ),
+      (
+        label: '⛰️ সাজেক ভ্যালি',
+        dest: 'Sajek Valley',
+        type: TourType.hill,
+        tide: false
+      ),
+      (
+        label: '🌿 সিলেট ও শ্রীমঙ্গল',
+        dest: 'Sylhet',
+        type: TourType.nature,
+        tide: false
+      ),
+      (
+        label: '🏞️ বান্দরবান',
+        dest: 'Bandarban',
+        type: TourType.hill,
+        tide: false
+      ),
       (label: '🌅 কুয়াকাটা', dest: 'Kuakata', type: TourType.beach, tide: true),
-      (label: '🐅 সুন্দরবন', dest: 'Sundarbans', type: TourType.nature, tide: false),
+      (
+        label: '🐅 সুন্দরবন',
+        dest: 'Sundarbans',
+        type: TourType.nature,
+        tide: false
+      ),
     ];
 
     showDialog<void>(
@@ -651,7 +692,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           builder: (dialogCtx, setDialogState) {
             final days = endDate.difference(startDate).inDays + 1;
             final nights = days > 1 ? days - 1 : 0;
-            final durationText = nights == 0 ? '$days দিন (ডে-ট্যুর)' : '$days দিন $nights রাত';
+            final durationText =
+                nights == 0 ? '$days দিন (ডে-ট্যুর)' : '$days দিন $nights রাত';
 
             return AlertDialog(
               backgroundColor: const Color(0xFF14241B),
@@ -659,7 +701,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   borderRadius: BorderRadius.circular(18)),
               title: const Text('নতুন ট্যুর গ্রুপ তৈরি করুন (Universal)',
                   style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17)),
               content: SizedBox(
                 width: double.maxFinite,
                 child: SingleChildScrollView(
@@ -673,12 +717,15 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'ট্যুরের নাম (যেমন: সাজেক ক্লাউড ট্যুর)',
-                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          labelStyle: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
                           hintText: 'e.g. Sajek Tour 2026',
-                          hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                          hintStyle: const TextStyle(
+                              color: Colors.white30, fontSize: 12),
                           filled: true,
                           fillColor: Colors.black26,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -686,7 +733,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       // 2. Destination Presets
                       const Text(
                         'জনপ্রিয় গন্তব্যসমূহ (Quick Select):',
-                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 6),
                       Wrap(
@@ -704,17 +754,23 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             },
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: isSelected ? AppColors.mintGreen : Colors.white10,
+                                color: isSelected
+                                    ? AppColors.mintGreen
+                                    : Colors.white10,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 p.label,
                                 style: TextStyle(
-                                  color: isSelected ? Colors.black : Colors.white,
+                                  color:
+                                      isSelected ? Colors.black : Colors.white,
                                   fontSize: 11,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                 ),
                               ),
                             ),
@@ -729,12 +785,15 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'গন্তব্য বা স্থান (Destination)',
-                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          labelStyle: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
                           hintText: 'e.g. Sajek, Sylhet, Darjeeling, etc.',
-                          hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                          hintStyle: const TextStyle(
+                              color: Colors.white30, fontSize: 12),
                           filled: true,
                           fillColor: Colors.black26,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -748,12 +807,15 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
                                 labelText: 'যাত্রা শুরু (Origin)',
-                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                labelStyle: const TextStyle(
+                                    color: Colors.white70, fontSize: 12),
                                 hintText: 'ঢাকা / রংপুর',
-                                hintStyle: const TextStyle(color: Colors.white30, fontSize: 11),
+                                hintStyle: const TextStyle(
+                                    color: Colors.white30, fontSize: 11),
                                 filled: true,
                                 fillColor: Colors.black26,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12)),
                               ),
                             ),
                           ),
@@ -762,18 +824,22 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             child: DropdownButtonFormField<TourType>(
                               initialValue: selectedTourType,
                               dropdownColor: const Color(0xFF14241B),
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 12),
                               decoration: InputDecoration(
                                 labelText: 'ট্যুর ধরন',
-                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                labelStyle: const TextStyle(
+                                    color: Colors.white70, fontSize: 12),
                                 filled: true,
                                 fillColor: Colors.black26,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12)),
                               ),
                               items: TourType.values.map((t) {
                                 return DropdownMenuItem(
                                   value: t,
-                                  child: Text('${t.labelBn.split(' ').first} ${t.name.toUpperCase()}',
+                                  child: Text(
+                                      '${t.labelBn.split(' ').first} ${t.name.toUpperCase()}',
                                       style: const TextStyle(fontSize: 11)),
                                 );
                               }).toList(),
@@ -794,14 +860,18 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       // 5. Date Range Selector Button
                       const Text(
                         'ট্যুরের তারিখ ও মেয়াদ (Any Amount of Days):',
-                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 6),
                       InkWell(
                         onTap: () async {
                           final picked = await showDateRangePicker(
                             context: dialogCtx,
-                            initialDateRange: DateTimeRange(start: startDate, end: endDate),
+                            initialDateRange:
+                                DateTimeRange(start: startDate, end: endDate),
                             firstDate: DateTime(2022),
                             lastDate: DateTime(2035),
                             builder: (context, child) {
@@ -827,15 +897,19 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
                             color: Colors.black38,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.4)),
+                            border: Border.all(
+                                color:
+                                    AppColors.mintGreen.withValues(alpha: 0.4)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.date_range_rounded, color: AppColors.mintGreen, size: 20),
+                              const Icon(Icons.date_range_rounded,
+                                  color: AppColors.mintGreen, size: 20),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -843,16 +917,22 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   children: [
                                     Text(
                                       '${DateFormat('d MMM yyyy').format(startDate)} – ${DateFormat('d MMM yyyy').format(endDate)}',
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12),
                                     ),
                                     Text(
                                       'মেয়াদ: $durationText (ক্যালেন্ডার চাপুন)',
-                                      style: const TextStyle(color: AppColors.mintGreen, fontSize: 11),
+                                      style: const TextStyle(
+                                          color: AppColors.mintGreen,
+                                          fontSize: 11),
                                     ),
                                   ],
                                 ),
                               ),
-                              const Icon(Icons.edit_calendar_rounded, color: Colors.white54, size: 16),
+                              const Icon(Icons.edit_calendar_rounded,
+                                  color: Colors.white54, size: 16),
                             ],
                           ),
                         ),
@@ -865,10 +945,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'বিবরণ (ঐচ্ছিক)',
-                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          labelStyle: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
                           filled: true,
                           fillColor: Colors.black26,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ],
@@ -897,8 +979,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             final newGroup = await _repository.createGroup(
                               name: name,
                               description: descCtrl.text.trim(),
-                              destination: dest.isNotEmpty ? dest : "Custom Destination",
-                              originCity: originCtrl.text.trim().isNotEmpty ? originCtrl.text.trim() : 'ঢাকা',
+                              destination:
+                                  dest.isNotEmpty ? dest : "Custom Destination",
+                              originCity: originCtrl.text.trim().isNotEmpty
+                                  ? originCtrl.text.trim()
+                                  : 'ঢাকা',
                               tourType: selectedTourType,
                               startDate: startDate,
                               endDate: endDate,
@@ -972,7 +1057,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           builder: (dialogCtx, setDialogState) {
             final days = endDate.difference(startDate).inDays + 1;
             final nights = days > 1 ? days - 1 : 0;
-            final durationText = nights == 0 ? '$days দিন (ডে-ট্যুর)' : '$days দিন $nights রাত';
+            final durationText =
+                nights == 0 ? '$days দিন (ডে-ট্যুর)' : '$days দিন $nights রাত';
 
             return AlertDialog(
               backgroundColor: const Color(0xFF14241B),
@@ -980,7 +1066,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   borderRadius: BorderRadius.circular(18)),
               title: const Text('ট্যুর সেটিংস ও দিন সম্পাদনা',
                   style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17)),
               content: SizedBox(
                 width: double.maxFinite,
                 child: SingleChildScrollView(
@@ -993,10 +1081,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'ট্যুরের নাম',
-                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          labelStyle: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
                           filled: true,
                           fillColor: Colors.black26,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1005,10 +1095,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'গন্তব্য বা স্থান (Destination)',
-                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          labelStyle: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
                           filled: true,
                           fillColor: Colors.black26,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1020,10 +1112,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               style: const TextStyle(color: Colors.white),
                               decoration: InputDecoration(
                                 labelText: 'যাত্রা শুরু (Origin)',
-                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                labelStyle: const TextStyle(
+                                    color: Colors.white70, fontSize: 12),
                                 filled: true,
                                 fillColor: Colors.black26,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12)),
                               ),
                             ),
                           ),
@@ -1032,18 +1126,22 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             child: DropdownButtonFormField<TourType>(
                               initialValue: selectedTourType,
                               dropdownColor: const Color(0xFF14241B),
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 12),
                               decoration: InputDecoration(
                                 labelText: 'ট্যুর ধরন',
-                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                labelStyle: const TextStyle(
+                                    color: Colors.white70, fontSize: 12),
                                 filled: true,
                                 fillColor: Colors.black26,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12)),
                               ),
                               items: TourType.values.map((t) {
                                 return DropdownMenuItem(
                                   value: t,
-                                  child: Text('${t.labelBn.split(' ').first} ${t.name.toUpperCase()}',
+                                  child: Text(
+                                      '${t.labelBn.split(' ').first} ${t.name.toUpperCase()}',
                                       style: const TextStyle(fontSize: 11)),
                                 );
                               }).toList(),
@@ -1059,14 +1157,18 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       const SizedBox(height: 14),
                       const Text(
                         'ট্যুরের তারিখ ও মেয়াদ পরিবর্তন করুন:',
-                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 6),
                       InkWell(
                         onTap: () async {
                           final picked = await showDateRangePicker(
                             context: dialogCtx,
-                            initialDateRange: DateTimeRange(start: startDate, end: endDate),
+                            initialDateRange:
+                                DateTimeRange(start: startDate, end: endDate),
                             firstDate: DateTime(2022),
                             lastDate: DateTime(2035),
                             builder: (context, child) {
@@ -1092,15 +1194,19 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         },
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(
                             color: Colors.black38,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.4)),
+                            border: Border.all(
+                                color:
+                                    AppColors.mintGreen.withValues(alpha: 0.4)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.date_range_rounded, color: AppColors.mintGreen, size: 20),
+                              const Icon(Icons.date_range_rounded,
+                                  color: AppColors.mintGreen, size: 20),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
@@ -1108,16 +1214,22 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   children: [
                                     Text(
                                       '${DateFormat('d MMM yyyy').format(startDate)} – ${DateFormat('d MMM yyyy').format(endDate)}',
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12),
                                     ),
                                     Text(
                                       'নতুন মেয়াদ: $durationText',
-                                      style: const TextStyle(color: AppColors.mintGreen, fontSize: 11),
+                                      style: const TextStyle(
+                                          color: AppColors.mintGreen,
+                                          fontSize: 11),
                                     ),
                                   ],
                                 ),
                               ),
-                              const Icon(Icons.edit_calendar_rounded, color: Colors.white54, size: 16),
+                              const Icon(Icons.edit_calendar_rounded,
+                                  color: Colors.white54, size: 16),
                             ],
                           ),
                         ),
@@ -1128,10 +1240,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'বিবরণ',
-                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          labelStyle: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
                           filled: true,
                           fillColor: Colors.black26,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ],
@@ -1161,7 +1275,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               tourId: group.id,
                               name: name,
                               description: descCtrl.text.trim(),
-                              destination: dest.isNotEmpty ? dest : group.destination,
+                              destination:
+                                  dest.isNotEmpty ? dest : group.destination,
                               originCity: originCtrl.text.trim(),
                               tourType: selectedTourType,
                               startDate: startDate,
@@ -1172,7 +1287,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                 _activeGroup = group.copyWith(
                                   name: name,
                                   description: descCtrl.text.trim(),
-                                  destination: dest.isNotEmpty ? dest : group.destination,
+                                  destination: dest.isNotEmpty
+                                      ? dest
+                                      : group.destination,
                                   originCity: originCtrl.text.trim(),
                                   tourType: selectedTourType,
                                   startDate: startDate,
@@ -1182,7 +1299,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               navigator.pop();
                               messenger.showSnackBar(
                                 const SnackBar(
-                                  content: Text('ট্যুর সেটিংস সফলভাবে আপডেট হয়েছে!'),
+                                  content: Text(
+                                      'ট্যুর সেটিংস সফলভাবে আপডেট হয়েছে!'),
                                   backgroundColor: AppColors.midGreen,
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -1334,11 +1452,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
-  Future<void> _exportTourJsonBackup(BuildContext context, TourGroup group) async {
+  Future<void> _exportTourJsonBackup(
+      BuildContext context, TourGroup group) async {
     try {
       final snapshot = await _repository.fetchFullTourSnapshot(group.id);
       final jsonStr = const JsonEncoder.withIndent('  ').convert(snapshot);
-      final fileName = '${group.name.replaceAll(' ', '_')}_Backup_${DateFormat('yyyyMMdd').format(DateTime.now())}.json';
+      final fileName =
+          '${group.name.replaceAll(' ', '_')}_Backup_${DateFormat('yyyyMMdd').format(DateTime.now())}.json';
       // ignore: deprecated_member_use
       await Share.share(
         jsonStr,
@@ -1476,17 +1596,21 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     final newRole = member.role == TourRole.admin
                         ? TourRole.member
                         : TourRole.admin;
-                    await _repository.updateMemberRole(tourId, member.email, newRole);
+                    await _repository.updateMemberRole(
+                        tourId, member.email, newRole);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${member.displayName} এর রোল পরিবর্তন করা হয়েছে')),
+                        SnackBar(
+                            content: Text(
+                                '${member.displayName} এর রোল পরিবর্তন করা হয়েছে')),
                       );
                     }
                   },
                 ),
                 // Transfer Ownership
                 ListTile(
-                  leading: const Icon(Icons.stars_rounded, color: AppColors.gold),
+                  leading:
+                      const Icon(Icons.stars_rounded, color: AppColors.gold),
                   title: const Text(
                     'Transfer Tour Ownership',
                     style: TextStyle(color: Colors.white),
@@ -1497,12 +1621,19 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       context: context,
                       builder: (c) => AlertDialog(
                         backgroundColor: const Color(0xFF14241B),
-                        title: const Text('মালিকানা হস্তান্তর করবেন?', style: TextStyle(color: Colors.white)),
-                        content: Text('আপনি কি নিশ্চিত যে ${member.displayName} কে এই ট্যুরের প্রধান মালিক করবেন?', style: const TextStyle(color: Colors.white70)),
+                        title: const Text('মালিকানা হস্তান্তর করবেন?',
+                            style: TextStyle(color: Colors.white)),
+                        content: Text(
+                            'আপনি কি নিশ্চিত যে ${member.displayName} কে এই ট্যুরের প্রধান মালিক করবেন?',
+                            style: const TextStyle(color: Colors.white70)),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('বাতিল')),
+                          TextButton(
+                              onPressed: () => Navigator.pop(c, false),
+                              child: const Text('বাতিল')),
                           ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold, foregroundColor: Colors.black),
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.gold,
+                                foregroundColor: Colors.black),
                             onPressed: () => Navigator.pop(c, true),
                             child: const Text('হস্তান্তর করুন'),
                           ),
@@ -1516,7 +1647,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 ),
                 // Remove Member
                 ListTile(
-                  leading: const Icon(Icons.person_remove_rounded, color: Colors.redAccent),
+                  leading: const Icon(Icons.person_remove_rounded,
+                      color: Colors.redAccent),
                   title: const Text(
                     'Remove from Tour',
                     style: TextStyle(color: Colors.redAccent),
@@ -1527,12 +1659,19 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       context: context,
                       builder: (c) => AlertDialog(
                         backgroundColor: const Color(0xFF14241B),
-                        title: const Text('সদস্য অপসারণ', style: TextStyle(color: Colors.white)),
-                        content: Text('${member.displayName} কে ট্যুর গ্রুপ থেকে বাদ দিতে চান?', style: const TextStyle(color: Colors.white70)),
+                        title: const Text('সদস্য অপসারণ',
+                            style: TextStyle(color: Colors.white)),
+                        content: Text(
+                            '${member.displayName} কে ট্যুর গ্রুপ থেকে বাদ দিতে চান?',
+                            style: const TextStyle(color: Colors.white70)),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('বাতিল')),
+                          TextButton(
+                              onPressed: () => Navigator.pop(c, false),
+                              child: const Text('বাতিল')),
                           ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                                foregroundColor: Colors.white),
                             onPressed: () => Navigator.pop(c, true),
                             child: const Text('অপসারণ করুন'),
                           ),

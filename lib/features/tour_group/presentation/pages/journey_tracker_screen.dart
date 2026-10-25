@@ -68,7 +68,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   }
 
   Future<void> _openLocationOnMap(double lat, double lng) async {
-    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    final uri =
+        Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -117,7 +118,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           lng: 92.0583,
           estDuration: '০৭:৩০ ঘণ্টা',
           highlight: 'নিরাপত্তা এসকর্ট ও সেনাবাহিনীর ছাড়পত্র',
-          details: 'সকাল ১০টা বা দুপুর ২টার এসকর্ট কনভয়ে সাজেকের পাহাড়ে প্রবেশ।',
+          details:
+              'সকাল ১০টা বা দুপুর ২টার এসকর্ট কনভয়ে সাজেকের পাহাড়ে প্রবেশ।',
           amenities: ['সেনা চেকপোস্ট', 'নিরাপত্তা ও সহায়তা'],
           iconEmoji: '🛡️',
         ),
@@ -143,12 +145,15 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           lng: 92.2938,
           estDuration: '০৯:৩০ ঘণ্টা',
           highlight: 'মেঘের বাড়ি সাজেক ও কংলাক পাহাড় চূড়া',
-          details: 'রিসোর্টে চেক-ইন, কটেজে বসে সূর্যাস্ত দেখা ও মেঘের ভেলা উপভোগ।',
+          details:
+              'রিসোর্টে চেক-ইন, কটেজে বসে সূর্যাস্ত দেখা ও মেঘের ভেলা উপভোগ।',
           amenities: ['রিসোর্ট', 'ক্যাফে', 'হেলিপ্যাড', 'মার্কেট'],
           iconEmoji: '☁️',
         ),
       ];
-    } else if (dest.contains('sylhet') || dest.contains('সিলেট') || dest.contains('sreemangal')) {
+    } else if (dest.contains('sylhet') ||
+        dest.contains('সিলেট') ||
+        dest.contains('sreemangal')) {
       baseList = [
         HighwayMilestone(
           id: 'SYL_1',
@@ -198,7 +203,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           lng: 91.8687,
           estDuration: '০৬:০০ ঘণ্টা',
           highlight: 'ঐতিহ্যবাহী পুণ্যভূমি সিলেট ও সাতকড়া বিফ',
-          details: 'হোটেল চেক-ইন, ফ্রেশ হওয়া এবং শহরের বিখ্যাত খাবারের স্বাদ গ্রহণ।',
+          details:
+              'হোটেল চেক-ইন, ফ্রেশ হওয়া এবং শহরের বিখ্যাত খাবারের স্বাদ গ্রহণ।',
           amenities: ['হোটেল', 'মাজার', 'রেস্তোরাঁ', 'শপিং'],
           iconEmoji: '🕌',
         ),
@@ -308,7 +314,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           lng: 90.2647,
           estDuration: '০১:১৫ ঘণ্টা',
           highlight: 'জাতীয় গৌরবের ৬.১৫ কিমি পদ্মা সেতু পারাপার',
-          details: 'দক্ষিণাঞ্চলের স্বপ্নিল এক্সপ্রেসওয়ে দিয়ে দ্রুতিতে ছুটে চলা।',
+          details:
+              'দক্ষিণাঞ্চলের স্বপ্নিল এক্সপ্রেসওয়ে দিয়ে দ্রুতিতে ছুটে চলা।',
           amenities: ['টোল প্লাজা', 'ভিউ পয়েন্ট'],
           iconEmoji: '🌉',
         ),
@@ -351,7 +358,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           lng: 89.2752,
           estDuration: '০০:০০ ঘণ্টা',
           highlight: 'যাত্রার শুভ সূচনা ও ভ্রমণ দোয়া',
-          details: 'পরিবারের সকলের বাসে আসন গ্রহণ, লাগেজ চেকিং ও নিরাপদ ভ্রমণের শুভ দোয়া।',
+          details:
+              'পরিবারের সকলের বাসে আসন গ্রহণ, লাগেজ চেকিং ও নিরাপদ ভ্রমণের শুভ দোয়া।',
           amenities: const ['বাস ডিপো', 'চা ও কফি', 'নামাজ'],
           iconEmoji: '🚌',
         ),
@@ -364,7 +372,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           lng: 89.4187,
           estDuration: '০২:১৫ ঘণ্টা',
           highlight: 'শেরপুরের বিখ্যাত দই ও রাতের হালকা নাস্তা',
-          details: 'ফুড ভিলেজে হাইওয়ে বিরতি, পরিষ্কার ওয়াশরুম এবং স্পেশাল চা ও মিষ্টি দই।',
+          details:
+              'ফুড ভিলেজে হাইওয়ে বিরতি, পরিষ্কার ওয়াশরুম এবং স্পেশাল চা ও মিষ্টি দই।',
           amenities: ['রেস্তোরাঁ', 'ওয়াশরুম', 'নামাজঘর', 'এটিএম'],
           iconEmoji: '🍲',
         ),
@@ -403,7 +412,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           lng: 91.1783,
           estDuration: '০৯:১৫ ঘণ্টা',
           highlight: 'কুমিল্লার বিখ্যাত রসমালাই ও সকালের নাস্তা',
-          details: 'মাতৃভাণ্ডারের খাঁটি রসমালাইয়ের স্বাদ ও ফজরের নামাজের বিরতি।',
+          details:
+              'মাতৃভাণ্ডারের খাঁটি রসমালাইয়ের স্বাদ ও ফজরের নামাজের বিরতি।',
           amenities: ['রসমালাই', 'রেস্তোরাঁ', 'নামাজঘর', 'পাম্প'],
           iconEmoji: '🍮',
         ),
@@ -416,13 +426,15 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           lng: 91.7765,
           estDuration: '১২:৩০ ঘণ্টা',
           highlight: 'বন্দরনগরী চট্টগ্রাম আগমন ও পাহাড়ের হাতছানি',
-          details: 'একে খান মোড় হয়ে চট্টগ্রাম বাইপাস রোড ধরে সরাসরি কক্সবাজারমুখী।',
+          details:
+              'একে খান মোড় হয়ে চট্টগ্রাম বাইপাস রোড ধরে সরাসরি কক্সবাজারমুখী।',
           amenities: ['সিটি বাইপাস', 'ট্রাফিক সহায়তা'],
           iconEmoji: '🏙️',
         ),
         HighwayMilestone(
           id: 'DEST_FINAL',
-          name: '${_tourGroup?.destination ?? "কক্সবাজার"} ডলফিন মোড় ও হোটেল এরিয়া',
+          name:
+              '${_tourGroup?.destination ?? "কক্সবাজার"} ডলফিন মোড় ও হোটেল এরিয়া',
           nameEn: '${_tourGroup?.destination ?? "Coxs Bazar"} Dolphin Point',
           kmFromStart: 820,
           lat: 21.4326,
@@ -436,7 +448,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
       ];
     }
 
-    final combined = List<HighwayMilestone>.from(baseList)..addAll(_customMilestones);
+    final combined = List<HighwayMilestone>.from(baseList)
+      ..addAll(_customMilestones);
     return combined;
   }
 
@@ -450,8 +463,11 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: const Color(0xFF142428),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('নতুন চেকপয়েন্ট যোগ করুন', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('নতুন চেকপয়েন্ট যোগ করুন',
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -493,10 +509,12 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.tealAccent.shade700),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.tealAccent.shade700),
               onPressed: () {
                 final name = nameCtrl.text.trim();
                 final km = int.tryParse(kmCtrl.text.trim()) ?? 0;
@@ -511,8 +529,11 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                       lat: _currentPosition?.latitude ?? 23.8,
                       lng: _currentPosition?.longitude ?? 90.4,
                       estDuration: 'কাস্টম সময়',
-                      highlight: highlightCtrl.text.trim().isNotEmpty ? highlightCtrl.text.trim() : 'কাস্টম চেকপয়েন্ট',
-                      details: 'ট্যুর অ্যাডমিন কর্তৃক সরাসরি রোডে যুক্ত করা হয়েছে।',
+                      highlight: highlightCtrl.text.trim().isNotEmpty
+                          ? highlightCtrl.text.trim()
+                          : 'কাস্টম চেকপয়েন্ট',
+                      details:
+                          'ট্যুর অ্যাডমিন কর্তৃক সরাসরি রোডে যুক্ত করা হয়েছে।',
                       amenities: const ['কাস্টম স্টপ', 'চেকপয়েন্ট'],
                       iconEmoji: '📍',
                     ),
@@ -520,7 +541,9 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                 });
                 Navigator.pop(ctx);
               },
-              child: const Text('Add Stop', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: const Text('Add Stop',
+                  style: TextStyle(
+                      color: Colors.black, fontWeight: FontWeight.bold)),
             ),
           ],
         );
@@ -544,7 +567,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_location_alt_rounded, color: Colors.tealAccent),
+            icon: const Icon(Icons.add_location_alt_rounded,
+                color: Colors.tealAccent),
             tooltip: 'নতুন চেকপয়েন্ট যোগ করুন',
             onPressed: _showAddMilestoneDialog,
           ),
@@ -567,10 +591,12 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             // Milestones Timeline
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 itemCount: milestones.length,
                 itemBuilder: (context, index) {
-                  return _buildMilestoneTile(milestones[index], index, milestones.length);
+                  return _buildMilestoneTile(
+                      milestones[index], index, milestones.length);
                 },
               ),
             ),
@@ -597,7 +623,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           1000.0;
       final traveledKm = (totalKm - distToDestKm).clamp(0, totalKm.toDouble());
       progress = totalKm > 0 ? (traveledKm / totalKm).clamp(0.0, 1.0) : 0.0;
-      statusSubtitle = 'গন্তব্য থেকে ${distToDestKm.toStringAsFixed(0)} কি.মি. দূরে (${(progress * 100).toStringAsFixed(0)}%)';
+      statusSubtitle =
+          'গন্তব্য থেকে ${distToDestKm.toStringAsFixed(0)} কি.মি. দূরে (${(progress * 100).toStringAsFixed(0)}%)';
     }
 
     return Container(
@@ -610,11 +637,15 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.alt_route, color: Colors.tealAccent, size: 20),
+                  const Icon(Icons.alt_route,
+                      color: Colors.tealAccent, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     '$origin ➔ $dest জাতীয় মহাসড়ক',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13),
                   ),
                 ],
               ),
@@ -625,7 +656,10 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text('~$totalKm কি.মি.',
-                    style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold, fontSize: 12)),
+                    style: const TextStyle(
+                        color: Colors.tealAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12)),
               ),
             ],
           ),
@@ -637,16 +671,23 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               value: progress,
               minHeight: 8,
               backgroundColor: const Color(0xFF263D42),
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.tealAccent),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Colors.tealAccent),
             ),
           ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('$origin (০ কি.মি.)', style: const TextStyle(color: Colors.white54, fontSize: 11)),
-              Text(statusSubtitle, style: const TextStyle(color: Colors.tealAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-              Text('$dest ($totalKm কি.মি.)', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              Text('$origin (০ কি.মি.)',
+                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              Text(statusSubtitle,
+                  style: const TextStyle(
+                      color: Colors.tealAccent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold)),
+              Text('$dest ($totalKm কি.মি.)',
+                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
             ],
           ),
         ],
@@ -655,7 +696,12 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   }
 
   Widget _buildFilterTabs(List<HighwayMilestone> milestones) {
-    final filters = ['সব চেকপয়েন্ট (${milestones.length})', 'বিরতি ও খাবার', 'নামাজঘর', 'ফুয়েল/পাম্প'];
+    final filters = [
+      'সব চেকপয়েন্ট (${milestones.length})',
+      'বিরতি ও খাবার',
+      'নামাজঘর',
+      'ফুয়েল/পাম্প'
+    ];
 
     return Container(
       height: 48,
@@ -690,13 +736,21 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
 
   Widget _buildMilestoneTile(HighwayMilestone m, int index, int totalCount) {
     // Check filters
-    if (_activeFilterIndex == 1 && !m.amenities.any((a) => a.contains('রেস্তোরাঁ') || a.contains('নাস্তা') || a.contains('খাবার') || a.contains('ক্যাফে'))) {
+    if (_activeFilterIndex == 1 &&
+        !m.amenities.any((a) =>
+            a.contains('রেস্তোরাঁ') ||
+            a.contains('নাস্তা') ||
+            a.contains('খাবার') ||
+            a.contains('ক্যাফে'))) {
       return const SizedBox.shrink();
     }
-    if (_activeFilterIndex == 2 && !m.amenities.any((a) => a.contains('নামাজ'))) {
+    if (_activeFilterIndex == 2 &&
+        !m.amenities.any((a) => a.contains('নামাজ'))) {
       return const SizedBox.shrink();
     }
-    if (_activeFilterIndex == 3 && !m.amenities.any((a) => a.contains('পাম্প') || a.contains('তেল') || a.contains('ফুয়েল'))) {
+    if (_activeFilterIndex == 3 &&
+        !m.amenities.any((a) =>
+            a.contains('পাম্প') || a.contains('তেল') || a.contains('ফুয়েল'))) {
       return const SizedBox.shrink();
     }
 
@@ -716,7 +770,9 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: isLast ? Colors.amber : (isFirst ? Colors.green : const Color(0xFF1E3A40)),
+                    color: isLast
+                        ? Colors.amber
+                        : (isFirst ? Colors.green : const Color(0xFF1E3A40)),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white24),
                   ),
@@ -757,18 +813,25 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                       Expanded(
                         child: Text(
                           m.name,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13),
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.tealAccent.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           '${m.kmFromStart} কি.মি.',
-                          style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold, fontSize: 11),
+                          style: const TextStyle(
+                              color: Colors.tealAccent,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11),
                         ),
                       ),
                     ],
@@ -780,14 +843,18 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.amber.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '✨ ${m.highlight}',
-                      style: const TextStyle(color: Colors.amberAccent, fontSize: 11, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                          color: Colors.amberAccent,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -805,18 +872,22 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                           runSpacing: 4,
                           children: m.amenities.map((a) {
                             return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: Text(a, style: const TextStyle(color: Colors.white60, fontSize: 10)),
+                              child: Text(a,
+                                  style: const TextStyle(
+                                      color: Colors.white60, fontSize: 10)),
                             );
                           }).toList(),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.map, size: 18, color: Colors.tealAccent),
+                        icon: const Icon(Icons.map,
+                            size: 18, color: Colors.tealAccent),
                         tooltip: 'ম্যাপে দেখুন',
                         onPressed: () => _openLocationOnMap(m.lat, m.lng),
                       ),

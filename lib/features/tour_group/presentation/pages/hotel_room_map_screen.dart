@@ -34,11 +34,13 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
         elevation: 0,
         title: const Text(
           'Hotel Rooms (হোটেল রুম)',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_home_work_rounded, color: AppColors.mintGreen),
+            icon: const Icon(Icons.add_home_work_rounded,
+                color: AppColors.mintGreen),
             tooltip: 'Add Room',
             onPressed: () => _showAddRoomDialog(context),
           ),
@@ -48,7 +50,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
         stream: roomCollection.snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.midGreen));
+            return const Center(
+                child: CircularProgressIndicator(color: AppColors.midGreen));
           }
 
           final rooms = snapshot.data!.docs
@@ -60,7 +63,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.hotel_rounded, size: 64, color: Colors.white24),
+                  const Icon(Icons.hotel_rounded,
+                      size: 64, color: Colors.white24),
                   const SizedBox(height: 16),
                   const Text('No hotel rooms configured yet.',
                       style: TextStyle(color: Colors.white70)),
@@ -69,7 +73,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                     onPressed: () => _showAddRoomDialog(context),
                     icon: const Icon(Icons.add),
                     label: const Text('Add First Room'),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.midGreen),
                   ),
                 ],
               ),
@@ -77,7 +82,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
           }
 
           int totalCapacity = rooms.fold(0, (acc, r) => acc + r.capacity);
-          int assignedCount = rooms.fold(0, (acc, r) => acc + r.assignedMemberEmails.length);
+          int assignedCount =
+              rooms.fold(0, (acc, r) => acc + r.assignedMemberEmails.length);
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -96,7 +102,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   children: [
                     _buildStat('Total Rooms', '${rooms.length}'),
                     _buildStat('Total Beds', '$totalCapacity'),
-                    _buildStat('Assigned Guests', '$assignedCount / $totalCapacity',
+                    _buildStat(
+                        'Assigned Guests', '$assignedCount / $totalCapacity',
                         color: AppColors.mintGreen),
                   ],
                 ),
@@ -114,9 +121,12 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
   Widget _buildStat(String label, String value, {Color color = Colors.white}) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+        Text(label,
+            style: const TextStyle(color: Colors.white54, fontSize: 11)),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(value,
+            style: TextStyle(
+                color: color, fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -129,7 +139,9 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
         color: const Color(0xFF14241B),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: room.isFull ? AppColors.mintGreen.withValues(alpha: 0.3) : Colors.white12,
+          color: room.isFull
+              ? AppColors.mintGreen.withValues(alpha: 0.3)
+              : Colors.white12,
         ),
       ),
       child: Column(
@@ -141,7 +153,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.midGreen.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(8),
@@ -158,7 +171,10 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   const SizedBox(width: 8),
                   Text(
                     room.title,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14),
                   ),
                 ],
               ),
@@ -167,12 +183,14 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   if (room.isAc)
                     const Padding(
                       padding: EdgeInsets.only(right: 6),
-                      child: Icon(Icons.ac_unit_rounded, size: 16, color: Color(0xFF38BDF8)),
+                      child: Icon(Icons.ac_unit_rounded,
+                          size: 16, color: Color(0xFF38BDF8)),
                     ),
                   if (room.hasSeaView)
                     const Padding(
                       padding: EdgeInsets.only(right: 6),
-                      child: Icon(Icons.waves_rounded, size: 16, color: AppColors.gold),
+                      child: Icon(Icons.waves_rounded,
+                          size: 16, color: AppColors.gold),
                     ),
                   Text(
                     'Floor ${room.floor}',
@@ -194,7 +212,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               ),
               TextButton(
                 onPressed: () => _showManageRoomGuestsSheet(context, room),
-                child: const Text('Manage Guests', style: TextStyle(color: AppColors.mintGreen, fontSize: 12)),
+                child: const Text('Manage Guests',
+                    style: TextStyle(color: AppColors.mintGreen, fontSize: 12)),
               ),
             ],
           ),
@@ -215,15 +234,18 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                         : 'G'),
                   ),
                   label: Text(room.assignedMemberNames[i],
-                      style: const TextStyle(color: Colors.white, fontSize: 12)),
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 12)),
                 ),
               for (int i = 0; i < room.availableSlots; i++)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.black26,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white12, style: BorderStyle.solid),
+                    border: Border.all(
+                        color: Colors.white12, style: BorderStyle.solid),
                   ),
                   child: const Text('Empty Bed',
                       style: TextStyle(color: Colors.white30, fontSize: 11)),
@@ -251,8 +273,10 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: const Color(0xFF14241B),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              title: const Text('Add Hotel Room', style: TextStyle(color: Colors.white)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              title: const Text('Add Hotel Room',
+                  style: TextStyle(color: Colors.white)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -282,12 +306,16 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                             initialValue: capacity,
                             dropdownColor: const Color(0xFF1B4332),
                             style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(labelText: 'Beds / Capacity'),
+                            decoration: const InputDecoration(
+                                labelText: 'Beds / Capacity'),
                             items: [1, 2, 3, 4, 5, 6]
-                                .map((c) => DropdownMenuItem(value: c, child: Text('$c Persons')))
+                                .map((c) => DropdownMenuItem(
+                                    value: c, child: Text('$c Persons')))
                                 .toList(),
                             onChanged: (val) {
-                              if (val != null) setDialogState(() => capacity = val);
+                              if (val != null) {
+                                setDialogState(() => capacity = val);
+                              }
                             },
                           ),
                         ),
@@ -297,12 +325,16 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                             initialValue: floor,
                             dropdownColor: const Color(0xFF1B4332),
                             style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(labelText: 'Floor'),
+                            decoration:
+                                const InputDecoration(labelText: 'Floor'),
                             items: [1, 2, 3, 4, 5, 6, 7]
-                                .map((f) => DropdownMenuItem(value: f, child: Text('Floor $f')))
+                                .map((f) => DropdownMenuItem(
+                                    value: f, child: Text('Floor $f')))
                                 .toList(),
                             onChanged: (val) {
-                              if (val != null) setDialogState(() => floor = val);
+                              if (val != null) {
+                                setDialogState(() => floor = val);
+                              }
                             },
                           ),
                         ),
@@ -311,17 +343,20 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                     const SizedBox(height: 10),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Air Conditioned (AC)', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      title: const Text('Air Conditioned (AC)',
+                          style: TextStyle(color: Colors.white, fontSize: 13)),
                       value: isAc,
                       activeThumbColor: AppColors.mintGreen,
                       onChanged: (val) => setDialogState(() => isAc = val),
                     ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Sea View Balcony', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      title: const Text('Sea View Balcony',
+                          style: TextStyle(color: Colors.white, fontSize: 13)),
                       value: hasSeaView,
                       activeThumbColor: AppColors.gold,
-                      onChanged: (val) => setDialogState(() => hasSeaView = val),
+                      onChanged: (val) =>
+                          setDialogState(() => hasSeaView = val),
                     ),
                   ],
                 ),
@@ -329,10 +364,12 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.white54)),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.midGreen),
                   onPressed: () async {
                     final num = numberCtrl.text.trim();
                     if (num.isEmpty) return;
@@ -356,7 +393,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                         .doc(roomId)
                         .set(room.toMap());
                   },
-                  child: const Text('Add Room', style: TextStyle(color: Colors.white)),
+                  child: const Text('Add Room',
+                      style: TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -372,7 +410,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
       isScrollControlled: true,
       barrierColor: Colors.black.withValues(alpha: 0.75),
       backgroundColor: const Color(0xFF14241B),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         return StreamBuilder<List<TourMember>>(
           stream: _repository.watchMembers(widget.tourId),
@@ -393,76 +432,99 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.max,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Room ${room.roomNumber} Guests (${room.assignedMemberEmails.length}/${room.capacity})',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                    ),
-                    const Divider(color: Colors.white12),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: members.length,
-                        itemBuilder: (context, i) {
-                          final m = members[i];
-                          final isAssigned = room.assignedMemberEmails.contains(m.email);
-
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: AppColors.midGreen,
-                              child: Text(m.displayName.isNotEmpty ? m.displayName[0] : 'G'),
-                            ),
-                            title: Text(m.displayName, style: const TextStyle(color: Colors.white)),
-                            subtitle: Text(m.email, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                            trailing: isAssigned
-                                ? IconButton(
-                                    icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
-                                    onPressed: () async {
-                                      final updatedEmails = List<String>.from(room.assignedMemberEmails)..remove(m.email);
-                                      final updatedNames = List<String>.from(room.assignedMemberNames)..remove(m.displayName);
-
-                                      await _firestore
-                                          .collection('tours')
-                                          .doc(widget.tourId)
-                                          .collection('hotel_rooms')
-                                          .doc(room.id)
-                                          .update({
-                                        'assignedMemberEmails': updatedEmails,
-                                        'assignedMemberNames': updatedNames,
-                                      });
-                                    },
-                                  )
-                                : IconButton(
-                                    icon: const Icon(Icons.add_circle, color: AppColors.mintGreen),
-                                    onPressed: room.isFull
-                                        ? null
-                                        : () async {
-                                            final updatedEmails = List<String>.from(room.assignedMemberEmails)..add(m.email);
-                                            final updatedNames = List<String>.from(room.assignedMemberNames)..add(m.displayName);
-
-                                            await _firestore
-                                                .collection('tours')
-                                                .doc(widget.tourId)
-                                                .collection('hotel_rooms')
-                                                .doc(room.id)
-                                                .update({
-                                              'assignedMemberEmails': updatedEmails,
-                                              'assignedMemberNames': updatedNames,
-                                            });
-                                          },
-                                  ),
-                          );
-                        },
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Room ${room.roomNumber} Guests (${room.assignedMemberEmails.length}/${room.capacity})',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18),
                       ),
-                    ),
-                  ],
+                      const Divider(color: Colors.white12),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: members.length,
+                          itemBuilder: (context, i) {
+                            final m = members[i];
+                            final isAssigned =
+                                room.assignedMemberEmails.contains(m.email);
+
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: AppColors.midGreen,
+                                child: Text(m.displayName.isNotEmpty
+                                    ? m.displayName[0]
+                                    : 'G'),
+                              ),
+                              title: Text(m.displayName,
+                                  style: const TextStyle(color: Colors.white)),
+                              subtitle: Text(m.email,
+                                  style: const TextStyle(
+                                      color: Colors.white54, fontSize: 12)),
+                              trailing: isAssigned
+                                  ? IconButton(
+                                      icon: const Icon(Icons.remove_circle,
+                                          color: Colors.redAccent),
+                                      onPressed: () async {
+                                        final updatedEmails = List<String>.from(
+                                            room.assignedMemberEmails)
+                                          ..remove(m.email);
+                                        final updatedNames = List<String>.from(
+                                            room.assignedMemberNames)
+                                          ..remove(m.displayName);
+
+                                        await _firestore
+                                            .collection('tours')
+                                            .doc(widget.tourId)
+                                            .collection('hotel_rooms')
+                                            .doc(room.id)
+                                            .update({
+                                          'assignedMemberEmails': updatedEmails,
+                                          'assignedMemberNames': updatedNames,
+                                        });
+                                      },
+                                    )
+                                  : IconButton(
+                                      icon: const Icon(Icons.add_circle,
+                                          color: AppColors.mintGreen),
+                                      onPressed: room.isFull
+                                          ? null
+                                          : () async {
+                                              final updatedEmails =
+                                                  List<String>.from(
+                                                      room.assignedMemberEmails)
+                                                    ..add(m.email);
+                                              final updatedNames =
+                                                  List<String>.from(
+                                                      room.assignedMemberNames)
+                                                    ..add(m.displayName);
+
+                                              await _firestore
+                                                  .collection('tours')
+                                                  .doc(widget.tourId)
+                                                  .collection('hotel_rooms')
+                                                  .doc(room.id)
+                                                  .update({
+                                                'assignedMemberEmails':
+                                                    updatedEmails,
+                                                'assignedMemberNames':
+                                                    updatedNames,
+                                              });
+                                            },
+                                    ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+            );
+          },
+        );
+      },
+    );
+  }
 }

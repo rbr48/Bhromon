@@ -13,7 +13,8 @@ class BusSeat {
     this.isWindow = false,
   });
 
-  bool get isOccupied => assignedMemberEmail != null && assignedMemberEmail!.isNotEmpty;
+  bool get isOccupied =>
+      assignedMemberEmail != null && assignedMemberEmail!.isNotEmpty;
 
   Map<String, dynamic> toMap() {
     return {

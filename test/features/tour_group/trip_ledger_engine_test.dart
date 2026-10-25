@@ -26,11 +26,24 @@ void main() {
       expect(parts, equals([400, 600]));
     });
 
-    test('computeLedger accurately calculates fund balance and settlements', () {
+    test('computeLedger accurately calculates fund balance and settlements',
+        () {
       final members = [
-        const LedgerMemberInput(id: 'm1', name: 'Shohag', familyCount: 1, depositPaisa: 500000), // 5000 Tk
-        const LedgerMemberInput(id: 'm2', name: 'Tanvir', familyCount: 1, depositPaisa: 500000), // 5000 Tk
-        const LedgerMemberInput(id: 'm3', name: 'Nur Bhai', familyCount: 2, depositPaisa: 1000000), // 10000 Tk
+        const LedgerMemberInput(
+            id: 'm1',
+            name: 'Shohag',
+            familyCount: 1,
+            depositPaisa: 500000), // 5000 Tk
+        const LedgerMemberInput(
+            id: 'm2',
+            name: 'Tanvir',
+            familyCount: 1,
+            depositPaisa: 500000), // 5000 Tk
+        const LedgerMemberInput(
+            id: 'm3',
+            name: 'Nur Bhai',
+            familyCount: 2,
+            depositPaisa: 1000000), // 10000 Tk
       ];
 
       final expenses = [
@@ -56,7 +69,8 @@ void main() {
         ),
       ];
 
-      final summary = TripLedgerEngine.computeLedger(members: members, expenses: expenses);
+      final summary =
+          TripLedgerEngine.computeLedger(members: members, expenses: expenses);
 
       // Headcount: 1 + 1 + 2 = 4
       expect(summary.headcount, equals(4));

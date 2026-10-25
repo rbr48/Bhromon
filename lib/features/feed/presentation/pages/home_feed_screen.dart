@@ -4384,121 +4384,121 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Center(
-                child: Container(
-                  width: 38,
-                  height: 4.5,
-                  margin: const EdgeInsets.only(bottom: 22),
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(3),
+                  child: Container(
+                    width: 38,
+                    height: 4.5,
+                    margin: const EdgeInsets.only(bottom: 22),
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
                 ),
-              ),
-              const Text(
-                'Explorer Navigation',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+                const Text(
+                  'Explorer Navigation',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.4,
-                children: [
-                  _buildNavMenuItem(
-                    icon: Icons.person_outline,
-                    title: 'My Profile',
-                    subtitle: 'Score & badges',
-                    color: const Color(0xFF52B788),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      context.push('/profile/$uid');
-                    },
-                  ),
-                  _buildNavMenuItem(
-                    icon: Icons.dashboard_outlined,
-                    title: 'Dashboard',
-                    subtitle: 'Trust & stats',
-                    color: const Color(0xFF6366F1),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      context.push('/dashboard');
-                    },
-                  ),
-                  _buildNavMenuItem(
-                    icon: Icons.emoji_events_outlined,
-                    title: 'Challenges',
-                    subtitle: 'Active quests',
-                    color: const Color(0xFFFFD166),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      context.push('/challenges');
-                    },
-                  ),
-                  _buildNavMenuItem(
-                    icon: Icons.style_outlined,
-                    title: 'Discover',
-                    subtitle: 'Swipe destination',
-                    color: const Color(0xFFEC4899),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      context.push('/discover');
-                    },
-                  ),
-                  _buildNavMenuItem(
-                    icon: Icons.leaderboard_outlined,
-                    title: 'Leaderboard',
-                    subtitle: 'Top explorers',
-                    color: const Color(0xFFF59E0B),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      context.push('/leaderboard');
-                    },
-                  ),
-                  _buildNavMenuItem(
-                    icon: Icons.cloud_download_outlined,
-                    title: 'Offline Vault',
-                    subtitle: 'Saved regions',
-                    color: const Color(0xFF10B981),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      context.push('/vault');
-                    },
-                  ),
-                  _buildNavMenuItem(
-                    icon: Icons.groups_outlined,
-                    title: 'Tour Groups',
-                    subtitle: 'Tours & Ledger',
-                    color: const Color(0xFF2DD4BF),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      context.push('/group-hub');
-                    },
-                  ),
-                  _buildNavMenuItem(
-                    icon: Icons.sports_esports_outlined,
-                    title: 'GameZone',
-                    subtitle: '29, Chess & Ludo',
-                    color: const Color(0xFFA855F7),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      context.push('/game-zone');
-                    },
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 16),
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.4,
+                  children: [
+                    _buildNavMenuItem(
+                      icon: Icons.person_outline,
+                      title: 'My Profile',
+                      subtitle: 'Score & badges',
+                      color: const Color(0xFF52B788),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        context.push('/profile/$uid');
+                      },
+                    ),
+                    _buildNavMenuItem(
+                      icon: Icons.dashboard_outlined,
+                      title: 'Dashboard',
+                      subtitle: 'Trust & stats',
+                      color: const Color(0xFF6366F1),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        context.push('/dashboard');
+                      },
+                    ),
+                    _buildNavMenuItem(
+                      icon: Icons.emoji_events_outlined,
+                      title: 'Challenges',
+                      subtitle: 'Active quests',
+                      color: const Color(0xFFFFD166),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        context.push('/challenges');
+                      },
+                    ),
+                    _buildNavMenuItem(
+                      icon: Icons.style_outlined,
+                      title: 'Discover',
+                      subtitle: 'Swipe destination',
+                      color: const Color(0xFFEC4899),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        context.push('/discover');
+                      },
+                    ),
+                    _buildNavMenuItem(
+                      icon: Icons.leaderboard_outlined,
+                      title: 'Leaderboard',
+                      subtitle: 'Top explorers',
+                      color: const Color(0xFFF59E0B),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        context.push('/leaderboard');
+                      },
+                    ),
+                    _buildNavMenuItem(
+                      icon: Icons.cloud_download_outlined,
+                      title: 'Offline Vault',
+                      subtitle: 'Saved regions',
+                      color: const Color(0xFF10B981),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        context.push('/vault');
+                      },
+                    ),
+                    _buildNavMenuItem(
+                      icon: Icons.groups_outlined,
+                      title: 'Tour Groups',
+                      subtitle: 'Tours & Ledger',
+                      color: const Color(0xFF2DD4BF),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        context.push('/group-hub');
+                      },
+                    ),
+                    _buildNavMenuItem(
+                      icon: Icons.sports_esports_outlined,
+                      title: 'GameZone',
+                      subtitle: '29, Chess & Ludo',
+                      color: const Color(0xFFA855F7),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        context.push('/game-zone');
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      );
+        );
       },
     );
   }

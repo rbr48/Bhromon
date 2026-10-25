@@ -20,7 +20,12 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
   final TextEditingController _msgController = TextEditingController();
   final Uuid _uuid = const Uuid();
 
-  final List<String> _channels = ['general', 'food', 'sightseeing', 'emergency'];
+  final List<String> _channels = [
+    'general',
+    'food',
+    'sightseeing',
+    'emergency'
+  ];
   late TabController _tabController;
 
   @override
@@ -60,7 +65,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
         elevation: 0,
         title: const Text(
           'Group Channels (আলোচনা চ্যানেল)',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -98,7 +104,9 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
             stream: messagesStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: AppColors.midGreen));
+                return const Center(
+                    child:
+                        CircularProgressIndicator(color: AppColors.midGreen));
               }
 
               final docs = snapshot.data?.docs ?? [];
@@ -114,7 +122,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
 
               return ListView.builder(
                 reverse: true,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 itemCount: docs.length,
                 itemBuilder: (context, i) {
                   final data = docs[i].data();
@@ -124,13 +133,17 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
                   final isMe = senderEmail == _repository.currentEmail;
 
                   return Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment:
+                        isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.symmetric(vertical: 4),
-                      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.78),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: isMe ? AppColors.midGreen : const Color(0xFF1E3326),
+                        color:
+                            isMe ? AppColors.midGreen : const Color(0xFF1E3326),
                         borderRadius: BorderRadius.only(
                           topLeft: const Radius.circular(14),
                           topRight: const Radius.circular(14),
@@ -153,7 +166,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
                           const SizedBox(height: 2),
                           Text(
                             text,
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                           ),
                         ],
                       ),
@@ -188,7 +202,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
                       style: const TextStyle(color: Colors.white),
                       decoration: const InputDecoration(
                         hintText: 'Type a message...',
-                        hintStyle: TextStyle(color: Colors.white30, fontSize: 13),
+                        hintStyle:
+                            TextStyle(color: Colors.white30, fontSize: 13),
                         border: InputBorder.none,
                       ),
                     ),
@@ -196,7 +211,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen>
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.send_rounded, color: AppColors.mintGreen),
+                  icon: const Icon(Icons.send_rounded,
+                      color: AppColors.mintGreen),
                   onPressed: () => _sendMessage(channelId),
                 ),
               ],

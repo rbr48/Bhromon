@@ -15,16 +15,46 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   static final List<({String title, String category})> _defaultItems = [
-    (title: 'জাতীয় পরিচয়পত্র / NID বা জন্ম নিবন্ধন ফটোকপি', category: 'ডকুমেন্টস (Documents)'),
-    (title: 'হোটেল ও বাসের টিকিট কপি / কনফার্মেশন', category: 'ডকুমেন্টস (Documents)'),
-    (title: 'প্যারাসিটামল, ওরস্যালাইন ও গ্যাস্ট্রিকের ওষুধ', category: 'ওষুধ ও ফার্স্ট এইড (Medicines)'),
-    (title: 'ব্যান্ড-এইড, স্যাভলন ও মোশন সিকনেস ওষুধ', category: 'ওষুধ ও ফার্স্ট এইড (Medicines)'),
-    (title: 'মোবাইল চার্জার ও পাওয়ার ব্যাংক (১০,০০০+ mAh)', category: 'ইলেকট্রনিক্স (Electronics)'),
-    (title: 'মাল্টিপ্লাগ ও ওয়াটারপ্রুফ মোবাইল পাউচ', category: 'ইলেকট্রনিক্স (Electronics)'),
-    (title: 'হালকা সুতি পোশাক ও রোদচশমা (Sunglasses)', category: 'পোশাক (Clothing)'),
-    (title: 'সুইমিং কস্টিউম বা অতিরিক্ত হাফপ্যান্ট ও টি-শার্ট', category: 'পোশাক (Clothing)'),
-    (title: 'সানস্ক্রিন লোশন (SPF 50+) ও বড় হ্যাট', category: 'সৈকত অনুষঙ্গ (Beach Gear)'),
-    (title: 'স্যান্ডেল / ওয়াটার শু ও হালকা ছাতা', category: 'সৈকত অনুষঙ্গ (Beach Gear)'),
+    (
+      title: 'জাতীয় পরিচয়পত্র / NID বা জন্ম নিবন্ধন ফটোকপি',
+      category: 'ডকুমেন্টস (Documents)'
+    ),
+    (
+      title: 'হোটেল ও বাসের টিকিট কপি / কনফার্মেশন',
+      category: 'ডকুমেন্টস (Documents)'
+    ),
+    (
+      title: 'প্যারাসিটামল, ওরস্যালাইন ও গ্যাস্ট্রিকের ওষুধ',
+      category: 'ওষুধ ও ফার্স্ট এইড (Medicines)'
+    ),
+    (
+      title: 'ব্যান্ড-এইড, স্যাভলন ও মোশন সিকনেস ওষুধ',
+      category: 'ওষুধ ও ফার্স্ট এইড (Medicines)'
+    ),
+    (
+      title: 'মোবাইল চার্জার ও পাওয়ার ব্যাংক (১০,০০০+ mAh)',
+      category: 'ইলেকট্রনিক্স (Electronics)'
+    ),
+    (
+      title: 'মাল্টিপ্লাগ ও ওয়াটারপ্রুফ মোবাইল পাউচ',
+      category: 'ইলেকট্রনিক্স (Electronics)'
+    ),
+    (
+      title: 'হালকা সুতি পোশাক ও রোদচশমা (Sunglasses)',
+      category: 'পোশাক (Clothing)'
+    ),
+    (
+      title: 'সুইমিং কস্টিউম বা অতিরিক্ত হাফপ্যান্ট ও টি-শার্ট',
+      category: 'পোশাক (Clothing)'
+    ),
+    (
+      title: 'সানস্ক্রিন লোশন (SPF 50+) ও বড় হ্যাট',
+      category: 'সৈকত অনুষঙ্গ (Beach Gear)'
+    ),
+    (
+      title: 'স্যান্ডেল / ওয়াটার শু ও হালকা ছাতা',
+      category: 'সৈকত অনুষঙ্গ (Beach Gear)'
+    ),
   ];
 
   @override
@@ -41,11 +71,13 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
         elevation: 0,
         title: const Text(
           'Packing Checklist (ট্যুর চেকলিস্ট)',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_task_rounded, color: AppColors.mintGreen),
+            icon:
+                const Icon(Icons.add_task_rounded, color: AppColors.mintGreen),
             tooltip: 'Add item',
             onPressed: () => _showAddItemDialog(context),
           ),
@@ -95,18 +127,26 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Packing Readiness (প্যাকিং প্রস্তুতি)',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13)),
                         Text('$completedCount / $totalCount Done',
-                            style: const TextStyle(color: AppColors.mintGreen, fontWeight: FontWeight.bold)),
+                            style: const TextStyle(
+                                color: AppColors.mintGreen,
+                                fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 10),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(6),
                       child: LinearProgressIndicator(
-                        value: totalCount > 0 ? (completedCount / totalCount).clamp(0.0, 1.0) : 0,
+                        value: totalCount > 0
+                            ? (completedCount / totalCount).clamp(0.0, 1.0)
+                            : 0,
                         backgroundColor: Colors.white12,
-                        valueColor: const AlwaysStoppedAnimation(AppColors.mintGreen),
+                        valueColor:
+                            const AlwaysStoppedAnimation(AppColors.mintGreen),
                         minHeight: 8,
                       ),
                     ),
@@ -119,7 +159,8 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   children: categories.map((cat) {
-                    final catItems = _defaultItems.where((i) => i.category == cat).toList();
+                    final catItems =
+                        _defaultItems.where((i) => i.category == cat).toList();
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 14),
@@ -153,7 +194,9 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                                 style: TextStyle(
                                   color: isDone ? Colors.white38 : Colors.white,
                                   fontSize: 13,
-                                  decoration: isDone ? TextDecoration.lineThrough : null,
+                                  decoration: isDone
+                                      ? TextDecoration.lineThrough
+                                      : null,
                                 ),
                               ),
                               value: isDone,
@@ -192,8 +235,10 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: const Color(0xFF14241B),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Text('Add Custom Item', style: TextStyle(color: Colors.white)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: const Text('Add Custom Item',
+              style: TextStyle(color: Colors.white)),
           content: TextField(
             controller: titleCtrl,
             style: const TextStyle(color: Colors.white),
@@ -205,10 +250,12 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+              child:
+                  const Text('Cancel', style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
               onPressed: () async {
                 final title = titleCtrl.text.trim();
                 if (title.isEmpty) return;

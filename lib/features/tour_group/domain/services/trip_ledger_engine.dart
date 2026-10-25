@@ -107,7 +107,8 @@ class TripLedgerEngine {
 
   static int toPaisa(num? taka) {
     if (taka == null || taka.isNaN || taka.isInfinite) return 0;
-    final clamped = max(0.0, min(maxSafeAmountTaka.toDouble(), taka.toDouble()));
+    final clamped =
+        max(0.0, min(maxSafeAmountTaka.toDouble(), taka.toDouble()));
     return (clamped * 100).round();
   }
 
@@ -140,21 +141,25 @@ class TripLedgerEngine {
   }
 
   /// Calculates settlements that balance all debts and credits with minimum transactions.
-  static List<SettlementTransaction> settle(List<({String name, int netPaisa, bool fund})> parties) {
+  static List<SettlementTransaction> settle(
+      List<({String name, int netPaisa, bool fund})> parties) {
     final balanceSum = parties.fold<int>(0, (sum, p) => sum + p.netPaisa);
     if (balanceSum.abs() > 1) {
-      throw StateError('Ledger balances do not sum to zero: total net is $balanceSum paisa');
+      throw StateError(
+          'Ledger balances do not sum to zero: total net is $balanceSum paisa');
     }
 
     final debtors = parties
         .where((p) => p.netPaisa < 0)
-        .map((p) => _PartyBalance(name: p.name, amountPaisa: -p.netPaisa, isFund: p.fund))
+        .map((p) => _PartyBalance(
+            name: p.name, amountPaisa: -p.netPaisa, isFund: p.fund))
         .toList()
       ..sort((a, b) => b.amountPaisa.compareTo(a.amountPaisa));
 
     final creditors = parties
         .where((p) => p.netPaisa > 0)
-        .map((p) => _PartyBalance(name: p.name, amountPaisa: p.netPaisa, isFund: p.fund))
+        .map((p) => _PartyBalance(
+            name: p.name, amountPaisa: p.netPaisa, isFund: p.fund))
         .toList()
       ..sort((a, b) => b.amountPaisa.compareTo(a.amountPaisa));
 
@@ -164,7 +169,9 @@ class TripLedgerEngine {
     final maxIterations = (debtors.length + creditors.length) * 2;
     int iterations = 0;
 
-    while (d < debtors.length && c < creditors.length && iterations < maxIterations) {
+    while (d < debtors.length &&
+        c < creditors.length &&
+        iterations < maxIterations) {
       iterations++;
       final amount = min(debtors[d].amountPaisa, creditors[c].amountPaisa);
       if (amount <= 0) break;
@@ -242,7 +249,8 @@ class TripLedgerEngine {
       );
     }
 
-    final totalDepositsPaisa = members.fold<int>(0, (sum, m) => sum + m.depositPaisa);
+    final totalDepositsPaisa =
+        members.fold<int>(0, (sum, m) => sum + m.depositPaisa);
     final fundBalancePaisa = totalDepositsPaisa - fundPaidPaisa;
     final netSumPaisa = rows.fold<int>(0, (sum, r) => sum + r.netPaisa);
 
@@ -264,7 +272,8 @@ class TripLedgerEngine {
       totalExpensePaisa: totalExpensePaisa,
       fundPaidPaisa: fundPaidPaisa,
       fundBalancePaisa: fundBalancePaisa,
-      perHeadCostPaisa: headcount > 0 ? (totalExpensePaisa / headcount).round() : 0,
+      perHeadCostPaisa:
+          headcount > 0 ? (totalExpensePaisa / headcount).round() : 0,
       rows: rows,
       settlements: settlements,
       categoryTotals: categoryTotalsList,

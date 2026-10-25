@@ -20,15 +20,42 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
 
   // Standard 36-seater tourist coach layout: Rows A through I (4 seats each)
   static final List<String> _seatLabels = [
-    'A1', 'A2', 'A3', 'A4',
-    'B1', 'B2', 'B3', 'B4',
-    'C1', 'C2', 'C3', 'C4',
-    'D1', 'D2', 'D3', 'D4',
-    'E1', 'E2', 'E3', 'E4',
-    'F1', 'F2', 'F3', 'F4',
-    'G1', 'G2', 'G3', 'G4',
-    'H1', 'H2', 'H3', 'H4',
-    'I1', 'I2', 'I3', 'I4',
+    'A1',
+    'A2',
+    'A3',
+    'A4',
+    'B1',
+    'B2',
+    'B3',
+    'B4',
+    'C1',
+    'C2',
+    'C3',
+    'C4',
+    'D1',
+    'D2',
+    'D3',
+    'D4',
+    'E1',
+    'E2',
+    'E3',
+    'E4',
+    'F1',
+    'F2',
+    'F3',
+    'F4',
+    'G1',
+    'G2',
+    'G3',
+    'G4',
+    'H1',
+    'H2',
+    'H3',
+    'H4',
+    'I1',
+    'I2',
+    'I3',
+    'I4',
   ];
 
   @override
@@ -45,7 +72,8 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
         elevation: 0,
         title: const Text(
           'Bus Seat Allocator (বাসের সিট)',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -91,46 +119,58 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
               // Bus Cabin Frame
               Expanded(
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: const Color(0xFF14241B),
                     borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.3), width: 1.5),
+                    border: Border.all(
+                        color: AppColors.mintGreen.withValues(alpha: 0.3),
+                        width: 1.5),
                   ),
                   child: Column(
                     children: [
                       // Driver & Door Front Row
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: Colors.black38,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Row(
                                 children: [
-                                  Icon(Icons.directions_bus_rounded, color: AppColors.mintGreen, size: 16),
+                                  Icon(Icons.directions_bus_rounded,
+                                      color: AppColors.mintGreen, size: 16),
                                   SizedBox(width: 6),
-                                  Text('DOOR (দরজা)', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                                  Text('DOOR (দরজা)',
+                                      style: TextStyle(
+                                          color: Colors.white70, fontSize: 11)),
                                 ],
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: Colors.black38,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Row(
                                 children: [
-                                  Icon(Icons.sports_motorsports_rounded, color: AppColors.gold, size: 16),
+                                  Icon(Icons.sports_motorsports_rounded,
+                                      color: AppColors.gold, size: 16),
                                   SizedBox(width: 6),
-                                  Text('DRIVER', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                                  Text('DRIVER',
+                                      style: TextStyle(
+                                          color: Colors.white70, fontSize: 11)),
                                 ],
                               ),
                             ),
@@ -145,10 +185,17 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
                           itemCount: _seatLabels.length ~/ 4,
                           itemBuilder: (context, rowIndex) {
                             final i = rowIndex * 4;
-                            final s1 = seatData[_seatLabels[i]] ?? BusSeat(seatNumber: _seatLabels[i], isWindow: true);
-                            final s2 = seatData[_seatLabels[i + 1]] ?? BusSeat(seatNumber: _seatLabels[i + 1]);
-                            final s3 = seatData[_seatLabels[i + 2]] ?? BusSeat(seatNumber: _seatLabels[i + 2]);
-                            final s4 = seatData[_seatLabels[i + 3]] ?? BusSeat(seatNumber: _seatLabels[i + 3], isWindow: true);
+                            final s1 = seatData[_seatLabels[i]] ??
+                                BusSeat(
+                                    seatNumber: _seatLabels[i], isWindow: true);
+                            final s2 = seatData[_seatLabels[i + 1]] ??
+                                BusSeat(seatNumber: _seatLabels[i + 1]);
+                            final s3 = seatData[_seatLabels[i + 2]] ??
+                                BusSeat(seatNumber: _seatLabels[i + 2]);
+                            final s4 = seatData[_seatLabels[i + 3]] ??
+                                BusSeat(
+                                    seatNumber: _seatLabels[i + 3],
+                                    isWindow: true);
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 5),
@@ -165,7 +212,9 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
                                     child: Center(
                                       child: Text(
                                         '│',
-                                        style: TextStyle(color: Colors.white12, fontSize: 14),
+                                        style: TextStyle(
+                                            color: Colors.white12,
+                                            fontSize: 14),
                                       ),
                                     ),
                                   ),
@@ -197,10 +246,12 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
         Container(
           width: 12,
           height: 12,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
+          decoration: BoxDecoration(
+              color: color, borderRadius: BorderRadius.circular(3)),
         ),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(label,
+            style: const TextStyle(color: Colors.white70, fontSize: 12)),
       ],
     );
   }
@@ -270,7 +321,8 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
       isScrollControlled: true,
       barrierColor: Colors.black.withValues(alpha: 0.75),
       backgroundColor: const Color(0xFF14241B),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         return StreamBuilder<List<TourMember>>(
           stream: _repository.watchMembers(widget.tourId),
@@ -307,8 +359,10 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
                         ),
                         if (seat.isOccupied)
                           TextButton.icon(
-                            icon: const Icon(Icons.clear, color: Colors.redAccent, size: 16),
-                            label: const Text('Vacate Seat', style: TextStyle(color: Colors.redAccent)),
+                            icon: const Icon(Icons.clear,
+                                color: Colors.redAccent, size: 16),
+                            label: const Text('Vacate Seat',
+                                style: TextStyle(color: Colors.redAccent)),
                             onPressed: () async {
                               Navigator.pop(ctx);
                               await _firestore
@@ -332,17 +386,24 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
                         itemCount: members.length,
                         itemBuilder: (context, i) {
                           final m = members[i];
-                          final isAssigned = seat.assignedMemberEmail == m.email;
+                          final isAssigned =
+                              seat.assignedMemberEmail == m.email;
 
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor: AppColors.midGreen,
-                              child: Text(m.displayName.isNotEmpty ? m.displayName[0] : 'P'),
+                              child: Text(m.displayName.isNotEmpty
+                                  ? m.displayName[0]
+                                  : 'P'),
                             ),
-                            title: Text(m.displayName, style: const TextStyle(color: Colors.white)),
-                            subtitle: Text(m.email, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                            title: Text(m.displayName,
+                                style: const TextStyle(color: Colors.white)),
+                            subtitle: Text(m.email,
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 12)),
                             trailing: isAssigned
-                                ? const Icon(Icons.check_circle, color: AppColors.mintGreen)
+                                ? const Icon(Icons.check_circle,
+                                    color: AppColors.mintGreen)
                                 : null,
                             onTap: () async {
                               Navigator.pop(ctx);

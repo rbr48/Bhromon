@@ -5,7 +5,8 @@ class ExpenseItem {
   final String tourId;
   final String title;
   final int amountPaisa; // Integer paisa: 100 paisa = 1 BDT
-  final String? paidById; // Member ID/email, or null if paid directly from the shared fund
+  final String?
+      paidById; // Member ID/email, or null if paid directly from the shared fund
   final String? paidByName;
   final String category; // e.g. Food, Transport, Hotel, Tickets, Miscellaneous
   final DateTime date;
