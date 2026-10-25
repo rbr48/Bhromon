@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -47,12 +48,17 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   // Feed Slicing & Views
   bool _isGridView = false; // Grid Explore View vs Feed List View
   String _selectedDayFilter = 'all';
-  String _selectedMediaFilter = 'all'; // 'all', 'photos', 'reels', 'saved'
+  String _selectedMediaFilter =
+      'all'; // 'all', 'photos', 'reels', 'saved', 'archived'
   String? _activeHashtagFilter;
+  String? _selectedLandmarkFilter;
   bool _sortByPopular = false;
 
   Set<String> _bookmarkedPostIds = {};
+  Map<String, List<String>> _bookmarkCollections = {};
+  String? _selectedBookmarkCollection;
   Set<String> _seenStoryIds = {};
+  List<TourPostItem> _latestPosts = const [];
   TourGroup? _tourGroup;
 
   // Logistics cache (Seat & Room mappings: email -> seat/room)
@@ -89,13 +95,18 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     setState(() {
       _bookmarkedPostIds = Set<String>.from(prefs.bookmarks);
       _seenStoryIds = Set<String>.from(prefs.seenStories);
+      _bookmarkCollections = Map<String, List<String>>.from(prefs.collections);
     });
   }
 
   void _saveFeedPrefs() {
     _repository.saveFeedPrefs(
       widget.tourId,
-      FeedPrefs(bookmarks: _bookmarkedPostIds, seenStories: _seenStoryIds),
+      FeedPrefs(
+        bookmarks: _bookmarkedPostIds,
+        seenStories: _seenStoryIds,
+        collections: _bookmarkCollections,
+      ),
     );
   }
 
@@ -130,9 +141,329 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
   void _toggleBookmark(String postId) {
     setState(() {
-      if (!_bookmarkedPostIds.remove(postId)) _bookmarkedPostIds.add(postId);
+      if (!_bookmarkedPostIds.remove(postId)) {
+        _bookmarkedPostIds.add(postId);
+      } else {
+        // Also remove from collections if unbookmarked
+        for (final list in _bookmarkCollections.values) {
+          list.remove(postId);
+        }
+      }
     });
     _saveFeedPrefs();
+  }
+
+  void _showSaveToCollectionSheet(TourPostItem post) {
+    final newCollectionCtrl = TextEditingController();
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'সংগ্রহ ফোল্ডারে যোগ করুন (Collections)',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'পছন্দের পোস্টগুলোকে আলাদা ফোল্ডারে সংরক্ষণ করুন',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                  const Divider(color: Colors.white12, height: 20),
+
+                  // Existing Collections
+                  if (_bookmarkCollections.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'এখনও কোনো ফোল্ডার তৈরি করা হয়নি। নিচে নতুন ফোল্ডার তৈরি করুন।',
+                        style: TextStyle(color: Colors.white38, fontSize: 13),
+                      ),
+                    )
+                  else
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 180),
+                      child: ListView(
+                        shrinkWrap: true,
+                        children: _bookmarkCollections.entries.map((entry) {
+                          final collectionName = entry.key;
+                          final list = entry.value;
+                          final isIncluded = list.contains(post.id);
+
+                          return CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(collectionName,
+                                style: const TextStyle(color: Colors.white)),
+                            subtitle: Text('${list.length}টি পোস্ট সংরক্ষিত',
+                                style: const TextStyle(
+                                    color: Colors.white38, fontSize: 11)),
+                            value: isIncluded,
+                            activeColor: const Color(0xFF00C853),
+                            onChanged: (bool? val) {
+                              setSheetState(() {
+                                if (val == true) {
+                                  if (!list.contains(post.id)) {
+                                    list.add(post.id);
+                                  }
+                                  _bookmarkedPostIds.add(post.id);
+                                } else {
+                                  list.remove(post.id);
+                                }
+                              });
+                              setState(() {});
+                              _saveFeedPrefs();
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+
+                  const SizedBox(height: 12),
+                  // Create New Collection Input
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: newCollectionCtrl,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText:
+                                'নতুন ফোল্ডারের নাম (যেমন: খাবার, হোটেল)',
+                            hintStyle: const TextStyle(
+                                color: Colors.white38, fontSize: 13),
+                            filled: true,
+                            fillColor: const Color(0xFF2C2C2C),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF00C853),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                        ),
+                        onPressed: () {
+                          final name = newCollectionCtrl.text.trim();
+                          if (name.isNotEmpty) {
+                            setSheetState(() {
+                              _bookmarkCollections
+                                  .putIfAbsent(name, () => [])
+                                  .add(post.id);
+                              _bookmarkedPostIds.add(post.id);
+                              newCollectionCtrl.clear();
+                            });
+                            setState(() {});
+                            _saveFeedPrefs();
+                          }
+                        },
+                        child: const Text('তৈরি',
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showLandmarkMapModal(BuildContext context, List<TourPostItem> posts) {
+    final byLandmark = <String, List<TourPostItem>>{};
+    for (final p in posts) {
+      final loc = p.location.trim().isNotEmpty
+          ? p.location.trim()
+          : (_tourGroup?.destination ?? 'প্রধান পর্যটন কেন্দ্র');
+      byLandmark.putIfAbsent(loc, () => []).add(p);
+    }
+
+    final sortedLandmarks = byLandmark.entries.toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF141414),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.4,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (ctx, scrollController) => Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.explore_rounded,
+                      color: Color(0xFF00C853), size: 24),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'ল্যান্ডমার্ক ও স্পট ম্যাপ (Tour Landmarks)',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_selectedLandmarkFilter != null)
+                    TextButton(
+                      onPressed: () {
+                        setState(() => _selectedLandmarkFilter = null);
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text('ফিল্টার মুছুন',
+                          style: TextStyle(color: Colors.redAccent)),
+                    ),
+                ],
+              ),
+            ),
+            const Divider(color: Colors.white12, height: 1),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                padding: const EdgeInsets.all(16),
+                itemCount: sortedLandmarks.length,
+                itemBuilder: (context, idx) {
+                  final entry = sortedLandmarks[idx];
+                  final spotName = entry.key;
+                  final spotPosts = entry.value;
+                  final firstImage = spotPosts.firstWhere(
+                    (p) => p.images.isNotEmpty,
+                    orElse: () => spotPosts.first,
+                  );
+                  final isSelected = _selectedLandmarkFilter == spotName;
+
+                  return Card(
+                    color: isSelected
+                        ? const Color(0xFF00C853).withValues(alpha: 0.15)
+                        : const Color(0xFF1E1E1E),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: isSelected
+                            ? const Color(0xFF00C853)
+                            : Colors.white10,
+                      ),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(10),
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: SizedBox(
+                          width: 54,
+                          height: 54,
+                          child: firstImage.images.isNotEmpty &&
+                                  isRemoteMediaUrl(firstImage.images.first)
+                              ? CachedNetworkImage(
+                                  imageUrl: firstImage.images.first,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) =>
+                                      Container(color: Colors.grey.shade900),
+                                  errorWidget: (_, __, ___) => const Icon(
+                                      Icons.location_on,
+                                      color: Color(0xFF00C853)),
+                                )
+                              : const Center(
+                                  child: Icon(Icons.location_on,
+                                      color: Color(0xFF00C853))),
+                        ),
+                      ),
+                      title: Text(
+                        spotName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${spotPosts.length}টি স্মৃতি ও ছবি সংগৃহীত',
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12),
+                      ),
+                      trailing: FilledButton.tonal(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: isSelected
+                              ? const Color(0xFF00C853)
+                              : Colors.white12,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _selectedLandmarkFilter =
+                                isSelected ? null : spotName;
+                          });
+                          Navigator.pop(ctx);
+                        },
+                        child: Text(
+                          isSelected ? 'নির্বাচিত' : 'ফিড ফিল্টার',
+                          style: TextStyle(
+                            color: isSelected ? Colors.black : Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _loadMorePosts() {
@@ -392,6 +723,18 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             onPressed: () => setState(() => _isGridView = !_isGridView),
           ),
 
+          // Landmark Map / Location Hub
+          IconButton(
+            icon: Icon(
+              Icons.explore_outlined,
+              color: _selectedLandmarkFilter != null
+                  ? const Color(0xFF00C853)
+                  : Colors.white70,
+            ),
+            tooltip: 'স্পট ও ল্যান্ডমার্ক ম্যাপ',
+            onPressed: () => _showLandmarkMapModal(context, _latestPosts),
+          ),
+
           // Sort Toggle (Newest vs Popular)
           IconButton(
             icon: Icon(
@@ -444,9 +787,17 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     stream: _postsStream,
                     builder: (context, postsSnap) {
                       final posts = postsSnap.data ?? const <TourPostItem>[];
+                      _latestPosts = posts;
 
                       // Apply filtering
                       var filteredPosts = posts.where((p) {
+                        // Archive filter
+                        if (_selectedMediaFilter == 'archived') {
+                          if (!p.isArchived) return false;
+                        } else {
+                          if (p.isArchived) return false;
+                        }
+
                         if (_selectedDayFilter != 'all' &&
                             p.tourDay != _selectedDayFilter) {
                           return false;
@@ -457,8 +808,21 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         if (_selectedMediaFilter == 'reels' && !p.isReel) {
                           return false;
                         }
-                        if (_selectedMediaFilter == 'saved' &&
-                            !_bookmarkedPostIds.contains(p.id)) {
+                        if (_selectedMediaFilter == 'saved') {
+                          if (_selectedBookmarkCollection != null) {
+                            final inColl = _bookmarkCollections[
+                                        _selectedBookmarkCollection]
+                                    ?.contains(p.id) ??
+                                false;
+                            if (!inColl) return false;
+                          } else {
+                            if (!_bookmarkedPostIds.contains(p.id)) {
+                              return false;
+                            }
+                          }
+                        }
+                        if (_selectedLandmarkFilter != null &&
+                            p.location != _selectedLandmarkFilter) {
                           return false;
                         }
                         if (_activeHashtagFilter != null &&
@@ -552,10 +916,101 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                               ),
                             ),
 
-                          // 5. Media Filter Tabs (All, Photos, Reels, Saved)
+                          // 4b. Landmark Filter Chip (if active)
+                          if (_selectedLandmarkFilter != null)
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 4),
+                                child: Row(
+                                  children: [
+                                    Chip(
+                                      backgroundColor: const Color(0xFF00C853)
+                                          .withValues(alpha: 0.2),
+                                      avatar: const Icon(Icons.location_on,
+                                          size: 16, color: Color(0xFF00C853)),
+                                      label: Text(
+                                        _selectedLandmarkFilter!,
+                                        style: const TextStyle(
+                                            color: Color(0xFF00C853),
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      deleteIcon: const Icon(Icons.close,
+                                          size: 16, color: Colors.white70),
+                                      onDeleted: () => setState(
+                                          () => _selectedLandmarkFilter = null),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                          // 5. Media Filter Tabs (All, Photos, Reels, Saved, Archived)
                           SliverToBoxAdapter(
                             child: _buildMediaFilterTabs(),
                           ),
+
+                          // 5b. Bookmark Collection Chips (When Saved Tab is active)
+                          if (_selectedMediaFilter == 'saved')
+                            SliverToBoxAdapter(
+                              child: Container(
+                                height: 40,
+                                margin: const EdgeInsets.only(top: 4, bottom: 4),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
+                                child: ListView(
+                                  scrollDirection: Axis.horizontal,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 6),
+                                      child: ChoiceChip(
+                                        label: const Text('সব সেভ করা'),
+                                        selected:
+                                            _selectedBookmarkCollection == null,
+                                        selectedColor: Colors.amber,
+                                        backgroundColor:
+                                            const Color(0xFF1E1E1E),
+                                        labelStyle: TextStyle(
+                                          color: _selectedBookmarkCollection ==
+                                                  null
+                                              ? Colors.black
+                                              : Colors.white70,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        onSelected: (_) => setState(() =>
+                                            _selectedBookmarkCollection = null),
+                                      ),
+                                    ),
+                                    ..._bookmarkCollections.keys.map((name) {
+                                      final isSel =
+                                          _selectedBookmarkCollection == name;
+                                      return Padding(
+                                        padding:
+                                            const EdgeInsets.only(right: 6),
+                                        child: ChoiceChip(
+                                          label: Text(name),
+                                          selected: isSel,
+                                          selectedColor: Colors.amber,
+                                          backgroundColor:
+                                              const Color(0xFF1E1E1E),
+                                          labelStyle: TextStyle(
+                                            color: isSel
+                                                ? Colors.black
+                                                : Colors.white70,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          onSelected: (_) => setState(() =>
+                                              _selectedBookmarkCollection =
+                                                  name),
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              ),
+                            ),
 
                           // 6. Day-wise Filter Chips
                           SliverToBoxAdapter(
@@ -626,6 +1081,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                         _bookmarkedPostIds.contains(post.id),
                                     onBookmarkToggle: () =>
                                         _toggleBookmark(post.id),
+                                    onSaveToCollection:
+                                        _showSaveToCollectionSheet,
                                     onOpenComments: (p) =>
                                         _showCommentsModal(context, p),
                                     onShare: (p) => _showShareModal(context, p),
@@ -854,6 +1311,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       {'id': 'photos', 'label': 'ছবি (Photos)'},
       {'id': 'reels', 'label': 'রিলস (Reels)'},
       {'id': 'saved', 'label': 'সেভ করা (Saved)'},
+      {'id': 'archived', 'label': 'আর্কাইভ (Archive)'},
     ];
 
     return Container(

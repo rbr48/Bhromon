@@ -253,6 +253,9 @@ class TourPostItem {
   final double? expenseAmount;
   final String? expenseCategory;
   final String? coverUrl;
+  final bool isEdited;
+  final DateTime? editedAt;
+  final bool isArchived;
 
   const TourPostItem({
     required this.id,
@@ -280,6 +283,9 @@ class TourPostItem {
     this.expenseAmount,
     this.expenseCategory,
     this.coverUrl,
+    this.isEdited = false,
+    this.editedAt,
+    this.isArchived = false,
   });
 
   bool isLikedBy(String email) => likes.contains(normalizeEmail(email));
@@ -316,6 +322,9 @@ class TourPostItem {
     double? expenseAmount,
     String? expenseCategory,
     String? coverUrl,
+    bool? isEdited,
+    DateTime? editedAt,
+    bool? isArchived,
   }) {
     return TourPostItem(
       id: id ?? this.id,
@@ -343,6 +352,9 @@ class TourPostItem {
       expenseAmount: expenseAmount ?? this.expenseAmount,
       expenseCategory: expenseCategory ?? this.expenseCategory,
       coverUrl: coverUrl ?? this.coverUrl,
+      isEdited: isEdited ?? this.isEdited,
+      editedAt: editedAt ?? this.editedAt,
+      isArchived: isArchived ?? this.isArchived,
     );
   }
 
@@ -372,6 +384,9 @@ class TourPostItem {
       if (expenseAmount != null) 'expenseAmount': expenseAmount,
       if (expenseCategory != null) 'expenseCategory': expenseCategory,
       if (coverUrl != null) 'coverUrl': coverUrl,
+      if (isEdited) 'isEdited': true,
+      if (editedAt != null) 'editedAt': writeDate(editedAt!),
+      if (isArchived) 'isArchived': true,
     };
   }
 
@@ -409,6 +424,9 @@ class TourPostItem {
       expenseAmount: (map['expenseAmount'] as num?)?.toDouble(),
       expenseCategory: map['expenseCategory'] as String?,
       coverUrl: map['coverUrl'] as String?,
+      isEdited: map['isEdited'] as bool? ?? false,
+      editedAt: readDate(map['editedAt']),
+      isArchived: map['isArchived'] as bool? ?? false,
     );
   }
 }
@@ -528,6 +546,7 @@ class TourStoryItem {
   final TourStoryPoll? poll;
   final TourStorySticker? sticker;
   final String? highlightId;
+  final Map<String, String> reactions; // email -> emoji
 
   const TourStoryItem({
     required this.id,
@@ -543,6 +562,7 @@ class TourStoryItem {
     this.poll,
     this.sticker,
     this.highlightId,
+    this.reactions = const {},
   });
 
   bool isActiveAt(DateTime now) =>
@@ -564,6 +584,7 @@ class TourStoryItem {
     TourStoryPoll? poll,
     TourStorySticker? sticker,
     String? highlightId,
+    Map<String, String>? reactions,
   }) {
     return TourStoryItem(
       id: id ?? this.id,
@@ -579,6 +600,7 @@ class TourStoryItem {
       poll: poll ?? this.poll,
       sticker: sticker ?? this.sticker,
       highlightId: highlightId ?? this.highlightId,
+      reactions: reactions ?? this.reactions,
     );
   }
 
@@ -596,10 +618,19 @@ class TourStoryItem {
       if (poll != null) 'poll': poll!.toMap(),
       if (sticker != null) 'sticker': sticker!.toMap(),
       if (highlightId != null) 'highlightId': highlightId,
+      if (reactions.isNotEmpty) 'reactions': reactions,
     };
   }
 
   factory TourStoryItem.fromMap(String id, Map<String, dynamic> map) {
+    final rawReactions = map['reactions'] as Map<dynamic, dynamic>? ?? {};
+    final parsedReactions = <String, String>{};
+    rawReactions.forEach((k, v) {
+      if (v != null) {
+        parsedReactions[normalizeEmail(k.toString())] = v.toString();
+      }
+    });
+
     return TourStoryItem(
       id: id,
       authorEmail: normalizeEmail(map['authorEmail'] as String? ?? ''),
@@ -622,6 +653,7 @@ class TourStoryItem {
               Map<String, dynamic>.from(map['sticker'] as Map))
           : null,
       highlightId: map['highlightId'] as String?,
+      reactions: parsedReactions,
     );
   }
 }

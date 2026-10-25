@@ -27,6 +27,7 @@ class InstafeedPostCard extends StatefulWidget {
   final void Function(TourPostItem post)? onReelTap;
   final void Function(String hashtag)? onHashtagTap;
   final VoidCallback onBookmarkToggle;
+  final void Function(TourPostItem post)? onSaveToCollection;
   final VoidCallback? onPostChanged;
   final String? seatNumber;
   final String? roomNumber;
@@ -45,6 +46,7 @@ class InstafeedPostCard extends StatefulWidget {
     this.onReelTap,
     this.onHashtagTap,
     required this.onBookmarkToggle,
+    this.onSaveToCollection,
     this.onPostChanged,
     this.seatNumber,
     this.roomNumber,
@@ -84,6 +86,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
       if (!mounted || _videoCtrl != ctrl) return;
       ctrl.setLooping(true);
       ctrl.setVolume(0.0);
+      ctrl.play();
       setState(() {
         _isVideoInitialized = true;
       });
@@ -258,6 +261,163 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     }
   }
 
+  Future<void> _showEditDialog() async {
+    final captionCtrl = TextEditingController(text: widget.post.caption);
+    final locationCtrl = TextEditingController(text: widget.post.location);
+    String selectedDay = widget.post.tourDay;
+
+    final updated = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title: const Text('পোস্ট এডিট করুন',
+              style: TextStyle(color: Colors.white)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('ক্যাপশন',
+                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: captionCtrl,
+                  maxLines: 3,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'ক্যাপশন লিখুন...',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: const Color(0xFF2A2A2A),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text('স্থান / ল্যান্ডমার্ক',
+                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: locationCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.location_on,
+                        color: Color(0xFF00C853), size: 18),
+                    hintText: 'যেমন: ইনানী বিচ, লালবাগ কেল্লা...',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: const Color(0xFF2A2A2A),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text('ট্যুর ডে',
+                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(height: 6),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedDay,
+                  dropdownColor: const Color(0xFF2A2A2A),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFF2A2A2A),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'day1', child: Text('দিন ১ (Day 1)')),
+                    DropdownMenuItem(
+                        value: 'day2', child: Text('দিন ২ (Day 2)')),
+                    DropdownMenuItem(
+                        value: 'day3', child: Text('দিন ৩ (Day 3)')),
+                    DropdownMenuItem(
+                        value: 'day4', child: Text('দিন ৪ (Day 4)')),
+                    DropdownMenuItem(
+                        value: 'day5', child: Text('দিন ৫ (Day 5)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setDlgState(() => selectedDay = val);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child:
+                  const Text('বাতিল', style: TextStyle(color: Colors.white60)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF00C853)),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('সংরক্ষণ করুন',
+                  style: TextStyle(
+                      color: Colors.black, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (updated == true) {
+      try {
+        await widget.repository.updatePost(
+          widget.tourId,
+          widget.post.id,
+          caption: captionCtrl.text,
+          location: locationCtrl.text,
+          tourDay: selectedDay,
+        );
+        widget.onPostChanged?.call();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('পোস্ট সফলভাবে সম্পাদিত হয়েছে')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('পোস্ট সম্পাদনা ব্যর্থ: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _toggleArchive() async {
+    final newArchived = !widget.post.isArchived;
+    try {
+      await widget.repository.setPostArchived(
+        widget.tourId,
+        widget.post.id,
+        isArchived: newArchived,
+      );
+      widget.onPostChanged?.call();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(newArchived
+                  ? 'পোস্টটি আর্কাইভে রাখা হয়েছে'
+                  : 'পোস্টটি আর্কাইভ থেকে পুনরুদ্ধার করা হয়েছে')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('আর্কাইভ পরিবর্তন ব্যর্থ: $e')),
+        );
+      }
+    }
+  }
+
   void _showPostMenu() {
     final canManage = _isAuthor || widget.isAdmin;
 
@@ -282,6 +442,34 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 ),
               ),
               if (canManage) ...[
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined,
+                      color: Colors.lightBlueAccent),
+                  title: const Text('পোস্ট এডিট করুন',
+                      style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showEditDialog();
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    widget.post.isArchived
+                        ? Icons.unarchive_outlined
+                        : Icons.archive_outlined,
+                    color: Colors.purpleAccent,
+                  ),
+                  title: Text(
+                    widget.post.isArchived
+                        ? 'আর্কাইভ থেকে ফিরিয়ে আনুন'
+                        : 'পোস্টটি আর্কাইভ করুন',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _toggleArchive();
+                  },
+                ),
                 ListTile(
                   leading: Icon(
                     widget.post.isPinned
@@ -359,6 +547,17 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   widget.onBookmarkToggle();
                 },
               ),
+              if (widget.onSaveToCollection != null)
+                ListTile(
+                  leading: const Icon(Icons.folder_special_outlined,
+                      color: Colors.amber),
+                  title: const Text('কালেকশনে যোগ করুন',
+                      style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    widget.onSaveToCollection!(widget.post);
+                  },
+                ),
               if (canManage)
                 ListTile(
                   leading:
@@ -926,18 +1125,23 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   onPressed: () => widget.onAddToLedger?.call(widget.post),
                 ),
 
-                // Bookmark / Save
-                IconButton(
-                  icon: Icon(
-                    widget.isBookmarked
-                        ? Icons.bookmark
-                        : Icons.bookmark_border,
-                    color: widget.isBookmarked
-                        ? const Color(0xFF00C853)
-                        : Colors.white,
-                    size: 24,
+                // Bookmark / Save (tap toggles, long-press opens collections)
+                GestureDetector(
+                  onLongPress: widget.onSaveToCollection != null
+                      ? () => widget.onSaveToCollection!(widget.post)
+                      : null,
+                  child: IconButton(
+                    icon: Icon(
+                      widget.isBookmarked
+                          ? Icons.bookmark
+                          : Icons.bookmark_border,
+                      color: widget.isBookmarked
+                          ? const Color(0xFF00C853)
+                          : Colors.white,
+                      size: 24,
+                    ),
+                    onPressed: widget.onBookmarkToggle,
                   ),
-                  onPressed: widget.onBookmarkToggle,
                 ),
               ],
             ),
@@ -988,12 +1192,46 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               ),
             ),
 
-          // Timestamp
+          // Timestamp & edit/archive status
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
-            child: Text(
-              timeStr,
-              style: const TextStyle(color: Colors.white30, fontSize: 11),
+            child: Row(
+              children: [
+                Text(
+                  timeStr,
+                  style: const TextStyle(color: Colors.white30, fontSize: 11),
+                ),
+                if (widget.post.isEdited) ...[
+                  const SizedBox(width: 6),
+                  const Text(
+                    '• (সম্পাদিত)',
+                    style: TextStyle(
+                        color: Colors.white38,
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic),
+                  ),
+                ],
+                if (widget.post.isArchived) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                          color: Colors.purpleAccent.withValues(alpha: 0.4)),
+                    ),
+                    child: const Text(
+                      'আর্কাইভড',
+                      style: TextStyle(
+                          color: Colors.purpleAccent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],

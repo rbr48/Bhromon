@@ -103,6 +103,11 @@ class RouteCheckpoint {
 class FeedPrefs {
   final Set<String> bookmarks;
   final Set<String> seenStories;
+  final Map<String, List<String>> collections;
 
-  const FeedPrefs({this.bookmarks = const {}, this.seenStories = const {}});
+  const FeedPrefs({
+    this.bookmarks = const {},
+    this.seenStories = const {},
+    this.collections = const {},
+  });
 }

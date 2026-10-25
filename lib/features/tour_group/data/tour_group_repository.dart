@@ -186,10 +186,20 @@ class TourGroupRepository {
       final box = await _openBox();
       final raw = box.get(_feedPrefsKey(tourId));
       if (raw is Map) {
+        final rawCollections = raw['collections'] as Map?;
+        final collections = <String, List<String>>{};
+        if (rawCollections != null) {
+          rawCollections.forEach((k, v) {
+            if (v is List) {
+              collections[k.toString()] = v.map((e) => e.toString()).toList();
+            }
+          });
+        }
         return FeedPrefs(
           bookmarks: Set<String>.from((raw['bookmarks'] as List?) ?? const []),
           seenStories:
               Set<String>.from((raw['seenStories'] as List?) ?? const []),
+          collections: collections,
         );
       }
     } catch (e) {
@@ -205,6 +215,7 @@ class TourGroupRepository {
         'bookmarks': prefs.bookmarks.toList(),
         // Keep only the most recent 500 so the box does not grow forever.
         'seenStories': prefs.seenStories.toList().reversed.take(500).toList(),
+        'collections': prefs.collections,
       });
     } catch (e) {
       debugPrint('[TourGroupRepository] Could not save feed prefs: $e');
@@ -1255,6 +1266,35 @@ class TourGroupRepository {
     await _sub(tourId, 'posts').doc(postId).update({'caption': caption.trim()});
   }
 
+  Future<void> updatePost(
+    String tourId,
+    String postId, {
+    String? caption,
+    String? location,
+    String? tourDay,
+    List<String>? tags,
+  }) async {
+    _requireEmail();
+    final updates = <String, dynamic>{
+      'isEdited': true,
+      'editedAt': writeDate(DateTime.now()),
+    };
+    if (caption != null) updates['caption'] = caption.trim();
+    if (location != null) updates['location'] = location.trim();
+    if (tourDay != null) updates['tourDay'] = tourDay;
+    if (tags != null) updates['tags'] = tags;
+    await _sub(tourId, 'posts').doc(postId).update(updates);
+  }
+
+  Future<void> setPostArchived(
+    String tourId,
+    String postId, {
+    required bool isArchived,
+  }) async {
+    _requireEmail();
+    await _sub(tourId, 'posts').doc(postId).update({'isArchived': isArchived});
+  }
+
   /// Likes or unlikes a post. arrayUnion/arrayRemove mean two people liking at
   /// the same moment both count.
   Future<void> setPostLiked(String tourId, String postId,
@@ -1460,6 +1500,14 @@ class TourGroupRepository {
     final email = _requireEmail();
     await _sub(tourId, 'stories').doc(storyId).update({
       'poll.votes.$email': optionIndex,
+    });
+  }
+
+  Future<void> addStoryReaction(
+      String tourId, String storyId, String emoji) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'stories').doc(storyId).update({
+      'reactions.$email': emoji,
     });
   }
 
