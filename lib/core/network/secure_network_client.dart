@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
-import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:flutter/foundation.dart' show kReleaseMode, kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:injectable/injectable.dart';
 import '../utils/app_logger.dart';
@@ -48,7 +48,8 @@ class SecureNetworkClient {
       ..headers['Content-Type'] = 'application/json';
 
     // Certificate pinning via custom HttpClient adapter
-    if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) {
+    // Certificate pinning via custom HttpClient adapter (Mobile only; browsers handle TLS natively)
+    if (!kIsWeb && !Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) {
       dio.httpClientAdapter = IOHttpClientAdapter(
         createHttpClient: () {
           final client =
