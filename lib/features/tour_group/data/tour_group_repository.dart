@@ -214,6 +214,8 @@ class TourGroupRepository {
     final tours = <String, TourGroup>{};
     var listedIds = <String>{};
     var heardFromServer = false;
+    // Role each membership row says we have, by tour id.
+    final rolesByTour = <String, String>{};
 
     void emit() {
       if (controller.isClosed) return;
@@ -235,6 +237,16 @@ class TourGroupRepository {
             final group = TourGroup.fromMap(doc.id, data);
             tours[tourId] = group;
             _cacheLocalGroup(group);
+            // Owner rows written before role 'owner' was saved as 'admin'.
+            // The owner's own app repairs them here.
+            if (group.ownerEmail == email &&
+                rolesByTour[tourId] != TourRole.owner.toValue()) {
+              _memberships.doc(_membershipId(tourId, email)).update({
+                'role': TourRole.owner.toValue()
+              }).catchError((Object e) => debugPrint(
+                  '[TourGroupRepository] owner role repair failed: $e'));
+              rolesByTour[tourId] = TourRole.owner.toValue();
+            }
           } else {
             tours.remove(tourId);
             _removeLocalGroup(tourId);
@@ -267,10 +279,14 @@ class TourGroupRepository {
             .listen(
           (snapshot) {
             heardFromServer = true;
-            final ids = snapshot.docs
-                .map((d) => d.data()['tourId'] as String? ?? '')
-                .where((id) => id.isNotEmpty)
-                .toSet();
+            rolesByTour.clear();
+            for (final d in snapshot.docs) {
+              final id = d.data()['tourId'] as String? ?? '';
+              if (id.isNotEmpty) {
+                rolesByTour[id] = d.data()['role'] as String? ?? 'member';
+              }
+            }
+            final ids = rolesByTour.keys.toSet();
             for (final id in listedIds.difference(ids)) {
               stopTour(id);
               _removeLocalGroup(id);
@@ -668,8 +684,9 @@ class TourGroupRepository {
   /// Leaves a tour. The owner must transfer ownership first.
   Future<void> leaveTour(String tourId) async {
     final email = _requireEmail();
-    final row = await _memberships.doc(_membershipId(tourId, email)).get();
-    if (row.data()?['role'] == TourRole.owner.toValue()) {
+    // The tour's owner is the source of truth; older owner rows may say 'admin'.
+    final tour = await _tour(tourId).get();
+    if (normalizeEmail(tour.data()?['ownerEmail'] as String? ?? '') == email) {
       throw const TourAccessException(
           'মালিক হিসেবে আগে মালিকানা অন্য সদস্যকে হস্তান্তর করুন।');
     }
