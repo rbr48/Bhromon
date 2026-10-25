@@ -76,11 +76,10 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
           ? widget.authorStoryGroups[_groupIndex]
           : const [];
 
-  TourStoryItem? get _currentStory =>
-      _currentAuthorStories.isNotEmpty &&
-              _storyIndex < _currentAuthorStories.length
-          ? _currentAuthorStories[_storyIndex]
-          : null;
+  TourStoryItem? get _currentStory => _currentAuthorStories.isNotEmpty &&
+          _storyIndex < _currentAuthorStories.length
+      ? _currentAuthorStories[_storyIndex]
+      : null;
 
   bool get _isAuthor =>
       _currentStory != null &&
@@ -205,8 +204,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
       setState(() {
         final updatedPoll =
             story.poll!.withVote(widget.repository.currentEmail, optionIndex);
-        _currentAuthorStories[_storyIndex] =
-            story.copyWith(poll: updatedPoll);
+        _currentAuthorStories[_storyIndex] = story.copyWith(poll: updatedPoll);
       });
     } catch (e) {
       debugPrint('[StoryViewer] Vote error: $e');
@@ -365,7 +363,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                           ),
                           title: Text(
                             email,
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                           ),
                         );
                       },
@@ -390,7 +389,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('হাইলাইটে যোগ করুন', style: TextStyle(color: Colors.white)),
+        title: const Text('হাইলাইটে যোগ করুন',
+            style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: titleCtrl,
           style: const TextStyle(color: Colors.white),
@@ -405,7 +405,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
             child: const Text('বাতিল'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00C853)),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF00C853)),
             onPressed: () => Navigator.pop(ctx, titleCtrl.text.trim()),
             child: const Text('যোগ করুন'),
           ),
@@ -511,8 +512,10 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
               if (story.sticker != null)
                 Positioned(
-                  left: MediaQuery.of(context).size.width * story.sticker!.dx - 70,
-                  top: MediaQuery.of(context).size.height * story.sticker!.dy - 25,
+                  left: MediaQuery.of(context).size.width * story.sticker!.dx -
+                      70,
+                  top: MediaQuery.of(context).size.height * story.sticker!.dy -
+                      25,
                   child: _buildStickerWidget(story.sticker!),
                 ),
 
@@ -550,7 +553,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                   children: [
                     // Progress bars
                     Row(
-                      children: List.generate(_currentAuthorStories.length, (idx) {
+                      children:
+                          List.generate(_currentAuthorStories.length, (idx) {
                         return Expanded(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -792,7 +796,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                           child: Container(
                             decoration: BoxDecoration(
                               color: isChosen
-                                  ? const Color(0xFF00C853).withValues(alpha: 0.4)
+                                  ? const Color(0xFF00C853)
+                                      .withValues(alpha: 0.4)
                                   : Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),

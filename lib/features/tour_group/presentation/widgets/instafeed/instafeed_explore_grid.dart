@@ -22,7 +22,8 @@ class InstafeedExploreGrid extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.grid_on_outlined, size: 54, color: Colors.white.withValues(alpha: 0.2)),
+            Icon(Icons.grid_on_outlined,
+                size: 54, color: Colors.white.withValues(alpha: 0.2)),
             const SizedBox(height: 12),
             const Text(
               'এখনও কোনো ছবি বা ভিডিও যোগ করা হয়নি।',
@@ -55,10 +56,12 @@ class InstafeedExploreGrid extends StatelessWidget {
                 CachedNetworkImage(
                   imageUrl: thumbnail,
                   fit: BoxFit.cover,
-                  placeholder: (context, _) => Container(color: Colors.grey.shade900),
+                  placeholder: (context, _) =>
+                      Container(color: Colors.grey.shade900),
                   errorWidget: (context, _, __) => Container(
                     color: Colors.grey.shade900,
-                    child: const Icon(Icons.broken_image, color: Colors.white24),
+                    child:
+                        const Icon(Icons.broken_image, color: Colors.white24),
                   ),
                 )
               else

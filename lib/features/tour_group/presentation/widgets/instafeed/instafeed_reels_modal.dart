@@ -70,7 +70,8 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
     if (_controllerPool.containsKey(index)) return _controllerPool[index];
 
     final post = widget.reels[index];
-    final url = post.videoUrl ?? (post.images.isNotEmpty ? post.images.first : null);
+    final url =
+        post.videoUrl ?? (post.images.isNotEmpty ? post.images.first : null);
     if (url == null || !isRemoteMediaUrl(url)) return null;
 
     final controller = VideoPlayerController.networkUrl(Uri.parse(url));
@@ -226,8 +227,6 @@ class _ReelPageItemState extends State<_ReelPageItem>
     _discRotCtrl.dispose();
     super.dispose();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -525,8 +524,9 @@ class _ReelPageItemState extends State<_ReelPageItem>
                     valueListenable: ctrl,
                     builder: (context, VideoPlayerValue val, _) {
                       final duration = val.duration.inMilliseconds.toDouble();
-                      final position =
-                          val.position.inMilliseconds.toDouble().clamp(0.0, duration);
+                      final position = val.position.inMilliseconds
+                          .toDouble()
+                          .clamp(0.0, duration);
 
                       return SliderTheme(
                         data: SliderTheme.of(context).copyWith(

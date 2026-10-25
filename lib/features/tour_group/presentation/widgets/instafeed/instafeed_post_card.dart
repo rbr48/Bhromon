@@ -138,7 +138,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('পোস্ট মুছবেন?', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('পোস্ট মুছবেন?', style: TextStyle(color: Colors.white)),
         content: const Text(
           'পোস্ট এবং এর সকল মন্তব্য ও মিডিয়া চিরতরে মুছে যাবে।',
           style: TextStyle(color: Colors.white70),
@@ -197,11 +198,15 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               if (canManage) ...[
                 ListTile(
                   leading: Icon(
-                    widget.post.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                    widget.post.isPinned
+                        ? Icons.push_pin_outlined
+                        : Icons.push_pin,
                     color: Colors.amber,
                   ),
                   title: Text(
-                    widget.post.isPinned ? 'ফিড থেকে আনপিন করুন' : 'ফিডের শীর্ষে পিন করুন',
+                    widget.post.isPinned
+                        ? 'ফিড থেকে আনপিন করুন'
+                        : 'ফিডের শীর্ষে পিন করুন',
                     style: const TextStyle(color: Colors.white),
                   ),
                   onTap: () {
@@ -217,7 +222,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     color: Colors.white70,
                   ),
                   title: Text(
-                    widget.post.hideLikeCount ? 'লাইক সংখ্যা দেখান' : 'লাইক সংখ্যা লুকান',
+                    widget.post.hideLikeCount
+                        ? 'লাইক সংখ্যা দেখান'
+                        : 'লাইক সংখ্যা লুকান',
                     style: const TextStyle(color: Colors.white),
                   ),
                   onTap: () {
@@ -245,7 +252,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 ),
               ],
               ListTile(
-                leading: const Icon(Icons.receipt_long, color: Color(0xFF00C853)),
+                leading:
+                    const Icon(Icons.receipt_long, color: Color(0xFF00C853)),
                 title: const Text('ট্রিপ লেজারে খরচ হিসেবে যোগ করুন',
                     style: TextStyle(color: Colors.white)),
                 onTap: () {
@@ -254,7 +262,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.bookmark_border, color: Colors.white70),
+                leading:
+                    const Icon(Icons.bookmark_border, color: Colors.white70),
                 title: Text(
                   widget.isBookmarked ? 'সংগ্রহ থেকে সরান' : 'সংগ্রহে সেভ করুন',
                   style: const TextStyle(color: Colors.white),
@@ -266,7 +275,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               ),
               if (canManage)
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  leading:
+                      const Icon(Icons.delete_outline, color: Colors.redAccent),
                   title: const Text('পোস্ট মুছুন',
                       style: TextStyle(color: Colors.redAccent)),
                   onTap: () {
@@ -437,7 +447,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 // Audio indicator pill if audio track attached
                 if (widget.post.audioTitle != null)
                   InkWell(
-                    onTap: () => setState(() => _isPlayingAudio = !_isPlayingAudio),
+                    onTap: () =>
+                        setState(() => _isPlayingAudio = !_isPlayingAudio),
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -530,8 +541,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   bottom: 44,
                   left: 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.black87,
                       borderRadius: BorderRadius.circular(12),
@@ -595,7 +606,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 // Bookmark / Save
                 IconButton(
                   icon: Icon(
-                    widget.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                    widget.isBookmarked
+                        ? Icons.bookmark
+                        : Icons.bookmark_border,
                     color: widget.isBookmarked
                         ? const Color(0xFF00C853)
                         : Colors.white,

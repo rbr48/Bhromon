@@ -140,7 +140,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('মন্তব্য মুছবেন?', style: TextStyle(color: Colors.white)),
+        title: const Text('মন্তব্য মুছবেন?',
+            style: TextStyle(color: Colors.white)),
         content: const Text(
           'এই মন্তব্যটি চিরতরে মুছে ফেলা হবে।',
           style: TextStyle(color: Colors.white70),
@@ -223,7 +224,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
           // Comments List
           Expanded(
             child: StreamBuilder<List<TourCommentItem>>(
-              stream: widget.repository.watchComments(widget.tourId, widget.post.id),
+              stream: widget.repository
+                  .watchComments(widget.tourId, widget.post.id),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(
@@ -246,7 +248,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.chat_bubble_outline,
-                            size: 48, color: Colors.white.withValues(alpha: 0.2)),
+                            size: 48,
+                            color: Colors.white.withValues(alpha: 0.2)),
                         const SizedBox(height: 12),
                         const Text(
                           'এখনও কোনো মন্তব্য নেই।\nপ্রথম মন্তব্যটি আপনিই করুন!',
@@ -273,7 +276,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                 });
 
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   itemCount: topLevel.length,
                   itemBuilder: (context, index) {
                     final parent = topLevel[index];
@@ -286,7 +290,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         _buildCommentRow(parent),
                         if (replies.isNotEmpty) ...[
                           Padding(
-                            padding: const EdgeInsets.only(left: 48, top: 4, bottom: 4),
+                            padding: const EdgeInsets.only(
+                                left: 48, top: 4, bottom: 4),
                             child: InkWell(
                               onTap: () {
                                 setState(() {
@@ -362,7 +367,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 18, color: Colors.white54),
+                    icon: const Icon(Icons.close,
+                        size: 18, color: Colors.white54),
                     onPressed: _cancelReply,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -383,7 +389,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                   onTap: () => _submitComment(reaction: emoji),
                   borderRadius: BorderRadius.circular(20),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                     child: Text(emoji, style: const TextStyle(fontSize: 22)),
                   ),
                 );
@@ -431,7 +438,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.send_rounded, color: Color(0xFF00C853)),
+                        : const Icon(Icons.send_rounded,
+                            color: Color(0xFF00C853)),
                   ),
                 ],
               ),
@@ -561,7 +569,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         const SizedBox(width: 12),
                         const Row(
                           children: [
-                            Icon(Icons.favorite, size: 12, color: Colors.redAccent),
+                            Icon(Icons.favorite,
+                                size: 12, color: Colors.redAccent),
                             SizedBox(width: 3),
                             Text(
                               'লেখকের পছন্দ',
@@ -580,7 +589,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                           child: Text(
                             comment.isPinned ? 'আনপিন' : 'পিন করুন',
                             style: TextStyle(
-                              color: comment.isPinned ? Colors.amber : Colors.white54,
+                              color: comment.isPinned
+                                  ? Colors.amber
+                                  : Colors.white54,
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),

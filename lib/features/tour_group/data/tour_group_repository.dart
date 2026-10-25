@@ -245,7 +245,6 @@ class TourGroupRepository {
     }
   }
 
-
   // ---------------------------------------------------------------------------
   // Groups
   // ---------------------------------------------------------------------------
@@ -1285,7 +1284,6 @@ class TourGroupRepository {
     }
   }
 
-
   /// Deletes a post with its comments, then removes its files from Storage
   /// (best effort: the post is removed even if a file cannot be deleted).
   Future<void> deletePost(TourPostItem post) async {
@@ -1367,8 +1365,7 @@ class TourGroupRepository {
     await batch.commit();
   }
 
-  Future<void> setCommentLiked(
-      String tourId, String postId, String commentId,
+  Future<void> setCommentLiked(String tourId, String postId, String commentId,
       {required bool liked}) async {
     final email = _requireEmail();
     await _sub(tourId, 'posts')
@@ -1382,8 +1379,7 @@ class TourGroupRepository {
     });
   }
 
-  Future<void> setCommentPinned(
-      String tourId, String postId, String commentId,
+  Future<void> setCommentPinned(String tourId, String postId, String commentId,
       {required bool isPinned, bool? isAuthorLiked}) async {
     _requireEmail();
     final updates = <String, dynamic>{'isPinned': isPinned};
@@ -1394,7 +1390,6 @@ class TourGroupRepository {
         .doc(commentId)
         .update(updates);
   }
-
 
   // ---------------------------------------------------------------------------
   // Stories
@@ -1504,7 +1499,6 @@ class TourGroupRepository {
     _requireEmail();
     await _sub(tourId, 'highlights').doc(highlightId).delete();
   }
-
 
   // ---------------------------------------------------------------------------
   // Live locations & safety

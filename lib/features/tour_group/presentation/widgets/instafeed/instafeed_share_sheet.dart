@@ -50,9 +50,11 @@ class InstafeedShareSheet extends StatelessWidget {
     },
   ];
 
-  Future<void> _sendToChannel(BuildContext context, String channelId, String channelName) async {
+  Future<void> _sendToChannel(
+      BuildContext context, String channelId, String channelName) async {
     try {
-      final msg = '📸 [ট্যুর পোস্ট]\n${post.authorName}: ${post.caption.isNotEmpty ? post.caption : "একটি ছবি শেয়ার করেছেন"}\n${post.images.isNotEmpty ? post.images.first : post.videoUrl ?? ""}';
+      final msg =
+          '📸 [ট্যুর পোস্ট]\n${post.authorName}: ${post.caption.isNotEmpty ? post.caption : "একটি ছবি শেয়ার করেছেন"}\n${post.images.isNotEmpty ? post.images.first : post.videoUrl ?? ""}';
 
       final channelRepo = TourChannelRepository(groups: repository);
       await channelRepo.sendMessage(
@@ -122,7 +124,8 @@ class InstafeedShareSheet extends StatelessWidget {
 
   void _shareExternal() {
     final link = 'https://app.bhromon.fun/tours/$tourId/posts/${post.id}';
-    final text = 'ভ্রমণ অ্যাপে ${post.authorName}-এর পোস্ট দেখুন:\n${post.caption}\n$link';
+    final text =
+        'ভ্রমণ অ্যাপে ${post.authorName}-এর পোস্ট দেখুন:\n${post.caption}\n$link';
     SharePlus.instance.share(ShareParams(text: text));
   }
 
@@ -168,7 +171,8 @@ class InstafeedShareSheet extends StatelessWidget {
                 child: Icon(Icons.auto_stories, color: Colors.white, size: 20),
               ),
               title: const Text('আপনার স্টোরিতে যোগ করুন',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
               subtitle: const Text('স্টোরি ট্রে-তে ২৪ ঘণ্টার জন্য থাকবে',
                   style: TextStyle(color: Colors.white54, fontSize: 12)),
               onTap: () => _shareToStory(context),
@@ -180,7 +184,10 @@ class InstafeedShareSheet extends StatelessWidget {
               padding: EdgeInsets.symmetric(vertical: 6),
               child: Text(
                 'ট্যুর গ্রুপ চ্যানেলে পাঠান',
-                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600),
               ),
             ),
             ..._channels.map((ch) {
@@ -189,13 +196,17 @@ class InstafeedShareSheet extends StatelessWidget {
                 dense: true,
                 leading: CircleAvatar(
                   radius: 16,
-                  backgroundColor: (ch['color'] as Color).withValues(alpha: 0.2),
-                  child: Icon(ch['icon'] as IconData, size: 16, color: ch['color'] as Color),
+                  backgroundColor:
+                      (ch['color'] as Color).withValues(alpha: 0.2),
+                  child: Icon(ch['icon'] as IconData,
+                      size: 16, color: ch['color'] as Color),
                 ),
                 title: Text(ch['name'] as String,
                     style: const TextStyle(color: Colors.white, fontSize: 14)),
-                trailing: const Icon(Icons.send_rounded, size: 16, color: Colors.white38),
-                onTap: () => _sendToChannel(context, ch['id'] as String, ch['name'] as String),
+                trailing: const Icon(Icons.send_rounded,
+                    size: 16, color: Colors.white38),
+                onTap: () => _sendToChannel(
+                    context, ch['id'] as String, ch['name'] as String),
               );
             }),
 
@@ -244,7 +255,8 @@ class InstafeedShareSheet extends StatelessWidget {
               child: Icon(icon, color: Colors.white),
             ),
             const SizedBox(height: 6),
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            Text(label,
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ],
         ),
       ),

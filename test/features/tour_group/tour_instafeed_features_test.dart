@@ -4,7 +4,7 @@ import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart'
 void main() {
   group('TourStoryPoll', () {
     test('calculates vote counts and percentages accurately', () {
-      final poll = TourStoryPoll(
+      const poll = TourStoryPoll(
         question: 'Dinner tonight?',
         options: ['Seafood', 'Biryani', 'BBQ'],
         votes: {
@@ -33,7 +33,7 @@ void main() {
     });
 
     test('serializes and deserializes correctly', () {
-      final poll = TourStoryPoll(
+      const poll = TourStoryPoll(
         question: 'Boat ride?',
         options: ['Yes', 'No'],
         votes: {'traveler@bd.com': 0},
@@ -121,11 +121,11 @@ void main() {
 
   group('TourStoryItem Video & Stickers', () {
     test('video story with poll and viewer tracking', () {
-      final poll = const TourStoryPoll(
+      const poll = TourStoryPoll(
         question: 'Beach or Hills?',
         options: ['Beach', 'Hills'],
       );
-      final sticker = const TourStorySticker(
+      const sticker = TourStorySticker(
         type: 'tide',
         title: 'ভাটা (Low Tide)',
         subtitle: 'Safe for swimming',
