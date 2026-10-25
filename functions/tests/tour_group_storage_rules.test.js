@@ -1,5 +1,5 @@
 // Tour Group Storage rules. Needs the Firestore and Storage emulators:
-//   firebase emulators:exec --only firestore,storage --project bhromon-rules-test-project "npx jest tests/tour_group_storage_rules"
+//   firebase emulators:exec --only firestore,storage --project bhromon-rules-test-project "npx jest --runInBand tests/tour_group_storage_rules"
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
 const fs = require('fs');
 const path = require('path');

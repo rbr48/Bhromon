@@ -590,7 +590,7 @@ service cloud.firestore {
                           request.resource.data.role == resource.data.role &&
                           request.resource.data.status == resource.data.status &&
                           request.resource.data.diff(resource.data).affectedKeys()
-                            .hasOnly(['displayName', 'photoUrl', 'tourName']))
+                            .hasOnly(['displayName', 'photoUrl', 'tourName', 'familyCount']))
                        );
       // The owner row can't be removed; ownership moves first. Members can leave.
       allow delete: if isAuth() && (

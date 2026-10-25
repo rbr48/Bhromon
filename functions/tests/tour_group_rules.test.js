@@ -1,5 +1,5 @@
 // Tour Group security rules. Runs against the Firestore emulator on port 8080:
-//   firebase emulators:exec --only firestore --project bhromon-rules-test-project "npx jest tests/tour_group_rules"
+//   firebase emulators:exec --only firestore --project bhromon-rules-test-project "npx jest --runInBand tests/tour_group_rules"
 const {
   initializeTestEnvironment,
   assertFails,
@@ -136,6 +136,11 @@ describe('Tour Group Firestore rules', () => {
     test('everyone can list only their own memberships', async () => {
       await assertSucceeds(getDocs(query(collection(db('member'), 'memberships'), where('email', '==', people.member.email))));
       await assertFails(getDocs(collection(db('member'), 'memberships')));
+    });
+
+    test('a member sets their own family size, but not their role', async () => {
+      await assertSucceeds(updateDoc(doc(db('member'), 'memberships', `${TOUR}__${people.member.email}`), { familyCount: 3 }));
+      await assertFails(updateDoc(doc(db('member'), 'memberships', `${TOUR}__${people.member.email}`), { familyCount: 3, role: 'admin' }));
     });
 
     test('admin cannot promote a member; owner can', async () => {
