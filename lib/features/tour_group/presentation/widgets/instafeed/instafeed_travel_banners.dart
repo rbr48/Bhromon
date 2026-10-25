@@ -61,7 +61,8 @@ class InstafeedTideBanner extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      color: isHighTide ? Colors.tealAccent : Colors.orangeAccent,
+                      color:
+                          isHighTide ? Colors.tealAccent : Colors.orangeAccent,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -254,7 +255,8 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
             value: seatNumber != null && seatNumber!.isNotEmpty
                 ? 'আসন $seatNumber'
                 : 'বরাদ্দ নেই',
-            valueColor: seatNumber != null ? const Color(0xFF00C853) : Colors.white54,
+            valueColor:
+                seatNumber != null ? const Color(0xFF00C853) : Colors.white54,
           ),
           const SizedBox(height: 10),
           _buildInfoRow(
@@ -263,7 +265,8 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
             value: roomNumber != null && roomNumber!.isNotEmpty
                 ? 'রুম $roomNumber'
                 : 'বরাদ্দ নেই',
-            valueColor: roomNumber != null ? Colors.amberAccent : Colors.white54,
+            valueColor:
+                roomNumber != null ? Colors.amberAccent : Colors.white54,
           ),
           if (familyCount != null && familyCount! > 1) ...[
             const SizedBox(height: 10),
@@ -280,7 +283,8 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
         FilledButton(
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF00C853),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onPressed: () => Navigator.pop(context),
           child: const Text('ঠিক আছে'),
@@ -305,7 +309,8 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
         children: [
           Icon(icon, size: 20, color: Colors.white70),
           const SizedBox(width: 10),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          Text(label,
+              style: const TextStyle(color: Colors.white70, fontSize: 13)),
           const Spacer(),
           Text(
             value,

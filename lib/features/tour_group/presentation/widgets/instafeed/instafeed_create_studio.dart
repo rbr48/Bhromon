@@ -43,7 +43,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   // Poll sticker controllers
   bool _includePoll = false;
   final TextEditingController _pollQuestionCtrl = TextEditingController();
-  final TextEditingController _pollOpt1Ctrl = TextEditingController(text: 'হ্যাঁ');
+  final TextEditingController _pollOpt1Ctrl =
+      TextEditingController(text: 'হ্যাঁ');
   final TextEditingController _pollOpt2Ctrl = TextEditingController(text: 'না');
 
   bool _isReel = false;
@@ -53,7 +54,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
 
   String _selectedFilterId = 'normal';
   double _brightness = 0.0; // -0.5 to 0.5
-  double _contrast = 1.0;   // 0.5 to 1.5
+  double _contrast = 1.0; // 0.5 to 1.5
   double _saturation = 1.0; // 0.0 to 2.0
 
   String _selectedDay = 'day1';
@@ -182,12 +183,14 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     final remaining = kMaxPhotosPerPost - _photos.length;
     if (remaining <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('সর্বোচ্চ $kMaxPhotosPerPost টি ছবি যোগ করা সম্ভব।')),
+        const SnackBar(
+            content: Text('সর্বোচ্চ $kMaxPhotosPerPost টি ছবি যোগ করা সম্ভব।')),
       );
       return;
     }
 
-    final picked = await widget.picker.pickMultiImage(imageQuality: 85, maxWidth: 1920);
+    final picked =
+        await widget.picker.pickMultiImage(imageQuality: 85, maxWidth: 1920);
     if (picked.isEmpty || !mounted) return;
 
     setState(() {
@@ -324,7 +327,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         for (int i = 0; i < _photos.length; i++) {
           final photo = _photos[i];
           setState(() {
-            _uploadStatusText = 'ছবি আপলোড হচ্ছে (${i + 1}/${_photos.length})...';
+            _uploadStatusText =
+                'ছবি আপলোড হচ্ছে (${i + 1}/${_photos.length})...';
           });
           final ext = storedExtension(photo.name, 'jpg');
           final cType = imageContentType(photo.name) ?? 'image/jpeg';
@@ -367,7 +371,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       }
 
       // If poll sticker is enabled, also create a story with the poll!
-      if (_includePoll && _pollQuestionCtrl.text.trim().isNotEmpty && uploadedUrls.isNotEmpty) {
+      if (_includePoll &&
+          _pollQuestionCtrl.text.trim().isNotEmpty &&
+          uploadedUrls.isNotEmpty) {
         await widget.repository.addStory(
           tourId: widget.tourId,
           mediaUrl: uploadedUrls.first,
@@ -375,8 +381,12 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           poll: TourStoryPoll(
             question: _pollQuestionCtrl.text.trim(),
             options: [
-              _pollOpt1Ctrl.text.trim().isNotEmpty ? _pollOpt1Ctrl.text.trim() : 'হ্যাঁ',
-              _pollOpt2Ctrl.text.trim().isNotEmpty ? _pollOpt2Ctrl.text.trim() : 'না',
+              _pollOpt1Ctrl.text.trim().isNotEmpty
+                  ? _pollOpt1Ctrl.text.trim()
+                  : 'হ্যাঁ',
+              _pollOpt2Ctrl.text.trim().isNotEmpty
+                  ? _pollOpt2Ctrl.text.trim()
+                  : 'না',
             ],
           ),
         );
@@ -415,17 +425,35 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   ColorFilter? get _activeColorFilter {
     // If tuning sliders are applied, combine with color matrix or return adjustment filter
     // For normal matrix, return null
-    if (_selectedFilterId == 'normal' && _brightness == 0.0 && _contrast == 1.0) {
+    if (_selectedFilterId == 'normal' &&
+        _brightness == 0.0 &&
+        _contrast == 1.0) {
       return null;
     }
     // High-performance color matrix for brightness & contrast
     final b = _brightness * 255;
     final c = _contrast;
     return ColorFilter.matrix([
-      c, 0, 0, 0, b,
-      0, c, 0, 0, b,
-      0, 0, c, 0, b,
-      0, 0, 0, 1, 0,
+      c,
+      0,
+      0,
+      0,
+      b,
+      0,
+      c,
+      0,
+      0,
+      b,
+      0,
+      0,
+      c,
+      0,
+      b,
+      0,
+      0,
+      0,
+      1,
+      0,
     ]);
   }
 
@@ -464,7 +492,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                 FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF00C853),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                   ),
                   onPressed: _isPublishing || _isCompressing ? null : _publish,
                   child: _isPublishing
@@ -473,7 +502,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : const Text('পোস্ট করুন',
@@ -502,10 +532,12 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   TextButton(
                     onPressed: _restoreDraft,
                     child: const Text('পুনরুদ্ধার',
-                        style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                        style: TextStyle(
+                            color: Colors.amber, fontWeight: FontWeight.bold)),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 16, color: Colors.white54),
+                    icon: const Icon(Icons.close,
+                        size: 16, color: Colors.white54),
                     onPressed: _discardDraft,
                   ),
                 ],
@@ -523,21 +555,26 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     children: [
                       Text(
                         _uploadStatusText ?? 'প্রক্রিয়াকরণ চলছে...',
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
                       ),
                       const Spacer(),
                       Text(
                         '${((_isCompressing ? _compressionProgress : _uploadProgress) * 100).toStringAsFixed(0)}%',
                         style: const TextStyle(
-                            color: Color(0xFF00C853), fontWeight: FontWeight.bold, fontSize: 12),
+                            color: Color(0xFF00C853),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   LinearProgressIndicator(
-                    value: _isCompressing ? _compressionProgress : _uploadProgress,
+                    value:
+                        _isCompressing ? _compressionProgress : _uploadProgress,
                     backgroundColor: Colors.white12,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00C853)),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Color(0xFF00C853)),
                   ),
                 ],
               ),
@@ -579,20 +616,29 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                       child: DropdownButtonFormField<String>(
                         initialValue: _selectedDay,
                         dropdownColor: const Color(0xFF222222),
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
                         decoration: InputDecoration(
                           labelText: 'ট্যুর দিবস',
-                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                          labelStyle: const TextStyle(
+                              color: Colors.white70, fontSize: 12),
                           filled: true,
                           fillColor: const Color(0xFF1E1E1E),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'day1', child: Text('দিন ১ (Day 1)')),
-                          DropdownMenuItem(value: 'day2', child: Text('দিন ২ (Day 2)')),
-                          DropdownMenuItem(value: 'day3', child: Text('দিন ৩ (Day 3)')),
-                          DropdownMenuItem(value: 'day4', child: Text('দিন ৪ (Day 4)')),
-                          DropdownMenuItem(value: 'day5', child: Text('দিন ৫ (Day 5)')),
+                          DropdownMenuItem(
+                              value: 'day1', child: Text('দিন ১ (Day 1)')),
+                          DropdownMenuItem(
+                              value: 'day2', child: Text('দিন ২ (Day 2)')),
+                          DropdownMenuItem(
+                              value: 'day3', child: Text('দিন ৩ (Day 3)')),
+                          DropdownMenuItem(
+                              value: 'day4', child: Text('দিন ৪ (Day 4)')),
+                          DropdownMenuItem(
+                              value: 'day5', child: Text('দিন ৫ (Day 5)')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -608,16 +654,23 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                       child: DropdownButtonFormField<String>(
                         initialValue: _selectedLandmark,
                         dropdownColor: const Color(0xFF222222),
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
                         decoration: InputDecoration(
                           labelText: 'দর্শনীয় স্থান',
-                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                          labelStyle: const TextStyle(
+                              color: Colors.white70, fontSize: 12),
                           filled: true,
                           fillColor: const Color(0xFF1E1E1E),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none),
                         ),
                         items: (widget.group?.allSpots ?? _kTourLandmarks)
-                            .map((spot) => DropdownMenuItem(value: spot, child: Text(spot, overflow: TextOverflow.ellipsis)))
+                            .map((spot) => DropdownMenuItem(
+                                value: spot,
+                                child: Text(spot,
+                                    overflow: TextOverflow.ellipsis)))
                             .toList(),
                         onChanged: (val) {
                           if (val != null) {
@@ -639,7 +692,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                       hintStyle: const TextStyle(color: Colors.white38),
                       filled: true,
                       fillColor: const Color(0xFF1E1E1E),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none),
                     ),
                     onChanged: (_) => _saveCurrentDraft(),
                   ),
@@ -694,9 +749,12 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.brightness_6, size: 16, color: Colors.white70),
+                              const Icon(Icons.brightness_6,
+                                  size: 16, color: Colors.white70),
                               const SizedBox(width: 8),
-                              const Text('উজ্জ্বলতা', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                              const Text('উজ্জ্বলতা',
+                                  style: TextStyle(
+                                      color: Colors.white70, fontSize: 12)),
                               Expanded(
                                 child: Slider(
                                   value: _brightness,
@@ -713,9 +771,12 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           ),
                           Row(
                             children: [
-                              const Icon(Icons.contrast, size: 16, color: Colors.white70),
+                              const Icon(Icons.contrast,
+                                  size: 16, color: Colors.white70),
                               const SizedBox(width: 8),
-                              const Text('কনট্রাস্ট', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                              const Text('কনট্রাস্ট',
+                                  style: TextStyle(
+                                      color: Colors.white70, fontSize: 12)),
                               Expanded(
                                 child: Slider(
                                   value: _contrast,
@@ -742,7 +803,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   controller: _audioTitleCtrl,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.music_note, color: Color(0xFF00C853)),
+                    prefixIcon:
+                        const Icon(Icons.music_note, color: Color(0xFF00C853)),
                     hintText: 'ব্যাকগ্রাউন্ড গানের নাম (ঐচ্ছিক)',
                     hintStyle: const TextStyle(color: Colors.white38),
                     filled: true,
@@ -759,7 +821,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('স্টোরি পোল স্টিকার যোগ করুন',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
                   subtitle: const Text('ভ্রমণসঙ্গীদের মতামত ও ভোট সংগ্রহ করুন',
                       style: TextStyle(color: Colors.white54, fontSize: 12)),
                   value: _includePoll,
@@ -868,7 +931,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
               ),
               IconButton(
                 icon: Icon(
-                  _videoCtrl!.value.isPlaying ? Icons.pause_circle : Icons.play_circle,
+                  _videoCtrl!.value.isPlaying
+                      ? Icons.pause_circle
+                      : Icons.play_circle,
                   color: Colors.white70,
                   size: 48,
                 ),
@@ -898,13 +963,15 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.all(8),
-          itemCount: _photos.length + (_photos.length < kMaxPhotosPerPost ? 1 : 0),
+          itemCount:
+              _photos.length + (_photos.length < kMaxPhotosPerPost ? 1 : 0),
           itemBuilder: (context, index) {
             if (index == _photos.length) {
               return Center(
                 child: IconButton.filledTonal(
                   onPressed: _pickPhotos,
-                  icon: const Icon(Icons.add_photo_alternate, color: Color(0xFF00C853)),
+                  icon: const Icon(Icons.add_photo_alternate,
+                      color: Color(0xFF00C853)),
                 ),
               );
             }
@@ -916,10 +983,18 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: ColorFiltered(
-                      colorFilter: _activeColorFilter ?? const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+                      colorFilter: _activeColorFilter ??
+                          const ColorFilter.mode(
+                              Colors.transparent, BlendMode.multiply),
                       child: kIsWeb
-                          ? Image.network(photo.path, width: 140, height: 164, fit: BoxFit.cover)
-                          : Image.asset(photo.path, width: 140, height: 164, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 140, color: Colors.grey.shade900)),
+                          ? Image.network(photo.path,
+                              width: 140, height: 164, fit: BoxFit.cover)
+                          : Image.asset(photo.path,
+                              width: 140,
+                              height: 164,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                  width: 140, color: Colors.grey.shade900)),
                     ),
                   ),
                   Positioned(
@@ -936,7 +1011,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           color: Colors.black54,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close, size: 14, color: Colors.white),
+                        child: const Icon(Icons.close,
+                            size: 14, color: Colors.white),
                       ),
                     ),
                   ),

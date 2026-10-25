@@ -104,7 +104,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       setState(() {
         _seatMap.clear();
         for (final s in seats) {
-          if (s.assignedMemberEmail != null && s.assignedMemberEmail!.isNotEmpty) {
+          if (s.assignedMemberEmail != null &&
+              s.assignedMemberEmail!.isNotEmpty) {
             _seatMap[s.assignedMemberEmail!] = s.seatNumber;
           }
         }
@@ -190,7 +191,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     );
   }
 
-  void _openReelsModal(BuildContext context, List<TourPostItem> allReels, int initialIndex) {
+  void _openReelsModal(
+      BuildContext context, List<TourPostItem> allReels, int initialIndex) {
     Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
@@ -214,7 +216,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           : '',
     );
     final titleCtrl = TextEditingController(
-      text: post.caption.isNotEmpty ? post.caption : 'ট্যুর খরচ (${post.authorName})',
+      text: post.caption.isNotEmpty
+          ? post.caption
+          : 'ট্যুর খরচ (${post.authorName})',
     );
     String selectedCategory = post.expenseCategory ?? 'Food';
 
@@ -226,7 +230,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           children: [
             Icon(Icons.receipt_long, color: Color(0xFF00C853)),
             SizedBox(width: 8),
-            Text('ট্রিপ লেজারে যোগ করুন', style: TextStyle(color: Colors.white)),
+            Text('ট্রিপ লেজারে যোগ করুন',
+                style: TextStyle(color: Colors.white)),
           ],
         ),
         content: Column(
@@ -243,7 +248,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: amountCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 labelText: 'টাকার পরিমাণ (BDT)',
@@ -263,9 +269,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               ),
               items: const [
                 DropdownMenuItem(value: 'Food', child: Text('খাবার (Food)')),
-                DropdownMenuItem(value: 'Transport', child: Text('পরিবহন (Transport)')),
-                DropdownMenuItem(value: 'Hotel', child: Text('হোটেল / থাকার ব্যবস্থা')),
-                DropdownMenuItem(value: 'Activity', child: Text('দর্শনীয় ও স্পট')),
+                DropdownMenuItem(
+                    value: 'Transport', child: Text('পরিবহন (Transport)')),
+                DropdownMenuItem(
+                    value: 'Hotel', child: Text('হোটেল / থাকার ব্যবস্থা')),
+                DropdownMenuItem(
+                    value: 'Activity', child: Text('দর্শনীয় ও স্পট')),
                 DropdownMenuItem(value: 'Other', child: Text('অন্যান্য')),
               ],
               onChanged: (v) {
@@ -280,7 +289,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             child: const Text('বাতিল'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00C853)),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF00C853)),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('যোগ করুন'),
           ),
@@ -426,7 +436,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               return StreamBuilder<List<TourStoryHighlight>>(
                 stream: _highlightsStream,
                 builder: (context, highlightsSnap) {
-                  final highlights = highlightsSnap.data ?? const <TourStoryHighlight>[];
+                  final highlights =
+                      highlightsSnap.data ?? const <TourStoryHighlight>[];
 
                   return StreamBuilder<List<TourPostItem>>(
                     stream: _postsStream,
@@ -458,7 +469,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
                       // Apply sorting
                       if (_sortByPopular) {
-                        filteredPosts.sort((a, b) => b.likes.length.compareTo(a.likes.length));
+                        filteredPosts.sort(
+                            (a, b) => b.likes.length.compareTo(a.likes.length));
                       } else {
                         // Keep pinned posts at top, then chronological
                         filteredPosts.sort((a, b) {
@@ -511,19 +523,25 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           if (_activeHashtagFilter != null)
                             SliverToBoxAdapter(
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 4),
                                 child: Row(
                                   children: [
                                     Chip(
-                                      backgroundColor: const Color(0xFF00C853).withValues(alpha: 0.2),
-                                      avatar: const Icon(Icons.tag, size: 16, color: Color(0xFF00C853)),
+                                      backgroundColor: const Color(0xFF00C853)
+                                          .withValues(alpha: 0.2),
+                                      avatar: const Icon(Icons.tag,
+                                          size: 16, color: Color(0xFF00C853)),
                                       label: Text(
                                         _activeHashtagFilter!,
                                         style: const TextStyle(
-                                            color: Color(0xFF00C853), fontWeight: FontWeight.bold),
+                                            color: Color(0xFF00C853),
+                                            fontWeight: FontWeight.bold),
                                       ),
-                                      deleteIcon: const Icon(Icons.close, size: 16, color: Colors.white70),
-                                      onDeleted: () => setState(() => _activeHashtagFilter = null),
+                                      deleteIcon: const Icon(Icons.close,
+                                          size: 16, color: Colors.white70),
+                                      onDeleted: () => setState(
+                                          () => _activeHashtagFilter = null),
                                     ),
                                   ],
                                 ),
@@ -546,11 +564,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           else if (!postsSnap.hasData)
                             const SliverFillRemaining(
                               child: Center(
-                                child: CircularProgressIndicator(color: AppColors.mintGreen),
+                                child: CircularProgressIndicator(
+                                    color: AppColors.mintGreen),
                               ),
                             )
                           else if (filteredPosts.isEmpty)
-                            SliverFillRemaining(child: _buildEmptyFeedState(context))
+                            SliverFillRemaining(
+                                child: _buildEmptyFeedState(context))
                           else if (_isGridView)
                             SliverFillRemaining(
                               child: InstafeedExploreGrid(
@@ -558,7 +578,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                 onPostTap: (post) {
                                   if (post.isReel) {
                                     final reelIdx = reelsList.indexOf(post);
-                                    _openReelsModal(context, reelsList, reelIdx >= 0 ? reelIdx : 0);
+                                    _openReelsModal(context, reelsList,
+                                        reelIdx >= 0 ? reelIdx : 0);
                                   } else {
                                     setState(() => _isGridView = false);
                                   }
@@ -586,16 +607,22 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                     isAdmin: _isAdmin,
                                     seatNumber: _seatMap[post.authorEmail],
                                     roomNumber: _roomMap[post.authorEmail],
-                                    isBookmarked: _bookmarkedPostIds.contains(post.id),
-                                    onBookmarkToggle: () => _toggleBookmark(post.id),
-                                    onOpenComments: (p) => _showCommentsModal(context, p),
+                                    isBookmarked:
+                                        _bookmarkedPostIds.contains(post.id),
+                                    onBookmarkToggle: () =>
+                                        _toggleBookmark(post.id),
+                                    onOpenComments: (p) =>
+                                        _showCommentsModal(context, p),
                                     onShare: (p) => _showShareModal(context, p),
-                                    onAddToLedger: (p) => _showAddToLedgerDialog(p),
-                                    onHashtagTap: (tag) => setState(() => _activeHashtagFilter = tag),
+                                    onAddToLedger: (p) =>
+                                        _showAddToLedgerDialog(p),
+                                    onHashtagTap: (tag) => setState(
+                                        () => _activeHashtagFilter = tag),
                                     onPostChanged: () => setState(() {}),
                                   );
                                 },
-                                childCount: filteredPosts.length + (hasMore ? 1 : 0),
+                                childCount:
+                                    filteredPosts.length + (hasMore ? 1 : 0),
                               ),
                             ),
 
@@ -641,7 +668,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                 _repository.currentDisplayName.isNotEmpty
                             ? null
                             : null,
-                        child: const Icon(Icons.person, color: Colors.white54, size: 28),
+                        child: const Icon(Icons.person,
+                            color: Colors.white54, size: 28),
                       ),
                       Positioned(
                         bottom: 0,
@@ -652,7 +680,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                             color: Color(0xFF00C853),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.add, size: 14, color: Colors.black),
+                          child: const Icon(Icons.add,
+                              size: 14, color: Colors.black),
                         ),
                       ),
                     ],
@@ -700,12 +729,19 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         shape: BoxShape.circle,
                         gradient: isUnseen
                             ? const LinearGradient(
-                                colors: [Color(0xFF00E676), Color(0xFF1DE9B6), Color(0xFF00B0FF)],
+                                colors: [
+                                  Color(0xFF00E676),
+                                  Color(0xFF1DE9B6),
+                                  Color(0xFF00B0FF)
+                                ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               )
                             : LinearGradient(
-                                colors: [Colors.grey.shade700, Colors.grey.shade800],
+                                colors: [
+                                  Colors.grey.shade700,
+                                  Colors.grey.shade800
+                                ],
                               ),
                       ),
                       child: CircleAvatar(
@@ -720,7 +756,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                     ? first.authorName[0].toUpperCase()
                                     : 'M',
                                 style: const TextStyle(
-                                    color: Colors.white, fontWeight: FontWeight.bold),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
                               )
                             : null,
                       ),
@@ -733,7 +770,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white, fontSize: 11),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 11),
                       ),
                     ),
                   ],
@@ -761,7 +799,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           ? NetworkImage(h.coverUrl)
                           : null,
                       child: h.coverUrl.isEmpty
-                          ? const Icon(Icons.star, color: Colors.amber, size: 24)
+                          ? const Icon(Icons.star,
+                              color: Colors.amber, size: 24)
                           : null,
                     ),
                     const SizedBox(height: 4),
@@ -772,7 +811,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white70, fontSize: 11),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 11),
                       ),
                     ),
                   ],
@@ -812,7 +852,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 12,
               ),
-              onSelected: (_) => setState(() => _selectedMediaFilter = f['id']!),
+              onSelected: (_) =>
+                  setState(() => _selectedMediaFilter = f['id']!),
             ),
           );
         }).toList(),
@@ -868,7 +909,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded, size: 48, color: Colors.white38),
+            const Icon(Icons.cloud_off_rounded,
+                size: 48, color: Colors.white38),
             const SizedBox(height: 12),
             const Text(
               'পোস্টগুলো লোড করা যায়নি',
@@ -877,7 +919,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             const SizedBox(height: 12),
             FilledButton.tonal(
               onPressed: () => setState(() {
-                _postsStream = _repository.watchPosts(widget.tourId, limit: _postLimit);
+                _postsStream =
+                    _repository.watchPosts(widget.tourId, limit: _postLimit);
               }),
               child: const Text('পুনরায় চেষ্টা করুন'),
             ),
@@ -894,11 +937,15 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.photo_library_outlined, size: 54, color: Colors.white24),
+            const Icon(Icons.photo_library_outlined,
+                size: 54, color: Colors.white24),
             const SizedBox(height: 16),
             const Text(
               'এখনও কোনো পোস্ট নেই',
-              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -908,9 +955,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF00C853)),
+              style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF00C853)),
               icon: const Icon(Icons.add_a_photo, color: Colors.black),
-              label: const Text('পোস্ট তৈরি করুন', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              label: const Text('পোস্ট তৈরি করুন',
+                  style: TextStyle(
+                      color: Colors.black, fontWeight: FontWeight.bold)),
               onPressed: () => _showCreatePostModal(context),
             ),
           ],

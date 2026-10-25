@@ -217,8 +217,8 @@ class TourPostDraft {
       tags:
           (map['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
               const [],
-      savedAt: DateTime.tryParse(map['savedAt'] as String? ?? '') ??
-          DateTime.now(),
+      savedAt:
+          DateTime.tryParse(map['savedAt'] as String? ?? '') ?? DateTime.now(),
     );
   }
 }
