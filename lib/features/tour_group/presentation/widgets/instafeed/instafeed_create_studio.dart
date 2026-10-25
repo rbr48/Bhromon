@@ -124,6 +124,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     _pollQuestionCtrl.dispose();
     _pollOpt1Ctrl.dispose();
     _pollOpt2Ctrl.dispose();
+    // Leaving the sheet mid-compression stops the transcode too.
+    if (_isCompressing) TourVideoCompressor.cancel();
     _releaseVideoPreview();
     super.dispose();
   }
@@ -237,6 +239,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
               if (mounted) setState(() => _compressionProgress = p);
             },
           );
+        } on TourVideoCompressionCancelled {
+          if (mounted) setState(() => _isCompressing = false);
+          return;
         } catch (e) {
           if (!mounted) return;
           setState(() => _isCompressing = false);
@@ -691,6 +696,14 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                             fontWeight: FontWeight.bold,
                             fontSize: 12),
                       ),
+                      if (_isCompressing)
+                        IconButton(
+                          tooltip: 'বাতিল',
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.close,
+                              color: Colors.white70, size: 18),
+                          onPressed: () => TourVideoCompressor.cancel(),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 6),
