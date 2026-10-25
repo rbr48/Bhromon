@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../domain/models/tour_group.dart';
+import '../../data/tour_group_repository.dart';
 
 class QuizQuestion {
   final int id;
@@ -26,70 +28,138 @@ class TourQuizScreen extends StatefulWidget {
 }
 
 class _TourQuizScreenState extends State<TourQuizScreen> {
+  final TourGroupRepository _repository = TourGroupRepository();
+  TourGroup? _tourGroup;
   int _currentIndex = 0;
   int? _selectedOption;
   bool _isAnswered = false;
   int _score = 0;
   bool _isFinished = false;
 
-  static const List<QuizQuestion> questions = [
-    QuizQuestion(
-      id: 1,
-      question: 'কক্সবাজার সমুদ্র সৈকত পৃথিবীর কততম দীর্ঘতম প্রাকৃতিক অবিচ্ছিন্ন বালুকাময় সৈকত?',
-      options: ['প্রথম (১ম)', 'দ্বিতীয় (২য়)', 'তৃতীয় (৩য়)', 'পঞ্চম (৫ম)'],
-      correctIndex: 0,
-      explanation: 'কক্সবাজার সমুদ্র সৈকত প্রায় ১২০ কিলোমিটার দীর্ঘ এবং এটি পৃথিবীর দীর্ঘতম প্রাকৃতিক অবিচ্ছিন্ন বালুকাময় সমুদ্র সৈকত!',
-    ),
-    QuizQuestion(
-      id: 2,
-      question: 'রংপুর থেকে কক্সবাজারের দূরত্ব জাতীয় মহাসড়ক পথে আনুমানিক কত কিলোমিটার?',
-      options: ['৫৫০ কি.মি.', '৬৮০ কি.মি.', '৭৮০ - ৮২০ কি.মি.', '৯৫০ কি.মি.'],
-      correctIndex: 2,
-      explanation: 'রংপুর থেকে ঢাকা হয়ে কক্সবাজারের মোট দূরত্ব প্রায় ৭৮০-৮২০ কিলোমিটার, যা এভারগ্রীন বাসে অতিক্রম করা হয়।',
-    ),
-    QuizQuestion(
-      id: 3,
-      question: 'ইনানী বিচের প্রধান ও বিশেষ বৈশিষ্ট্য কী?',
-      options: ['লাল কাঁকড়া', 'প্রবাল ও প্রবাল পাথর (Coral Rocks)', 'গভীর খাল', 'ম্যানগ্রোভ বন'],
-      correctIndex: 1,
-      explanation: 'ইনানী সৈকত তার শান্ত পরিবেশ এবং প্রাকৃতিকভাবে গড়ে ওঠা প্রবাল পাথরের জন্য বিখ্যাত।',
-    ),
-    QuizQuestion(
-      id: 4,
-      question: 'সমুদ্র সৈকতে কখন গোসল করা সবচেয়ে বিপজ্জনক?',
-      options: ['জোয়ারের সময়', 'ভাটার সময় (Low Tide)', 'সকালের শান্ত বাতাসে', 'দুপুরের রোদে'],
-      correctIndex: 1,
-      explanation: 'ভাটার সময় পানির টান বা রিপ কারেন্ট সমুদ্রের গভীরে টেনে নেয়, তাই ভাটার সময় গভীর সমুদ্রে নামা অত্যন্ত বিপজ্জনক।',
-    ),
-    QuizQuestion(
-      id: 5,
-      question: 'বাংলাদেশের একমাত্র পাহাড়ি দ্বীপ কোনটি?',
-      options: ['সেন্টমার্টিন', 'মহেশখালী', 'ছেঁড়াদ্বীপ', 'হাতিয়া'],
-      correctIndex: 1,
-      explanation: 'মহেশখালী বাংলাদেশের একমাত্র পাহাড়ি দ্বীপ, যেখানে বিখ্যাত আদিনাথ মন্দির ও পানের বরজ রয়েছে।',
-    ),
-    QuizQuestion(
-      id: 6,
-      question: 'হিমছড়ি পাহাড়ে কোন প্রাকৃতিক সৌন্দর্য দেখার মতো?',
-      options: ['পাহাড়ি ঝর্ণা ও সমুদ্রের ভিউ', 'আইসবর্গ', 'চা বাগান', 'হরিণ প্রজনন কেন্দ্র'],
-      correctIndex: 0,
-      explanation: 'হিমছড়িতে রয়েছে শীতল পাহাড়ি ঝর্ণা এবং পাহাড়ের চূড়া থেকে বঙ্গোপসাগরের দিগন্ত বিস্তৃত রূপ।',
-    ),
-    QuizQuestion(
-      id: 7,
-      question: 'মেরিন ড্রাইভ রোড কোন দুটি স্থানকে সরাসরি সংযুক্ত করেছে?',
-      options: ['কক্সবাজার থেকে টেকনাফ', 'কক্সবাজার থেকে চট্টগ্রাম', 'কক্সবাজার থেকে বান্দরবান', 'কক্সবাজার থেকে রাঙ্গামাটি'],
-      correctIndex: 0,
-      explanation: '৮০ কি.মি. দীর্ঘ মেরিন ড্রাইভ রোড কক্সবাজার কলাতলী থেকে টেকনাফ পর্যন্ত বিস্তৃত, যার একপাশে পাহাড় ও অন্যপাশে সমুদ্র।',
-    ),
-    QuizQuestion(
-      id: 8,
-      question: 'বার্মিজ মার্কেটের সবচেয়ে জনপ্রিয় কেনাকাটার আইটেম কোনটি?',
-      options: ['বার্মিজ আচার, চকোলেট ও স্যান্ডেল', 'মোবাইল ফোন', 'ল্যাপটপ', 'মাটির হাড়ি'],
-      correctIndex: 0,
-      explanation: 'বার্মিজ আচার, চকোলেট, স্যান্ডেল, থামি এবং কাঠের হস্তশিল্প পর্যটকদের প্রধান আকর্ষণ।',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadGroup();
+  }
+
+  Future<void> _loadGroup() async {
+    final g = await _repository.getGroup(widget.tourId);
+    if (mounted) setState(() => _tourGroup = g);
+  }
+
+  List<QuizQuestion> get questions {
+    final dest = _tourGroup?.destination.toLowerCase() ?? 'cox';
+
+    if (dest.contains('sajek') || dest.contains('সাজেক')) {
+      return const [
+        QuizQuestion(
+          id: 1,
+          question: 'সাজেক ভ্যালি বাংলাদেশের কোন জেলায় অবস্থিত?',
+          options: ['রাঙ্গামাটি', 'খাগড়াছড়ি', 'বান্দরবান', 'কক্সবাজার'],
+          correctIndex: 0,
+          explanation: 'ভৌগোলিকভাবে সাজেক রাঙ্গামাটি জেলার বাঘাইছড়ি উপজেলায় অবস্থিত, তবে যাতায়াত করতে হয় খাগড়াছড়ি দিয়ে।',
+        ),
+        QuizQuestion(
+          id: 2,
+          question: 'সাজেক ভ্যালির সর্বোচ্চ পাহাড় চূড়া কোনটি?',
+          options: ['কংলাক পাহাড় (Konglak Peak)', 'রুইলুই পাড়া', 'হ্যালিপ্যাড', 'তাজিংডং'],
+          correctIndex: 0,
+          explanation: 'কংলাক পাহাড় চূড়া সাজেকের সর্বোচ্চ বিন্দু, যেখান থেকে চারপাশের মেঘ ও ভারতের মিজোরাম সীমান্ত দেখা যায়।',
+        ),
+        QuizQuestion(
+          id: 3,
+          question: 'সাজেকে যাতায়াতের জন্য প্রধান ও রোমাঞ্চকর বাহন কোনটি?',
+          options: ['খোলা চাঁদের গাড়ি (Chander Gari)', 'সিএনজি অটোরিকশা', 'লঞ্চ', 'ট্রেন'],
+          correctIndex: 0,
+          explanation: 'পাহাড়ি উঁচু-নিচু আঁকাবাঁকা পথে ৪-হুইল ড্রাইভ চাঁদের গাড়িই সাজেক ভ্রমণের প্রধান রোমাঞ্চ।',
+        ),
+        QuizQuestion(
+          id: 4,
+          question: 'সাজেকে প্রবেশের জন্য সেনাবাহিনীর এসকর্ট কোথা থেকে শুরু হয়?',
+          options: ['দীঘিনালা সেনা ক্যাম্প', 'আলুটিলা', 'মাইজভাণ্ডার', 'মানিকছড়ি'],
+          correctIndex: 0,
+          explanation: 'নিরাপত্তার স্বার্থে দীঘিনালা থেকে প্রতিদিন সকাল ও দুপুরে সেনাবাহিনীর কনভয় এসকর্ট দিয়ে সাজেক নেওয়া হয়।',
+        ),
+        QuizQuestion(
+          id: 5,
+          question: 'সাজেকে সবচেয়ে বিখ্যাত আকর্ষণ কী?',
+          options: ['মেঘের সমুদ্র ও মেঘ ছোঁয়া (Sea of Clouds)', 'সমুদ্রের ঢেউ', 'চা বাগান', 'হরিণ প্রজনন'],
+          correctIndex: 0,
+          explanation: 'ভোরে কটেজের বারান্দা বা হ্যালিপ্যাডে দাঁড়ালে পায়ের নিচে তুলোর মতো ভাসমান মেঘের সমুদ্র দেখা যায়।',
+        ),
+      ];
+    } else if (dest.contains('sylhet') || dest.contains('সিলেট')) {
+      return const [
+        QuizQuestion(
+          id: 1,
+          question: 'বাংলাদেশের একমাত্র স্বীকৃত মিঠাপানির জলাবন (Swamp Forest) কোনটি?',
+          options: ['রাতারগুল সোয়াম্প ফরেস্ট', 'সুন্দরবন', 'লাউয়াছড়া', 'রেমা-কালেঙ্গা'],
+          correctIndex: 0,
+          explanation: 'সিলেটের গোয়াইনঘাটে অবস্থিত রাতারগুল হলো মিঠাপানির এক অনন্য ও নৈসর্গিক জলাবন।',
+        ),
+        QuizQuestion(
+          id: 2,
+          question: 'ভোলাগঞ্জ সাদা পাথর পয়েন্টে কোন নদী বয়ে চলেছে?',
+          options: ['ধলাই নদী (Dhalai)', 'পদ্মা', 'সুরমা', 'কর্ণফুলী'],
+          correctIndex: 0,
+          explanation: 'মেঘালয় পাহাড় থেকে নেমে আসা স্বচ্ছ শীতল ধলাই নদীর বুকে সাদা পাথরের রাজ্য গড়ে উঠেছে।',
+        ),
+        QuizQuestion(
+          id: 3,
+          question: 'সিলেটের ঐতিহ্যবাহী রান্নায় কোন বিশেষ সাইট্রাস ফল ব্যবহার করা হয়?',
+          options: ['সাতকড়া (Satkara)', 'আমলকী', 'বাতাবি লেবু', 'কামরাঙা'],
+          correctIndex: 0,
+          explanation: 'সিলেটের ঐতিহ্যবাহী গরুর মাংস বা মাছে সুগন্ধি সাতকড়া লেবু দিয়ে রান্না করা হয়।',
+        ),
+        QuizQuestion(
+          id: 4,
+          question: 'শ্রীমঙ্গলের বিখ্যাত চায়ের বিশেষত্ব কী?',
+          options: ['নীলকণ্ঠের ৭ স্তরের সাত রঙের চা', 'আইস টি', 'গ্রিন টি ল্যাটে', 'লেমন গ্রাস টি'],
+          correctIndex: 0,
+          explanation: 'রমেশ রাম গৌড়ের আবিষ্কৃত এক গ্লাসে ৭ স্তরের বিভিন্ন ঘনত্বের চা দেশজুড়ে বিখ্যাত।',
+        ),
+      ];
+    } else {
+      // Default: Cox's Bazar / Universal
+      return const [
+        QuizQuestion(
+          id: 1,
+          question: 'কক্সবাজার সমুদ্র সৈকত পৃথিবীর কততম দীর্ঘতম প্রাকৃতিক অবিচ্ছিন্ন বালুকাময় সৈকত?',
+          options: ['প্রথম (১ম)', 'দ্বিতীয় (২য়)', 'তৃতীয় (৩য়)', 'পঞ্চম (৫ম)'],
+          correctIndex: 0,
+          explanation: 'কক্সবাজার সমুদ্র সৈকত প্রায় ১২০ কিলোমিটার দীর্ঘ এবং এটি পৃথিবীর দীর্ঘতম প্রাকৃতিক অবিচ্ছিন্ন বালুকাময় সমুদ্র সৈকত!',
+        ),
+        QuizQuestion(
+          id: 2,
+          question: 'ইনানী বিচের প্রধান ও বিশেষ বৈশিষ্ট্য কী?',
+          options: ['লাল কাঁকড়া', 'প্রবাল ও প্রবাল পাথর (Coral Rocks)', 'গভীর খাল', 'ম্যানগ্রোভ বন'],
+          correctIndex: 1,
+          explanation: 'ইনানী সৈকত তার শান্ত পরিবেশ এবং প্রাকৃতিকভাবে গড়ে ওঠা প্রবাল পাথরের জন্য বিখ্যাত।',
+        ),
+        QuizQuestion(
+          id: 3,
+          question: 'সমুদ্র সৈকতে কখন গোসল করা সবচেয়ে বিপজ্জনক?',
+          options: ['জোয়ারের সময়', 'ভাটার সময় (Low Tide)', 'সকালের শান্ত বাতাসে', 'দুপুরের রোদে'],
+          correctIndex: 1,
+          explanation: 'ভাটার সময় পানির টান বা রিপ কারেন্ট সমুদ্রের গভীরে টেনে নেয়, তাই ভাটার সময় গভীর সমুদ্রে নামা অত্যন্ত বিপজ্জনক।',
+        ),
+        QuizQuestion(
+          id: 4,
+          question: 'বাংলাদেশের একমাত্র পাহাড়ি দ্বীপ কোনটি?',
+          options: ['সেন্টমার্টিন', 'মহেশখালী', 'ছেঁড়াদ্বীপ', 'হাতিয়া'],
+          correctIndex: 1,
+          explanation: 'মহেশখালী বাংলাদেশের একমাত্র পাহাড়ি দ্বীপ, যেখানে বিখ্যাত আদিনাথ মন্দির ও পানের বরজ রয়েছে।',
+        ),
+        QuizQuestion(
+          id: 5,
+          question: 'মেরিন ড্রাইভ রোড কোন দুটি স্থানকে সরাসরি সংযুক্ত করেছে?',
+          options: ['কক্সবাজার থেকে টেকনাফ', 'কক্সবাজার থেকে চট্টগ্রাম', 'কক্সবাজার থেকে বান্দরবান', 'কক্সবাজার থেকে রাঙ্গামাটি'],
+          correctIndex: 0,
+          explanation: '৮০ কি.মি. দীর্ঘ মেরিন ড্রাইভ রোড কক্সবাজার কলাতলী থেকে টেকনাফ পর্যন্ত বিস্তৃত, যার একপাশে পাহাড় ও অন্যপাশে সমুদ্র।',
+        ),
+      ];
+    }
+  }
 
   void _onOptionSelected(int index) {
     if (_isAnswered) return;
@@ -326,9 +396,10 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
 
   Widget _buildResultView() {
     final pct = (_score / questions.length) * 100;
+    final dest = _tourGroup?.destination ?? 'ট্যুর';
     String badge = 'পর্যটক শিক্ষার্থী';
     if (pct >= 85) {
-      badge = '👑 কক্সবাজার ট্যুর এক্সপার্ট';
+      badge = '👑 $dest এক্সপার্ট';
     } else if (pct >= 60) {
       badge = '🌟 চৌকস ভ্রমণকারী';
     }

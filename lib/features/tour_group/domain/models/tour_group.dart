@@ -36,6 +36,70 @@ enum TourMemberStatus {
   String toValue() => name;
 }
 
+enum TourType {
+  beach,
+  hill,
+  nature,
+  heritage,
+  city,
+  custom;
+
+  static TourType fromString(String? type) {
+    switch (type?.toLowerCase()) {
+      case 'hill':
+      case 'mountain':
+        return TourType.hill;
+      case 'nature':
+      case 'forest':
+        return TourType.nature;
+      case 'heritage':
+      case 'historical':
+        return TourType.heritage;
+      case 'city':
+      case 'urban':
+        return TourType.city;
+      case 'custom':
+      case 'other':
+        return TourType.custom;
+      default:
+        return TourType.beach;
+    }
+  }
+
+  String toValue() => name;
+
+  String get labelBn {
+    switch (this) {
+      case TourType.beach:
+        return '🏖️ সমুদ্র সৈকত (Beach)';
+      case TourType.hill:
+        return '⛰️ পাহাড় ও ট্র্যাকিং (Hill & Trek)';
+      case TourType.nature:
+        return '🌲 বন ও প্রকৃতি (Forest & Nature)';
+      case TourType.heritage:
+        return '🏛️ প্রত্নতাত্ত্বিক ও ঐতিহ্য (Heritage)';
+      case TourType.city:
+        return '🏙️ শহর ও আধুনিক ভ্রমণ (City Tour)';
+      case TourType.custom:
+        return '🎒 সাধারণ / কাস্টম ভ্রমণ (Custom Tour)';
+    }
+  }
+}
+
+class TourDayInfo {
+  final String id; // 'day1', 'day2', etc.
+  final int dayNumber; // 1, 2, etc.
+  final DateTime date;
+  final String label; // e.g. 'ডে ১ (২৫ অক্টো)'
+
+  const TourDayInfo({
+    required this.id,
+    required this.dayNumber,
+    required this.date,
+    required this.label,
+  });
+}
+
 class TourMember {
   final String tourId;
   final String tourName;
@@ -117,6 +181,20 @@ class TourModules {
       chat: map['chat'] as bool? ?? true,
     );
   }
+
+  TourModules copyWith({
+    bool? seatsRooms,
+    bool? tideSafety,
+    bool? games,
+    bool? chat,
+  }) {
+    return TourModules(
+      seatsRooms: seatsRooms ?? this.seatsRooms,
+      tideSafety: tideSafety ?? this.tideSafety,
+      games: games ?? this.games,
+      chat: chat ?? this.chat,
+    );
+  }
 }
 
 class TourGroup {
@@ -124,12 +202,17 @@ class TourGroup {
   final String name;
   final String description;
   final String destination;
+  final String originCity;
+  final TourType tourType;
   final String ownerEmail;
   final String ownerUid;
   final String inviteCode;
   final DateTime startDate;
   final DateTime endDate;
   final TourModules modules;
+  final List<String> customSpots;
+  final String? meetingPointTitle;
+  final String? meetingPointMapUrl;
   final DateTime createdAt;
 
   const TourGroup({
@@ -137,14 +220,205 @@ class TourGroup {
     required this.name,
     this.description = '',
     this.destination = "Cox's Bazar",
+    this.originCity = 'ঢাকা',
+    this.tourType = TourType.beach,
     required this.ownerEmail,
     this.ownerUid = '',
     required this.inviteCode,
     required this.startDate,
     required this.endDate,
     this.modules = const TourModules(),
+    this.customSpots = const [],
+    this.meetingPointTitle,
+    this.meetingPointMapUrl,
     required this.createdAt,
   });
+
+  int get totalDays {
+    final diff = endDate.difference(startDate).inDays;
+    return diff < 0 ? 1 : diff + 1;
+  }
+
+  int get totalNights => totalDays > 1 ? totalDays - 1 : 0;
+
+  String get durationText {
+    final daysBn = _toBanglaNumber(totalDays);
+    if (totalNights == 0) return '$daysBn দিন (ডে-ট্যুর)';
+    final nightsBn = _toBanglaNumber(totalNights);
+    return '$daysBn দিন $nightsBn রাত';
+  }
+
+  List<TourDayInfo> get daysList {
+    final list = <TourDayInfo>[];
+    for (int i = 0; i < totalDays; i++) {
+      final dayDate = startDate.add(Duration(days: i));
+      final monthName = _banglaMonth(dayDate.month);
+      final dayNumBn = _toBanglaNumber(dayDate.day);
+      final dayIndexBn = _toBanglaNumber(i + 1);
+      list.add(
+        TourDayInfo(
+          id: 'day${i + 1}',
+          dayNumber: i + 1,
+          date: dayDate,
+          label: 'ডে $dayIndexBn ($dayNumBn $monthName)',
+        ),
+      );
+    }
+    return list;
+  }
+
+  static String _toBanglaNumber(int n) {
+    const en = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const bn = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    String s = n.toString();
+    for (int i = 0; i < 10; i++) {
+      s = s.replaceAll(en[i], bn[i]);
+    }
+    return s;
+  }
+
+  static String _banglaMonth(int m) {
+    const months = [
+      'জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
+      'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'
+    ];
+    if (m >= 1 && m <= 12) return months[m - 1];
+    return '';
+  }
+
+  List<String> get recommendedSpots {
+    final dest = destination.toLowerCase();
+    if (dest.contains('cox') || dest.contains('কক্সবাজার')) {
+      return const [
+        'লাবণী বিচ (Laboni Point)',
+        'সুগন্ধা বিচ (Sugandha Point)',
+        'কলাতলী বিচ ও পয়েন্ট (Kolatoli)',
+        'ইনানী বিচ ও প্রবাল দ্বীপ (Inani Beach)',
+        'পাটুয়ারটেক বিচ (Patuartek)',
+        'হিমছড়ি পাহাড় ও ঝর্ণা (Himchari)',
+        'মেরিন ড্রাইভ রোড (Marine Drive)',
+        'বার্মিজ মার্কেট (Burmese Market)',
+        'ডলফিন মোড় (Dolphin Point)',
+        'অন্যান্য স্থান (Others)',
+      ];
+    } else if (dest.contains('sajek') || dest.contains('সাজেক')) {
+      return const [
+        'রুইলুই পাড়া (Ruilui Para)',
+        'কংলাক পাহাড় চূড়া (Konglak Peak)',
+        'সাজেক হ্যালিপ্যাড (Sajek Helipad)',
+        'স্টোন গার্ডেন (Stone Garden)',
+        'লুসাই ভিলেজ (Lushai Village)',
+        'রিছাং ঝর্ণা (Richang Waterfall)',
+        'আলুটিলা গুহা ও সুরঙ্গ (Alutila Cave)',
+        'অন্যান্য স্থান (Others)',
+      ];
+    } else if (dest.contains('sylhet') || dest.contains('সিলেট') || dest.contains('sreemangal') || dest.contains('শ্রীমঙ্গল')) {
+      return const [
+        'রাতারগুল সোয়াম্প ফরেস্ট (Ratargul)',
+        'বিছনাকান্দি (Bisnakandi)',
+        'জাফলং জিরো পয়েন্ট (Jaflong)',
+        'ভোলাগঞ্জ সাদা পাথর (Sada Pathor)',
+        'লালাখাল পান্না নদী (Lalakhal)',
+        'মালনীছড়া চা বাগান (Malnicherra Tea)',
+        'মাধবপুর লেক (Madhabpur Lake)',
+        'লাউয়াছড়া জাতীয় উদ্যান (Lawachara)',
+        'অন্যান্য স্থান (Others)',
+      ];
+    } else if (dest.contains('bandarban') || dest.contains('বান্দরবান')) {
+      return const [
+        'নীলগিরি রিসোর্ট ও মেঘলোক (Nilgiri)',
+        'নীলাচল ভিউপয়েন্ট (Nilachal)',
+        'স্বর্ণমন্দির / বুদ্ধ ধাতু জাদি (Golden Temple)',
+        'বগা লেক (Boga Lake)',
+        'নাফাখুম জলপ্রপাত (Nafakhum)',
+        'মেঘলা পর্যটন কমপ্লেক্স (Meghla)',
+        'চিম্বুক পাহাড় (Chimbuk Hill)',
+        'অন্যান্য স্থান (Others)',
+      ];
+    } else if (dest.contains('kuakata') || dest.contains('কুয়াকাটা')) {
+      return const [
+        'কুয়াকাটা সৈকত সূর্যোদয় ও সূর্যাস্ত পয়েন্ট',
+        'ঝাউবন ও লাল কাঁকড়ার চর',
+        'ফাতরার বন ম্যানগ্রোভ অঞ্চল',
+        'লেম্বুর চর ও তিন নদীর মোহনা',
+        'মিশ্রীপাড়া বৌদ্ধ মন্দির ও সীমা বিহার',
+        'অন্যান্য স্থান (Others)',
+      ];
+    } else if (dest.contains('sundarban') || dest.contains('সুন্দরবন')) {
+      return const [
+        'করমজল বন্যপ্রাণী কেন্দ্র',
+        'কটকা বিচ ও ওয়াচ টাওয়ার',
+        'হাড়বাড়িয়া ইকোট্যুরিজম কেন্দ্র',
+        'হিরণ পয়েন্ট ও নীলকমল',
+        'দুবলার চর ও আলোরকোল',
+        'অন্যান্য স্থান (Others)',
+      ];
+    } else {
+      return const [
+        'প্রধান হোটেল / রিসোর্ট (Hotel/Resort)',
+        'যাত্রা পয়েন্ট / স্টেশন (Departure/Station)',
+        'দর্শনীয় স্পট ১ (Attraction 1)',
+        'দর্শনীয় স্পট ২ (Attraction 2)',
+        'দর্শনীয় স্পট ৩ (Attraction 3)',
+        'বিখ্যাত রেস্তোরাঁ ও ক্যাফে (Food & Dine)',
+        'স্থানীয় বাজার ও কেনাকাটা (Local Market)',
+        'অন্যান্য স্থান (Others)',
+      ];
+    }
+  }
+
+  List<String> get allSpots {
+    final list = <String>[];
+    for (final s in customSpots) {
+      if (s.trim().isNotEmpty && !list.contains(s.trim())) {
+        list.add(s.trim());
+      }
+    }
+    for (final s in recommendedSpots) {
+      if (!list.contains(s)) {
+        list.add(s);
+      }
+    }
+    return list;
+  }
+
+  TourGroup copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? destination,
+    String? originCity,
+    TourType? tourType,
+    String? ownerEmail,
+    String? ownerUid,
+    String? inviteCode,
+    DateTime? startDate,
+    DateTime? endDate,
+    TourModules? modules,
+    List<String>? customSpots,
+    String? meetingPointTitle,
+    String? meetingPointMapUrl,
+    DateTime? createdAt,
+  }) {
+    return TourGroup(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      destination: destination ?? this.destination,
+      originCity: originCity ?? this.originCity,
+      tourType: tourType ?? this.tourType,
+      ownerEmail: ownerEmail ?? this.ownerEmail,
+      ownerUid: ownerUid ?? this.ownerUid,
+      inviteCode: inviteCode ?? this.inviteCode,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      modules: modules ?? this.modules,
+      customSpots: customSpots ?? this.customSpots,
+      meetingPointTitle: meetingPointTitle ?? this.meetingPointTitle,
+      meetingPointMapUrl: meetingPointMapUrl ?? this.meetingPointMapUrl,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -152,14 +426,19 @@ class TourGroup {
       'name': name,
       'description': description,
       'destination': destination,
+      'originCity': originCity,
+      'tourType': tourType.toValue(),
       'ownerEmail': ownerEmail.toLowerCase().trim(),
       'ownerUid': ownerUid,
       'inviteCode': inviteCode,
       'startDate': startDate.toIso8601String(),
       'endDate': endDate.toIso8601String(),
       'modules': modules.toMap(),
+      'customSpots': customSpots,
+      if (meetingPointTitle != null) 'meetingPointTitle': meetingPointTitle,
+      if (meetingPointMapUrl != null) 'meetingPointMapUrl': meetingPointMapUrl,
       'createdAt': createdAt.toIso8601String(),
-      'schemaVersion': 2,
+      'schemaVersion': 3,
     };
   }
 
@@ -169,6 +448,8 @@ class TourGroup {
       name: map['name'] as String? ?? 'Family Tour',
       description: map['description'] as String? ?? '',
       destination: map['destination'] as String? ?? "Cox's Bazar",
+      originCity: map['originCity'] as String? ?? 'ঢাকা',
+      tourType: TourType.fromString(map['tourType'] as String?),
       ownerEmail: (map['ownerEmail'] as String? ?? '').toLowerCase().trim(),
       ownerUid: map['ownerUid'] as String? ?? '',
       inviteCode: map['inviteCode'] as String? ?? '',
@@ -180,6 +461,12 @@ class TourGroup {
               DateTime.now().add(const Duration(days: 4))
           : DateTime.now().add(const Duration(days: 4)),
       modules: TourModules.fromMap(map['modules'] as Map<String, dynamic>?),
+      customSpots: (map['customSpots'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      meetingPointTitle: map['meetingPointTitle'] as String?,
+      meetingPointMapUrl: map['meetingPointMapUrl'] as String?,
       createdAt: map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'].toString()) ?? DateTime.now()
           : DateTime.now(),

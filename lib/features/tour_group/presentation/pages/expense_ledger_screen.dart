@@ -24,11 +24,22 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   LedgerSummary? _latestSummary;
   List<ExpenseItem> _latestExpenses = [];
   List<TourMember> _latestMembers = [];
+  TourGroup? _tourGroup;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadGroup();
+  }
+
+  Future<void> _loadGroup() async {
+    final group = await _repository.getGroup(widget.tourId);
+    if (mounted && group != null) {
+      setState(() {
+        _tourGroup = group;
+      });
+    }
   }
 
   @override
@@ -842,10 +853,17 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       buffer.writeln(escapeCell('================== $title =================='));
     }
 
-    line(['রংপুর ➔ কক্সবাজার ফ্যামিলি ট্যুর ২০২৬ - অফিশিয়াল অডিট বিবরণী']);
-    line(['ভ্রমণকাল', '১৯ অক্টোবর ২০২৬ – ২৩ অক্টোবর ২০২৬']);
-    line(['পরিবহন', 'এভারগ্রীন এসি বাস (রংপুর-কক্সবাজার)']);
-    line(['হোটেল', 'হোটেল সি মুন (কক্সবাজার)']);
+    final tourTitle = _tourGroup?.name ?? 'ট্যুর ফান্ড ও খরচ বিবরণী';
+    final tourDates = _tourGroup != null
+        ? '${DateFormat('dd MMMM yyyy').format(_tourGroup!.startDate)} – ${DateFormat('dd MMMM yyyy').format(_tourGroup!.endDate)} (${_tourGroup!.durationText})'
+        : DateFormat('dd MMMM yyyy').format(DateTime.now());
+    final route = _tourGroup != null
+        ? '${_tourGroup!.originCity} ➔ ${_tourGroup!.destination}'
+        : 'ট্যুর রুট';
+
+    line(['$tourTitle - অফিশিয়াল অডিট বিবরণী']);
+    line(['ভ্রমণ রুট', route]);
+    line(['ভ্রমণকাল', tourDates]);
     line(['রিপোর্ট তৈরির তারিখ', DateFormat('dd MMMM yyyy, hh:mm a').format(DateTime.now())]);
 
     section('আর্থিক সারসংক্ষেপ (FINANCIAL AUDIT SUMMARY)');
@@ -903,7 +921,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     }
 
     section('অডিট অনুমোদন ও স্বাক্ষর');
-    line(['ট্যুর লিডার: রেজাউল করিম', 'কোষাধ্যক্ষ: অডিট প্যানেল', 'অনুমোদনকারী: পরিবারের অভিভাবকবৃন্দ']);
+    line(['ট্যুর অ্যাডমিন ও লিডার', 'কোষাধ্যক্ষ: অডিট প্যানেল', 'অনুমোদনকারী: ট্যুর সদস্যবৃন্দ']);
 
     // Prepend UTF-8 BOM so Excel opens Bangla text without mojibake
     final csvContent = '\uFEFF${buffer.toString()}';
@@ -911,7 +929,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     // ignore: deprecated_member_use
     Share.share(
       csvContent,
-      subject: 'CoxsBazar_Tour2026_Official_Audit_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
+      subject: 'Bhromon_Tour_Official_Audit_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
     );
   }
 

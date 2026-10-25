@@ -244,42 +244,79 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.mintGreen.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Destination: ${group.destination}',
-                  style: const TextStyle(
-                    color: AppColors.mintGreen,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.mintGreen.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${group.tourType.labelBn.split(' ').first} ${group.destination}',
+                        style: const TextStyle(
+                          color: AppColors.mintGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '⏱️ ${group.durationText}',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              if (allGroups.length > 1)
-                DropdownButton<String>(
-                  value: group.id,
-                  dropdownColor: const Color(0xFF1B4332),
-                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
-                  underline: const SizedBox(),
-                  items: allGroups.map((g) {
-                    return DropdownMenuItem(
-                      value: g.id,
-                      child: Text(g.name,
-                          style: const TextStyle(color: Colors.white, fontSize: 13)),
-                    );
-                  }).toList(),
-                  onChanged: (id) {
-                    if (id != null) {
-                      setState(() {
-                        _activeGroup = allGroups.firstWhere((g) => g.id == id);
-                      });
-                    }
-                  },
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_calendar_rounded, size: 20, color: AppColors.mintGreen),
+                    tooltip: 'ট্যুর সেটিংস ও দিন পরিবর্তন',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _showEditGroupDialog(context, group),
+                  ),
+                  if (allGroups.length > 1) ...[
+                    const SizedBox(width: 8),
+                    DropdownButton<String>(
+                      value: group.id,
+                      dropdownColor: const Color(0xFF1B4332),
+                      icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
+                      underline: const SizedBox(),
+                      items: allGroups.map((g) {
+                        return DropdownMenuItem(
+                          value: g.id,
+                          child: Text(g.name,
+                              style: const TextStyle(color: Colors.white, fontSize: 13)),
+                        );
+                      }).toList(),
+                      onChanged: (id) {
+                        if (id != null) {
+                          setState(() {
+                            _activeGroup = allGroups.firstWhere((g) => g.id == id);
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -290,6 +327,24 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(Icons.calendar_today_rounded, size: 12, color: Colors.white60),
+              const SizedBox(width: 5),
+              Text(
+                '${DateFormat('d MMM yyyy').format(group.startDate)} – ${DateFormat('d MMM yyyy').format(group.endDate)}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(width: 12),
+              const Icon(Icons.near_me_rounded, size: 12, color: Colors.white60),
+              const SizedBox(width: 4),
+              Text(
+                'যাত্রা: ${group.originCity}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
           ),
           if (group.description.isNotEmpty) ...[
             const SizedBox(height: 6),
@@ -356,9 +411,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         onTap: () => context.push('/group/${group.id}/logistics'),
       ),
       _ModuleItem(
-        title: 'Tide & Beach Guide',
-        subtitle: 'High/low tide & danger flags',
-        icon: Icons.waves_rounded,
+        title: group.tourType == TourType.beach ? 'Tide & Beach Guide 🌊' : 'Weather & Nature 🌤️',
+        subtitle: group.tourType == TourType.beach
+            ? 'High/low tide & danger flags'
+            : 'লাইভ আবহাওয়া ও ট্র্যাকিং সতর্কতা',
+        icon: group.tourType == TourType.beach ? Icons.waves_rounded : Icons.wb_sunny_rounded,
         color: const Color(0xFF38BDF8),
         onTap: () => context.push('/group/${group.id}/tide'),
       ),
@@ -371,14 +428,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       ),
       _ModuleItem(
         title: 'Highway Roadmap 🛣️',
-        subtitle: '৮২০ কিমি জার্নি ট্র্যাকার',
+        subtitle: '${group.originCity} ➔ ${group.destination} জার্নি ট্র্যাকার',
         icon: Icons.alt_route_rounded,
         color: const Color(0xFF10B981),
         onTap: () => context.push('/group/${group.id}/journey'),
       ),
       _ModuleItem(
         title: 'Safety Hub & SOS 🚨',
-        subtitle: 'বিচ কম্পাস ও হেল্পলাইন',
+        subtitle: 'জরুরি কম্পাস ও হেল্পলাইন',
         icon: Icons.shield_rounded,
         color: const Color(0xFFEF4444),
         onTap: () => context.push('/group/${group.id}/safety'),
@@ -392,7 +449,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       ),
       _ModuleItem(
         title: 'Tour Quiz 🎯',
-        subtitle: 'কক্সবাজার ট্রাভেল কুইজ',
+        subtitle: '${group.destination} ট্রাভেল কুইজ',
         icon: Icons.quiz_rounded,
         color: const Color(0xFF8B5CF6),
         onTap: () => context.push('/group/${group.id}/quiz'),
@@ -566,8 +623,25 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   void _showCreateGroupDialog(BuildContext context) {
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
-    final destCtrl = TextEditingController(text: "Cox's Bazar");
+    final destCtrl = TextEditingController();
+    final originCtrl = TextEditingController(text: 'ঢাকা');
+    TourType selectedTourType = TourType.beach;
+    DateTime startDate = DateTime.now();
+    DateTime endDate = DateTime.now().add(const Duration(days: 3)); // 4 days 3 nights by default
+    bool seatsRooms = true;
+    bool tideSafety = true;
+    bool games = true;
+    bool chat = true;
     bool isCreating = false;
+
+    final presets = [
+      (label: '🏖️ কক্সবাজার', dest: "Cox's Bazar", type: TourType.beach, tide: true),
+      (label: '⛰️ সাজেক ভ্যালি', dest: 'Sajek Valley', type: TourType.hill, tide: false),
+      (label: '🌿 সিলেট ও শ্রীমঙ্গল', dest: 'Sylhet', type: TourType.nature, tide: false),
+      (label: '🏞️ বান্দরবান', dest: 'Bandarban', type: TourType.hill, tide: false),
+      (label: '🌅 কুয়াকাটা', dest: 'Kuakata', type: TourType.beach, tide: true),
+      (label: '🐅 সুন্দরবন', dest: 'Sundarbans', type: TourType.nature, tide: false),
+    ];
 
     showDialog<void>(
       context: context,
@@ -575,43 +649,231 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (dialogCtx, setDialogState) {
+            final days = endDate.difference(startDate).inDays + 1;
+            final nights = days > 1 ? days - 1 : 0;
+            final durationText = nights == 0 ? '$days দিন (ডে-ট্যুর)' : '$days দিন $nights রাত';
+
             return AlertDialog(
               backgroundColor: const Color(0xFF14241B),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
-              title: const Text('Create Tour Group',
+              title: const Text('নতুন ট্যুর গ্রুপ তৈরি করুন (Universal)',
                   style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameCtrl,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'Tour Name (e.g. Cox Tour 2026)',
-                      labelStyle: TextStyle(color: Colors.white70),
-                    ),
+                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. Tour Name
+                      TextField(
+                        controller: nameCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'ট্যুরের নাম (যেমন: সাজেক ক্লাউড ট্যুর)',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          hintText: 'e.g. Sajek Tour 2026',
+                          hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 2. Destination Presets
+                      const Text(
+                        'জনপ্রিয় গন্তব্যসমূহ (Quick Select):',
+                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: presets.map((p) {
+                          final isSelected = destCtrl.text == p.dest;
+                          return InkWell(
+                            onTap: () {
+                              setDialogState(() {
+                                destCtrl.text = p.dest;
+                                selectedTourType = p.type;
+                                tideSafety = p.tide;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppColors.mintGreen : Colors.white10,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                p.label,
+                                style: TextStyle(
+                                  color: isSelected ? Colors.black : Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // 3. Custom Destination Field
+                      TextField(
+                        controller: destCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'গন্তব্য বা স্থান (Destination)',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          hintText: 'e.g. Sajek, Sylhet, Darjeeling, etc.',
+                          hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 4. Origin & Tour Type Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: originCtrl,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                labelText: 'যাত্রা শুরু (Origin)',
+                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                hintText: 'ঢাকা / রংপুর',
+                                hintStyle: const TextStyle(color: Colors.white30, fontSize: 11),
+                                filled: true,
+                                fillColor: Colors.black26,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: DropdownButtonFormField<TourType>(
+                              initialValue: selectedTourType,
+                              dropdownColor: const Color(0xFF14241B),
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                              decoration: InputDecoration(
+                                labelText: 'ট্যুর ধরন',
+                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                filled: true,
+                                fillColor: Colors.black26,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              items: TourType.values.map((t) {
+                                return DropdownMenuItem(
+                                  value: t,
+                                  child: Text('${t.labelBn.split(' ').first} ${t.name.toUpperCase()}',
+                                      style: const TextStyle(fontSize: 11)),
+                                );
+                              }).toList(),
+                              onChanged: (t) {
+                                if (t != null) {
+                                  setDialogState(() {
+                                    selectedTourType = t;
+                                    tideSafety = (t == TourType.beach);
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // 5. Date Range Selector Button
+                      const Text(
+                        'ট্যুরের তারিখ ও মেয়াদ (Any Amount of Days):',
+                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await showDateRangePicker(
+                            context: dialogCtx,
+                            initialDateRange: DateTimeRange(start: startDate, end: endDate),
+                            firstDate: DateTime(2022),
+                            lastDate: DateTime(2035),
+                            builder: (context, child) {
+                              return Theme(
+                                data: ThemeData.dark().copyWith(
+                                  colorScheme: const ColorScheme.dark(
+                                    primary: AppColors.midGreen,
+                                    onPrimary: Colors.white,
+                                    surface: Color(0xFF14241B),
+                                    onSurface: Colors.white,
+                                  ),
+                                ),
+                                child: child!,
+                              );
+                            },
+                          );
+                          if (picked != null) {
+                            setDialogState(() {
+                              startDate = picked.start;
+                              endDate = picked.end;
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.black38,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.date_range_rounded, color: AppColors.mintGreen, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${DateFormat('d MMM yyyy').format(startDate)} – ${DateFormat('d MMM yyyy').format(endDate)}',
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                    ),
+                                    Text(
+                                      'মেয়াদ: $durationText (ক্যালেন্ডার চাপুন)',
+                                      style: const TextStyle(color: AppColors.mintGreen, fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.edit_calendar_rounded, color: Colors.white54, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 6. Description
+                      TextField(
+                        controller: descCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'বিবরণ (ঐচ্ছিক)',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: destCtrl,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'Destination',
-                      labelStyle: TextStyle(color: Colors.white70),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: descCtrl,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'Description (optional)',
-                      labelStyle: TextStyle(color: Colors.white70),
-                    ),
-                  ),
-                ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -626,6 +888,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       ? null
                       : () async {
                           final name = nameCtrl.text.trim();
+                          final dest = destCtrl.text.trim();
                           if (name.isEmpty) return;
                           final messenger = ScaffoldMessenger.of(context);
                           final navigator = Navigator.of(ctx);
@@ -634,10 +897,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             final newGroup = await _repository.createGroup(
                               name: name,
                               description: descCtrl.text.trim(),
-                              destination: destCtrl.text.trim(),
-                              startDate: DateTime.now(),
-                              endDate:
-                                  DateTime.now().add(const Duration(days: 4)),
+                              destination: dest.isNotEmpty ? dest : "Custom Destination",
+                              originCity: originCtrl.text.trim().isNotEmpty ? originCtrl.text.trim() : 'ঢাকা',
+                              tourType: selectedTourType,
+                              startDate: startDate,
+                              endDate: endDate,
+                              modules: TourModules(
+                                seatsRooms: seatsRooms,
+                                tideSafety: tideSafety,
+                                games: games,
+                                chat: chat,
+                              ),
                             );
                             if (mounted) {
                               setState(() {
@@ -647,7 +917,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               messenger.showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                      'ট্যুর গ্রুপ "${newGroup.name}" সফলভাবে তৈরি হয়েছে!'),
+                                      'ট্যুর গ্রুপ "${newGroup.name}" (${newGroup.durationText}) সফলভাবে তৈরি হয়েছে!'),
                                   backgroundColor: AppColors.midGreen,
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -673,7 +943,272 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2),
                         )
-                      : const Text('Create',
+                      : const Text('Create Tour',
+                          style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showEditGroupDialog(BuildContext context, TourGroup group) {
+    final nameCtrl = TextEditingController(text: group.name);
+    final descCtrl = TextEditingController(text: group.description);
+    final destCtrl = TextEditingController(text: group.destination);
+    final originCtrl = TextEditingController(text: group.originCity);
+    TourType selectedTourType = group.tourType;
+    DateTime startDate = group.startDate;
+    DateTime endDate = group.endDate;
+    bool isUpdating = false;
+
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final days = endDate.difference(startDate).inDays + 1;
+            final nights = days > 1 ? days - 1 : 0;
+            final durationText = nights == 0 ? '$days দিন (ডে-ট্যুর)' : '$days দিন $nights রাত';
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF14241B),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              title: const Text('ট্যুর সেটিংস ও দিন সম্পাদনা',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: nameCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'ট্যুরের নাম',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: destCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'গন্তব্য বা স্থান (Destination)',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: originCtrl,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                labelText: 'যাত্রা শুরু (Origin)',
+                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                filled: true,
+                                fillColor: Colors.black26,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: DropdownButtonFormField<TourType>(
+                              initialValue: selectedTourType,
+                              dropdownColor: const Color(0xFF14241B),
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                              decoration: InputDecoration(
+                                labelText: 'ট্যুর ধরন',
+                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                filled: true,
+                                fillColor: Colors.black26,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              items: TourType.values.map((t) {
+                                return DropdownMenuItem(
+                                  value: t,
+                                  child: Text('${t.labelBn.split(' ').first} ${t.name.toUpperCase()}',
+                                      style: const TextStyle(fontSize: 11)),
+                                );
+                              }).toList(),
+                              onChanged: (t) {
+                                if (t != null) {
+                                  setDialogState(() => selectedTourType = t);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'ট্যুরের তারিখ ও মেয়াদ পরিবর্তন করুন:',
+                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await showDateRangePicker(
+                            context: dialogCtx,
+                            initialDateRange: DateTimeRange(start: startDate, end: endDate),
+                            firstDate: DateTime(2022),
+                            lastDate: DateTime(2035),
+                            builder: (context, child) {
+                              return Theme(
+                                data: ThemeData.dark().copyWith(
+                                  colorScheme: const ColorScheme.dark(
+                                    primary: AppColors.midGreen,
+                                    onPrimary: Colors.white,
+                                    surface: Color(0xFF14241B),
+                                    onSurface: Colors.white,
+                                  ),
+                                ),
+                                child: child!,
+                              );
+                            },
+                          );
+                          if (picked != null) {
+                            setDialogState(() {
+                              startDate = picked.start;
+                              endDate = picked.end;
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.black38,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.date_range_rounded, color: AppColors.mintGreen, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${DateFormat('d MMM yyyy').format(startDate)} – ${DateFormat('d MMM yyyy').format(endDate)}',
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                    ),
+                                    Text(
+                                      'নতুন মেয়াদ: $durationText',
+                                      style: const TextStyle(color: AppColors.mintGreen, fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.edit_calendar_rounded, color: Colors.white54, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: descCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'বিবরণ',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isUpdating ? null : () => Navigator.pop(ctx),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.midGreen),
+                  onPressed: isUpdating
+                      ? null
+                      : () async {
+                          final name = nameCtrl.text.trim();
+                          final dest = destCtrl.text.trim();
+                          if (name.isEmpty) return;
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(ctx);
+                          setDialogState(() => isUpdating = true);
+                          try {
+                            await _repository.updateGroupSettings(
+                              tourId: group.id,
+                              name: name,
+                              description: descCtrl.text.trim(),
+                              destination: dest.isNotEmpty ? dest : group.destination,
+                              originCity: originCtrl.text.trim(),
+                              tourType: selectedTourType,
+                              startDate: startDate,
+                              endDate: endDate,
+                            );
+                            if (mounted) {
+                              setState(() {
+                                _activeGroup = group.copyWith(
+                                  name: name,
+                                  description: descCtrl.text.trim(),
+                                  destination: dest.isNotEmpty ? dest : group.destination,
+                                  originCity: originCtrl.text.trim(),
+                                  tourType: selectedTourType,
+                                  startDate: startDate,
+                                  endDate: endDate,
+                                );
+                              });
+                              navigator.pop();
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('ট্যুর সেটিংস সফলভাবে আপডেট হয়েছে!'),
+                                  backgroundColor: AppColors.midGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isUpdating = false);
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('আপডেট ব্যর্থ: $e'),
+                                  backgroundColor: Colors.redAccent,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isUpdating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Save Changes',
                           style: TextStyle(color: Colors.white)),
                 ),
               ],

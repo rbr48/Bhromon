@@ -8,6 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/models/tour_post_models.dart';
+import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
 import '../../../../core/theme/colors.dart';
 
@@ -20,20 +21,13 @@ String toBengaliNum(int number) {
   }).join('');
 }
 
-// Preset locations
+// Preset locations fallback
 const List<String> kTourLandmarks = [
-  'লাবণী ও সুগন্ধা বিচ, কক্সবাজার',
-  'হোটেল সি মুন (Hotel Sea Moon)',
-  'এভারগ্রীন এসি বাস (রংপুর ➔ কক্সবাজার)',
-  'বিআরটিসি ছাদখোলা দোতলা বাস',
-  'হিমছড়ি পাহাড় ও ঝর্ণা',
-  'ইনানী পাথুরে প্রবাল সৈকত',
-  'পটুয়ারটেক বিচ পয়েন্ট',
-  'সাবরাং জিরো পয়েন্ট (টেকনাফ)',
-  'মহেশখালী আদিনাথ মন্দির',
-  'নুনিয়াছড়া ঘাট ও বাঁকখালী নদী',
-  'বার্মিজ মার্কেট ফ্যামিলি শপিং',
-  'রেডিয়েন্ট ফিশ ওয়ার্ল্ড একুরিয়াম',
+  'প্রধান হোটেল / রিসোর্ট (Hotel / Resort)',
+  'দর্শনীয় স্পট ও পয়েন্ট (Scenic Spot)',
+  'যাত্রা পথ / হাইওয়ে বিরতি (Journey / Highway)',
+  'রেস্তোরাঁ ও ফুড পয়েন্ট (Restaurant & Food)',
+  'অন্যান্য স্থান (Others)',
 ];
 
 // Instagram 8 Color Filter Matrices
@@ -171,15 +165,38 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   String _selectedDayFilter = 'all';
   String _selectedMediaFilter = 'all'; // 'all', 'photos', 'reels'
   final Set<String> _bookmarkedPostIds = {};
+  TourGroup? _tourGroup;
 
-  final List<Map<String, String>> _tourDays = [
-    {'id': 'all', 'label': 'সব দিন'},
-    {'id': 'day1', 'label': 'ডে ১ (যাত্রা ও শুরু)'},
-    {'id': 'day2', 'label': 'ডে ২ (লাবণী ও ইনানী)'},
-    {'id': 'day3', 'label': 'ডে ৩ (হিমছড়ি সূর্যাস্ত)'},
-    {'id': 'day4', 'label': 'ডে ৪ (মার্কেট ও দর্শনীয়)'},
-    {'id': 'day5', 'label': 'ডে ৫ (প্রত্যাবর্তন)'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadGroup();
+  }
+
+  Future<void> _loadGroup() async {
+    final g = await _repository.getGroup(widget.tourId);
+    if (mounted) setState(() => _tourGroup = g);
+  }
+
+  List<Map<String, String>> get _dynamicTourDays {
+    final list = <Map<String, String>>[
+      {'id': 'all', 'label': 'সব দিন (All Days)'},
+    ];
+    if (_tourGroup != null && _tourGroup!.daysList.isNotEmpty) {
+      for (final d in _tourGroup!.daysList) {
+        list.add({'id': d.id, 'label': d.label});
+      }
+    } else {
+      list.addAll(const [
+        {'id': 'day1', 'label': 'ডে ১ (যাত্রা ও শুরু)'},
+        {'id': 'day2', 'label': 'ডে ২ (দর্শনীয় স্পট)'},
+        {'id': 'day3', 'label': 'ডে ৩ (ঘোরাঘুরি)'},
+        {'id': 'day4', 'label': 'ডে ৪ (শপিং)'},
+        {'id': 'day5', 'label': 'ডে ৫ (প্রত্যাবর্তন)'},
+      ]);
+    }
+    return list;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -569,10 +586,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 14),
-        itemCount: _tourDays.length,
+        itemCount: _dynamicTourDays.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final day = _tourDays[index];
+          final day = _dynamicTourDays[index];
           final isSelected = _selectedDayFilter == day['id'];
 
           return ChoiceChip(
@@ -683,6 +700,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => _CreatePostStudioSheet(
         tourId: widget.tourId,
+        group: _tourGroup,
         repository: _repository,
         picker: _picker,
         initialModeIsReel: initialModeIsReel,
@@ -1620,12 +1638,14 @@ class _TourCommentsSheetState extends State<_TourCommentsSheet> {
 
 class _CreatePostStudioSheet extends StatefulWidget {
   final String tourId;
+  final TourGroup? group;
   final TourGroupRepository repository;
   final ImagePicker picker;
   final bool initialModeIsReel;
 
   const _CreatePostStudioSheet({
     required this.tourId,
+    this.group,
     required this.repository,
     required this.picker,
     this.initialModeIsReel = false,
@@ -1637,9 +1657,11 @@ class _CreatePostStudioSheet extends StatefulWidget {
 
 class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
   final TextEditingController _captionCtrl = TextEditingController();
+  final TextEditingController _customSpotCtrl = TextEditingController();
   final List<String> _selectedImagePaths = [];
-  String _selectedDay = 'day1';
-  String _selectedLandmark = kTourLandmarks.first;
+  late String _selectedDay;
+  late String _selectedLandmark;
+  bool _isCustomSpot = false;
   String _selectedFilter = 'normal';
   bool _isPublishing = false;
 
@@ -1656,11 +1678,17 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
   void initState() {
     super.initState();
     _isReelMode = widget.initialModeIsReel;
+    _selectedDay = (widget.group?.daysList.isNotEmpty ?? false)
+        ? widget.group!.daysList.first.id
+        : 'day1';
+    final availableSpots = widget.group?.allSpots ?? kTourLandmarks;
+    _selectedLandmark = availableSpots.isNotEmpty ? availableSpots.first : 'অন্যান্য স্থান (Others)';
   }
 
   @override
   void dispose() {
     _captionCtrl.dispose();
+    _customSpotCtrl.dispose();
     _videoPlayerController?.dispose();
     super.dispose();
   }
@@ -1777,15 +1805,31 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
           finalVideoUrl = await snap.ref.getDownloadURL();
         }
 
+        final spotToSave = _isCustomSpot && _customSpotCtrl.text.trim().isNotEmpty
+            ? _customSpotCtrl.text.trim()
+            : _selectedLandmark;
+
+        if (_isCustomSpot && _customSpotCtrl.text.trim().isNotEmpty && widget.group != null) {
+          final newSpot = _customSpotCtrl.text.trim();
+          final current = List<String>.from(widget.group!.customSpots);
+          if (!current.contains(newSpot)) {
+            current.add(newSpot);
+            widget.repository.updateGroupSettings(
+              tourId: widget.tourId,
+              customSpots: current,
+            );
+          }
+        }
+
         await widget.repository.addPost(
           tourId: widget.tourId,
           caption: _captionCtrl.text.trim().isEmpty
-              ? 'ট্যুর রিলস 🏖️🎬'
+              ? 'ট্যুর রিলস 🎬'
               : _captionCtrl.text.trim(),
           images: [],
           videoUrl: finalVideoUrl,
           isReel: true,
-          location: _selectedLandmark,
+          location: spotToSave,
           tourDay: _selectedDay,
           filterId: 'normal',
         );
@@ -1841,11 +1885,27 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
           }
         }
 
+        final spotToSave = _isCustomSpot && _customSpotCtrl.text.trim().isNotEmpty
+            ? _customSpotCtrl.text.trim()
+            : _selectedLandmark;
+
+        if (_isCustomSpot && _customSpotCtrl.text.trim().isNotEmpty && widget.group != null) {
+          final newSpot = _customSpotCtrl.text.trim();
+          final current = List<String>.from(widget.group!.customSpots);
+          if (!current.contains(newSpot)) {
+            current.add(newSpot);
+            widget.repository.updateGroupSettings(
+              tourId: widget.tourId,
+              customSpots: current,
+            );
+          }
+        }
+
         await widget.repository.addPost(
           tourId: widget.tourId,
           caption: _captionCtrl.text.trim(),
           images: uploadedUrls,
-          location: _selectedLandmark,
+          location: spotToSave,
           tourDay: _selectedDay,
           filterId: _selectedFilter,
         );
@@ -2440,7 +2500,7 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
 
                 const SizedBox(height: 20),
 
-                // Tour Day Selector
+                // Tour Day Selector (Dynamic based on tour duration)
                 const Text(
                   'ভ্রমণ দিন (Tour Day)',
                   style: TextStyle(
@@ -2462,23 +2522,20 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                       borderSide: BorderSide.none,
                     ),
                   ),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'day1',
-                        child: Text('ডে ১: রংপুর ➔ কক্সবাজার যাত্রা ও পৌঁছানো')),
-                    DropdownMenuItem(
-                        value: 'day2',
-                        child: Text('ডে ২: সুগন্ধা ও লাবণী বিচ গোসল ও ইনানী')),
-                    DropdownMenuItem(
-                        value: 'day3',
-                        child: Text('ডে ৩: হিমছড়ি পাহাড়, ঝর্ণা ও সূর্যাস্ত')),
-                    DropdownMenuItem(
-                        value: 'day4',
-                        child: Text('ডে ৪: মহেশখালী ও বার্মিজ মার্কেট শপিং')),
-                    DropdownMenuItem(
-                        value: 'day5',
-                        child: Text('ডে ৫: বিদায় ও রংপুর প্রত্যাবর্তন')),
-                  ],
+                  items: (widget.group?.daysList.isNotEmpty ?? false)
+                      ? widget.group!.daysList.map((d) {
+                          return DropdownMenuItem(
+                            value: d.id,
+                            child: Text(d.label),
+                          );
+                        }).toList()
+                      : const [
+                          DropdownMenuItem(value: 'day1', child: Text('ডে ১ (যাত্রা ও শুরু)')),
+                          DropdownMenuItem(value: 'day2', child: Text('ডে ২ (দর্শনীয় স্পট)')),
+                          DropdownMenuItem(value: 'day3', child: Text('ডে ৩ (ঘোরাঘুরি)')),
+                          DropdownMenuItem(value: 'day4', child: Text('ডে ৪ (শপিং)')),
+                          DropdownMenuItem(value: 'day5', child: Text('ডে ৫ (প্রত্যাবর্তন)')),
+                        ],
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedDay = val);
                   },
@@ -2486,9 +2543,9 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
 
                 const SizedBox(height: 16),
 
-                // Landmark Location Dropdown
+                // Landmark / Spot Location Dropdown (Dynamic + Custom entry)
                 const Text(
-                  'লোকেশন ট্যাগ (Landmark)',
+                  'লোকেশন বা স্পট ট্যাগ (Spot / Landmark)',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -2497,7 +2554,7 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedLandmark,
+                  initialValue: _isCustomSpot ? '__custom__' : _selectedLandmark,
                   dropdownColor: const Color(0xFF14241B),
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: InputDecoration(
@@ -2508,13 +2565,51 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                       borderSide: BorderSide.none,
                     ),
                   ),
-                  items: kTourLandmarks.map((loc) {
-                    return DropdownMenuItem(value: loc, child: Text(loc));
-                  }).toList(),
+                  items: [
+                    ...(widget.group?.allSpots ?? kTourLandmarks).map((loc) {
+                      return DropdownMenuItem(
+                        value: loc,
+                        child: Text(loc, overflow: TextOverflow.ellipsis),
+                      );
+                    }),
+                    const DropdownMenuItem(
+                      value: '__custom__',
+                      child: Text(
+                        '➕ নতুন স্থান লিখুন (Custom Spot)...',
+                        style: TextStyle(
+                          color: AppColors.mintGreen,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                   onChanged: (val) {
-                    if (val != null) setState(() => _selectedLandmark = val);
+                    if (val == '__custom__') {
+                      setState(() => _isCustomSpot = true);
+                    } else if (val != null) {
+                      setState(() {
+                        _isCustomSpot = false;
+                        _selectedLandmark = val;
+                      });
+                    }
                   },
                 ),
+                if (_isCustomSpot) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _customSpotCtrl,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'নতুন স্থানের নাম লিখুন',
+                      labelStyle: const TextStyle(color: AppColors.mintGreen, fontSize: 12),
+                      hintText: 'e.g. কংলাক পাহাড় চূড়া / স্পট ১',
+                      hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                      filled: true,
+                      fillColor: Colors.black26,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 16),
 

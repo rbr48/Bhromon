@@ -40,9 +40,9 @@ void main() {
 
     test('Pawn advance and AI can generate legal response', () {
       // Play 1. e4 (6,4 -> 4,4)
-      final e4Move = ChessMove(
-        from: const BoardPosition(6, 4),
-        to: const BoardPosition(4, 4),
+      const e4Move = ChessMove(
+        from: BoardPosition(6, 4),
+        to: BoardPosition(4, 4),
       );
       final success = engine.makeMove(e4Move);
       expect(success, isTrue);

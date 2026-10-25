@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../../domain/models/tour_group.dart';
+import '../../data/tour_group_repository.dart';
 import 'package:share_plus/share_plus.dart';
 
 class TourScrapbookScreen extends StatefulWidget {
@@ -13,6 +16,8 @@ class TourScrapbookScreen extends StatefulWidget {
 
 class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final TourGroupRepository _repository = TourGroupRepository();
+  TourGroup? _tourGroup;
   Map<String, dynamic>? _tourData;
   List<Map<String, dynamic>> _members = [];
   bool _isLoading = true;
@@ -25,15 +30,14 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
 
   Future<void> _loadScrapbookData() async {
     try {
+      final group = await _repository.getGroup(widget.tourId);
       final doc = await _firestore.collection('tours').doc(widget.tourId).get();
-      // In Bhromon, memberships are stored at root collection 'memberships'
       var membersSnap = await _firestore
           .collection('memberships')
           .where('tourId', isEqualTo: widget.tourId)
           .get();
 
       if (membersSnap.docs.isEmpty) {
-        // Fallback to subcollection if applicable
         membersSnap = await _firestore
             .collection('tours')
             .doc(widget.tourId)
@@ -43,6 +47,7 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
 
       if (mounted) {
         setState(() {
+          _tourGroup = group;
           _tourData = doc.data();
           _members = membersSnap.docs.map((d) => d.data()).toList();
           _isLoading = false;
@@ -54,21 +59,25 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
   }
 
   void _shareScrapbookSummary() {
-    final tourName = _tourData?['name'] as String? ?? 'রংপুর ➔ কক্সবাজার ফ্যামিলি ট্যুর ২০২৬';
+    final tourName = _tourGroup?.name ?? (_tourData?['name'] as String? ?? 'ফ্যামিলি ট্যুর স্মৃতিমালা');
+    final datesStr = _tourGroup != null
+        ? '${DateFormat('d MMM yyyy').format(_tourGroup!.startDate)} – ${DateFormat('d MMM yyyy').format(_tourGroup!.endDate)}'
+        : 'ট্যুর সময়কাল';
+    final durationStr = _tourGroup?.durationText ?? '৫ দিনব্যাপী ফ্যামিলি ট্যুর';
+    final dest = _tourGroup?.destination ?? 'কক্সবাজার';
+    final origin = _tourGroup?.originCity ?? 'যাত্রা স্থান';
+
     final shareText = '''
-📖 $tourName — ডিজিটাল ফ্যামিলি স্ক্র্যাপবুক
-✨ ভ্রমণকাল: ১৯ অক্টোবর – ২৩ অক্টোবর ২০২৬
-🚌 প্রধান বাহন: এভারগ্রীন এসি বাস (~৮২০ কি.মি.)
-🏨 আবাসন: হোটেল সি মুন, কলাতলী, কক্সবাজার
+📖 $tourName — ডিজিটাল স্ক্র্যাপবুক ও স্মরণিকা
+✨ ভ্রমণকাল: $datesStr ($durationStr)
+🚌 যাত্রাপথ: $origin ➔ $dest
+🏨 গন্তব্য: $dest
 👥 মোট পরিভ্রমণকারী: ${_members.length} জন সদস্য
 
-🌊 স্মরণীয় মুহূর্তসমূহ:
-• ইনানী প্রবাল পাথর ও শান্ত সমুদ্র সৈকত
-• হিমছড়ি পাহাড়ি ঝর্ণা ও সমুদ্রের দিগন্ত
-• সুগন্ধা সৈকতে ফ্যামিলি সান্ধ্য আড্ডা
-• ঐতিহাসিক যমুনা বহুমুখী সেতু পারাপার
+✨ স্মরণীয় দর্শনীয় স্থানসমূহ:
+${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয় স্পট', 'হোটেল ও রিসোর্ট']).map((s) => '• $s').join('\n')}
 
-পরিবারের সাথে ভ্রমণে Bhromon অ্যাপের মাধ্যমে সংরক্ষিত স্মৃতিমালা ❤️
+ভ্রমণে Bhromon অ্যাপের মাধ্যমে সংরক্ষিত অবিস্মরণীয় স্মৃতিমালা ❤️
 ''';
     // ignore: deprecated_member_use
     Share.share(shareText, subject: '$tourName ডিজিটাল স্মৃতিচিহ্ন');
@@ -76,7 +85,7 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tourName = _tourData?['name'] as String? ?? 'রংপুর ➔ কক্সবাজার ফ্যামিলি ট্যুর ২০২৬';
+    final tourName = _tourData?['name'] as String? ?? (_tourGroup?.name ?? 'ট্যুর ডিজিটাল স্মৃতিমালা');
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F1A1C),
@@ -181,19 +190,21 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            '১৯ অক্টোবর – ২৩ অক্টোবর ২০২৬ • ৫ দিনব্যাপী ফ্যামিলি ট্যুর',
-            style: TextStyle(color: Colors.white70, fontSize: 12),
+          Text(
+            _tourGroup != null
+                ? '${DateFormat('d MMM yyyy').format(_tourGroup!.startDate)} – ${DateFormat('d MMM yyyy').format(_tourGroup!.endDate)} • ${_tourGroup!.durationText}'
+                : 'ভ্রমণ স্মৃতিচিহ্ন ও ফ্যামিলি ম্যাগাজিন',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           const SizedBox(height: 14),
           const Divider(color: Colors.white24),
           const SizedBox(height: 10),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _CoverBadge(icon: Icons.directions_bus, label: 'এভারগ্রীন বাস'),
-              _CoverBadge(icon: Icons.hotel, label: 'হোটেল সি মুন'),
-              _CoverBadge(icon: Icons.waves, label: 'বঙ্গোপসাগর'),
+              _CoverBadge(icon: Icons.directions_bus, label: '${_tourGroup?.originCity ?? "যাত্রা"} পরিবহন'),
+              _CoverBadge(icon: Icons.hotel, label: '${_tourGroup?.destination ?? "ট্যুর"} আবাসন'),
+              _CoverBadge(icon: Icons.explore_rounded, label: '${_tourGroup?.destination ?? "স্পট"} ভ্রমণ'),
             ],
           ),
         ],
@@ -225,7 +236,7 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
         Expanded(
           child: _buildMetricTile(
             title: 'ট্যুর ব্যাপ্তিকাল',
-            value: '৫ দিন ৪ রাত',
+            value: _tourGroup?.durationText ?? '৫ দিন ৪ রাত',
             icon: Icons.calendar_month,
             color: Colors.blueAccent,
           ),

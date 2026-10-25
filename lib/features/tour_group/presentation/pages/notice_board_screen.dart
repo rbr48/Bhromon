@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../../domain/models/tour_group.dart';
+import '../../data/tour_group_repository.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -14,10 +16,12 @@ class NoticeBoardScreen extends StatefulWidget {
 
 class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final TourGroupRepository _repository = TourGroupRepository();
+  TourGroup? _tourGroup;
 
-  String _meetingTitle = 'হোটেল সি মুন লবি (কলাতলী)';
+  String _meetingTitle = 'প্রধান মিটিং পয়েন্ট ও হোটেল লবি';
   String _meetingNote = 'সকল ভ্রমণের আগে ও পরে সবাই নির্ধারিত সময়ে এখানে সমবেত হব।';
-  String _meetingMapUrl = 'https://maps.google.com/?q=Hotel+Sea+Moon+Kolatoli+Coxs+Bazar';
+  String _meetingMapUrl = 'https://maps.google.com/?q=Hotel+Lobby';
 
   @override
   void initState() {
@@ -27,6 +31,15 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
 
   Future<void> _loadMeetingPoint() async {
     try {
+      final group = await _repository.getGroup(widget.tourId);
+      if (mounted && group != null) {
+        setState(() {
+          _tourGroup = group;
+          _meetingTitle = group.meetingPointTitle ?? '${group.destination} প্রধান মিটিং পয়েন্ট (হোটেল লবি)';
+          _meetingMapUrl = group.meetingPointMapUrl ?? 'https://maps.google.com/?q=${Uri.encodeComponent(group.destination)}';
+        });
+      }
+
       final doc = await _firestore.collection('tours').doc(widget.tourId).get();
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
@@ -238,8 +251,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F1A1C),
       appBar: AppBar(
-        title: const Text('Notice Board & Meeting Point',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(
+          _tourGroup != null ? '${_tourGroup!.name} নোটিশ বোর্ড' : 'Notice Board & Meeting Point',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         backgroundColor: const Color(0xFF142428),
         foregroundColor: Colors.white,
         elevation: 0,
