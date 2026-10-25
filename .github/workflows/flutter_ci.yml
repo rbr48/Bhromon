@@ -2,9 +2,9 @@ name: Flutter CI
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ master, main, develop ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ master, main, develop ]
 
 env:
   FLUTTER_VERSION: '3.44.4'
@@ -23,7 +23,6 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
@@ -48,7 +47,6 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
@@ -74,7 +72,6 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
@@ -104,10 +101,10 @@ jobs:
           retention-days: 14
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Job 4: Build Android App Bundle (Release) — only on branch push
+  # Job 4: Build Android App Bundle & APK (Release) — only on branch push
   # ─────────────────────────────────────────────────────────────────────────────
   build_android:
-    name: Build Android (Release AAB)
+    name: Build Android (Release AAB & APK)
     runs-on: ubuntu-latest
     needs: [ analyze, test ]
     if: github.event_name == 'push'
@@ -126,9 +123,12 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      - name: Clean environment-specific Gradle settings
+        run: |
+          sed -i '/org.gradle.java.home/d' android/gradle.properties || true
 
       - name: Install dependencies
         run: flutter pub get
@@ -157,11 +157,22 @@ jobs:
             --obfuscate \
             --split-debug-info=build/debug-info
 
+      - name: Build Android APK (release)
+        run: |
+          flutter build apk --release
+
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-release-aab
           path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 14
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
 
       - name: Upload debug symbols artifact
