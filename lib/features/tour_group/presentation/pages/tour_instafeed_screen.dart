@@ -15,7 +15,9 @@ import '../../data/tour_media_uploader.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/models/tour_post_models.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../domain/services/media_rules.dart';
+import '../../domain/services/tour_video_compressor.dart';
 
 // Bengali numeral helper
 String toBengaliNum(int number) {
@@ -1959,6 +1961,8 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
   // Reels Mode State
   late bool _isReelMode;
   XFile? _selectedVideo;
+  bool _isCompressingVideo = false;
+  double _compressionProgress = 0.0;
   VideoPlayerController? _videoPlayerController;
   Duration _videoDuration = Duration.zero;
   bool _isVideoPlaying = false;
@@ -1984,6 +1988,7 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
 
   @override
   void dispose() {
+    TourVideoCompressor.cancel();
     _captionCtrl.dispose();
     _customSpotCtrl.dispose();
     _videoPlayerController?.dispose();
@@ -2024,17 +2029,64 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
       );
       if (picked == null || !mounted) return;
 
-      final size = await picked.length();
-      if (size > kMaxVideoBytes) {
+      XFile fileToUse = picked;
+      final originalSize = await picked.length();
+
+      // If video exceeds limit (e.g. 100 MB), compress it on mobile platforms.
+      if (originalSize > kMaxVideoBytes) {
+        if (kIsWeb) {
+          setState(() {
+            _selectedVideo = picked;
+            _videoError =
+                'ভিডিও খুব বড় (${formatMegabytes(originalSize)})। সর্বোচ্চ ${formatMegabytes(kMaxVideoBytes)} হতে পারে।';
+          });
+          return;
+        }
+
+        final prevCtrl = _videoPlayerController;
+        _videoPlayerController = null;
+        await prevCtrl?.dispose();
+
         setState(() {
           _selectedVideo = picked;
-          _videoError =
-              'ভিডিও খুব বড় (${formatMegabytes(size)})। সর্বোচ্চ ${formatMegabytes(kMaxVideoBytes)} হতে পারে।';
+          _isCompressingVideo = true;
+          _compressionProgress = 0.0;
+          _videoError = null;
         });
-        return;
+
+        try {
+          fileToUse = await TourVideoCompressor.compressIfNeeded(
+            sourceFile: picked,
+            targetMaxBytes: kMaxVideoBytes,
+            onProgress: (p) {
+              if (mounted) setState(() => _compressionProgress = p);
+            },
+          );
+        } catch (e) {
+          if (!mounted) return;
+          setState(() {
+            _isCompressingVideo = false;
+            _videoError =
+                'ভিডিও অপ্টিমাইজ করা যায়নি ($e)। অনুগ্রহ করে অন্য ভিডিও নির্বাচন করুন।';
+          });
+          return;
+        }
+
+        if (!mounted) return;
+        setState(() => _isCompressingVideo = false);
+
+        final newSize = await fileToUse.length();
+        if (newSize > kMaxVideoBytes) {
+          setState(() {
+            _selectedVideo = fileToUse;
+            _videoError =
+                'ভিডিও কম্প্রেস করার পরও খুব বড় (${formatMegabytes(newSize)})। অনুগ্রহ করে ছোট ভিডিও বাছাই করুন।';
+          });
+          return;
+        }
       }
 
-      final controller = createLocalVideoController(picked);
+      final controller = createLocalVideoController(fileToUse);
       await controller.initialize();
       await controller.setLooping(true);
       final duration = controller.value.duration;
@@ -2047,7 +2099,7 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
       }
       final previous = _videoPlayerController;
       setState(() {
-        _selectedVideo = picked;
+        _selectedVideo = fileToUse;
         _videoPlayerController = controller;
         _videoDuration = duration;
         _isVideoPlaying = !tooLong;
@@ -2057,7 +2109,10 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
       });
       await previous?.dispose();
     } catch (e) {
-      _showError('ভিডিও বাছাই করতে সমস্যা হয়েছে: $e');
+      if (mounted) {
+        setState(() => _isCompressingVideo = false);
+        _showError('ভিডিও বাছাই করতে সমস্যা হয়েছে: $e');
+      }
     }
   }
 
@@ -2313,7 +2368,10 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
 
   Widget _buildSheet(BuildContext context) {
     final bool canSubmit = _isReelMode
-        ? (_selectedVideo != null && _videoError == null && !_isPublishing)
+        ? (_selectedVideo != null &&
+            _videoError == null &&
+            !_isPublishing &&
+            !_isCompressingVideo)
         : (_photos.isNotEmpty && !_isPublishing);
 
     return Container(
@@ -2596,52 +2654,112 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(14),
-                                child: AspectRatio(
-                                  aspectRatio:
-                                      (_videoPlayerController != null &&
-                                              _videoPlayerController!
-                                                  .value.isInitialized)
-                                          ? _videoPlayerController!
-                                              .value.aspectRatio
-                                          : (9 / 14),
-                                  child: (_videoPlayerController != null &&
-                                          _videoPlayerController!
-                                              .value.isInitialized)
-                                      ? VideoPlayer(_videoPlayerController!)
-                                      : const Center(
-                                          child: CircularProgressIndicator(
-                                              color: AppColors.mintGreen),
+                                child: _isCompressingVideo
+                                    ? Container(
+                                        height: 220,
+                                        width: double.infinity,
+                                        color: Colors.black87,
+                                        child: Center(
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 24),
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const CircularProgressIndicator(
+                                                    color: AppColors.mintGreen),
+                                                const SizedBox(height: 16),
+                                                Text(
+                                                  'ভিডিও অপ্টিমাইজ / কম্প্রেস করা হচ্ছে (${(_compressionProgress * 100).toInt()}%)...',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                                const SizedBox(height: 8),
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                  child: LinearProgressIndicator(
+                                                    value: _compressionProgress >
+                                                            0
+                                                        ? _compressionProgress
+                                                        : null,
+                                                    backgroundColor:
+                                                        Colors.white24,
+                                                    valueColor:
+                                                        const AlwaysStoppedAnimation<
+                                                                Color>(
+                                                            AppColors.mintGreen),
+                                                    minHeight: 6,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 10),
+                                                const Text(
+                                                  'বড় ভিডিও ইনস্টাফিডের উপযোগী (720p HD) করতে সাইজ কমানো হচ্ছে',
+                                                  style: TextStyle(
+                                                      color: Colors.white70,
+                                                      fontSize: 11),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
-                                ),
+                                      )
+                                    : AspectRatio(
+                                        aspectRatio:
+                                            (_videoPlayerController != null &&
+                                                    _videoPlayerController!
+                                                        .value.isInitialized)
+                                                ? _videoPlayerController!
+                                                    .value.aspectRatio
+                                                : (9 / 14),
+                                        child: (_videoPlayerController !=
+                                                    null &&
+                                                _videoPlayerController!
+                                                    .value.isInitialized)
+                                            ? VideoPlayer(
+                                                _videoPlayerController!)
+                                            : const Center(
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        color: AppColors
+                                                            .mintGreen),
+                                              ),
+                                      ),
                               ),
-                              GestureDetector(
-                                onTap: _toggleVideoPlayback,
-                                child: Container(
-                                  color: Colors.transparent,
-                                  height: 220,
-                                  width: double.infinity,
-                                  child: Center(
-                                    child: AnimatedOpacity(
-                                      opacity: !_isVideoPlaying ? 1.0 : 0.0,
-                                      duration:
-                                          const Duration(milliseconds: 200),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(14),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black54,
-                                          shape: BoxShape.circle,
-                                          border:
-                                              Border.all(color: Colors.white30),
+                              if (!_isCompressingVideo)
+                                GestureDetector(
+                                  onTap: _toggleVideoPlayback,
+                                  child: Container(
+                                    color: Colors.transparent,
+                                    height: 220,
+                                    width: double.infinity,
+                                    child: Center(
+                                      child: AnimatedOpacity(
+                                        opacity: !_isVideoPlaying ? 1.0 : 0.0,
+                                        duration:
+                                            const Duration(milliseconds: 200),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(14),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black54,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                                color: Colors.white30),
+                                          ),
+                                          child: const Icon(
+                                              Icons.play_arrow_rounded,
+                                              color: Colors.white,
+                                              size: 36),
                                         ),
-                                        child: const Icon(
-                                            Icons.play_arrow_rounded,
-                                            color: Colors.white,
-                                            size: 36),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
                               Positioned(
                                 bottom: 10,
                                 left: 10,
@@ -2694,12 +2812,14 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                               ),
                               TextButton.icon(
                                 onPressed: () {
+                                  TourVideoCompressor.cancel();
                                   _videoPlayerController?.dispose();
                                   setState(() {
                                     _selectedVideo = null;
                                     _videoPlayerController = null;
                                     _videoDuration = Duration.zero;
                                     _videoError = null;
+                                    _isCompressingVideo = false;
                                   });
                                 },
                                 icon: const Icon(Icons.delete_outline_rounded,
