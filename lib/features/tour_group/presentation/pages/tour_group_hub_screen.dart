@@ -1,0 +1,1580 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:go_router/go_router.dart';
+import '../../domain/models/tour_group.dart';
+import '../../data/tour_group_repository.dart';
+import '../../../../core/theme/colors.dart';
+
+class TourGroupHubScreen extends StatefulWidget {
+  const TourGroupHubScreen({super.key});
+
+  @override
+  State<TourGroupHubScreen> createState() => _TourGroupHubScreenState();
+}
+
+class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
+  final TourGroupRepository _repository = TourGroupRepository();
+  TourGroup? _activeGroup;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D1A12),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0D1A12),
+        elevation: 0,
+        title: const Text(
+          'Family & Tour Groups',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.backup_rounded, color: AppColors.gold),
+            tooltip: 'JSON ব্যাকআপ ডাউনলোড',
+            onPressed: () {
+              final active = _activeGroup;
+              if (active != null) {
+                _exportTourJsonBackup(context, active);
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.group_add_outlined, color: AppColors.mintGreen),
+            tooltip: 'Join with code',
+            onPressed: () => _showJoinGroupDialog(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline, color: AppColors.midGreen),
+            tooltip: 'Create new tour',
+            onPressed: () => _showCreateGroupDialog(context),
+          ),
+        ],
+      ),
+      body: StreamBuilder<List<TourGroup>>(
+        stream: _repository.watchMyGroups(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.midGreen),
+            );
+          }
+
+          if (snapshot.hasError &&
+              (snapshot.data == null || snapshot.data!.isEmpty)) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.cloud_off_rounded,
+                        color: Colors.redAccent, size: 54),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'ট্যুর গ্রুপ লোড করতে সমস্যা হয়েছে',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.midGreen),
+                      onPressed: () => setState(() {}),
+                      child: const Text('আবার চেষ্টা করুন'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final groups = snapshot.data ?? [];
+          if (groups.isEmpty) {
+            return _buildEmptyState(context);
+          }
+
+          final current = _activeGroup != null &&
+                  groups.any((g) => g.id == _activeGroup!.id)
+              ? groups.firstWhere((g) => g.id == _activeGroup!.id)
+              : groups.first;
+
+          return ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            children: [
+              // 1. Active Tour Card
+              _buildActiveTourBanner(context, current, groups),
+              const SizedBox(height: 24),
+
+              // 2. Feature Launchpad Grid
+              const Text(
+                'Tour Modules & Operations',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 14),
+              _buildModulesGrid(context, current),
+
+              const SizedBox(height: 28),
+
+              // 3. Tour Members List
+              _buildMembersSection(current.id),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.midGreen.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.travel_explore_rounded,
+                  size: 72, color: AppColors.mintGreen),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'No Active Tour Groups',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Create a group for your family or friends, or join one with an invite code.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 28),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _showCreateGroupDialog(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Tour'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.midGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _showJoinGroupDialog(context),
+                  icon: const Icon(Icons.key),
+                  label: const Text('Enter Code'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.mintGreen,
+                    side: const BorderSide(color: AppColors.mintGreen),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveTourBanner(
+      BuildContext context, TourGroup group, List<TourGroup> allGroups) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF1B4332),
+            Color(0xFF081C15),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.25)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.mintGreen.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${group.tourType.labelBn.split(' ').first} ${group.destination}',
+                        style: const TextStyle(
+                          color: AppColors.mintGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '⏱️ ${group.durationText}',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_calendar_rounded, size: 20, color: AppColors.mintGreen),
+                    tooltip: 'ট্যুর সেটিংস ও দিন পরিবর্তন',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _showEditGroupDialog(context, group),
+                  ),
+                  if (allGroups.length > 1) ...[
+                    const SizedBox(width: 8),
+                    DropdownButton<String>(
+                      value: group.id,
+                      dropdownColor: const Color(0xFF1B4332),
+                      icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
+                      underline: const SizedBox(),
+                      items: allGroups.map((g) {
+                        return DropdownMenuItem(
+                          value: g.id,
+                          child: Text(g.name,
+                              style: const TextStyle(color: Colors.white, fontSize: 13)),
+                        );
+                      }).toList(),
+                      onChanged: (id) {
+                        if (id != null) {
+                          setState(() {
+                            _activeGroup = allGroups.firstWhere((g) => g.id == id);
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            group.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(Icons.calendar_today_rounded, size: 12, color: Colors.white60),
+              const SizedBox(width: 5),
+              Text(
+                '${DateFormat('d MMM yyyy').format(group.startDate)} – ${DateFormat('d MMM yyyy').format(group.endDate)}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(width: 12),
+              const Icon(Icons.near_me_rounded, size: 12, color: Colors.white60),
+              const SizedBox(width: 4),
+              Text(
+                'যাত্রা: ${group.originCity}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+          if (group.description.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              group.description,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.vpn_key_rounded,
+                        size: 14, color: AppColors.gold),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Invite: ${group.inviteCode}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModulesGrid(BuildContext context, TourGroup group) {
+    final modules = [
+      _ModuleItem(
+        title: 'Tour InstaFeed 📸',
+        subtitle: 'ফটো, রিলস ও স্টোরিজ',
+        icon: Icons.camera_alt_rounded,
+        color: const Color(0xFFF43F5E),
+        onTap: () => context.push('/group/${group.id}/feed'),
+      ),
+      _ModuleItem(
+        title: 'Shared Fund & Ledger',
+        subtitle: 'Paisa-precise Splitwise',
+        icon: Icons.account_balance_wallet_rounded,
+        color: const Color(0xFF52B788),
+        onTap: () => context.push('/group/${group.id}/ledger'),
+      ),
+      _ModuleItem(
+        title: 'Bus Seats & Rooms',
+        subtitle: 'Seat & room allocators',
+        icon: Icons.airline_seat_recline_extra_rounded,
+        color: const Color(0xFF6366F1),
+        onTap: () => context.push('/group/${group.id}/logistics'),
+      ),
+      _ModuleItem(
+        title: group.tourType == TourType.beach ? 'Tide & Beach Guide 🌊' : 'Weather & Nature 🌤️',
+        subtitle: group.tourType == TourType.beach
+            ? 'High/low tide & danger flags'
+            : 'লাইভ আবহাওয়া ও ট্র্যাকিং সতর্কতা',
+        icon: group.tourType == TourType.beach ? Icons.waves_rounded : Icons.wb_sunny_rounded,
+        color: const Color(0xFF38BDF8),
+        onTap: () => context.push('/group/${group.id}/tide'),
+      ),
+      _ModuleItem(
+        title: 'Notice Board 📌',
+        subtitle: 'মিটিং পয়েন্ট ও জরুরি নোটিশ',
+        icon: Icons.campaign_rounded,
+        color: const Color(0xFFEAB308),
+        onTap: () => context.push('/group/${group.id}/notices'),
+      ),
+      _ModuleItem(
+        title: 'Highway Roadmap 🛣️',
+        subtitle: '${group.originCity} ➔ ${group.destination} জার্নি ট্র্যাকার',
+        icon: Icons.alt_route_rounded,
+        color: const Color(0xFF10B981),
+        onTap: () => context.push('/group/${group.id}/journey'),
+      ),
+      _ModuleItem(
+        title: 'Safety Hub & SOS 🚨',
+        subtitle: 'জরুরি কম্পাস ও হেল্পলাইন',
+        icon: Icons.shield_rounded,
+        color: const Color(0xFFEF4444),
+        onTap: () => context.push('/group/${group.id}/safety'),
+      ),
+      _ModuleItem(
+        title: 'Family GameZone 🎮',
+        subtitle: '29, Chess, Ludo & Teen Patti',
+        icon: Icons.sports_esports_rounded,
+        color: const Color(0xFFF59E0B),
+        onTap: () => context.push('/game-zone'),
+      ),
+      _ModuleItem(
+        title: 'Tour Quiz 🎯',
+        subtitle: '${group.destination} ট্রাভেল কুইজ',
+        icon: Icons.quiz_rounded,
+        color: const Color(0xFF8B5CF6),
+        onTap: () => context.push('/group/${group.id}/quiz'),
+      ),
+      _ModuleItem(
+        title: 'Digital Scrapbook 📖',
+        subtitle: 'স্মৃতি অ্যালবাম ও ম্যাগাজিন',
+        icon: Icons.auto_stories_rounded,
+        color: const Color(0xFFD97706),
+        onTap: () => context.push('/group/${group.id}/scrapbook'),
+      ),
+      _ModuleItem(
+        title: 'Discussion Channels 💬',
+        subtitle: '#general, #food, #emergency',
+        icon: Icons.forum_rounded,
+        color: const Color(0xFFEC4899),
+        onTap: () => context.push('/group/${group.id}/channels'),
+      ),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: modules.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.15,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+      ),
+      itemBuilder: (context, index) {
+        final m = modules[index];
+        return GestureDetector(
+          onTap: m.onTap,
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF14241B),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: m.color.withValues(alpha: 0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: m.color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(m.icon, color: m.color, size: 22),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      m.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      m.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMembersSection(String tourId) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Active Tour Members',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<List<TourMember>>(
+          stream: _repository.watchMembers(tourId),
+          builder: (context, snapshot) {
+            final members = snapshot.data ?? [];
+            if (members.isEmpty) {
+              return const Text('Loading members...',
+                  style: TextStyle(color: Colors.white54));
+            }
+
+            return Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF14241B),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: members.length,
+                separatorBuilder: (_, __) =>
+                    const Divider(color: Colors.white10, height: 1),
+                itemBuilder: (context, i) {
+                  final m = members[i];
+                  return ListTile(
+                    onTap: () => _showManageMemberSheet(context, tourId, m),
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.midGreen,
+                      backgroundImage:
+                          m.photoUrl != null ? NetworkImage(m.photoUrl!) : null,
+                      child: m.photoUrl == null
+                          ? Text(m.displayName.isNotEmpty
+                              ? m.displayName[0].toUpperCase()
+                              : 'E')
+                          : null,
+                    ),
+                    title: Text(m.displayName,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w600)),
+                    subtitle: Text(m.email,
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12)),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: m.role.isAdminOrOwner
+                            ? AppColors.gold.withValues(alpha: 0.2)
+                            : Colors.white10,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        m.role.toValue().toUpperCase(),
+                        style: TextStyle(
+                          color: m.role.isAdminOrOwner
+                              ? AppColors.gold
+                              : Colors.white70,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showCreateGroupDialog(BuildContext context) {
+    final nameCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    final destCtrl = TextEditingController();
+    final originCtrl = TextEditingController(text: 'ঢাকা');
+    TourType selectedTourType = TourType.beach;
+    DateTime startDate = DateTime.now();
+    DateTime endDate = DateTime.now().add(const Duration(days: 3)); // 4 days 3 nights by default
+    bool seatsRooms = true;
+    bool tideSafety = true;
+    bool games = true;
+    bool chat = true;
+    bool isCreating = false;
+
+    final presets = [
+      (label: '🏖️ কক্সবাজার', dest: "Cox's Bazar", type: TourType.beach, tide: true),
+      (label: '⛰️ সাজেক ভ্যালি', dest: 'Sajek Valley', type: TourType.hill, tide: false),
+      (label: '🌿 সিলেট ও শ্রীমঙ্গল', dest: 'Sylhet', type: TourType.nature, tide: false),
+      (label: '🏞️ বান্দরবান', dest: 'Bandarban', type: TourType.hill, tide: false),
+      (label: '🌅 কুয়াকাটা', dest: 'Kuakata', type: TourType.beach, tide: true),
+      (label: '🐅 সুন্দরবন', dest: 'Sundarbans', type: TourType.nature, tide: false),
+    ];
+
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final days = endDate.difference(startDate).inDays + 1;
+            final nights = days > 1 ? days - 1 : 0;
+            final durationText = nights == 0 ? '$days দিন (ডে-ট্যুর)' : '$days দিন $nights রাত';
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF14241B),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              title: const Text('নতুন ট্যুর গ্রুপ তৈরি করুন (Universal)',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. Tour Name
+                      TextField(
+                        controller: nameCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'ট্যুরের নাম (যেমন: সাজেক ক্লাউড ট্যুর)',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          hintText: 'e.g. Sajek Tour 2026',
+                          hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 2. Destination Presets
+                      const Text(
+                        'জনপ্রিয় গন্তব্যসমূহ (Quick Select):',
+                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: presets.map((p) {
+                          final isSelected = destCtrl.text == p.dest;
+                          return InkWell(
+                            onTap: () {
+                              setDialogState(() {
+                                destCtrl.text = p.dest;
+                                selectedTourType = p.type;
+                                tideSafety = p.tide;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppColors.mintGreen : Colors.white10,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                p.label,
+                                style: TextStyle(
+                                  color: isSelected ? Colors.black : Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // 3. Custom Destination Field
+                      TextField(
+                        controller: destCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'গন্তব্য বা স্থান (Destination)',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          hintText: 'e.g. Sajek, Sylhet, Darjeeling, etc.',
+                          hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 4. Origin & Tour Type Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: originCtrl,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                labelText: 'যাত্রা শুরু (Origin)',
+                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                hintText: 'ঢাকা / রংপুর',
+                                hintStyle: const TextStyle(color: Colors.white30, fontSize: 11),
+                                filled: true,
+                                fillColor: Colors.black26,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: DropdownButtonFormField<TourType>(
+                              initialValue: selectedTourType,
+                              dropdownColor: const Color(0xFF14241B),
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                              decoration: InputDecoration(
+                                labelText: 'ট্যুর ধরন',
+                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                filled: true,
+                                fillColor: Colors.black26,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              items: TourType.values.map((t) {
+                                return DropdownMenuItem(
+                                  value: t,
+                                  child: Text('${t.labelBn.split(' ').first} ${t.name.toUpperCase()}',
+                                      style: const TextStyle(fontSize: 11)),
+                                );
+                              }).toList(),
+                              onChanged: (t) {
+                                if (t != null) {
+                                  setDialogState(() {
+                                    selectedTourType = t;
+                                    tideSafety = (t == TourType.beach);
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // 5. Date Range Selector Button
+                      const Text(
+                        'ট্যুরের তারিখ ও মেয়াদ (Any Amount of Days):',
+                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await showDateRangePicker(
+                            context: dialogCtx,
+                            initialDateRange: DateTimeRange(start: startDate, end: endDate),
+                            firstDate: DateTime(2022),
+                            lastDate: DateTime(2035),
+                            builder: (context, child) {
+                              return Theme(
+                                data: ThemeData.dark().copyWith(
+                                  colorScheme: const ColorScheme.dark(
+                                    primary: AppColors.midGreen,
+                                    onPrimary: Colors.white,
+                                    surface: Color(0xFF14241B),
+                                    onSurface: Colors.white,
+                                  ),
+                                ),
+                                child: child!,
+                              );
+                            },
+                          );
+                          if (picked != null) {
+                            setDialogState(() {
+                              startDate = picked.start;
+                              endDate = picked.end;
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.black38,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.date_range_rounded, color: AppColors.mintGreen, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${DateFormat('d MMM yyyy').format(startDate)} – ${DateFormat('d MMM yyyy').format(endDate)}',
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                    ),
+                                    Text(
+                                      'মেয়াদ: $durationText (ক্যালেন্ডার চাপুন)',
+                                      style: const TextStyle(color: AppColors.mintGreen, fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.edit_calendar_rounded, color: Colors.white54, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 6. Description
+                      TextField(
+                        controller: descCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'বিবরণ (ঐচ্ছিক)',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isCreating ? null : () => Navigator.pop(ctx),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.midGreen),
+                  onPressed: isCreating
+                      ? null
+                      : () async {
+                          final name = nameCtrl.text.trim();
+                          final dest = destCtrl.text.trim();
+                          if (name.isEmpty) return;
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(ctx);
+                          setDialogState(() => isCreating = true);
+                          try {
+                            final newGroup = await _repository.createGroup(
+                              name: name,
+                              description: descCtrl.text.trim(),
+                              destination: dest.isNotEmpty ? dest : "Custom Destination",
+                              originCity: originCtrl.text.trim().isNotEmpty ? originCtrl.text.trim() : 'ঢাকা',
+                              tourType: selectedTourType,
+                              startDate: startDate,
+                              endDate: endDate,
+                              modules: TourModules(
+                                seatsRooms: seatsRooms,
+                                tideSafety: tideSafety,
+                                games: games,
+                                chat: chat,
+                              ),
+                            );
+                            if (mounted) {
+                              setState(() {
+                                _activeGroup = newGroup;
+                              });
+                              navigator.pop();
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      'ট্যুর গ্রুপ "${newGroup.name}" (${newGroup.durationText}) সফলভাবে তৈরি হয়েছে!'),
+                                  backgroundColor: AppColors.midGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isCreating = false);
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('গ্রুপ তৈরি করা যায়নি: $e'),
+                                  backgroundColor: Colors.redAccent,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isCreating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Create Tour',
+                          style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showEditGroupDialog(BuildContext context, TourGroup group) {
+    final nameCtrl = TextEditingController(text: group.name);
+    final descCtrl = TextEditingController(text: group.description);
+    final destCtrl = TextEditingController(text: group.destination);
+    final originCtrl = TextEditingController(text: group.originCity);
+    TourType selectedTourType = group.tourType;
+    DateTime startDate = group.startDate;
+    DateTime endDate = group.endDate;
+    bool isUpdating = false;
+
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final days = endDate.difference(startDate).inDays + 1;
+            final nights = days > 1 ? days - 1 : 0;
+            final durationText = nights == 0 ? '$days দিন (ডে-ট্যুর)' : '$days দিন $nights রাত';
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF14241B),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              title: const Text('ট্যুর সেটিংস ও দিন সম্পাদনা',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: nameCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'ট্যুরের নাম',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: destCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'গন্তব্য বা স্থান (Destination)',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: originCtrl,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: InputDecoration(
+                                labelText: 'যাত্রা শুরু (Origin)',
+                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                filled: true,
+                                fillColor: Colors.black26,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: DropdownButtonFormField<TourType>(
+                              initialValue: selectedTourType,
+                              dropdownColor: const Color(0xFF14241B),
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                              decoration: InputDecoration(
+                                labelText: 'ট্যুর ধরন',
+                                labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                filled: true,
+                                fillColor: Colors.black26,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              items: TourType.values.map((t) {
+                                return DropdownMenuItem(
+                                  value: t,
+                                  child: Text('${t.labelBn.split(' ').first} ${t.name.toUpperCase()}',
+                                      style: const TextStyle(fontSize: 11)),
+                                );
+                              }).toList(),
+                              onChanged: (t) {
+                                if (t != null) {
+                                  setDialogState(() => selectedTourType = t);
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'ট্যুরের তারিখ ও মেয়াদ পরিবর্তন করুন:',
+                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await showDateRangePicker(
+                            context: dialogCtx,
+                            initialDateRange: DateTimeRange(start: startDate, end: endDate),
+                            firstDate: DateTime(2022),
+                            lastDate: DateTime(2035),
+                            builder: (context, child) {
+                              return Theme(
+                                data: ThemeData.dark().copyWith(
+                                  colorScheme: const ColorScheme.dark(
+                                    primary: AppColors.midGreen,
+                                    onPrimary: Colors.white,
+                                    surface: Color(0xFF14241B),
+                                    onSurface: Colors.white,
+                                  ),
+                                ),
+                                child: child!,
+                              );
+                            },
+                          );
+                          if (picked != null) {
+                            setDialogState(() {
+                              startDate = picked.start;
+                              endDate = picked.end;
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.black38,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.date_range_rounded, color: AppColors.mintGreen, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${DateFormat('d MMM yyyy').format(startDate)} – ${DateFormat('d MMM yyyy').format(endDate)}',
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                    ),
+                                    Text(
+                                      'নতুন মেয়াদ: $durationText',
+                                      style: const TextStyle(color: AppColors.mintGreen, fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.edit_calendar_rounded, color: Colors.white54, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: descCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'বিবরণ',
+                          labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isUpdating ? null : () => Navigator.pop(ctx),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.midGreen),
+                  onPressed: isUpdating
+                      ? null
+                      : () async {
+                          final name = nameCtrl.text.trim();
+                          final dest = destCtrl.text.trim();
+                          if (name.isEmpty) return;
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(ctx);
+                          setDialogState(() => isUpdating = true);
+                          try {
+                            await _repository.updateGroupSettings(
+                              tourId: group.id,
+                              name: name,
+                              description: descCtrl.text.trim(),
+                              destination: dest.isNotEmpty ? dest : group.destination,
+                              originCity: originCtrl.text.trim(),
+                              tourType: selectedTourType,
+                              startDate: startDate,
+                              endDate: endDate,
+                            );
+                            if (mounted) {
+                              setState(() {
+                                _activeGroup = group.copyWith(
+                                  name: name,
+                                  description: descCtrl.text.trim(),
+                                  destination: dest.isNotEmpty ? dest : group.destination,
+                                  originCity: originCtrl.text.trim(),
+                                  tourType: selectedTourType,
+                                  startDate: startDate,
+                                  endDate: endDate,
+                                );
+                              });
+                              navigator.pop();
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('ট্যুর সেটিংস সফলভাবে আপডেট হয়েছে!'),
+                                  backgroundColor: AppColors.midGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isUpdating = false);
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('আপডেট ব্যর্থ: $e'),
+                                  backgroundColor: Colors.redAccent,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isUpdating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Save Changes',
+                          style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showJoinGroupDialog(BuildContext context) {
+    final codeCtrl = TextEditingController();
+    bool isJoining = false;
+
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF14241B),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              title: const Text('Join Tour Group',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Enter the 6-character tour invite code shared by your tour admin.',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: codeCtrl,
+                    textCapitalization: TextCapitalization.characters,
+                    style: const TextStyle(
+                      color: AppColors.mintGreen,
+                      fontSize: 20,
+                      letterSpacing: 4,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 7X9A2F',
+                      hintStyle: const TextStyle(
+                          color: Colors.white24, letterSpacing: 2),
+                      filled: true,
+                      fillColor: Colors.black26,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: AppColors.mintGreen),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isJoining ? null : () => Navigator.pop(ctx),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.midGreen),
+                  onPressed: isJoining
+                      ? null
+                      : () async {
+                          final code = codeCtrl.text.trim();
+                          if (code.isEmpty) return;
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(ctx);
+                          setDialogState(() => isJoining = true);
+                          try {
+                            final joinedGroup =
+                                await _repository.joinGroupWithCode(code);
+                            if (mounted) {
+                              setState(() {
+                                _activeGroup = joinedGroup;
+                              });
+                              navigator.pop();
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      'গ্রুপ "${joinedGroup.name}" এ সফলভাবে যোগ দিয়েছেন!'),
+                                  backgroundColor: AppColors.midGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isJoining = false);
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(e.toString()),
+                                  backgroundColor: Colors.redAccent,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isJoining
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Join',
+                          style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _exportTourJsonBackup(BuildContext context, TourGroup group) async {
+    try {
+      final snapshot = await _repository.fetchFullTourSnapshot(group.id);
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(snapshot);
+      final fileName = '${group.name.replaceAll(' ', '_')}_Backup_${DateFormat('yyyyMMdd').format(DateTime.now())}.json';
+      // ignore: deprecated_member_use
+      await Share.share(
+        jsonStr,
+        subject: fileName,
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ব্যাকআপ তৈরিতে ত্রুটি: $e')),
+        );
+      }
+    }
+  }
+
+  void _showManageMemberSheet(
+      BuildContext context, String tourId, TourMember member) {
+    final currentEmail = _repository.currentEmail;
+    final isMe = currentEmail.toLowerCase() == member.email.toLowerCase();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
+      backgroundColor: const Color(0xFF14241B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        final bottomPad = MediaQuery.of(ctx).padding.bottom;
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 16,
+            bottom: bottomPad + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: AppColors.midGreen,
+                    backgroundImage: member.photoUrl != null
+                        ? NetworkImage(member.photoUrl!)
+                        : null,
+                    child: member.photoUrl == null
+                        ? Text(
+                            member.displayName.isNotEmpty
+                                ? member.displayName[0].toUpperCase()
+                                : 'M',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          member.displayName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          member.email,
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: member.role.isAdminOrOwner
+                          ? AppColors.gold.withValues(alpha: 0.2)
+                          : Colors.white10,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      member.role.toValue().toUpperCase(),
+                      style: TextStyle(
+                        color: member.role.isAdminOrOwner
+                            ? AppColors.gold
+                            : Colors.white70,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Divider(color: Colors.white10),
+              if (!isMe && member.role != TourRole.owner) ...[
+                // Promote / Demote
+                ListTile(
+                  leading: Icon(
+                    member.role == TourRole.admin
+                        ? Icons.person_outline
+                        : Icons.admin_panel_settings_rounded,
+                    color: AppColors.mintGreen,
+                  ),
+                  title: Text(
+                    member.role == TourRole.admin
+                        ? 'Remove Admin Role'
+                        : 'Promote to Tour Admin',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final newRole = member.role == TourRole.admin
+                        ? TourRole.member
+                        : TourRole.admin;
+                    await _repository.updateMemberRole(tourId, member.email, newRole);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${member.displayName} এর রোল পরিবর্তন করা হয়েছে')),
+                      );
+                    }
+                  },
+                ),
+                // Transfer Ownership
+                ListTile(
+                  leading: const Icon(Icons.stars_rounded, color: AppColors.gold),
+                  title: const Text(
+                    'Transfer Tour Ownership',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        backgroundColor: const Color(0xFF14241B),
+                        title: const Text('মালিকানা হস্তান্তর করবেন?', style: TextStyle(color: Colors.white)),
+                        content: Text('আপনি কি নিশ্চিত যে ${member.displayName} কে এই ট্যুরের প্রধান মালিক করবেন?', style: const TextStyle(color: Colors.white70)),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('বাতিল')),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold, foregroundColor: Colors.black),
+                            onPressed: () => Navigator.pop(c, true),
+                            child: const Text('হস্তান্তর করুন'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await _repository.transferOwnership(tourId, member.email);
+                    }
+                  },
+                ),
+                // Remove Member
+                ListTile(
+                  leading: const Icon(Icons.person_remove_rounded, color: Colors.redAccent),
+                  title: const Text(
+                    'Remove from Tour',
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        backgroundColor: const Color(0xFF14241B),
+                        title: const Text('সদস্য অপসারণ', style: TextStyle(color: Colors.white)),
+                        content: Text('${member.displayName} কে ট্যুর গ্রুপ থেকে বাদ দিতে চান?', style: const TextStyle(color: Colors.white70)),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('বাতিল')),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+                            onPressed: () => Navigator.pop(c, true),
+                            child: const Text('অপসারণ করুন'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await _repository.removeMember(tourId, member.email);
+                    }
+                  },
+                ),
+              ] else if (isMe) ...[
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    'এটি আপনার প্রোফাইল। আপনি ট্যুরের সক্রিয় সদস্য।',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ModuleItem {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ModuleItem({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+}

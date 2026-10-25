@@ -373,5 +373,106 @@ service cloud.firestore {
       allow read:   if isRegionExpertOrAbove();
       allow write:  if false; // Only Cloud Functions service account may write
     }
+
+    // ── Tour Groups & Memberships (Family Bhromon Engine) ───────────────────
+    function tourUserEmail() {
+      return (request.auth.token.email != null)
+        ? request.auth.token.email.lower()
+        : (request.auth.uid + '@bhromon.app');
+    }
+
+    function isMemberOf(tId) {
+      return isAuth() && (
+        exists(/databases/$(database)/documents/memberships/$(tId + '__' + tourUserEmail())) ||
+        exists(/databases/$(database)/documents/memberships/$(tId + '__' + request.auth.uid))
+      );
+    }
+
+    function isGroupAdmin(tId) {
+      return isAuth() && (
+        (exists(/databases/$(database)/documents/tours/$(tId)) &&
+         (get(/databases/$(database)/documents/tours/$(tId)).data.get('ownerEmail', null) == tourUserEmail() ||
+          get(/databases/$(database)/documents/tours/$(tId)).data.get('ownerUid', null) == request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/memberships/$(tId + '__' + tourUserEmail())) &&
+         get(/databases/$(database)/documents/memberships/$(tId + '__' + tourUserEmail())).data.role in ['admin', 'owner']) ||
+        (exists(/databases/$(database)/documents/memberships/$(tId + '__' + request.auth.uid)) &&
+         get(/databases/$(database)/documents/memberships/$(tId + '__' + request.auth.uid)).data.role in ['admin', 'owner'])
+      );
+    }
+
+    match /memberships/{membershipId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    match /tours/{tourId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth() && (
+        resource.data.get('ownerEmail', null) == tourUserEmail() ||
+        resource.data.get('ownerUid', null) == request.auth.uid ||
+        isGroupAdmin(tourId)
+      );
+
+      match /private/{docId} {
+        allow read, write: if isAuth();
+      }
+
+      match /expenses/{expenseId} {
+        allow read, write: if isAuth();
+      }
+
+      match /deposits/{depositId} {
+        allow read, write: if isAuth();
+      }
+
+      match /notices/{noticeId} {
+        allow read, write: if isAuth();
+      }
+
+      match /checklist/{itemId} {
+        allow read, write: if isAuth();
+      }
+
+      match /itinerary/{itemId} {
+        allow read, write: if isAuth();
+      }
+
+      match /members/{memberId} {
+        allow read, write: if isAuth();
+      }
+
+      match /posts/{postId} {
+        allow read, write: if isAuth();
+
+        match /comments/{commentId} {
+          allow read, write: if isAuth();
+        }
+      }
+
+      match /stories/{storyId} {
+        allow read, write: if isAuth();
+      }
+
+      match /channels/{channelId}/messages/{messageId} {
+        allow read, write: if isAuth();
+      }
+
+      match /locations/{locId} {
+        allow read, write: if isAuth();
+      }
+
+      match /profiles/{profId} {
+        allow read, write: if isAuth();
+      }
+
+      match /meta/{metaId} {
+        allow read, write: if isAuth();
+      }
+    }
+
   }
 }

@@ -23,6 +23,14 @@ service firebase.storage {
       return request.resource.contentType.matches('audio/.*');
     }
 
+    // ── Tour Group media (posts, reels, stories, scrapbook) ─────────────────
+    match /tours/{tourId}/{allPaths=**} {
+      allow read: if isAuth();
+      allow write: if isAuth()
+                   && (isImage() || isVideo() || isAudio())
+                   && (underImageLimit() || underVideoLimit());
+    }
+
     // ── Trip Log media ───────────────────────────────────────────────────────
     // Read: public (trip logs are community-shared content)
     // Write: authenticated users only, with file size caps
