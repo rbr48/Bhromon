@@ -140,9 +140,14 @@ class TourGroupRepository {
     required String name,
     required String description,
     required String destination,
+    String originCity = 'ঢাকা',
+    TourType tourType = TourType.beach,
     required DateTime startDate,
     required DateTime endDate,
     TourModules modules = const TourModules(),
+    List<String> customSpots = const [],
+    String? meetingPointTitle,
+    String? meetingPointMapUrl,
   }) async {
     final email = currentEmail;
     final uid = currentUid;
@@ -155,12 +160,17 @@ class TourGroupRepository {
       name: name,
       description: description,
       destination: destination,
+      originCity: originCity,
+      tourType: tourType,
       ownerEmail: email,
       ownerUid: uid,
       inviteCode: inviteCode,
       startDate: startDate,
       endDate: endDate,
       modules: modules,
+      customSpots: customSpots,
+      meetingPointTitle: meetingPointTitle,
+      meetingPointMapUrl: meetingPointMapUrl,
       createdAt: DateTime.now(),
     );
 
@@ -260,6 +270,70 @@ class TourGroupRepository {
     }
 
     return matchedGroup;
+  }
+
+  /// Watch a specific tour group's live updates.
+  Stream<TourGroup?> watchGroup(String tourId) {
+    return _firestore.collection('tours').doc(tourId).snapshots().map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return TourGroup.fromMap(doc.id, doc.data()!);
+    });
+  }
+
+  /// Get single tour group details with local fallback.
+  Future<TourGroup?> getGroup(String tourId) async {
+    try {
+      final doc = await _firestore.collection('tours').doc(tourId).get();
+      if (doc.exists && doc.data() != null) {
+        final g = TourGroup.fromMap(doc.id, doc.data()!);
+        await _cacheLocalGroup(g);
+        return g;
+      }
+      final local = await getLocalGroups();
+      return local.where((e) => e.id == tourId).firstOrNull;
+    } catch (_) {
+      final local = await getLocalGroups();
+      return local.where((e) => e.id == tourId).firstOrNull;
+    }
+  }
+
+  /// Update tour group settings, destination, dates, spots, or meeting point.
+  Future<void> updateGroupSettings({
+    required String tourId,
+    String? name,
+    String? description,
+    String? destination,
+    String? originCity,
+    TourType? tourType,
+    DateTime? startDate,
+    DateTime? endDate,
+    TourModules? modules,
+    List<String>? customSpots,
+    String? meetingPointTitle,
+    String? meetingPointMapUrl,
+  }) async {
+    final tourRef = _firestore.collection('tours').doc(tourId);
+    final updates = <String, dynamic>{};
+    if (name != null) updates['name'] = name;
+    if (description != null) updates['description'] = description;
+    if (destination != null) updates['destination'] = destination;
+    if (originCity != null) updates['originCity'] = originCity;
+    if (tourType != null) updates['tourType'] = tourType.toValue();
+    if (startDate != null) updates['startDate'] = startDate.toIso8601String();
+    if (endDate != null) updates['endDate'] = endDate.toIso8601String();
+    if (modules != null) updates['modules'] = modules.toMap();
+    if (customSpots != null) updates['customSpots'] = customSpots;
+    if (meetingPointTitle != null) updates['meetingPointTitle'] = meetingPointTitle;
+    if (meetingPointMapUrl != null) updates['meetingPointMapUrl'] = meetingPointMapUrl;
+
+    if (updates.isNotEmpty) {
+      await tourRef.update(updates);
+      final updatedDoc = await tourRef.get();
+      if (updatedDoc.exists && updatedDoc.data() != null) {
+        final updatedGroup = TourGroup.fromMap(tourId, updatedDoc.data()!);
+        await _cacheLocalGroup(updatedGroup);
+      }
+    }
   }
 
   /// Stream of active members in a tour.

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../domain/models/tour_group.dart';
+import '../../data/tour_group_repository.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -40,54 +42,220 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   bool _isSirenActive = false;
   late AnimationController _sirenAnimController;
 
-  static const List<TourLandmark> landmarks = [
-    TourLandmark(
-      id: 'hotel_sea_moon',
-      name: 'হোটেল সি মুন (Hotel Sea Moon)',
-      subtitle: 'প্রধান হোটেল ও থাকার রুম',
-      lat: 21.4326,
-      lng: 91.9774,
-      icon: Icons.hotel,
-      color: Colors.amber,
-    ),
-    TourLandmark(
-      id: 'evergreen_bus',
-      name: 'এভারগ্রীন এসি বাস পার্কিং',
-      subtitle: 'রংপুর ➔ কক্সবাজার প্রধান বাস পয়েন্ট',
-      lat: 21.4385,
-      lng: 91.9740,
-      icon: Icons.directions_bus,
-      color: Colors.teal,
-    ),
-    TourLandmark(
-      id: 'sugandha_beach',
-      name: 'সুগন্ধা বিচ মেইন পয়েন্ট',
-      subtitle: 'ফ্যামিলি আড্ডা ও মিলনমেলা পয়েন্ট',
-      lat: 21.4298,
-      lng: 91.9752,
-      icon: Icons.beach_access,
-      color: Colors.blueAccent,
-    ),
-    TourLandmark(
-      id: 'laboni_beach',
-      name: 'লাবণী বিচ পয়েন্ট ও ঝাউবন',
-      subtitle: 'সকালে সূর্যাস্ত ও হাঁটাচলা',
-      lat: 21.4390,
-      lng: 91.9712,
-      icon: Icons.wb_sunny,
-      color: Colors.orangeAccent,
-    ),
-  ];
+  final TourGroupRepository _repository = TourGroupRepository();
+  TourGroup? _tourGroup;
+
+  List<TourLandmark> get _landmarks {
+    final dest = _tourGroup?.destination.toLowerCase() ?? 'cox';
+    if (dest.contains('sajek') || dest.contains('সাজেক')) {
+      return const [
+        TourLandmark(
+          id: 'sajek_resort',
+          name: 'সাজেক কটেজ ও রিসোর্ট জোন',
+          subtitle: 'প্রধান কটেজ ও থাকার রুম',
+          lat: 23.3828,
+          lng: 92.2938,
+          icon: Icons.hotel,
+          color: Colors.amber,
+        ),
+        TourLandmark(
+          id: 'sajek_vehicle',
+          name: 'সাজেক চাঁদের গাড়ি পার্কিং স্ট্যান্ড',
+          subtitle: 'ট্যুর গ্রুপ পরিবহন পয়েন্ট',
+          lat: 23.3840,
+          lng: 92.2945,
+          icon: Icons.directions_bus,
+          color: Colors.teal,
+        ),
+        TourLandmark(
+          id: 'sajek_helipad',
+          name: 'সাজেক হ্যালিপ্যাড ও সানসেট পয়েন্ট',
+          subtitle: 'ফ্যামিলি আড্ডা ও মিলনমেলা পয়েন্ট',
+          lat: 23.3815,
+          lng: 92.2930,
+          icon: Icons.wb_cloudy_rounded,
+          color: Colors.blueAccent,
+        ),
+        TourLandmark(
+          id: 'konglak_peak',
+          name: 'কংলাক পাহাড় চূড়া ও লুসাই পাড়া',
+          subtitle: 'ট্যুর ট্র্যাকিং ও মেঘলোক ভিউ',
+          lat: 23.3980,
+          lng: 92.3010,
+          icon: Icons.landscape_rounded,
+          color: Colors.orangeAccent,
+        ),
+      ];
+    } else if (dest.contains('sylhet') || dest.contains('সিলেট')) {
+      return const [
+        TourLandmark(
+          id: 'syl_hotel',
+          name: 'সিলেট প্রধান হোটেল ও রিসোর্ট',
+          subtitle: 'প্রধান হোটেল ও থাকার রুম',
+          lat: 24.8949,
+          lng: 91.8687,
+          icon: Icons.hotel,
+          color: Colors.amber,
+        ),
+        TourLandmark(
+          id: 'syl_bus',
+          name: 'ট্যুর বাস ও মাইক্রোবাস পার্কিং',
+          subtitle: 'প্রধান পরিবহন পয়েন্ট',
+          lat: 24.8960,
+          lng: 91.8700,
+          icon: Icons.directions_bus,
+          color: Colors.teal,
+        ),
+        TourLandmark(
+          id: 'syl_ratargul',
+          name: 'রাতারগুল সোয়াম্প ফরেস্ট ঘাট',
+          subtitle: 'জলজ বন ও নৌকা ভ্রমণ স্পট',
+          lat: 25.0050,
+          lng: 91.9300,
+          icon: Icons.water_rounded,
+          color: Colors.blueAccent,
+        ),
+        TourLandmark(
+          id: 'syl_sada',
+          name: 'ভোলাগঞ্জ সাদা পাথর জিরো পয়েন্ট',
+          subtitle: 'স্বচ্ছ জল ও পাথুরে নদী পয়েন্ট',
+          lat: 25.1634,
+          lng: 92.0189,
+          icon: Icons.diamond_rounded,
+          color: Colors.orangeAccent,
+        ),
+      ];
+    } else if (dest.contains('bandarban') || dest.contains('বান্দরবান')) {
+      return const [
+        TourLandmark(
+          id: 'ban_hotel',
+          name: 'বান্দরবান প্রধান হোটেল ও রিসোর্ট',
+          subtitle: 'প্রধান হোটেল ও থাকার রুম',
+          lat: 22.1953,
+          lng: 92.2184,
+          icon: Icons.hotel,
+          color: Colors.amber,
+        ),
+        TourLandmark(
+          id: 'ban_bus',
+          name: 'চাঁদের গাড়ি স্ট্যান্ড ও বাস পার্কিং',
+          subtitle: 'ট্যুর পাহাড়ি পরিবহন পয়েন্ট',
+          lat: 22.1970,
+          lng: 92.2190,
+          icon: Icons.directions_bus,
+          color: Colors.teal,
+        ),
+        TourLandmark(
+          id: 'ban_nilachal',
+          name: 'নীলাচল ভিউপয়েন্ট ও ঝুলন্ত ব্রিজ',
+          subtitle: 'সূর্যাস্ত ও মেঘ দর্শন পয়েন্ট',
+          lat: 22.1800,
+          lng: 92.2050,
+          icon: Icons.wb_sunny_rounded,
+          color: Colors.blueAccent,
+        ),
+        TourLandmark(
+          id: 'ban_nilgiri',
+          name: 'নীলগিরি হিলটপ রিসোর্ট চূড়া',
+          subtitle: 'পাহাড় চূড়া ও মেঘের সমারোহ',
+          lat: 21.9189,
+          lng: 92.3364,
+          icon: Icons.landscape_rounded,
+          color: Colors.orangeAccent,
+        ),
+      ];
+    } else {
+      return [
+        TourLandmark(
+          id: 'hotel_sea_moon',
+          name: '${_tourGroup?.destination ?? "কক্সবাজার"} প্রধান হোটেল / রিসোর্ট',
+          subtitle: 'প্রধান হোটেল ও থাকার রুম',
+          lat: 21.4326,
+          lng: 91.9774,
+          icon: Icons.hotel,
+          color: Colors.amber,
+        ),
+        TourLandmark(
+          id: 'evergreen_bus',
+          name: '${_tourGroup?.originCity ?? "রংপুর"} ➔ ${_tourGroup?.destination ?? "কক্সবাজার"} বাস পার্কিং',
+          subtitle: 'প্রধান বাস ও পরিবহন পয়েন্ট',
+          lat: 21.4385,
+          lng: 91.9740,
+          icon: Icons.directions_bus,
+          color: Colors.teal,
+        ),
+        TourLandmark(
+          id: 'sugandha_beach',
+          name: '${_tourGroup?.destination ?? "কক্সবাজার"} প্রধান মিলনমেলা পয়েন্ট',
+          subtitle: 'ফ্যামিলি আড্ডা ও মিলনমেলা পয়েন্ট',
+          lat: 21.4298,
+          lng: 91.9752,
+          icon: Icons.place_rounded,
+          color: Colors.blueAccent,
+        ),
+        TourLandmark(
+          id: 'laboni_beach',
+          name: '${_tourGroup?.destination ?? "কক্সবাজার"} দর্শনীয় প্রধান স্পট',
+          subtitle: 'দর্শনীয় স্পট ও ফটো পয়েন্ট',
+          lat: 21.4390,
+          lng: 91.9712,
+          icon: Icons.camera_alt_rounded,
+          color: Colors.orangeAccent,
+        ),
+      ];
+    }
+  }
+
+  ({String title, String number, String display}) _getLocalHospitalContact() {
+    final dest = _tourGroup?.destination.toLowerCase() ?? '';
+    if (dest.contains('sajek') || dest.contains('সাজেক')) {
+      return (
+        title: 'খাগড়াছড়ি সদর হাসপাতাল ও ইমার্জেন্সি',
+        number: '01730324790',
+        display: '01730-324790',
+      );
+    } else if (dest.contains('sylhet') || dest.contains('সিলেট')) {
+      return (
+        title: 'সিলেট এম এ জি ওসমানী মেডিকেল হাসপাতাল',
+        number: '01730324795',
+        display: '01730-324795',
+      );
+    } else if (dest.contains('bandarban') || dest.contains('বান্দরবান')) {
+      return (
+        title: 'বান্দরবান সদর হাসপাতাল ও ইমার্জেন্সি',
+        number: '01730324799',
+        display: '01730-324799',
+      );
+    } else if (dest.contains('cox') || dest.contains('কক্সবাজার')) {
+      return (
+        title: 'কক্সবাজার সদর হাসপাতাল ইমার্জেন্সি',
+        number: '01730324785',
+        display: '01730-324785',
+      );
+    } else {
+      return (
+        title: 'জাতীয় স্বাস্থ্য হেল্পলাইন ও অ্যাম্বুলেন্স',
+        number: '16263',
+        display: '16263 (২৪ ঘণ্টা ফ্রি)',
+      );
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _loadGroup();
     _sirenAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
     )..repeat(reverse: true);
 
     _initGps();
+  }
+
+  Future<void> _loadGroup() async {
+    final g = await _repository.getGroup(widget.tourId);
+    if (mounted) setState(() => _tourGroup = g);
   }
 
   @override
@@ -181,7 +349,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             ),
             const SizedBox(height: 10),
 
-            ...landmarks.map((l) => _buildLandmarkCard(l)),
+            ..._landmarks.map((l) => _buildLandmarkCard(l)),
 
             const SizedBox(height: 20),
 
@@ -328,12 +496,17 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           ],
         ),
         const SizedBox(height: 10),
-        _buildFullWidthDialCard(
-          title: 'কক্সবাজার সদর হাসপাতাল ইমার্জেন্সি',
-          number: '01730324785',
-          displayNumber: '01730-324785',
-          icon: Icons.local_hospital,
-          color: Colors.teal,
+        Builder(
+          builder: (context) {
+            final h = _getLocalHospitalContact();
+            return _buildFullWidthDialCard(
+              title: h.title,
+              number: h.number,
+              displayNumber: h.display,
+              icon: Icons.local_hospital,
+              color: Colors.teal,
+            );
+          },
         ),
       ],
     );
