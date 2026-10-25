@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -14,6 +13,7 @@ import '../domain/models/tour_activity_models.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
 import '../domain/services/invite_code.dart';
+import 'tour_media_uploader.dart';
 
 /// Thrown when an action needs a signed-in member. The message is shown to users.
 class TourAccessException implements Exception {
@@ -1198,7 +1198,7 @@ class TourGroupRepository {
     ]) {
       if (!isRemoteMediaUrl(url)) continue;
       try {
-        await FirebaseStorage.instance.refFromURL(url).delete();
+        await TourMediaUploader.deleteMedia(url);
       } catch (e) {
         debugPrint('[TourGroupRepository] Could not delete media: $e');
       }
