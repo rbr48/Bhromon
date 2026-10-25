@@ -48,12 +48,19 @@ This document serves as the persistent system memory, architectural guidelines, 
 - Computes dynamic itineraries, budget estimations, and packing checklists per person/family.
 
 ### B. Tour Group Hub & Trip Ledger
-- **Firestore Security Rules**: Group owners are stored with `role: 'admin'` / `'owner'`.
-- **Expense Allocation (`trip_ledger_engine.dart`)**: Always compute money in integer **paisa** (`toPaisa`) to avoid floating-point drift. Support weighted family headcounts.
-- **Offline Resilience**: Offline caching in Hive/Drift with queue-based network replay.
+- **Access is membership-based.** `memberships/{tourId}__{email}` decides who can read a tour. Roles are `owner`, `admin` and `member`. Only the owner changes ownership or the invite code, or promotes someone to admin. Admins edit trip details and remove members; the owner's row cannot be removed.
+- **Invite codes** live in `invites/{code}`: readable by exact code, never listed. Codes are 8 characters from an unambiguous alphabet (legacy 6-character codes still work). Joining always creates a plain member and is refused for accounts in `tours/{id}/bans`. Removing a member writes a ban and deletes the row together.
+- **Rules are tested on the emulator:** `functions/tests/tour_group_rules.test.js` and `tour_group_storage_rules.test.js`. Run them with `firebase emulators:exec --only firestore,storage ... "npx jest --runInBand tests/tour_group_"`. `--runInBand` is required because the suites share one emulator project.
+- **Expense allocation (`trip_ledger_engine.dart`):** always integer paisa. User amounts go through `parseTakaInput` (Bengali digits accepted; zero, negative and over-cap amounts refused). Each expense is split among its participants (default: every member), weighted by `familyCount` (1 to 20, which members can set for themselves). Payers and depositors who have left keep their balance; email matching ignores case.
+- **Offline:** the tour list comes from memberships, not the cache, so tours the user left stop showing. A write that is not acknowledged within 8 seconds is reported as syncing and kept queued; a rejected write is removed from the local cache.
+- **Known limits:** the bus layout is a fixed 36-seat coach. The SOS button vibrates and can share the current location, but it does not push an alert to other members. Tide times are estimates and are labelled that way.
 
 ### C. Tour Reels & Media Sharing
 - Vertical reels video feed (`tour_instafeed_screen.dart`) matching Family Bhromon with video playback controls, aspect ratio fitting, upload flows, and media filters.
+- **Uploads go through `TourMediaUploader`.** Size and type are checked before anything is sent. Files live under `tours/{id}/{folder}/` and are tagged with `uploadedByEmail` metadata, which the storage rules use to allow later deletes by the uploader or an admin. Limits match `storage.rules`: images 10 MB, videos 100 MB, reels 3 minutes.
+- Posts never store device paths or blob URLs. A post with an unfinished upload is refused, and a failed or cancelled post deletes the files it uploaded.
+- **Platform code:** `dart:io` is imported only in `tour_media_upload_io.dart`. Web uses `putData` and blob URLs.
+- **Not done yet:** reel thumbnails are not generated. `video_thumbnail` resolves, but adding it downgrades five transitive packages, so it needs a decision first.
 
 ### D. Family Game Zone (`lib/features/game_zone/`)
 Game rules live in pure-Dart models/engines (unit-tested); screens only render and drive timers.

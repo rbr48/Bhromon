@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
+import '../../domain/models/tour_activity_models.dart';
 
 class HighwayMilestone {
   final String id;
@@ -46,13 +49,35 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   TourGroup? _tourGroup;
   Position? _currentPosition;
   int _activeFilterIndex = 0; // 0: All, 1: Rest/Food, 2: Prayer, 3: Fuel
-  final List<HighwayMilestone> _customMilestones = [];
+  // Stops that group members added; shared by everyone on the tour.
+  List<RouteCheckpoint> _checkpoints = const [];
+  StreamSubscription<List<RouteCheckpoint>>? _checkpointSub;
+
+  /// The curated stop lists were measured from Dhaka. From any other origin
+  /// they would be wrong, so they are hidden.
+  bool get _isDhakaOrigin {
+    if (_tourGroup == null) return true;
+    final origin = _tourGroup!.originCity.toLowerCase();
+    return origin.contains('dhaka') || origin.contains('ঢাকা');
+  }
 
   @override
   void initState() {
     super.initState();
     _loadGroup();
     _fetchGps();
+    _checkpointSub = _repository.watchCheckpoints(widget.tourId).listen(
+      (cps) {
+        if (mounted) setState(() => _checkpoints = cps);
+      },
+      onError: (Object _) {},
+    );
+  }
+
+  @override
+  void dispose() {
+    _checkpointSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadGroup() async {
@@ -62,6 +87,14 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
 
   Future<void> _fetchGps() async {
     try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        return;
+      }
       final pos = await Geolocator.getCurrentPosition();
       if (mounted) setState(() => _currentPosition = pos);
     } catch (_) {}
@@ -76,10 +109,10 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   }
 
   List<HighwayMilestone> _getRouteMilestones() {
-    final dest = _tourGroup?.destination.toLowerCase() ?? 'cox';
+    final dest = _tourGroup?.destination.toLowerCase() ?? '';
     final origin = _tourGroup?.originCity ?? 'রংপুর';
 
-    List<HighwayMilestone> baseList;
+    List<HighwayMilestone> baseList = const [];
 
     if (dest.contains('sajek') || dest.contains('সাজেক')) {
       baseList = [
@@ -346,7 +379,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           iconEmoji: '🌅',
         ),
       ];
-    } else {
+    } else if (dest.contains('cox')) {
+      // Cox's Bazar route. Other destinations get no curated stops.
       // Default: Comprehensive Cox's Bazar / Universal Route
       baseList = [
         HighwayMilestone(
@@ -448,11 +482,53 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
       ];
     }
 
-    final combined = List<HighwayMilestone>.from(baseList)
-      ..addAll(_customMilestones);
+    final combined = List<HighwayMilestone>.from(
+        _isDhakaOrigin ? baseList : const <HighwayMilestone>[])
+      ..addAll(_checkpoints.map(_milestoneFromCheckpoint));
     return combined;
   }
 
+  HighwayMilestone _milestoneFromCheckpoint(RouteCheckpoint c) {
+    return HighwayMilestone(
+      id: c.id,
+      name: c.name,
+      nameEn: c.name,
+      kmFromStart: c.kmFromStart,
+      lat: c.lat ?? 0,
+      lng: c.lng ?? 0,
+      estDuration: 'ট্যুর সদস্য যুক্ত করেছেন',
+      highlight: c.highlight.isEmpty ? 'চেকপয়েন্ট' : c.highlight,
+      details: 'এই স্টপটি ট্যুরের একজন সদস্য যুক্ত করেছেন।',
+      amenities: const ['কাস্টম স্টপ'],
+      iconEmoji: '📍',
+    );
+  }
+
+  /// Whether a stop passes the active filter (the same rules the timeline uses).
+  bool _matchesFilter(HighwayMilestone m) {
+    if (_activeFilterIndex == 1 &&
+        !m.amenities.any((a) =>
+            a.contains('রেস্তোরাঁ') ||
+            a.contains('নাস্তা') ||
+            a.contains('খাবার') ||
+            a.contains('ক্যাফে'))) {
+      return false;
+    }
+    if (_activeFilterIndex == 2 &&
+        !m.amenities.any((a) => a.contains('নামাজ'))) {
+      return false;
+    }
+    if (_activeFilterIndex == 3 &&
+        !m.amenities.any((a) =>
+            a.contains('পাম্প') || a.contains('তেল') || a.contains('ফুয়েল'))) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Adds a stop for everyone on the tour. The stop's place is not the
+  /// adder's GPS position, so no coordinates are stored.
   void _showAddMilestoneDialog() {
     final nameCtrl = TextEditingController();
     final kmCtrl = TextEditingController();
@@ -463,8 +539,6 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: const Color(0xFF142428),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('নতুন চেকপয়েন্ট যোগ করুন',
               style:
                   TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -477,11 +551,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                 decoration: const InputDecoration(
                   labelText: 'স্টপ বা চেকপয়েন্টের নাম',
                   labelStyle: TextStyle(color: Colors.white70),
-                  hintText: 'e.g. হোটেল বিরতি / ফিলিং স্টেশন',
-                  hintStyle: TextStyle(color: Colors.white24),
                 ),
               ),
-              const SizedBox(height: 10),
               TextField(
                 controller: kmCtrl,
                 keyboardType: TextInputType.number,
@@ -489,19 +560,14 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                 decoration: const InputDecoration(
                   labelText: 'শুরু থেকে দূরত্ব (কি.মি.)',
                   labelStyle: TextStyle(color: Colors.white70),
-                  hintText: 'e.g. 150',
-                  hintStyle: TextStyle(color: Colors.white24),
                 ),
               ),
-              const SizedBox(height: 10),
               TextField(
                 controller: highlightCtrl,
                 style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
                   labelText: 'বিশেষ আকর্ষণ বা হাইলাইট',
                   labelStyle: TextStyle(color: Colors.white70),
-                  hintText: 'e.g. চা ও ওয়াশরুম বিরতি',
-                  hintStyle: TextStyle(color: Colors.white24),
                 ),
               ),
             ],
@@ -510,50 +576,50 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child:
-                  const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                  const Text('বাতিল', style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.tealAccent.shade700),
-              onPressed: () {
+              onPressed: () async {
                 final name = nameCtrl.text.trim();
-                final km = int.tryParse(kmCtrl.text.trim()) ?? 0;
-                if (name.isEmpty) return;
-                setState(() {
-                  _customMilestones.add(
-                    HighwayMilestone(
-                      id: 'CUSTOM_${DateTime.now().millisecondsSinceEpoch}',
-                      name: name,
-                      nameEn: name,
-                      kmFromStart: km,
-                      lat: _currentPosition?.latitude ?? 23.8,
-                      lng: _currentPosition?.longitude ?? 90.4,
-                      estDuration: 'কাস্টম সময়',
-                      highlight: highlightCtrl.text.trim().isNotEmpty
-                          ? highlightCtrl.text.trim()
-                          : 'কাস্টম চেকপয়েন্ট',
-                      details:
-                          'ট্যুর অ্যাডমিন কর্তৃক সরাসরি রোডে যুক্ত করা হয়েছে।',
-                      amenities: const ['কাস্টম স্টপ', 'চেকপয়েন্ট'],
-                      iconEmoji: '📍',
-                    ),
-                  );
-                });
+                final km = int.tryParse(kmCtrl.text.trim());
+                if (name.isEmpty || km == null || km < 0) return;
                 Navigator.pop(ctx);
+                try {
+                  await _repository.addCheckpoint(
+                    tourId: widget.tourId,
+                    name: name,
+                    kmFromStart: km,
+                    highlight: highlightCtrl.text.trim(),
+                  );
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('স্টপ যোগ করা যায়নি: $e'),
+                      backgroundColor: Colors.redAccent,
+                    ));
+                  }
+                }
               },
-              child: const Text('Add Stop',
+              child: const Text('যোগ করুন',
                   style: TextStyle(
                       color: Colors.black, fontWeight: FontWeight.bold)),
             ),
           ],
         );
       },
-    );
+    ).whenComplete(() {
+      nameCtrl.dispose();
+      kmCtrl.dispose();
+      highlightCtrl.dispose();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final milestones = _getRouteMilestones();
+    final visible = milestones.where(_matchesFilter).toList();
     final origin = _tourGroup?.originCity ?? 'রংপুর';
     final dest = _tourGroup?.destination ?? 'কক্সবাজার';
 
@@ -585,6 +651,14 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             // Top Overview Card
             _buildOverviewHeader(milestones),
 
+            if (!_isDhakaOrigin)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 10, 16, 0),
+                child: Text(
+                  'এই রুমের দূরত্ব ও স্টপ ঢাকা থেকে যাত্রার জন্য হিসাব করা। অন্য শহর থেকে যাত্রায় নিজের স্টপ যোগ করুন।',
+                  style: TextStyle(color: Colors.amberAccent, fontSize: 11),
+                ),
+              ),
             // Filter Chips
             _buildFilterTabs(milestones),
 
@@ -593,10 +667,10 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               child: ListView.builder(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                itemCount: milestones.length,
+                itemCount: visible.length,
                 itemBuilder: (context, index) {
                   return _buildMilestoneTile(
-                      milestones[index], index, milestones.length);
+                      visible[index], index, visible.length);
                 },
               ),
             ),
@@ -614,17 +688,28 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final dest = _tourGroup?.destination ?? 'গন্তব্য';
 
     if (_currentPosition != null && milestones.isNotEmpty) {
-      final distToDestKm = Geolocator.distanceBetween(
-            _currentPosition!.latitude,
-            _currentPosition!.longitude,
-            milestones.last.lat,
-            milestones.last.lng,
-          ) /
-          1000.0;
-      final traveledKm = (totalKm - distToDestKm).clamp(0, totalKm.toDouble());
-      progress = totalKm > 0 ? (traveledKm / totalKm).clamp(0.0, 1.0) : 0.0;
-      statusSubtitle =
-          'গন্তব্য থেকে ${distToDestKm.toStringAsFixed(0)} কি.মি. দূরে (${(progress * 100).toStringAsFixed(0)}%)';
+      // Progress follows the nearest stop that has coordinates. The old
+      // straight-line estimate was wrong on bent roads.
+      HighwayMilestone? nearest;
+      var nearestMetres = double.infinity;
+      for (final m in milestones) {
+        if (m.lat == 0 && m.lng == 0) continue;
+        final d = Geolocator.distanceBetween(
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+          m.lat,
+          m.lng,
+        );
+        if (d < nearestMetres) {
+          nearestMetres = d;
+          nearest = m;
+        }
+      }
+      if (nearest != null && totalKm > 0) {
+        progress = (nearest.kmFromStart / totalKm).clamp(0.0, 1.0);
+        statusSubtitle =
+            'কাছের স্টপ: ${nearest.name} (প্রায় ${(nearestMetres / 1000).toStringAsFixed(1)} কি.মি.)';
+      }
     }
 
     return Container(
@@ -889,7 +974,9 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                         icon: const Icon(Icons.map,
                             size: 18, color: Colors.tealAccent),
                         tooltip: 'ম্যাপে দেখুন',
-                        onPressed: () => _openLocationOnMap(m.lat, m.lng),
+                        onPressed: (m.lat == 0 && m.lng == 0)
+                            ? null
+                            : () => _openLocationOnMap(m.lat, m.lng),
                       ),
                     ],
                   ),

@@ -25,6 +25,8 @@ enum SwimSafetyStatus {
   }
 }
 
+/// One tide window. [startMinutes] and [endMinutes] are minutes after midnight;
+/// a window may run past midnight, in which case end is earlier than start.
 class TideWindow {
   final String name;
   final int startMinutes; // Minutes from midnight
@@ -40,6 +42,14 @@ class TideWindow {
     required this.description,
   });
 
+  /// Whether [minutes] after midnight falls inside this window.
+  bool contains(int minutes) {
+    if (endMinutes >= startMinutes) {
+      return minutes >= startMinutes && minutes <= endMinutes;
+    }
+    return minutes >= startMinutes || minutes <= endMinutes;
+  }
+
   String formatTimeRange() {
     final startH = (startMinutes ~/ 60).toString().padLeft(2, '0');
     final startM = (startMinutes % 60).toString().padLeft(2, '0');
@@ -49,8 +59,15 @@ class TideWindow {
   }
 }
 
+/// Swim-safety guidance from estimated tide windows.
+///
+/// These are estimates, not an official tide table. The curated day is the
+/// only one with hand-entered times; other days are shifted by a fixed amount
+/// and ignore the beach's location. Local lifeguards and administration always
+/// take priority.
 class TideScheduleEngine {
-  /// Base tidal progression for Bay of Bengal (approx ~50 minutes shift per day)
+  static const bool isEstimate = true;
+
   static final Map<String, List<TideWindow>> _curatedSchedule = {
     '2026-10-24': [
       const TideWindow(
@@ -86,18 +103,16 @@ class TideScheduleEngine {
     ],
   };
 
-  /// Returns tide windows for a given date.
-  /// If the date is not hardcoded, dynamically projects tidal shifts.
+  static final DateTime _baseDate = DateTime(2026, 10, 24);
+
   static List<TideWindow> getTidesForDate(DateTime date) {
     final dateKey = DateFormat('yyyy-MM-dd').format(date);
     if (_curatedSchedule.containsKey(dateKey)) {
       return _curatedSchedule[dateKey]!;
     }
 
-    // Dynamic lunar tide calculation:
-    // Earth-Moon gravitational progression shifts tidal peaks by ~50 minutes per day.
-    final baseDate = DateTime(2026, 10, 24);
-    final daysDiff = date.difference(baseDate).inDays;
+    final daysDiff =
+        DateTime(date.year, date.month, date.day).difference(_baseDate).inDays;
     final shiftMinutes = (daysDiff * 50) % 720;
 
     int wrap(int m) => (m + shiftMinutes) % 1440;
@@ -136,7 +151,8 @@ class TideScheduleEngine {
     ]..sort((a, b) => a.startMinutes.compareTo(b.startMinutes));
   }
 
-  /// Evaluates current swimming safety status right now.
+  /// The swim advice for [currentTime], with the window it falls in and the
+  /// next window (which may be tomorrow's first window).
   static ({
     SwimSafetyStatus status,
     String advisory,
@@ -144,23 +160,25 @@ class TideScheduleEngine {
     TideWindow? nextWindow,
   }) evaluateCurrentSafety([DateTime? currentTime]) {
     final now = currentTime ?? DateTime.now();
-    final currentMinutes = now.hour * 60 + now.minute;
+    final minutes = now.hour * 60 + now.minute;
     final tides = getTidesForDate(now);
 
     TideWindow? active;
-    TideWindow? next;
-
-    for (int i = 0; i < tides.length; i++) {
-      final t = tides[i];
-      if (currentMinutes >= t.startMinutes && currentMinutes <= t.endMinutes) {
+    for (final t in tides) {
+      if (t.contains(minutes)) {
         active = t;
-        next = (i + 1 < tides.length) ? tides[i + 1] : tides.first;
         break;
-      } else if (currentMinutes < t.startMinutes) {
+      }
+    }
+
+    TideWindow? next;
+    for (final t in tides) {
+      if (t.startMinutes > minutes) {
         next = t;
         break;
       }
     }
+    next ??= getTidesForDate(now.add(const Duration(days: 1))).first;
 
     if (now.hour >= 18 || now.hour < 5) {
       return (
@@ -177,25 +195,23 @@ class TideScheduleEngine {
         return (
           status: SwimSafetyStatus.safe,
           advisory:
-              'এখন জোয়ার চলছে! লাইফগার্ড নির্ধারিত লাল-হলুদ সীমানার ভেতরে গোসল করুন।',
-          currentWindow: active,
-          nextWindow: next,
-        );
-      } else {
-        return (
-          status: SwimSafetyStatus.danger,
-          advisory:
-              'সৈকতে ভাটা চলছে! পানিতে নামবেন না, চোরাবালি ও গুপ্ত গর্তে ডুবে যাওয়ার প্রবল ঝুঁকি।',
+              'আনুমানিক জোয়ার চলছে। লাইফগার্ড নির্ধারিত সীমানার ভেতরে গোসল করুন।',
           currentWindow: active,
           nextWindow: next,
         );
       }
+      return (
+        status: SwimSafetyStatus.danger,
+        advisory:
+            'আনুমানিক ভাটা চলছে। পানিতে নামবেন না, চোরাবালি ও গুপ্ত গর্তে ডুবে যাওয়ার ঝুঁকি।',
+        currentWindow: active,
+        nextWindow: next,
+      );
     }
 
     return (
       status: SwimSafetyStatus.caution,
-      advisory:
-          'জোয়ার ও ভাটার মধ্যবর্তী পরিবর্তনকালীন সময়। কোমর পানির বেশি নামবেন না।',
+      advisory: 'জোয়ার ও ভাটার মাঝের সময়। কোমর পানির বেশি নামবেন না।',
       currentWindow: null,
       nextWindow: next,
     );

@@ -62,6 +62,39 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
+  Future<int?> _pickFamilyCount(BuildContext context, int current) {
+    int value = current;
+    return showDialog<int>(
+      context: context,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF14241B),
+          title: const Text('পরিবারের সদস্য সংখ্যা',
+              style: TextStyle(color: Colors.white)),
+          content: DropdownButtonFormField<int>(
+            initialValue: value,
+            dropdownColor: const Color(0xFF1B4332),
+            decoration: const InputDecoration(labelText: 'কতজন (আপনি সহ)'),
+            items: [
+              for (var n = 1; n <= 10; n++)
+                DropdownMenuItem(value: n, child: Text('$n জন')),
+            ],
+            onChanged: (v) {
+              if (v != null) setDialogState(() => value = v);
+            },
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(c), child: const Text('বাতিল')),
+            TextButton(
+                onPressed: () => Navigator.pop(c, value),
+                child: const Text('সংরক্ষণ')),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<bool> _confirm(String title, String body) async {
     final result = await showDialog<bool>(
       context: context,
@@ -1914,6 +1947,29 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     },
                   ),
               ] else if (isMe) ...[
+                ListTile(
+                  leading: const Icon(Icons.family_restroom_rounded,
+                      color: AppColors.mintGreen),
+                  title: Text(
+                    'পরিবারের সদস্য সংখ্যা: ${member.familyCount}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    'খরচ ভাগের সময় এই সংখ্যা অনুযায়ী ভাগ হবে',
+                    style: TextStyle(color: Colors.white38, fontSize: 11),
+                  ),
+                  onTap: () async {
+                    final count =
+                        await _pickFamilyCount(ctx, member.familyCount);
+                    if (count == null || count == member.familyCount) return;
+                    try {
+                      await _repository.setMyFamilyCount(tourId, count);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    } catch (e) {
+                      _reportFailure(e);
+                    }
+                  },
+                ),
                 const Padding(
                   padding: EdgeInsets.all(12),
                   child: Text(
