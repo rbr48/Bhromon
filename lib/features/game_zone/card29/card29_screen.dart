@@ -622,8 +622,8 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
         _game.isTrumpRevealed &&
         _game.leadSuit != null &&
         !userHand.any((c) => c.suit == _game.leadSuit) &&
-        userHand.any((c) => c.suit == _game.trumpSuit);
-
+        userHand.any((c) => c.suit == _game.trumpSuit) &&
+        !legal.any((c) => c.suit != _game.trumpSuit);
     return Container(
       height: 128,
       width: double.infinity,

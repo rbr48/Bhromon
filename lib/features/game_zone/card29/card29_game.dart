@@ -236,6 +236,21 @@ class Card29Game {
       }
       return List.of(hand);
     }
+    // If trump is revealed and the player is void in the led suit, they must
+    // play trump to win the trick from an opponent. However, if their partner
+    // is already winning the current trick, the player is not forced to trump.
+    bool mustTrump = true;
+    if (isTrumpRevealed && currentTrick.isNotEmpty) {
+      final currentWinner = Card29Engine.determineTrickWinner(
+        trickCards: currentTrick,
+        trumpSuit: trumpSuit,
+        isTrumpRevealed: isTrumpRevealed,
+      );
+      if (teamOf(currentWinner.playerIndex) == teamOf(player)) {
+        mustTrump = false;
+      }
+    }
+
     return hand
         .where((c) => Card29Engine.isCardLegal(
               card: c,
@@ -243,7 +258,7 @@ class Card29Game {
               leadSuit: leadSuit,
               isTrumpRevealed: isTrumpRevealed,
               trumpSuit: trumpSuit,
-              mustPlayTrumpIfHeld: true,
+              mustPlayTrumpIfHeld: mustTrump,
             ))
         .toList();
   }

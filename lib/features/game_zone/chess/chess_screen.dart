@@ -745,6 +745,12 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
 
 /// Draws a chess piece with a filled glyph and a contrasting outline so white
 /// pieces stay visible on the light squares and black pieces on the dark ones.
+///
+/// Note: Standard Unicode pawn (U+265F) was added to Emoji 11.0, so Android's
+/// font fallback can hijack it with NotoColorEmoji (ignoring Paint color and
+/// stroke). To ensure pawns are always rendered with pixel-perfect vector
+/// clarity and correct side coloring across all devices, pawns are painted
+/// via [_ChessPawnPainter].
 class _PieceGlyph extends StatelessWidget {
   const _PieceGlyph({required this.piece, required this.size});
 
@@ -754,6 +760,22 @@ class _PieceGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWhite = piece.color == PieceColor.white;
+    if (piece.type == PieceType.pawn) {
+      return ExcludeSemantics(
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: CustomPaint(
+            size: Size(size, size),
+            painter: _ChessPawnPainter(
+              isWhite: isWhite,
+              size: size,
+            ),
+          ),
+        ),
+      );
+    }
+
     final fontSize = size * 0.74;
     return ExcludeSemantics(
       child: Stack(
@@ -784,4 +806,65 @@ class _PieceGlyph extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ChessPawnPainter extends CustomPainter {
+  final bool isWhite;
+  final double size;
+
+  const _ChessPawnPainter({required this.isWhite, required this.size});
+
+  @override
+  void paint(Canvas canvas, Size canvasSize) {
+    final s = canvasSize.width;
+    final strokeWidth = max(1.2, s * 0.055);
+    final fillPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = isWhite ? Colors.white : const Color(0xFF1B1B1B);
+    final strokePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round
+      ..color = isWhite ? const Color(0xFF1B1B1B) : const Color(0xFFF2F2F2);
+
+    final cx = s * 0.5;
+
+    // Body & Base: continuous symmetrical Staunton silhouette
+    final body = Path();
+    body.moveTo(cx - s * 0.22, s * 0.81);
+    body.lineTo(cx + s * 0.22, s * 0.81);
+    body.quadraticBezierTo(cx + s * 0.22, s * 0.75, cx + s * 0.17, s * 0.74);
+    body.lineTo(cx + s * 0.15, s * 0.70);
+    body.quadraticBezierTo(cx + s * 0.08, s * 0.57, cx + s * 0.07, s * 0.49);
+    body.lineTo(cx + s * 0.12, s * 0.47);
+    body.quadraticBezierTo(cx + s * 0.12, s * 0.44, cx + s * 0.08, s * 0.44);
+    body.lineTo(cx - s * 0.08, s * 0.44);
+    body.quadraticBezierTo(cx - s * 0.12, s * 0.44, cx - s * 0.12, s * 0.47);
+    body.lineTo(cx - s * 0.07, s * 0.49);
+    body.quadraticBezierTo(cx - s * 0.08, s * 0.57, cx - s * 0.15, s * 0.70);
+    body.lineTo(cx - s * 0.17, s * 0.74);
+    body.quadraticBezierTo(cx - s * 0.22, s * 0.75, cx - s * 0.22, s * 0.81);
+    body.close();
+
+    // Head: spherical round top
+    final headCenter = Offset(cx, s * 0.33);
+    final headRadius = s * 0.12;
+
+    canvas.drawPath(body, fillPaint);
+    canvas.drawPath(body, strokePaint);
+
+    canvas.drawCircle(headCenter, headRadius, fillPaint);
+    canvas.drawCircle(headCenter, headRadius, strokePaint);
+
+    // Collar detail ring
+    final collar = Path()
+      ..moveTo(cx - s * 0.11, s * 0.46)
+      ..lineTo(cx + s * 0.11, s * 0.46);
+    canvas.drawPath(collar, strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ChessPawnPainter oldDelegate) =>
+      oldDelegate.isWhite != isWhite || oldDelegate.size != size;
 }
