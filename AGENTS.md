@@ -89,6 +89,13 @@ static session while the user visits other screens, and asks before discarding a
    - Show ties split the pot between the tied players only; the pot is cleared on payout; pot limit 1280 forces a show.
    - Real-time hand rank badge for seen cards.
    - Chip rebuy popup (+500 chips) when you can't cover boot + one blind.
+5. **Carrom (`carrom/`, physics `carrom_engine.dart`, rules `carrom_game.dart`)**:
+   - Deterministic fixed-step physics (1/480 s) on a 0..1 board with ICF proportions: friction, cushion and coin restitution, a striker ~2.6× a coin's mass, 4 corner pockets.
+   - You play white from the bottom baseline; the opponent (bot or Pass & Play) plays black from the top. Striker slides along the baseline (drag or slider) and may not touch a coin; drag back anywhere and release to shoot.
+   - Own coin pocketed → shoot again. Striker pocketed → foul: that shot's own coins return plus one penalty coin. Opponent-colour coins count for the opponent.
+   - Queen only after an own coin; must be covered on the same or next shot or she returns. The last coin can't drop before the queen is covered.
+   - First to 9 coins wins the board: 1 point per opponent coin left, +3 for covering the queen.
+   - Bot (`CarromBot`) builds cut shots from ghost-ball geometry with the minimum power that carries the coin (friction + momentum transfer), simulates each candidate, and adds aim noise per difficulty (Easy 0.035 / Medium 0.018 / Hard 0.008 rad). It runs via `compute(carromBotWorker, ...)`.
 
 ---
 

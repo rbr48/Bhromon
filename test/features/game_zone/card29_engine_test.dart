@@ -14,9 +14,9 @@ void main() {
     test('Trick winner without trump follows highest lead suit card', () {
       final trick = [
         PlayedCard(playerIndex: 0, card: Card29.fromCode('10S')), // Power: 5
-        PlayedCard(playerIndex: 1, card: Card29.fromCode('AS')),  // Power: 6
-        PlayedCard(playerIndex: 2, card: Card29.fromCode('9S')),  // Power: 7
-        PlayedCard(playerIndex: 3, card: Card29.fromCode('KS')),  // Power: 4
+        PlayedCard(playerIndex: 1, card: Card29.fromCode('AS')), // Power: 6
+        PlayedCard(playerIndex: 2, card: Card29.fromCode('9S')), // Power: 7
+        PlayedCard(playerIndex: 3, card: Card29.fromCode('KS')), // Power: 4
       ];
 
       final winner = Card29Engine.determineTrickWinner(trickCards: trick);
@@ -25,10 +25,15 @@ void main() {
 
     test('Trump card beats higher non-trump card when trump is revealed', () {
       final trick = [
-        PlayedCard(playerIndex: 0, card: Card29.fromCode('JS')), // Jack of Spades (Lead suit)
-        PlayedCard(playerIndex: 1, card: Card29.fromCode('7H')), // 7 of Hearts (Trump)
+        PlayedCard(
+            playerIndex: 0,
+            card: Card29.fromCode('JS')), // Jack of Spades (Lead suit)
+        PlayedCard(
+            playerIndex: 1, card: Card29.fromCode('7H')), // 7 of Hearts (Trump)
         PlayedCard(playerIndex: 2, card: Card29.fromCode('AS')),
-        PlayedCard(playerIndex: 3, card: Card29.fromCode('8H')), // 8 of Hearts (Higher trump)
+        PlayedCard(
+            playerIndex: 3,
+            card: Card29.fromCode('8H')), // 8 of Hearts (Higher trump)
       ];
 
       final winner = Card29Engine.determineTrickWinner(
@@ -48,19 +53,23 @@ void main() {
       ];
 
       // If lead suit is Spades, player has JS, so they MUST play Spades
-      expect(Card29Engine.isCardLegal(
-        card: Card29.fromCode('JS'),
-        hand: hand,
-        leadSuit: CardSuit.spades,
-        isTrumpRevealed: true,
-      ), isTrue);
+      expect(
+          Card29Engine.isCardLegal(
+            card: Card29.fromCode('JS'),
+            hand: hand,
+            leadSuit: CardSuit.spades,
+            isTrumpRevealed: true,
+          ),
+          isTrue);
 
-      expect(Card29Engine.isCardLegal(
-        card: Card29.fromCode('9H'),
-        hand: hand,
-        leadSuit: CardSuit.spades,
-        isTrumpRevealed: true,
-      ), isFalse);
+      expect(
+          Card29Engine.isCardLegal(
+            card: Card29.fromCode('9H'),
+            hand: hand,
+            leadSuit: CardSuit.spades,
+            isTrumpRevealed: true,
+          ),
+          isFalse);
     });
   });
 }
