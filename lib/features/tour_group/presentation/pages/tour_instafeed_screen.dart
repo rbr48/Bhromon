@@ -61,6 +61,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   String? _selectedBookmarkCollection;
   Set<String> _seenStoryIds = {};
   List<TourPostItem> _latestPosts = const [];
+
+  /// Bookmarked posts that are older than the loaded page. Fetched when the
+  /// Saved view opens, so a bookmark from months ago still shows there.
+  List<TourPostItem> _savedOutsidePage = const [];
   TourGroup? _tourGroup;
   StreamSubscription<TourGroup?>? _groupSub;
 
@@ -524,6 +528,31 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         _activeHashtagFilter,
       ].join('|');
 
+  /// The posts the feed filters: the loaded page, plus bookmarks from outside
+  /// it while the Saved view is open.
+  List<TourPostItem> _feedSource(List<TourPostItem> posts) {
+    if (_selectedMediaFilter != 'saved' || _savedOutsidePage.isEmpty) {
+      return posts;
+    }
+    final loaded = posts.map((p) => p.id).toSet();
+    return [
+      ...posts,
+      ..._savedOutsidePage.where((p) => !loaded.contains(p.id)),
+    ];
+  }
+
+  /// Fetches the bookmarks that are not on the loaded page.
+  Future<void> _refreshSavedPosts() async {
+    final loaded = _latestPosts.map((p) => p.id).toSet();
+    final missing = _bookmarkedPostIds.where((id) => !loaded.contains(id));
+    try {
+      final fetched = await _repository.getPostsByIds(widget.tourId, missing);
+      if (mounted) setState(() => _savedOutsidePage = fetched);
+    } catch (e) {
+      debugPrint('[TourInstaFeed] Could not load saved posts: $e');
+    }
+  }
+
   /// Drops bookmarks and collection entries for posts that no longer exist,
   /// such as a post deleted by its author. Called only with the whole feed
   /// loaded, so an id that is missing really is gone.
@@ -875,7 +904,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       _latestPosts = posts;
 
                       // Apply filtering
-                      var filteredPosts = posts.where((p) {
+                      var filteredPosts = _feedSource(posts).where((p) {
                         // Archive filter
                         if (_selectedMediaFilter == 'archived') {
                           if (!p.isArchived) return false;
@@ -1429,8 +1458,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 12,
               ),
-              onSelected: (_) =>
-                  setState(() => _selectedMediaFilter = f['id']!),
+              onSelected: (_) {
+                setState(() => _selectedMediaFilter = f['id']!);
+                if (f['id'] == 'saved') unawaited(_refreshSavedPosts());
+              },
             ),
           );
         }).toList(),
