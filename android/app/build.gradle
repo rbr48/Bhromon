@@ -81,7 +81,7 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             ndk {
-                debugSymbolLevel 'none'
+                debugSymbolLevel 'SYMBOL_TABLE'
             }
         }
     }
@@ -96,7 +96,13 @@ dependencies {
 }
 
 tasks.whenTaskAdded { task ->
-    if (task.name.toLowerCase().contains("artprofile") || task.name.toLowerCase().contains("nativesymboltable") || task.name.toLowerCase().contains("cleanmergereleaseassets") || task.name.toLowerCase().contains("cleanmergereleasenativelibs")) {
-        task.enabled = false
+    if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+        if (task.name.toLowerCase().contains("artprofile") || task.name.toLowerCase().contains("cleanmergereleaseassets") || task.name.toLowerCase().contains("cleanmergereleasenativelibs")) {
+            task.enabled = false
+        }
+    } else {
+        if (task.name.toLowerCase().contains("artprofile")) {
+            task.enabled = false
+        }
     }
 }

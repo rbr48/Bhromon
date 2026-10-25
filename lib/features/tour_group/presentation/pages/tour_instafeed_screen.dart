@@ -2682,7 +2682,8 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                                                 ClipRRect(
                                                   borderRadius:
                                                       BorderRadius.circular(4),
-                                                  child: LinearProgressIndicator(
+                                                  child:
+                                                      LinearProgressIndicator(
                                                     value: _compressionProgress >
                                                             0
                                                         ? _compressionProgress
@@ -2692,7 +2693,8 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                                                     valueColor:
                                                         const AlwaysStoppedAnimation<
                                                                 Color>(
-                                                            AppColors.mintGreen),
+                                                            AppColors
+                                                                .mintGreen),
                                                     minHeight: 6,
                                                   ),
                                                 ),
@@ -2717,18 +2719,18 @@ class _CreatePostStudioSheetState extends State<_CreatePostStudioSheet> {
                                                 ? _videoPlayerController!
                                                     .value.aspectRatio
                                                 : (9 / 14),
-                                        child: (_videoPlayerController !=
-                                                    null &&
-                                                _videoPlayerController!
-                                                    .value.isInitialized)
-                                            ? VideoPlayer(
-                                                _videoPlayerController!)
-                                            : const Center(
-                                                child:
-                                                    CircularProgressIndicator(
-                                                        color: AppColors
-                                                            .mintGreen),
-                                              ),
+                                        child:
+                                            (_videoPlayerController != null &&
+                                                    _videoPlayerController!
+                                                        .value.isInitialized)
+                                                ? VideoPlayer(
+                                                    _videoPlayerController!)
+                                                : const Center(
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                            color: AppColors
+                                                                .mintGreen),
+                                                  ),
                                       ),
                               ),
                               if (!_isCompressingVideo)
