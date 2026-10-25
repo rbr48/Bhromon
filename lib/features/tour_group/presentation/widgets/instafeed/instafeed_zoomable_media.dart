@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 
 /// Wraps feed media with smooth two-finger pinch-to-zoom and automatic
-/// springback translation/scale reset on finger lift.
+/// springback translation/scale reset on finger lift. Pan is only active
+/// while zoomed in so vertical feed scrolling remains 100% fluid and uninterrupted.
 class InstafeedZoomableMedia extends StatefulWidget {
   final Widget child;
+  final VoidCallback? onTap;
   final VoidCallback? onDoubleTap;
 
   const InstafeedZoomableMedia({
     super.key,
     required this.child,
+    this.onTap,
     this.onDoubleTap,
   });
 
@@ -21,10 +24,12 @@ class _InstafeedZoomableMediaState extends State<InstafeedZoomableMedia>
   final TransformationController _transformCtrl = TransformationController();
   late AnimationController _animCtrl;
   Animation<Matrix4>? _resetAnimation;
+  bool _isZoomed = false;
 
   @override
   void initState() {
     super.initState();
+    _transformCtrl.addListener(_handleTransform);
     _animCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
@@ -35,8 +40,17 @@ class _InstafeedZoomableMediaState extends State<InstafeedZoomableMedia>
       });
   }
 
+  void _handleTransform() {
+    final scale = _transformCtrl.value.getMaxScaleOnAxis();
+    final zoomed = scale > 1.05;
+    if (zoomed != _isZoomed && mounted) {
+      setState(() => _isZoomed = zoomed);
+    }
+  }
+
   @override
   void dispose() {
+    _transformCtrl.removeListener(_handleTransform);
     _animCtrl.dispose();
     _transformCtrl.dispose();
     super.dispose();
@@ -59,6 +73,8 @@ class _InstafeedZoomableMediaState extends State<InstafeedZoomableMedia>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap,
       onDoubleTap: widget.onDoubleTap,
       child: ClipRect(
         child: InteractiveViewer(
@@ -66,7 +82,7 @@ class _InstafeedZoomableMediaState extends State<InstafeedZoomableMedia>
           clipBehavior: Clip.none,
           minScale: 1.0,
           maxScale: 3.5,
-          panEnabled: true,
+          panEnabled: _isZoomed,
           scaleEnabled: true,
           onInteractionEnd: _onInteractionEnd,
           child: widget.child,

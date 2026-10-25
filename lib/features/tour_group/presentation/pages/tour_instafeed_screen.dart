@@ -13,6 +13,7 @@ import 'tide_beach_guide_screen.dart';
 import '../widgets/instafeed/instafeed_create_studio.dart';
 import '../widgets/instafeed/instafeed_comments_sheet.dart';
 import '../widgets/instafeed/instafeed_explore_grid.dart';
+import '../widgets/instafeed/instafeed_image_viewer_modal.dart';
 import '../widgets/instafeed/instafeed_post_card.dart';
 import '../widgets/instafeed/instafeed_reels_modal.dart';
 import '../widgets/instafeed/instafeed_share_sheet.dart';
@@ -484,6 +485,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       final reelsList = posts.where((p) => p.isReel).toList();
 
                       return CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
                         slivers: [
                           // 1. Live SOS Alert Banner (if active)
                           if (openAlerts.isNotEmpty)
@@ -581,7 +585,18 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                     _openReelsModal(context, reelsList,
                                         reelIdx >= 0 ? reelIdx : 0);
                                   } else {
-                                    setState(() => _isGridView = false);
+                                    InstafeedImageViewerModal.show(
+                                      context,
+                                      repository: _repository,
+                                      tourId: widget.tourId,
+                                      post: post,
+                                      onOpenComments: (p) =>
+                                          _showCommentsModal(context, p),
+                                      onShare: (p) =>
+                                          _showShareModal(context, p),
+                                      onAddToLedger: (p) =>
+                                          _showAddToLedgerDialog(p),
+                                    );
                                   }
                                 },
                               ),
@@ -616,6 +631,14 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                     onShare: (p) => _showShareModal(context, p),
                                     onAddToLedger: (p) =>
                                         _showAddToLedgerDialog(p),
+                                    onReelTap: (p) {
+                                      final reelIdx = reelsList.indexOf(p);
+                                      _openReelsModal(
+                                        context,
+                                        reelsList,
+                                        reelIdx >= 0 ? reelIdx : 0,
+                                      );
+                                    },
                                     onHashtagTap: (tag) => setState(
                                         () => _activeHashtagFilter = tag),
                                     onPostChanged: () => setState(() {}),
