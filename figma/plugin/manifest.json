@@ -1,0 +1,9 @@
+{
+  "name": "Bhromon App Design System & Screens Generator",
+  "id": "bhromon-app-generator-v1",
+  "api": "1.0.0",
+  "main": "code.js",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "editorType": ["figma"]
+}

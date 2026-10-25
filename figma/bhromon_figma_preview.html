@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bhromon App — Master Design System & Screen Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --dark-green: #1B4332;
+      --mid-green: #2D6A4F;
+      --leaf-green: #40916C;
+      --mint-green: #74C69D;
+      --pale-green: #D8F3DC;
+      --gold: #F4A261;
+      --amber: #E76F51;
+      --light-gold: #FFD166;
+      --dark-text: #1A1A2E;
+      --gray-text: #5C6B73;
+      --bg-light: #F8FAFB;
+      --card-dark: #1E1E1E;
+      --bg-dark: #121212;
+      --border-light: #E5E7EB;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Noto Sans Bengali', 'Hind Siliguri', 'Inter', sans-serif;
+    }
+    body {
+      background: #F0F4F8;
+      color: var(--dark-text);
+      padding: 32px;
+    }
+    header {
+      background: white;
+      padding: 28px 36px;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      margin-bottom: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .header-info h1 {
+      font-size: 28px;
+      color: var(--dark-green);
+      margin-bottom: 6px;
+    }
+    .header-info p {
+      color: var(--gray-text);
+      font-size: 15px;
+    }
+    .plugin-instruction-pill {
+      background: var(--pale-green);
+      border: 1px solid var(--mint-green);
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      color: var(--dark-green);
+    }
+    .plugin-instruction-pill code {
+      background: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+
+    /* Screen Grid */
+    .section-title {
+      font-size: 22px;
+      color: var(--dark-green);
+      margin: 40px 0 20px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .screens-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 28px;
+    }
+    .device-card {
+      background: white;
+      border-radius: 36px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      border: 8px solid #222;
+      height: 740px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .device-card.dark {
+      background: var(--bg-dark);
+      color: white;
+    }
+    .notch {
+      width: 140px;
+      height: 24px;
+      background: #222;
+      margin: 0 auto;
+      border-bottom-left-radius: 14px;
+      border-bottom-right-radius: 14px;
+    }
+    .app-bar {
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      font-size: 16px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .device-card.dark .app-bar {
+      border-bottom-color: #262626;
+      background: var(--card-dark);
+    }
+    .screen-body {
+      padding: 16px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Component styles */
+    .hero-box {
+      background: var(--pale-green);
+      border-radius: 18px;
+      padding: 24px;
+      text-align: center;
+    }
+    .hero-box h2 {
+      color: var(--dark-green);
+      font-size: 20px;
+      margin: 8px 0;
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      text-align: center;
+      display: block;
+    }
+    .btn-primary {
+      background: var(--mid-green);
+      color: white;
+    }
+    .btn-outlined {
+      background: transparent;
+      border: 1.5px solid var(--mid-green);
+      color: var(--mid-green);
+    }
+    .btn-amber {
+      background: var(--amber);
+      color: white;
+    }
+
+    /* Bus seats */
+    .bus-grid {
+      background: white;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid var(--border-light);
+    }
+    .bus-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .seat {
+      width: 44px;
+      height: 38px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .seat.free { background: var(--pale-green); color: var(--dark-green); }
+    .seat.selected { background: var(--mid-green); color: white; }
+    .seat.booked { background: #E0E0E0; color: #999; }
+
+    /* Bottom Nav */
+    .bottom-nav {
+      height: 64px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background: white;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .device-card.dark .bottom-nav {
+      background: var(--card-dark);
+      border-top-color: #262626;
+      color: #A0AEC0;
+    }
+    .nav-active {
+      color: var(--mid-green);
+    }
+    .device-card.dark .nav-active {
+      color: var(--mint-green);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-info">
+      <h1>Bhromon (ভ্রমণ) — Design System & Screen Library</h1>
+      <p>Universal Tour Engine • Offline Relational Architecture • Family Game Zone • 20+ Screens</p>
+    </div>
+    <div class="plugin-instruction-pill">
+      ⚡ <strong>Figma Generator Ready:</strong> Figma-তে ইম্পোর্ট করতে <code>figma/plugin/manifest.json</code> ফাইলটি ব্যবহার করুন।
+    </div>
+  </header>
+
+  <!-- Section 1: Auth & Onboarding -->
+  <div class="section-title">🔐 ১. অথেন্টিকেশন ও অনবোর্ডিং (Auth & Onboarding)</div>
+  <div class="screens-grid">
+    
+    <!-- Screen 1: Welcome -->
+    <div class="device-card">
+      <div class="notch"></div>
+      <div class="app-bar"><span>ভ্রমণ (Bhromon)</span><span>🇧🇩</span></div>
+      <div class="screen-body">
+        <div class="hero-box">
+          <div style="font-size: 44px;">🌴 🌊 ⛰️</div>
+          <h2>স্মার্ট ভ্রমণ সঙ্গী</h2>
+          <p style="font-size: 13px; color: var(--mid-green);">বাংলাদেশের প্রথম স্বয়ংসম্পূর্ণ ট্যুর হাব ও অফলাইন ট্রাভেল লেজার</p>
+        </div>
+        <div style="flex: 1;"></div>
+        <button class="btn btn-primary">গুগল দিয়ে প্রবেশ করুন</button>
+        <button class="btn btn-outlined">ইমেইল দিয়ে সাইন ইন</button>
+        <p style="text-align: center; font-size: 12px; color: var(--gray-text);">এগিয়ে গিয়ে আপনি আমাদের টার্মস অব সার্ভিস মেনে নিচ্ছেন।</p>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-active">লগইন</div>
+        <div>সহায়তা</div>
+        <div>শর্তাবলী</div>
+      </div>
+    </div>
+
+    <!-- Screen 2: OTP Verification -->
+    <div class="device-card">
+      <div class="notch"></div>
+      <div class="app-bar"><span>ওটিপি যাচাইকরণ</span><span>🔒</span></div>
+      <div class="screen-body">
+        <h3 style="color: var(--dark-green); font-size: 20px;">৬-ডিজিটের কোড লিখুন</h3>
+        <p style="font-size: 13px; color: var(--gray-text);">আপনার ইমেইলে প্রেরিত ভেরিফিকেশন কোডটি প্রদান করুন</p>
+        <div style="display: flex; gap: 8px; margin: 20px 0;">
+          <input type="text" value="5" readonly style="width: 46px; height: 54px; text-align: center; font-size: 22px; font-weight: bold; border-radius: 10px; border: 2px solid var(--mid-green);">
+          <input type="text" value="8" readonly style="width: 46px; height: 54px; text-align: center; font-size: 22px; font-weight: bold; border-radius: 10px; border: 2px solid var(--mid-green);">
+          <input type="text" value="2" readonly style="width: 46px; height: 54px; text-align: center; font-size: 22px; font-weight: bold; border-radius: 10px; border: 2px solid var(--mid-green);">
+          <input type="text" value="" readonly style="width: 46px; height: 54px; text-align: center; font-size: 22px; font-weight: bold; border-radius: 10px; border: 1px solid var(--border-light);">
+          <input type="text" value="" readonly style="width: 46px; height: 54px; text-align: center; font-size: 22px; font-weight: bold; border-radius: 10px; border: 1px solid var(--border-light);">
+          <input type="text" value="" readonly style="width: 46px; height: 54px; text-align: center; font-size: 22px; font-weight: bold; border-radius: 10px; border: 1px solid var(--border-light);">
+        </div>
+        <button class="btn btn-primary">যাচাই করুন ও প্রবেশ করুন</button>
+        <p style="text-align: center; font-size: 13px; color: var(--gray-text);">কোড পাননি? <strong style="color: var(--mid-green);">পুনরায় পাঠান (০:৪৫)</strong></p>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-active">যাচাই</div>
+        <div>সাহায্য</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Section 2: Tour Hub & Logistics -->
+  <div class="section-title">🎒 ২. ট্যুর গ্রুপ হাব ও লজিস্টিকস (Tour Hub & Logistics)</div>
+  <div class="screens-grid">
+    
+    <!-- Screen 3: Tour Hub -->
+    <div class="device-card">
+      <div class="notch"></div>
+      <div class="app-bar"><span>কক্সবাজার ট্যুর ২০২৬</span><span>🔔</span></div>
+      <div class="screen-body">
+        <div style="background: var(--dark-green); color: white; padding: 18px; border-radius: 16px;">
+          <div style="font-size: 12px; color: var(--mint-green); font-weight: bold;">ইনভাইট কোড: COX-8210</div>
+          <h3 style="font-size: 20px; margin: 4px 0;">কক্সবাজার সমুদ্র বিলাস — ৫ দিন</h3>
+          <p style="font-size: 13px; color: var(--pale-green);">👥 ১৮ জন সদস্য • 🏨 ওশান প্যারাডাইস বুকড</p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+          <div style="background: white; border: 1px solid var(--border-light); padding: 12px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 22px;">🚌</div>
+            <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">বাস সিট</div>
+          </div>
+          <div style="background: white; border: 1px solid var(--border-light); padding: 12px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 22px;">🏨</div>
+            <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">হোটেল রুম</div>
+          </div>
+          <div style="background: white; border: 1px solid var(--border-light); padding: 12px; border-radius: 12px; text-align: center;">
+            <div style="font-size: 22px;">💰</div>
+            <div style="font-size: 12px; font-weight: bold; margin-top: 4px;">লেজার খাতা</div>
+          </div>
+        </div>
+        <div style="background: white; padding: 14px; border-radius: 14px; border: 1px solid var(--border-light);">
+          <h4 style="color: var(--dark-green); margin-bottom: 8px;">আজকের ভ্রমণ পরিকল্পনা (Day 2)</h4>
+          <p style="font-size: 13px; color: var(--dark-text);">সকাল ৮:০০ - হিমছড়ি ঝরনা ও ড্রাইভ<br>দুপুর ১:৩০ - ইনানী সি-বিচে দুপুরের খাবার<br>বিকাল ৫:০০ - লাবণী পয়েন্টে সূর্যাস্ত</p>
+        </div>
+        <button class="btn btn-amber">🚨 জরুরি এসওএস (SOS Emergency)</button>
+      </div>
+      <div class="bottom-nav">
+        <div>ফিড</div>
+        <div class="nav-active">ট্যুর হাব</div>
+        <div>গেমস</div>
+        <div>প্রোফাইল</div>
+      </div>
+    </div>
+
+    <!-- Screen 4: 36-Seat Bus Layout -->
+    <div class="device-card">
+      <div class="notch"></div>
+      <div class="app-bar"><span>৩৬-সিট বাস লেআউট</span><span>🚌</span></div>
+      <div class="screen-body">
+        <p style="font-size: 13px; color: var(--gray-text);">সবুজ: খালি • গাঢ় সবুজ: নির্বাচিত • ধূসর: বুকড</p>
+        <div class="bus-grid">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px dashed var(--border-light);">
+            <span>🚪 দরজা</span><span>💺 ড্রাইভার কেবিন</span>
+          </div>
+          <!-- Rows -->
+          <div class="bus-row"><div class="seat booked">A1</div><div class="seat booked">B1</div><div style="width: 20px;"></div><div class="seat free">C1</div><div class="seat free">D1</div></div>
+          <div class="bus-row"><div class="seat selected">A2</div><div class="seat free">B2</div><div style="width: 20px;"></div><div class="seat booked">C2</div><div class="seat booked">D2</div></div>
+          <div class="bus-row"><div class="seat free">A3</div><div class="seat free">B3</div><div style="width: 20px;"></div><div class="seat free">C3</div><div class="seat free">D3</div></div>
+          <div class="bus-row"><div class="seat booked">A4</div><div class="seat booked">B4</div><div style="width: 20px;"></div><div class="seat free">C4</div><div class="seat free">D4</div></div>
+        </div>
+        <button class="btn btn-primary">আসন নিশ্চিত করুন (A2)</button>
+      </div>
+      <div class="bottom-nav">
+        <div>ট্যুর</div>
+        <div class="nav-active">বাস সিট</div>
+        <div>লজিস্টিকস</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Section 3: Family Game Zone -->
+  <div class="section-title">🎮 ৩. ফ্যামিলি গেম জোন (Family Game Zone — 5 Games)</div>
+  <div class="screens-grid">
+    
+    <!-- Screen 5: Game Zone Hub -->
+    <div class="device-card dark">
+      <div class="notch"></div>
+      <div class="app-bar"><span>ফ্যামিলি গেম জোন</span><span>🏆</span></div>
+      <div class="screen-body">
+        <p style="font-size: 13px; color: var(--mint-green);">ট্যুর বাসে কিংবা রিসোর্টে অফলাইনে খেলুন সবার সাথে!</p>
+        
+        <div style="background: var(--card-dark); padding: 14px; border-radius: 14px; display: flex; gap: 14px; align-items: center; border: 1px solid #333;">
+          <div style="font-size: 32px;">🃏</div>
+          <div>
+            <div style="font-weight: bold; font-size: 16px;">Card 29 (২৯ কার্ড)</div>
+            <div style="font-size: 12px; color: #A0AEC0;">Strict Trump • Pair Royalty • 6-Pip Match</div>
+          </div>
+        </div>
+
+        <div style="background: var(--card-dark); padding: 14px; border-radius: 14px; display: flex; gap: 14px; align-items: center; border: 1px solid #333;">
+          <div style="font-size: 32px;">♟️</div>
+          <div>
+            <div style="font-weight: bold; font-size: 16px;">Travel Chess AI (দাবা)</div>
+            <div style="font-size: 12px; color: #A0AEC0;">Negamax Bot • Takeback • Check Halo</div>
+          </div>
+        </div>
+
+        <div style="background: var(--card-dark); padding: 14px; border-radius: 14px; display: flex; gap: 14px; align-items: center; border: 1px solid #333;">
+          <div style="font-size: 32px;">🎲</div>
+          <div>
+            <div style="font-weight: bold; font-size: 16px;">Ludo Express (লুডু)</div>
+            <div style="font-size: 12px; color: #A0AEC0;">Pass & Play • Safe Stars • 3-Six Forfeit</div>
+          </div>
+        </div>
+
+        <div style="background: var(--card-dark); padding: 14px; border-radius: 14px; display: flex; gap: 14px; align-items: center; border: 1px solid #333;">
+          <div style="font-size: 32px;">⚪</div>
+          <div>
+            <div style="font-weight: bold; font-size: 16px;">ICF Carrom (ক্যারাম)</div>
+            <div style="font-size: 12px; color: #A0AEC0;">Real Physics • Striker Slider • Bot Aim</div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div>ফিড</div>
+        <div>ট্যুর</div>
+        <div class="nav-active">গেমস</div>
+        <div>প্রোফাইল</div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
