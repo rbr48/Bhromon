@@ -127,6 +127,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     // Leaving the sheet mid-compression stops the transcode too.
     if (_isCompressing) TourVideoCompressor.cancel();
     _releaseVideoPreview();
+    // A compressed copy is only needed while its post is uploading.
+    if (!_isCompressing && !_isPublishing) TourVideoCompressor.clearCache();
     super.dispose();
   }
 
@@ -521,6 +523,10 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
 
       // Clear draft upon success
       await widget.repository.clearPostDraft(widget.tourId);
+
+      // The reel is saved, so its compressed copy is no longer needed.
+      _releaseVideoPreview();
+      TourVideoCompressor.clearCache();
 
       if (mounted) {
         Navigator.pop(context);
