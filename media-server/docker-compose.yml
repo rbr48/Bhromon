@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  bhromon-media:
+    build: .
+    container_name: bhromon-media-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8210:8000"
+    volumes:
+      - /var/www/bhromon-media:/data/media
+    environment:
+      - MEDIA_ROOT=/data/media
+      - MEDIA_UPLOAD_KEY=bhromon_vps_media_2026_sec
+      - BASE_URL=https://bhromon.fun/media

@@ -55,11 +55,13 @@ This document serves as the persistent system memory, architectural guidelines, 
 - **Offline:** the tour list comes from memberships, not the cache, so tours the user left stop showing. A write that is not acknowledged within 8 seconds is reported as syncing and kept queued; a rejected write is removed from the local cache.
 - **Known limits:** the bus layout is a fixed 36-seat coach. The SOS button vibrates and can share the current location, but it does not push an alert to other members. Tide times are estimates and are labelled that way.
 
-### C. Tour Reels & Media Sharing
+### C. Tour Reels & Media Sharing (VPS Microservice)
 - Vertical reels video feed (`tour_instafeed_screen.dart`) matching Family Bhromon with video playback controls, aspect ratio fitting, upload flows, and media filters.
-- **Uploads go through `TourMediaUploader`.** Size and type are checked before anything is sent. Files live under `tours/{id}/{folder}/` and are tagged with `uploadedByEmail` metadata, which the storage rules use to allow later deletes by the uploader or an admin. Limits match `storage.rules`: images 10 MB, videos 100 MB, reels 3 minutes.
+- **Dedicated VPS Media Storage**: To bypass Firebase Storage rate limits and bandwidth charges, media is hosted on the user's Hostinger VPS (`148.135.137.245`) in an isolated Docker container (`bhromon-media-app` on `127.0.0.1:8210`), saving to `/var/www/bhromon-media`.
+- **High-Performance Streaming**: Nginx directly serves `/media/` using `http_mp4_module` with native HTTP Range Requests (`206 Partial Content`) for instant video reels seeking and edge caching via Cloudflare.
+- **Uploads go through `TourMediaUploader`**: Uses `Dio` for chunked streaming upload (`POST https://bhromon.fun/api/media/upload`), cancellation via `CancelToken`, real-time progress stream, and authorized cleanup via `DELETE https://bhromon.fun/api/media/media/{tourId}/{folder}/{filename}` (with backward-compatible deletion fallback for legacy Firebase Storage URLs). Limits: images 10 MB, videos 100 MB, reels 3 minutes.
 - Posts never store device paths or blob URLs. A post with an unfinished upload is refused, and a failed or cancelled post deletes the files it uploaded.
-- **Platform code:** `dart:io` is imported only in `tour_media_upload_io.dart`. Web uses `putData` and blob URLs.
+- **Platform code:** `dart:io` is imported only in `tour_media_upload_io.dart`. Web uses `putData` / bytes and blob URLs.
 - **Not done yet:** reel thumbnails are not generated. `video_thumbnail` resolves, but adding it downgrades five transitive packages, so it needs a decision first.
 
 ### D. Family Game Zone (`lib/features/game_zone/`)
