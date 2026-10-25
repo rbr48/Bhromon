@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:injectable/injectable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../../app/router.dart';
 
 /// Channel used for all general Bhromon notifications.
@@ -97,7 +98,7 @@ class FcmService {
     await _firestore.collection('fcm_tokens').doc(uid).set({
       'token': token,
       // Correctly record platform instead of hardcoding 'android'
-      'platform': Platform.isAndroid ? 'android' : 'ios',
+      'platform': kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios'),
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }

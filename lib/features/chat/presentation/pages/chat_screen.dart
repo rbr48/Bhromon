@@ -658,6 +658,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     showDialog<void>(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (dialogContext) => AlertDialog(
         backgroundColor: const Color(0xFF1F2C34),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

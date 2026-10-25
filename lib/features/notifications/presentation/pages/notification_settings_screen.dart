@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/colors.dart';
-import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../../core/theme/theme_context.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -127,26 +124,6 @@ class _NotificationSettingsScreenState
                       const Divider(color: Colors.white10),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading:
-                            const Icon(Icons.logout, color: Colors.redAccent),
-                        title: const Text('Log Out',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold)),
-                        subtitle: const Text(
-                            'Sign out of your active explorer session',
-                            style:
-                                TextStyle(color: Colors.white38, fontSize: 11)),
-                        trailing: const Icon(Icons.chevron_right,
-                            color: Colors.white30),
-                        onTap: () async {
-                          context.read<AuthCubit>().signOut();
-                        },
-                      ),
-                      const Divider(color: Colors.white10),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.delete_forever,
                             color: Colors.redAccent),
                         title: const Text('Delete Profile & Account',
@@ -160,7 +137,7 @@ class _NotificationSettingsScreenState
                                 TextStyle(color: Colors.white38, fontSize: 11)),
                         trailing: const Icon(Icons.chevron_right,
                             color: Colors.redAccent),
-                        onTap: () => _showDeleteProfileConfirmation(context),
+                        onTap: () => context.push('/delete-account'),
                       ),
                     ],
                   ),
@@ -299,161 +276,5 @@ class _NotificationSettingsScreenState
         ],
       ),
     );
-  }
-
-  void _showDeleteProfileConfirmation(BuildContext context) {
-    final confirmationController = TextEditingController();
-    bool canDelete = false;
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setStateDialog) => AlertDialog(
-          backgroundColor: context.surfacePanel,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Colors.redAccent, width: 0.8),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded,
-                  color: Colors.redAccent, size: 24),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'DELETE ACCOUNT',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'This action is irreversible. All your travel logs, profile information, and account details will be permanently deleted.',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Type "DELETE" to confirm:',
-                style: TextStyle(
-                    color: Colors.white30,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: confirmationController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'DELETE',
-                  hintStyle:
-                      const TextStyle(color: Colors.white24, fontSize: 13),
-                  fillColor: Colors.white.withValues(alpha: 0.05),
-                  filled: true,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Colors.white10),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Colors.redAccent),
-                  ),
-                ),
-                onChanged: (val) {
-                  setStateDialog(() {
-                    canDelete = val.trim() == 'DELETE';
-                  });
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child:
-                  const Text('Cancel', style: TextStyle(color: Colors.white38)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: canDelete ? Colors.redAccent : Colors.white10,
-                foregroundColor: canDelete ? Colors.white : Colors.white24,
-              ),
-              onPressed: !canDelete
-                  ? null
-                  : () {
-                      Navigator.pop(dialogContext);
-                      _deleteProfileAndAccount();
-                    },
-              child: const Text('Delete Permanently',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _deleteProfileAndAccount() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final batch = FirebaseFirestore.instance.batch();
-
-      // 1. Delete all travel logs
-      final logsSnap = await FirebaseFirestore.instance
-          .collection('trip_logs')
-          .where('authorId', isEqualTo: user.uid)
-          .get();
-      for (final doc in logsSnap.docs) {
-        batch.delete(doc.reference);
-      }
-
-      // 2. Delete explorer profile document
-      batch.delete(
-        FirebaseFirestore.instance
-            .collection('explorer_profiles')
-            .doc(user.uid),
-      );
-
-      // 3. Delete Firebase Auth user
-      await batch.commit();
-      await user.delete();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account deleted successfully.')),
-        );
-        context.read<AuthCubit>().signOut();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              e.toString().contains('requires-recent-login')
-                  ? 'Sensitive operation. Please log out and sign back in to delete account.'
-                  : 'Failed to delete account: $e',
-            ),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
   }
 }

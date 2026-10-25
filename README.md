@@ -25,13 +25,13 @@ Bhromon is structured around **Clean Architecture** principles to separate busin
   └─────────────────────────────────────────────────────────┘
 ```
 
-For more architectural decisions, see the [ADRs](file:///e:/Projects/Bhromon/docs/adr/):
-- [ADR 001: Choice of BLoC](file:///e:/Projects/Bhromon/docs/adr/001_choice_of_bloc.md)
-- [ADR 002: Dual Database Strategy (Hive + Drift)](file:///e:/Projects/Bhromon/docs/adr/002_dual_database_strategy.md)
-- [ADR 003: Clean Architecture](file:///e:/Projects/Bhromon/docs/adr/003_clean_architecture.md)
-- [ADR 004: Firebase Region Gating](file:///e:/Projects/Bhromon/docs/adr/004_firebase_region_gating.md)
-- [ADR 005: Security Hardening](file:///e:/Projects/Bhromon/docs/adr/005_security_hardening.md)
-- [ADR 006: Offline Maps via MapLibre Regions](file:///e:/Projects/Bhromon/docs/adr/006_offline_maps_via_maplibre_regions.md)
+For more architectural decisions, see the [ADRs](docs/adr/):
+- [ADR 001: Choice of BLoC](docs/adr/001_choice_of_bloc.md)
+- [ADR 002: Dual Database Strategy (Hive + Drift)](docs/adr/002_dual_database_strategy.md)
+- [ADR 003: Clean Architecture](docs/adr/003_clean_architecture.md)
+- [ADR 004: Firebase Region Gating](docs/adr/004_firebase_region_gating.md)
+- [ADR 005: Security Hardening](docs/adr/005_security_hardening.md)
+- [ADR 006: Offline Maps via MapLibre Regions](docs/adr/006_offline_maps_via_maplibre_regions.md)
 
 ---
 
@@ -91,4 +91,4 @@ Bhromon runs against local Firebase emulators for offline testing.
 ## Security Policy & Guidelines
 
 - **Sensitive Data**: Never commit `service-account.json` or API keys. Ensure they are added to `.gitignore` (which already excludes `.env` and `key.properties`).
-- **Reporting Vulnerabilities**: See [SECURITY.md](file:///e:/Projects/Bhromon/SECURITY.md) for details on responsible disclosure.
+- **Reporting Vulnerabilities**: See [SECURITY.md](SECURITY.md) for details on responsible disclosure.
