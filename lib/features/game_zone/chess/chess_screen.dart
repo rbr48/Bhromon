@@ -757,8 +757,7 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
                         : null,
                   ),
                 ),
-              if (piece != null)
-                _PieceGlyph(piece: piece, size: size * 0.88),
+              if (piece != null) _PieceGlyph(piece: piece, size: size * 0.88),
             ],
           ),
         ),

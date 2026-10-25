@@ -649,12 +649,14 @@ class _CarromPainter extends CustomPainter {
       ..strokeWidth = 0.8;
     for (int i = 0; i < 16; i++) {
       final angle = i * pi / 8;
-      final r1 = centerP + Offset(cos(angle) * 0.075 * play, sin(angle) * 0.075 * play);
+      final r1 = centerP +
+          Offset(cos(angle) * 0.075 * play, sin(angle) * 0.075 * play);
       final r2 = centerP + Offset(cos(angle) * mandalaR, sin(angle) * mandalaR);
       canvas.drawLine(r1, r2, rayPaint);
     }
     canvas.drawCircle(centerP, 0.018 * play, red);
-    canvas.drawCircle(centerP, 0.007 * play, Paint()..color = const Color(0xFFFFF8E7));
+    canvas.drawCircle(
+        centerP, 0.007 * play, Paint()..color = const Color(0xFFFFF8E7));
 
     // Pockets with brass bracket rim and woven string net depth.
     for (final pocket in CarromBoard.pockets) {
@@ -721,8 +723,10 @@ class _CarromPainter extends CustomPainter {
       canvas.drawPath(
         Path()
           ..moveTo(tip.dx + dir.dx * head, tip.dy + dir.dy * head)
-          ..lineTo(tip.dx + side.dx * head * 0.75, tip.dy + side.dy * head * 0.75)
-          ..lineTo(tip.dx - side.dx * head * 0.75, tip.dy - side.dy * head * 0.75)
+          ..lineTo(
+              tip.dx + side.dx * head * 0.75, tip.dy + side.dy * head * 0.75)
+          ..lineTo(
+              tip.dx - side.dx * head * 0.75, tip.dy - side.dy * head * 0.75)
           ..close(),
         Paint()..color = arrowColor,
       );

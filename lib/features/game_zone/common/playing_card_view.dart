@@ -150,7 +150,9 @@ class _PlayingCardPainter extends CustomPainter {
       ..strokeWidth = 0.8;
 
     final step = max(6.0, w * 0.18);
-    for (double x = innerBorder.left - h; x < innerBorder.right + h; x += step) {
+    for (double x = innerBorder.left - h;
+        x < innerBorder.right + h;
+        x += step) {
       canvas.drawLine(
         Offset(x, innerBorder.top),
         Offset(x + innerBorder.height, innerBorder.bottom),
@@ -189,7 +191,8 @@ class _PlayingCardPainter extends CustomPainter {
     final starPaint = Paint()..color = Colors.amber.shade300;
     for (int i = 0; i < 8; i++) {
       final angle = i * pi / 4;
-      final p1 = center + Offset(cos(angle) * medRadius * 0.55, sin(angle) * medRadius * 0.55);
+      final p1 = center +
+          Offset(cos(angle) * medRadius * 0.55, sin(angle) * medRadius * 0.55);
       canvas.drawCircle(p1, medRadius * 0.12, starPaint);
     }
   }
@@ -224,7 +227,8 @@ class _PlayingCardPainter extends CustomPainter {
       ..color = const Color(0x18000000);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(innerMargin, innerMargin, w - innerMargin * 2, h - innerMargin * 2),
+        Rect.fromLTWH(
+            innerMargin, innerMargin, w - innerMargin * 2, h - innerMargin * 2),
         Radius.circular(max(2.0, w * 0.04)),
       ),
       innerLinePaint,
@@ -327,7 +331,8 @@ class _PlayingCardPainter extends CustomPainter {
     }
   }
 
-  void _paintAceArtwork(Canvas canvas, Offset center, double w, Color suitColor) {
+  void _paintAceArtwork(
+      Canvas canvas, Offset center, double w, Color suitColor) {
     final aceSize = (w * 0.52).clamp(16.0, 32.0);
     final painter = TextPainter(
       text: TextSpan(
@@ -347,24 +352,29 @@ class _PlayingCardPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
 
-    painter.paint(canvas, center - Offset(painter.width / 2, painter.height / 2));
+    painter.paint(
+        canvas, center - Offset(painter.width / 2, painter.height / 2));
   }
 
-  void _paintCourtCard(Canvas canvas, double w, double h, Offset center, Color suitColor) {
+  void _paintCourtCard(
+      Canvas canvas, double w, double h, Offset center, Color suitColor) {
     final courtBoxSize = min(w * 0.62, h * 0.52);
-    final rect = Rect.fromCenter(center: center, width: courtBoxSize, height: courtBoxSize);
+    final rect = Rect.fromCenter(
+        center: center, width: courtBoxSize, height: courtBoxSize);
 
     // Ornate gold-tinted court frame
     final framePaint = Paint()
       ..color = const Color(0xFFF3E5AB)
       ..style = PaintingStyle.fill;
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)), framePaint);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(4)), framePaint);
 
     final frameBorder = Paint()
       ..color = const Color(0xFFD4AF37)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)), frameBorder);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, const Radius.circular(4)), frameBorder);
 
     // Court emblem: King with Crown, Queen with Tiara, Jack with Crest
     final iconData = rank == 'K'

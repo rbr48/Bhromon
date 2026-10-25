@@ -61,7 +61,8 @@ class ChessPiecePainter extends CustomPainter {
     }
   }
 
-  void _paintPawn(Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
+  void _paintPawn(
+      Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
     final body = Path();
     body.moveTo(cx - s * 0.22, s * 0.81);
     body.lineTo(cx + s * 0.22, s * 0.81);
@@ -94,7 +95,8 @@ class ChessPiecePainter extends CustomPainter {
     canvas.drawPath(collar, stroke);
   }
 
-  void _paintKnight(Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
+  void _paintKnight(
+      Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
     final path = Path();
     // Base pedestal
     path.moveTo(cx - s * 0.25, s * 0.84);
@@ -137,7 +139,8 @@ class ChessPiecePainter extends CustomPainter {
     canvas.drawPath(jaw, stroke);
   }
 
-  void _paintBishop(Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
+  void _paintBishop(
+      Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
     // Pedestal and stem
     final body = Path();
     body.moveTo(cx - s * 0.24, s * 0.84);
@@ -172,7 +175,8 @@ class ChessPiecePainter extends CustomPainter {
     canvas.drawPath(collar, stroke);
   }
 
-  void _paintRook(Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
+  void _paintRook(
+      Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
     final body = Path();
     // Base
     body.moveTo(cx - s * 0.25, s * 0.84);
@@ -212,7 +216,8 @@ class ChessPiecePainter extends CustomPainter {
     canvas.drawPath(trim, stroke);
   }
 
-  void _paintQueen(Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
+  void _paintQueen(
+      Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
     // Base and gown
     final body = Path();
     body.moveTo(cx - s * 0.26, s * 0.84);
@@ -257,7 +262,8 @@ class ChessPiecePainter extends CustomPainter {
     canvas.drawPath(belt, stroke);
   }
 
-  void _paintKing(Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
+  void _paintKing(
+      Canvas canvas, double s, double cx, Paint fill, Paint stroke) {
     // Base and royal robe
     final body = Path();
     body.moveTo(cx - s * 0.26, s * 0.84);

@@ -643,7 +643,9 @@ class _LudoScreenState extends State<LudoScreen>
               ],
             ),
             border: Border.all(
-              color: movable ? Colors.amberAccent : Colors.white.withValues(alpha: 0.9),
+              color: movable
+                  ? Colors.amberAccent
+                  : Colors.white.withValues(alpha: 0.9),
               width: movable ? max(2.2, size * 0.14) : 1.5,
             ),
             boxShadow: [
@@ -686,7 +688,10 @@ class _LudoScreenState extends State<LudoScreen>
                           fontSize: 11,
                           fontWeight: FontWeight.w900,
                           shadows: const [
-                            Shadow(color: Colors.black45, blurRadius: 2, offset: Offset(0, 1))
+                            Shadow(
+                                color: Colors.black45,
+                                blurRadius: 2,
+                                offset: Offset(0, 1))
                           ],
                         ),
                       ),
@@ -904,7 +909,8 @@ class _DiceFacePainter extends CustomPainter {
 
     for (final p in pips) {
       // Recessed concave drop shadow
-      canvas.drawCircle(p + const Offset(0.5, 0.8), r, Paint()..color = const Color(0x33000000));
+      canvas.drawCircle(p + const Offset(0.5, 0.8), r,
+          Paint()..color = const Color(0x33000000));
       // Pip cavity
       canvas.drawCircle(p, r, pipFill);
       // Specular glint
@@ -1048,7 +1054,8 @@ class _PathwayGridPainter extends CustomPainter {
     }
     path.close();
     // Drop shadow
-    canvas.drawPath(path.shift(const Offset(0.5, 0.8)), Paint()..color = const Color(0x33000000));
+    canvas.drawPath(path.shift(const Offset(0.5, 0.8)),
+        Paint()..color = const Color(0x33000000));
     canvas.drawPath(path, Paint()..color = color);
   }
 
