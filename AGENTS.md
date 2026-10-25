@@ -6,7 +6,7 @@ This document serves as the persistent system memory, architectural guidelines, 
 
 ## 1. Project Overview & Architecture
 - **Repository**: [https://github.com/rbr48/Bhromon](https://github.com/rbr48/Bhromon)
-- **Primary Branches**: `main` (active) and `master` (synchronized).
+- **Primary Branch**: `main` (active and default).
 - **Architecture**: Clean Architecture (Domain, Data, Presentation) with BLoC state management, injectable DI, Drift (SQLite) for offline relational storage, and Hive for encrypted local boxes.
 - **Backend**: Firebase Firestore (with offline persistence), Cloud Functions (TypeScript), Firebase Auth, Firebase Storage, and Firebase Hosting.
 - **Live Deployments**:
@@ -22,7 +22,7 @@ This document serves as the persistent system memory, architectural guidelines, 
    - Do **NOT** request broad storage permissions `READ_MEDIA_IMAGES` or `READ_MEDIA_VIDEO`.
    - Use the Android system Photo Picker via `image_picker` / system pickers.
 3. **Version Numbering**:
-   - In `pubspec.yaml`, increment version and version code monotonically on each release (e.g., `1.8.2+56`).
+   - In `pubspec.yaml`, increment version and version code monotonically on each release (e.g., `1.8.3+57`).
 4. **Windows Gradle Build Contention**:
    - Always keep `org.gradle.vfs.watch=false` in `android/gradle.properties` to avoid Windows directory locks (`AccessDeniedException` during `mergeReleaseNativeLibs` or `packageRelease`).
    - In `android/app/build.gradle`, disable intermediate tasks: `artprofile`, `nativesymboltable`, `cleanmergereleaseassets`, and `cleanmergereleasenativelibs`.
@@ -116,4 +116,4 @@ Before shipping or pushing changes:
 2. `flutter analyze lib/` -> Must report `No issues found!` (0 errors, 0 warnings).
 3. If building APK: `flutter build apk --release`.
 4. If updating Web: `flutter build web --release` && `firebase deploy --only hosting`.
-5. Keep `git status` clean and push to `main` and `master`.
+5. Keep `git status` clean and push to `main`.
