@@ -71,6 +71,13 @@ const List<List<int>> _trackCoordinates = [
 class LudoScreen extends StatefulWidget {
   const LudoScreen({super.key});
 
+  @visibleForTesting
+  static void resetSession() {
+    _LudoSession.engine = null;
+    _LudoSession.winner = null;
+    _LudoSession.statusMessage = 'Your turn! Tap the dice to roll.';
+  }
+
   @override
   State<LudoScreen> createState() => _LudoScreenState();
 }

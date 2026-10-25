@@ -35,6 +35,9 @@ Future<void> _dispose(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(() {
+    LudoScreen.resetSession();
+  });
   for (final size in _sizes) {
     final label = '${size.width.toInt()}x${size.height.toInt()}';
 
