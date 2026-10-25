@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
@@ -44,11 +46,17 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
 
   Future<void> _loadGroup() async {
     final g = await _repository.getGroup(widget.tourId);
-    if (mounted) setState(() => _tourGroup = g);
+    if (!mounted) return;
+    setState(() {
+      _tourGroup = g;
+      _prepareQuiz();
+    });
   }
 
-  List<QuizQuestion> get questions {
-    final dest = _tourGroup?.destination.toLowerCase() ?? 'cox';
+  /// Question bank for the tour's destination. Destinations without a bank
+  /// get an empty list, not someone else's quiz.
+  List<QuizQuestion> get _baseQuestions {
+    final dest = _tourGroup?.destination.toLowerCase() ?? '';
 
     if (dest.contains('sajek') || dest.contains('সাজেক')) {
       return const [
@@ -161,8 +169,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
               'রমেশ রাম গৌড়ের আবিষ্কৃত এক গ্লাসে ৭ স্তরের বিভিন্ন ঘনত্বের চা দেশজুড়ে বিখ্যাত।',
         ),
       ];
-    } else {
-      // Default: Cox's Bazar / Universal
+    } else if (dest.contains('cox') || dest.contains('কক্সবাজার')) {
       return const [
         QuizQuestion(
           id: 1,
@@ -222,6 +229,26 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
         ),
       ];
     }
+    return const [];
+  }
+
+  /// Quiz questions with their options shuffled, so the answer is not always
+  /// the first one. Built once per attempt.
+  List<QuizQuestion> _quiz = const [];
+  final Random _random = Random();
+
+  void _prepareQuiz() {
+    _quiz = _baseQuestions.map((q) {
+      final order = List<int>.generate(q.options.length, (i) => i)
+        ..shuffle(_random);
+      return QuizQuestion(
+        id: q.id,
+        question: q.question,
+        options: [for (final i in order) q.options[i]],
+        correctIndex: order.indexOf(q.correctIndex),
+        explanation: q.explanation,
+      );
+    }).toList();
   }
 
   void _onOptionSelected(int index) {
@@ -230,14 +257,14 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
     setState(() {
       _selectedOption = index;
       _isAnswered = true;
-      if (index == questions[_currentIndex].correctIndex) {
+      if (index == _quiz[_currentIndex].correctIndex) {
         _score++;
       }
     });
   }
 
   void _nextQuestion() {
-    if (_currentIndex + 1 < questions.length) {
+    if (_currentIndex + 1 < _quiz.length) {
       setState(() {
         _currentIndex++;
         _selectedOption = null;
@@ -252,6 +279,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
 
   void _restartQuiz() {
     setState(() {
+      _prepareQuiz();
       _currentIndex = 0;
       _selectedOption = null;
       _isAnswered = false;
@@ -262,6 +290,33 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_tourGroup != null && _quiz.isEmpty) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0F1A1C),
+        appBar: AppBar(
+          title: const Text('Tour Quiz (ট্যুর কুইজ)'),
+          backgroundColor: const Color(0xFF142428),
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'এই গন্তব্যের জন্য কুইজ এখনও তৈরি হয়নি।',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+        ),
+      );
+    }
+    if (_quiz.isEmpty) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0F1A1C),
+        body:
+            Center(child: CircularProgressIndicator(color: Colors.tealAccent)),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF0F1A1C),
       appBar: AppBar(
@@ -278,8 +333,8 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
   }
 
   Widget _buildQuizView() {
-    final q = questions[_currentIndex];
-    final progress = (_currentIndex + 1) / questions.length;
+    final q = _quiz[_currentIndex];
+    final progress = (_currentIndex + 1) / _quiz.length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -291,7 +346,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'প্রশ্ন নং ${_currentIndex + 1} / ${questions.length}',
+                'প্রশ্ন নং ${_currentIndex + 1} / ${_quiz.length}',
                 style: const TextStyle(
                     color: Colors.tealAccent,
                     fontWeight: FontWeight.bold,
@@ -397,7 +452,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
               ),
               onPressed: _nextQuestion,
               child: Text(
-                _currentIndex + 1 < questions.length
+                _currentIndex + 1 < _quiz.length
                     ? 'পরবর্তী প্রশ্ন'
                     : 'ফলাফল দেখুন',
                 style:
@@ -486,7 +541,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
   }
 
   Widget _buildResultView() {
-    final pct = (_score / questions.length) * 100;
+    final pct = (_score / _quiz.length) * 100;
     final dest = _tourGroup?.destination ?? 'ট্যুর';
     String badge = 'পর্যটক শিক্ষার্থী';
     if (pct >= 85) {
@@ -520,7 +575,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'আপনি $_score / ${questions.length} প্রশ্নের সঠিক উত্তর দিয়েছেন!',
+              'আপনি $_score / ${_quiz.length} প্রশ্নের সঠিক উত্তর দিয়েছেন!',
               style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
             const SizedBox(height: 24),

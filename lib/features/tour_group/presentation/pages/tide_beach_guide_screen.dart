@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../domain/services/tide_schedule_engine.dart';
 import '../../domain/models/tour_group.dart';
@@ -17,11 +18,22 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
   final TourGroupRepository _repository = TourGroupRepository();
   TourGroup? _tourGroup;
   bool _isBeachView = true;
+  // Refreshes "now" each minute so the safety banner does not go stale.
+  Timer? _ticker;
 
   @override
   void initState() {
     super.initState();
     _loadGroup();
+    _ticker = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadGroup() async {
@@ -136,6 +148,11 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
           if (_isBeachView) ...[
             // ── Beach View ──
             _buildLiveSafetyBanner(safety),
+            const SizedBox(height: 8),
+            const Text(
+              'সময়সূচি আনুমানিক, সরকারি জোয়ার-ভাটার তালিকা নয়। স্থানীয় লাইফগার্ড ও প্রশাসনের নির্দেশ সবার আগে মানুন।',
+              style: TextStyle(color: Colors.amberAccent, fontSize: 11),
+            ),
             const SizedBox(height: 20),
 
             const Text(
@@ -187,14 +204,14 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
             ),
             const SizedBox(height: 10),
             _buildSunEventCard(
-                'ভোর ০৫:৩৫ – ০৬:১৫',
+                'ভোর ০৫:৩৫ – ০৬:১৫ (আনুমানিক)',
                 'সূর্যোদয় ও মেঘের ভেলা (Sunrise Clouds)',
                 'কটেজ বা পাহাড়ের পূর্ব কোণে মেঘের সমুদ্র দেখার সেরা সময়',
                 Icons.wb_twilight_rounded,
                 Colors.orangeAccent),
             const SizedBox(height: 8),
             _buildSunEventCard(
-                'বিকেল ০৫:২০ – ০৫:৫৫',
+                'বিকেল ০৫:২০ – ০৫:৫৫ (আনুমানিক)',
                 'পাহাড়ি সূর্যাস্ত ও গোধূলি (Golden Hour)',
                 'পশ্চিম পাহাড়ের চূড়ায় রক্তিম সূর্যাস্ত ও ছবি তোলার সোনালী আলো',
                 Icons.wb_sunny_rounded,

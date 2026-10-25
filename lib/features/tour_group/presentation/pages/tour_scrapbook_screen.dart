@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
+import '../../domain/models/tour_group.dart';
+import '../../domain/models/tour_post_models.dart';
 import 'package:share_plus/share_plus.dart';
 
 class TourScrapbookScreen extends StatefulWidget {
@@ -15,12 +15,12 @@ class TourScrapbookScreen extends StatefulWidget {
 }
 
 class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TourGroupRepository _repository = TourGroupRepository();
   TourGroup? _tourGroup;
-  Map<String, dynamic>? _tourData;
-  List<Map<String, dynamic>> _members = [];
+  List<TourMember> _members = const [];
+  List<TourPostItem> _posts = const [];
   bool _isLoading = true;
+  String? _loadError;
 
   @override
   void initState() {
@@ -28,44 +28,37 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
     _loadScrapbookData();
   }
 
+  /// Everything the scrapbook shows comes from the tour itself: the group, its
+  /// members and its posts. Nothing is invented when the data is missing.
   Future<void> _loadScrapbookData() async {
     try {
       final group = await _repository.getGroup(widget.tourId);
-      final doc = await _firestore.collection('tours').doc(widget.tourId).get();
-      var membersSnap = await _firestore
-          .collection('memberships')
-          .where('tourId', isEqualTo: widget.tourId)
-          .get();
-
-      if (membersSnap.docs.isEmpty) {
-        membersSnap = await _firestore
-            .collection('tours')
-            .doc(widget.tourId)
-            .collection('members')
-            .get();
-      }
-
-      if (mounted) {
-        setState(() {
-          _tourGroup = group;
-          _tourData = doc.data();
-          _members = membersSnap.docs.map((d) => d.data()).toList();
-          _isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      final members = await _repository.watchMembers(widget.tourId).first;
+      final posts =
+          await _repository.watchPosts(widget.tourId, limit: 60).first;
+      if (!mounted) return;
+      setState(() {
+        _tourGroup = group;
+        _members = members;
+        _posts = posts;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _loadError =
+            'স্ক্র্যাপবুক লোড করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।';
+      });
     }
   }
 
   void _shareScrapbookSummary() {
-    final tourName = _tourGroup?.name ??
-        (_tourData?['name'] as String? ?? 'ফ্যামিলি ট্যুর স্মৃতিমালা');
+    final tourName = _tourGroup?.name ?? 'ফ্যামিলি ট্যুর স্মৃতিমালা';
     final datesStr = _tourGroup != null
         ? '${DateFormat('d MMM yyyy').format(_tourGroup!.startDate)} – ${DateFormat('d MMM yyyy').format(_tourGroup!.endDate)}'
         : 'ট্যুর সময়কাল';
-    final durationStr =
-        _tourGroup?.durationText ?? '৫ দিনব্যাপী ফ্যামিলি ট্যুর';
+    final durationStr = _tourGroup?.durationText ?? '';
     final dest = _tourGroup?.destination ?? 'কক্সবাজার';
     final origin = _tourGroup?.originCity ?? 'যাত্রা স্থান';
 
@@ -90,8 +83,7 @@ ${(_tourGroup?.allSpots.take(5) ?? [
 
   @override
   Widget build(BuildContext context) {
-    final tourName = _tourData?['name'] as String? ??
-        (_tourGroup?.name ?? 'ট্যুর ডিজিটাল স্মৃতিমালা');
+    final tourName = _tourGroup?.name ?? 'ট্যুর ডিজিটাল স্মৃতিমালা';
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F1A1C),
@@ -112,50 +104,59 @@ ${(_tourGroup?.allSpots.take(5) ?? [
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: Colors.tealAccent))
-          : SafeArea(
-              child: ListView(
-                padding: const EdgeInsets.all(18),
-                children: [
-                  // Magazine Cover Section
-                  _buildMagazineCover(tourName),
-
-                  const SizedBox(height: 20),
-
-                  // Key Highlights Metrics Grid
-                  _buildMetricsGrid(),
-
-                  const SizedBox(height: 20),
-
-                  // Memory Highlights Section
-                  _buildHighlightsSection(),
-
-                  const SizedBox(height: 20),
-
-                  // Tour Honor Roll
-                  _buildHonorRoll(),
-
-                  const SizedBox(height: 24),
-
-                  // Share & Save Souvenir Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.download),
-                      label: const Text('ডিজিটাল স্মৃতিচিহ্ন শেয়ার করুন',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.amber.shade800,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                      ),
-                      onPressed: _shareScrapbookSummary,
-                    ),
+          : _loadError != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(_loadError!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white70)),
                   ),
-                ],
-              ),
-            ),
+                )
+              : SafeArea(
+                  child: ListView(
+                    padding: const EdgeInsets.all(18),
+                    children: [
+                      // Magazine Cover Section
+                      _buildMagazineCover(tourName),
+
+                      const SizedBox(height: 20),
+
+                      // Key Highlights Metrics Grid
+                      _buildMetricsGrid(),
+
+                      const SizedBox(height: 20),
+
+                      // Memory Highlights Section
+                      _buildHighlightsSection(),
+
+                      const SizedBox(height: 20),
+
+                      // Tour Honor Roll
+                      _buildHonorRoll(),
+
+                      const SizedBox(height: 24),
+
+                      // Share & Save Souvenir Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.download),
+                          label: const Text('ডিজিটাল স্মৃতিচিহ্ন শেয়ার করুন',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber.shade800,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: _shareScrapbookSummary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
     );
   }
 
@@ -237,9 +238,9 @@ ${(_tourGroup?.allSpots.take(5) ?? [
       children: [
         Expanded(
           child: _buildMetricTile(
-            title: 'মোট পরিভ্রমণ',
-            value: '~৮২০ কি.মি.',
-            icon: Icons.route,
+            title: 'স্মৃতি পোস্ট',
+            value: '${_posts.length} টি',
+            icon: Icons.photo_library,
             color: Colors.tealAccent,
           ),
         ),
@@ -247,7 +248,7 @@ ${(_tourGroup?.allSpots.take(5) ?? [
         Expanded(
           child: _buildMetricTile(
             title: 'ট্যুর পার্টিসিপ্যান্ট',
-            value: '${_members.isEmpty ? 36 : _members.length} জন',
+            value: '${_members.length} জন',
             icon: Icons.groups,
             color: Colors.amber,
           ),
@@ -256,7 +257,7 @@ ${(_tourGroup?.allSpots.take(5) ?? [
         Expanded(
           child: _buildMetricTile(
             title: 'ট্যুর ব্যাপ্তিকাল',
-            value: _tourGroup?.durationText ?? '৫ দিন ৪ রাত',
+            value: _tourGroup?.durationText ?? '—',
             icon: Icons.calendar_month,
             color: Colors.blueAccent,
           ),
@@ -303,36 +304,9 @@ ${(_tourGroup?.allSpots.take(5) ?? [
     );
   }
 
+  /// Recent photo and reel posts from the tour, newest first.
   Widget _buildHighlightsSection() {
-    final highlights = [
-      {
-        'title': 'বঙ্গবন্ধু যমুনা সেতু পারাপার',
-        'desc':
-            'রাতে যমুনা নদীর শীতল বাতাস ও ৪.৮ কি.মি. দীর্ঘ মেগা ব্রিজ অতিক্রম।',
-        'icon': '🌉'
-      },
-      {
-        'title': 'শেরপুর ফুড ভিলেজ প্লাস',
-        'desc': 'বগুড়ার বিখ্যাত মিষ্টি দই ও রাতের হাইওয়ে বিরতি।',
-        'icon': '🍲'
-      },
-      {
-        'title': 'ইনানী প্রবাল সৈকত ও পাথুরে রূপ',
-        'desc': 'স্বচ্ছ শান্ত পানি এবং প্রবাল পাথরের প্রাকৃতিক স্বর্গরাজ্য।',
-        'icon': '🪨'
-      },
-      {
-        'title': 'হিমছড়ি ঝর্ণা ও মেরিন ড্রাইভ',
-        'desc':
-            'একপাশে আকাশচুম্বী সবুজ পাহাড়, অন্যপাশে নীল সমুদ্রের রোমাঞ্চকর ড্রাইভ।',
-        'icon': '🌊'
-      },
-      {
-        'title': 'সুগন্ধা সৈকতে সূর্যাস্ত ও ফ্যামিলি মিলনমেলা',
-        'desc': 'পরিবারের সবাই মিলে লাল টুকটুকে সূর্যাস্ত দর্শন ও ফটোসেশন।',
-        'icon': '🌅'
-      },
-    ];
+    final highlights = _posts.where((p) => p.hasRemoteMedia).take(6).toList();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -349,7 +323,7 @@ ${(_tourGroup?.allSpots.take(5) ?? [
               Icon(Icons.stars, color: Colors.amber, size: 20),
               SizedBox(width: 8),
               Text(
-                'ট্যুরের অবিস্মরণীয় মুহূর্তমালা (Highlights)',
+                'ট্যুরের অবিস্মরণীয় মুহূর্তমালা (Highlights)',
                 style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -358,33 +332,50 @@ ${(_tourGroup?.allSpots.take(5) ?? [
             ],
           ),
           const SizedBox(height: 12),
-          ...highlights.map((h) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(h['icon']!, style: const TextStyle(fontSize: 18)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(h['title']!,
+          if (highlights.isEmpty)
+            const Text(
+              'এখনও কোনো ছবি বা রিলস যুক্ত হয়নি। ইনস্টাফিড থেকে প্রথম পোস্ট করুন।',
+              style: TextStyle(color: Colors.white38, fontSize: 12),
+            )
+          else
+            for (final post in highlights)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(post.isReel ? '🎬' : '📸',
+                        style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            post.caption.isEmpty
+                                ? post.authorName
+                                : post.caption,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12)),
-                        Text(h['desc']!,
+                                fontSize: 12),
+                          ),
+                          Text(
+                            [
+                              post.authorName,
+                              if (post.location.isNotEmpty) post.location,
+                            ].join(' • '),
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 11)),
-                      ],
+                                color: Colors.white70, fontSize: 11),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            );
-          }),
         ],
       ),
     );

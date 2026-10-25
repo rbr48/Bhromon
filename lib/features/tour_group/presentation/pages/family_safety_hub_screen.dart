@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
 import 'package:geolocator/geolocator.dart';
@@ -41,12 +43,13 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   StreamSubscription<Position>? _positionStream;
   bool _isSirenActive = false;
   late AnimationController _sirenAnimController;
+  Timer? _alertTimer;
 
   final TourGroupRepository _repository = TourGroupRepository();
   TourGroup? _tourGroup;
 
   List<TourLandmark> get _landmarks {
-    final dest = _tourGroup?.destination.toLowerCase() ?? 'cox';
+    final dest = _tourGroup?.destination.toLowerCase() ?? '';
     if (dest.contains('sajek') || dest.contains('সাজেক')) {
       return const [
         TourLandmark(
@@ -164,7 +167,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           color: Colors.orangeAccent,
         ),
       ];
-    } else {
+    } else if (dest.contains('cox')) {
       return [
         TourLandmark(
           id: 'hotel_sea_moon',
@@ -207,41 +210,19 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
       ];
     }
+    // Other destinations have no surveyed points yet; showing Cox's Bazar
+    // coordinates for them would send people to the wrong place.
+    return const [];
   }
 
+  /// The national health helpline. Local hospital numbers are not listed
+  /// because none could be verified; the tour admin can add them on the notice board.
   ({String title, String number, String display}) _getLocalHospitalContact() {
-    final dest = _tourGroup?.destination.toLowerCase() ?? '';
-    if (dest.contains('sajek') || dest.contains('সাজেক')) {
-      return (
-        title: 'খাগড়াছড়ি সদর হাসপাতাল ও ইমার্জেন্সি',
-        number: '01730324790',
-        display: '01730-324790',
-      );
-    } else if (dest.contains('sylhet') || dest.contains('সিলেট')) {
-      return (
-        title: 'সিলেট এম এ জি ওসমানী মেডিকেল হাসপাতাল',
-        number: '01730324795',
-        display: '01730-324795',
-      );
-    } else if (dest.contains('bandarban') || dest.contains('বান্দরবান')) {
-      return (
-        title: 'বান্দরবান সদর হাসপাতাল ও ইমার্জেন্সি',
-        number: '01730324799',
-        display: '01730-324799',
-      );
-    } else if (dest.contains('cox') || dest.contains('কক্সবাজার')) {
-      return (
-        title: 'কক্সবাজার সদর হাসপাতাল ইমার্জেন্সি',
-        number: '01730324785',
-        display: '01730-324785',
-      );
-    } else {
-      return (
-        title: 'জাতীয় স্বাস্থ্য হেল্পলাইন ও অ্যাম্বুলেন্স',
-        number: '16263',
-        display: '16263 (২৪ ঘণ্টা ফ্রি)',
-      );
-    }
+    return (
+      title: 'জাতীয় স্বাস্থ্য হেল্পলাইন',
+      number: '16263',
+      display: '16263',
+    );
   }
 
   @override
@@ -251,7 +232,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     _sirenAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
-    )..repeat(reverse: true);
+    );
 
     _initGps();
   }
@@ -264,6 +245,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   @override
   void dispose() {
     _positionStream?.cancel();
+    _alertTimer?.cancel();
     _sirenAnimController.dispose();
     super.dispose();
   }
@@ -307,6 +289,46 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  /// Phone heading in degrees, or 0 (north) when the device does not report one.
+  double get _headingDegrees {
+    final heading = _currentPosition?.heading ?? -1;
+    return heading >= 0 ? heading : 0;
+  }
+
+  /// Starts or stops the alert: a repeating vibration and the pulsing banner.
+  void _toggleAlert() {
+    setState(() => _isSirenActive = !_isSirenActive);
+    _alertTimer?.cancel();
+    if (_isSirenActive) {
+      _sirenAnimController.repeat(reverse: true);
+      HapticFeedback.heavyImpact();
+      _alertTimer = Timer.periodic(const Duration(milliseconds: 900),
+          (_) => HapticFeedback.heavyImpact());
+    } else {
+      _sirenAnimController.stop();
+      _sirenAnimController.value = 0;
+    }
+  }
+
+  /// Shares the current position as a map link, for the family to find you.
+  Future<void> _shareLocation() async {
+    final pos = _currentPosition;
+    if (pos == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('অবস্থান পাওয়া যায়নি। GPS চালু করে আবার চেষ্টা করুন।'),
+          backgroundColor: Colors.redAccent,
+        ));
+      }
+      return;
+    }
+    final link =
+        'https://maps.google.com/?q=${pos.latitude.toStringAsFixed(6)},${pos.longitude.toStringAsFixed(6)}';
+    // ignore: deprecated_member_use
+    await Share.share('আমি বিপদে আছি। আমার বর্তমান অবস্থান: $link');
   }
 
   double _calculateBearing(double lat1, double lon1, double lat2, double lon2) {
@@ -422,7 +444,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                       children: [
                         Text(
                           _isSirenActive
-                              ? 'জরুরি সাইরেন সক্রিয়!'
+                              ? 'জরুরি এলার্ট চালু আছে!'
                               : 'ফ্যামিলি ইমার্জেন্সি এসওএস',
                           style: const TextStyle(
                             color: Colors.white,
@@ -433,8 +455,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                         const SizedBox(height: 2),
                         Text(
                           _isSirenActive
-                              ? 'কাছের মানুষদের দৃষ্টি আকর্ষণ করতে সাইরেন বাজছে।'
-                              : 'বিপদে পড়লে বা দলছুট হলে তাৎক্ষণিক সাইরেন ও হটলাইন ব্যবহার করুন।',
+                              ? 'ভাইব্রেশনের মাধ্যমে এলার্ট চলছে। অবস্থানসহ বার্তা পাঠাতে বোতাম চেপে ধরুন।'
+                              : 'বিপদে পড়লে এলার্ট চালু করুন, অবস্থান শেয়ার করুন, অথবা ৯৯৯ কল করুন।',
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 12),
                         ),
@@ -451,8 +473,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                       Icon(_isSirenActive ? Icons.volume_off : Icons.volume_up),
                   label: Text(
                     _isSirenActive
-                        ? 'সাইরেন বন্ধ করুন'
-                        : 'জরুরি সাইরেন চালু করুন',
+                        ? 'এলার্ট বন্ধ করুন'
+                        : 'জরুরি এলার্ট চালু করুন',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -465,11 +487,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _isSirenActive = !_isSirenActive;
-                    });
-                  },
+                  onPressed: _toggleAlert,
+                  onLongPress: _shareLocation,
                 ),
               ),
             ],
@@ -495,16 +514,6 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(
-              child: _buildDialCard(
-                title: 'ট্যুরিস্ট পুলিশ',
-                number: '01320163599',
-                displayNumber: '01320-163599',
-                icon: Icons.local_police,
-                color: Colors.blueAccent,
-              ),
-            ),
-            const SizedBox(width: 10),
             Expanded(
               child: _buildDialCard(
                 title: 'জাতীয় জরুরি সেবা',
@@ -695,7 +704,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                       if (bearing != null) ...[
                         const SizedBox(width: 8),
                         Transform.rotate(
-                          angle: (bearing * math.pi / 180),
+                          angle: ((bearing - _headingDegrees) * math.pi / 180),
                           child: const Icon(Icons.arrow_upward,
                               size: 12, color: Colors.amberAccent),
                         ),

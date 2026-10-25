@@ -613,6 +613,15 @@ class TourGroupRepository {
         .update({'role': newRole.toValue()});
   }
 
+  /// Sets how many people the signed-in member's family counts as (1 to 20).
+  /// Expenses are shared by this weight.
+  Future<void> setMyFamilyCount(String tourId, int count) async {
+    final email = _requireEmail();
+    await _memberships
+        .doc(_membershipId(tourId, email))
+        .update({'familyCount': count.clamp(1, 20)});
+  }
+
   /// Removes a member and bans the email, so the invite code cannot be used
   /// to come back. Only a bans document plus the membership row are written.
   Future<void> removeMember(String tourId, String email) async {
