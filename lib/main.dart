@@ -42,11 +42,13 @@ void main() {
 
     // Edge-to-edge: Android 15 (targetSdk 35) enforces it; opting in here
     // keeps the look identical on older Android versions.
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.transparent,
-    ));
+    if (!kIsWeb) {
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+      ));
+    }
 
     // Optimize ImageCache to hold up to 300 images & 250MB to prevent constant lazy-loading and jank on feeds
     PaintingBinding.instance.imageCache.maximumSizeBytes =
@@ -54,7 +56,9 @@ void main() {
     PaintingBinding.instance.imageCache.maximumSize = 300; // 300 images
 
     HydratedBloc.storage = await HydratedStorage.build(
-      storageDirectory: await getApplicationDocumentsDirectory(),
+      storageDirectory: kIsWeb
+          ? HydratedStorage.webStorageDirectory
+          : await getApplicationDocumentsDirectory(),
     );
 
     // Global Sync/Layout Error Boundaries
@@ -168,37 +172,41 @@ void main() {
     } else {
       configureDependencies(environment: Env.prod);
 
-      // Wire up Firebase Crashlytics error handlers
-      FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+      if (!kIsWeb) {
+        // Wire up Firebase Crashlytics error handlers
+        FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
 
-      final originalOnError = FlutterError.onError;
-      FlutterError.onError = (FlutterErrorDetails details) {
-        if (originalOnError != null) originalOnError(details);
-        FirebaseCrashlytics.instance.recordFlutterFatalError(details);
-      };
+        final originalOnError = FlutterError.onError;
+        FlutterError.onError = (FlutterErrorDetails details) {
+          if (originalOnError != null) originalOnError(details);
+          FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+        };
 
-      PlatformDispatcher.instance.onError = (error, stack) {
-        logError('[GlobalError] Asynchronous error caught', error, stack);
-        appLogger.handle(error, stack);
-        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-        return true; // Mark as handled to prevent native crash
-      };
+        PlatformDispatcher.instance.onError = (error, stack) {
+          logError('[GlobalError] Asynchronous error caught', error, stack);
+          appLogger.handle(error, stack);
+          FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+          return true; // Mark as handled to prevent native crash
+        };
+      }
 
-      // ── Firebase App Check — blocks non-genuine app instances ──────────
-      try {
-        await FirebaseAppCheck.instance.activate(
-          // Use playIntegrity on Android (requires Play Store-signed build)
-          // Falls back gracefully to debug provider in non-release builds.
-          providerAndroid: kReleaseMode
-              ? const AndroidPlayIntegrityProvider()
-              : const AndroidDebugProvider(),
-          providerApple: kReleaseMode
-              ? const AppleDeviceCheckProvider()
-              : const AppleDebugProvider(),
-        );
-        logInfo('[AppCheck] Firebase App Check activated successfully');
-      } catch (e, stack) {
-        logWarning('[AppCheck] Failed to activate App Check', e, stack);
+      if (!kIsWeb) {
+        // ── Firebase App Check — blocks non-genuine app instances ──────────
+        try {
+          await FirebaseAppCheck.instance.activate(
+            // Use playIntegrity on Android (requires Play Store-signed build)
+            // Falls back gracefully to debug provider in non-release builds.
+            providerAndroid: kReleaseMode
+                ? const AndroidPlayIntegrityProvider()
+                : const AndroidDebugProvider(),
+            providerApple: kReleaseMode
+                ? const AppleDeviceCheckProvider()
+                : const AppleDebugProvider(),
+          );
+          logInfo('[AppCheck] Firebase App Check activated successfully');
+        } catch (e, stack) {
+          logWarning('[AppCheck] Failed to activate App Check', e, stack);
+        }
       }
 
       // ── Firestore offline persistence (one-time setting) ─────────────────
@@ -214,16 +222,18 @@ void main() {
             '[Firestore] Could not enable offline persistence', e, stack);
       }
 
-      try {
-        // SyncWorker.initialize() calls Workmanager().initialize() internally
-        // with the single unified callbackDispatcher that handles both sync
-        // and geo-fence tasks.
-        SyncWorker.initialize();
-        SyncWorker.registerPeriodicSync();
-        await registerGeoFenceWork();
-      } catch (e, stack) {
-        logWarning(
-            '[SyncWorker] Failed to initialize background sync', e, stack);
+      if (!kIsWeb) {
+        try {
+          // SyncWorker.initialize() calls Workmanager().initialize() internally
+          // with the single unified callbackDispatcher that handles both sync
+          // and geo-fence tasks.
+          SyncWorker.initialize();
+          SyncWorker.registerPeriodicSync();
+          await registerGeoFenceWork();
+        } catch (e, stack) {
+          logWarning(
+              '[SyncWorker] Failed to initialize background sync', e, stack);
+        }
       }
     }
 
@@ -232,9 +242,11 @@ void main() {
     logError('[GlobalError] Asynchronous error caught in runZonedGuarded zone',
         error, stack);
     appLogger.handle(error, stack);
-    try {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    } catch (_) {}
+    if (!kIsWeb) {
+      try {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      } catch (_) {}
+    }
   });
 }
 
