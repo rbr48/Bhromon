@@ -93,6 +93,23 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
     return controller;
   }
 
+  Future<void> _toggleLike(TourPostItem post) async {
+    final isLiked = post.isLikedBy(widget.repository.currentEmail);
+    try {
+      await widget.repository.setPostLiked(
+        widget.tourId,
+        post.id,
+        liked: !isLiked,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('লাইক করা যায়নি: $e')),
+        );
+      }
+    }
+  }
+
   void _onPageChanged(int newIndex) {
     // Pause previous
     _controllerPool[_currentIndex]?.pause();
@@ -163,14 +180,7 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
             onOpenComments: () => widget.onOpenComments?.call(post),
             onShare: () => widget.onShare?.call(post),
             onAddToLedger: () => widget.onAddToLedger?.call(post),
-            onLikeToggle: () async {
-              final isLiked = post.isLikedBy(widget.repository.currentEmail);
-              await widget.repository.setPostLiked(
-                widget.tourId,
-                post.id,
-                liked: !isLiked,
-              );
-            },
+            onLikeToggle: () => _toggleLike(post),
             currentEmail: widget.repository.currentEmail,
           );
         },
