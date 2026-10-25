@@ -268,6 +268,47 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  describe('safety alerts', () => {
+    const alertPath = ['tours', TOUR, 'sos', 'a1'];
+    const alert = (sender) => ({ senderEmail: sender, senderName: 'x', resolved: false, createdAt: serverTimestamp() });
+
+    test('members raise an alert under their own email only', async () => {
+      await assertSucceeds(setDoc(doc(db('member'), ...alertPath), alert(people.member.email)));
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'sos', 'a2'), alert(people.admin.email)));
+    });
+
+    test('an alert starts unresolved and carries the server time', async () => {
+      await assertFails(setDoc(doc(db('member'), ...alertPath), { ...alert(people.member.email), resolved: true }));
+      await assertFails(setDoc(doc(db('member'), ...alertPath), { ...alert(people.member.email), createdAt: new Date('2020-01-01') }));
+    });
+
+    test('outsiders and banned accounts can neither raise nor read alerts', async () => {
+      await assertFails(setDoc(doc(db('outsider'), ...alertPath), alert(people.outsider.email)));
+      await assertFails(setDoc(doc(db('banned'), ...alertPath), alert(people.banned.email)));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', TOUR, 'sos')));
+    });
+
+    test('active members read every alert in the tour', async () => {
+      await setDoc(doc(db('member'), ...alertPath), alert(people.member.email));
+      await assertSucceeds(getDocs(collection(db('other'), 'tours', TOUR, 'sos')));
+    });
+
+    test('the sender or an admin resolves; other members cannot', async () => {
+      await setDoc(doc(db('member'), ...alertPath), alert(people.member.email));
+      await assertFails(updateDoc(doc(db('other'), ...alertPath), { resolved: true }));
+      await assertSucceeds(updateDoc(doc(db('member'), ...alertPath), { resolved: true, resolvedByEmail: people.member.email }));
+
+      await setDoc(doc(db('member'), 'tours', TOUR, 'sos', 'a3'), alert(people.member.email));
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', TOUR, 'sos', 'a3'), { resolved: true, resolvedByEmail: people.admin.email }));
+    });
+
+    test('resolving changes only the resolution fields and cannot reopen', async () => {
+      await setDoc(doc(db('member'), ...alertPath), alert(people.member.email));
+      await assertFails(updateDoc(doc(db('member'), ...alertPath), { resolved: true, senderName: 'hijack' }));
+      await assertFails(updateDoc(doc(db('member'), ...alertPath), { resolved: false }));
+    });
+  });
+
   test('unauthenticated users can read nothing in the tour group', async () => {
     await assertFails(getDoc(doc(anon(), 'memberships', `${TOUR}__${people.member.email}`)));
     await assertFails(getDoc(doc(anon(), 'invites', CODE)));
