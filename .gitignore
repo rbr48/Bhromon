@@ -46,6 +46,7 @@ app.*.map.json
 notif-daemon/service-account.json
 **/service-account.json
 **/google-services.json
+!/android/app/google-services.json
 key.properties
 .env
 .env.*

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "919602851188",
+    "project_id": "bhromon-ff801",
+    "storage_bucket": "bhromon-ff801.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:919602851188:android:89360212aea9ece4f61021",
+        "android_client_info": {
+          "package_name": "com.bhromon.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADg43-_aGd8oVLHJAtaOVijhNqOqBzyjQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
