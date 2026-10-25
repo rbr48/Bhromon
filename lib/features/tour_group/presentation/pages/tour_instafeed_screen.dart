@@ -524,6 +524,24 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         _activeHashtagFilter,
       ].join('|');
 
+  /// Drops bookmarks and collection entries for posts that no longer exist,
+  /// such as a post deleted by its author. Called only with the whole feed
+  /// loaded, so an id that is missing really is gone.
+  void _pruneMissingBookmarks(List<TourPostItem> posts) {
+    int entryCount() =>
+        _bookmarkedPostIds.length +
+        _bookmarkCollections.values.fold(0, (n, list) => n + list.length);
+
+    final before = entryCount();
+    final live = posts.map((p) => p.id).toSet();
+    _bookmarkedPostIds.removeWhere((id) => !live.contains(id));
+    for (final name in _bookmarkCollections.keys.toList()) {
+      _bookmarkCollections[name] =
+          _bookmarkCollections[name]!.where(live.contains).toList();
+    }
+    if (entryCount() != before) _saveFeedPrefs();
+  }
+
   /// Loads the next page while the active filters match nothing on the loaded
   /// page. The budget starts again whenever the filters change.
   void _maybeAutoLoadForFilter({required bool needsMore}) {
@@ -913,6 +931,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       }
 
                       final hasMore = posts.length >= _postLimit;
+                      // Only with the whole feed loaded is a missing id known to be gone.
+                      if (postsSnap.hasData && !hasMore) {
+                        _pruneMissingBookmarks(posts);
+                      }
                       _maybeAutoLoadForFilter(
                           needsMore: filteredPosts.isEmpty && hasMore);
                       final reelsList = posts.where((p) => p.isReel).toList();
