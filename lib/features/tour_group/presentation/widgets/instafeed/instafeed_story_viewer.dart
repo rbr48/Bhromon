@@ -16,6 +16,10 @@ class InstafeedStoryViewer extends StatefulWidget {
   final int initialGroupIndex;
   final VoidCallback? onHighlightsUpdated;
 
+  /// Owners and admins may delete any story in the tour. Authors may always
+  /// delete their own.
+  final bool isAdmin;
+
   const InstafeedStoryViewer({
     super.key,
     required this.repository,
@@ -23,6 +27,7 @@ class InstafeedStoryViewer extends StatefulWidget {
     required this.authorStoryGroups,
     this.initialGroupIndex = 0,
     this.onHighlightsUpdated,
+    this.isAdmin = false,
   });
 
   @override
@@ -31,6 +36,9 @@ class InstafeedStoryViewer extends StatefulWidget {
 
 class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     with SingleTickerProviderStateMixin {
+  /// A private copy, so a deleted story can be removed without touching the
+  /// feed's list.
+  late List<List<TourStoryItem>> _groups;
   late int _groupIndex;
   int _storyIndex = 0;
 
@@ -46,11 +54,12 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
   @override
   void initState() {
     super.initState();
+    _groups = [
+      for (final group in widget.authorStoryGroups) List.of(group),
+    ];
     _groupIndex = widget.initialGroupIndex.clamp(
       0,
-      widget.authorStoryGroups.isNotEmpty
-          ? widget.authorStoryGroups.length - 1
-          : 0,
+      _groups.isNotEmpty ? _groups.length - 1 : 0,
     );
 
     _animCtrl = AnimationController(vsync: this)
@@ -72,9 +81,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
   }
 
   List<TourStoryItem> get _currentAuthorStories =>
-      widget.authorStoryGroups.isNotEmpty
-          ? widget.authorStoryGroups[_groupIndex]
-          : const [];
+      _groups.isNotEmpty ? _groups[_groupIndex] : const [];
 
   TourStoryItem? get _currentStory => _currentAuthorStories.isNotEmpty &&
           _storyIndex < _currentAuthorStories.length
@@ -84,6 +91,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
   bool get _isAuthor =>
       _currentStory != null &&
       _currentStory!.authorEmail == widget.repository.currentEmail;
+
+  bool get _canDelete => _currentStory != null && (_isAuthor || widget.isAdmin);
 
   Future<void> _loadCurrentStory() async {
     final story = _currentStory;
@@ -146,7 +155,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     if (_storyIndex < _currentAuthorStories.length - 1) {
       setState(() => _storyIndex++);
       _loadCurrentStory();
-    } else if (_groupIndex < widget.authorStoryGroups.length - 1) {
+    } else if (_groupIndex < _groups.length - 1) {
       // Transition to next author
       setState(() {
         _groupIndex++;
@@ -167,7 +176,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
       // Transition to previous author's last story
       setState(() {
         _groupIndex--;
-        _storyIndex = widget.authorStoryGroups[_groupIndex].length - 1;
+        _storyIndex = _groups[_groupIndex].length - 1;
       });
       _loadCurrentStory();
     } else {
@@ -187,6 +196,82 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     _isPaused = false;
     _animCtrl.forward();
     _videoCtrl?.play();
+  }
+
+  Future<void> _deleteCurrentStory() async {
+    final story = _currentStory;
+    if (story == null) return;
+
+    _pause();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title:
+            const Text('স্টোরি মুছবেন?', style: TextStyle(color: Colors.white)),
+        content: const Text('এই স্টোরিটি সবার জন্য মুছে যাবে।',
+            style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('বাতিল'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('মুছে ফেলুন'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      _resume();
+      return;
+    }
+
+    try {
+      await widget.repository.deleteStory(widget.tourId, story);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('স্টোরি মোছা যায়নি: $e')),
+        );
+        _resume();
+      }
+      return;
+    }
+    if (!mounted) return;
+    _removeStoryLocally(story.id);
+  }
+
+  /// Drops a deleted story from the viewer and shows the next one. Closes the
+  /// viewer when nothing is left.
+  void _removeStoryLocally(String storyId) {
+    final group = _groups[_groupIndex];
+    final index = group.indexWhere((s) => s.id == storyId);
+    if (index < 0) {
+      _resume();
+      return;
+    }
+    group.removeAt(index);
+
+    if (group.isEmpty && _groups.length == 1) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    setState(() {
+      if (group.isEmpty) {
+        _groups.removeAt(_groupIndex);
+        if (_groupIndex >= _groups.length) _groupIndex = _groups.length - 1;
+        _storyIndex = 0;
+      } else if (_storyIndex >= group.length) {
+        _storyIndex = group.length - 1;
+      }
+    });
+    _isPaused = false;
+    _loadCurrentStory();
   }
 
   Future<void> _votePoll(int optionIndex) async {
@@ -632,6 +717,14 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                           ),
                         ),
                         const Spacer(),
+
+                        if (_canDelete)
+                          IconButton(
+                            tooltip: 'মুছুন',
+                            icon: const Icon(Icons.delete_outline,
+                                color: Colors.white),
+                            onPressed: _deleteCurrentStory,
+                          ),
 
                         // Highlight button
                         IconButton(

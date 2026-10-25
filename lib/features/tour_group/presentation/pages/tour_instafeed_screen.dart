@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/tour_media_journal.dart';
+import '../../data/tour_media_uploader.dart';
 import '../../domain/models/safety_alert_models.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
@@ -66,6 +68,15 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   final Map<String, String> _roomMap = {};
 
   int _postLimit = _pageSize;
+
+  // Filtered pages can come back empty, so the feed pages in more posts while
+  // nothing matches. Capped, so a filter that never matches stops on its own.
+  static const int _maxEmptyAutoLoads = 3;
+  int _emptyAutoLoads = 0;
+  bool _autoLoadScheduled = false;
+  String _autoLoadFilterKey = '';
+
+  TourRole? _myRole;
   late Stream<List<TourStoryItem>> _storiesStream;
   late Stream<List<TourPostItem>> _postsStream;
   late Stream<List<TourStoryHighlight>> _highlightsStream;
@@ -80,13 +91,23 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     _alertsStream = _repository.watchSafetyAlerts(widget.tourId);
 
     _loadGroup();
+    _loadMyRole();
     _loadFeedPrefs();
     _loadLogistics();
+    unawaited(TourMediaJournal.instance.sweep(
+      isReferenced: _repository.isMediaReferenced,
+      deleteRemote: TourMediaUploader.deleteMedia,
+    ));
   }
 
   Future<void> _loadGroup() async {
     final g = await _repository.getGroup(widget.tourId);
     if (mounted) setState(() => _tourGroup = g);
+  }
+
+  Future<void> _loadMyRole() async {
+    final role = await _repository.myRole(widget.tourId);
+    if (mounted) setState(() => _myRole = role);
   }
 
   Future<void> _loadFeedPrefs() async {
@@ -253,8 +274,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           controller: newCollectionCtrl,
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
-                            hintText:
-                                'নতুন ফোল্ডারের নাম (যেমন: খাবার, হোটেল)',
+                            hintText: 'নতুন ফোল্ডারের নাম (যেমন: খাবার, হোটেল)',
                             hintStyle: const TextStyle(
                                 color: Colors.white38, fontSize: 13),
                             filled: true,
@@ -473,10 +493,44 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     });
   }
 
+  /// Owners and admins moderate the feed. The membership role is checked first;
+  /// the group's owner email is a fallback for a missing membership row.
   bool get _isAdmin {
-    if (_tourGroup == null) return false;
+    if (_myRole == TourRole.owner || _myRole == TourRole.admin) return true;
     final email = _repository.currentEmail;
-    return _tourGroup!.ownerEmail == email;
+    return _tourGroup != null &&
+        email.isNotEmpty &&
+        _tourGroup!.ownerEmail == email;
+  }
+
+  String get _filterKey => [
+        _selectedDayFilter,
+        _selectedMediaFilter,
+        _selectedBookmarkCollection,
+        _selectedLandmarkFilter,
+        _activeHashtagFilter,
+      ].join('|');
+
+  /// Loads the next page while the active filters match nothing on the loaded
+  /// page. The budget starts again whenever the filters change.
+  void _maybeAutoLoadForFilter({required bool needsMore}) {
+    final key = _filterKey;
+    if (key != _autoLoadFilterKey) {
+      _autoLoadFilterKey = key;
+      _emptyAutoLoads = 0;
+    }
+    if (!needsMore ||
+        _autoLoadScheduled ||
+        _emptyAutoLoads >= _maxEmptyAutoLoads) {
+      return;
+    }
+
+    _autoLoadScheduled = true;
+    _emptyAutoLoads++;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoLoadScheduled = false;
+      if (mounted) _loadMorePosts();
+    });
   }
 
   List<TourDayInfo> get _tourDays => _tourGroup?.daysList ?? const [];
@@ -846,6 +900,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       }
 
                       final hasMore = posts.length >= _postLimit;
+                      _maybeAutoLoadForFilter(
+                          needsMore: filteredPosts.isEmpty && hasMore);
                       final reelsList = posts.where((p) => p.isReel).toList();
 
                       return CustomScrollView(
@@ -955,7 +1011,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                             SliverToBoxAdapter(
                               child: Container(
                                 height: 40,
-                                margin: const EdgeInsets.only(top: 4, bottom: 4),
+                                margin:
+                                    const EdgeInsets.only(top: 4, bottom: 4),
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 16),
                                 child: ListView(
@@ -1029,7 +1086,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                             )
                           else if (filteredPosts.isEmpty)
                             SliverFillRemaining(
-                                child: _buildEmptyFeedState(context))
+                                child: posts.isEmpty
+                                    ? _buildEmptyFeedState(context)
+                                    : _buildFilteredEmptyState(
+                                        hasMore: hasMore))
                           else if (_isGridView)
                             SliverFillRemaining(
                               child: InstafeedExploreGrid(
@@ -1197,6 +1257,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         tourId: widget.tourId,
                         authorStoryGroups: authorGroups,
                         initialGroupIndex: idx,
+                        isAdmin: _isAdmin,
                       ),
                     ),
                   );
@@ -1407,6 +1468,41 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Shown when posts are loaded but the active filters hide all of them.
+  Widget _buildFilteredEmptyState({required bool hasMore}) {
+    final autoLoading = hasMore && _emptyAutoLoads < _maxEmptyAutoLoads;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: autoLoading
+            ? const CircularProgressIndicator(color: AppColors.mintGreen)
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.filter_alt_off_outlined,
+                      size: 54, color: Colors.white24),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'এই ফিল্টারে কোনো পোস্ট নেই',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  if (hasMore) ...[
+                    const SizedBox(height: 16),
+                    FilledButton.tonal(
+                      onPressed: _loadMorePosts,
+                      child: const Text('আরও পোস্ট দেখুন'),
+                    ),
+                  ],
+                ],
+              ),
       ),
     );
   }

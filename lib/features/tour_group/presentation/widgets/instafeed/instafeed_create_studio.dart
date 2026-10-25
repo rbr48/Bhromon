@@ -63,7 +63,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   double _saturation = 1.0; // 0.0 to 2.0
   double _warmth = 0.0; // -0.4 to 0.4
   double _vignette = 0.0; // 0.0 to 1.0
-  double? _selectedAspectRatio; // null = original, 1.0 = 1:1, 0.8 = 4:5, 16/9 = 16:9
+  double?
+      _selectedAspectRatio; // null = original, 1.0 = 1:1, 0.8 = 4:5, 16/9 = 16:9
 
   String _selectedDay = 'day1';
   String _selectedLandmark = 'অন্যান্য স্থান (Others)';
@@ -342,7 +343,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       _uploadStatusText = 'আপলোড শুরু হচ্ছে...';
     });
 
+    final uploads = <TourMediaUpload>[];
     final uploadedUrls = <String>[];
+    var postSaved = false;
     try {
       if (_isReel && _selectedVideo != null) {
         setState(() => _uploadStatusText = 'ভিডিও আপলোড হচ্ছে...');
@@ -355,8 +358,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           contentType: cType,
           extension: ext,
           maxBytes: kMaxVideoBytes,
-          uploaderEmail: widget.repository.currentEmail,
         );
+        uploads.add(upload);
         final sub = upload.progress.listen((p) {
           if (mounted) {
             final scale = _coverImage != null ? 0.8 : 1.0;
@@ -383,8 +386,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
             contentType: cContentType,
             extension: cExt,
             maxBytes: kMaxImageBytes,
-            uploaderEmail: widget.repository.currentEmail,
           );
+          uploads.add(coverUpload);
           final coverSub = coverUpload.progress.listen((p) {
             if (mounted) {
               setState(() => _uploadProgress = 0.8 + (p * 0.2));
@@ -430,8 +433,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
             contentType: cType,
             extension: ext,
             maxBytes: kMaxImageBytes,
-            uploaderEmail: widget.repository.currentEmail,
           );
+          uploads.add(upload);
           final sub = upload.progress.listen((p) {
             if (mounted) {
               final base = i / _photos.length;
@@ -462,26 +465,41 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         );
       }
 
+      // The post is saved, so its files are no longer orphans.
+      postSaved = true;
+      for (final upload in uploads) {
+        await upload.commit();
+      }
+
       // If poll sticker is enabled, also create a story with the poll!
       if (_includePoll &&
           _pollQuestionCtrl.text.trim().isNotEmpty &&
           uploadedUrls.isNotEmpty) {
-        await widget.repository.addStory(
-          tourId: widget.tourId,
-          mediaUrl: uploadedUrls.first,
-          caption: _pollQuestionCtrl.text.trim(),
-          poll: TourStoryPoll(
-            question: _pollQuestionCtrl.text.trim(),
-            options: [
-              _pollOpt1Ctrl.text.trim().isNotEmpty
-                  ? _pollOpt1Ctrl.text.trim()
-                  : 'হ্যাঁ',
-              _pollOpt2Ctrl.text.trim().isNotEmpty
-                  ? _pollOpt2Ctrl.text.trim()
-                  : 'না',
-            ],
-          ),
-        );
+        try {
+          await widget.repository.addStory(
+            tourId: widget.tourId,
+            mediaUrl: uploadedUrls.first,
+            caption: _pollQuestionCtrl.text.trim(),
+            poll: TourStoryPoll(
+              question: _pollQuestionCtrl.text.trim(),
+              options: [
+                _pollOpt1Ctrl.text.trim().isNotEmpty
+                    ? _pollOpt1Ctrl.text.trim()
+                    : 'হ্যাঁ',
+                _pollOpt2Ctrl.text.trim().isNotEmpty
+                    ? _pollOpt2Ctrl.text.trim()
+                    : 'না',
+              ],
+            ),
+          );
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                  content: Text('পোস্ট হয়েছে, কিন্তু পোল যোগ করা যায়নি: $e')),
+            );
+          }
+        }
       }
 
       // Clear draft upon success
@@ -498,11 +516,11 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         );
       }
     } catch (e) {
-      // Clean up uploaded files if posting failed
-      for (final u in uploadedUrls) {
-        try {
-          await TourMediaUploader.deleteMedia(u);
-        } catch (_) {}
+      // The post is not saved, so the files it would have used are removed.
+      if (!postSaved) {
+        for (final upload in uploads) {
+          await upload.discard();
+        }
       }
 
       if (mounted) {
@@ -529,10 +547,26 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     final wR = 1.0 + (_warmth * 0.35);
     final wB = 1.0 - (_warmth * 0.35);
     return ColorFilter.matrix([
-      c * wR, 0, 0, 0, b,
-      0, c, 0, 0, b,
-      0, 0, c * wB, 0, b,
-      0, 0, 0, 1, 0,
+      c * wR,
+      0,
+      0,
+      0,
+      b,
+      0,
+      c,
+      0,
+      0,
+      b,
+      0,
+      0,
+      c * wB,
+      0,
+      b,
+      0,
+      0,
+      0,
+      1,
+      0,
     ]);
   }
 
