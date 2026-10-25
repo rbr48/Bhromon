@@ -1,5 +1,10 @@
 // Pure domain models for Tour Group Engine
 
+import 'date_codec.dart';
+
+/// Used by copyWith to tell "not passed" apart from an explicit null.
+const Object _keep = Object();
+
 enum TourRole {
   owner,
   admin,
@@ -110,6 +115,9 @@ class TourMember {
   final TourMemberStatus status;
   final DateTime joinedAt;
 
+  /// People this member's family counts as when expenses are shared (1-20).
+  final int familyCount;
+
   const TourMember({
     required this.tourId,
     this.tourName = '',
@@ -119,18 +127,22 @@ class TourMember {
     required this.role,
     required this.status,
     required this.joinedAt,
+    this.familyCount = 1,
   });
+
+  bool get isOwner => role == TourRole.owner;
 
   Map<String, dynamic> toMap() {
     return {
       'tourId': tourId,
       'tourName': tourName,
-      'email': email.toLowerCase().trim(),
+      'email': normalizeEmail(email),
       'displayName': displayName,
       'photoUrl': photoUrl,
-      'role': role == TourRole.owner ? 'admin' : role.toValue(),
+      'role': role.toValue(),
       'status': status.toValue(),
-      'joinedAt': joinedAt.toIso8601String(),
+      'joinedAt': writeDate(joinedAt),
+      'familyCount': familyCount.clamp(1, 20),
     };
   }
 
@@ -138,14 +150,13 @@ class TourMember {
     return TourMember(
       tourId: map['tourId'] as String? ?? '',
       tourName: map['tourName'] as String? ?? '',
-      email: (map['email'] as String? ?? '').toLowerCase().trim(),
+      email: normalizeEmail(map['email'] as String? ?? ''),
       displayName: map['displayName'] as String? ?? 'Explorer',
       photoUrl: map['photoUrl'] as String?,
       role: TourRole.fromString(map['role'] as String?),
       status: TourMemberStatus.fromString(map['status'] as String?),
-      joinedAt: map['joinedAt'] != null
-          ? DateTime.tryParse(map['joinedAt'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+      joinedAt: readDate(map['joinedAt']) ?? DateTime.now(),
+      familyCount: ((map['familyCount'] as num?)?.toInt() ?? 1).clamp(1, 20),
     );
   }
 }
@@ -212,6 +223,7 @@ class TourGroup {
   final TourModules modules;
   final List<String> customSpots;
   final String? meetingPointTitle;
+  final String? meetingPointNote;
   final String? meetingPointMapUrl;
   final DateTime createdAt;
 
@@ -219,7 +231,7 @@ class TourGroup {
     required this.id,
     required this.name,
     this.description = '',
-    this.destination = "Cox's Bazar",
+    this.destination = 'Custom Destination',
     this.originCity = 'ঢাকা',
     this.tourType = TourType.beach,
     required this.ownerEmail,
@@ -230,16 +242,28 @@ class TourGroup {
     this.modules = const TourModules(),
     this.customSpots = const [],
     this.meetingPointTitle,
+    this.meetingPointNote,
     this.meetingPointMapUrl,
     required this.createdAt,
   });
 
+  /// Calendar days the tour covers, counting the start and end dates whatever
+  /// time of day they were picked at.
   int get totalDays {
-    final diff = endDate.difference(startDate).inDays;
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final end = DateTime(endDate.year, endDate.month, endDate.day);
+    final diff = end.difference(start).inDays;
     return diff < 0 ? 1 : diff + 1;
   }
 
   int get totalNights => totalDays > 1 ? totalDays - 1 : 0;
+
+  /// True while [now] falls on one of the tour's calendar days.
+  bool isLiveAt(DateTime now) {
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final endExclusive = DateTime(endDate.year, endDate.month, endDate.day + 1);
+    return !now.isBefore(start) && now.isBefore(endExclusive);
+  }
 
   String get durationText {
     final daysBn = _toBanglaNumber(totalDays);
@@ -409,8 +433,9 @@ class TourGroup {
     DateTime? endDate,
     TourModules? modules,
     List<String>? customSpots,
-    String? meetingPointTitle,
-    String? meetingPointMapUrl,
+    Object? meetingPointTitle = _keep,
+    Object? meetingPointNote = _keep,
+    Object? meetingPointMapUrl = _keep,
     DateTime? createdAt,
   }) {
     return TourGroup(
@@ -427,8 +452,16 @@ class TourGroup {
       endDate: endDate ?? this.endDate,
       modules: modules ?? this.modules,
       customSpots: customSpots ?? this.customSpots,
-      meetingPointTitle: meetingPointTitle ?? this.meetingPointTitle,
-      meetingPointMapUrl: meetingPointMapUrl ?? this.meetingPointMapUrl,
+      // Meeting point fields may be cleared, so an explicit null must win.
+      meetingPointTitle: identical(meetingPointTitle, _keep)
+          ? this.meetingPointTitle
+          : meetingPointTitle as String?,
+      meetingPointNote: identical(meetingPointNote, _keep)
+          ? this.meetingPointNote
+          : meetingPointNote as String?,
+      meetingPointMapUrl: identical(meetingPointMapUrl, _keep)
+          ? this.meetingPointMapUrl
+          : meetingPointMapUrl as String?,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -441,48 +474,48 @@ class TourGroup {
       'destination': destination,
       'originCity': originCity,
       'tourType': tourType.toValue(),
-      'ownerEmail': ownerEmail.toLowerCase().trim(),
+      'ownerEmail': normalizeEmail(ownerEmail),
       'ownerUid': ownerUid,
       'inviteCode': inviteCode,
-      'startDate': startDate.toIso8601String(),
-      'endDate': endDate.toIso8601String(),
+      'startDate': writeDate(startDate),
+      'endDate': writeDate(endDate),
       'modules': modules.toMap(),
       'customSpots': customSpots,
-      if (meetingPointTitle != null) 'meetingPointTitle': meetingPointTitle,
-      if (meetingPointMapUrl != null) 'meetingPointMapUrl': meetingPointMapUrl,
-      'createdAt': createdAt.toIso8601String(),
-      'schemaVersion': 3,
+      'createdAt': writeDate(createdAt),
+      'schemaVersion': 4,
     };
   }
 
   factory TourGroup.fromMap(String id, Map<String, dynamic> map) {
+    final createdAt = readDate(map['createdAt']) ?? DateTime.now();
+    final startDate = readDate(map['startDate']) ?? createdAt;
+    final endDate = readDate(map['endDate']) ?? startDate;
+    // Older notice-board writes stored the meeting point as a nested map.
+    final legacyMeeting = map['meetingPoint'] as Map<String, dynamic>?;
     return TourGroup(
       id: id,
       name: map['name'] as String? ?? 'Family Tour',
       description: map['description'] as String? ?? '',
-      destination: map['destination'] as String? ?? "Cox's Bazar",
+      destination: map['destination'] as String? ?? 'Custom Destination',
       originCity: map['originCity'] as String? ?? 'ঢাকা',
       tourType: TourType.fromString(map['tourType'] as String?),
-      ownerEmail: (map['ownerEmail'] as String? ?? '').toLowerCase().trim(),
+      ownerEmail: normalizeEmail(map['ownerEmail'] as String? ?? ''),
       ownerUid: map['ownerUid'] as String? ?? '',
       inviteCode: map['inviteCode'] as String? ?? '',
-      startDate: map['startDate'] != null
-          ? DateTime.tryParse(map['startDate'].toString()) ?? DateTime.now()
-          : DateTime.now(),
-      endDate: map['endDate'] != null
-          ? DateTime.tryParse(map['endDate'].toString()) ??
-              DateTime.now().add(const Duration(days: 4))
-          : DateTime.now().add(const Duration(days: 4)),
+      startDate: startDate,
+      endDate: endDate,
       modules: TourModules.fromMap(map['modules'] as Map<String, dynamic>?),
       customSpots: (map['customSpots'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           const [],
-      meetingPointTitle: map['meetingPointTitle'] as String?,
-      meetingPointMapUrl: map['meetingPointMapUrl'] as String?,
-      createdAt: map['createdAt'] != null
-          ? DateTime.tryParse(map['createdAt'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+      meetingPointTitle: map['meetingPointTitle'] as String? ??
+          legacyMeeting?['title'] as String?,
+      meetingPointNote: map['meetingPointNote'] as String? ??
+          legacyMeeting?['note'] as String?,
+      meetingPointMapUrl: map['meetingPointMapUrl'] as String? ??
+          legacyMeeting?['mapUrl'] as String?,
+      createdAt: createdAt,
     );
   }
 }

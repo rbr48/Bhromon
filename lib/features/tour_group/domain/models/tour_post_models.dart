@@ -1,4 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'date_codec.dart';
+
+/// Only http(s) URLs can be shown on any device. Paths and blob URLs saved
+/// by a failed upload exist only on the uploader's own device.
+bool isRemoteMediaUrl(String? url) {
+  if (url == null) return false;
+  return url.startsWith('https://') || url.startsWith('http://');
+}
 
 class TourPostItem {
   final String id;
@@ -10,8 +17,10 @@ class TourPostItem {
   final List<String> images;
   final String? videoUrl;
   final bool isReel;
+
+  /// Empty means "use the tour destination" (set by the UI, not hard-coded here).
   final String location;
-  final String tourDay; // 'all', 'day1', 'day2', 'day3', 'day4', 'day5'
+  final String tourDay; // e.g. 'day1', 'day2'
   final String filterId;
   final List<String> likes;
   final int commentCount;
@@ -27,7 +36,7 @@ class TourPostItem {
     required this.images,
     this.videoUrl,
     this.isReel = false,
-    this.location = 'Cox\'s Bazar',
+    this.location = '',
     this.tourDay = 'day1',
     this.filterId = 'normal',
     this.likes = const [],
@@ -35,10 +44,18 @@ class TourPostItem {
     required this.createdAt,
   });
 
+  bool isLikedBy(String email) => likes.contains(normalizeEmail(email));
+
+  /// True when every attached media item can be shown on any device.
+  bool get hasRemoteMedia {
+    if (isReel) return isRemoteMediaUrl(videoUrl);
+    return images.isNotEmpty && images.every(isRemoteMediaUrl);
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'tourId': tourId,
-      'authorEmail': authorEmail,
+      'authorEmail': normalizeEmail(authorEmail),
       'authorName': authorName,
       'authorPhoto': authorPhoto,
       'caption': caption,
@@ -50,7 +67,7 @@ class TourPostItem {
       'filterId': filterId,
       'likes': likes,
       'commentCount': commentCount,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': writeDate(createdAt),
     };
   }
 
@@ -58,24 +75,24 @@ class TourPostItem {
     return TourPostItem(
       id: id,
       tourId: map['tourId'] as String? ?? '',
-      authorEmail: map['authorEmail'] as String? ?? '',
+      authorEmail: normalizeEmail(map['authorEmail'] as String? ?? ''),
       authorName: map['authorName'] as String? ?? 'Family Member',
       authorPhoto: map['authorPhoto'] as String?,
       caption: map['caption'] as String? ?? '',
       images: (map['images'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
-          [],
+          const [],
       videoUrl: map['videoUrl'] as String?,
       isReel: map['isReel'] as bool? ?? false,
-      location: map['location'] as String? ?? "লাবণী ও সুগন্ধা বিচ, কক্সবাজার",
+      location: map['location'] as String? ?? '',
       tourDay: map['tourDay'] as String? ?? 'day1',
       filterId: map['filterId'] as String? ?? 'normal',
       likes:
           (map['likes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-              [],
-      commentCount: map['commentCount'] as int? ?? 0,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+              const [],
+      commentCount: (map['commentCount'] as num?)?.toInt() ?? 0,
+      createdAt: readDate(map['createdAt']) ?? DateTime.now(),
     );
   }
 }
@@ -86,6 +103,8 @@ class TourCommentItem {
   final String authorName;
   final String? authorPhoto;
   final String text;
+
+  /// A reaction-only comment (an emoji) has an empty [text]; it is shown once.
   final String? reaction;
   final DateTime createdAt;
 
@@ -101,29 +120,32 @@ class TourCommentItem {
 
   Map<String, dynamic> toMap() {
     return {
-      'authorEmail': authorEmail,
+      'authorEmail': normalizeEmail(authorEmail),
       'authorName': authorName,
       'authorPhoto': authorPhoto,
       'text': text,
       'reaction': reaction,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': writeDate(createdAt),
     };
   }
 
   factory TourCommentItem.fromMap(String id, Map<String, dynamic> map) {
     return TourCommentItem(
       id: id,
-      authorEmail: map['authorEmail'] as String? ?? '',
+      authorEmail: normalizeEmail(map['authorEmail'] as String? ?? ''),
       authorName: map['authorName'] as String? ?? 'Member',
       authorPhoto: map['authorPhoto'] as String?,
       text: map['text'] as String? ?? '',
       reaction: map['reaction'] as String?,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: readDate(map['createdAt']) ?? DateTime.now(),
     );
   }
 }
 
 class TourStoryItem {
+  /// Stories are visible for this long after they are posted.
+  static const Duration lifetime = Duration(hours: 24);
+
   final String id;
   final String authorEmail;
   final String authorName;
@@ -142,26 +164,44 @@ class TourStoryItem {
     required this.createdAt,
   });
 
+  bool isActiveAt(DateTime now) =>
+      now.difference(createdAt) < lifetime && !createdAt.isAfter(now);
+
   Map<String, dynamic> toMap() {
     return {
-      'authorEmail': authorEmail,
+      'authorEmail': normalizeEmail(authorEmail),
       'authorName': authorName,
       'authorPhoto': authorPhoto,
       'mediaUrl': mediaUrl,
       'caption': caption,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': writeDate(createdAt),
     };
   }
 
   factory TourStoryItem.fromMap(String id, Map<String, dynamic> map) {
     return TourStoryItem(
       id: id,
-      authorEmail: map['authorEmail'] as String? ?? '',
+      authorEmail: normalizeEmail(map['authorEmail'] as String? ?? ''),
       authorName: map['authorName'] as String? ?? 'Member',
       authorPhoto: map['authorPhoto'] as String?,
       mediaUrl: map['mediaUrl'] as String? ?? '',
       caption: map['caption'] as String?,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: readDate(map['createdAt']) ?? DateTime.now(),
     );
   }
+}
+
+/// Groups stories by author, newest author first, keeping each author's
+/// stories in posting order so the viewer can step through them.
+List<List<TourStoryItem>> groupStoriesByAuthor(List<TourStoryItem> stories) {
+  final byAuthor = <String, List<TourStoryItem>>{};
+  for (final story in stories) {
+    byAuthor.putIfAbsent(story.authorEmail, () => []).add(story);
+  }
+  final groups = byAuthor.values.toList();
+  for (final group in groups) {
+    group.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+  groups.sort((a, b) => b.last.createdAt.compareTo(a.last.createdAt));
+  return groups;
 }

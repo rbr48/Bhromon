@@ -1067,7 +1067,8 @@ class _TourPostCardState extends State<_TourPostCard>
   void _handleDoubleTapLike() {
     final email = widget.repository.currentEmail;
     if (!widget.post.likes.contains(email)) {
-      widget.repository.toggleLikePost(widget.tourId, widget.post.id);
+      widget.repository
+          .setPostLiked(widget.tourId, widget.post.id, liked: true);
     }
 
     setState(() => _showHeartAnim = true);
@@ -1396,7 +1397,8 @@ class _TourPostCardState extends State<_TourPostCard>
                     size: 26,
                   ),
                   onPressed: () {
-                    widget.repository.toggleLikePost(widget.tourId, post.id);
+                    widget.repository.setPostLiked(widget.tourId, post.id,
+                        liked: !post.isLikedBy(widget.repository.currentEmail));
                   },
                 ),
                 IconButton(
@@ -3194,7 +3196,8 @@ class _ReelVideoItemState extends State<_ReelVideoItem>
   }
 
   void _handleDoubleTapLike() {
-    widget.repository.toggleLikePost(widget.post.tourId, widget.post.id);
+    widget.repository
+        .setPostLiked(widget.post.tourId, widget.post.id, liked: true);
     setState(() => _showHeartAnim = true);
     _animCtrl.forward(from: 0.0).then((_) {
       if (mounted) {
@@ -3354,7 +3357,8 @@ class _ReelVideoItemState extends State<_ReelVideoItem>
                     size: 32,
                   ),
                   onPressed: () {
-                    widget.repository.toggleLikePost(post.tourId, post.id);
+                    widget.repository.setPostLiked(post.tourId, post.id,
+                        liked: !post.isLikedBy(widget.repository.currentEmail));
                   },
                 ),
                 Text(

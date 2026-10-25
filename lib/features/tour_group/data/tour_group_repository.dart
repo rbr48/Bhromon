@@ -1,11 +1,35 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
-import '../domain/models/tour_group.dart';
+
+import '../domain/models/date_codec.dart';
 import '../domain/models/expense_models.dart';
+import '../domain/models/logistics_models.dart';
+import '../domain/models/tour_activity_models.dart';
+import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
+import '../domain/services/invite_code.dart';
+
+/// Thrown when an action needs a signed-in member. The message is shown to users.
+class TourAccessException implements Exception {
+  final String message;
+  const TourAccessException(this.message);
+
+  @override
+  String toString() => message;
+}
+
+/// How long a write may wait for the server before the UI is told it is still
+/// syncing. Firestore keeps the write queued, so this never loses data.
+const Duration _serverAckTimeout = Duration(seconds: 8);
+
+/// Firestore delete/update batches hold at most 500 operations.
+const int _batchLimit = 400;
 
 class TourGroupRepository {
   final FirebaseFirestore _firestore;
@@ -18,17 +42,56 @@ class TourGroupRepository {
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _auth = auth ?? FirebaseAuth.instance;
 
-  String get currentUid => _auth.currentUser?.uid ?? 'explorer_guest';
+  // ---------------------------------------------------------------------------
+  // Identity
+  // ---------------------------------------------------------------------------
 
-  String get currentEmail =>
-      _auth.currentUser?.email?.toLowerCase().trim() ??
-      '$currentUid@bhromon.app';
+  bool get isSignedIn => _auth.currentUser != null;
+
+  /// Empty when signed out. There is no shared guest identity any more.
+  String get currentUid => _auth.currentUser?.uid ?? '';
+
+  String get currentEmail => normalizeEmail(_auth.currentUser?.email ?? '');
 
   String get currentDisplayName {
     final name = _auth.currentUser?.displayName;
     if (name != null && name.trim().isNotEmpty) return name.trim();
     return 'Explorer';
   }
+
+  String _requireEmail() {
+    if (!isSignedIn || currentEmail.isEmpty) {
+      throw const TourAccessException(
+          'ট্যুর গ্রুপ ব্যবহার করতে আগে সাইন-ইন করুন।');
+    }
+    return currentEmail;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Collections
+  // ---------------------------------------------------------------------------
+
+  CollectionReference<Map<String, dynamic>> get _tours =>
+      _firestore.collection('tours');
+
+  CollectionReference<Map<String, dynamic>> get _memberships =>
+      _firestore.collection('memberships');
+
+  CollectionReference<Map<String, dynamic>> get _invites =>
+      _firestore.collection('invites');
+
+  DocumentReference<Map<String, dynamic>> _tour(String tourId) =>
+      _tours.doc(tourId);
+
+  CollectionReference<Map<String, dynamic>> _sub(String tourId, String name) =>
+      _tours.doc(tourId).collection(name);
+
+  String _membershipId(String tourId, String email) => '${tourId}__$email';
+
+  // ---------------------------------------------------------------------------
+  // Offline cache (Hive). Used only to show something before the network
+  // answers. Membership is the source of truth for which tours are listed.
+  // ---------------------------------------------------------------------------
 
   Future<Box<dynamic>> _openBox() async {
     if (Hive.isBoxOpen('tour_groups_box')) {
@@ -41,9 +104,8 @@ class TourGroupRepository {
     try {
       final box = await _openBox();
       await box.put('tour_${group.id}', group.toMap());
-      final List<dynamic> rawIds =
-          box.get('my_tour_ids', defaultValue: <dynamic>[]) as List<dynamic>;
-      final List<String> myIds = List<String>.from(rawIds);
+      final List<String> myIds = List<String>.from(
+          box.get('my_tour_ids', defaultValue: <String>[]) as List);
       if (!myIds.contains(group.id)) {
         myIds.add(group.id);
         await box.put('my_tour_ids', myIds);
@@ -53,13 +115,25 @@ class TourGroupRepository {
     }
   }
 
+  Future<void> _removeLocalGroup(String tourId) async {
+    try {
+      final box = await _openBox();
+      await box.delete('tour_$tourId');
+      final List<String> myIds = List<String>.from(
+          box.get('my_tour_ids', defaultValue: <String>[]) as List);
+      myIds.remove(tourId);
+      await box.put('my_tour_ids', myIds);
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Error clearing local group: $e');
+    }
+  }
+
   Future<List<TourGroup>> getLocalGroups() async {
     try {
       final box = await _openBox();
-      final List<dynamic> rawIds =
-          box.get('my_tour_ids', defaultValue: <dynamic>[]) as List<dynamic>;
-      final List<String> myIds = List<String>.from(rawIds);
-      final List<TourGroup> groups = [];
+      final List<String> myIds = List<String>.from(
+          box.get('my_tour_ids', defaultValue: <String>[]) as List);
+      final groups = <TourGroup>[];
       for (final id in myIds) {
         final data = box.get('tour_$id');
         if (data is Map) {
@@ -72,72 +146,151 @@ class TourGroupRepository {
     }
   }
 
-  /// Stream of groups the current user is a member of.
-  /// Yields local Hive-cached groups immediately, then updates from Firestore.
-  Stream<List<TourGroup>> watchMyGroups() async* {
-    // 1. Immediately emit offline/cached groups
-    final initialLocal = await getLocalGroups();
-    yield initialLocal;
-
-    final email = currentEmail;
-
-    // 2. Stream from Firestore
-    final membershipStream = _firestore
-        .collection('memberships')
-        .where('email', isEqualTo: email)
-        .where('status', isEqualTo: 'active')
-        .snapshots();
-
-    await for (final snapshot in membershipStream.handleError((Object error) {
-      debugPrint('[TourGroupRepository] Error watching memberships: $error');
-    })) {
-      final tourIds = snapshot.docs
-          .map((d) => d.data()['tourId'] as String? ?? '')
-          .where((id) => id.isNotEmpty)
-          .toSet()
-          .toList();
-
-      final List<TourGroup> groups = [];
-
-      for (final id in tourIds) {
-        try {
-          final doc = await _firestore.collection('tours').doc(id).get();
-          if (doc.exists && doc.data() != null) {
-            final group = TourGroup.fromMap(doc.id, doc.data()!);
-            groups.add(group);
-            await _cacheLocalGroup(group);
-          }
-        } catch (_) {}
-      }
-
-      // Also query tours owned by user if memberships didn't catch them
-      try {
-        final ownedSnap = await _firestore
-            .collection('tours')
-            .where('ownerEmail', isEqualTo: email)
-            .get();
-        for (final doc in ownedSnap.docs) {
-          if (!groups.any((g) => g.id == doc.id)) {
-            final group = TourGroup.fromMap(doc.id, doc.data());
-            groups.add(group);
-            await _cacheLocalGroup(group);
-          }
-        }
-      } catch (_) {}
-
-      // Merge with any local groups
-      final local = await getLocalGroups();
-      for (final lg in local) {
-        if (!groups.any((g) => g.id == lg.id)) {
-          groups.add(lg);
-        }
-      }
-
-      yield groups;
+  /// Waits for a write to reach the server. If the network is down, returns
+  /// false and leaves the write queued; a rejected write is re-thrown.
+  Future<bool> _awaitServer(Future<void> write) async {
+    try {
+      await write.timeout(_serverAckTimeout);
+      return true;
+    } on TimeoutException {
+      return false;
     }
   }
 
-  /// Creates a new tour group and registers the creator as the Owner/Admin.
+  // ---------------------------------------------------------------------------
+  // Groups
+  // ---------------------------------------------------------------------------
+
+  /// Tours the signed-in user is an active member of, live.
+  ///
+  /// Membership decides the list. Cached tours show only until the first
+  /// membership answer arrives, so tours the user left or was removed from
+  /// stop appearing.
+  Stream<List<TourGroup>> watchMyGroups() {
+    if (!isSignedIn) return Stream.value(const []);
+    final email = currentEmail;
+
+    late StreamController<List<TourGroup>> controller;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? membershipSub;
+    final tourSubs =
+        <String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>{};
+    final tours = <String, TourGroup>{};
+    var listedIds = <String>{};
+    var heardFromServer = false;
+
+    void emit() {
+      if (controller.isClosed) return;
+      final groups = tours.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      controller.add(groups);
+    }
+
+    void stopTour(String tourId) {
+      tourSubs.remove(tourId)?.cancel();
+      tours.remove(tourId);
+    }
+
+    void startTour(String tourId) {
+      tourSubs[tourId] = _tour(tourId).snapshots().listen(
+        (doc) {
+          final data = doc.data();
+          if (doc.exists && data != null) {
+            final group = TourGroup.fromMap(doc.id, data);
+            tours[tourId] = group;
+            _cacheLocalGroup(group);
+          } else {
+            tours.remove(tourId);
+            _removeLocalGroup(tourId);
+          }
+          emit();
+        },
+        onError: (Object e) {
+          // Losing access to a tour means the user is no longer a member.
+          debugPrint('[TourGroupRepository] tour $tourId unavailable: $e');
+          stopTour(tourId);
+          listedIds.remove(tourId);
+          _removeLocalGroup(tourId);
+          emit();
+        },
+      );
+    }
+
+    controller = StreamController<List<TourGroup>>(
+      onListen: () {
+        getLocalGroups().then((local) {
+          if (!heardFromServer && !controller.isClosed) {
+            controller.add(local);
+          }
+        });
+
+        membershipSub = _memberships
+            .where('email', isEqualTo: email)
+            .where('status', isEqualTo: 'active')
+            .snapshots()
+            .listen(
+          (snapshot) {
+            heardFromServer = true;
+            final ids = snapshot.docs
+                .map((d) => d.data()['tourId'] as String? ?? '')
+                .where((id) => id.isNotEmpty)
+                .toSet();
+            for (final id in listedIds.difference(ids)) {
+              stopTour(id);
+              _removeLocalGroup(id);
+            }
+            for (final id in ids.difference(listedIds)) {
+              startTour(id);
+            }
+            listedIds = ids;
+            emit();
+          },
+          onError: (Object e) {
+            debugPrint('[TourGroupRepository] memberships error: $e');
+            if (!controller.isClosed) controller.addError(e);
+          },
+        );
+      },
+      onCancel: () async {
+        await membershipSub?.cancel();
+        for (final sub in tourSubs.values) {
+          await sub.cancel();
+        }
+        tourSubs.clear();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  /// Live view of one tour. Null when the tour no longer exists.
+  Stream<TourGroup?> watchGroup(String tourId) {
+    return _tour(tourId).snapshots().map((doc) {
+      final data = doc.data();
+      if (!doc.exists || data == null) return null;
+      return TourGroup.fromMap(doc.id, data);
+    });
+  }
+
+  /// One-off read of a tour, falling back to the cache when offline.
+  Future<TourGroup?> getGroup(String tourId) async {
+    try {
+      final doc = await _tour(tourId).get();
+      final data = doc.data();
+      if (doc.exists && data != null) {
+        final group = TourGroup.fromMap(doc.id, data);
+        await _cacheLocalGroup(group);
+        return group;
+      }
+      return null;
+    } catch (_) {
+      final local = await getLocalGroups();
+      return local.where((g) => g.id == tourId).firstOrNull;
+    }
+  }
+
+  /// Creates a tour, makes the creator its owner, and issues an invite code.
+  /// Returns as soon as the server accepts the writes, or as soon as they are
+  /// queued offline. A rejected write throws and leaves no local copy behind.
   Future<TourGroup> createGroup({
     required String name,
     required String description,
@@ -149,13 +302,14 @@ class TourGroupRepository {
     TourModules modules = const TourModules(),
     List<String> customSpots = const [],
     String? meetingPointTitle,
+    String? meetingPointNote,
     String? meetingPointMapUrl,
   }) async {
-    final email = currentEmail;
+    final email = _requireEmail();
     final uid = currentUid;
-
-    final tourId = _uuid.v4().substring(0, 20);
-    final inviteCode = _uuid.v4().substring(0, 6).toUpperCase();
+    final tourId = _uuid.v4().replaceAll('-', '').substring(0, 20);
+    final inviteCode = generateInviteCode();
+    final now = DateTime.now();
 
     final group = TourGroup(
       id: tourId,
@@ -172,137 +326,126 @@ class TourGroupRepository {
       modules: modules,
       customSpots: customSpots,
       meetingPointTitle: meetingPointTitle,
+      meetingPointNote: meetingPointNote,
       meetingPointMapUrl: meetingPointMapUrl,
-      createdAt: DateTime.now(),
+      createdAt: now,
     );
 
-    // Cache locally immediately so the user sees their group right away
-    await _cacheLocalGroup(group);
-
-    // Persist to remote Firestore with subcollection private/invite
-    try {
-      final batch = _firestore.batch();
-      final tourRef = _firestore.collection('tours').doc(tourId);
-      batch.set(tourRef, group.toMap());
-
-      final membershipId = '${tourId}__$email';
-      final membershipRef =
-          _firestore.collection('memberships').doc(membershipId);
-      final member = TourMember(
-        tourId: tourId,
-        tourName: name,
-        email: email,
-        displayName: currentDisplayName,
-        photoUrl: _auth.currentUser?.photoURL,
-        role: TourRole.owner,
-        status: TourMemberStatus.active,
-        joinedAt: DateTime.now(),
-      );
-      batch.set(membershipRef, member.toMap());
-
-      final inviteRef = tourRef.collection('private').doc('invite');
-      batch.set(inviteRef, {
-        'code': inviteCode,
-        'rotatedAt': DateTime.now().toIso8601String(),
+    final tourData = group.toMap()
+      ..addAll({
+        if (meetingPointTitle != null) 'meetingPointTitle': meetingPointTitle,
+        if (meetingPointNote != null) 'meetingPointNote': meetingPointNote,
+        if (meetingPointMapUrl != null)
+          'meetingPointMapUrl': meetingPointMapUrl,
       });
 
-      await batch.commit();
-    } catch (e) {
-      debugPrint(
-          '[TourGroupRepository] Remote write failed; saved locally: $e');
-    }
+    // The rules check that the tour exists before they accept the owner's
+    // membership and invite, so the owner rows are written after the tour.
+    final tourWrite = _tour(tourId).set(tourData);
+    final ownerWrite = tourWrite.then((_) {
+      final batch = _firestore.batch();
+      batch.set(
+        _memberships.doc(_membershipId(tourId, email)),
+        TourMember(
+          tourId: tourId,
+          tourName: name,
+          email: email,
+          displayName: currentDisplayName,
+          photoUrl: _auth.currentUser?.photoURL,
+          role: TourRole.owner,
+          status: TourMemberStatus.active,
+          joinedAt: now,
+        ).toMap(),
+      );
+      batch.set(_invites.doc(inviteCode), {
+        'tourId': tourId,
+        'code': inviteCode,
+        'createdAt': writeDate(now),
+      });
+      return batch.commit();
+    });
+    // A rejected write, whenever it happens, drops the local copy.
+    unawaited(ownerWrite.catchError((Object e) => _discardGroup(tourId, e)));
 
+    await _cacheLocalGroup(group);
+    try {
+      await _awaitServer(tourWrite);
+      await _awaitServer(ownerWrite);
+    } catch (e) {
+      await _discardGroup(tourId, e);
+      rethrow;
+    }
     return group;
   }
 
-  /// Joins an existing tour using its 6-character invite code.
+  Future<void> _discardGroup(String tourId, Object error) async {
+    debugPrint('[TourGroupRepository] Group $tourId rejected: $error');
+    await _removeLocalGroup(tourId);
+  }
+
+  /// Joins a tour with its invite code. Joining is always as a plain member.
+  /// Someone who is already a member keeps their role.
   Future<TourGroup> joinGroupWithCode(String inviteCode) async {
-    final email = currentEmail;
+    final email = _requireEmail();
     final code = inviteCode.trim().toUpperCase();
-
-    TourGroup? matchedGroup;
-
-    try {
-      final query = await _firestore
-          .collection('tours')
-          .where('inviteCode', isEqualTo: code)
-          .limit(1)
-          .get();
-
-      if (query.docs.isNotEmpty) {
-        final tourDoc = query.docs.first;
-        matchedGroup = TourGroup.fromMap(tourDoc.id, tourDoc.data());
-      }
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Query inviteCode failed: $e');
+    if (!isValidInviteCode(code)) {
+      throw const FormatException(
+          'সঠিক আমন্ত্রণ কোড দিন (৮ অক্ষরের কোড, যেমন: 7KQ2M9XB)।');
     }
 
-    if (matchedGroup == null) {
-      final localGroups = await getLocalGroups();
-      for (final g in localGroups) {
-        if (g.inviteCode.toUpperCase() == code) {
-          matchedGroup = g;
-          break;
-        }
-      }
+    final invite = await _invites.doc(code).get();
+    final tourId = invite.data()?['tourId'] as String?;
+    if (!invite.exists || tourId == null) {
+      throw const FormatException(
+          'এই আমন্ত্রণ কোডে কোনো ট্যুর গ্রুপ পাওয়া যায়নি।');
     }
 
-    if (matchedGroup == null) {
-      throw ArgumentError(
-          'সঠিক ৬-সংখ্যার আমন্ত্রণ কোড দিন। কোনো ট্যুর গ্রুপ পাওয়া যায়নি।');
-    }
-
-    await _cacheLocalGroup(matchedGroup);
-
-    try {
-      final membershipId = '${matchedGroup.id}__$email';
-      final memberRef = _firestore.collection('memberships').doc(membershipId);
-
+    final membershipRef = _memberships.doc(_membershipId(tourId, email));
+    // Already a member: keep the existing role and just open the tour.
+    final existing = await _readOwnRow(membershipRef);
+    if (existing == null) {
       final member = TourMember(
-        tourId: matchedGroup.id,
-        tourName: matchedGroup.name,
+        tourId: tourId,
         email: email,
         displayName: currentDisplayName,
         photoUrl: _auth.currentUser?.photoURL,
         role: TourRole.member,
         status: TourMemberStatus.active,
         joinedAt: DateTime.now(),
-      );
-
-      await memberRef.set(member.toMap(), SetOptions(merge: true));
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Join membership set failed: $e');
-    }
-
-    return matchedGroup;
-  }
-
-  /// Watch a specific tour group's live updates.
-  Stream<TourGroup?> watchGroup(String tourId) {
-    return _firestore.collection('tours').doc(tourId).snapshots().map((doc) {
-      if (!doc.exists || doc.data() == null) return null;
-      return TourGroup.fromMap(doc.id, doc.data()!);
-    });
-  }
-
-  /// Get single tour group details with local fallback.
-  Future<TourGroup?> getGroup(String tourId) async {
-    try {
-      final doc = await _firestore.collection('tours').doc(tourId).get();
-      if (doc.exists && doc.data() != null) {
-        final g = TourGroup.fromMap(doc.id, doc.data()!);
-        await _cacheLocalGroup(g);
-        return g;
+      ).toMap()
+        ..['joinCode'] = code;
+      try {
+        final synced = await _awaitServer(membershipRef.set(member));
+        if (!synced) {
+          throw const TourAccessException(
+              'ইন্টারনেট সংযোগ নেই। সংযোগ ফিরে এলে আবার চেষ্টা করুন।');
+        }
+      } on FirebaseException {
+        throw const TourAccessException(
+            'এই ট্যুরে যোগ দেওয়ার অনুমতি নেই। কোড ঠিক আছে কি না দেখুন, অথবা অ্যাডমিনের সাথে যোগাযোগ করুন।');
       }
-      final local = await getLocalGroups();
-      return local.where((e) => e.id == tourId).firstOrNull;
-    } catch (_) {
-      final local = await getLocalGroups();
-      return local.where((e) => e.id == tourId).firstOrNull;
+    }
+
+    final group = await getGroup(tourId);
+    if (group == null) {
+      throw const TourAccessException('ট্যুরটি এখন আর পাওয়া যাচ্ছে না।');
+    }
+    return group;
+  }
+
+  /// Reads the caller's own membership row. Returns null when there is none.
+  Future<DocumentSnapshot<Map<String, dynamic>>?> _readOwnRow(
+      DocumentReference<Map<String, dynamic>> ref) async {
+    try {
+      final snap = await ref.get();
+      return snap.exists ? snap : null;
+    } on FirebaseException {
+      // Rules deny reading a row that does not exist yet.
+      return null;
     }
   }
 
-  /// Update tour group settings, destination, dates, spots, or meeting point.
+  /// Updates settings the admin can change. Null arguments are left as they are.
   Future<void> updateGroupSettings({
     required String tourId,
     String? name,
@@ -314,70 +457,204 @@ class TourGroupRepository {
     DateTime? endDate,
     TourModules? modules,
     List<String>? customSpots,
-    String? meetingPointTitle,
-    String? meetingPointMapUrl,
   }) async {
-    final tourRef = _firestore.collection('tours').doc(tourId);
+    _requireEmail();
     final updates = <String, dynamic>{};
     if (name != null) updates['name'] = name;
     if (description != null) updates['description'] = description;
     if (destination != null) updates['destination'] = destination;
     if (originCity != null) updates['originCity'] = originCity;
     if (tourType != null) updates['tourType'] = tourType.toValue();
-    if (startDate != null) updates['startDate'] = startDate.toIso8601String();
-    if (endDate != null) updates['endDate'] = endDate.toIso8601String();
+    if (startDate != null) updates['startDate'] = writeDate(startDate);
+    if (endDate != null) updates['endDate'] = writeDate(endDate);
     if (modules != null) updates['modules'] = modules.toMap();
     if (customSpots != null) updates['customSpots'] = customSpots;
-    if (meetingPointTitle != null) {
-      updates['meetingPointTitle'] = meetingPointTitle;
-    }
-    if (meetingPointMapUrl != null) {
-      updates['meetingPointMapUrl'] = meetingPointMapUrl;
-    }
-
-    if (updates.isNotEmpty) {
-      await tourRef.update(updates);
-      final updatedDoc = await tourRef.get();
-      if (updatedDoc.exists && updatedDoc.data() != null) {
-        final updatedGroup = TourGroup.fromMap(tourId, updatedDoc.data()!);
-        await _cacheLocalGroup(updatedGroup);
-      }
-    }
+    if (updates.isEmpty) return;
+    await _tour(tourId).update(updates);
   }
 
-  /// Stream of active members in a tour.
+  /// Saves the meeting point. Empty values remove the field rather than
+  /// storing an empty string.
+  Future<void> updateMeetingPoint(
+    String tourId, {
+    String? title,
+    String? note,
+    String? mapUrl,
+  }) async {
+    _requireEmail();
+    await _tour(tourId).update({
+      'meetingPointTitle': _orDelete(title),
+      'meetingPointNote': _orDelete(note),
+      'meetingPointMapUrl': _orDelete(mapUrl),
+      // The notice board used to store a nested map; drop it once replaced.
+      'meetingPoint': FieldValue.delete(),
+    });
+  }
+
+  static Object _orDelete(String? value) {
+    final trimmed = value?.trim() ?? '';
+    return trimmed.isEmpty ? FieldValue.delete() : trimmed;
+  }
+
+  /// Adds a custom spot. arrayUnion keeps spots added by others at the same time.
+  Future<void> addCustomSpot(String tourId, String spot) async {
+    _requireEmail();
+    final trimmed = spot.trim();
+    if (trimmed.isEmpty) return;
+    await _tour(tourId).update({
+      'customSpots': FieldValue.arrayUnion([trimmed]),
+    });
+  }
+
+  /// Issues a new invite code and retires the old one.
+  Future<String> rotateInviteCode(String tourId, String oldCode) async {
+    _requireEmail();
+    final newCode = generateInviteCode();
+    final batch = _firestore.batch();
+    batch.update(_tour(tourId), {'inviteCode': newCode});
+    batch.set(_invites.doc(newCode), {
+      'tourId': tourId,
+      'code': newCode,
+      'createdAt': writeDate(DateTime.now()),
+    });
+    if (oldCode.isNotEmpty) batch.delete(_invites.doc(oldCode));
+    await batch.commit();
+    return newCode;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Members & roles
+  // ---------------------------------------------------------------------------
+
+  /// Active members of a tour, owner first, then by join date.
   Stream<List<TourMember>> watchMembers(String tourId) {
-    return _firestore
-        .collection('memberships')
+    return _memberships
         .where('tourId', isEqualTo: tourId)
         .where('status', isEqualTo: 'active')
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((d) => TourMember.fromMap(d.data())).toList())
-        .handleError((Object e) {
-      debugPrint('[TourGroupRepository] watchMembers error: $e');
-      return <TourMember>[];
+        .map((snapshot) {
+      final members =
+          snapshot.docs.map((d) => TourMember.fromMap(d.data())).toList();
+      members.sort((a, b) {
+        final byRole = _roleRank(a.role).compareTo(_roleRank(b.role));
+        return byRole != 0 ? byRole : a.joinedAt.compareTo(b.joinedAt);
+      });
+      return members;
     });
   }
 
-  /// Stream of expenses for a tour.
+  static int _roleRank(TourRole role) => switch (role) {
+        TourRole.owner => 0,
+        TourRole.admin => 1,
+        TourRole.member => 2,
+      };
+
+  /// Owner promotes a member to admin, or demotes an admin to member.
+  Future<void> updateMemberRole(
+      String tourId, String email, TourRole newRole) async {
+    _requireEmail();
+    if (newRole == TourRole.owner) {
+      throw const TourAccessException(
+          'মালিকানা হস্তান্তর করতে "মালিকানা হস্তান্তর" ব্যবহার করুন।');
+    }
+    await _memberships
+        .doc(_membershipId(tourId, normalizeEmail(email)))
+        .update({'role': newRole.toValue()});
+  }
+
+  /// Removes a member and bans the email, so the invite code cannot be used
+  /// to come back. Only a bans document plus the membership row are written.
+  Future<void> removeMember(String tourId, String email) async {
+    final actor = _requireEmail();
+    final target = normalizeEmail(email);
+    if (target == actor) {
+      throw const TourAccessException(
+          'নিজেকে সরাতে "ট্যুর ছেড়ে যান" ব্যবহার করুন।');
+    }
+    final batch = _firestore.batch();
+    batch.set(_tour(tourId).collection('bans').doc(target), {
+      'email': target,
+      'removedBy': actor,
+      'removedAt': writeDate(DateTime.now()),
+    });
+    batch.delete(_memberships.doc(_membershipId(tourId, target)));
+    await batch.commit();
+  }
+
+  /// Current owner hands the tour to another active member. Their membership
+  /// role becomes owner and the owner becomes admin, in one batch.
+  Future<void> transferOwnership(String tourId, String newOwnerEmail) async {
+    final actor = _requireEmail();
+    final target = normalizeEmail(newOwnerEmail);
+    if (target == actor) {
+      throw const TourAccessException('আপনি ইতিমধ্যে এই ট্যুরের মালিক।');
+    }
+    final targetRow =
+        await _memberships.doc(_membershipId(tourId, target)).get();
+    if (!targetRow.exists || targetRow.data()?['status'] != 'active') {
+      throw const TourAccessException(
+          'মালিকানা শুধু এই ট্যুরের সক্রিয় সদস্যকে দেওয়া যাবে।');
+    }
+
+    final batch = _firestore.batch();
+    batch.update(_tour(tourId), {'ownerEmail': target});
+    batch.update(_memberships.doc(_membershipId(tourId, target)),
+        {'role': TourRole.owner.toValue()});
+    batch.update(_memberships.doc(_membershipId(tourId, actor)),
+        {'role': TourRole.admin.toValue()});
+    await batch.commit();
+  }
+
+  /// Leaves a tour. The owner must transfer ownership first.
+  Future<void> leaveTour(String tourId) async {
+    final email = _requireEmail();
+    final row = await _memberships.doc(_membershipId(tourId, email)).get();
+    if (row.data()?['role'] == TourRole.owner.toValue()) {
+      throw const TourAccessException(
+          'মালিক হিসেবে আগে মালিকানা অন্য সদস্যকে হস্তান্তর করুন।');
+    }
+    await _memberships.doc(_membershipId(tourId, email)).delete();
+  }
+
+  /// Owner deletes the tour. Other members' rows and the invite go first, the
+  /// tour document after, and the owner's own row last.
+  Future<void> deleteTour(String tourId, {required String inviteCode}) async {
+    final actor = _requireEmail();
+    final rows = await _memberships.where('tourId', isEqualTo: tourId).get();
+    final others = rows.docs
+        .where((d) => d.data()['role'] != TourRole.owner.toValue())
+        .toList();
+    for (var i = 0; i < others.length; i += _batchLimit) {
+      final batch = _firestore.batch();
+      for (final row in others.skip(i).take(_batchLimit)) {
+        batch.delete(row.reference);
+      }
+      await batch.commit();
+    }
+    final cleanup = _firestore.batch();
+    if (inviteCode.isNotEmpty) cleanup.delete(_invites.doc(inviteCode));
+    await cleanup.commit();
+    await _tour(tourId).delete();
+    await _memberships.doc(_membershipId(tourId, actor)).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Money
+  // ---------------------------------------------------------------------------
+
+  /// Expenses, newest first. Sorted here because older documents store dates
+  /// as strings, which Firestore cannot order alongside timestamps.
   Stream<List<ExpenseItem>> watchExpenses(String tourId) {
-    return _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('expenses')
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((d) => ExpenseItem.fromMap(d.id, d.data()))
-            .toList())
-        .handleError((Object e) {
-      debugPrint('[TourGroupRepository] watchExpenses error: $e');
-      return <ExpenseItem>[];
+    return _sub(tourId, 'expenses').snapshots().map((snapshot) {
+      final items = snapshot.docs
+          .map((d) => ExpenseItem.fromMap(d.id, d.data()))
+          .toList();
+      items.sort((a, b) => b.date.compareTo(a.date));
+      return items;
     });
   }
 
-  /// Adds a new expense item.
+  /// Adds an expense. [participantIds] null means all current members share it.
   Future<void> addExpense({
     required String tourId,
     required String title,
@@ -387,10 +664,11 @@ class TourGroupRepository {
     required String category,
     DateTime? date,
     String? notes,
+    List<String>? participantIds,
   }) async {
-    final expId = _uuid.v4();
+    final email = _requireEmail();
     final expense = ExpenseItem(
-      id: expId,
+      id: _uuid.v4(),
       tourId: tourId,
       title: title,
       amountPaisa: amountPaisa,
@@ -399,34 +677,34 @@ class TourGroupRepository {
       category: category,
       date: date ?? DateTime.now(),
       notes: notes,
+      addedByEmail: email,
+      participantIds: participantIds,
     );
-
-    await _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('expenses')
-        .doc(expId)
-        .set(expense.toMap());
+    await _sub(tourId, 'expenses').doc(expense.id).set(expense.toMap());
   }
 
-  /// Stream of deposits for a tour.
+  /// Saves an edited expense. [expense] must keep its original addedByEmail.
+  Future<void> updateExpense(ExpenseItem expense) async {
+    _requireEmail();
+    await _sub(expense.tourId, 'expenses').doc(expense.id).set(expense.toMap());
+  }
+
+  Future<void> deleteExpense(String tourId, String expenseId) async {
+    _requireEmail();
+    await _sub(tourId, 'expenses').doc(expenseId).delete();
+  }
+
+  /// Deposits, newest first.
   Stream<List<DepositItem>> watchDeposits(String tourId) {
-    return _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('deposits')
-        .orderBy('date', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((d) => DepositItem.fromMap(d.id, d.data()))
-            .toList())
-        .handleError((Object e) {
-      debugPrint('[TourGroupRepository] watchDeposits error: $e');
-      return <DepositItem>[];
+    return _sub(tourId, 'deposits').snapshots().map((snapshot) {
+      final items = snapshot.docs
+          .map((d) => DepositItem.fromMap(d.id, d.data()))
+          .toList();
+      items.sort((a, b) => b.date.compareTo(a.date));
+      return items;
     });
   }
 
-  /// Adds a new deposit contribution into the shared fund.
   Future<void> addDeposit({
     required String tourId,
     required String memberId,
@@ -435,166 +713,470 @@ class TourGroupRepository {
     DateTime? date,
     String? notes,
   }) async {
-    final depId = _uuid.v4();
+    final email = _requireEmail();
     final deposit = DepositItem(
-      id: depId,
+      id: _uuid.v4(),
       tourId: tourId,
       memberId: memberId,
       memberName: memberName,
       amountPaisa: amountPaisa,
       date: date ?? DateTime.now(),
       notes: notes,
+      addedByEmail: email,
     );
-
-    await _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('deposits')
-        .doc(depId)
-        .set(deposit.toMap());
+    await _sub(tourId, 'deposits').doc(deposit.id).set(deposit.toMap());
   }
 
-  // --- Tour Posts & InstaFeed ---
+  Future<void> deleteDeposit(String tourId, String depositId) async {
+    _requireEmail();
+    await _sub(tourId, 'deposits').doc(depositId).delete();
+  }
 
-  Stream<List<TourPostItem>> watchPosts(String tourId) {
-    return _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('posts')
+  // ---------------------------------------------------------------------------
+  // Notices & meeting point
+  // ---------------------------------------------------------------------------
+
+  Stream<List<TourNotice>> watchNotices(String tourId) {
+    return _sub(tourId, 'notices')
         .orderBy('createdAt', descending: true)
+        .limit(100)
         .snapshots()
         .map((s) =>
-            s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList())
-        .handleError((Object e) {
-      debugPrint('[TourGroupRepository] watchPosts error: $e');
-      return <TourPostItem>[];
+            s.docs.map((d) => TourNotice.fromMap(d.id, d.data())).toList());
+  }
+
+  /// Admins post notices. The author is the signed-in admin, not free text.
+  Future<void> postNotice({
+    required String tourId,
+    required String title,
+    required String content,
+    required bool urgent,
+  }) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'notices').add({
+      'title': title,
+      'content': content,
+      'author': currentDisplayName,
+      'authorEmail': email,
+      'urgent': urgent,
+      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
+  Future<void> deleteNotice(String tourId, String noticeId) async {
+    _requireEmail();
+    await _sub(tourId, 'notices').doc(noticeId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Packing checklist
+  // ---------------------------------------------------------------------------
+
+  Stream<List<ChecklistItem>> watchChecklist(String tourId) {
+    return _sub(tourId, 'checklist').snapshots().map((s) =>
+        s.docs.map((d) => ChecklistItem.fromMap(d.id, d.data())).toList());
+  }
+
+  /// Ticks or unticks an item for the signed-in person only.
+  Future<void> setChecklistItemPacked(
+      String tourId, String itemId, bool packed) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'checklist').doc(itemId).set({
+      'checkedBy': packed
+          ? FieldValue.arrayUnion([email])
+          : FieldValue.arrayRemove([email]),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> addChecklistItem(
+      String tourId, String title, String category) async {
+    _requireEmail();
+    final id = 'custom_${_uuid.v4()}';
+    await _sub(tourId, 'checklist').doc(id).set({
+      'id': id,
+      'title': title,
+      'category': category,
+      'checkedBy': <String>[],
+    });
+  }
+
+  Future<void> deleteChecklistItem(String tourId, String itemId) async {
+    _requireEmail();
+    await _sub(tourId, 'checklist').doc(itemId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Highway roadmap checkpoints
+  // ---------------------------------------------------------------------------
+
+  Stream<List<RouteCheckpoint>> watchCheckpoints(String tourId) {
+    return _sub(tourId, 'checkpoints').snapshots().map((s) {
+      final items = s.docs
+          .map((d) => RouteCheckpoint.fromMap(d.id, d.data()))
+          .toList()
+        ..sort((a, b) => a.kmFromStart.compareTo(b.kmFromStart));
+      return items;
+    });
+  }
+
+  Future<void> addCheckpoint({
+    required String tourId,
+    required String name,
+    required int kmFromStart,
+    String highlight = '',
+    double? lat,
+    double? lng,
+  }) async {
+    final email = _requireEmail();
+    final id = _uuid.v4();
+    await _sub(tourId, 'checkpoints').doc(id).set({
+      'id': id,
+      'name': name,
+      'kmFromStart': kmFromStart,
+      'highlight': highlight,
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
+      'addedByEmail': email,
+    });
+  }
+
+  Future<void> deleteCheckpoint(String tourId, String checkpointId) async {
+    _requireEmail();
+    await _sub(tourId, 'checkpoints').doc(checkpointId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Discussion channels
+  // ---------------------------------------------------------------------------
+
+  /// The newest [limit] messages, newest first.
+  Stream<List<ChannelMessage>> watchChannelMessages(
+      String tourId, String channelId,
+      {int limit = 100}) {
+    return _sub(tourId, 'channels')
+        .doc(channelId)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((s) =>
+            s.docs.map((d) => ChannelMessage.fromMap(d.id, d.data())).toList());
+  }
+
+  Future<void> sendChannelMessage(
+      String tourId, String channelId, String text) async {
+    final email = _requireEmail();
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+    if (trimmed.length > 1000) {
+      throw const TourAccessException('বার্তা ১০০০ অক্ষরের বেশি হতে পারবে না।');
+    }
+    final id = _uuid.v4();
+    await _sub(tourId, 'channels')
+        .doc(channelId)
+        .collection('messages')
+        .doc(id)
+        .set({
+      'id': id,
+      'text': trimmed,
+      'senderEmail': email,
+      'senderName': currentDisplayName,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Bus seats
+  // ---------------------------------------------------------------------------
+
+  Stream<List<BusSeat>> watchBusSeats(String tourId) {
+    return _sub(tourId, 'bus_seats')
+        .snapshots()
+        .map((s) => s.docs.map((d) => BusSeat.fromMap(d.data())).toList());
+  }
+
+  /// Puts [email] in [seatNumber], first freeing any other seat they hold, so
+  /// one member never holds two seats. A null [email] vacates the seat.
+  Future<void> assignBusSeat(
+    String tourId,
+    String seatNumber, {
+    String? email,
+    String? name,
+  }) async {
+    _requireEmail();
+    final seats = _sub(tourId, 'bus_seats');
+    final batch = _firestore.batch();
+    final target = email == null ? null : normalizeEmail(email);
+
+    if (target != null) {
+      final held =
+          await seats.where('assignedMemberEmail', isEqualTo: target).get();
+      for (final doc in held.docs) {
+        if (doc.id != seatNumber) {
+          batch.set(
+              doc.reference,
+              BusSeat.fromMap(doc.data())
+                  .copyWith(assignedMemberEmail: null, assignedMemberName: null)
+                  .toMap());
+        }
+      }
+    }
+
+    final seat = BusSeat(
+      seatNumber: seatNumber,
+      assignedMemberEmail: target,
+      assignedMemberName: target == null ? null : name,
+      isWindow: _isWindowSeat(seatNumber),
+    );
+    batch.set(seats.doc(seatNumber), seat.toMap());
+    await batch.commit();
+  }
+
+  /// Window seats are the outer columns: A1/A4, B1/B4 and so on.
+  static bool _isWindowSeat(String seatNumber) =>
+      seatNumber.endsWith('1') || seatNumber.endsWith('4');
+
+  // ---------------------------------------------------------------------------
+  // Hotel rooms
+  // ---------------------------------------------------------------------------
+
+  Stream<List<HotelRoom>> watchHotelRooms(String tourId) {
+    return _sub(tourId, 'hotel_rooms').snapshots().map((s) {
+      final rooms =
+          s.docs.map((d) => HotelRoom.fromMap(d.id, d.data())).toList();
+      rooms.sort((a, b) => a.roomNumber.compareTo(b.roomNumber));
+      return rooms;
+    });
+  }
+
+  /// Admins create or edit a room's details.
+  Future<void> saveHotelRoom(String tourId, HotelRoom room) async {
+    _requireEmail();
+    await _sub(tourId, 'hotel_rooms').doc(room.id).set(room.toMap());
+  }
+
+  Future<void> deleteHotelRoom(String tourId, String roomId) async {
+    _requireEmail();
+    await _sub(tourId, 'hotel_rooms').doc(roomId).delete();
+  }
+
+  /// Moves a guest into a room, out of any other room, inside one transaction.
+  /// Throws [StateError] when the room is full.
+  Future<void> assignHotelGuest(
+    String tourId,
+    String roomId, {
+    required String email,
+    required String name,
+  }) async {
+    _requireEmail();
+    final guest = normalizeEmail(email);
+    final rooms = _sub(tourId, 'hotel_rooms');
+    final elsewhere =
+        await rooms.where('assignedMemberEmails', arrayContains: guest).get();
+    for (final doc in elsewhere.docs) {
+      if (doc.id != roomId) await _removeGuestFromRoom(tourId, doc.id, guest);
+    }
+    await _firestore.runTransaction((tx) async {
+      final ref = rooms.doc(roomId);
+      final snap = await tx.get(ref);
+      if (!snap.exists) throw StateError('রুমটি আর পাওয়া যাচ্ছে না।');
+      final room = HotelRoom.fromMap(snap.id, snap.data()!);
+      tx.set(ref, room.addGuest(guest, name).toMap());
+    });
+  }
+
+  Future<void> removeHotelGuest(
+      String tourId, String roomId, String email) async {
+    _requireEmail();
+    await _removeGuestFromRoom(tourId, roomId, normalizeEmail(email));
+  }
+
+  Future<void> _removeGuestFromRoom(
+      String tourId, String roomId, String guest) async {
+    final rooms = _sub(tourId, 'hotel_rooms');
+    await _firestore.runTransaction((tx) async {
+      final ref = rooms.doc(roomId);
+      final snap = await tx.get(ref);
+      if (!snap.exists) return;
+      final room = HotelRoom.fromMap(snap.id, snap.data()!);
+      tx.set(ref, room.removeGuest(guest).toMap());
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Posts & InstaFeed
+  // ---------------------------------------------------------------------------
+
+  /// The newest [limit] posts. The feed raises the limit to load more.
+  Stream<List<TourPostItem>> watchPosts(String tourId, {int limit = 60}) {
+    return _sub(tourId, 'posts')
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((s) =>
+            s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList());
+  }
+
+  Stream<TourPostItem?> watchPost(String tourId, String postId) {
+    return _sub(tourId, 'posts').doc(postId).snapshots().map((doc) {
+      final data = doc.data();
+      if (!doc.exists || data == null) return null;
+      return TourPostItem.fromMap(doc.id, data);
+    });
+  }
+
+  /// Publishes a post. Media must already be uploaded: a local path or blob URL
+  /// would show only on the uploader's device, so it is refused here.
   Future<void> addPost({
     required String tourId,
     required String caption,
     required List<String> images,
     String? videoUrl,
     bool isReel = false,
-    String location = 'Cox\'s Bazar',
+    String location = '',
     String tourDay = 'day1',
     String filterId = 'normal',
   }) async {
-    final postId = _uuid.v4();
+    final email = _requireEmail();
+    final mediaUrls = [...images, if (videoUrl != null) videoUrl];
+    if (mediaUrls.isEmpty) {
+      throw const TourAccessException('পোস্টে অন্তত একটি ছবি বা ভিডিও দিন।');
+    }
+    if (!mediaUrls.every(isRemoteMediaUrl)) {
+      throw const TourAccessException(
+          'আপলোড এখনও শেষ হয়নি। ছবি বা ভিডিও সম্পূর্ণ আপলোড হওয়ার পর পোস্ট করুন।');
+    }
+    final id = _uuid.v4();
     final post = TourPostItem(
-      id: postId,
+      id: id,
       tourId: tourId,
-      authorEmail: currentEmail,
+      authorEmail: email,
       authorName: currentDisplayName,
       authorPhoto: _auth.currentUser?.photoURL,
-      caption: caption,
+      caption: caption.trim(),
       images: images,
       videoUrl: videoUrl,
       isReel: isReel,
       location: location,
       tourDay: tourDay,
       filterId: filterId,
-      likes: [],
+      likes: const [],
       commentCount: 0,
       createdAt: DateTime.now(),
     );
-
-    await _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('posts')
-        .doc(postId)
-        .set(post.toMap());
+    await _sub(tourId, 'posts').doc(id).set(post.toMap());
   }
 
-  Future<void> toggleLikePost(String tourId, String postId) async {
-    final email = currentEmail;
-    final postRef = _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('posts')
-        .doc(postId);
+  Future<void> updatePostCaption(
+      String tourId, String postId, String caption) async {
+    _requireEmail();
+    await _sub(tourId, 'posts').doc(postId).update({'caption': caption.trim()});
+  }
 
-    final snap = await postRef.get();
-    if (!snap.exists) return;
+  /// Likes or unlikes a post. arrayUnion/arrayRemove mean two people liking at
+  /// the same moment both count.
+  Future<void> setPostLiked(String tourId, String postId,
+      {required bool liked}) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'posts').doc(postId).update({
+      'likes': liked
+          ? FieldValue.arrayUnion([email])
+          : FieldValue.arrayRemove([email]),
+    });
+  }
 
-    final data = snap.data() ?? {};
-    final likes =
-        (data['likes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-            [];
-
-    if (likes.contains(email)) {
-      likes.remove(email);
-    } else {
-      likes.add(email);
+  /// Deletes a post with its comments, then removes its files from Storage
+  /// (best effort: the post is removed even if a file cannot be deleted).
+  Future<void> deletePost(TourPostItem post) async {
+    _requireEmail();
+    final postRef = _sub(post.tourId, 'posts').doc(post.id);
+    final comments = await postRef.collection('comments').get();
+    for (var i = 0; i < comments.docs.length; i += _batchLimit) {
+      final batch = _firestore.batch();
+      for (final c in comments.docs.skip(i).take(_batchLimit)) {
+        batch.delete(c.reference);
+      }
+      await batch.commit();
     }
-    await postRef.update({'likes': likes});
+    await postRef.delete();
+    for (final url in [
+      ...post.images,
+      if (post.videoUrl != null) post.videoUrl!
+    ]) {
+      if (!isRemoteMediaUrl(url)) continue;
+      try {
+        await FirebaseStorage.instance.refFromURL(url).delete();
+      } catch (e) {
+        debugPrint('[TourGroupRepository] Could not delete media: $e');
+      }
+    }
   }
 
   Stream<List<TourCommentItem>> watchComments(String tourId, String postId) {
-    return _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('posts')
+    return _sub(tourId, 'posts')
         .doc(postId)
         .collection('comments')
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((s) =>
-            s.docs.map((d) => TourCommentItem.fromMap(d.id, d.data())).toList())
-        .handleError((Object e) {
-      debugPrint('[TourGroupRepository] watchComments error: $e');
-      return <TourCommentItem>[];
-    });
+        .map((s) => s.docs
+            .map((d) => TourCommentItem.fromMap(d.id, d.data()))
+            .toList());
   }
 
+  /// Adds a comment and bumps the post's count in one batch. A comment needs
+  /// text or a reaction.
   Future<void> addComment({
     required String tourId,
     required String postId,
     required String text,
     String? reaction,
   }) async {
+    final email = _requireEmail();
+    final trimmed = text.trim();
+    if (trimmed.isEmpty && (reaction == null || reaction.isEmpty)) return;
+    if (trimmed.length > 500) {
+      throw const TourAccessException('মন্তব্য ৫০০ অক্ষরের বেশি হতে পারবে না।');
+    }
     final commentId = _uuid.v4();
     final comment = TourCommentItem(
       id: commentId,
-      authorEmail: currentEmail,
+      authorEmail: email,
       authorName: currentDisplayName,
       authorPhoto: _auth.currentUser?.photoURL,
-      text: text,
+      text: trimmed,
       reaction: reaction,
       createdAt: DateTime.now(),
     );
-
-    final postRef = _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('posts')
-        .doc(postId);
-
+    final postRef = _sub(tourId, 'posts').doc(postId);
     final batch = _firestore.batch();
     batch.set(postRef.collection('comments').doc(commentId), comment.toMap());
     batch.update(postRef, {'commentCount': FieldValue.increment(1)});
     await batch.commit();
   }
 
-  // --- Tour Stories ---
+  Future<void> deleteComment(
+      String tourId, String postId, String commentId) async {
+    _requireEmail();
+    final postRef = _sub(tourId, 'posts').doc(postId);
+    final batch = _firestore.batch();
+    batch.delete(postRef.collection('comments').doc(commentId));
+    batch.update(postRef, {'commentCount': FieldValue.increment(-1)});
+    await batch.commit();
+  }
 
+  // ---------------------------------------------------------------------------
+  // Stories
+  // ---------------------------------------------------------------------------
+
+  /// Recent stories. The caller filters to those still within their 24 hours,
+  /// which keeps the cutoff current instead of frozen at subscription time.
   Stream<List<TourStoryItem>> watchStories(String tourId) {
-    final cutoff = DateTime.now().subtract(const Duration(hours: 24));
-    return _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('stories')
-        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
+    return _sub(tourId, 'stories')
         .orderBy('createdAt', descending: true)
+        .limit(100)
         .snapshots()
         .map((s) =>
-            s.docs.map((d) => TourStoryItem.fromMap(d.id, d.data())).toList())
-        .handleError((Object e) {
-      debugPrint('[TourGroupRepository] watchStories error: $e');
-      return <TourStoryItem>[];
-    });
+            s.docs.map((d) => TourStoryItem.fromMap(d.id, d.data())).toList());
   }
 
   Future<void> addStory({
@@ -602,102 +1184,97 @@ class TourGroupRepository {
     required String mediaUrl,
     String? caption,
   }) async {
-    final storyId = _uuid.v4();
+    final email = _requireEmail();
+    if (!isRemoteMediaUrl(mediaUrl)) {
+      throw const TourAccessException(
+          'আপলোড এখনও শেষ হয়নি। ছবি সম্পূর্ণ আপলোড হওয়ার পর স্টোরি দিন।');
+    }
+    final id = _uuid.v4();
     final story = TourStoryItem(
-      id: storyId,
-      authorEmail: currentEmail,
+      id: id,
+      authorEmail: email,
       authorName: currentDisplayName,
       authorPhoto: _auth.currentUser?.photoURL,
       mediaUrl: mediaUrl,
-      caption: caption,
+      caption: caption?.trim().isEmpty ?? true ? null : caption!.trim(),
       createdAt: DateTime.now(),
     );
-
-    await _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('stories')
-        .doc(storyId)
-        .set(story.toMap());
+    await _sub(tourId, 'stories').doc(id).set(story.toMap());
   }
 
-  // --- Member Management & Role Delegation ---
+  Future<void> deleteStory(String tourId, String storyId) async {
+    _requireEmail();
+    await _sub(tourId, 'stories').doc(storyId).delete();
+  }
 
-  Future<void> updateMemberRole(
-      String tourId, String email, TourRole newRole) async {
-    final membershipId = '${tourId}__$email';
-    await _firestore.collection('memberships').doc(membershipId).update({
-      'role': newRole.toValue(),
+  // ---------------------------------------------------------------------------
+  // Live locations & safety
+  // ---------------------------------------------------------------------------
+
+  /// Shares the signed-in person's position. Each person writes only their own doc.
+  Future<void> setMyLocation(String tourId,
+      {required double lat, required double lng}) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'locations').doc(email).set({
+      'email': email,
+      'displayName': currentDisplayName,
+      'lat': lat,
+      'lng': lng,
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  Future<void> removeMember(String tourId, String email) async {
-    final membershipId = '${tourId}__$email';
-    await _firestore.collection('memberships').doc(membershipId).delete();
-  }
+  // ---------------------------------------------------------------------------
+  // Backup
+  // ---------------------------------------------------------------------------
 
-  Future<void> transferOwnership(String tourId, String newOwnerEmail) async {
-    final oldOwnerEmail = currentEmail;
-    final batch = _firestore.batch();
-
-    // 1. Update tour doc
-    batch.update(_firestore.collection('tours').doc(tourId), {
-      'ownerEmail': newOwnerEmail,
-    });
-
-    // 2. Update new owner membership
-    batch.update(
-        _firestore.collection('memberships').doc('${tourId}__$newOwnerEmail'), {
-      'role': TourRole.owner.toValue(),
-    });
-
-    // 3. Demote old owner to admin
-    batch.update(
-        _firestore.collection('memberships').doc('${tourId}__$oldOwnerEmail'), {
-      'role': TourRole.admin.toValue(),
-    });
-
-    await batch.commit();
-  }
-
-  // --- Full Tour Snapshot JSON Export ---
-
+  /// Everything the owner needs to keep a copy of the tour. Member emails are
+  /// left out; names are kept so the backup still reads well.
   Future<Map<String, dynamic>> fetchFullTourSnapshot(String tourId) async {
-    final tourDoc = await _firestore.collection('tours').doc(tourId).get();
-    final membersSnap = await _firestore
-        .collection('memberships')
-        .where('tourId', isEqualTo: tourId)
+    _requireEmail();
+    final tourDoc = await _tour(tourId).get();
+    final tourData = Map<String, dynamic>.from(tourDoc.data() ?? {});
+    tourData.remove('inviteCode');
+
+    Future<List<Map<String, dynamic>>> collect(String name) async {
+      final snap = await _sub(tourId, name).get();
+      return snap.docs.map((d) => d.data()).toList();
+    }
+
+    final members = await _memberships.where('tourId', isEqualTo: tourId).get();
+    final posts = await _sub(tourId, 'posts')
+        .orderBy('createdAt', descending: true)
+        .limit(500)
         .get();
-    final expensesSnap = await _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('expenses')
-        .get();
-    final depositsSnap = await _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('deposits')
-        .get();
-    final noticesSnap = await _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('notices')
-        .get();
-    final postsSnap = await _firestore
-        .collection('tours')
-        .doc(tourId)
-        .collection('posts')
-        .get();
+    final comments = <Map<String, dynamic>>[];
+    for (final post in posts.docs) {
+      final c = await post.reference.collection('comments').get();
+      for (final doc in c.docs) {
+        comments.add({'postId': post.id, ...doc.data()});
+      }
+    }
 
     return {
       'exportedAt': DateTime.now().toIso8601String(),
-      'app': 'Bhromon / Family_Bhromon Hybrid 2026',
-      'tour': tourDoc.data() ?? {},
-      'members': membersSnap.docs.map((d) => d.data()).toList(),
-      'expenses': expensesSnap.docs.map((d) => d.data()).toList(),
-      'deposits': depositsSnap.docs.map((d) => d.data()).toList(),
-      'notices': noticesSnap.docs.map((d) => d.data()).toList(),
-      'posts': postsSnap.docs.map((d) => d.data()).toList(),
+      'app': 'Bhromon Tour Group',
+      'tour': tourData,
+      'members': members.docs
+          .map((d) => {
+                'displayName': d.data()['displayName'],
+                'role': d.data()['role'],
+                'familyCount': d.data()['familyCount'],
+              })
+          .toList(),
+      'expenses': await collect('expenses'),
+      'deposits': await collect('deposits'),
+      'notices': await collect('notices'),
+      'checklist': await collect('checklist'),
+      'checkpoints': await collect('checkpoints'),
+      'bus_seats': await collect('bus_seats'),
+      'hotel_rooms': await collect('hotel_rooms'),
+      'posts': posts.docs.map((d) => d.data()).toList(),
+      'comments': comments,
+      'stories': await collect('stories'),
     };
   }
 }
