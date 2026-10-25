@@ -27,8 +27,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   Stream<List<TourMember>> _membersOf(String tourId) => _memberStreams
       .putIfAbsent(tourId, () => _repository.watchMembers(tourId));
 
-  bool _viewerIsOwner(List<TourMember> members) => members.any(
-      (m) => m.email == _repository.currentEmail && m.role == TourRole.owner);
+  bool _viewerIsOwner(List<TourMember> members) =>
+      _displayedGroup?.ownerEmail == _repository.currentEmail ||
+      members.any((m) =>
+          m.email == _repository.currentEmail && m.role == TourRole.owner);
 
   bool _viewerIsAdmin(List<TourMember> members) => members
       .any((m) => m.email == _repository.currentEmail && m.role.isAdminOrOwner);
