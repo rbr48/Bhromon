@@ -4,7 +4,8 @@ enum TideType {
   high,
   low;
 
-  String get banglaName => this == TideType.high ? 'জোয়ার (High Tide)' : 'ভাটা (Low Tide)';
+  String get banglaName =>
+      this == TideType.high ? 'জোয়ার (High Tide)' : 'ভাটা (Low Tide)';
 }
 
 enum SwimSafetyStatus {
@@ -64,14 +65,16 @@ class TideScheduleEngine {
         startMinutes: 650,
         endMinutes: 870,
         type: TideType.low,
-        description: 'দুপুরের তীব্র ভাটা! পানিতে নামা ঝুঁকিপূর্ণ। চোরাবালির ঝুঁকি থাকে।',
+        description:
+            'দুপুরের তীব্র ভাটা! পানিতে নামা ঝুঁকিপূর্ণ। চোরাবালির ঝুঁকি থাকে।',
       ),
       const TideWindow(
         name: 'বিকেলের জোয়ার (Sunset High Tide)',
         startMinutes: 990,
         endMinutes: 1210,
         type: TideType.high,
-        description: 'সূর্যাস্তকালীন জোয়ার। সাগরে গোসল ও ঢেউ উপভোগের সেরা সময়।',
+        description:
+            'সূর্যাস্তকালীন জোয়ার। সাগরে গোসল ও ঢেউ উপভোগের সেরা সময়।',
       ),
       const TideWindow(
         name: 'রাতের ভাটা (Night Low Tide)',
@@ -105,14 +108,16 @@ class TideScheduleEngine {
         startMinutes: wrap(320),
         endMinutes: wrap(530),
         type: TideType.high,
-        description: 'জোয়ারের সময় স্রোত কূলের দিকে থাকে, লাইফগার্ড জোনে গোসল করা যায়।',
+        description:
+            'জোয়ারের সময় স্রোত কূলের দিকে থাকে, লাইফগার্ড জোনে গোসল করা যায়।',
       ),
       TideWindow(
         name: 'দুপুরের ভাটা (Low Tide 1)',
         startMinutes: wrap(650),
         endMinutes: wrap(870),
         type: TideType.low,
-        description: 'ভাটার সময় তীব্র টান ও চোরাবালির ঝুঁকি থাকে। পানিতে নামা অনুচিত।',
+        description:
+            'ভাটার সময় তীব্র টান ও চোরাবালির ঝুঁকি থাকে। পানিতে নামা অনুচিত।',
       ),
       TideWindow(
         name: 'বিকেলের জোয়ার (High Tide 2)',
@@ -160,7 +165,8 @@ class TideScheduleEngine {
     if (now.hour >= 18 || now.hour < 5) {
       return (
         status: SwimSafetyStatus.danger,
-        advisory: 'সন্ধ্যার পর বা রাতে সমুদ্রে নামা আইনত নিষিদ্ধ ও অত্যন্ত ঝুঁকিপূর্ণ।',
+        advisory:
+            'সন্ধ্যার পর বা রাতে সমুদ্রে নামা আইনত নিষিদ্ধ ও অত্যন্ত ঝুঁকিপূর্ণ।',
         currentWindow: active,
         nextWindow: next,
       );
@@ -170,14 +176,16 @@ class TideScheduleEngine {
       if (active.type == TideType.high) {
         return (
           status: SwimSafetyStatus.safe,
-          advisory: 'এখন জোয়ার চলছে! লাইফগার্ড নির্ধারিত লাল-হলুদ সীমানার ভেতরে গোসল করুন।',
+          advisory:
+              'এখন জোয়ার চলছে! লাইফগার্ড নির্ধারিত লাল-হলুদ সীমানার ভেতরে গোসল করুন।',
           currentWindow: active,
           nextWindow: next,
         );
       } else {
         return (
           status: SwimSafetyStatus.danger,
-          advisory: 'সৈকতে ভাটা চলছে! পানিতে নামবেন না, চোরাবালি ও গুপ্ত গর্তে ডুবে যাওয়ার প্রবল ঝুঁকি।',
+          advisory:
+              'সৈকতে ভাটা চলছে! পানিতে নামবেন না, চোরাবালি ও গুপ্ত গর্তে ডুবে যাওয়ার প্রবল ঝুঁকি।',
           currentWindow: active,
           nextWindow: next,
         );
@@ -186,7 +194,8 @@ class TideScheduleEngine {
 
     return (
       status: SwimSafetyStatus.caution,
-      advisory: 'জোয়ার ও ভাটার মধ্যবর্তী পরিবর্তনকালীন সময়। কোমর পানির বেশি নামবেন না।',
+      advisory:
+          'জোয়ার ও ভাটার মধ্যবর্তী পরিবর্তনকালীন সময়। কোমর পানির বেশি নামবেন না।',
       currentWindow: null,
       nextWindow: next,
     );

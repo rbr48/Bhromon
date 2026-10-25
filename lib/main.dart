@@ -175,7 +175,8 @@ void main() {
 
       if (!kIsWeb) {
         // Wire up Firebase Crashlytics error handlers
-        FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+        FirebaseCrashlytics.instance
+            .setCrashlyticsCollectionEnabled(!kDebugMode);
 
         final originalOnError = FlutterError.onError;
         FlutterError.onError = (FlutterErrorDetails details) {
@@ -236,7 +237,6 @@ void main() {
               '[SyncWorker] Failed to initialize background sync', e, stack);
         }
       }
-
     }
 
     runApp(const MyApp());

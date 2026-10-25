@@ -168,7 +168,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       return [
         TourLandmark(
           id: 'hotel_sea_moon',
-          name: '${_tourGroup?.destination ?? "কক্সবাজার"} প্রধান হোটেল / রিসোর্ট',
+          name:
+              '${_tourGroup?.destination ?? "কক্সবাজার"} প্রধান হোটেল / রিসোর্ট',
           subtitle: 'প্রধান হোটেল ও থাকার রুম',
           lat: 21.4326,
           lng: 91.9774,
@@ -177,7 +178,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'evergreen_bus',
-          name: '${_tourGroup?.originCity ?? "রংপুর"} ➔ ${_tourGroup?.destination ?? "কক্সবাজার"} বাস পার্কিং',
+          name:
+              '${_tourGroup?.originCity ?? "রংপুর"} ➔ ${_tourGroup?.destination ?? "কক্সবাজার"} বাস পার্কিং',
           subtitle: 'প্রধান বাস ও পরিবহন পয়েন্ট',
           lat: 21.4385,
           lng: 91.9740,
@@ -186,7 +188,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'sugandha_beach',
-          name: '${_tourGroup?.destination ?? "কক্সবাজার"} প্রধান মিলনমেলা পয়েন্ট',
+          name:
+              '${_tourGroup?.destination ?? "কক্সবাজার"} প্রধান মিলনমেলা পয়েন্ট',
           subtitle: 'ফ্যামিলি আড্ডা ও মিলনমেলা পয়েন্ট',
           lat: 21.4298,
           lng: 91.9752,
@@ -299,7 +302,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   }
 
   Future<void> _openMapNavigation(double lat, double lng) async {
-    final uri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+    final uri = Uri.parse(
+        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -345,7 +349,10 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             // Live Landmark Direction Cards
             const Text(
               'গুরুত্বপূর্ণ ট্যুর পয়েন্ট ও কম্পাস ডিরেকশন',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15),
             ),
             const SizedBox(height: 10),
 
@@ -366,7 +373,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       animation: _sirenAnimController,
       builder: (context, child) {
         final alertColor = _isSirenActive
-            ? Color.lerp(Colors.red.shade900, Colors.redAccent, _sirenAnimController.value)!
+            ? Color.lerp(Colors.red.shade900, Colors.redAccent,
+                _sirenAnimController.value)!
             : const Color(0xFF1F2E33);
 
         return Container(
@@ -395,11 +403,14 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: _isSirenActive ? Colors.white : Colors.red.shade700,
+                      color:
+                          _isSirenActive ? Colors.white : Colors.red.shade700,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      _isSirenActive ? Icons.notifications_active : Icons.shield,
+                      _isSirenActive
+                          ? Icons.notifications_active
+                          : Icons.shield,
                       color: _isSirenActive ? Colors.red : Colors.white,
                       size: 28,
                     ),
@@ -410,7 +421,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _isSirenActive ? 'জরুরি সাইরেন সক্রিয়!' : 'ফ্যামিলি ইমার্জেন্সি এসওএস',
+                          _isSirenActive
+                              ? 'জরুরি সাইরেন সক্রিয়!'
+                              : 'ফ্যামিলি ইমার্জেন্সি এসওএস',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -422,7 +435,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                           _isSirenActive
                               ? 'কাছের মানুষদের দৃষ্টি আকর্ষণ করতে সাইরেন বাজছে।'
                               : 'বিপদে পড়লে বা দলছুট হলে তাৎক্ষণিক সাইরেন ও হটলাইন ব্যবহার করুন।',
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12),
                         ),
                       ],
                     ),
@@ -433,16 +447,23 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon: Icon(_isSirenActive ? Icons.volume_off : Icons.volume_up),
+                  icon:
+                      Icon(_isSirenActive ? Icons.volume_off : Icons.volume_up),
                   label: Text(
-                    _isSirenActive ? 'সাইরেন বন্ধ করুন' : 'জরুরি সাইরেন চালু করুন',
+                    _isSirenActive
+                        ? 'সাইরেন বন্ধ করুন'
+                        : 'জরুরি সাইরেন চালু করুন',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isSirenActive ? Colors.white : Colors.redAccent.shade700,
-                    foregroundColor: _isSirenActive ? Colors.red.shade900 : Colors.white,
+                    backgroundColor: _isSirenActive
+                        ? Colors.white
+                        : Colors.redAccent.shade700,
+                    foregroundColor:
+                        _isSirenActive ? Colors.red.shade900 : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
                     setState(() {
@@ -534,12 +555,18 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           children: [
             Icon(icon, color: color, size: 24),
             const SizedBox(height: 6),
-            Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+            Text(title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13)),
             const SizedBox(height: 2),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(displayNumber, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+              child: Text(displayNumber,
+                  style: TextStyle(
+                      color: color, fontSize: 11, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -572,12 +599,21 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                  Text(displayNumber, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+                  Text(title,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13)),
+                  Text(displayNumber,
+                      style: TextStyle(
+                          color: color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
-            const Icon(Icons.phone_in_talk, color: Colors.greenAccent, size: 20),
+            const Icon(Icons.phone_in_talk,
+                color: Colors.greenAccent, size: 20),
           ],
         ),
       ),
@@ -629,7 +665,10 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               children: [
                 Text(
                   landmark.name,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -640,7 +679,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.near_me, size: 12, color: Colors.greenAccent),
+                      const Icon(Icons.near_me,
+                          size: 12, color: Colors.greenAccent),
                       const SizedBox(width: 4),
                       Text(
                         distanceMeters > 1000
@@ -656,7 +696,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                         const SizedBox(width: 8),
                         Transform.rotate(
                           angle: (bearing * math.pi / 180),
-                          child: const Icon(Icons.arrow_upward, size: 12, color: Colors.amberAccent),
+                          child: const Icon(Icons.arrow_upward,
+                              size: 12, color: Colors.amberAccent),
                         ),
                       ],
                     ],
@@ -692,7 +733,10 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               SizedBox(width: 8),
               Text(
                 'পরিবারের সুরক্ষা ও সমুদ্র সতর্কতা নির্দেশিকা',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13),
               ),
             ],
           ),

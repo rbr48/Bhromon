@@ -37,7 +37,8 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
         elevation: 0,
         title: const Text(
           'Logistics (সিট ও রুম বণ্টন)',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         bottom: TabBar(
           controller: _tabController,
@@ -45,7 +46,9 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
           labelColor: AppColors.mintGreen,
           unselectedLabelColor: Colors.white60,
           tabs: const [
-            Tab(icon: Icon(Icons.directions_bus_rounded), text: 'Bus Seats (বাস)'),
+            Tab(
+                icon: Icon(Icons.directions_bus_rounded),
+                text: 'Bus Seats (বাস)'),
             Tab(icon: Icon(Icons.hotel_rounded), text: 'Hotel Rooms (রুম)'),
           ],
         ),

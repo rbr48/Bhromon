@@ -279,8 +279,18 @@ class TourGroup {
 
   static String _banglaMonth(int m) {
     const months = [
-      'জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-      'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'
+      'জানু',
+      'ফেব্রু',
+      'মার্চ',
+      'এপ্রিল',
+      'মে',
+      'জুন',
+      'জুলাই',
+      'আগস্ট',
+      'সেপ্টে',
+      'অক্টো',
+      'নভে',
+      'ডিসে'
     ];
     if (m >= 1 && m <= 12) return months[m - 1];
     return '';
@@ -312,7 +322,10 @@ class TourGroup {
         'আলুটিলা গুহা ও সুরঙ্গ (Alutila Cave)',
         'অন্যান্য স্থান (Others)',
       ];
-    } else if (dest.contains('sylhet') || dest.contains('সিলেট') || dest.contains('sreemangal') || dest.contains('শ্রীমঙ্গল')) {
+    } else if (dest.contains('sylhet') ||
+        dest.contains('সিলেট') ||
+        dest.contains('sreemangal') ||
+        dest.contains('শ্রীমঙ্গল')) {
       return const [
         'রাতারগুল সোয়াম্প ফরেস্ট (Ratargul)',
         'বিছনাকান্দি (Bisnakandi)',

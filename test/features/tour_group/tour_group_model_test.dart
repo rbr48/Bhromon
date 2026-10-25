@@ -65,7 +65,8 @@ void main() {
       expect(group.daysList.first.label, contains('ডে ১'));
     });
 
-    test('Universal Tour calculates 7-day Sajek-to-Bandarban tour accurately', () {
+    test('Universal Tour calculates 7-day Sajek-to-Bandarban tour accurately',
+        () {
       final start = DateTime(2026, 12, 1);
       final end = DateTime(2026, 12, 7);
       final group = TourGroup(
@@ -91,7 +92,9 @@ void main() {
       expect(group.allSpots, contains('কংলাক পাহাড় চূড়া (Konglak Peak)'));
     });
 
-    test('TourMember serializes role owner as admin for Firestore rule compliance', () {
+    test(
+        'TourMember serializes role owner as admin for Firestore rule compliance',
+        () {
       final now = DateTime.now();
       final member = TourMember(
         tourId: 'tour_123',

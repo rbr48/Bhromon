@@ -59,11 +59,13 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
   }
 
   void _shareScrapbookSummary() {
-    final tourName = _tourGroup?.name ?? (_tourData?['name'] as String? ?? 'ফ্যামিলি ট্যুর স্মৃতিমালা');
+    final tourName = _tourGroup?.name ??
+        (_tourData?['name'] as String? ?? 'ফ্যামিলি ট্যুর স্মৃতিমালা');
     final datesStr = _tourGroup != null
         ? '${DateFormat('d MMM yyyy').format(_tourGroup!.startDate)} – ${DateFormat('d MMM yyyy').format(_tourGroup!.endDate)}'
         : 'ট্যুর সময়কাল';
-    final durationStr = _tourGroup?.durationText ?? '৫ দিনব্যাপী ফ্যামিলি ট্যুর';
+    final durationStr =
+        _tourGroup?.durationText ?? '৫ দিনব্যাপী ফ্যামিলি ট্যুর';
     final dest = _tourGroup?.destination ?? 'কক্সবাজার';
     final origin = _tourGroup?.originCity ?? 'যাত্রা স্থান';
 
@@ -75,7 +77,10 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
 👥 মোট পরিভ্রমণকারী: ${_members.length} জন সদস্য
 
 ✨ স্মরণীয় দর্শনীয় স্থানসমূহ:
-${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয় স্পট', 'হোটেল ও রিসোর্ট']).map((s) => '• $s').join('\n')}
+${(_tourGroup?.allSpots.take(5) ?? [
+              'প্রধান দর্শনীয় স্পট',
+              'হোটেল ও রিসোর্ট'
+            ]).map((s) => '• $s').join('\n')}
 
 ভ্রমণে Bhromon অ্যাপের মাধ্যমে সংরক্ষিত অবিস্মরণীয় স্মৃতিমালা ❤️
 ''';
@@ -85,7 +90,8 @@ ${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয়
 
   @override
   Widget build(BuildContext context) {
-    final tourName = _tourData?['name'] as String? ?? (_tourGroup?.name ?? 'ট্যুর ডিজিটাল স্মৃতিমালা');
+    final tourName = _tourData?['name'] as String? ??
+        (_tourGroup?.name ?? 'ট্যুর ডিজিটাল স্মৃতিমালা');
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F1A1C),
@@ -104,7 +110,8 @@ ${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয়
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.tealAccent))
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.tealAccent))
           : SafeArea(
               child: ListView(
                 padding: const EdgeInsets.all(18),
@@ -134,12 +141,14 @@ ${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয়
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.download),
-                      label: const Text('ডিজিটাল স্মৃতিচিহ্ন শেয়ার করুন', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const Text('ডিজিটাল স্মৃতিচিহ্ন শেয়ার করুন',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.amber.shade800,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
                       ),
                       onPressed: _shareScrapbookSummary,
                     ),
@@ -160,9 +169,11 @@ ${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয়
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 1.5),
+        border:
+            Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 1.5),
         boxShadow: const [
-          BoxShadow(color: Colors.black54, blurRadius: 12, offset: Offset(0, 6)),
+          BoxShadow(
+              color: Colors.black54, blurRadius: 12, offset: Offset(0, 6)),
         ],
       ),
       child: Column(
@@ -175,7 +186,10 @@ ${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয়
             ),
             child: const Text(
               'স্মৃতিচিহ্ন ও ভ্রমণ স্মারক ২০২৬',
-              style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 11),
+              style: TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11),
             ),
           ),
           const SizedBox(height: 14),
@@ -202,9 +216,15 @@ ${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয়
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _CoverBadge(icon: Icons.directions_bus, label: '${_tourGroup?.originCity ?? "যাত্রা"} পরিবহন'),
-              _CoverBadge(icon: Icons.hotel, label: '${_tourGroup?.destination ?? "ট্যুর"} আবাসন'),
-              _CoverBadge(icon: Icons.explore_rounded, label: '${_tourGroup?.destination ?? "স্পট"} ভ্রমণ'),
+              _CoverBadge(
+                  icon: Icons.directions_bus,
+                  label: '${_tourGroup?.originCity ?? "যাত্রা"} পরিবহন'),
+              _CoverBadge(
+                  icon: Icons.hotel,
+                  label: '${_tourGroup?.destination ?? "ট্যুর"} আবাসন'),
+              _CoverBadge(
+                  icon: Icons.explore_rounded,
+                  label: '${_tourGroup?.destination ?? "স্পট"} ভ্রমণ'),
             ],
           ),
         ],
@@ -267,13 +287,16 @@ ${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয়
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+            child: Text(value,
+                style: TextStyle(
+                    color: color, fontWeight: FontWeight.bold, fontSize: 13)),
           ),
           const SizedBox(height: 2),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(title, style: const TextStyle(color: Colors.white60, fontSize: 10)),
+            child: Text(title,
+                style: const TextStyle(color: Colors.white60, fontSize: 10)),
           ),
         ],
       ),
@@ -282,11 +305,33 @@ ${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয়
 
   Widget _buildHighlightsSection() {
     final highlights = [
-      {'title': 'বঙ্গবন্ধু যমুনা সেতু পারাপার', 'desc': 'রাতে যমুনা নদীর শীতল বাতাস ও ৪.৮ কি.মি. দীর্ঘ মেগা ব্রিজ অতিক্রম।', 'icon': '🌉'},
-      {'title': 'শেরপুর ফুড ভিলেজ প্লাস', 'desc': 'বগুড়ার বিখ্যাত মিষ্টি দই ও রাতের হাইওয়ে বিরতি।', 'icon': '🍲'},
-      {'title': 'ইনানী প্রবাল সৈকত ও পাথুরে রূপ', 'desc': 'স্বচ্ছ শান্ত পানি এবং প্রবাল পাথরের প্রাকৃতিক স্বর্গরাজ্য।', 'icon': '🪨'},
-      {'title': 'হিমছড়ি ঝর্ণা ও মেরিন ড্রাইভ', 'desc': 'একপাশে আকাশচুম্বী সবুজ পাহাড়, অন্যপাশে নীল সমুদ্রের রোমাঞ্চকর ড্রাইভ।', 'icon': '🌊'},
-      {'title': 'সুগন্ধা সৈকতে সূর্যাস্ত ও ফ্যামিলি মিলনমেলা', 'desc': 'পরিবারের সবাই মিলে লাল টুকটুকে সূর্যাস্ত দর্শন ও ফটোসেশন।', 'icon': '🌅'},
+      {
+        'title': 'বঙ্গবন্ধু যমুনা সেতু পারাপার',
+        'desc':
+            'রাতে যমুনা নদীর শীতল বাতাস ও ৪.৮ কি.মি. দীর্ঘ মেগা ব্রিজ অতিক্রম।',
+        'icon': '🌉'
+      },
+      {
+        'title': 'শেরপুর ফুড ভিলেজ প্লাস',
+        'desc': 'বগুড়ার বিখ্যাত মিষ্টি দই ও রাতের হাইওয়ে বিরতি।',
+        'icon': '🍲'
+      },
+      {
+        'title': 'ইনানী প্রবাল সৈকত ও পাথুরে রূপ',
+        'desc': 'স্বচ্ছ শান্ত পানি এবং প্রবাল পাথরের প্রাকৃতিক স্বর্গরাজ্য।',
+        'icon': '🪨'
+      },
+      {
+        'title': 'হিমছড়ি ঝর্ণা ও মেরিন ড্রাইভ',
+        'desc':
+            'একপাশে আকাশচুম্বী সবুজ পাহাড়, অন্যপাশে নীল সমুদ্রের রোমাঞ্চকর ড্রাইভ।',
+        'icon': '🌊'
+      },
+      {
+        'title': 'সুগন্ধা সৈকতে সূর্যাস্ত ও ফ্যামিলি মিলনমেলা',
+        'desc': 'পরিবারের সবাই মিলে লাল টুকটুকে সূর্যাস্ত দর্শন ও ফটোসেশন।',
+        'icon': '🌅'
+      },
     ];
 
     return Container(
@@ -305,7 +350,10 @@ ${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয়
               SizedBox(width: 8),
               Text(
                 'ট্যুরের অবিস্মরণীয় মুহূর্তমালা (Highlights)',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14),
               ),
             ],
           ),
@@ -322,8 +370,14 @@ ${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয়
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(h['title']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                        Text(h['desc']!, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                        Text(h['title']!,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12)),
+                        Text(h['desc']!,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 11)),
                       ],
                     ),
                   ),
@@ -353,7 +407,10 @@ ${(_tourGroup?.allSpots.take(5) ?? ['প্রধান দর্শনীয়
               SizedBox(width: 8),
               Text(
                 'ট্যুর পরিচালনা ও কৃতজ্ঞতা স্বীকার (Honor Roll)',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14),
               ),
             ],
           ),
@@ -383,7 +440,11 @@ class _CoverBadge extends StatelessWidget {
       children: [
         Icon(icon, color: Colors.amber, size: 14),
         const SizedBox(width: 4),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w500)),
+        Text(label,
+            style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 10,
+                fontWeight: FontWeight.w500)),
       ],
     );
   }

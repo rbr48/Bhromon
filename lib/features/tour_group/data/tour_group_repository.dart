@@ -41,7 +41,8 @@ class TourGroupRepository {
     try {
       final box = await _openBox();
       await box.put('tour_${group.id}', group.toMap());
-      final List<dynamic> rawIds = box.get('my_tour_ids', defaultValue: <dynamic>[]) as List<dynamic>;
+      final List<dynamic> rawIds =
+          box.get('my_tour_ids', defaultValue: <dynamic>[]) as List<dynamic>;
       final List<String> myIds = List<String>.from(rawIds);
       if (!myIds.contains(group.id)) {
         myIds.add(group.id);
@@ -55,7 +56,8 @@ class TourGroupRepository {
   Future<List<TourGroup>> getLocalGroups() async {
     try {
       final box = await _openBox();
-      final List<dynamic> rawIds = box.get('my_tour_ids', defaultValue: <dynamic>[]) as List<dynamic>;
+      final List<dynamic> rawIds =
+          box.get('my_tour_ids', defaultValue: <dynamic>[]) as List<dynamic>;
       final List<String> myIds = List<String>.from(rawIds);
       final List<TourGroup> groups = [];
       for (final id in myIds) {
@@ -184,7 +186,8 @@ class TourGroupRepository {
       batch.set(tourRef, group.toMap());
 
       final membershipId = '${tourId}__$email';
-      final membershipRef = _firestore.collection('memberships').doc(membershipId);
+      final membershipRef =
+          _firestore.collection('memberships').doc(membershipId);
       final member = TourMember(
         tourId: tourId,
         tourName: name,
@@ -205,7 +208,8 @@ class TourGroupRepository {
 
       await batch.commit();
     } catch (e) {
-      debugPrint('[TourGroupRepository] Remote write failed; saved locally: $e');
+      debugPrint(
+          '[TourGroupRepository] Remote write failed; saved locally: $e');
     }
 
     return group;
@@ -244,7 +248,8 @@ class TourGroupRepository {
     }
 
     if (matchedGroup == null) {
-      throw ArgumentError('সঠিক ৬-সংখ্যার আমন্ত্রণ কোড দিন। কোনো ট্যুর গ্রুপ পাওয়া যায়নি।');
+      throw ArgumentError(
+          'সঠিক ৬-সংখ্যার আমন্ত্রণ কোড দিন। কোনো ট্যুর গ্রুপ পাওয়া যায়নি।');
     }
 
     await _cacheLocalGroup(matchedGroup);
@@ -323,8 +328,12 @@ class TourGroupRepository {
     if (endDate != null) updates['endDate'] = endDate.toIso8601String();
     if (modules != null) updates['modules'] = modules.toMap();
     if (customSpots != null) updates['customSpots'] = customSpots;
-    if (meetingPointTitle != null) updates['meetingPointTitle'] = meetingPointTitle;
-    if (meetingPointMapUrl != null) updates['meetingPointMapUrl'] = meetingPointMapUrl;
+    if (meetingPointTitle != null) {
+      updates['meetingPointTitle'] = meetingPointTitle;
+    }
+    if (meetingPointMapUrl != null) {
+      updates['meetingPointMapUrl'] = meetingPointMapUrl;
+    }
 
     if (updates.isNotEmpty) {
       await tourRef.update(updates);
@@ -359,8 +368,9 @@ class TourGroupRepository {
         .collection('expenses')
         .orderBy('date', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((d) => ExpenseItem.fromMap(d.id, d.data())).toList())
+        .map((snapshot) => snapshot.docs
+            .map((d) => ExpenseItem.fromMap(d.id, d.data()))
+            .toList())
         .handleError((Object e) {
       debugPrint('[TourGroupRepository] watchExpenses error: $e');
       return <ExpenseItem>[];
@@ -407,8 +417,9 @@ class TourGroupRepository {
         .collection('deposits')
         .orderBy('date', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((d) => DepositItem.fromMap(d.id, d.data())).toList())
+        .map((snapshot) => snapshot.docs
+            .map((d) => DepositItem.fromMap(d.id, d.data()))
+            .toList())
         .handleError((Object e) {
       debugPrint('[TourGroupRepository] watchDeposits error: $e');
       return <DepositItem>[];
@@ -452,7 +463,8 @@ class TourGroupRepository {
         .collection('posts')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList())
+        .map((s) =>
+            s.docs.map((d) => TourPostItem.fromMap(d.id, d.data())).toList())
         .handleError((Object e) {
       debugPrint('[TourGroupRepository] watchPosts error: $e');
       return <TourPostItem>[];
@@ -508,7 +520,9 @@ class TourGroupRepository {
     if (!snap.exists) return;
 
     final data = snap.data() ?? {};
-    final likes = (data['likes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+    final likes =
+        (data['likes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+            [];
 
     if (likes.contains(email)) {
       likes.remove(email);
@@ -527,7 +541,8 @@ class TourGroupRepository {
         .collection('comments')
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((s) => s.docs.map((d) => TourCommentItem.fromMap(d.id, d.data())).toList())
+        .map((s) =>
+            s.docs.map((d) => TourCommentItem.fromMap(d.id, d.data())).toList())
         .handleError((Object e) {
       debugPrint('[TourGroupRepository] watchComments error: $e');
       return <TourCommentItem>[];
@@ -574,7 +589,8 @@ class TourGroupRepository {
         .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs.map((d) => TourStoryItem.fromMap(d.id, d.data())).toList())
+        .map((s) =>
+            s.docs.map((d) => TourStoryItem.fromMap(d.id, d.data())).toList())
         .handleError((Object e) {
       debugPrint('[TourGroupRepository] watchStories error: $e');
       return <TourStoryItem>[];
@@ -607,7 +623,8 @@ class TourGroupRepository {
 
   // --- Member Management & Role Delegation ---
 
-  Future<void> updateMemberRole(String tourId, String email, TourRole newRole) async {
+  Future<void> updateMemberRole(
+      String tourId, String email, TourRole newRole) async {
     final membershipId = '${tourId}__$email';
     await _firestore.collection('memberships').doc(membershipId).update({
       'role': newRole.toValue(),
@@ -629,12 +646,14 @@ class TourGroupRepository {
     });
 
     // 2. Update new owner membership
-    batch.update(_firestore.collection('memberships').doc('${tourId}__$newOwnerEmail'), {
+    batch.update(
+        _firestore.collection('memberships').doc('${tourId}__$newOwnerEmail'), {
       'role': TourRole.owner.toValue(),
     });
 
     // 3. Demote old owner to admin
-    batch.update(_firestore.collection('memberships').doc('${tourId}__$oldOwnerEmail'), {
+    batch.update(
+        _firestore.collection('memberships').doc('${tourId}__$oldOwnerEmail'), {
       'role': TourRole.admin.toValue(),
     });
 
@@ -645,11 +664,30 @@ class TourGroupRepository {
 
   Future<Map<String, dynamic>> fetchFullTourSnapshot(String tourId) async {
     final tourDoc = await _firestore.collection('tours').doc(tourId).get();
-    final membersSnap = await _firestore.collection('memberships').where('tourId', isEqualTo: tourId).get();
-    final expensesSnap = await _firestore.collection('tours').doc(tourId).collection('expenses').get();
-    final depositsSnap = await _firestore.collection('tours').doc(tourId).collection('deposits').get();
-    final noticesSnap = await _firestore.collection('tours').doc(tourId).collection('notices').get();
-    final postsSnap = await _firestore.collection('tours').doc(tourId).collection('posts').get();
+    final membersSnap = await _firestore
+        .collection('memberships')
+        .where('tourId', isEqualTo: tourId)
+        .get();
+    final expensesSnap = await _firestore
+        .collection('tours')
+        .doc(tourId)
+        .collection('expenses')
+        .get();
+    final depositsSnap = await _firestore
+        .collection('tours')
+        .doc(tourId)
+        .collection('deposits')
+        .get();
+    final noticesSnap = await _firestore
+        .collection('tours')
+        .doc(tourId)
+        .collection('notices')
+        .get();
+    final postsSnap = await _firestore
+        .collection('tours')
+        .doc(tourId)
+        .collection('posts')
+        .get();
 
     return {
       'exportedAt': DateTime.now().toIso8601String(),

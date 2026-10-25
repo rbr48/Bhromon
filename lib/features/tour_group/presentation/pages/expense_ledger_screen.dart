@@ -61,7 +61,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_view_rounded, color: AppColors.mintGreen),
+            icon: const Icon(Icons.table_view_rounded,
+                color: AppColors.mintGreen),
             tooltip: 'Excel CSV অডিট এক্সপোর্ট',
             onPressed: _exportLedgerCsv,
           ),
@@ -280,7 +281,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                           : s.toFund
                               ? '${s.from} pays remaining share to Fund'
                               : 'Direct transfer',
-                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 11),
                     ),
                   ],
                 ),
@@ -356,7 +358,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       isFund
                           ? 'Paid from Shared Fund'
                           : 'Paid by: ${exp.paidByName ?? exp.paidById}',
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                   ],
                 ),
@@ -627,8 +630,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         labelStyle: TextStyle(color: Colors.white70),
                       ),
                       items: ['Food', 'Transport', 'Hotel', 'Tickets', 'Others']
-                          .map((c) =>
-                              DropdownMenuItem(value: c, child: Text(c)))
+                          .map(
+                              (c) => DropdownMenuItem(value: c, child: Text(c)))
                           .toList(),
                       onChanged: (val) {
                         if (val != null) setDialogState(() => category = val);
@@ -664,12 +667,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         items: _latestMembers.map((m) {
                           return DropdownMenuItem(
                             value: m.email,
-                            child: Text(m.displayName, overflow: TextOverflow.ellipsis),
+                            child: Text(m.displayName,
+                                overflow: TextOverflow.ellipsis),
                           );
                         }).toList(),
                         onChanged: (val) {
                           if (val != null) {
-                            final m = _latestMembers.firstWhere((x) => x.email == val);
+                            final m = _latestMembers
+                                .firstWhere((x) => x.email == val);
                             setDialogState(() {
                               selectedPayerEmail = m.email;
                               selectedPayerName = m.displayName;
@@ -707,8 +712,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       category: category,
                     );
                   },
-                  child: const Text('Save',
-                      style: TextStyle(color: Colors.white)),
+                  child:
+                      const Text('Save', style: TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -740,8 +745,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: const Color(0xFF14241B),
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
               title: const Text('Record Deposit',
                   style: TextStyle(color: Colors.white)),
               content: SingleChildScrollView(
@@ -760,12 +765,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         items: _latestMembers.map((m) {
                           return DropdownMenuItem(
                             value: m.email,
-                            child: Text(m.displayName, overflow: TextOverflow.ellipsis),
+                            child: Text(m.displayName,
+                                overflow: TextOverflow.ellipsis),
                           );
                         }).toList(),
                         onChanged: (val) {
                           if (val != null) {
-                            final m = _latestMembers.firstWhere((x) => x.email == val);
+                            final m = _latestMembers
+                                .firstWhere((x) => x.email == val);
                             setDialogState(() {
                               selectedDepositorEmail = m.email;
                               selectedDepositorName = m.displayName;
@@ -777,7 +784,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     ] else ...[
                       Text(
                         'Contributing member: ${_repository.currentDisplayName}',
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 13),
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -796,12 +804,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child:
-                      const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Colors.white54)),
                 ),
                 ElevatedButton(
-                  style:
-                      ElevatedButton.styleFrom(backgroundColor: AppColors.midGreen),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.midGreen),
                   onPressed: () async {
                     final amountNum = double.tryParse(amountCtrl.text.trim());
                     if (amountNum == null || amountNum <= 0) return;
@@ -814,8 +822,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       amountPaisa: TripLedgerEngine.toPaisa(amountNum),
                     );
                   },
-                  child:
-                      const Text('Record', style: TextStyle(color: Colors.white)),
+                  child: const Text('Record',
+                      style: TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -824,11 +832,13 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       },
     );
   }
+
   void _exportLedgerCsv() {
     final summary = _latestSummary;
     if (summary == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('হিসাবের ডেটা লোড হচ্ছে, অপেক্ষা করুন...')),
+        const SnackBar(
+            content: Text('হিসাবের ডেটা লোড হচ্ছে, অপেক্ষা করুন...')),
       );
       return;
     }
@@ -850,7 +860,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
 
     void section(String title) {
       buffer.writeln('');
-      buffer.writeln(escapeCell('================== $title =================='));
+      buffer
+          .writeln(escapeCell('================== $title =================='));
     }
 
     final tourTitle = _tourGroup?.name ?? 'ট্যুর ফান্ড ও খরচ বিবরণী';
@@ -864,27 +875,47 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     line(['$tourTitle - অফিশিয়াল অডিট বিবরণী']);
     line(['ভ্রমণ রুট', route]);
     line(['ভ্রমণকাল', tourDates]);
-    line(['রিপোর্ট তৈরির তারিখ', DateFormat('dd MMMM yyyy, hh:mm a').format(DateTime.now())]);
+    line([
+      'রিপোর্ট তৈরির তারিখ',
+      DateFormat('dd MMMM yyyy, hh:mm a').format(DateTime.now())
+    ]);
 
     section('আর্থিক সারসংক্ষেপ (FINANCIAL AUDIT SUMMARY)');
     line(['বিবরণ', 'পরিমাণ (টাকা)']);
-    line(['মোট সংগৃহীত জমা ফান্ড', '৳${summary.totalDepositsTaka.toStringAsFixed(2)}']);
+    line([
+      'মোট সংগৃহীত জমা ফান্ড',
+      '৳${summary.totalDepositsTaka.toStringAsFixed(2)}'
+    ]);
     line(['সর্বমোট খরচ', '৳${summary.totalExpenseTaka.toStringAsFixed(2)}']);
-    line(['ফান্ড থেকে পরিশোধিত খরচ বাদে অবশিষ্ট ফান্ড', '৳${summary.fundBalanceTaka.toStringAsFixed(2)}']);
+    line([
+      'ফান্ড থেকে পরিশোধিত খরচ বাদে অবশিষ্ট ফান্ড',
+      '৳${summary.fundBalanceTaka.toStringAsFixed(2)}'
+    ]);
     line(['মোট সদস্য সংখ্যা (হেডকাউন্ট)', '${summary.headcount} জন']);
-    line(['মাথাপিছু গড় ব্যয়', '৳${summary.perHeadCostTaka.toStringAsFixed(2)}']);
+    line([
+      'মাথাপিছু গড় ব্যয়',
+      '৳${summary.perHeadCostTaka.toStringAsFixed(2)}'
+    ]);
 
     section('খাতভিত্তিক খরচের সারসংক্ষেপ (CATEGORY BREAKDOWN)');
     line(['খাত (Category)', 'মোট ব্যয় (টাকা)', 'শতকরা অনুপাত (%)']);
     for (final ct in summary.categoryTotals) {
       final pct = summary.totalExpensePaisa > 0
-          ? ((ct.amountPaisa / summary.totalExpensePaisa) * 100).toStringAsFixed(1)
+          ? ((ct.amountPaisa / summary.totalExpensePaisa) * 100)
+              .toStringAsFixed(1)
           : '0.0';
       line([ct.category, '৳${ct.amountTaka.toStringAsFixed(2)}', '$pct%']);
     }
 
     section('খরচের সম্পূর্ণ বিবরণী (EXPENSES LEDGER)');
-    line(['ক্রমিক নং', 'তারিখ', 'খাত', 'খরচের বিবরণ', 'বিল পরিশোধক', 'পরিমাণ (টাকা)']);
+    line([
+      'ক্রমিক নং',
+      'তারিখ',
+      'খাত',
+      'খরচের বিবরণ',
+      'বিল পরিশোধক',
+      'পরিমাণ (টাকা)'
+    ]);
     for (int i = 0; i < expenses.length; i++) {
       final exp = expenses[i];
       final payer = exp.paidByName ?? exp.paidById ?? 'ফান্ড';
@@ -897,10 +928,24 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         exp.amountTaka.toStringAsFixed(2),
       ]);
     }
-    line(['', '', '', 'সর্বমোট ব্যয়:', '', '৳${summary.totalExpenseTaka.toStringAsFixed(2)}']);
+    line([
+      '',
+      '',
+      '',
+      'সর্বমোট ব্যয়:',
+      '',
+      '৳${summary.totalExpenseTaka.toStringAsFixed(2)}'
+    ]);
 
     section('সদস্যদের জমা ও খরচ শেয়ার (MEMBERS & DEPOSITS)');
-    line(['ক্রমিক নং', 'সদস্যের নাম', 'ইমেইল/আইডি', 'মোট জমা (টাকা)', 'খরচের শেয়ার (টাকা)', 'হিসাব (+ পাবেন / - দেবেন)']);
+    line([
+      'ক্রমিক নং',
+      'সদস্যের নাম',
+      'ইমেইল/আইডি',
+      'মোট জমা (টাকা)',
+      'খরচের শেয়ার (টাকা)',
+      'হিসাব (+ পাবেন / - দেবেন)'
+    ]);
     for (int i = 0; i < summary.rows.length; i++) {
       final row = summary.rows[i];
       line([
@@ -912,7 +957,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         row.netTaka.toStringAsFixed(2),
       ]);
     }
-    line(['', '', 'মোট ফান্ড:', '৳${summary.totalDepositsTaka.toStringAsFixed(2)}', '৳${summary.totalExpenseTaka.toStringAsFixed(2)}', '৳${summary.fundBalanceTaka.toStringAsFixed(2)}']);
+    line([
+      '',
+      '',
+      'মোট ফান্ড:',
+      '৳${summary.totalDepositsTaka.toStringAsFixed(2)}',
+      '৳${summary.totalExpenseTaka.toStringAsFixed(2)}',
+      '৳${summary.fundBalanceTaka.toStringAsFixed(2)}'
+    ]);
 
     section('চূড়ান্ত সেটেলমেন্ট ম্যাট্রিক্স (SETTLEMENTS)');
     line(['কে দেবেন (Debtor)', 'কাকে দেবেন (Creditor)', 'পরিমাণ (টাকা)']);
@@ -921,7 +973,11 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     }
 
     section('অডিট অনুমোদন ও স্বাক্ষর');
-    line(['ট্যুর অ্যাডমিন ও লিডার', 'কোষাধ্যক্ষ: অডিট প্যানেল', 'অনুমোদনকারী: ট্যুর সদস্যবৃন্দ']);
+    line([
+      'ট্যুর অ্যাডমিন ও লিডার',
+      'কোষাধ্যক্ষ: অডিট প্যানেল',
+      'অনুমোদনকারী: ট্যুর সদস্যবৃন্দ'
+    ]);
 
     // Prepend UTF-8 BOM so Excel opens Bangla text without mojibake
     final csvContent = '\uFEFF${buffer.toString()}';
@@ -929,8 +985,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     // ignore: deprecated_member_use
     Share.share(
       csvContent,
-      subject: 'Bhromon_Tour_Official_Audit_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
+      subject:
+          'Bhromon_Tour_Official_Audit_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv',
     );
   }
-
 }

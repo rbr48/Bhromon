@@ -49,7 +49,10 @@ class SecureNetworkClient {
 
     // Certificate pinning via custom HttpClient adapter
     // Certificate pinning via custom HttpClient adapter (Mobile only; browsers handle TLS natively)
-    if (!kIsWeb && !Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) {
+    if (!kIsWeb &&
+        !Platform.isWindows &&
+        !Platform.isMacOS &&
+        !Platform.isLinux) {
       dio.httpClientAdapter = IOHttpClientAdapter(
         createHttpClient: () {
           final client =

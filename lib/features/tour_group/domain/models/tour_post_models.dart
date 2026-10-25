@@ -62,13 +62,18 @@ class TourPostItem {
       authorName: map['authorName'] as String? ?? 'Family Member',
       authorPhoto: map['authorPhoto'] as String?,
       caption: map['caption'] as String? ?? '',
-      images: (map['images'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      images: (map['images'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
       videoUrl: map['videoUrl'] as String?,
       isReel: map['isReel'] as bool? ?? false,
       location: map['location'] as String? ?? "লাবণী ও সুগন্ধা বিচ, কক্সবাজার",
       tourDay: map['tourDay'] as String? ?? 'day1',
       filterId: map['filterId'] as String? ?? 'normal',
-      likes: (map['likes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      likes:
+          (map['likes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+              [],
       commentCount: map['commentCount'] as int? ?? 0,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
