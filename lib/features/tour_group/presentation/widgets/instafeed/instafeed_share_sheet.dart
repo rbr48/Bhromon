@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:bhromon/features/tour_group/data/tour_channel_repository.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 
@@ -53,10 +54,11 @@ class InstafeedShareSheet extends StatelessWidget {
     try {
       final msg = '📸 [ট্যুর পোস্ট]\n${post.authorName}: ${post.caption.isNotEmpty ? post.caption : "একটি ছবি শেয়ার করেছেন"}\n${post.images.isNotEmpty ? post.images.first : post.videoUrl ?? ""}';
 
-      await repository.sendChannelMessage(
+      final channelRepo = TourChannelRepository(groups: repository);
+      await channelRepo.sendMessage(
         tourId,
         channelId,
-        msg,
+        text: msg,
       );
 
       if (context.mounted) {

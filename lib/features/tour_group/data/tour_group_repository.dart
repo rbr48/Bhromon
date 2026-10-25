@@ -78,6 +78,12 @@ class TourGroupRepository {
     return currentEmail;
   }
 
+  /// The signed-in member's email. Throws if nobody is signed in.
+  String requireEmail() => _requireEmail();
+
+  /// The database, shared with the repositories that work beside this one.
+  FirebaseFirestore get firestore => _firestore;
+
   // ---------------------------------------------------------------------------
   // Collections
   // ---------------------------------------------------------------------------
@@ -777,8 +783,9 @@ class TourGroupRepository {
     });
   }
 
-  /// Adds an expense. [participantIds] null means all current members share it.
-  Future<void> addExpense({
+  /// Adds an expense and returns its id. [participantIds] null means all
+  /// current members share it.
+  Future<String> addExpense({
     required String tourId,
     required String title,
     required int amountPaisa,
@@ -804,6 +811,7 @@ class TourGroupRepository {
       participantIds: participantIds,
     );
     await _sub(tourId, 'expenses').doc(expense.id).set(expense.toMap());
+    return expense.id;
   }
 
   /// Saves an edited expense. [expense] must keep its original addedByEmail.
@@ -1038,46 +1046,6 @@ class TourGroupRepository {
         .snapshots()
         .map((s) =>
             s.docs.map((d) => SafetyAlert.fromMap(d.id, d.data())).toList());
-  }
-
-  // ---------------------------------------------------------------------------
-  // Discussion channels
-  // ---------------------------------------------------------------------------
-
-  /// The newest [limit] messages, newest first.
-  Stream<List<ChannelMessage>> watchChannelMessages(
-      String tourId, String channelId,
-      {int limit = 100}) {
-    return _sub(tourId, 'channels')
-        .doc(channelId)
-        .collection('messages')
-        .orderBy('timestamp', descending: true)
-        .limit(limit)
-        .snapshots()
-        .map((s) =>
-            s.docs.map((d) => ChannelMessage.fromMap(d.id, d.data())).toList());
-  }
-
-  Future<void> sendChannelMessage(
-      String tourId, String channelId, String text) async {
-    final email = _requireEmail();
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
-    if (trimmed.length > 1000) {
-      throw const TourAccessException('বার্তা ১০০০ অক্ষরের বেশি হতে পারবে না।');
-    }
-    final id = _uuid.v4();
-    await _sub(tourId, 'channels')
-        .doc(channelId)
-        .collection('messages')
-        .doc(id)
-        .set({
-      'id': id,
-      'text': trimmed,
-      'senderEmail': email,
-      'senderName': currentDisplayName,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
   }
 
   // ---------------------------------------------------------------------------

@@ -309,6 +309,119 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  describe('discussion channels', () => {
+    const CH = 'general';
+    const msgPath = (id) => ['tours', TOUR, 'channels', CH, 'messages', id];
+    const message = (sender, extra = {}) => ({
+      id: 'm1',
+      kind: 'text',
+      text: 'hello',
+      senderEmail: sender,
+      senderName: 'x',
+      timestamp: serverTimestamp(),
+      attachments: [],
+      mentions: [],
+      isPinned: false,
+      ...extra,
+    });
+    const seed = (extra = {}) =>
+      env.withSecurityRulesDisabled((ctx) =>
+        setDoc(doc(ctx.firestore(), ...msgPath('m1')), message(people.member.email, extra)));
+
+    test('members post as themselves, and only as themselves', async () => {
+      await assertSucceeds(setDoc(doc(db('member'), ...msgPath('a1')), message(people.member.email)));
+      await assertFails(setDoc(doc(db('member'), ...msgPath('a2')), message(people.admin.email)));
+      await assertFails(setDoc(doc(anon(), ...msgPath('a3')), message(people.member.email)));
+    });
+
+    test('a post has at most 1000 characters and four photos, and a known kind', async () => {
+      await assertFails(setDoc(doc(db('member'), ...msgPath('b1')), message(people.member.email, { text: 'x'.repeat(1001) })));
+      const photos = Array.from({ length: 5 }, (_, i) => ({ url: `https://m.x/${i}.jpg`, kind: 'image' }));
+      await assertFails(setDoc(doc(db('member'), ...msgPath('b2')), message(people.member.email, { attachments: photos })));
+      await assertSucceeds(setDoc(doc(db('member'), ...msgPath('b3')), message(people.member.email, { attachments: photos.slice(0, 4) })));
+      await assertFails(setDoc(doc(db('member'), ...msgPath('b4')), message(people.member.email, { kind: 'video-call' })));
+    });
+
+    test('in an admin-only channel, only admins post', async () => {
+      await setDoc(doc(db('admin'), 'tours', TOUR, 'channels', 'announce'), { name: 'Announcements', topic: '', adminOnly: true });
+      const path = ['tours', TOUR, 'channels', 'announce', 'messages', 'c1'];
+      await assertFails(setDoc(doc(db('member'), ...path), message(people.member.email)));
+      await assertSucceeds(setDoc(doc(db('admin'), ...path), message(people.admin.email)));
+    });
+
+    test('only admins create, change or delete channels, with bounded names', async () => {
+      const chPath = ['tours', TOUR, 'channels', 'trek'];
+      await assertFails(setDoc(doc(db('member'), ...chPath), { name: 'Trek', topic: '', adminOnly: false }));
+      await assertSucceeds(setDoc(doc(db('admin'), ...chPath), { name: 'Trek', topic: '', adminOnly: false }));
+      await assertFails(setDoc(doc(db('admin'), 'tours', TOUR, 'channels', 'long'), { name: 'x'.repeat(41), topic: '', adminOnly: false }));
+      await assertFails(updateDoc(doc(db('member'), ...chPath), { topic: 'hijack' }));
+      await assertFails(deleteDoc(doc(db('member'), ...chPath)));
+      await assertSucceeds(deleteDoc(doc(db('admin'), ...chPath)));
+    });
+
+    test('the author edits the text; no one else, and no other field', async () => {
+      await seed();
+      await assertSucceeds(updateDoc(doc(db('member'), ...msgPath('m1')), { text: 'edited', editedAt: serverTimestamp() }));
+      await assertFails(updateDoc(doc(db('other'), ...msgPath('m1')), { text: 'nope', editedAt: serverTimestamp() }));
+      await assertFails(updateDoc(doc(db('admin'), ...msgPath('m1')), { text: 'nope', editedAt: serverTimestamp() }));
+      await assertFails(updateDoc(doc(db('member'), ...msgPath('m1')), { text: 'edited', senderEmail: people.other.email }));
+      await assertFails(updateDoc(doc(db('member'), ...msgPath('m1')), { attachments: [{ url: 'https://evil.x/a.jpg', kind: 'image' }] }));
+    });
+
+    test('admins pin and unpin, and change nothing else', async () => {
+      await seed();
+      await assertFails(updateDoc(doc(db('member'), ...msgPath('m1')), { isPinned: true, pinnedByEmail: people.member.email }));
+      await assertSucceeds(updateDoc(doc(db('admin'), ...msgPath('m1')), { isPinned: true, pinnedByEmail: people.admin.email }));
+      await assertFails(updateDoc(doc(db('admin'), ...msgPath('m1')), { isPinned: true, text: 'changed' }));
+      await assertSucceeds(updateDoc(doc(db('admin'), ...msgPath('m1')), { isPinned: false, pinnedByEmail: '' }));
+    });
+
+    test('each member sets or clears only their own reaction', async () => {
+      await seed();
+      await assertSucceeds(updateDoc(doc(db('other'), ...msgPath('m1')), { reactions: { [people.other.email]: '👍' } }));
+      await assertSucceeds(updateDoc(doc(db('other'), ...msgPath('m1')), { reactions: { [people.other.email]: '🔥' } }));
+      await assertFails(updateDoc(doc(db('other'), ...msgPath('m1')), { reactions: { [people.other.email]: '👍', [people.member.email]: '🔥' } }));
+      await assertFails(updateDoc(doc(db('other'), ...msgPath('m1')), { reactions: { [people.other.email]: '👍' }, text: 'x' }));
+      await assertSucceeds(updateDoc(doc(db('other'), ...msgPath('m1')), { reactions: {} }));
+    });
+
+    test('members vote once, for an option that exists, and cannot vote for others', async () => {
+      await seed({ kind: 'poll', text: 'Dinner?', pollOptions: ['Hilsa', 'Chicken'], votes: {} });
+      await assertSucceeds(updateDoc(doc(db('member'), ...msgPath('m1')), { votes: { [people.member.email]: 1 } }));
+      await assertFails(updateDoc(doc(db('member'), ...msgPath('m1')), { votes: { [people.member.email]: 5 } }));
+      await assertFails(updateDoc(doc(db('member'), ...msgPath('m1')), { votes: { [people.other.email]: 0 } }));
+      await assertSucceeds(updateDoc(doc(db('member'), ...msgPath('m1')), { votes: {} }));
+    });
+
+    test('a text message takes no votes', async () => {
+      await seed();
+      await assertFails(updateDoc(doc(db('member'), ...msgPath('m1')), { votes: { [people.member.email]: 0 } }));
+    });
+
+    test('the author or an admin deletes a message; other members cannot', async () => {
+      await seed();
+      await assertFails(deleteDoc(doc(db('other'), ...msgPath('m1'))));
+      await assertSucceeds(deleteDoc(doc(db('member'), ...msgPath('m1'))));
+      await seed();
+      await assertSucceeds(deleteDoc(doc(db('admin'), ...msgPath('m1'))));
+    });
+
+    test('typing signals are written by their owner and read by members only', async () => {
+      const typing = (who) => ['tours', TOUR, 'channels', CH, 'typing', who.email];
+      await assertSucceeds(setDoc(doc(db('member'), ...typing(people.member)), { name: 'x', at: serverTimestamp() }));
+      await assertFails(setDoc(doc(db('member'), ...typing(people.other)), { name: 'x', at: serverTimestamp() }));
+      await assertSucceeds(getDocs(collection(db('other'), 'tours', TOUR, 'channels', CH, 'typing')));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', TOUR, 'channels', CH, 'typing')));
+    });
+
+    test('only admins set the live itinerary stop; members read it', async () => {
+      const live = ['tours', TOUR, 'meta', 'itinerary'];
+      await assertFails(setDoc(doc(db('member'), ...live), { currentStopId: 's1' }));
+      await assertSucceeds(setDoc(doc(db('admin'), ...live), { currentStopId: 's1' }));
+      await assertSucceeds(getDoc(doc(db('member'), ...live)));
+    });
+  });
+
   test('unauthenticated users can read nothing in the tour group', async () => {
     await assertFails(getDoc(doc(anon(), 'memberships', `${TOUR}__${people.member.email}`)));
     await assertFails(getDoc(doc(anon(), 'invites', CODE)));
