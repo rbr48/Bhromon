@@ -47,6 +47,7 @@ import '../features/game_zone/game_zone_hub_screen.dart';
 import '../features/game_zone/card29/card29_screen.dart';
 import '../features/game_zone/chess/chess_screen.dart';
 import '../features/game_zone/ludo/ludo_screen.dart';
+import '../features/game_zone/carrom/carrom_screen.dart';
 
 import '../features/offline_vault/presentation/cubit/vault_cubit.dart';
 import '../features/trip_log/presentation/bloc/trip_log_bloc.dart';
@@ -314,6 +315,11 @@ class AppRouter {
         path: '/game-zone/teen-patti',
         pageBuilder: (context, state) =>
             _customPageTransition(state, const TeenPattiScreen()),
+      ),
+      GoRoute(
+        path: '/game-zone/carrom',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const CarromScreen()),
       ),
     ],
   );

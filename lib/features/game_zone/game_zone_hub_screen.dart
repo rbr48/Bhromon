@@ -9,7 +9,8 @@ class GameZoneHubScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF14181B),
       appBar: AppBar(
-        title: const Text('Travel GameZone', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Travel GameZone',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF1E2429),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -38,7 +39,8 @@ class GameZoneHubScreen extends StatelessWidget {
                       color: Colors.amber.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.sports_esports, color: Colors.amber, size: 36),
+                    child: const Icon(Icons.sports_esports,
+                        color: Colors.amber, size: 36),
                   ),
                   const SizedBox(width: 16),
                   const Expanded(
@@ -47,7 +49,10 @@ class GameZoneHubScreen extends StatelessWidget {
                       children: [
                         Text(
                           'In-Transit Offline Arcade',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18),
                         ),
                         SizedBox(height: 4),
                         Text(
@@ -77,7 +82,8 @@ class GameZoneHubScreen extends StatelessWidget {
             _buildGameCard(
               context,
               title: 'Card 29 (টুয়েন্টি নাইন)',
-              subtitle: 'Classic South Asian 32-card trick-taking game. Bid, set trump, and team up with your AI partner.',
+              subtitle:
+                  'Classic South Asian 32-card trick-taking game. Bid, set trump, and team up with your AI partner.',
               icon: Icons.style,
               tag: 'CROWD FAVORITE',
               tagColor: Colors.redAccent,
@@ -91,7 +97,8 @@ class GameZoneHubScreen extends StatelessWidget {
             _buildGameCard(
               context,
               title: 'Travel Chess AI',
-              subtitle: 'Sharpen your mind on the road against our built-in Minimax chess engine across 3 difficulty levels.',
+              subtitle:
+                  'Sharpen your mind on the road against our built-in Minimax chess engine across 3 difficulty levels.',
               icon: Icons.psychology,
               tag: 'STRATEGY',
               tagColor: Colors.blueAccent,
@@ -105,7 +112,8 @@ class GameZoneHubScreen extends StatelessWidget {
             _buildGameCard(
               context,
               title: 'Ludo Express',
-              subtitle: 'Roll the dice, race your 4 tokens to home base, and knock out your companions in classic 4-player Ludo.',
+              subtitle:
+                  'Roll the dice, race your 4 tokens to home base, and knock out your companions in classic 4-player Ludo.',
               icon: Icons.casino,
               tag: 'CASUAL & FUN',
               tagColor: Colors.amber,
@@ -119,12 +127,28 @@ class GameZoneHubScreen extends StatelessWidget {
             _buildGameCard(
               context,
               title: 'Teen Patti (তিন পাত্তি)',
-              subtitle: 'Classic South Asian 3-card poker. Play blind or seen, manage chips, and call showdowns with trail & pure sequence.',
+              subtitle:
+                  'Classic South Asian 3-card poker. Play blind or seen, manage chips, and call showdowns with trail & pure sequence.',
               icon: Icons.filter_3,
               tag: 'DESI CLASSIC',
               tagColor: Colors.tealAccent,
               gradient: const [Color(0xFF004D40), Color(0xFF001F1A)],
               route: '/game-zone/teen-patti',
+            ),
+
+            const SizedBox(height: 16),
+
+            // Carrom (ক্যারম)
+            _buildGameCard(
+              context,
+              title: 'Carrom (ক্যারম)',
+              subtitle:
+                  'Flick the striker and sink your coins on a real-physics board. Cover the Queen, beat the bot or pass the phone.',
+              icon: Icons.adjust,
+              tag: 'FAMILY FAVORITE',
+              tagColor: Colors.orangeAccent,
+              gradient: const [Color(0xFF6D4C2E), Color(0xFF2B1A0E)],
+              route: '/game-zone/carrom',
             ),
           ],
         ),
@@ -144,7 +168,10 @@ class GameZoneHubScreen extends StatelessWidget {
   }) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(
+            colors: gradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white10),
         boxShadow: const [
@@ -176,14 +203,18 @@ class GameZoneHubScreen extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               color: tagColor.withValues(alpha: 0.25),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               tag,
-                              style: TextStyle(color: tagColor, fontSize: 10, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  color: tagColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -191,18 +222,23 @@ class GameZoneHubScreen extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(
                         title,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Icon(Icons.arrow_forward_ios, color: Colors.white38, size: 16),
+                const Icon(Icons.arrow_forward_ios,
+                    color: Colors.white38, size: 16),
               ],
             ),
           ),

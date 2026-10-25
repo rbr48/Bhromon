@@ -1,4 +1,5 @@
 import 'package:bhromon/features/game_zone/card29/card29_screen.dart';
+import 'package:bhromon/features/game_zone/carrom/carrom_screen.dart';
 import 'package:bhromon/features/game_zone/chess/chess_screen.dart';
 import 'package:bhromon/features/game_zone/ludo/ludo_screen.dart';
 import 'package:bhromon/features/game_zone/teen_patti/teen_patti_screen.dart';
@@ -83,6 +84,47 @@ void main() {
         if (movable.evaluate().isNotEmpty) await tester.tap(movable.first);
       }
       await _play(tester, steps: 5);
+      await _dispose(tester);
+    });
+
+    testWidgets(
+        'Carrom lays out, shoots and plays on without overflow at $label',
+        (tester) async {
+      await _pumpScreen(tester, size, const CarromScreen());
+      // The board is kept between visits, so start a fresh one.
+      await tester.tap(find.byTooltip('New Board'));
+      for (int i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+      final confirm = find.text('Start over');
+      if (confirm.evaluate().isNotEmpty) {
+        await tester.tap(confirm);
+        for (int i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 200));
+        }
+      }
+      final board = find
+          .byType(CustomPaint)
+          .evaluate()
+          .map((e) => e.widget as CustomPaint)
+          .firstWhere(
+            (w) => w.painter.runtimeType.toString() == '_CarromPainter',
+          );
+      expect(board, isNotNull);
+      final boardFinder = find.byWidget(board);
+      final centre = tester.getCenter(boardFinder);
+      final boardSize = tester.getSize(boardFinder);
+      // Pull back towards the bottom and release: the striker fires upwards.
+      final gesture = await tester.startGesture(centre);
+      await gesture.moveBy(Offset(0, boardSize.height * 0.2));
+      await tester.pump();
+      expect(find.textContaining(RegExp(r'^Power \d+%')), findsOneWidget);
+      await gesture.up();
+      await tester.pump();
+      expect(find.text('Coins in motion...'), findsOneWidget);
+      for (int i = 0; i < 300; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
       await _dispose(tester);
     });
 
