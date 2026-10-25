@@ -129,7 +129,7 @@ class _SosHubDialogState extends State<SosHubDialog> {
                       children: [
                         const Text('YOUR COORDINATES',
                             style: TextStyle(
-                                color: Colors.white38,
+                                color: Colors.white54,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold)),
                         const SizedBox(height: 2),

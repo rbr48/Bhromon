@@ -138,7 +138,7 @@ class OtaUpdateDialog extends StatelessWidget {
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: const Text('LATER',
-                        style: TextStyle(color: Colors.white30)),
+                        style: TextStyle(color: Colors.white54)),
                   ),
 
                 // UPDATE NOW — shown only when no download is in progress

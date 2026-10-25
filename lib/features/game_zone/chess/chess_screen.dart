@@ -512,7 +512,7 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
       child: entries.isEmpty
           ? const Center(
               child: Text('Moves will appear here',
-                  style: TextStyle(color: Colors.white38, fontSize: 12)),
+                  style: TextStyle(color: Colors.white54, fontSize: 12)),
             )
           : ListView.separated(
               controller: _moveListController,

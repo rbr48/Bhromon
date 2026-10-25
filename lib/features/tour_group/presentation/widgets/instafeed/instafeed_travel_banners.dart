@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:bhromon/features/tour_group/domain/models/safety_alert_models.dart';
 import 'package:bhromon/features/tour_group/domain/services/tide_schedule_engine.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/family_safety_hub_screen.dart';
+import '../../../../../core/theme/colors.dart';
 
 /// Live Beach Tide & Ocean Safety pill banner shown at the top of InstaFeed.
 class InstafeedTideBanner extends StatelessWidget {
@@ -212,7 +213,7 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: const Color(0xFF00C853),
+            backgroundColor: AppColors.mintGreen,
             backgroundImage:
                 authorPhoto != null ? NetworkImage(authorPhoto!) : null,
             child: authorPhoto == null
@@ -256,7 +257,7 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
                 ? 'আসন $seatNumber'
                 : 'বরাদ্দ নেই',
             valueColor:
-                seatNumber != null ? const Color(0xFF00C853) : Colors.white54,
+                seatNumber != null ? AppColors.mintGreen : Colors.white54,
           ),
           const SizedBox(height: 10),
           _buildInfoRow(
@@ -282,7 +283,7 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
       actions: [
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF00C853),
+            backgroundColor: AppColors.mintGreen,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),

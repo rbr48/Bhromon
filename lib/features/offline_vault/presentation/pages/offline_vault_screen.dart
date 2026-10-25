@@ -114,7 +114,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.mintGreen,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.darkGreen,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -236,7 +236,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                               ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.mintGreen,
-                                  foregroundColor: Colors.white,
+                                  foregroundColor: AppColors.darkGreen,
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8)),
                                 ),
@@ -304,7 +304,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                                     subtitle: Text(
                                       'Enqueued: ${DateTime.fromMillisecondsSinceEpoch(entry.enqueuedAt.millisecondsSinceEpoch).toLocal().toString().substring(0, 16)}',
                                       style: const TextStyle(
-                                          color: Colors.white38, fontSize: 11),
+                                          color: Colors.white54, fontSize: 11),
                                     ),
                                     trailing: ElevatedButton(
                                       style: ElevatedButton.styleFrom(

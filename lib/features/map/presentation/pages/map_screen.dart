@@ -1166,7 +1166,7 @@ class _MapScreenState extends State<MapScreen> {
                       backgroundColor: AppColors.mintGreen,
                       onPressed: _showAddPinDialog,
                       child: const Icon(Icons.add_location_alt_outlined,
-                          color: Colors.white),
+                          color: AppColors.darkGreen),
                     ),
                   ],
                 ),
@@ -1356,7 +1356,7 @@ class _MapScreenState extends State<MapScreen> {
                       '🛺 CNG ~৳${(totalDist * 6).toStringAsFixed(0)}  '
                       '🏍️ Bike ~৳${(totalDist * 4).toStringAsFixed(0)}',
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 10),
+                          const TextStyle(color: Colors.white54, fontSize: 10),
                     ),
                   ],
                 ),
@@ -1472,7 +1472,7 @@ class _MapScreenState extends State<MapScreen> {
                 const SizedBox(height: 8),
                 Text(
                   '📍 ${center.latitude.toStringAsFixed(5)}, ${center.longitude.toStringAsFixed(5)}',
-                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ],
             ),
@@ -1536,11 +1536,11 @@ class _MapScreenState extends State<MapScreen> {
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+        hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
         prefixIcon: Icon(icon, color: AppColors.mintGreen, size: 18),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white24),
+          borderSide: const BorderSide(color: Colors.white54),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1733,7 +1733,7 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                         trailing: const Icon(
                           Icons.arrow_forward_ios_rounded,
-                          color: Colors.white30,
+                          color: Colors.white54,
                           size: 14,
                         ),
                         onTap: () {

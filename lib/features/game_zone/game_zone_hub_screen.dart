@@ -276,7 +276,7 @@ class GameZoneHubScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 const Icon(Icons.arrow_forward_ios,
-                    color: Colors.white38, size: 16),
+                    color: Colors.white54, size: 16),
               ],
             ),
           ),

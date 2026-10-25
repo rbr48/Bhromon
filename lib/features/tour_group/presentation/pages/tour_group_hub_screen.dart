@@ -466,7 +466,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         size: 20, color: AppColors.mintGreen),
                     tooltip: context.l10n.translate('hub_settings_dates'),
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
                     onPressed: () => _showEditGroupDialog(context, group),
                   ),
                   if (allGroups.length > 1) ...[
@@ -931,7 +930,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               color: Colors.white70, fontSize: 13),
                           hintText: 'e.g. Sajek Tour 2026',
                           hintStyle: const TextStyle(
-                              color: Colors.white30, fontSize: 12),
+                              color: Colors.white54, fontSize: 12),
                           filled: true,
                           fillColor: Colors.black26,
                           border: OutlineInputBorder(
@@ -999,7 +998,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               color: Colors.white70, fontSize: 13),
                           hintText: l10n.translate('hub_destination_example'),
                           hintStyle: const TextStyle(
-                              color: Colors.white30, fontSize: 12),
+                              color: Colors.white54, fontSize: 12),
                           filled: true,
                           fillColor: Colors.black26,
                           border: OutlineInputBorder(
@@ -1021,7 +1020,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                     color: Colors.white70, fontSize: 12),
                                 hintText: l10n.translate('hub_origin_hint'),
                                 hintStyle: const TextStyle(
-                                    color: Colors.white30, fontSize: 11),
+                                    color: Colors.white54, fontSize: 11),
                                 filled: true,
                                 fillColor: Colors.black26,
                                 border: OutlineInputBorder(
@@ -1666,7 +1665,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     decoration: InputDecoration(
                       hintText: l10n.translate('hub_join_code_example'),
                       hintStyle: const TextStyle(
-                          color: Colors.white24, letterSpacing: 2),
+                          color: Colors.white54, letterSpacing: 2),
                       filled: true,
                       fillColor: Colors.black26,
                       border: OutlineInputBorder(
@@ -2022,7 +2021,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ),
                   subtitle: Text(
                     context.l10n.translate('hub_family_count_note'),
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
                   ),
                   onTap: () async {
                     final count =

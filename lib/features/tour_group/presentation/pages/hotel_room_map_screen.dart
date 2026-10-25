@@ -65,7 +65,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.hotel_rounded,
-                    size: 64, color: Colors.white24),
+                    size: 64, color: Colors.white54),
                 const SizedBox(height: 16),
                 const Text('এখনও কোনো রুম যোগ করা হয়নি।',
                     style: TextStyle(color: Colors.white70)),
@@ -207,7 +207,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
             const SizedBox(height: 8),
             if (room.assignedMemberEmails.isEmpty)
               const Text('কেউ বরাদ্দ পাননি — ট্যাপ করে যোগ করুন',
-                  style: TextStyle(color: Colors.white38, fontSize: 12))
+                  style: TextStyle(color: Colors.white54, fontSize: 12))
             else
               Wrap(
                 spacing: 6,
@@ -468,7 +468,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
             : (room.isFull
                 ? 'রুমটি পূর্ণ'
                 : 'যোগ করলে আগের রুম থেকে সরে আসবেন'),
-        style: const TextStyle(color: Colors.white38, fontSize: 11),
+        style: const TextStyle(color: Colors.white54, fontSize: 11),
       ),
       trailing: IconButton(
         icon: Icon(here ? Icons.remove_circle : Icons.add_circle,

@@ -765,7 +765,6 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 const SizedBox(width: 4),
                 IconButton(
-                  constraints: const BoxConstraints(),
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => context.pop(),
@@ -949,10 +948,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                   size: 13, color: Color(0xFF53BDEB)); // blue
                             } else if (status == 'delivered') {
                               return const Icon(Icons.done_all,
-                                  size: 13, color: Colors.white30); // grey
+                                  size: 13, color: Colors.white54); // grey
                             } else {
                               return const Icon(Icons.done,
-                                  size: 13, color: Colors.white30); // single
+                                  size: 13, color: Colors.white54); // single
                             }
                           }
 
@@ -995,7 +994,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                             Text(
                                               timeStr,
                                               style: const TextStyle(
-                                                  color: Colors.white38,
+                                                  color: Colors.white54,
                                                   fontSize: 9.5),
                                             ),
                                             if (isMe) ...[
@@ -1064,7 +1063,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                   Text(
                                                     timeStr,
                                                     style: const TextStyle(
-                                                        color: Colors.white38,
+                                                        color: Colors.white54,
                                                         fontSize: 9.5),
                                                   ),
                                                   const SizedBox(width: 4),
@@ -1116,7 +1115,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                               child: Text(
                                                 timeStr,
                                                 style: const TextStyle(
-                                                    color: Colors.white38,
+                                                    color: Colors.white54,
                                                     fontSize: 9.5),
                                               ),
                                             ),

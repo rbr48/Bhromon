@@ -289,7 +289,7 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.mic_none, color: Colors.white30, size: 20),
+                  const Icon(Icons.mic_none, color: Colors.white54, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -297,7 +297,7 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
                           ? 'No voice bio yet. Tap "Record" to add a 30-second introduction!'
                           : 'This explorer hasn\'t added a voice bio yet.',
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 12),
+                          const TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                   ),
                 ],
@@ -415,10 +415,10 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
                   children: [
                     Text(posStr,
                         style: const TextStyle(
-                            color: Colors.white38, fontSize: 10)),
+                            color: Colors.white54, fontSize: 10)),
                     Text(durStr,
                         style: const TextStyle(
-                            color: Colors.white38, fontSize: 10)),
+                            color: Colors.white54, fontSize: 10)),
                   ],
                 ),
               ],
@@ -431,7 +431,6 @@ class _VoiceBioWidgetState extends State<VoiceBioWidget>
                   color: Colors.redAccent, size: 20),
               onPressed: _deleteVoiceBio,
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
             ),
           ],
           // Waveform bars (static decorative)

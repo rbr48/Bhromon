@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
+import '../../../../../core/theme/colors.dart';
 
 /// 2-level nested threaded comments sheet with likes, pins, author badges,
 /// and quick emoji reactions.
@@ -255,7 +256,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         const Text(
                           'এখনও কোনো মন্তব্য নেই।\nপ্রথম মন্তব্যটি আপনিই করুন!',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white38, height: 1.4),
+                          style: TextStyle(color: Colors.white54, height: 1.4),
                         ),
                       ],
                     ),
@@ -360,7 +361,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
               color: Colors.grey.shade900,
               child: Row(
                 children: [
-                  const Icon(Icons.reply, size: 16, color: Color(0xFF00C853)),
+                  const Icon(Icons.reply, size: 16, color: AppColors.mintGreen),
                   const SizedBox(width: 8),
                   Text(
                     'উত্তর দিচ্ছেন: ${_replyingTo!.authorName}',
@@ -373,7 +374,6 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         size: 18, color: Colors.white54),
                     onPressed: _cancelReply,
                     padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
                   ),
                 ],
               ),
@@ -419,7 +419,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         hintText: _replyingTo == null
                             ? 'মন্তব্য লিখুন...'
                             : '${_replyingTo!.authorName}-এর উত্তরে লিখুন...',
-                        hintStyle: const TextStyle(color: Colors.white38),
+                        hintStyle: const TextStyle(color: Colors.white54),
                         filled: true,
                         fillColor: const Color(0xFF2C2C2C),
                         contentPadding: const EdgeInsets.symmetric(
@@ -442,7 +442,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.send_rounded,
-                            color: Color(0xFF00C853)),
+                            color: AppColors.mintGreen),
                   ),
                 ],
               ),
@@ -469,7 +469,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
           // Avatar
           CircleAvatar(
             radius: isReply ? 14 : 18,
-            backgroundColor: const Color(0xFF00C853),
+            backgroundColor: AppColors.mintGreen,
             backgroundImage: comment.authorPhoto != null
                 ? NetworkImage(comment.authorPhoto!)
                 : null,
@@ -510,13 +510,13 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 5, vertical: 1.5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF00C853).withValues(alpha: 0.2),
+                          color: AppColors.mintGreen.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
                           'লেখক',
                           style: TextStyle(
-                            color: Color(0xFF00C853),
+                            color: AppColors.mintGreen,
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                           ),
@@ -633,7 +633,6 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                   color: isLiked ? Colors.redAccent : Colors.white38,
                 ),
                 padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
                 onPressed: () => _toggleLike(comment),
               ),
               if (comment.likes.isNotEmpty)

@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'instafeed_zoomable_media.dart';
+import '../../../../../core/theme/colors.dart';
 
 /// Interactive multi-image carousel with smooth dynamic worm dot indicators,
 /// pinch-to-zoom support on every slide, and double-tap heart triggers.
@@ -91,7 +92,7 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
                   color: const Color(0xFF1E1E1E),
                   child: const Center(
                     child: Icon(Icons.broken_image,
-                        color: Colors.white38, size: 36),
+                        color: Colors.white54, size: 36),
                   ),
                 ),
               );
@@ -162,7 +163,7 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
                         height: 6,
                         decoration: BoxDecoration(
                           color: isActive
-                              ? const Color(0xFF00C853)
+                              ? AppColors.mintGreen
                               : Colors.white.withValues(alpha: 0.45),
                           borderRadius: BorderRadius.circular(3),
                         ),

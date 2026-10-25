@@ -263,7 +263,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                         child: Text(
                           'Your wishlist is empty.\nSwipe right on destinations to save them!',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white38, fontSize: 13),
+                          style: TextStyle(color: Colors.white54, fontSize: 13),
                         ),
                       )
                     : ListView.builder(
@@ -282,7 +282,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                                     color: Colors.white54, fontSize: 11)),
                             trailing: const Icon(
                                 Icons.arrow_forward_ios_rounded,
-                                color: Colors.white30,
+                                color: Colors.white54,
                                 size: 14),
                             onTap: () {
                               Navigator.pop(context);
@@ -544,7 +544,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.explore_outlined, size: 64, color: Colors.white30),
+          const Icon(Icons.explore_outlined, size: 64, color: Colors.white54),
           const SizedBox(height: 16),
           const Text(
             "You've explored all destinations!",
@@ -554,7 +554,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           const SizedBox(height: 8),
           const Text(
             "Check back later for new hidden gems.",
-            style: TextStyle(color: Colors.white38, fontSize: 13),
+            style: TextStyle(color: Colors.white54, fontSize: 13),
           ),
           const SizedBox(height: 16),
           ElevatedButton(

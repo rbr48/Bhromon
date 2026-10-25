@@ -11,6 +11,7 @@ import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'package:bhromon/features/tour_group/domain/services/media_rules.dart';
 import 'package:bhromon/features/tour_group/domain/services/tour_video_compressor.dart';
+import '../../../../../core/theme/colors.dart';
 
 /// Creation Studio bottom sheet supporting multi-image posts and reels with
 /// draft auto-recovery, manual photo tuning (brightness, contrast, saturation),
@@ -534,7 +535,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('পোস্ট সফলভাবে প্রকাশিত হয়েছে!'),
-            backgroundColor: Color(0xFF00C853),
+            backgroundColor: AppColors.mintGreen,
           ),
         );
       }
@@ -633,7 +634,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   const Spacer(),
                   FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF00C853),
+                      backgroundColor: AppColors.mintGreen,
                       padding: const EdgeInsets.symmetric(
                           horizontal: 18, vertical: 8),
                     ),
@@ -709,7 +710,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         Text(
                           '${((_isCompressing ? _compressionProgress : _uploadProgress) * 100).toStringAsFixed(0)}%',
                           style: const TextStyle(
-                              color: Color(0xFF00C853),
+                              color: AppColors.mintGreen,
                               fontWeight: FontWeight.bold,
                               fontSize: 12),
                         ),
@@ -730,7 +731,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           : _uploadProgress,
                       backgroundColor: Colors.white12,
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF00C853)),
+                          AppColors.mintGreen),
                     ),
                   ],
                 ),
@@ -785,7 +786,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     onChanged: (_) => _saveCurrentDraft(),
                     decoration: InputDecoration(
                       hintText: 'ক্যাপশন লিখুন... (#হ্যাশট্যাগ যোগ করতে পারেন)',
-                      hintStyle: const TextStyle(color: Colors.white38),
+                      hintStyle: const TextStyle(color: Colors.white54),
                       filled: true,
                       fillColor: const Color(0xFF1E1E1E),
                       border: OutlineInputBorder(
@@ -877,7 +878,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: 'নির্দিষ্ট স্থানের নাম লিখুন...',
-                        hintStyle: const TextStyle(color: Colors.white38),
+                        hintStyle: const TextStyle(color: Colors.white54),
                         filled: true,
                         fillColor: const Color(0xFF1E1E1E),
                         border: OutlineInputBorder(
@@ -892,8 +893,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   // Image Tuning & Filter Tab
                   TabBar(
                     controller: _tabCtrl,
-                    indicatorColor: const Color(0xFF00C853),
-                    labelColor: const Color(0xFF00C853),
+                    indicatorColor: AppColors.mintGreen,
+                    labelColor: AppColors.mintGreen,
                     unselectedLabelColor: Colors.white54,
                     tabs: const [
                       Tab(text: 'কালার প্রিসেট'),
@@ -916,7 +917,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                               child: ChoiceChip(
                                 label: Text(e.value),
                                 selected: isSelected,
-                                selectedColor: const Color(0xFF00C853),
+                                selectedColor: AppColors.mintGreen,
                                 backgroundColor: const Color(0xFF222222),
                                 labelStyle: TextStyle(
                                   color:
@@ -954,7 +955,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                                       value: _brightness,
                                       min: -0.4,
                                       max: 0.4,
-                                      activeColor: const Color(0xFF00C853),
+                                      activeColor: AppColors.mintGreen,
                                       onChanged: (v) {
                                         setState(() => _brightness = v);
                                         _saveCurrentDraft();
@@ -980,7 +981,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                                       value: _contrast,
                                       min: 0.6,
                                       max: 1.4,
-                                      activeColor: const Color(0xFF00C853),
+                                      activeColor: AppColors.mintGreen,
                                       onChanged: (v) {
                                         setState(() => _contrast = v);
                                         _saveCurrentDraft();
@@ -1032,7 +1033,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                                       value: _vignette,
                                       min: 0.0,
                                       max: 1.0,
-                                      activeColor: const Color(0xFF00C853),
+                                      activeColor: AppColors.mintGreen,
                                       onChanged: (v) {
                                         setState(() => _vignette = v);
                                         _saveCurrentDraft();
@@ -1055,9 +1056,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.music_note,
-                          color: Color(0xFF00C853)),
+                          color: AppColors.mintGreen),
                       hintText: 'ব্যাকগ্রাউন্ড গানের নাম (ঐচ্ছিক)',
-                      hintStyle: const TextStyle(color: Colors.white38),
+                      hintStyle: const TextStyle(color: Colors.white54),
                       filled: true,
                       fillColor: const Color(0xFF1E1E1E),
                       border: OutlineInputBorder(
@@ -1078,7 +1079,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         'ভ্রমণসঙ্গীদের মতামত ও ভোট সংগ্রহ করুন',
                         style: TextStyle(color: Colors.white54, fontSize: 12)),
                     value: _includePoll,
-                    activeThumbColor: const Color(0xFF00C853),
+                    activeThumbColor: AppColors.mintGreen,
                     onChanged: (v) => setState(() => _includePoll = v),
                   ),
 
@@ -1091,7 +1092,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         decoration: InputDecoration(
                           hintText:
                               'পোলের প্রশ্ন (উদা: রাতের খাবারে কী খাবেন?)',
-                          hintStyle: const TextStyle(color: Colors.white38),
+                          hintStyle: const TextStyle(color: Colors.white54),
                           filled: true,
                           fillColor: const Color(0xFF222222),
                           border: OutlineInputBorder(
@@ -1145,7 +1146,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     title: const Text('লাইক সংখ্যা লুকান',
                         style: TextStyle(color: Colors.white, fontSize: 14)),
                     value: _hideLikeCount,
-                    activeThumbColor: const Color(0xFF00C853),
+                    activeThumbColor: AppColors.mintGreen,
                     onChanged: (v) => setState(() => _hideLikeCount = v),
                   ),
                   SwitchListTile(
@@ -1153,7 +1154,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     title: const Text('মন্তব্য বন্ধ রাখুন',
                         style: TextStyle(color: Colors.white, fontSize: 14)),
                     value: _disableComments,
-                    activeThumbColor: const Color(0xFF00C853),
+                    activeThumbColor: AppColors.mintGreen,
                     onChanged: (v) => setState(() => _disableComments = v),
                   ),
                   const SizedBox(height: 24),
@@ -1225,9 +1226,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           const RoundSliderThumbShape(enabledThumbRadius: 6),
                       overlayShape:
                           const RoundSliderOverlayShape(overlayRadius: 10),
-                      activeTrackColor: const Color(0xFF00C853),
+                      activeTrackColor: AppColors.mintGreen,
                       inactiveTrackColor: Colors.white24,
-                      thumbColor: const Color(0xFF00C853),
+                      thumbColor: AppColors.mintGreen,
                     ),
                     child: Slider(
                       value: _videoPosition.clamp(
@@ -1282,7 +1283,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                 child: IconButton.filledTonal(
                   onPressed: _pickPhotos,
                   icon: const Icon(Icons.add_photo_alternate,
-                      color: Color(0xFF00C853)),
+                      color: AppColors.mintGreen),
                 ),
               );
             }
@@ -1382,7 +1383,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: _coverImage != null
-              ? const Color(0xFF00C853).withValues(alpha: 0.5)
+              ? AppColors.mintGreen.withValues(alpha: 0.5)
               : Colors.white12,
         ),
       ),
@@ -1394,9 +1395,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
               Icon(
                 Icons.image_outlined,
                 size: 18,
-                color: _coverImage != null
-                    ? const Color(0xFF00C853)
-                    : Colors.white70,
+                color:
+                    _coverImage != null ? AppColors.mintGreen : Colors.white70,
               ),
               const SizedBox(width: 8),
               const Text(
@@ -1413,13 +1413,13 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF00C853).withValues(alpha: 0.2),
+                    color: AppColors.mintGreen.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text(
                     'নির্বাচিত',
                     style: TextStyle(
-                      color: Color(0xFF00C853),
+                      color: AppColors.mintGreen,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1502,8 +1502,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF00C853),
-                      side: const BorderSide(color: Color(0xFF00C853)),
+                      foregroundColor: AppColors.mintGreen,
+                      side: const BorderSide(color: AppColors.mintGreen),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -1532,7 +1532,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
-      selectedColor: const Color(0xFF00C853),
+      selectedColor: AppColors.mintGreen,
       backgroundColor: const Color(0xFF222222),
       labelStyle: TextStyle(
         color: isSelected ? Colors.black : Colors.white,
@@ -1558,8 +1558,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: const Color(0xFF00C853).withValues(alpha: 0.15),
-              child: Icon(icon, color: const Color(0xFF00C853), size: 26),
+              backgroundColor: AppColors.mintGreen.withValues(alpha: 0.15),
+              child: Icon(icon, color: AppColors.mintGreen, size: 26),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1601,7 +1601,8 @@ class _LocalPhotoThumbnail extends StatelessWidget {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00C853)),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
                 ),
               ),
             ),

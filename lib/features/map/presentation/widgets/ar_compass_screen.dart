@@ -245,7 +245,7 @@ class _ArCompassScreenState extends State<ArCompassScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 9)),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 9)),
         const SizedBox(height: 2),
         Text(value,
             style: const TextStyle(
