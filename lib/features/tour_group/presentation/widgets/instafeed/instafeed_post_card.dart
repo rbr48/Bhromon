@@ -32,6 +32,12 @@ class InstafeedPostCard extends StatefulWidget {
   final String? seatNumber;
   final String? roomNumber;
 
+  /// The feed picks one video to play. Only that card holds a player.
+  final bool videoPlaying;
+
+  /// Selects this card's video, from its play button.
+  final VoidCallback? onVideoTap;
+
   const InstafeedPostCard({
     super.key,
     required this.repository,
@@ -50,6 +56,8 @@ class InstafeedPostCard extends StatefulWidget {
     this.onPostChanged,
     this.seatNumber,
     this.roomNumber,
+    this.videoPlaying = false,
+    this.onVideoTap,
   });
 
   @override
@@ -74,9 +82,19 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
 
   void _checkAndInitVideo() {
     final vUrl = widget.post.videoUrl;
+    if (!widget.videoPlaying || _videoCtrl != null) return;
     if (vUrl != null && isRemoteMediaUrl(vUrl)) {
       _initVideoController(vUrl);
     }
+  }
+
+  /// Frees the player. A card without its video selected holds none.
+  void _disposeVideo() {
+    _videoCtrl?.removeListener(_onVideoStateChanged);
+    _videoCtrl?.dispose();
+    _videoCtrl = null;
+    _isVideoInitialized = false;
+    _isVideoPlaying = false;
   }
 
   void _initVideoController(String url) {
@@ -108,19 +126,20 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   void didUpdateWidget(InstafeedPostCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.post.videoUrl != widget.post.videoUrl) {
-      _videoCtrl?.removeListener(_onVideoStateChanged);
-      _videoCtrl?.dispose();
-      _videoCtrl = null;
-      _isVideoInitialized = false;
-      _isVideoPlaying = false;
+      _disposeVideo();
       _checkAndInitVideo();
+    } else if (oldWidget.videoPlaying != widget.videoPlaying) {
+      if (widget.videoPlaying) {
+        _checkAndInitVideo();
+      } else {
+        _disposeVideo();
+      }
     }
   }
 
   @override
   void dispose() {
-    _videoCtrl?.removeListener(_onVideoStateChanged);
-    _videoCtrl?.dispose();
+    _disposeVideo();
     super.dispose();
   }
 
@@ -668,11 +687,22 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 ),
               ),
             )
-          else
+          else if (widget.videoPlaying)
             const Center(
               child: CircularProgressIndicator(
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
+              ),
+            )
+          else if (widget.onVideoTap != null)
+            GestureDetector(
+              onTap: widget.onVideoTap,
+              child: Container(
+                color: Colors.black26,
+                child: const Center(
+                  child: Icon(Icons.play_arrow_rounded,
+                      size: 48, color: Colors.white),
+                ),
               ),
             ),
 

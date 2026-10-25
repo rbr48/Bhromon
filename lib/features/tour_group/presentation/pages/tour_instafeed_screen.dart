@@ -65,6 +65,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   /// Bookmarked posts that are older than the loaded page. Fetched when the
   /// Saved view opens, so a bookmark from months ago still shows there.
   List<TourPostItem> _savedOutsidePage = const [];
+
+  // Feed video: one card holds a player, the one nearest the middle of the
+  // screen once scrolling has stopped. A scroll releases it.
+  final Map<String, GlobalKey> _videoCardKeys = {};
+  String? _playingVideoId;
+  bool _isScrolling = false;
+  bool _settleScheduled = false;
   TourGroup? _tourGroup;
   StreamSubscription<TourGroup?>? _groupSub;
 
@@ -528,6 +535,57 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         _activeHashtagFilter,
       ].join('|');
 
+  /// Handles the feed's own scrolling. A scroll releases the playing video, and
+  /// the one nearest the middle is picked when it stops. Nested scrollers, such
+  /// as the stories tray, are ignored.
+  bool _onFeedScroll(ScrollNotification n) {
+    if (n.depth != 0) return false;
+    if (n is ScrollStartNotification) {
+      _isScrolling = true;
+      if (_playingVideoId != null) setState(() => _playingVideoId = null);
+    } else if (n is ScrollEndNotification) {
+      _isScrolling = false;
+      _scheduleSettle();
+    }
+    return false;
+  }
+
+  /// Picks the video once the frame has laid out, so the cards have positions.
+  void _scheduleSettle() {
+    if (_settleScheduled) return;
+    _settleScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _settleScheduled = false;
+      if (mounted) _settleVideos();
+    });
+  }
+
+  /// Chooses the built video card nearest the middle of the screen. Does
+  /// nothing while the feed is scrolling.
+  void _settleVideos() {
+    if (_isScrolling) return;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final middle = screenHeight / 2;
+
+    String? nearest;
+    var nearestGap = double.infinity;
+    for (final entry in _videoCardKeys.entries) {
+      final box = entry.value.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize) continue;
+      final top = box.localToGlobal(Offset.zero).dy;
+      final bottom = top + box.size.height;
+      if (bottom <= 0 || top >= screenHeight) continue;
+      final gap = ((top + bottom) / 2 - middle).abs();
+      if (gap < nearestGap) {
+        nearestGap = gap;
+        nearest = entry.key;
+      }
+    }
+    if (nearest != _playingVideoId) {
+      setState(() => _playingVideoId = nearest);
+    }
+  }
+
   /// The posts the feed filters: the loaded page, plus bookmarks from outside
   /// it while the Saved view is open.
   List<TourPostItem> _feedSource(List<TourPostItem> posts) {
@@ -902,6 +960,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     builder: (context, postsSnap) {
                       final posts = postsSnap.data ?? const <TourPostItem>[];
                       _latestPosts = posts;
+                      if (postsSnap.hasData) _scheduleSettle();
 
                       // Apply filtering
                       var filteredPosts = _feedSource(posts).where((p) {
@@ -968,270 +1027,291 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           needsMore: filteredPosts.isEmpty && hasMore);
                       final reelsList = posts.where((p) => p.isReel).toList();
 
-                      return CustomScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(
-                          parent: BouncingScrollPhysics(),
-                        ),
-                        slivers: [
-                          // 1. Live SOS Alert Banner (if active)
-                          if (openAlerts.isNotEmpty)
-                            SliverToBoxAdapter(
-                              child: InstafeedSosBanner(
-                                tourId: widget.tourId,
-                                alert: openAlerts.first,
-                              ),
-                            ),
-
-                          // 2. Beach Tide & Ocean Safety Banner
-                          SliverToBoxAdapter(
-                            child: InstafeedTideBanner(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => TideBeachGuideScreen(
-                                      tourId: widget.tourId,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                      return NotificationListener<ScrollNotification>(
+                        onNotification: _onFeedScroll,
+                        child: CustomScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(
+                            parent: BouncingScrollPhysics(),
                           ),
-
-                          // 3. Stories & Story Highlights Tray
-                          SliverToBoxAdapter(
-                            child: _buildStoriesAndHighlightsBar(
-                              context,
-                              authorGroups,
-                              highlights,
-                            ),
-                          ),
-
-                          // 4. Hashtag Filter Chip (if active)
-                          if (_activeHashtagFilter != null)
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 4),
-                                child: Row(
-                                  children: [
-                                    Chip(
-                                      backgroundColor: const Color(0xFF00C853)
-                                          .withValues(alpha: 0.2),
-                                      avatar: const Icon(Icons.tag,
-                                          size: 16, color: Color(0xFF00C853)),
-                                      label: Text(
-                                        _activeHashtagFilter!,
-                                        style: const TextStyle(
-                                            color: Color(0xFF00C853),
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      deleteIcon: const Icon(Icons.close,
-                                          size: 16, color: Colors.white70),
-                                      onDeleted: () => setState(
-                                          () => _activeHashtagFilter = null),
-                                    ),
-                                  ],
+                          slivers: [
+                            // 1. Live SOS Alert Banner (if active)
+                            if (openAlerts.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: InstafeedSosBanner(
+                                  tourId: widget.tourId,
+                                  alert: openAlerts.first,
                                 ),
                               ),
-                            ),
 
-                          // 4b. Landmark Filter Chip (if active)
-                          if (_selectedLandmarkFilter != null)
+                            // 2. Beach Tide & Ocean Safety Banner
                             SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 4),
-                                child: Row(
-                                  children: [
-                                    Chip(
-                                      backgroundColor: const Color(0xFF00C853)
-                                          .withValues(alpha: 0.2),
-                                      avatar: const Icon(Icons.location_on,
-                                          size: 16, color: Color(0xFF00C853)),
-                                      label: Text(
-                                        _selectedLandmarkFilter!,
-                                        style: const TextStyle(
-                                            color: Color(0xFF00C853),
-                                            fontWeight: FontWeight.bold),
+                              child: InstafeedTideBanner(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => TideBeachGuideScreen(
+                                        tourId: widget.tourId,
                                       ),
-                                      deleteIcon: const Icon(Icons.close,
-                                          size: 16, color: Colors.white70),
-                                      onDeleted: () => setState(
-                                          () => _selectedLandmarkFilter = null),
                                     ),
-                                  ],
-                                ),
+                                  );
+                                },
                               ),
                             ),
 
-                          // 5. Media Filter Tabs (All, Photos, Reels, Saved, Archived)
-                          SliverToBoxAdapter(
-                            child: _buildMediaFilterTabs(),
-                          ),
-
-                          // 5b. Bookmark Collection Chips (When Saved Tab is active)
-                          if (_selectedMediaFilter == 'saved')
+                            // 3. Stories & Story Highlights Tray
                             SliverToBoxAdapter(
-                              child: Container(
-                                height: 40,
-                                margin:
-                                    const EdgeInsets.only(top: 4, bottom: 4),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                child: ListView(
-                                  scrollDirection: Axis.horizontal,
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 6),
-                                      child: ChoiceChip(
-                                        label: const Text('সব সেভ করা'),
-                                        selected:
-                                            _selectedBookmarkCollection == null,
-                                        selectedColor: Colors.amber,
-                                        backgroundColor:
-                                            const Color(0xFF1E1E1E),
-                                        labelStyle: TextStyle(
-                                          color: _selectedBookmarkCollection ==
-                                                  null
-                                              ? Colors.black
-                                              : Colors.white70,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
+                              child: _buildStoriesAndHighlightsBar(
+                                context,
+                                authorGroups,
+                                highlights,
+                              ),
+                            ),
+
+                            // 4. Hashtag Filter Chip (if active)
+                            if (_activeHashtagFilter != null)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 4),
+                                  child: Row(
+                                    children: [
+                                      Chip(
+                                        backgroundColor: const Color(0xFF00C853)
+                                            .withValues(alpha: 0.2),
+                                        avatar: const Icon(Icons.tag,
+                                            size: 16, color: Color(0xFF00C853)),
+                                        label: Text(
+                                          _activeHashtagFilter!,
+                                          style: const TextStyle(
+                                              color: Color(0xFF00C853),
+                                              fontWeight: FontWeight.bold),
                                         ),
-                                        onSelected: (_) => setState(() =>
-                                            _selectedBookmarkCollection = null),
+                                        deleteIcon: const Icon(Icons.close,
+                                            size: 16, color: Colors.white70),
+                                        onDeleted: () => setState(
+                                            () => _activeHashtagFilter = null),
                                       ),
-                                    ),
-                                    ..._bookmarkCollections.keys.map((name) {
-                                      final isSel =
-                                          _selectedBookmarkCollection == name;
-                                      return Padding(
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                            // 4b. Landmark Filter Chip (if active)
+                            if (_selectedLandmarkFilter != null)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 4),
+                                  child: Row(
+                                    children: [
+                                      Chip(
+                                        backgroundColor: const Color(0xFF00C853)
+                                            .withValues(alpha: 0.2),
+                                        avatar: const Icon(Icons.location_on,
+                                            size: 16, color: Color(0xFF00C853)),
+                                        label: Text(
+                                          _selectedLandmarkFilter!,
+                                          style: const TextStyle(
+                                              color: Color(0xFF00C853),
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        deleteIcon: const Icon(Icons.close,
+                                            size: 16, color: Colors.white70),
+                                        onDeleted: () => setState(() =>
+                                            _selectedLandmarkFilter = null),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                            // 5. Media Filter Tabs (All, Photos, Reels, Saved, Archived)
+                            SliverToBoxAdapter(
+                              child: _buildMediaFilterTabs(),
+                            ),
+
+                            // 5b. Bookmark Collection Chips (When Saved Tab is active)
+                            if (_selectedMediaFilter == 'saved')
+                              SliverToBoxAdapter(
+                                child: Container(
+                                  height: 40,
+                                  margin:
+                                      const EdgeInsets.only(top: 4, bottom: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16),
+                                  child: ListView(
+                                    scrollDirection: Axis.horizontal,
+                                    children: [
+                                      Padding(
                                         padding:
                                             const EdgeInsets.only(right: 6),
                                         child: ChoiceChip(
-                                          label: Text(name),
-                                          selected: isSel,
+                                          label: const Text('সব সেভ করা'),
+                                          selected:
+                                              _selectedBookmarkCollection ==
+                                                  null,
                                           selectedColor: Colors.amber,
                                           backgroundColor:
                                               const Color(0xFF1E1E1E),
                                           labelStyle: TextStyle(
-                                            color: isSel
-                                                ? Colors.black
-                                                : Colors.white70,
+                                            color:
+                                                _selectedBookmarkCollection ==
+                                                        null
+                                                    ? Colors.black
+                                                    : Colors.white70,
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
                                           ),
                                           onSelected: (_) => setState(() =>
                                               _selectedBookmarkCollection =
-                                                  name),
+                                                  null),
                                         ),
-                                      );
-                                    }),
-                                  ],
+                                      ),
+                                      ..._bookmarkCollections.keys.map((name) {
+                                        final isSel =
+                                            _selectedBookmarkCollection == name;
+                                        return Padding(
+                                          padding:
+                                              const EdgeInsets.only(right: 6),
+                                          child: ChoiceChip(
+                                            label: Text(name),
+                                            selected: isSel,
+                                            selectedColor: Colors.amber,
+                                            backgroundColor:
+                                                const Color(0xFF1E1E1E),
+                                            labelStyle: TextStyle(
+                                              color: isSel
+                                                  ? Colors.black
+                                                  : Colors.white70,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            onSelected: (_) => setState(() =>
+                                                _selectedBookmarkCollection =
+                                                    name),
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                  ),
                                 ),
                               ),
+
+                            // 6. Day-wise Filter Chips
+                            SliverToBoxAdapter(
+                              child: _buildDayFilterChips(),
                             ),
 
-                          // 6. Day-wise Filter Chips
-                          SliverToBoxAdapter(
-                            child: _buildDayFilterChips(),
-                          ),
-
-                          // 7. Posts: Grid View vs Feed List View
-                          if (postsSnap.hasError && !postsSnap.hasData)
-                            SliverFillRemaining(child: _buildFeedError(context))
-                          else if (!postsSnap.hasData)
-                            const SliverFillRemaining(
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                    color: AppColors.mintGreen),
-                              ),
-                            )
-                          else if (filteredPosts.isEmpty)
-                            SliverFillRemaining(
-                                child: posts.isEmpty
-                                    ? _buildEmptyFeedState(context)
-                                    : _buildFilteredEmptyState(
-                                        hasMore: hasMore))
-                          else if (_isGridView)
-                            SliverFillRemaining(
-                              child: InstafeedExploreGrid(
-                                posts: filteredPosts,
-                                onPostTap: (post) {
-                                  if (post.isReel) {
-                                    final reelIdx = reelsList.indexOf(post);
-                                    _openReelsModal(context, reelsList,
-                                        reelIdx >= 0 ? reelIdx : 0);
-                                  } else {
-                                    InstafeedImageViewerModal.show(
-                                      context,
-                                      repository: _repository,
-                                      tourId: widget.tourId,
+                            // 7. Posts: Grid View vs Feed List View
+                            if (postsSnap.hasError && !postsSnap.hasData)
+                              SliverFillRemaining(
+                                  child: _buildFeedError(context))
+                            else if (!postsSnap.hasData)
+                              const SliverFillRemaining(
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                      color: AppColors.mintGreen),
+                                ),
+                              )
+                            else if (filteredPosts.isEmpty)
+                              SliverFillRemaining(
+                                  child: posts.isEmpty
+                                      ? _buildEmptyFeedState(context)
+                                      : _buildFilteredEmptyState(
+                                          hasMore: hasMore))
+                            else if (_isGridView)
+                              SliverFillRemaining(
+                                child: InstafeedExploreGrid(
+                                  posts: filteredPosts,
+                                  onPostTap: (post) {
+                                    if (post.isReel) {
+                                      final reelIdx = reelsList.indexOf(post);
+                                      _openReelsModal(context, reelsList,
+                                          reelIdx >= 0 ? reelIdx : 0);
+                                    } else {
+                                      InstafeedImageViewerModal.show(
+                                        context,
+                                        repository: _repository,
+                                        tourId: widget.tourId,
+                                        post: post,
+                                        onOpenComments: (p) =>
+                                            _showCommentsModal(context, p),
+                                        onShare: (p) =>
+                                            _showShareModal(context, p),
+                                        onAddToLedger: (p) =>
+                                            _showAddToLedgerDialog(p),
+                                      );
+                                    }
+                                  },
+                                ),
+                              )
+                            else
+                              SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    if (index == filteredPosts.length) {
+                                      return Center(
+                                        child: TextButton(
+                                          onPressed: _loadMorePosts,
+                                          child: const Text('আরও পোস্ট দেখুন'),
+                                        ),
+                                      );
+                                    }
+                                    final post = filteredPosts[index];
+                                    final isVideo = post.videoUrl != null;
+                                    return InstafeedPostCard(
+                                      // Video cards keep a GlobalKey, so the feed can find
+                                      // their position when it picks one to play.
+                                      key: isVideo
+                                          ? _videoCardKeys.putIfAbsent(
+                                              post.id, () => GlobalKey())
+                                          : ValueKey(post.id),
                                       post: post,
+                                      videoPlaying: post.id == _playingVideoId,
+                                      onVideoTap: isVideo
+                                          ? () => setState(
+                                              () => _playingVideoId = post.id)
+                                          : null,
+                                      tourId: widget.tourId,
+                                      repository: _repository,
+                                      isAdmin: _isAdmin,
+                                      seatNumber: _seatMap[post.authorEmail],
+                                      roomNumber: _roomMap[post.authorEmail],
+                                      isBookmarked:
+                                          _bookmarkedPostIds.contains(post.id),
+                                      onBookmarkToggle: () =>
+                                          _toggleBookmark(post.id),
+                                      onSaveToCollection:
+                                          _showSaveToCollectionSheet,
                                       onOpenComments: (p) =>
                                           _showCommentsModal(context, p),
                                       onShare: (p) =>
                                           _showShareModal(context, p),
                                       onAddToLedger: (p) =>
                                           _showAddToLedgerDialog(p),
+                                      onReelTap: (p) {
+                                        final reelIdx = reelsList.indexOf(p);
+                                        _openReelsModal(
+                                          context,
+                                          reelsList,
+                                          reelIdx >= 0 ? reelIdx : 0,
+                                        );
+                                      },
+                                      onHashtagTap: (tag) => setState(
+                                          () => _activeHashtagFilter = tag),
+                                      onPostChanged: () => setState(() {}),
                                     );
-                                  }
-                                },
+                                  },
+                                  childCount:
+                                      filteredPosts.length + (hasMore ? 1 : 0),
+                                ),
                               ),
-                            )
-                          else
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  if (index == filteredPosts.length) {
-                                    return Center(
-                                      child: TextButton(
-                                        onPressed: _loadMorePosts,
-                                        child: const Text('আরও পোস্ট দেখুন'),
-                                      ),
-                                    );
-                                  }
-                                  final post = filteredPosts[index];
-                                  return InstafeedPostCard(
-                                    key: ValueKey(post.id),
-                                    post: post,
-                                    tourId: widget.tourId,
-                                    repository: _repository,
-                                    isAdmin: _isAdmin,
-                                    seatNumber: _seatMap[post.authorEmail],
-                                    roomNumber: _roomMap[post.authorEmail],
-                                    isBookmarked:
-                                        _bookmarkedPostIds.contains(post.id),
-                                    onBookmarkToggle: () =>
-                                        _toggleBookmark(post.id),
-                                    onSaveToCollection:
-                                        _showSaveToCollectionSheet,
-                                    onOpenComments: (p) =>
-                                        _showCommentsModal(context, p),
-                                    onShare: (p) => _showShareModal(context, p),
-                                    onAddToLedger: (p) =>
-                                        _showAddToLedgerDialog(p),
-                                    onReelTap: (p) {
-                                      final reelIdx = reelsList.indexOf(p);
-                                      _openReelsModal(
-                                        context,
-                                        reelsList,
-                                        reelIdx >= 0 ? reelIdx : 0,
-                                      );
-                                    },
-                                    onHashtagTap: (tag) => setState(
-                                        () => _activeHashtagFilter = tag),
-                                    onPostChanged: () => setState(() {}),
-                                  );
-                                },
-                                childCount:
-                                    filteredPosts.length + (hasMore ? 1 : 0),
-                              ),
-                            ),
 
-                          const SliverToBoxAdapter(child: SizedBox(height: 80)),
-                        ],
+                            const SliverToBoxAdapter(
+                                child: SizedBox(height: 80)),
+                          ],
+                        ),
                       );
                     },
                   );
