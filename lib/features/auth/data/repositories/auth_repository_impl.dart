@@ -161,7 +161,8 @@ class AuthRepositoryImpl implements IAuthRepository {
       }
       final user = userCredential.user;
       if (user == null) {
-        return const Left(AuthFailure('Google Sign-In failed: No user returned'));
+        return const Left(
+            AuthFailure('Google Sign-In failed: No user returned'));
       }
       return await _syncUserWithFirestore(user);
     } on FirebaseAuthException catch (e) {
