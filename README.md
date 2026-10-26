@@ -4,6 +4,16 @@ Bhromon is an offline-first travel application designed with Clean Architecture,
 
 ---
 
+## Project Status
+
+Bhromon is free and open source, with no business model. No feature is sold.
+
+## License
+
+No license has been chosen yet. Until one is added, the code is not licensed for reuse, modification or redistribution. See [CONTRIBUTING.md](CONTRIBUTING.md) to take part.
+
+---
+
 ## Architecture Overview
 
 Bhromon is structured around **Clean Architecture** principles to separate business concerns from external dependencies:
