@@ -377,6 +377,27 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(deleteDoc(doc(db('member'), 'tours', TOUR, 'hotel_rooms', 'r1')));
     });
 
+    test('route stops: anyone adds their own; the author or an admin edits; the author stays', async () => {
+      const path = ['tours', TOUR, 'checkpoints', 'c1'];
+      const cp = { id: 'c1', name: 'Paduar Bazar', kmFromStart: 100, kind: 'food', legKey: 'origin>a', addedByEmail: people.member.email };
+      await assertFails(setDoc(doc(db('member'), ...path), { ...cp, addedByEmail: people.admin.email }));
+      await assertSucceeds(setDoc(doc(db('member'), ...path), cp));
+      await assertSucceeds(updateDoc(doc(db('member'), ...path), { name: 'Paduar Bazar Bishwaroad' }));
+      await assertSucceeds(updateDoc(doc(db('admin'), ...path), { visitedAt: serverTimestamp() }));
+      await assertFails(updateDoc(doc(db('other'), ...path), { name: 'x' }));
+      await assertFails(updateDoc(doc(db('member'), ...path), { addedByEmail: people.other.email }));
+      await assertFails(deleteDoc(doc(db('other'), ...path)));
+      await assertSucceeds(deleteDoc(doc(db('member'), ...path)));
+    });
+
+    test('admins save the itinerary and leg plans on the tour; members cannot', async () => {
+      const stops = [{ id: 'a', name: "Cox's Bazar", kind: 'beach' }];
+      await assertFails(updateDoc(doc(db('member'), 'tours', TOUR), { stops }));
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', TOUR), { stops, returnHome: true }));
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', TOUR), new FieldPath('legPlans', 'origin>a'), { mode: 'road' }));
+      await assertFails(updateDoc(doc(db('member'), 'tours', TOUR), new FieldPath('legPlans', 'origin>a'), { mode: 'air' }));
+    });
+
     const vehicle = (extra = {}) => ({ id: 'v1', kind: 'trainChair', name: 'Sonar Bangla', rows: 15, pattern: '2-2', locked: false, ...extra });
     const seat = (extra = {}) => ({ vehicleId: 'v1', seatNumber: '12', assignedMemberEmail: people.member.email, assignedMemberName: 'M', isWindow: false, familySlot: 0, ...extra });
 
