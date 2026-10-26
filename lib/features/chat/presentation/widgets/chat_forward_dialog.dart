@@ -60,7 +60,8 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
               decoration: InputDecoration(
                 hintText: 'Search chats...',
                 hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                prefixIcon: const Icon(Icons.search, color: Colors.white38, size: 18),
+                prefixIcon:
+                    const Icon(Icons.search, color: Colors.white38, size: 18),
                 filled: true,
                 fillColor: const Color(0xFF2A3942),
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -69,7 +70,8 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                   borderSide: BorderSide.none,
                 ),
               ),
-              onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
+              onChanged: (val) =>
+                  setState(() => _searchQuery = val.trim().toLowerCase()),
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -81,7 +83,8 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                 builder: (context, snap) {
                   if (!snap.hasData) {
                     return const Center(
-                      child: CircularProgressIndicator(color: Color(0xFF00A884)),
+                      child:
+                          CircularProgressIndicator(color: Color(0xFF00A884)),
                     );
                   }
                   final docs = snap.data!.docs;
@@ -139,7 +142,8 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                         ),
                         title: Text(
                           name,
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 13),
                         ),
                         trailing: Icon(
                           _selectedChatId == doc.id
@@ -162,16 +166,19 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('CANCEL', style: TextStyle(color: Colors.white54)),
+                  child: const Text('CANCEL',
+                      style: TextStyle(color: Colors.white54)),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00A884),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   icon: const Icon(Icons.send, size: 16, color: Colors.white),
-                  label: const Text('FORWARD', style: TextStyle(color: Colors.white)),
+                  label: const Text('FORWARD',
+                      style: TextStyle(color: Colors.white)),
                   onPressed: _selectedChatId == null
                       ? null
                       : () {

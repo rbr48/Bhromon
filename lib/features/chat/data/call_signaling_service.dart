@@ -74,10 +74,8 @@ class CallSignalingService {
 
   // ── Firestore stream subscriptions ────────────────────────────────────────
 
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
-      _offerCandidatesSub;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
-      _answerCandidatesSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _offerCandidatesSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _answerCandidatesSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _callDocSub;
 
   // ── Firestore shorthand ────────────────────────────────────────────────────
@@ -289,7 +287,8 @@ class CallSignalingService {
         });
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('CallSignalingService: endCall Firestore update error: $e');
+          debugPrint(
+              'CallSignalingService: endCall Firestore update error: $e');
         }
       }
     }
@@ -306,7 +305,8 @@ class CallSignalingService {
       });
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('CallSignalingService: declineCall Firestore update error: $e');
+        debugPrint(
+            'CallSignalingService: declineCall Firestore update error: $e');
       }
     }
   }
@@ -355,13 +355,10 @@ class CallSignalingService {
   Future<void> _getUserMedia(bool videoEnabled) async {
     final mediaConstraints = <String, dynamic>{
       'audio': true,
-      'video': videoEnabled
-          ? <String, dynamic>{'facingMode': 'user'}
-          : false,
+      'video': videoEnabled ? <String, dynamic>{'facingMode': 'user'} : false,
     };
 
-    _localStream =
-        await navigator.mediaDevices.getUserMedia(mediaConstraints);
+    _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
     onLocalStream?.call(_localStream!);
   }
 

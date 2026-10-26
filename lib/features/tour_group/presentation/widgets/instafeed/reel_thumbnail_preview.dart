@@ -73,7 +73,9 @@ class _ReelThumbnailPreviewState extends State<ReelThumbnailPreview> {
 
   @override
   Widget build(BuildContext context) {
-    if (_initialized && _controller != null && _controller!.value.isInitialized) {
+    if (_initialized &&
+        _controller != null &&
+        _controller!.value.isInitialized) {
       final size = _controller!.value.size;
       return SizedBox.expand(
         child: FittedBox(

@@ -759,8 +759,7 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     );
   }
 
-  Widget _buildSquare(
-      int row, int col, double size, ChessBoardTheme theme) {
+  Widget _buildSquare(int row, int col, double size, ChessBoardTheme theme) {
     final isLight = (row + col) % 2 == 0;
     Color squareColor = isLight ? theme.lightSquare : theme.darkSquare;
 

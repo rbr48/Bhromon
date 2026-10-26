@@ -151,7 +151,8 @@ class ChatLocationBubble extends StatelessWidget {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.directions, color: Color(0xFF00A884), size: 14),
+                      Icon(Icons.directions,
+                          color: Color(0xFF00A884), size: 14),
                       SizedBox(width: 4),
                       Flexible(
                         child: Text(

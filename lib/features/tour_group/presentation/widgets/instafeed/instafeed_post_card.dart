@@ -24,7 +24,8 @@ class InstafeedPostCard extends StatefulWidget {
   final bool isBookmarked;
   final bool isAdmin;
   final ColorFilter? colorFilter;
-  final void Function(TourPostItem post, {int? targetMediaIndex})? onOpenComments;
+  final void Function(TourPostItem post, {int? targetMediaIndex})?
+      onOpenComments;
   final void Function(TourPostItem post)? onShare;
   final void Function(TourPostItem post)? onAddToLedger;
   final void Function(TourPostItem post)? onReelTap;
@@ -585,8 +586,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     ),
                   ],
                   ListTile(
-                    leading:
-                        const Icon(Icons.receipt_long, color: AppColors.mintGreen),
+                    leading: const Icon(Icons.receipt_long,
+                        color: AppColors.mintGreen),
                     title: const Text('ট্রিপ লেজারে খরচ হিসেবে যোগ করুন',
                         style: TextStyle(color: Colors.white)),
                     onTap: () {
@@ -595,10 +596,12 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     },
                   ),
                   ListTile(
-                    leading:
-                        const Icon(Icons.bookmark_border, color: Colors.white70),
+                    leading: const Icon(Icons.bookmark_border,
+                        color: Colors.white70),
                     title: Text(
-                      widget.isBookmarked ? 'সংগ্রহ থেকে সরান' : 'সংগ্রহে সেভ করুন',
+                      widget.isBookmarked
+                          ? 'সংগ্রহ থেকে সরান'
+                          : 'সংগ্রহে সেভ করুন',
                       style: const TextStyle(color: Colors.white),
                     ),
                     onTap: () {
@@ -619,8 +622,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     ),
                   if (canManage)
                     ListTile(
-                      leading:
-                          const Icon(Icons.delete_outline, color: Colors.redAccent),
+                      leading: const Icon(Icons.delete_outline,
+                          color: Colors.redAccent),
                       title: const Text('পোস্ট মুছুন',
                           style: TextStyle(color: Colors.redAccent)),
                       onTap: () {

@@ -251,7 +251,10 @@ class _PinDetailSheetState extends State<PinDetailSheet>
               height: 4,
               margin: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant
+                    .withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -578,8 +581,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
           if (pin.description != null && pin.description!.isNotEmpty) ...[
             Text(
               pin.description!,
-              style: TextStyle(
-                  color: cs.onSurface, fontSize: 13, height: 1.6),
+              style: TextStyle(color: cs.onSurface, fontSize: 13, height: 1.6),
             ),
             const SizedBox(height: 16),
           ] else ...[
@@ -588,16 +590,19 @@ class _PinDetailSheetState extends State<PinDetailSheet>
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
+                border:
+                    Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: cs.onSurfaceVariant, size: 16),
+                  Icon(Icons.info_outline,
+                      color: cs.onSurfaceVariant, size: 16),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'No description yet. Be the first to add one by creating a trip log!',
-                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+                      style:
+                          TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
                     ),
                   ),
                 ],
@@ -618,7 +623,8 @@ class _PinDetailSheetState extends State<PinDetailSheet>
               child: Center(
                   child: LinearProgressIndicator(
                       color: AppColors.mintGreen,
-                      backgroundColor: cs.outlineVariant.withValues(alpha: 0.3))),
+                      backgroundColor:
+                          cs.outlineVariant.withValues(alpha: 0.3))),
             )
           else if (_weather != null)
             Container(
@@ -691,7 +697,8 @@ class _PinDetailSheetState extends State<PinDetailSheet>
             decoration: BoxDecoration(
               color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
+              border:
+                  Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1146,10 +1153,16 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4)),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outlineVariant
+                              .withValues(alpha: 0.4)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1197,7 +1210,10 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                               Text(
                                 _formatDate(ts.toDate()),
                                 style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 9),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                    fontSize: 9),
                               ),
                           ],
                         ),
@@ -1205,7 +1221,9 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                         Text(
                           text,
                           style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface, fontSize: 12.5, height: 1.5),
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontSize: 12.5,
+                              height: 1.5),
                         ),
                       ],
                     ),
@@ -1225,14 +1243,23 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                 child: Container(
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outlineVariant
+                            .withValues(alpha: 0.5)),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: TextField(
                     controller: _tipController,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 12),
                     maxLength: 140,
                     buildCounter: (_,
                             {required currentLength,
@@ -1241,7 +1268,12 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                         null,
                     decoration: InputDecoration(
                       hintText: 'Share a tip (max 140 chars)...',
-                      hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 11),
+                      hintStyle: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.7),
+                          fontSize: 11),
                       border: InputBorder.none,
                       counterText: '',
                     ),
@@ -1290,7 +1322,11 @@ class _PinDetailSheetState extends State<PinDetailSheet>
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-            top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3))),
+            top: BorderSide(
+                color: Theme.of(context)
+                    .colorScheme
+                    .outlineVariant
+                    .withValues(alpha: 0.3))),
       ),
       child: Row(
         children: [
@@ -1462,9 +1498,16 @@ class _PinDetailSheetState extends State<PinDetailSheet>
         return Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4)),
+            border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .outlineVariant
+                    .withValues(alpha: 0.4)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1501,7 +1544,12 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppColors.forTier(tier),
-                        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5), width: 1.5),
+                        border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outlineVariant
+                                .withValues(alpha: 0.5),
+                            width: 1.5),
                       ),
                       child: Center(
                         child: Text(name,
@@ -1519,7 +1567,12 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white12,
-                        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5), width: 1.5),
+                        border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outlineVariant
+                                .withValues(alpha: 0.5),
+                            width: 1.5),
                       ),
                       child: Center(
                         child: Text('+${docs.length - 5}',
@@ -1557,9 +1610,16 @@ class _PinDetailSheetState extends State<PinDetailSheet>
         return Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4)),
+            border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .outlineVariant
+                    .withValues(alpha: 0.4)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

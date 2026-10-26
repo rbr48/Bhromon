@@ -115,8 +115,7 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none),
-              counterStyle:
-                  TextStyle(color: cs.onSurfaceVariant, fontSize: 9),
+              counterStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 9),
               contentPadding: const EdgeInsets.all(12),
             ),
           ),

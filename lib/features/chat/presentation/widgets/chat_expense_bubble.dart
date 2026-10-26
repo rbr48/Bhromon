@@ -88,7 +88,9 @@ class ChatExpenseBubble extends StatelessWidget {
                 ? 'You paid • ৳${splitAmount.toStringAsFixed(0)} owed to you'
                 : '$paidByName paid • You owe ৳${splitAmount.toStringAsFixed(0)}',
             style: TextStyle(
-              color: isPaidByMe ? const Color(0xFF53BDEB) : const Color(0xFFFFB74D),
+              color: isPaidByMe
+                  ? const Color(0xFF53BDEB)
+                  : const Color(0xFFFFB74D),
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),

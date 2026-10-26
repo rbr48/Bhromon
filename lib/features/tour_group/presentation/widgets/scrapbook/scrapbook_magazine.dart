@@ -353,7 +353,9 @@ class _PostPicture extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = _url;
     final picture = url == null
-        ? (post.isReel && post.videoUrl != null && isRemoteMediaUrl(post.videoUrl!)
+        ? (post.isReel &&
+                post.videoUrl != null &&
+                isRemoteMediaUrl(post.videoUrl!)
             ? ReelThumbnailPreview(videoUrl: post.videoUrl!)
             : const DecoratedBox(
                 decoration: BoxDecoration(

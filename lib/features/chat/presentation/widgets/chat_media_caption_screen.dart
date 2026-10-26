@@ -91,12 +91,14 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                    icon:
+                        const Icon(Icons.close, color: Colors.white, size: 28),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.rotate_right, color: Colors.white, size: 26),
+                    icon: const Icon(Icons.rotate_right,
+                        color: Colors.white, size: 26),
                     tooltip: 'Rotate',
                     onPressed: _rotateImage,
                   ),
@@ -127,10 +129,12 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                       ),
                       child: TextField(
                         controller: _captionController,
-                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 15),
                         decoration: const InputDecoration(
                           hintText: 'Add a caption...',
-                          hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
+                          hintStyle:
+                              TextStyle(color: Colors.white54, fontSize: 14),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(vertical: 12),
                         ),
