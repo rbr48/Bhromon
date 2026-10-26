@@ -128,7 +128,9 @@ class _SwipeToReplyState extends State<SwipeToReply>
                   ),
                   child: Icon(
                     Icons.reply_rounded,
-                    color: _thresholdTriggered ? Colors.white : const Color(0xFF8696A0),
+                    color: _thresholdTriggered
+                        ? Colors.white
+                        : const Color(0xFF8696A0),
                     size: 18,
                   ),
                 ),

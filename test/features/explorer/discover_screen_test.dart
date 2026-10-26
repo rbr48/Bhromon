@@ -5,7 +5,9 @@ import 'package:bhromon/core/services/discovery_score_service.dart';
 
 void main() {
   group('DiscoveryScoreService', () {
-    test('computes highest discovery score for unvisited remote pin with no photos', () {
+    test(
+        'computes highest discovery score for unvisited remote pin with no photos',
+        () {
       final pin = LocationPin(
         pinId: 'hidden_spot',
         name: 'Secret Waterfall',
@@ -32,7 +34,9 @@ void main() {
       expect(DiscoveryScoreService.label(score), contains('Undiscovered'));
     });
 
-    test('computes lower discovery score for well-known verified pin with many visits and trips', () {
+    test(
+        'computes lower discovery score for well-known verified pin with many visits and trips',
+        () {
       final pin = LocationPin(
         pinId: 'popular_spot',
         name: 'Cox Beach',
@@ -41,7 +45,19 @@ void main() {
         lng: 91.97,
         trustTier: TrustTier.verified,
         lastConfirmed: DateTime.now(),
-        linkedTripIds: const ['trip_1', 'trip_2', 'trip_3', 'trip_4', 'trip_5', 'trip_6', 'trip_7', 'trip_8', 'trip_9', 'trip_10', 'trip_11'],
+        linkedTripIds: const [
+          'trip_1',
+          'trip_2',
+          'trip_3',
+          'trip_4',
+          'trip_5',
+          'trip_6',
+          'trip_7',
+          'trip_8',
+          'trip_9',
+          'trip_10',
+          'trip_11'
+        ],
         linkedTipIds: const [],
         division: 'Chittagong',
         district: 'Coxs Bazar',

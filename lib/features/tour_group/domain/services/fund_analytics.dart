@@ -217,8 +217,7 @@ class FundReport {
           CollectionRow(
             id: m.id,
             name: m.name,
-            targetPaisa:
-                budget.perHeadTargetPaisa * m.familyCount.clamp(1, 20),
+            targetPaisa: budget.perHeadTargetPaisa * m.familyCount.clamp(1, 20),
             paidPaisa: paid[m.id.toLowerCase()] ?? 0,
           ),
       ]..sort((a, b) => b.duePaisa.compareTo(a.duePaisa));

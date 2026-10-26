@@ -59,7 +59,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
     var text = (overrideText ?? _commentCtrl.text).trim();
     if (text.isEmpty && reaction == null) return;
 
-    if (_taggedSlideIndex != null && text.isNotEmpty && !text.startsWith('[ছবি')) {
+    if (_taggedSlideIndex != null &&
+        text.isNotEmpty &&
+        !text.startsWith('[ছবি')) {
       text = '[ছবি ${_taggedSlideIndex! + 1}] $text';
     }
 
@@ -246,7 +248,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                       decoration: BoxDecoration(
                         color: AppColors.darkGreen,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.mintGreen, width: 0.8),
+                        border:
+                            Border.all(color: AppColors.mintGreen, width: 0.8),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -261,7 +264,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                           ),
                           const SizedBox(width: 4),
                           GestureDetector(
-                            onTap: () => setState(() => _taggedSlideIndex = null),
+                            onTap: () =>
+                                setState(() => _taggedSlideIndex = null),
                             child: const Icon(Icons.close,
                                 size: 12, color: AppColors.mintGreen),
                           ),
@@ -278,239 +282,245 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                 ],
               ),
             ),
-          const Divider(height: 1, color: Colors.white10),
+            const Divider(height: 1, color: Colors.white10),
 
-          // Comments List
-          Expanded(
-            child: StreamBuilder<List<TourCommentItem>>(
-              stream: widget.repository
-                  .watchComments(widget.tourId, widget.post.id),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text(
-                      'লোড করা যায়নি: ${snapshot.error}',
-                      style: const TextStyle(color: Colors.white54),
-                    ),
-                  );
-                }
-                if (!snapshot.hasData) {
-                  return const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  );
-                }
+            // Comments List
+            Expanded(
+              child: StreamBuilder<List<TourCommentItem>>(
+                stream: widget.repository
+                    .watchComments(widget.tourId, widget.post.id),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'লোড করা যায়নি: ${snapshot.error}',
+                        style: const TextStyle(color: Colors.white54),
+                      ),
+                    );
+                  }
+                  if (!snapshot.hasData) {
+                    return const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    );
+                  }
 
-                final allComments = snapshot.data!;
-                if (allComments.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.chat_bubble_outline,
-                            size: 48,
-                            color: Colors.white.withValues(alpha: 0.2)),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'এখনও কোনো মন্তব্য নেই।\nপ্রথম মন্তব্যটি আপনিই করুন!',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white54, height: 1.4),
-                        ),
-                      ],
-                    ),
-                  );
-                }
+                  final allComments = snapshot.data!;
+                  if (allComments.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.chat_bubble_outline,
+                              size: 48,
+                              color: Colors.white.withValues(alpha: 0.2)),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'এখনও কোনো মন্তব্য নেই।\nপ্রথম মন্তব্যটি আপনিই করুন!',
+                            textAlign: TextAlign.center,
+                            style:
+                                TextStyle(color: Colors.white54, height: 1.4),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
-                // Partition into top-level and replies
-                final topLevel = allComments.where((c) => !c.isReply).toList();
-                final repliesMap = <String, List<TourCommentItem>>{};
-                for (final c in allComments.where((c) => c.isReply)) {
-                  repliesMap.putIfAbsent(c.parentId!, () => []).add(c);
-                }
+                  // Partition into top-level and replies
+                  final topLevel =
+                      allComments.where((c) => !c.isReply).toList();
+                  final repliesMap = <String, List<TourCommentItem>>{};
+                  for (final c in allComments.where((c) => c.isReply)) {
+                    repliesMap.putIfAbsent(c.parentId!, () => []).add(c);
+                  }
 
-                // Sort: pinned top comments first, then chronological
-                topLevel.sort((a, b) {
-                  if (a.isPinned && !b.isPinned) return -1;
-                  if (!a.isPinned && b.isPinned) return 1;
-                  return a.createdAt.compareTo(b.createdAt);
-                });
+                  // Sort: pinned top comments first, then chronological
+                  topLevel.sort((a, b) {
+                    if (a.isPinned && !b.isPinned) return -1;
+                    if (!a.isPinned && b.isPinned) return 1;
+                    return a.createdAt.compareTo(b.createdAt);
+                  });
 
-                return ListView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  itemCount: topLevel.length,
-                  itemBuilder: (context, index) {
-                    final parent = topLevel[index];
-                    final replies = repliesMap[parent.id] ?? const [];
-                    final isExpanded = _expandedParentIds.contains(parent.id);
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    itemCount: topLevel.length,
+                    itemBuilder: (context, index) {
+                      final parent = topLevel[index];
+                      final replies = repliesMap[parent.id] ?? const [];
+                      final isExpanded = _expandedParentIds.contains(parent.id);
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildCommentRow(parent),
-                        if (replies.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(
-                                left: 48, top: 4, bottom: 4),
-                            child: InkWell(
-                              onTap: () {
-                                setState(() {
-                                  if (isExpanded) {
-                                    _expandedParentIds.remove(parent.id);
-                                  } else {
-                                    _expandedParentIds.add(parent.id);
-                                  }
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(4),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 4, horizontal: 6),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 24,
-                                      height: 1,
-                                      color: Colors.white24,
-                                      margin: const EdgeInsets.only(right: 8),
-                                    ),
-                                    Text(
-                                      isExpanded
-                                          ? 'উত্তর লুকান'
-                                          : '${replies.length}টি উত্তর দেখুন',
-                                      style: const TextStyle(
-                                        color: Colors.white54,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildCommentRow(parent),
+                          if (replies.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                  left: 48, top: 4, bottom: 4),
+                              child: InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    if (isExpanded) {
+                                      _expandedParentIds.remove(parent.id);
+                                    } else {
+                                      _expandedParentIds.add(parent.id);
+                                    }
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(4),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 4, horizontal: 6),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 24,
+                                        height: 1,
+                                        color: Colors.white24,
+                                        margin: const EdgeInsets.only(right: 8),
                                       ),
-                                    ),
-                                    Icon(
-                                      isExpanded
-                                          ? Icons.keyboard_arrow_up
-                                          : Icons.keyboard_arrow_down,
-                                      size: 16,
-                                      color: Colors.white54,
-                                    ),
-                                  ],
+                                      Text(
+                                        isExpanded
+                                            ? 'উত্তর লুকান'
+                                            : '${replies.length}টি উত্তর দেখুন',
+                                        style: const TextStyle(
+                                          color: Colors.white54,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Icon(
+                                        isExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        size: 16,
+                                        color: Colors.white54,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          if (isExpanded)
-                            ...replies.map((reply) => Padding(
-                                  padding: const EdgeInsets.only(left: 44),
-                                  child: _buildCommentRow(reply, isReply: true),
-                                )),
+                            if (isExpanded)
+                              ...replies.map((reply) => Padding(
+                                    padding: const EdgeInsets.only(left: 44),
+                                    child:
+                                        _buildCommentRow(reply, isReply: true),
+                                  )),
+                          ],
+                          const SizedBox(height: 12),
                         ],
-                        const SizedBox(height: 12),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-
-          // Replying To Banner
-          if (_replyingTo != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: Colors.grey.shade900,
-              child: Row(
-                children: [
-                  const Icon(Icons.reply, size: 16, color: AppColors.mintGreen),
-                  const SizedBox(width: 8),
-                  Text(
-                    'উত্তর দিচ্ছেন: ${_replyingTo!.authorName}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    tooltip: 'বন্ধ করুন',
-                    icon: const Icon(Icons.close,
-                        size: 18, color: Colors.white54),
-                    onPressed: _cancelReply,
-                    padding: EdgeInsets.zero,
-                  ),
-                ],
+                      );
+                    },
+                  );
+                },
               ),
             ),
 
-          // Quick Emoji Bar
-          Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            color: const Color(0xFF181818),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: _quickEmojis.map((emoji) {
-                return InkWell(
-                  onTap: () => _submitComment(reaction: emoji),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                    child: Text(emoji, style: const TextStyle(fontSize: 22)),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
+            // Replying To Banner
+            if (_replyingTo != null)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: Colors.grey.shade900,
+                child: Row(
+                  children: [
+                    const Icon(Icons.reply,
+                        size: 16, color: AppColors.mintGreen),
+                    const SizedBox(width: 8),
+                    Text(
+                      'উত্তর দিচ্ছেন: ${_replyingTo!.authorName}',
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      tooltip: 'বন্ধ করুন',
+                      icon: const Icon(Icons.close,
+                          size: 18, color: Colors.white54),
+                      onPressed: _cancelReply,
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+              ),
 
-          // Input field
-          SafeArea(
-            top: false,
-            bottom: bottomInset == 0,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              color: const Color(0xFF1E1E1E),
+            // Quick Emoji Bar
+            Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              color: const Color(0xFF181818),
               child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _commentCtrl,
-                      focusNode: _focusNode,
-                      style: const TextStyle(color: Colors.white),
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _submitComment(),
-                      decoration: InputDecoration(
-                        hintText: _replyingTo == null
-                            ? 'মন্তব্য লিখুন...'
-                            : '${_replyingTo!.authorName}-এর উত্তরে লিখুন...',
-                        hintStyle: const TextStyle(color: Colors.white54),
-                        filled: true,
-                        fillColor: const Color(0xFF2C2C2C),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: _quickEmojis.map((emoji) {
+                  return InkWell(
+                    onTap: () => _submitComment(reaction: emoji),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 4),
+                      child: Text(emoji, style: const TextStyle(fontSize: 22)),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+
+            // Input field
+            SafeArea(
+              top: false,
+              bottom: bottomInset == 0,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                color: const Color(0xFF1E1E1E),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _commentCtrl,
+                        focusNode: _focusNode,
+                        style: const TextStyle(color: Colors.white),
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _submitComment(),
+                        decoration: InputDecoration(
+                          hintText: _replyingTo == null
+                              ? 'মন্তব্য লিখুন...'
+                              : '${_replyingTo!.authorName}-এর উত্তরে লিখুন...',
+                          hintStyle: const TextStyle(color: Colors.white54),
+                          filled: true,
+                          fillColor: const Color(0xFF2C2C2C),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: 'মন্তব্য পাঠান',
-                    onPressed: _isSubmitting ? null : () => _submitComment(),
-                    icon: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send_rounded,
-                            color: AppColors.mintGreen),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: 'মন্তব্য পাঠান',
+                      onPressed: _isSubmitting ? null : () => _submitComment(),
+                      icon: _isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send_rounded,
+                              color: AppColors.mintGreen),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildCommentRow(TourCommentItem comment, {bool isReply = false}) {
     final currentEmail = widget.repository.currentEmail;

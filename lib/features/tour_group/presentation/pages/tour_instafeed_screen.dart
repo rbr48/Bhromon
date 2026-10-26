@@ -1227,11 +1227,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                         repository: _repository,
                                         tourId: widget.tourId,
                                         post: post,
-                                        onOpenComments:
-                                            (p, {targetMediaIndex}) =>
-                                                _showCommentsModal(context, p,
-                                                    targetMediaIndex:
-                                                        targetMediaIndex),
+                                        onOpenComments: (p,
+                                                {targetMediaIndex}) =>
+                                            _showCommentsModal(context, p,
+                                                targetMediaIndex:
+                                                    targetMediaIndex),
                                         onShare: (p) =>
                                             _showShareModal(context, p),
                                         onAddToLedger: (p) =>
@@ -1279,11 +1279,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                           _toggleBookmark(post.id),
                                       onSaveToCollection:
                                           _showSaveToCollectionSheet,
-                                      onOpenComments:
-                                          (p, {targetMediaIndex}) =>
-                                              _showCommentsModal(context, p,
-                                                  targetMediaIndex:
-                                                      targetMediaIndex),
+                                      onOpenComments: (p, {targetMediaIndex}) =>
+                                          _showCommentsModal(context, p,
+                                              targetMediaIndex:
+                                                  targetMediaIndex),
                                       onShare: (p) =>
                                           _showShareModal(context, p),
                                       onAddToLedger: (p) =>

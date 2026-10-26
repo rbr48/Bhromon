@@ -53,8 +53,10 @@ class CallNotificationService {
           final extra = callKitParams.extra ?? {};
           final callId = extra['callId']?.toString() ?? callKitParams.id;
           final callerId = extra['callerId']?.toString() ?? '';
-          final callerName = extra['callerName']?.toString() ?? (callKitParams.nameCaller ?? 'Traveler');
-          final avatarUrl = extra['avatarUrl']?.toString() ?? callKitParams.avatar;
+          final callerName = extra['callerName']?.toString() ??
+              (callKitParams.nameCaller ?? 'Traveler');
+          final avatarUrl =
+              extra['avatarUrl']?.toString() ?? callKitParams.avatar;
           final isVideo = extra['isVideo'] == true || callKitParams.type == 1;
 
           if (callId.isNotEmpty) {
@@ -208,7 +210,8 @@ class CallNotificationService {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1F2C34),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -281,8 +284,8 @@ class CallNotificationService {
                       ),
                       const SizedBox(height: 6),
                       const Text('Decline',
-                          style: TextStyle(
-                              color: Colors.redAccent, fontSize: 12)),
+                          style:
+                              TextStyle(color: Colors.redAccent, fontSize: 12)),
                     ],
                   ),
                 ),

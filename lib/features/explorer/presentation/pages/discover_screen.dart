@@ -683,7 +683,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             const Text(
               "Check back later for new hidden gems, or restart the deck to review them again.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
+              style:
+                  TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
             ),
             const SizedBox(height: 24),
             Row(

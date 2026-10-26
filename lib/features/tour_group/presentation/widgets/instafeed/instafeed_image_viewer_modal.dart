@@ -16,7 +16,8 @@ class InstafeedImageViewerModal extends StatefulWidget {
   final String tourId;
   final TourPostItem post;
   final int initialIndex;
-  final void Function(TourPostItem post, {int? targetMediaIndex})? onOpenComments;
+  final void Function(TourPostItem post, {int? targetMediaIndex})?
+      onOpenComments;
   final void Function(TourPostItem post)? onShare;
   final void Function(TourPostItem post)? onAddToLedger;
 
@@ -383,8 +384,9 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.chat_bubble_outline,
                             color: Colors.white),
-                        onPressed: () => widget.onOpenComments
-                            ?.call(widget.post, targetMediaIndex: _currentIndex),
+                        onPressed: () => widget.onOpenComments?.call(
+                            widget.post,
+                            targetMediaIndex: _currentIndex),
                       ),
                       IconButton(
                         tooltip: 'শেয়ার করুন',

@@ -16,8 +16,7 @@ class StarredMessagesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
-    final currentUid =
-        authState is Authenticated ? authState.profile.uid : '';
+    final currentUid = authState is Authenticated ? authState.profile.uid : '';
 
     return Scaffold(
       backgroundColor: const Color(0xFF0B141A),
@@ -62,8 +61,7 @@ class StarredMessagesScreen extends StatelessWidget {
                 // Filter messages that belong to user or starred by user
                 final userStarredDocs = allDocs.where((doc) {
                   final data = doc.data();
-                  final starredBy =
-                      data['starredBy'] as Map<String, dynamic>?;
+                  final starredBy = data['starredBy'] as Map<String, dynamic>?;
                   if (starredBy != null && starredBy[currentUid] == true) {
                     return true;
                   }
@@ -267,8 +265,7 @@ class StarredMessagesScreen extends StatelessWidget {
     }
   }
 
-  String _typeSnippet(
-      String type, String text, Map<String, dynamic> data) {
+  String _typeSnippet(String type, String text, Map<String, dynamic> data) {
     switch (type) {
       case 'image':
         return text.isNotEmpty ? '📷 $text' : '📷 Photo';
