@@ -34,6 +34,7 @@ import 'features/ota/presentation/cubit/ota_state.dart';
 import 'features/ota/presentation/widgets/ota_update_dialog.dart';
 import 'core/security/device_integrity_service.dart';
 import 'core/database/app_database.dart';
+import 'features/chat/data/call_notification_service.dart';
 import 'features/notifications/geo_fence_service.dart'
     show registerGeoFenceWork;
 
@@ -247,8 +248,11 @@ void main() {
 
     runApp(const MyApp());
 
-    // Background job registration isn't needed to draw the first frame.
-    if (firebaseAvailable) unawaited(_registerBackgroundWork());
+    // Background job registration and call listener isn't needed to draw the first frame.
+    if (firebaseAvailable) {
+      CallNotificationService().init();
+      unawaited(_registerBackgroundWork());
+    }
   }, (error, stack) {
     logError('[GlobalError] Asynchronous error caught in runZonedGuarded zone',
         error, stack);
@@ -348,6 +352,7 @@ class _OtaListenerWrapperState extends State<OtaListenerWrapper> {
   @override
   void initState() {
     super.initState();
+    CallNotificationService().init();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final state = context.read<OtaCubit>().state;
       if (state is OtaUpdateAvailable) {

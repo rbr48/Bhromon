@@ -29,6 +29,7 @@ import '../features/auth/presentation/pages/account_deletion_page.dart';
 import '../features/chat/presentation/pages/chats_list_screen.dart';
 import '../features/chat/presentation/pages/chat_screen.dart';
 import '../features/chat/presentation/pages/call_screen.dart';
+import '../features/chat/presentation/pages/starred_messages_screen.dart';
 
 import '../features/tour_group/presentation/pages/tour_group_hub_screen.dart';
 import '../features/tour_group/presentation/pages/expense_ledger_screen.dart';
@@ -228,6 +229,11 @@ class AppRouter {
             ),
           );
         },
+      ),
+      GoRoute(
+        path: '/starred-messages',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const StarredMessagesScreen()),
       ),
       GoRoute(
         path: '/group-hub',

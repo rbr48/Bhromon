@@ -27,12 +27,23 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 ///   sdpMid        : String
 ///   sdpMLineIndex : int
 class CallSignalingService {
-  // ── ICE / STUN configuration ───────────────────────────────────────────────
+  // ── ICE / STUN / TURN configuration ───────────────────────────────────────
 
   static const Map<String, dynamic> _iceConfig = {
     'iceServers': [
       {
-        'urls': ['stun:stun.l.google.com:19302'],
+        'urls': [
+          'stun:stun.l.google.com:19302',
+          'stun:stun1.l.google.com:19302',
+        ],
+      },
+      {
+        'urls': [
+          'turn:148.135.137.245:3478?transport=udp',
+          'turn:148.135.137.245:3478?transport=tcp',
+        ],
+        'username': 'bhromon_user',
+        'credential': 'bhromon_turn_secret_2026',
       },
     ],
     'sdpSemantics': 'unified-plan',
@@ -109,6 +120,8 @@ class CallSignalingService {
     await _callDoc(callId).set({
       'callerId': localUid,
       'calleeId': remoteUid,
+      'participants': [localUid, remoteUid],
+      'isVideo': videoEnabled,
       'offer': {
         'type': offer.type,
         'sdp': offer.sdp,
@@ -266,10 +279,14 @@ class CallSignalingService {
 
   /// Ends the call, notifies the remote peer via Firestore, and releases all
   /// resources.
-  Future<void> endCall() async {
+  Future<void> endCall({int? durationSeconds}) async {
     if (_callId != null) {
       try {
-        await _callDoc(_callId!).update({'status': 'ended'});
+        await _callDoc(_callId!).update({
+          'status': 'ended',
+          'endedAt': FieldValue.serverTimestamp(),
+          if (durationSeconds != null) 'durationSeconds': durationSeconds,
+        });
       } catch (e) {
         if (kDebugMode) {
           debugPrint('CallSignalingService: endCall Firestore update error: $e');
@@ -278,6 +295,20 @@ class CallSignalingService {
     }
     await _releaseResources();
     onCallEnded?.call();
+  }
+
+  /// Declines an incoming call before answering.
+  Future<void> declineCall(String callId) async {
+    try {
+      await _callDoc(callId).update({
+        'status': 'declined',
+        'endedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('CallSignalingService: declineCall Firestore update error: $e');
+      }
+    }
   }
 
   /// Enables or disables all audio tracks on the local stream.
