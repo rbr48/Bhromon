@@ -41,6 +41,7 @@ import '../features/tour_group/presentation/pages/journey_tracker_screen.dart';
 import '../features/tour_group/presentation/pages/notice_board_screen.dart';
 import '../features/tour_group/presentation/pages/tour_quiz_screen.dart';
 import '../features/tour_group/presentation/pages/tour_scrapbook_screen.dart';
+import '../features/tour_group/presentation/widgets/trip_shell.dart';
 import '../features/game_zone/teen_patti/teen_patti_screen.dart';
 
 import '../features/game_zone/game_zone_hub_screen.dart';
@@ -216,77 +217,77 @@ class AppRouter {
       ),
       GoRoute(
         path: '/group/:tourId/ledger',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _tripPage(
           state,
           ExpenseLedgerScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(
         path: '/group/:tourId/logistics',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _tripPage(
           state,
           TourLogisticsHubScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(
         path: '/group/:tourId/tide',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _tripPage(
           state,
           TideBeachGuideScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(
         path: '/group/:tourId/channels',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _tripPage(
           state,
           GroupChannelsScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(
         path: '/group/:tourId/checklist',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _tripPage(
           state,
           TourChecklistScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(
         path: '/group/:tourId/feed',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _tripPage(
           state,
           TourInstaFeedScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(
         path: '/group/:tourId/safety',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _tripPage(
           state,
           FamilySafetyHubScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(
         path: '/group/:tourId/journey',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _tripPage(
           state,
           JourneyTrackerScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(
         path: '/group/:tourId/notices',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _tripPage(
           state,
           NoticeBoardScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(
         path: '/group/:tourId/quiz',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _tripPage(
           state,
           TourQuizScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(
         path: '/group/:tourId/scrapbook',
-        pageBuilder: (context, state) => _customPageTransition(
+        pageBuilder: (context, state) => _tripPage(
           state,
           TourScrapbookScreen(tourId: state.pathParameters['tourId']!),
         ),
@@ -323,6 +324,19 @@ class AppRouter {
       ),
     ],
   );
+
+  /// A tour screen inside the trip bar. See [TripShell] for why this is not a
+  /// ShellRoute.
+  static Page<void> _tripPage(GoRouterState state, Widget screen) {
+    return _customPageTransition(
+      state,
+      TripShell(
+        tourId: state.pathParameters['tourId']!,
+        location: state.uri.path,
+        child: screen,
+      ),
+    );
+  }
 
   static Page<void> _customPageTransition(GoRouterState state, Widget child) {
     return CustomTransitionPage<void>(
