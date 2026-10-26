@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/tour_activity_models.dart';
@@ -17,8 +18,12 @@ class TourChecklistScreen extends StatefulWidget {
 }
 
 class _TourChecklistScreenState extends State<TourChecklistScreen> {
-  static const String _beachCategory = 'সৈকত অনুষঙ্গ (Beach Gear)';
-  static const String _customCategory = 'আমার আইটেম (Custom)';
+  static const String _beachCategory = 'check_cat_beach';
+  static const String _customCategory = 'check_cat_custom';
+
+  /// The category saved with each custom item. It is stored data, so it stays
+  /// the same in every language.
+  static const String _customCategoryStored = 'আমার আইটেম (Custom)';
 
   final TourGroupRepository _repository = TourGroupRepository();
   late final Stream<List<ChecklistItem>> _items =
@@ -48,7 +53,8 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     super.dispose();
   }
 
-  /// Default items for this tour. Beach items are left out of hill and city tours.
+  /// Default items for this tour. Beach items are left out of hill and city
+  /// tours. Titles and categories are translation keys.
   List<({String id, String title, String category})> get _visibleDefaults {
     final isBeach = _group == null || _group!.tourType == TourType.beach;
     final items = <({String id, String title, String category})>[];
@@ -65,7 +71,9 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     try {
       await _repository.setChecklistItemPacked(widget.tourId, itemId, packed);
     } catch (e) {
-      _showError('সংরক্ষণ করা যায়নি: $e');
+      if (!mounted) return;
+      _showError(
+          context.l10n.translate('check_save_failed', args: {'error': e}));
     }
   }
 
@@ -78,6 +86,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final me = _repository.currentEmail;
 
     return Scaffold(
@@ -85,16 +94,16 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D1A12),
         elevation: 0,
-        title: const Text(
-          'Packing Checklist (ট্যুর চেকলিস্ট)',
-          style: TextStyle(
+        title: Text(
+          l10n.translate('check_title'),
+          style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
         ),
         actions: [
           IconButton(
             icon:
                 const Icon(Icons.add_task_rounded, color: AppColors.mintGreen),
-            tooltip: 'নতুন আইটেম যোগ করুন',
+            tooltip: l10n.translate('check_add_item'),
             onPressed: () => _showAddItemDialog(context),
           ),
         ],
@@ -103,9 +112,9 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
         stream: _items,
         builder: (context, snapshot) {
           if (snapshot.hasError && !snapshot.hasData) {
-            return const Center(
-              child: Text('চেকলিস্ট লোড করা যায়নি।',
-                  style: TextStyle(color: Colors.white54)),
+            return Center(
+              child: Text(l10n.translate('check_load_failed'),
+                  style: const TextStyle(color: Colors.white54)),
             );
           }
           final saved = snapshot.data ?? const <ChecklistItem>[];
@@ -142,8 +151,8 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('আমার প্যাকিং প্রস্তুতি',
-                            style: TextStyle(
+                        Text(l10n.translate('check_my_progress'),
+                            style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13)),
@@ -167,11 +176,12 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'প্রতিটি সদস্য নিজের আইটেম নিজে টিক দেবেন।',
-                        style: TextStyle(color: Colors.white54, fontSize: 11),
+                        l10n.translate('check_tick_own'),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 11),
                       ),
                     ),
                   ],
@@ -209,11 +219,12 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     required Map<String, ChecklistItem> byId,
     required String me,
   }) {
+    final l10n = context.l10n;
     final rows = <Widget>[
       for (final d in defaults)
         _buildRow(
           id: d.id,
-          title: d.title,
+          title: l10n.translate(d.title),
           checked: byId[d.id]?.isCheckedBy(me) ?? false,
           deletable: false,
         ),
@@ -239,7 +250,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
           Padding(
             padding: const EdgeInsets.all(14),
             child: Text(
-              category,
+              l10n.translate(category),
               style: const TextStyle(
                 color: AppColors.gold,
                 fontWeight: FontWeight.bold,
@@ -264,7 +275,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
       title: Text(
         title,
         style: TextStyle(
-          color: checked ? Colors.white38 : Colors.white,
+          color: checked ? Colors.white54 : Colors.white,
           fontSize: 13,
           decoration: checked ? TextDecoration.lineThrough : null,
         ),
@@ -275,7 +286,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
       controlAffinity: ListTileControlAffinity.leading,
       secondary: deletable
           ? IconButton(
-              tooltip: 'আইটেম মুছুন',
+              tooltip: context.l10n.translate('check_delete_item'),
               icon: const Icon(Icons.delete_outline, color: Colors.white54),
               onPressed: () => _confirmDelete(id, title),
             )
@@ -285,20 +296,22 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
   }
 
   Future<void> _confirmDelete(String id, String title) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
         backgroundColor: const Color(0xFF14241B),
-        title: Text('"$title" মুছবেন?',
+        title: Text(
+            l10n.translate('check_delete_confirm', args: {'title': title}),
             style: const TextStyle(color: Colors.white)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
-              child: const Text('না')),
+              child: Text(l10n.translate('check_no'))),
           TextButton(
               onPressed: () => Navigator.pop(c, true),
-              child: const Text('মুছুন',
-                  style: TextStyle(color: Colors.redAccent))),
+              child: Text(l10n.translate('check_delete'),
+                  style: const TextStyle(color: Colors.redAccent))),
         ],
       ),
     );
@@ -306,11 +319,12 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     try {
       await _repository.deleteChecklistItem(widget.tourId, id);
     } catch (_) {
-      _showError('শুধু অ্যাডমিন আইটেম মুছতে পারবেন।');
+      _showError(l10n.translate('check_admin_only_delete'));
     }
   }
 
   void _showAddItemDialog(BuildContext context) {
+    final l10n = context.l10n;
     final titleCtrl = TextEditingController();
 
     showDialog<void>(
@@ -321,23 +335,23 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
           backgroundColor: const Color(0xFF14241B),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: const Text('নতুন আইটেম যোগ করুন',
-              style: TextStyle(color: Colors.white)),
+          title: Text(l10n.translate('check_add_item'),
+              style: const TextStyle(color: Colors.white)),
           content: TextField(
             controller: titleCtrl,
             autofocus: true,
             maxLength: 80,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: 'আইটেমের নাম',
-              labelStyle: TextStyle(color: Colors.white70),
+            decoration: InputDecoration(
+              labelText: l10n.translate('check_item_name'),
+              labelStyle: const TextStyle(color: Colors.white70),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child:
-                  const Text('বাতিল', style: TextStyle(color: Colors.white54)),
+              child: Text(l10n.translate('tour_cancel'),
+                  style: const TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
               style:
@@ -348,13 +362,14 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                 Navigator.pop(ctx);
                 try {
                   await _repository.addChecklistItem(
-                      widget.tourId, title, _customCategory);
+                      widget.tourId, title, _customCategoryStored);
                 } catch (e) {
-                  _showError('আইটেম যোগ করা যায়নি: $e');
+                  _showError(
+                      l10n.translate('check_add_failed', args: {'error': e}));
                 }
               },
-              child:
-                  const Text('যোগ করুন', style: TextStyle(color: Colors.white)),
+              child: Text(l10n.translate('check_add'),
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -362,46 +377,21 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     ).whenComplete(titleCtrl.dispose);
   }
 
-  static const List<({String title, String category})> _defaultItems = [
-    (
-      title: 'জাতীয় পরিচয়পত্র / NID বা জন্ম নিবন্ধন ফটোকপি',
-      category: 'ডকুমেন্টস (Documents)'
-    ),
-    (
-      title: 'হোটেল ও বাসের টিকিট কপি / কনফার্মেশন',
-      category: 'ডকুমেন্টস (Documents)'
-    ),
-    (
-      title: 'প্যারাসিটামল, ওরস্যালাইন ও গ্যাস্ট্রিকের ওষুধ',
-      category: 'ওষুধ ও ফার্স্ট এইড (Medicines)'
-    ),
-    (
-      title: 'ব্যান্ড-এইড, স্যাভলন ও মোশন সিকনেস ওষুধ',
-      category: 'ওষুধ ও ফার্স্ট এইড (Medicines)'
-    ),
-    (
-      title: 'মোবাইল চার্জার ও পাওয়ার ব্যাংক (১০,০০০+ mAh)',
-      category: 'ইলেকট্রনিক্স (Electronics)'
-    ),
-    (
-      title: 'মাল্টিপ্লাগ ও ওয়াটারপ্রুফ মোবাইল পাউচ',
-      category: 'ইলেকট্রনিক্স (Electronics)'
-    ),
-    (
-      title: 'হালকা সুতি পোশাক ও রোদচশমা (Sunglasses)',
-      category: 'পোশাক (Clothing)'
-    ),
-    (
-      title: 'সুইমিং কস্টিউম বা অতিরিক্ত হাফপ্যান্ট ও টি-শার্ট',
-      category: 'পোশাক (Clothing)'
-    ),
-    (
-      title: 'সানস্ক্রিন লোশন (SPF 50+) ও বড় হ্যাট',
-      category: 'সৈকত অনুষঙ্গ (Beach Gear)'
-    ),
-    (
-      title: 'স্যান্ডেল / ওয়াটার শু ও হালকা ছাতা',
-      category: 'সৈকত অনুষঙ্গ (Beach Gear)'
-    ),
-  ];
+  static const _defaultItems = checklistDefaultItems;
 }
+
+/// The default checklist items, in a fixed order: each one's index is its
+/// saved id (`default_0`, `default_1`, ...), so new items go at the end.
+/// Titles and categories are translation keys.
+const List<({String title, String category})> checklistDefaultItems = [
+  (title: 'check_item_id_copy', category: 'check_cat_documents'),
+  (title: 'check_item_tickets', category: 'check_cat_documents'),
+  (title: 'check_item_basic_medicine', category: 'check_cat_medicines'),
+  (title: 'check_item_first_aid', category: 'check_cat_medicines'),
+  (title: 'check_item_charger', category: 'check_cat_electronics'),
+  (title: 'check_item_plug_pouch', category: 'check_cat_electronics'),
+  (title: 'check_item_cotton_clothes', category: 'check_cat_clothing'),
+  (title: 'check_item_swimwear', category: 'check_cat_clothing'),
+  (title: 'check_item_sunscreen', category: 'check_cat_beach'),
+  (title: 'check_item_sandals', category: 'check_cat_beach'),
+];
