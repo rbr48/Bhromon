@@ -472,6 +472,22 @@ service cloud.firestore {
                          (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
+      // Settle-up payments. Any member records one they took part in, or an
+      // admin records any; the author or an admin deletes it.
+      match /transfers/{transferId} {
+        allow read: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) &&
+                         request.resource.data.addedByEmail == tourUserEmail() &&
+                         request.resource.data.amountPaisa is int &&
+                         request.resource.data.amountPaisa > 0 &&
+                         (isTourAdmin(tourId) ||
+                          request.resource.data.fromId == tourUserEmail() ||
+                          request.resource.data.toId == tourUserEmail());
+        allow update: if false;
+        allow delete: if isActiveMember(tourId) &&
+                         (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
+      }
+
       // Official notices are posted by admins.
       match /notices/{noticeId} {
         allow read: if isActiveMember(tourId);

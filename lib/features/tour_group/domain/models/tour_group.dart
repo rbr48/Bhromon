@@ -1,5 +1,6 @@
 // Pure domain models for Tour Group Engine
 
+import 'expense_models.dart';
 import 'itinerary_models.dart';
 import 'date_codec.dart';
 
@@ -238,6 +239,9 @@ class TourGroup {
   /// Whether the route ends back at [originCity].
   final bool returnHome;
 
+  /// The fund's budget and collection target.
+  final FundBudget fundBudget;
+
   const TourGroup({
     required this.id,
     required this.name,
@@ -259,6 +263,7 @@ class TourGroup {
     this.stops = const [],
     this.legPlans = const {},
     this.returnHome = true,
+    this.fundBudget = const FundBudget(),
   });
 
   /// The id the origin city has in leg keys.
@@ -498,6 +503,7 @@ class TourGroup {
     List<TourStop>? stops,
     Map<String, LegPlan>? legPlans,
     bool? returnHome,
+    FundBudget? fundBudget,
   }) {
     return TourGroup(
       id: id ?? this.id,
@@ -527,6 +533,7 @@ class TourGroup {
       stops: stops ?? this.stops,
       legPlans: legPlans ?? this.legPlans,
       returnHome: returnHome ?? this.returnHome,
+      fundBudget: fundBudget ?? this.fundBudget,
     );
   }
 
@@ -549,6 +556,7 @@ class TourGroup {
       'stops': [for (final st in stops) st.toMap()],
       'legPlans': {for (final e in legPlans.entries) e.key: e.value.toMap()},
       'returnHome': returnHome,
+      if (!fundBudget.isEmpty) 'fundBudget': fundBudget.toMap(),
       'schemaVersion': 4,
     };
   }
@@ -586,6 +594,7 @@ class TourGroup {
       stops: readStops(map['stops']),
       legPlans: readLegPlans(map['legPlans']),
       returnHome: map['returnHome'] as bool? ?? true,
+      fundBudget: FundBudget.fromMap(map['fundBudget']),
     );
   }
 }

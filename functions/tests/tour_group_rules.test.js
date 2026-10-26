@@ -203,6 +203,34 @@ describe('Tour Group Firestore rules', () => {
       await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', TOUR, 'expenses', 'e1')));
     });
 
+    const transfer = (by, from, to, amountPaisa = 50000) => ({ tourId: TOUR, fromId: from, fromName: 'x', toId: to, toName: 'y', amountPaisa, addedByEmail: by });
+
+    test('settle-up payments: members record ones they took part in; admins any', async () => {
+      const t = (id) => doc(db('member'), 'tours', TOUR, 'transfers', id);
+      await assertSucceeds(setDoc(t('t1'), transfer(people.member.email, people.member.email, people.other.email)));
+      await assertSucceeds(setDoc(t('t2'), transfer(people.member.email, people.other.email, people.member.email)));
+      await assertSucceeds(setDoc(t('t3'), transfer(people.member.email, people.member.email, null)));
+      // Not between two other people, not under someone else's name, not zero.
+      await assertFails(setDoc(t('t4'), transfer(people.member.email, people.other.email, people.admin.email)));
+      await assertFails(setDoc(t('t5'), transfer(people.admin.email, people.member.email, null)));
+      await assertFails(setDoc(t('t6'), transfer(people.member.email, people.member.email, null, 0)));
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', TOUR, 'transfers', 't7'), transfer(people.admin.email, null, people.other.email)));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', TOUR, 'transfers')));
+    });
+
+    test('settle-up payments are never edited; the author or an admin deletes', async () => {
+      await setDoc(doc(db('member'), 'tours', TOUR, 'transfers', 't1'), transfer(people.member.email, people.member.email, people.other.email));
+      await assertFails(updateDoc(doc(db('member'), 'tours', TOUR, 'transfers', 't1'), { amountPaisa: 1 }));
+      await assertFails(deleteDoc(doc(db('other'), 'tours', TOUR, 'transfers', 't1')));
+      await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', TOUR, 'transfers', 't1')));
+    });
+
+    test('only admins set the fund budget', async () => {
+      const budget = { fundBudget: { categoryPaisa: { Food: 100000 }, perHeadTargetPaisa: 500000 } };
+      await assertFails(updateDoc(doc(db('member'), 'tours', TOUR), budget));
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', TOUR), budget));
+    });
+
     test('only admins post official notices', async () => {
       await assertFails(addDoc(collection(db('member'), 'tours', TOUR, 'notices'), { title: 'x', createdAt: serverTimestamp() }));
       await assertSucceeds(addDoc(collection(db('admin'), 'tours', TOUR, 'notices'), { title: 'x', createdAt: serverTimestamp() }));
