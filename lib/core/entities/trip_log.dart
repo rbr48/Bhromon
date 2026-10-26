@@ -30,7 +30,6 @@ class TripLog with _$TripLog {
     @Default(false) bool hidden,
     @Default(TrustTier.unverified) TrustTier tier,
     @Default(SyncStatus.synced) SyncStatus syncStatus,
-    @Default(false) bool isPremiumGuide,
     String? hiddenReason,
     @NullableDateTimeConverter() DateTime? publishedAt,
 

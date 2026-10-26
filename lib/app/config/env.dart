@@ -4,7 +4,6 @@ class Env {
   static const mapTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   static const maxOfflineRetries = 5;
   static const proTipStaleDays = 180;
-  static const premiumGuideScoreThreshold = 200;
   static const communityTierThreshold = 50;
   static const verifiedTierThreshold = 200;
   static const regionExpertThreshold = 500;

@@ -7,7 +7,9 @@ This document serves as the persistent system memory, architectural guidelines, 
 ## 1. Project Overview & Architecture
 - **Repository**: [https://github.com/rbr48/Bhromon](https://github.com/rbr48/Bhromon)
 - **Primary Branch**: `main` (active and default).
-- **Architecture**: Clean Architecture (Domain, Data, Presentation) with BLoC state management, injectable DI, Drift (SQLite) for offline relational storage, and Hive for encrypted local boxes.
+- **Architecture**: Clean Architecture (Domain, Data, Presentation) with injectable DI, Drift (SQLite) for offline relational storage, and Hive for encrypted local boxes.
+- **State management**: by feature. `tour_group` screens use `StatefulWidget`s that call repositories directly and listen to their streams. BLoC and Cubit remain in the other features. New tour-group code follows the direct pattern; don't add BLoC there.
+- **Status**: free and open source, with no business model. No feature is sold, and no paywall or payments should be added. The Game Zone is a core feature and stays.
 - **Backend**: Firebase Firestore (with offline persistence), Cloud Functions (TypeScript), Firebase Auth, Firebase Storage, and Firebase Hosting.
 - **Live Deployments**:
   - **Flutter Web**: [https://app.bhromon.fun](https://app.bhromon.fun) / [https://bhromon-ff801.web.app](https://bhromon-ff801.web.app)
@@ -134,4 +136,5 @@ Before shipping or pushing changes:
 3. If building APK: `flutter build apk --release`.
 4. If updating Web: `flutter build web --release` && `firebase deploy --only hosting`.
 5. Functions: `cd functions && npx tsc --noEmit && npx jest src` must pass.
-6. Keep `git status` clean and push to `main`.
+6. Keep `git status` clean. Changes go in through a pull request; CI must pass before merge.
+7. Never commit credentials or session cookies. Read them from environment variables. Facebook session cookies and a crawler credential were removed from the git history on 26 Oct 2026. Rotate any credential that was exposed.

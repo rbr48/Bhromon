@@ -36,7 +36,6 @@ mixin _$TripLog {
   bool get hidden => throw _privateConstructorUsedError;
   TrustTier get tier => throw _privateConstructorUsedError;
   SyncStatus get syncStatus => throw _privateConstructorUsedError;
-  bool get isPremiumGuide => throw _privateConstructorUsedError;
   String? get hiddenReason => throw _privateConstructorUsedError;
   @NullableDateTimeConverter()
   DateTime? get publishedAt =>
@@ -93,7 +92,6 @@ abstract class $TripLogCopyWith<$Res> {
       bool hidden,
       TrustTier tier,
       SyncStatus syncStatus,
-      bool isPremiumGuide,
       String? hiddenReason,
       @NullableDateTimeConverter() DateTime? publishedAt,
       DiaryVisibility visibility,
@@ -136,7 +134,6 @@ class _$TripLogCopyWithImpl<$Res, $Val extends TripLog>
     Object? hidden = null,
     Object? tier = null,
     Object? syncStatus = null,
-    Object? isPremiumGuide = null,
     Object? hiddenReason = freezed,
     Object? publishedAt = freezed,
     Object? visibility = null,
@@ -209,10 +206,6 @@ class _$TripLogCopyWithImpl<$Res, $Val extends TripLog>
           ? _value.syncStatus
           : syncStatus // ignore: cast_nullable_to_non_nullable
               as SyncStatus,
-      isPremiumGuide: null == isPremiumGuide
-          ? _value.isPremiumGuide
-          : isPremiumGuide // ignore: cast_nullable_to_non_nullable
-              as bool,
       hiddenReason: freezed == hiddenReason
           ? _value.hiddenReason
           : hiddenReason // ignore: cast_nullable_to_non_nullable
@@ -292,7 +285,6 @@ abstract class _$$TripLogImplCopyWith<$Res> implements $TripLogCopyWith<$Res> {
       bool hidden,
       TrustTier tier,
       SyncStatus syncStatus,
-      bool isPremiumGuide,
       String? hiddenReason,
       @NullableDateTimeConverter() DateTime? publishedAt,
       DiaryVisibility visibility,
@@ -334,7 +326,6 @@ class __$$TripLogImplCopyWithImpl<$Res>
     Object? hidden = null,
     Object? tier = null,
     Object? syncStatus = null,
-    Object? isPremiumGuide = null,
     Object? hiddenReason = freezed,
     Object? publishedAt = freezed,
     Object? visibility = null,
@@ -407,10 +398,6 @@ class __$$TripLogImplCopyWithImpl<$Res>
           ? _value.syncStatus
           : syncStatus // ignore: cast_nullable_to_non_nullable
               as SyncStatus,
-      isPremiumGuide: null == isPremiumGuide
-          ? _value.isPremiumGuide
-          : isPremiumGuide // ignore: cast_nullable_to_non_nullable
-              as bool,
       hiddenReason: freezed == hiddenReason
           ? _value.hiddenReason
           : hiddenReason // ignore: cast_nullable_to_non_nullable
@@ -474,7 +461,6 @@ class _$TripLogImpl implements _TripLog {
       this.hidden = false,
       this.tier = TrustTier.unverified,
       this.syncStatus = SyncStatus.synced,
-      this.isPremiumGuide = false,
       this.hiddenReason,
       @NullableDateTimeConverter() this.publishedAt,
       this.visibility = DiaryVisibility.community,
@@ -548,9 +534,6 @@ class _$TripLogImpl implements _TripLog {
   @JsonKey()
   final SyncStatus syncStatus;
   @override
-  @JsonKey()
-  final bool isPremiumGuide;
-  @override
   final String? hiddenReason;
   @override
   @NullableDateTimeConverter()
@@ -617,7 +600,7 @@ class _$TripLogImpl implements _TripLog {
 
   @override
   String toString() {
-    return 'TripLog(tripId: $tripId, authorId: $authorId, title: $title, blocks: $blocks, routePoints: $routePoints, costItems: $costItems, locationPinId: $locationPinId, trustScore: $trustScore, helpfulVotes: $helpfulVotes, lastConfirmed: $lastConfirmed, division: $division, district: $district, hidden: $hidden, tier: $tier, syncStatus: $syncStatus, isPremiumGuide: $isPremiumGuide, hiddenReason: $hiddenReason, publishedAt: $publishedAt, visibility: $visibility, weatherAtVisit: $weatherAtVisit, mood: $mood, tags: $tags, reactions: $reactions, coAuthors: $coAuthors, tripStartDate: $tripStartDate, tripEndDate: $tripEndDate)';
+    return 'TripLog(tripId: $tripId, authorId: $authorId, title: $title, blocks: $blocks, routePoints: $routePoints, costItems: $costItems, locationPinId: $locationPinId, trustScore: $trustScore, helpfulVotes: $helpfulVotes, lastConfirmed: $lastConfirmed, division: $division, district: $district, hidden: $hidden, tier: $tier, syncStatus: $syncStatus, hiddenReason: $hiddenReason, publishedAt: $publishedAt, visibility: $visibility, weatherAtVisit: $weatherAtVisit, mood: $mood, tags: $tags, reactions: $reactions, coAuthors: $coAuthors, tripStartDate: $tripStartDate, tripEndDate: $tripEndDate)';
   }
 
   @override
@@ -650,8 +633,6 @@ class _$TripLogImpl implements _TripLog {
             (identical(other.tier, tier) || other.tier == tier) &&
             (identical(other.syncStatus, syncStatus) ||
                 other.syncStatus == syncStatus) &&
-            (identical(other.isPremiumGuide, isPremiumGuide) ||
-                other.isPremiumGuide == isPremiumGuide) &&
             (identical(other.hiddenReason, hiddenReason) ||
                 other.hiddenReason == hiddenReason) &&
             (identical(other.publishedAt, publishedAt) ||
@@ -691,7 +672,6 @@ class _$TripLogImpl implements _TripLog {
         hidden,
         tier,
         syncStatus,
-        isPremiumGuide,
         hiddenReason,
         publishedAt,
         visibility,
@@ -735,7 +715,6 @@ abstract class _TripLog implements TripLog {
           final bool hidden,
           final TrustTier tier,
           final SyncStatus syncStatus,
-          final bool isPremiumGuide,
           final String? hiddenReason,
           @NullableDateTimeConverter() final DateTime? publishedAt,
           final DiaryVisibility visibility,
@@ -781,8 +760,6 @@ abstract class _TripLog implements TripLog {
   TrustTier get tier;
   @override
   SyncStatus get syncStatus;
-  @override
-  bool get isPremiumGuide;
   @override
   String? get hiddenReason;
   @override

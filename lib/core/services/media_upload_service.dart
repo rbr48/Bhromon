@@ -39,7 +39,8 @@ class MediaUploadService {
   }
 
   /// Deconstructs a legacy or logical path into [tourOrChatId], [folder], and [filename].
-  static (String tourId, String folder, String filename) _parsePath(String path) {
+  static (String tourId, String folder, String filename) _parsePath(
+      String path) {
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
     if (segments.length >= 3) {
       return (segments[1], segments[0], segments[2]);

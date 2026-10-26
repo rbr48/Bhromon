@@ -433,12 +433,11 @@ document.addEventListener('DOMContentLoaded', () => {
         badgeColor: "#d97706", // Gold
         reqXp: "200 XP Required",
         title: "Pioneer Explorer",
-        desc: "The elite contributor tier. Pioneers are trusted to publish paid 'Premium Guides' in the marketplace, co-author logs, and access closed beta features.",
+        desc: "The elite contributor tier. Pioneers are trusted to co-author logs and access closed beta features.",
         benefitsTitle: "Elite Capabilities",
         benefits: [
-          "Publish paid guides in Guide Marketplace",
           "Co-author collaborative TripLogs",
-          "Invite up to 3 co-authors per guide",
+          "Invite up to 3 co-authors per log",
           "Access offline vector map download packages"
         ]
       },
@@ -448,12 +447,11 @@ document.addEventListener('DOMContentLoaded', () => {
         badgeColor: "#d97706",
         reqXp: "২০০ এক্সপি (XP) প্রয়োজন",
         title: "পায়োনিয়ার এক্সপ্লোরার",
-        desc: "এলিট কন্ট্রিবিউটর স্তর। পায়োনিয়াররা গাইড মার্কেটপ্লেসে পেইড প্রিমিয়াম গাইড বিক্রি করতে পারেন এবং যৌথভাবে ব্লগ রাইটিং করতে পারেন।",
+        desc: "এলিট কন্ট্রিবিউটর স্তর। পায়োনিয়াররা ট্রিপলগ যৌথভাবে লিখতে এবং ক্লোজড বিটা ফিচার ব্যবহার করতে পারেন।",
         benefitsTitle: "এলিট সুবিধাসমূহ",
         benefits: [
-          "গাইড মার্কেটপ্লেসে গাইড সেল সুবিধা",
           "কো-অথর হিসেবে ট্রিপলগ এডিট করা",
-          "অন্য ট্রাভেলারদের গাইড রাইটিংয়ে ইনভাইট করা",
+          "ট্রিপলগে অন্য ট্রাভেলারদের ইনভাইট করা",
           "সম্পূর্ণ জেলার অফলাইন ভেক্টর প্যাকেজ ডাউনলোড"
         ]
       }
@@ -1562,31 +1560,6 @@ document.addEventListener('DOMContentLoaded', () => {
   updateXPUI();
 
   // ===========================================================================
-  // 14. GUIDE MARKETPLACE FILTER
-  // ===========================================================================
-
-  const filterBtns = document.querySelectorAll('.mkt-filter-btn');
-  const guideCards = document.querySelectorAll('.guide-card');
-
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      filterBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      const filter = btn.getAttribute('data-filter');
-
-      guideCards.forEach(card => {
-        const tags = (card.getAttribute('data-tags') || '').split(' ');
-        if (filter === 'all' || tags.includes(filter)) {
-          card.classList.remove('hidden');
-        } else {
-          card.classList.add('hidden');
-        }
-      });
-    });
-  });
-
-  // ===========================================================================
   // 15. EXTEND LANGUAGE TOGGLE — translate new select options & dynamic fields
   // ===========================================================================
 
@@ -1601,13 +1574,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       // Re-render xp bar text with new lang
       updateXPUI();
-      // Re-render marketplace filter button text
-      filterBtns.forEach(btn => {
-        const span = btn.querySelector('.lang-text');
-        if (span) {
-          span.textContent = currentLang === 'bn' ? span.getAttribute('data-bn') : span.getAttribute('data-en');
-        }
-      });
       // Re-translate challenge items
       document.querySelectorAll('.challenge-category-label[data-en], .challenge-name[data-en], .challenge-desc[data-en]').forEach(el => {
         el.textContent = currentLang === 'bn' ? el.getAttribute('data-bn') : el.getAttribute('data-en');
@@ -1620,8 +1586,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (navLinks && !document.getElementById('nav-link-planner')) {
     const links = [
       { id: 'nav-link-planner',     href: '#ai-planner',   en: 'AI Planner', bn: 'এআই প্ল্যানার' },
-      { id: 'nav-link-challenges',  href: '#xp-challenges', en: 'Challenges', bn: 'চ্যালেঞ্জ' },
-      { id: 'nav-link-marketplace', href: '#marketplace',   en: 'Marketplace', bn: 'মার্কেটপ্লেস' }
+      { id: 'nav-link-challenges',  href: '#xp-challenges', en: 'Challenges', bn: 'চ্যালেঞ্জ' }
     ];
     links.forEach(link => {
       const a = document.createElement('a');

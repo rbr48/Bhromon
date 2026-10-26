@@ -37,7 +37,6 @@ void main() {
       hidden: false,
       tier: TrustTier.unverified,
       syncStatus: SyncStatus.synced,
-      isPremiumGuide: false,
     );
 
     debugPrint('Serialized JSON:');

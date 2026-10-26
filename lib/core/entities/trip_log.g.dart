@@ -32,7 +32,6 @@ _$TripLogImpl _$$TripLogImplFromJson(Map json) => _$TripLogImpl(
       syncStatus:
           $enumDecodeNullable(_$SyncStatusEnumMap, json['syncStatus']) ??
               SyncStatus.synced,
-      isPremiumGuide: json['isPremiumGuide'] as bool? ?? false,
       hiddenReason: json['hiddenReason'] as String?,
       publishedAt:
           const NullableDateTimeConverter().fromJson(json['publishedAt']),
@@ -78,7 +77,6 @@ Map<String, dynamic> _$$TripLogImplToJson(_$TripLogImpl instance) =>
       'hidden': instance.hidden,
       'tier': _$TrustTierEnumMap[instance.tier]!,
       'syncStatus': _$SyncStatusEnumMap[instance.syncStatus]!,
-      'isPremiumGuide': instance.isPremiumGuide,
       'hiddenReason': instance.hiddenReason,
       'publishedAt':
           const NullableDateTimeConverter().toJson(instance.publishedAt),

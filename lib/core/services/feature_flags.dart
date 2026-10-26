@@ -11,7 +11,6 @@ class FeatureFlags {
 
   static const _defaults = <String, dynamic>{
     'chat_enabled': true,
-    'premium_guide_enabled': true,
     'feed_v2_enabled': false,
     'map_clustering_enabled': true,
     'offline_vault_enabled': true,
@@ -37,8 +36,6 @@ class FeatureFlags {
   // ── Feature Getters ───────────────────────────────────────────────────────
 
   bool get chatEnabled => kIsWeb ? true : _config.getBool('chat_enabled');
-  bool get premiumGuideEnabled =>
-      kIsWeb ? true : _config.getBool('premium_guide_enabled');
   bool get feedV2Enabled => kIsWeb ? false : _config.getBool('feed_v2_enabled');
   bool get mapClusteringEnabled =>
       kIsWeb ? true : _config.getBool('map_clustering_enabled');

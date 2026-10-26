@@ -15,6 +15,4 @@ class ExplorerScore with _$ExplorerScore {
 
   factory ExplorerScore.fromJson(Map<String, dynamic> json) =>
       _$ExplorerScoreFromJson(json);
-
-  bool isPremiumEligible() => tier.isVerifiedOrAbove;
 }

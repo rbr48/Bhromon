@@ -165,7 +165,6 @@ class _WarningStep extends StatelessWidget {
             'All trip logs, photos, and audio notes',
             'Your map pins and contributions',
             'Chat history and connections',
-            'Purchased guides and premium content',
           ].map(
             (item) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),

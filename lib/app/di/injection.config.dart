@@ -85,14 +85,6 @@ import '../../features/ota/domain/repositories/i_ota_repository.dart' as _i723;
 import '../../features/ota/domain/usecases/check_for_updates_usecase.dart'
     as _i46;
 import '../../features/ota/presentation/cubit/ota_cubit.dart' as _i965;
-import '../../features/premium_guide/data/repositories/guide_repository_impl.dart'
-    as _i307;
-import '../../features/premium_guide/domain/repositories/i_guide_repository.dart'
-    as _i42;
-import '../../features/premium_guide/domain/usecases/create_premium_guide_usecase.dart'
-    as _i438;
-import '../../features/premium_guide/domain/usecases/purchase_guide_usecase.dart'
-    as _i794;
 import '../../features/pro_tip/data/repositories/pro_tip_repository_impl.dart'
     as _i149;
 import '../../features/pro_tip/domain/repositories/i_pro_tip_repository.dart'
@@ -157,10 +149,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i216.SecureNetworkClient());
     gh.lazySingleton<_i1061.HiveEncryptionService>(
         () => _i1061.HiveEncryptionService());
-    gh.factory<_i794.PurchaseGuideParams>(() => _i794.PurchaseGuideParams(
-          guideId: gh<String>(),
-          userId: gh<String>(),
-        ));
     gh.lazySingleton<_i589.IAuthRepository>(
         () => _i153.AuthRepositoryImpl(gh<_i1061.HiveEncryptionService>()));
     gh.lazySingleton<_i695.IFeedRepository>(() => _i452.FeedRepositoryImpl(
@@ -215,8 +203,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i362.ExplorerRepositoryImpl(gh<_i974.FirebaseFirestore>()));
     gh.lazySingleton<_i1000.ITrustRepository>(
         () => _i842.TrustRepositoryImpl(gh<_i974.FirebaseFirestore>()));
-    gh.lazySingleton<_i42.IGuideRepository>(
-        () => _i307.GuideRepositoryImpl(gh<_i974.FirebaseFirestore>()));
     gh.factory<_i503.VerifyOtpUseCase>(
         () => _i503.VerifyOtpUseCase(gh<_i589.IAuthRepository>()));
     gh.factory<_i176.GetCurrentProfileUseCase>(
@@ -233,8 +219,6 @@ extension GetItInjectableX on _i174.GetIt {
         () => _i622.FeatureFlags(gh<_i627.FirebaseRemoteConfig>()));
     gh.factory<_i360.GetSavedTripLogsUseCase>(
         () => _i360.GetSavedTripLogsUseCase(gh<_i695.IFeedRepository>()));
-    gh.factory<_i438.CreatePremiumGuideUseCase>(
-        () => _i438.CreatePremiumGuideUseCase(gh<_i42.IGuideRepository>()));
     gh.factory<_i964.FlagContentUseCase>(
         () => _i964.FlagContentUseCase(gh<_i1000.ITrustRepository>()));
     gh.factory<_i168.AppealFlagUseCase>(

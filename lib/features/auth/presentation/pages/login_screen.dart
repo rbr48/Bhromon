@@ -221,9 +221,7 @@ class _LoginScreenState extends State<LoginScreen>
         duration: const Duration(milliseconds: 350),
         transitionBuilder: (child, anim) =>
             FadeTransition(opacity: anim, child: child),
-        child: state is AuthLoading
-            ? const _LoadingView()
-            : const _LoginForm(),
+        child: state is AuthLoading ? const _LoadingView() : const _LoginForm(),
       ),
     );
   }
@@ -579,6 +577,7 @@ class _LoadingView extends StatelessWidget {
     );
   }
 }
+
 class _GoogleButton extends StatelessWidget {
   final VoidCallback onTap;
 

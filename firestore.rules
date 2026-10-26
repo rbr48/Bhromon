@@ -168,10 +168,6 @@ service cloud.firestore {
         allow write: if isAuth() && isOwner(uid);
       }
 
-      match /purchased_guides/{guideId} {
-        allow read, write: if isAuth() && isOwner(uid);
-      }
-
       // ---- Saved Diaries ----
       match /saved_diaries/{tripLogId} {
         allow read: if isAuth() && isOwner(uid);

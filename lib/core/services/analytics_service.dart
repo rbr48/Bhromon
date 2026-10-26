@@ -11,14 +11,12 @@ class AnalyticsService {
   static Future<void> logTripLogPublished({
     required String division,
     required String district,
-    required bool isPremiumGuide,
   }) async {
     await _safeLog(
       'trip_log_published',
       parameters: {
         'division': division,
         'district': district,
-        'is_premium_guide': isPremiumGuide,
       },
     );
   }
@@ -97,17 +95,6 @@ class AnalyticsService {
     await _safeLog(
       'offline_vault_downloaded',
       parameters: {'division': division},
-    );
-  }
-
-  // ── Premium Guide Events ──────────────────────────────────────────────────
-
-  static Future<void> logPremiumGuideViewed({
-    required String guideId,
-  }) async {
-    await _safeLog(
-      'premium_guide_viewed',
-      parameters: {'guide_id': guideId},
     );
   }
 

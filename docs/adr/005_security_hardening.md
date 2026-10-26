@@ -1,7 +1,7 @@
 # ADR 005: Security Hardening Architecture
 
 ## Context
-Bhromon handles personal data, location tracking, and premium purchases. Protecting user data, preventing API abuse, and securing the offline storage is paramount.
+Bhromon handles personal data, and location tracking. Protecting user data, preventing API abuse, and securing the offline storage is paramount.
 
 ## Decision
 We implemented a multi-layered security system:
