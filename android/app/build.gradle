@@ -81,7 +81,8 @@ android {
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             ndk {
-                debugSymbolLevel 'none'
+                // Keep the symbol table so the AAB step can strip native libraries.
+                debugSymbolLevel 'SYMBOL_TABLE'
             }
         }
     }
