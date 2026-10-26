@@ -68,7 +68,8 @@ void main() {
       onDaySelected: (id) => picked = id,
     )));
 
-    expect(find.text('সব দিন'), findsOneWidget);
+    // The test app has no localization delegate, so the English label shows.
+    expect(find.text('All days'), findsOneWidget);
     await tester.tap(find.text('ডে ২'));
     expect(picked, 'day2');
   });
