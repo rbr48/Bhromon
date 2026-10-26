@@ -12,6 +12,7 @@ import '../../../domain/models/tour_group.dart';
 import '../../../domain/models/tour_post_models.dart';
 import '../../../domain/services/scrapbook_engine.dart';
 import '../instafeed/reel_thumbnail_preview.dart';
+import '../instafeed/tour_safe_network_image.dart';
 import '../../../../../core/localization/localized_date.dart';
 
 const _paper = Color(0xFF15110D);
@@ -369,11 +370,11 @@ class _PostPicture extends StatelessWidget {
                     child: Icon(Icons.play_circle_fill_rounded,
                         color: Colors.white70, size: 40)),
               ))
-        : CachedNetworkImage(
+        : TourSafeNetworkImage(
             imageUrl: url,
             fit: BoxFit.cover,
-            placeholder: (_, __) => const ColoredBox(color: Color(0xFF2A231C)),
-            errorWidget: (_, __, ___) => const ColoredBox(
+            placeholder: const ColoredBox(color: Color(0xFF2A231C)),
+            errorWidget: const ColoredBox(
               color: Color(0xFF2A231C),
               child: Center(
                   child: Icon(Icons.broken_image_outlined, color: _muted)),
@@ -409,7 +410,7 @@ void _openPhoto(BuildContext context, String url) {
         Positioned.fill(
           child: InteractiveViewer(
             maxScale: 5,
-            child: CachedNetworkImage(imageUrl: url, fit: BoxFit.contain),
+            child: TourSafeNetworkImage(imageUrl: url, fit: BoxFit.contain),
           ),
         ),
         Positioned(

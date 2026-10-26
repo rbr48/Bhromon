@@ -1,7 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'instafeed_zoomable_media.dart';
+import 'tour_safe_network_image.dart';
 import '../../../../../core/theme/colors.dart';
 
 /// Interactive multi-image carousel with smooth dynamic worm dot indicators,
@@ -76,33 +76,11 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
             },
             itemBuilder: (context, index) {
               final url = widget.imageUrls[index];
-              Widget imageWidget = CachedNetworkImage(
+              final imageWidget = TourSafeNetworkImage(
                 imageUrl: url,
                 fit: BoxFit.cover,
-                placeholder: (context, _) => Container(
-                  color: const Color(0xFF1E1E1E),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
-                    ),
-                  ),
-                ),
-                errorWidget: (context, _, __) => Container(
-                  color: const Color(0xFF1E1E1E),
-                  child: const Center(
-                    child: Icon(Icons.broken_image,
-                        color: Colors.white54, size: 36),
-                  ),
-                ),
+                colorFilter: widget.colorFilter,
               );
-
-              if (widget.colorFilter != null) {
-                imageWidget = ColorFiltered(
-                  colorFilter: widget.colorFilter!,
-                  child: imageWidget,
-                );
-              }
 
               return InstafeedZoomableMedia(
                 onTap: () => widget.onImageTap?.call(index),

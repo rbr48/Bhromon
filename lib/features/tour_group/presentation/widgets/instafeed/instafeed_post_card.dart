@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -11,6 +10,7 @@ import 'instafeed_image_viewer_modal.dart';
 import 'instafeed_travel_banners.dart';
 import 'instafeed_zoomable_media.dart';
 import 'reel_thumbnail_preview.dart';
+import 'tour_safe_network_image.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../../../core/localization/app_localizations.dart';
@@ -718,11 +718,11 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
           // 1. Poster background / Cover / Placeholder
           if (widget.post.coverUrl != null &&
               isRemoteMediaUrl(widget.post.coverUrl!))
-            CachedNetworkImage(
+            TourSafeNetworkImage(
               imageUrl: widget.post.coverUrl!,
               fit: BoxFit.cover,
-              placeholder: (_, __) => Container(color: const Color(0xFF1B1B1B)),
-              errorWidget: (_, __, ___) => Container(
+              placeholder: Container(color: const Color(0xFF1B1B1B)),
+              errorWidget: Container(
                 color: const Color(0xFF1B1B1B),
                 child: const Center(
                   child: Icon(Icons.slow_motion_video,
@@ -952,9 +952,21 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     final timeStr =
         localizedDateFormat('MMM d, h:mm a').format(widget.post.createdAt);
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isWide = screenWidth >= 600;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      color: const Color(0xFF161616),
+      margin: EdgeInsets.only(
+        bottom: 16,
+        left: isWide ? 12 : 0,
+        right: isWide ? 12 : 0,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161616),
+        borderRadius: isWide ? BorderRadius.circular(16) : BorderRadius.zero,
+        border: isWide ? Border.all(color: Colors.white12, width: 0.8) : null,
+      ),
+      clipBehavior: isWide ? Clip.antiAlias : Clip.none,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -1,11 +1,11 @@
 import 'dart:math' as math;
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_zoomable_media.dart';
+import 'tour_safe_network_image.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
@@ -313,11 +313,10 @@ class _ReelPageItemState extends State<_ReelPageItem>
                     children: [
                       if (widget.post.coverUrl != null &&
                           isRemoteMediaUrl(widget.post.coverUrl!))
-                        CachedNetworkImage(
+                        TourSafeNetworkImage(
                           imageUrl: widget.post.coverUrl!,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) =>
-                              Container(color: Colors.black),
+                          errorWidget: Container(color: Colors.black),
                         ),
                       const Center(
                         child: CircularProgressIndicator(

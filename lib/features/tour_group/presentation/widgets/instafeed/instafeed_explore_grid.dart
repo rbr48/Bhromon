@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import '../../../../../core/theme/colors.dart';
 import 'reel_thumbnail_preview.dart';
+import 'tour_safe_network_image.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
 /// 3-column Explore / Gallery Grid view matching Instagram's Explore / Profile
@@ -37,10 +37,13 @@ class InstafeedExploreGrid extends StatelessWidget {
       );
     }
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final cols = screenWidth >= 800 ? 4 : 3;
+
     return GridView.builder(
       padding: const EdgeInsets.all(2),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cols,
         crossAxisSpacing: 2,
         mainAxisSpacing: 2,
       ),
@@ -63,12 +66,11 @@ class InstafeedExploreGrid extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               if (thumbnail != null)
-                CachedNetworkImage(
+                TourSafeNetworkImage(
                   imageUrl: thumbnail,
                   fit: BoxFit.cover,
-                  placeholder: (context, _) =>
-                      Container(color: Colors.grey.shade900),
-                  errorWidget: (context, _, __) => Container(
+                  placeholder: Container(color: Colors.grey.shade900),
+                  errorWidget: Container(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,

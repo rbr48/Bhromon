@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -23,6 +22,7 @@ import '../widgets/instafeed/instafeed_reels_modal.dart';
 import '../widgets/instafeed/instafeed_share_sheet.dart';
 import '../widgets/instafeed/instafeed_story_viewer.dart';
 import '../widgets/instafeed/instafeed_travel_banners.dart';
+import '../widgets/instafeed/tour_safe_network_image.dart';
 import '../../../../core/localization/app_localizations.dart';
 
 // Bengali numeral helper
@@ -462,13 +462,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           height: 54,
                           child: firstImage.images.isNotEmpty &&
                                   isRemoteMediaUrl(firstImage.images.first)
-                              ? CachedNetworkImage(
+                              ? TourSafeNetworkImage(
                                   imageUrl: firstImage.images.first,
                                   fit: BoxFit.cover,
-                                  placeholder: (_, __) =>
+                                  placeholder:
                                       Container(color: Colors.grey.shade900),
-                                  errorWidget: (_, __, ___) => const Icon(
-                                      Icons.location_on,
+                                  errorWidget: const Icon(Icons.location_on,
                                       color: AppColors.mintGreen),
                                 )
                               : const Center(
@@ -1077,39 +1076,52 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
                             // 2. Stories & Story Highlights Tray (Facebook card style)
                             SliverToBoxAdapter(
-                              child: _buildStoriesAndHighlightsBar(
-                                context,
-                                authorGroups,
-                                highlights,
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 720),
+                                  child: _buildStoriesAndHighlightsBar(
+                                    context,
+                                    authorGroups,
+                                    highlights,
+                                  ),
+                                ),
                               ),
                             ),
 
                             // 4. Hashtag Filter Chip (if active)
                             if (_activeHashtagFilter != null)
                               SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 4),
-                                  child: Row(
-                                    children: [
-                                      Chip(
-                                        backgroundColor: AppColors.mintGreen
-                                            .withValues(alpha: 0.2),
-                                        avatar: const Icon(Icons.tag,
-                                            size: 16,
-                                            color: AppColors.mintGreen),
-                                        label: Text(
-                                          _activeHashtagFilter!,
-                                          style: const TextStyle(
-                                              color: AppColors.mintGreen,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        deleteIcon: const Icon(Icons.close,
-                                            size: 16, color: Colors.white70),
-                                        onDeleted: () => setState(
-                                            () => _activeHashtagFilter = null),
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints:
+                                        const BoxConstraints(maxWidth: 580),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 4),
+                                      child: Row(
+                                        children: [
+                                          Chip(
+                                            backgroundColor: AppColors.mintGreen
+                                                .withValues(alpha: 0.2),
+                                            avatar: const Icon(Icons.tag,
+                                                size: 16,
+                                                color: AppColors.mintGreen),
+                                            label: Text(
+                                              _activeHashtagFilter!,
+                                              style: const TextStyle(
+                                                  color: AppColors.mintGreen,
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                            deleteIcon: const Icon(Icons.close,
+                                                size: 16,
+                                                color: Colors.white70),
+                                            onDeleted: () => setState(() =>
+                                                _activeHashtagFilter = null),
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1117,105 +1129,127 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                             // 4b. Landmark Filter Chip (if active)
                             if (_selectedLandmarkFilter != null)
                               SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 4),
-                                  child: Row(
-                                    children: [
-                                      Chip(
-                                        backgroundColor: AppColors.mintGreen
-                                            .withValues(alpha: 0.2),
-                                        avatar: const Icon(Icons.location_on,
-                                            size: 16,
-                                            color: AppColors.mintGreen),
-                                        label: Text(
-                                          _selectedLandmarkFilter!,
-                                          style: const TextStyle(
-                                              color: AppColors.mintGreen,
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        deleteIcon: const Icon(Icons.close,
-                                            size: 16, color: Colors.white70),
-                                        onDeleted: () => setState(() =>
-                                            _selectedLandmarkFilter = null),
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints:
+                                        const BoxConstraints(maxWidth: 580),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 4),
+                                      child: Row(
+                                        children: [
+                                          Chip(
+                                            backgroundColor: AppColors.mintGreen
+                                                .withValues(alpha: 0.2),
+                                            avatar: const Icon(
+                                                Icons.location_on,
+                                                size: 16,
+                                                color: AppColors.mintGreen),
+                                            label: Text(
+                                              _selectedLandmarkFilter!,
+                                              style: const TextStyle(
+                                                  color: AppColors.mintGreen,
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                            deleteIcon: const Icon(Icons.close,
+                                                size: 16,
+                                                color: Colors.white70),
+                                            onDeleted: () => setState(() =>
+                                                _selectedLandmarkFilter = null),
+                                          ),
+                                        ],
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
 
                             // 5. Filter pill: media and day filters live in one sheet
                             SliverToBoxAdapter(
-                              child: InstafeedFilterBar(
-                                summary: _filterSummary(),
-                                onTap: () => unawaited(_showFilterSheet()),
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 580),
+                                  child: InstafeedFilterBar(
+                                    summary: _filterSummary(),
+                                    onTap: () => unawaited(_showFilterSheet()),
+                                  ),
+                                ),
                               ),
                             ),
 
                             // 5b. Bookmark Collection Chips (When Saved Tab is active)
                             if (_selectedMediaFilter == 'saved')
                               SliverToBoxAdapter(
-                                child: Container(
-                                  height: 40,
-                                  margin:
-                                      const EdgeInsets.only(top: 4, bottom: 4),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16),
-                                  child: ListView(
-                                    scrollDirection: Axis.horizontal,
-                                    children: [
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.only(right: 6),
-                                        child: ChoiceChip(
-                                          label: Text(context.l10n
-                                              .translate('ig_all_saved')),
-                                          selected:
-                                              _selectedBookmarkCollection ==
-                                                  null,
-                                          selectedColor: Colors.amber,
-                                          backgroundColor:
-                                              const Color(0xFF1E1E1E),
-                                          labelStyle: TextStyle(
-                                            color:
-                                                _selectedBookmarkCollection ==
-                                                        null
-                                                    ? Colors.black
-                                                    : Colors.white70,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          onSelected: (_) => setState(() =>
-                                              _selectedBookmarkCollection =
-                                                  null),
-                                        ),
-                                      ),
-                                      ..._bookmarkCollections.keys.map((name) {
-                                        final isSel =
-                                            _selectedBookmarkCollection == name;
-                                        return Padding(
-                                          padding:
-                                              const EdgeInsets.only(right: 6),
-                                          child: ChoiceChip(
-                                            label: Text(name),
-                                            selected: isSel,
-                                            selectedColor: Colors.amber,
-                                            backgroundColor:
-                                                const Color(0xFF1E1E1E),
-                                            labelStyle: TextStyle(
-                                              color: isSel
-                                                  ? Colors.black
-                                                  : Colors.white70,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints:
+                                        const BoxConstraints(maxWidth: 580),
+                                    child: Container(
+                                      height: 40,
+                                      margin: const EdgeInsets.only(
+                                          top: 4, bottom: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16),
+                                      child: ListView(
+                                        scrollDirection: Axis.horizontal,
+                                        children: [
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(right: 6),
+                                            child: ChoiceChip(
+                                              label: Text(context.l10n
+                                                  .translate('ig_all_saved')),
+                                              selected:
+                                                  _selectedBookmarkCollection ==
+                                                      null,
+                                              selectedColor: Colors.amber,
+                                              backgroundColor:
+                                                  const Color(0xFF1E1E1E),
+                                              labelStyle: TextStyle(
+                                                color:
+                                                    _selectedBookmarkCollection ==
+                                                            null
+                                                        ? Colors.black
+                                                        : Colors.white70,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              onSelected: (_) => setState(() =>
+                                                  _selectedBookmarkCollection =
+                                                      null),
                                             ),
-                                            onSelected: (_) => setState(() =>
-                                                _selectedBookmarkCollection =
-                                                    name),
                                           ),
-                                        );
-                                      }),
-                                    ],
+                                          ..._bookmarkCollections.keys
+                                              .map((name) {
+                                            final isSel =
+                                                _selectedBookmarkCollection ==
+                                                    name;
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                  right: 6),
+                                              child: ChoiceChip(
+                                                label: Text(name),
+                                                selected: isSel,
+                                                selectedColor: Colors.amber,
+                                                backgroundColor:
+                                                    const Color(0xFF1E1E1E),
+                                                labelStyle: TextStyle(
+                                                  color: isSel
+                                                      ? Colors.black
+                                                      : Colors.white70,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                onSelected: (_) => setState(() =>
+                                                    _selectedBookmarkCollection =
+                                                        name),
+                                              ),
+                                            );
+                                          }),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1281,7 +1315,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                     }
                                     final post = filteredPosts[index];
                                     final isVideo = post.videoUrl != null;
-                                    return InstafeedPostCard(
+                                    final card = InstafeedPostCard(
                                       // Video cards keep a GlobalKey, so the feed can find
                                       // their position when it picks one to play.
                                       key: isVideo
@@ -1324,6 +1358,15 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                       onHashtagTap: (tag) => setState(
                                           () => _activeHashtagFilter = tag),
                                       onPostChanged: () => setState(() {}),
+                                    );
+
+                                    return Center(
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 580,
+                                        ),
+                                        child: card,
+                                      ),
                                     );
                                   },
                                   childCount:
@@ -1448,12 +1491,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                CachedNetworkImage(
+                TourSafeNetworkImage(
                   imageUrl: latestStory.mediaUrl,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) =>
-                      Container(color: const Color(0xFF1E1E1E)),
-                  errorWidget: (_, __, ___) => Container(
+                  placeholder: Container(color: const Color(0xFF1E1E1E)),
+                  errorWidget: Container(
                     color: const Color(0xFF1E1E1E),
                     child: const Icon(Icons.person, color: Colors.white38),
                   ),
@@ -1656,17 +1698,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              CachedNetworkImage(
+              TourSafeNetworkImage(
                 imageUrl: story.mediaUrl,
                 fit: BoxFit.cover,
-                placeholder: (_, __) =>
-                    Container(color: const Color(0xFF1E1E1E)),
-                errorWidget: (_, __, ___) => Container(
-                  color: const Color(0xFF1E1E1E),
-                  child: const Center(
-                    child: Icon(Icons.broken_image, color: Colors.white38),
-                  ),
-                ),
+                placeholder: Container(color: const Color(0xFF1E1E1E)),
               ),
               Container(
                 decoration: BoxDecoration(
@@ -1797,12 +1832,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           fit: StackFit.expand,
           children: [
             if (highlight.coverUrl.isNotEmpty)
-              CachedNetworkImage(
+              TourSafeNetworkImage(
                 imageUrl: highlight.coverUrl,
                 fit: BoxFit.cover,
-                placeholder: (_, __) =>
-                    Container(color: const Color(0xFF1E1E1E)),
-                errorWidget: (_, __, ___) => Container(
+                placeholder: Container(color: const Color(0xFF1E1E1E)),
+                errorWidget: Container(
                   color: const Color(0xFF1E1E1E),
                   child: const Icon(Icons.star, color: Colors.amber),
                 ),
