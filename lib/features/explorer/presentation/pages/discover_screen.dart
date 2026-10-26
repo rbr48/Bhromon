@@ -1,4 +1,6 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
@@ -191,17 +193,17 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Future<void> _addToWishlist(LocationPin pin) async {
     try {
       final auth = context.read<AuthCubit>().state;
-      if (auth is! Authenticated) return;
-      final uid = auth.profile.uid;
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('wishlist')
-          .doc(pin.pinId)
-          .set({
-        'addedAt': FieldValue.serverTimestamp(),
-      });
+      if (auth is Authenticated) {
+        final uid = auth.profile.uid;
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('wishlist')
+            .doc(pin.pinId)
+            .set({
+          'addedAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       if (!mounted) return;
 
@@ -215,6 +217,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         SnackBar(
           content: Text('💾 Added ${pin.name} to Wishlist!'),
           duration: const Duration(seconds: 2),
+          backgroundColor: const Color(0xFF1F2C34),
         ),
       );
     } catch (e) {
@@ -391,17 +394,23 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       },
                       numberOfCardsDisplayed:
                           _pins.length >= 3 ? 3 : _pins.length,
-                      backCardOffset: const Offset(0, 20),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 8),
+                      // Negative Y offset lets back cards peek from the top without
+                      // extending downward into the action navigation buttons row.
+                      backCardOffset: const Offset(0, -14),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                       cardBuilder: (context, index, percentX, percentY) {
                         return _buildCard(_pins[index]);
                       },
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  _buildActionRow(),
-                  SizedBox(height: bottomPadding > 0 ? 8 : 18),
+                  // Safe padding lifts action buttons well above Android system navigation buttons
+                  Padding(
+                    padding: EdgeInsets.only(
+                      top: 4,
+                      bottom: math.max(bottomPadding, 16) + 4,
+                    ),
+                    child: _buildActionRow(),
+                  ),
                 ],
               ),
       ),
@@ -429,15 +438,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           borderRadius: BorderRadius.circular(24),
           child: Stack(
             children: [
-              // Card image/gradient
+              // Card image/gradient with disk and memory cache
               if (hasImg)
-                Image.network(
-                  pin.imageUrl!,
-                  cacheWidth: context.decodeWidth(),
+                CachedNetworkImage(
+                  imageUrl: pin.imageUrl!,
+                  memCacheWidth: context.decodeWidth(),
                   width: double.infinity,
                   height: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _gradientFallback(),
+                  placeholder: (_, __) => _gradientFallback(),
+                  errorWidget: (_, __, ___) => _gradientFallback(),
                 )
               else
                 _gradientFallback(),

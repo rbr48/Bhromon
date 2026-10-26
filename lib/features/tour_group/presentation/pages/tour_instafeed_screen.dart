@@ -927,13 +927,20 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.mintGreen,
-        foregroundColor: Colors.black,
-        elevation: 6,
-        tooltip: 'ক্যামেরা / ছবি যুক্ত করুন',
-        onPressed: () => _showCreatePostModal(context),
-        child: const Icon(Icons.camera_alt_rounded, size: 28),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom > 0
+              ? MediaQuery.of(context).padding.bottom
+              : 8,
+        ),
+        child: FloatingActionButton(
+          backgroundColor: AppColors.mintGreen,
+          foregroundColor: Colors.black,
+          elevation: 6,
+          tooltip: 'ক্যামেরা / ছবি যুক্ত করুন',
+          onPressed: () => _showCreatePostModal(context),
+          child: const Icon(Icons.camera_alt_rounded, size: 28),
+        ),
       ),
       body: StreamBuilder<List<SafetyAlert>>(
         stream: _alertsStream,
