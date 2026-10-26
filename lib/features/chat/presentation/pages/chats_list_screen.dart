@@ -220,7 +220,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           indent: 72,
                           endIndent: 16,
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 80),
                         itemCount: chatListItems.length,
                         itemBuilder: (context, index) {
                           final doc = chatListItems[index];

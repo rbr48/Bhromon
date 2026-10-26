@@ -12,6 +12,7 @@ import '../../../../../core/localization/app_localizations.dart';
 import '../../../domain/models/tour_group.dart';
 import '../../../domain/models/tour_post_models.dart';
 import '../../../domain/services/scrapbook_engine.dart';
+import '../instafeed/reel_thumbnail_preview.dart';
 
 const _paper = Color(0xFF15110D);
 const _ink = Color(0xFFF5EEDC);
@@ -352,18 +353,20 @@ class _PostPicture extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = _url;
     final picture = url == null
-        ? const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF5B2A86), Color(0xFFB4452F)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Center(
-                child: Icon(Icons.play_circle_fill_rounded,
-                    color: Colors.white70, size: 40)),
-          )
+        ? (post.isReel && post.videoUrl != null && isRemoteMediaUrl(post.videoUrl!)
+            ? ReelThumbnailPreview(videoUrl: post.videoUrl!)
+            : const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF5B2A86), Color(0xFFB4452F)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Center(
+                    child: Icon(Icons.play_circle_fill_rounded,
+                        color: Colors.white70, size: 40)),
+              ))
         : CachedNetworkImage(
             imageUrl: url,
             fit: BoxFit.cover,

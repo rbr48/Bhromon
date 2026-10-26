@@ -208,19 +208,21 @@ class FundReport {
         paid[k] = (paid[k] ?? 0) + t.amountPaisa;
       }
     }
-    final collection = budget.perHeadTargetPaisa <= 0
-        ? const <CollectionRow>[]
-        : [
-            for (final m in members)
-              CollectionRow(
-                id: m.id,
-                name: m.name,
-                targetPaisa:
-                    budget.perHeadTargetPaisa * m.familyCount.clamp(1, 20),
-                paidPaisa: paid[m.id.toLowerCase()] ?? 0,
-              ),
-          ]
-      ..sort((a, b) => b.duePaisa.compareTo(a.duePaisa));
+    final List<CollectionRow> collection;
+    if (budget.perHeadTargetPaisa <= 0) {
+      collection = const <CollectionRow>[];
+    } else {
+      collection = [
+        for (final m in members)
+          CollectionRow(
+            id: m.id,
+            name: m.name,
+            targetPaisa:
+                budget.perHeadTargetPaisa * m.familyCount.clamp(1, 20),
+            paidPaisa: paid[m.id.toLowerCase()] ?? 0,
+          ),
+      ]..sort((a, b) => b.duePaisa.compareTo(a.duePaisa));
+    }
 
     final start = DateTime(
         group.startDate.year, group.startDate.month, group.startDate.day);

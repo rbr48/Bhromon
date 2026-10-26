@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import '../../../../../core/theme/colors.dart';
+import 'reel_thumbnail_preview.dart';
 
 /// 3-column Explore / Gallery Grid view matching Instagram's Explore / Profile
 /// gallery with video reel badges and multi-photo indicators.
@@ -80,6 +81,8 @@ class InstafeedExploreGrid extends StatelessWidget {
                     ),
                   ),
                 )
+              else if (post.videoUrl != null && isRemoteMediaUrl(post.videoUrl!))
+                ReelThumbnailPreview(videoUrl: post.videoUrl!)
               else
                 Container(
                   decoration: const BoxDecoration(
