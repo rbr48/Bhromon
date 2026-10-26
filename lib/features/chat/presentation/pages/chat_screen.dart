@@ -143,6 +143,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   /// Starts a Firebase Performance trace for chat screen open → first message load.
   Future<void> _startChatOpenTrace() async {
+    if (kIsWeb) return;
     try {
       final trace = FirebasePerformance.instance.newTrace('chat_open');
       await trace.start();
@@ -523,11 +524,13 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _pendingUploads.add(pending));
 
     Trace? uploadTrace;
-    try {
-      uploadTrace = FirebasePerformance.instance.newTrace('media_upload');
-      await uploadTrace.start();
-      uploadTrace.putAttribute('mediaType', type);
-    } catch (_) {}
+    if (!kIsWeb) {
+      try {
+        uploadTrace = FirebasePerformance.instance.newTrace('media_upload');
+        await uploadTrace.start();
+        uploadTrace.putAttribute('mediaType', type);
+      } catch (_) {}
+    }
 
     try {
       // Ensure Firebase Auth token is fresh before uploading

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:workmanager/workmanager.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -42,6 +43,7 @@ class SyncWorker {
   static const String _oneTimeSyncUniqueName = 'bhromon_one_time_sync';
 
   static void initialize() {
+    if (kIsWeb) return;
     Workmanager().initialize(
       callbackDispatcher,
       isInDebugMode: false,
@@ -54,6 +56,7 @@ class SyncWorker {
   /// already enqueued it is left untouched, preventing duplicate scheduled
   /// work across multiple cold starts or FCM wakeups.
   static void registerPeriodicSync() {
+    if (kIsWeb) return;
     Workmanager().registerPeriodicTask(
       _periodicSyncUniqueName,
       _syncTask,
@@ -71,6 +74,7 @@ class SyncWorker {
   /// Uses [ExistingWorkPolicy.replace] so any pending one-time sync is
   /// superseded by the freshest request, avoiding stale queue runs.
   static void registerOneTimeImmediateSync() {
+    if (kIsWeb) return;
     Workmanager().registerOneOffTask(
       _oneTimeSyncUniqueName,
       _syncTask,
