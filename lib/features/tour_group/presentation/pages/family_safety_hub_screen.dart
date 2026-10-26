@@ -9,6 +9,7 @@ import '../../data/tour_group_repository.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/localization/localized_date.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class TourLandmark {
   final String id;
@@ -59,11 +60,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   List<TourLandmark> get _landmarks {
     final dest = _tourGroup?.destination.toLowerCase() ?? '';
     if (dest.contains('sajek') || dest.contains('সাজেক')) {
-      return const [
+      return [
         TourLandmark(
           id: 'sajek_resort',
-          name: 'সাজেক কটেজ ও রিসোর্ট জোন',
-          subtitle: 'প্রধান কটেজ ও থাকার রুম',
+          name: context.l10n.translate('fsh_sajek_cottage_name'),
+          subtitle: context.l10n.translate('fsh_main_cottage_sub'),
           lat: 23.3828,
           lng: 92.2938,
           icon: Icons.hotel,
@@ -71,8 +72,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'sajek_vehicle',
-          name: 'সাজেক চাঁদের গাড়ি পার্কিং স্ট্যান্ড',
-          subtitle: 'ট্যুর গ্রুপ পরিবহন পয়েন্ট',
+          name: context.l10n.translate('fsh_sajek_parking_name'),
+          subtitle: context.l10n.translate('fsh_tour_transport_sub'),
           lat: 23.3840,
           lng: 92.2945,
           icon: Icons.directions_bus,
@@ -80,8 +81,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'sajek_helipad',
-          name: 'সাজেক হ্যালিপ্যাড ও সানসেট পয়েন্ট',
-          subtitle: 'ফ্যামিলি আড্ডা ও মিলনমেলা পয়েন্ট',
+          name: context.l10n.translate('fsh_sajek_helipad_name'),
+          subtitle: context.l10n.translate('fsh_family_meetup_sub'),
           lat: 23.3815,
           lng: 92.2930,
           icon: Icons.wb_cloudy_rounded,
@@ -89,8 +90,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'konglak_peak',
-          name: 'কংলাক পাহাড় চূড়া ও লুসাই পাড়া',
-          subtitle: 'ট্যুর ট্র্যাকিং ও মেঘলোক ভিউ',
+          name: context.l10n.translate('fsh_konglak_name'),
+          subtitle: context.l10n.translate('fsh_konglak_sub'),
           lat: 23.3980,
           lng: 92.3010,
           icon: Icons.landscape_rounded,
@@ -98,11 +99,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
       ];
     } else if (dest.contains('sylhet') || dest.contains('সিলেট')) {
-      return const [
+      return [
         TourLandmark(
           id: 'syl_hotel',
-          name: 'সিলেট প্রধান হোটেল ও রিসোর্ট',
-          subtitle: 'প্রধান হোটেল ও থাকার রুম',
+          name: context.l10n.translate('fsh_sylhet_hotel_name'),
+          subtitle: context.l10n.translate('fsh_main_hotel_sub'),
           lat: 24.8949,
           lng: 91.8687,
           icon: Icons.hotel,
@@ -110,8 +111,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'syl_bus',
-          name: 'ট্যুর বাস ও মাইক্রোবাস পার্কিং',
-          subtitle: 'প্রধান পরিবহন পয়েন্ট',
+          name: context.l10n.translate('fsh_sylhet_bus_name'),
+          subtitle: context.l10n.translate('fsh_main_transport_sub'),
           lat: 24.8960,
           lng: 91.8700,
           icon: Icons.directions_bus,
@@ -119,8 +120,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'syl_ratargul',
-          name: 'রাতারগুল সোয়াম্প ফরেস্ট ঘাট',
-          subtitle: 'জলজ বন ও নৌকা ভ্রমণ স্পট',
+          name: context.l10n.translate('fsh_ratargul_name'),
+          subtitle: context.l10n.translate('fsh_ratargul_sub'),
           lat: 25.0050,
           lng: 91.9300,
           icon: Icons.water_rounded,
@@ -128,8 +129,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'syl_sada',
-          name: 'ভোলাগঞ্জ সাদা পাথর জিরো পয়েন্ট',
-          subtitle: 'স্বচ্ছ জল ও পাথুরে নদী পয়েন্ট',
+          name: context.l10n.translate('fsh_bholaganj_name'),
+          subtitle: context.l10n.translate('fsh_bholaganj_sub'),
           lat: 25.1634,
           lng: 92.0189,
           icon: Icons.diamond_rounded,
@@ -137,11 +138,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
       ];
     } else if (dest.contains('bandarban') || dest.contains('বান্দরবান')) {
-      return const [
+      return [
         TourLandmark(
           id: 'ban_hotel',
-          name: 'বান্দরবান প্রধান হোটেল ও রিসোর্ট',
-          subtitle: 'প্রধান হোটেল ও থাকার রুম',
+          name: context.l10n.translate('fsh_bandarban_hotel_name'),
+          subtitle: context.l10n.translate('fsh_main_hotel_sub'),
           lat: 22.1953,
           lng: 92.2184,
           icon: Icons.hotel,
@@ -149,8 +150,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'ban_bus',
-          name: 'চাঁদের গাড়ি স্ট্যান্ড ও বাস পার্কিং',
-          subtitle: 'ট্যুর পাহাড়ি পরিবহন পয়েন্ট',
+          name: context.l10n.translate('fsh_bandarban_bus_name'),
+          subtitle: context.l10n.translate('fsh_hill_transport_sub'),
           lat: 22.1970,
           lng: 92.2190,
           icon: Icons.directions_bus,
@@ -158,8 +159,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'ban_nilachal',
-          name: 'নীলাচল ভিউপয়েন্ট ও ঝুলন্ত ব্রিজ',
-          subtitle: 'সূর্যাস্ত ও মেঘ দর্শন পয়েন্ট',
+          name: context.l10n.translate('fsh_nilachal_name'),
+          subtitle: context.l10n.translate('fsh_nilachal_sub'),
           lat: 22.1800,
           lng: 92.2050,
           icon: Icons.wb_sunny_rounded,
@@ -167,8 +168,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'ban_nilgiri',
-          name: 'নীলগিরি হিলটপ রিসোর্ট চূড়া',
-          subtitle: 'পাহাড় চূড়া ও মেঘের সমারোহ',
+          name: context.l10n.translate('fsh_nilgiri_name'),
+          subtitle: context.l10n.translate('fsh_nilgiri_sub'),
           lat: 21.9189,
           lng: 92.3364,
           icon: Icons.landscape_rounded,
@@ -179,9 +180,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       return [
         TourLandmark(
           id: 'hotel_sea_moon',
-          name:
-              '${_tourGroup?.destination ?? "কক্সবাজার"} প্রধান হোটেল / রিসোর্ট',
-          subtitle: 'প্রধান হোটেল ও থাকার রুম',
+          name: context.l10n.translate('fsh_cox_hotel_name', args: {
+            'destination': _tourGroup?.destination ??
+                context.l10n.translate('fsh_default_destination')
+          }),
+          subtitle: context.l10n.translate('fsh_main_hotel_sub'),
           lat: 21.4326,
           lng: 91.9774,
           icon: Icons.hotel,
@@ -189,9 +192,13 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'evergreen_bus',
-          name:
-              '${_tourGroup?.originCity ?? "রংপুর"} ➔ ${_tourGroup?.destination ?? "কক্সবাজার"} বাস পার্কিং',
-          subtitle: 'প্রধান বাস ও পরিবহন পয়েন্ট',
+          name: context.l10n.translate('fsh_cox_bus_name', args: {
+            'origin': _tourGroup?.originCity ??
+                context.l10n.translate('fsh_default_origin'),
+            'destination': _tourGroup?.destination ??
+                context.l10n.translate('fsh_default_destination')
+          }),
+          subtitle: context.l10n.translate('fsh_main_bus_sub'),
           lat: 21.4385,
           lng: 91.9740,
           icon: Icons.directions_bus,
@@ -199,9 +206,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'sugandha_beach',
-          name:
-              '${_tourGroup?.destination ?? "কক্সবাজার"} প্রধান মিলনমেলা পয়েন্ট',
-          subtitle: 'ফ্যামিলি আড্ডা ও মিলনমেলা পয়েন্ট',
+          name: context.l10n.translate('fsh_cox_meetup_name', args: {
+            'destination': _tourGroup?.destination ??
+                context.l10n.translate('fsh_default_destination')
+          }),
+          subtitle: context.l10n.translate('fsh_family_meetup_sub'),
           lat: 21.4298,
           lng: 91.9752,
           icon: Icons.place_rounded,
@@ -209,8 +218,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ),
         TourLandmark(
           id: 'laboni_beach',
-          name: '${_tourGroup?.destination ?? "কক্সবাজার"} দর্শনীয় প্রধান স্পট',
-          subtitle: 'দর্শনীয় স্পট ও ফটো পয়েন্ট',
+          name: context.l10n.translate('fsh_cox_spot_name', args: {
+            'destination': _tourGroup?.destination ??
+                context.l10n.translate('fsh_default_destination')
+          }),
+          subtitle: context.l10n.translate('fsh_sightseeing_sub'),
           lat: 21.4390,
           lng: 91.9712,
           icon: Icons.camera_alt_rounded,
@@ -333,6 +345,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   }
 
   void _raiseAlert() {
+    final l10n = context.l10n;
     final alertId = _repository.newSafetyAlertId();
     _activeAlertId = alertId;
     final pos = _currentPosition;
@@ -346,11 +359,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         .then(
       (synced) {
         if (!synced) {
-          _showMessage(
-              'এলার্ট এখনও সার্ভারে পৌঁছায়নি। নেটওয়ার্ক পেলে গ্রুপে যাবে।');
+          _showMessage(l10n.translate('fsh_alert_not_synced'));
         }
       },
-      onError: (Object e) => _showMessage('গ্রুপে এলার্ট পাঠানো যায়নি: $e'),
+      onError: (Object e) => _showMessage(
+          l10n.translate('fsh_alert_send_failed', args: {'error': e})),
     ));
   }
 
@@ -363,9 +376,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   }
 
   void _resolveById(String alertId) {
+    final l10n = context.l10n;
     unawaited(_repository.resolveSafetyAlert(widget.tourId, alertId).then(
           (_) {},
-          onError: (Object e) => _showMessage('এলার্ট বন্ধ করা যায়নি: $e'),
+          onError: (Object e) => _showMessage(
+              l10n.translate('fsh_alert_close_failed', args: {'error': e})),
         ));
   }
 
@@ -389,9 +404,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     final pos = _currentPosition;
     if (pos == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content:
-              Text('অবস্থান পাওয়া যায়নি। GPS চালু করে আবার চেষ্টা করুন।'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.l10n.translate('fsh_location_unavailable')),
           backgroundColor: Colors.redAccent,
         ));
       }
@@ -400,7 +414,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     final link =
         'https://maps.google.com/?q=${pos.latitude.toStringAsFixed(6)},${pos.longitude.toStringAsFixed(6)}';
     // ignore: deprecated_member_use
-    await Share.share('আমি বিপদে আছি। আমার বর্তমান অবস্থান: $link');
+    await Share.share(context.l10n
+        .translate('fsh_share_location_text', args: {'link': link}));
   }
 
   double _calculateBearing(double lat1, double lon1, double lat2, double lon2) {
@@ -420,8 +435,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B1E),
       appBar: AppBar(
-        title: const Text('Family Safety Hub (নিরাপত্তা ও জরুরি সেবা)',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(context.l10n.translate('fsh_title'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         backgroundColor: const Color(0xFF142428),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -612,7 +627,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   Widget _buildAlertCard(SafetyAlert alert, {required bool canResolve}) {
     final raised = alert.createdAt;
     final when = raised == null
-        ? 'এইমাত্র'
+        ? context.l10n.translate('fsh_just_now')
         : localizedDateFormat('dd MMM, HH:mm').format(raised);
     final lat = alert.latitude;
     final lng = alert.longitude;
@@ -633,7 +648,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '${alert.senderName} এলার্ট পাঠিয়েছেন',
+                  context.l10n.translate('fsh_sender_sent_alert',
+                      args: {'name': alert.senderName}),
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold),
                 ),
@@ -670,9 +686,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'এক-ট্যাপে জরুরি কল (EMERGENCY HOTLINES)',
-          style: TextStyle(
+        Text(
+          context.l10n.translate('fsh_hotlines_title'),
+          style: const TextStyle(
             color: Colors.white70,
             fontSize: 12,
             fontWeight: FontWeight.bold,
@@ -861,8 +877,11 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                       const SizedBox(width: 4),
                       Text(
                         distanceMeters > 1000
-                            ? '${(distanceMeters / 1000).toStringAsFixed(1)} কি.মি. দূরে'
-                            : '$distanceMeters মিটার দূরে',
+                            ? context.l10n.translate('fsh_km_away', args: {
+                                'km': (distanceMeters / 1000).toStringAsFixed(1)
+                              })
+                            : context.l10n.translate('fsh_meters_away',
+                                args: {'meters': distanceMeters}),
                         style: const TextStyle(
                           color: Colors.greenAccent,
                           fontWeight: FontWeight.bold,
