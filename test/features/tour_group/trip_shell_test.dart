@@ -85,6 +85,41 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('open journey'), findsOneWidget);
     });
+
+    testWidgets('a wide window shows the tabs in a side rail', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.tap(find.text('open journey'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+
+      await tester.tap(find.text('Money'));
+      await tester.pumpAndSettle();
+      expect(find.text('body of ledger'), findsOneWidget);
+    });
+
+    testWidgets('on a wide window the content stops at the width cap',
+        (tester) async {
+      tester.view.physicalSize = const Size(1600, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.tap(find.text('open journey'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSize(find.byType(_Screen)).width,
+        TripShell.contentMaxWidth,
+      );
+    });
   });
 }
 
