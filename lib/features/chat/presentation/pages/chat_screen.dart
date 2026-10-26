@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/utils/shared_latest_stream.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_performance/firebase_performance.dart';
@@ -34,7 +35,7 @@ class ChatScreen extends StatefulWidget {
 /// Represents an in-progress media upload shown optimistically in the chat list.
 class _PendingUpload {
   final String id;
-  final File? file;
+  File? file;
   final String type;
   double progress = 0.0;
 
@@ -489,7 +490,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final file = pickResult.file;
     final xFile = pickResult.xFile;
 
-    final pending = _PendingUpload(id: uploadId, file: file, type: type);
+    File? fileToUpload =
+        file ?? (!kIsWeb && xFile.path.isNotEmpty ? File(xFile.path) : null);
+    final pending = _PendingUpload(id: uploadId, file: fileToUpload, type: type);
     setState(() => _pendingUploads.add(pending));
 
     Trace? uploadTrace;
@@ -500,8 +503,16 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (_) {}
 
     try {
-      File? fileToUpload =
-          file ?? (!kIsWeb && xFile.path.isNotEmpty ? File(xFile.path) : null);
+      // Ensure Firebase Auth token is fresh before uploading
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        try {
+          await currentUser.getIdToken();
+        } catch (e) {
+          debugPrint('Auth token refresh error: $e');
+        }
+      }
+
       if (!kIsWeb &&
           type == 'image' &&
           fileToUpload != null &&
@@ -519,6 +530,7 @@ class _ChatScreenState extends State<ChatScreen> {
           );
           if (compressed != null) {
             fileToUpload = File(compressed.path);
+            pending.file = fileToUpload;
             debugPrint('Image compressed: ${fileToUpload.lengthSync()} bytes');
           }
         } catch (e) {
@@ -532,20 +544,17 @@ class _ChatScreenState extends State<ChatScreen> {
           .ref('chat_media/${widget.chatId}/$uploadId.$ext');
 
       final UploadTask uploadTask;
-      if (type == 'image' || kIsWeb || fileToUpload == null) {
-        final Uint8List bytes;
-        if (fileToUpload != null && fileToUpload.existsSync()) {
-          bytes = await fileToUpload.readAsBytes();
-        } else {
-          bytes = await xFile.readAsBytes();
-        }
-        uploadTask = storageRef.putData(
-          bytes,
+      if (!kIsWeb && fileToUpload != null && fileToUpload.existsSync()) {
+        // Native mobile: stream directly from file via background thread without Binder limit
+        uploadTask = storageRef.putFile(
+          fileToUpload,
           SettableMetadata(contentType: mimeType),
         );
       } else {
-        uploadTask = storageRef.putFile(
-          fileToUpload,
+        // Web fallback: read bytes and upload
+        final Uint8List bytes = await xFile.readAsBytes();
+        uploadTask = storageRef.putData(
+          bytes,
           SettableMetadata(contentType: mimeType),
         );
       }
@@ -648,22 +657,33 @@ class _ChatScreenState extends State<ChatScreen> {
   ) async {
     final uploadId = const Uuid().v4();
     try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        try {
+          await currentUser.getIdToken();
+        } catch (e) {
+          debugPrint('Auth token refresh error: $e');
+        }
+      }
+
       final storageRef = FirebaseStorage.instance
           .ref('chat_media/${widget.chatId}/$uploadId.m4a');
 
       final UploadTask uploadTask;
       final voiceFile = File(filePath);
-      final Uint8List bytes;
       if (!kIsWeb && voiceFile.existsSync()) {
-        bytes = await voiceFile.readAsBytes();
+        uploadTask = storageRef.putFile(
+          voiceFile,
+          SettableMetadata(contentType: 'audio/mp4'),
+        );
       } else {
         final xFile = XFile(filePath);
-        bytes = await xFile.readAsBytes();
+        final bytes = await xFile.readAsBytes();
+        uploadTask = storageRef.putData(
+          bytes,
+          SettableMetadata(contentType: 'audio/mp4'),
+        );
       }
-      uploadTask = storageRef.putData(
-        bytes,
-        SettableMetadata(contentType: 'audio/mp4'),
-      );
 
       await uploadTask;
       final downloadUrl = await storageRef.getDownloadURL();

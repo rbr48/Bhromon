@@ -88,12 +88,12 @@ service firebase.storage {
     }
 
     // ── Chat media ───────────────────────────────────────────────────────────
-    // Read: authenticated users; write: authenticated users with file type & size cap
-    match /chat_media/{chatId}/{fileName} {
-      allow read: if isAuth();
+    // Read: public (via token/download URL); write: authenticated users up to 100MB
+    match /chat_media/{allPaths=**} {
+      allow read: if true;
       allow write: if isAuth()
-                   && (isImage() || isVideo() || isAudio())
-                   && (underImageLimit() || underVideoLimit());
+                   && (isImage() || isVideo() || isAudio() || request.resource.contentType == null)
+                   && request.resource.size < 100 * 1024 * 1024;
       allow delete: if isAuth();
     }
 

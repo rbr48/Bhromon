@@ -528,7 +528,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     final displayName =
         authState is Authenticated ? authState.profile.displayName : 'Guest';
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
-    final double bottomSpacerHeight = 78.0 + bottomPadding;
+    final double bottomSpacerHeight = 96.0 + bottomPadding;
 
     // Specific colors from the ultra mockup
     const Color mockBackground = Color(0xFFF6F5F1);

@@ -100,8 +100,8 @@ tasks.whenTaskAdded { task ->
         if (task.name.toLowerCase().contains("artprofile") ||
             task.name.toLowerCase().contains("nativesymboltable") ||
             task.name.toLowerCase().contains("nativedebugmetadata") ||
-            task.name.toLowerCase().contains("cleanmerge") ||
-            task.name.toLowerCase().contains("cleanpackage")) {
+            task.name.toLowerCase().contains("cleanmergereleaseassets") ||
+            task.name.toLowerCase().contains("cleanmergereleasenativelibs")) {
             task.enabled = false
         }
     } else {
