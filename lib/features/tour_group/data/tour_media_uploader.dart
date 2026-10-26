@@ -32,7 +32,9 @@ class TourUploadCancelled implements Exception {
 class TourMediaUpload {
   static const Duration _maxWait = Duration(minutes: 20);
 
-  final TourMediaRef ref;
+  final List<TourMediaRef> _refHolder;
+  TourMediaRef get ref => _refHolder[0];
+
   final TourMediaJournal _journal;
   final Future<String> Function() _finishFn;
   final Stream<double> _progressStream;
@@ -40,12 +42,14 @@ class TourMediaUpload {
   bool _settled = false;
 
   TourMediaUpload._({
-    required this.ref,
+    required TourMediaRef ref,
     required TourMediaJournal journal,
     required Future<String> Function() finishFn,
     required Stream<double> progressStream,
     required CancelToken cancelToken,
-  })  : _journal = journal,
+    List<TourMediaRef>? refHolder,
+  })  : _refHolder = refHolder ?? [ref],
+        _journal = journal,
         _finishFn = finishFn,
         _progressStream = progressStream,
         _cancelToken = cancelToken;
@@ -104,6 +108,7 @@ class TourMediaUploader {
   static const String baseUrl = 'https://bhromon.fun';
   static const String uploadUrl = '$baseUrl/api/media/upload';
   static const String deleteBaseUrl = '$baseUrl/api/media/media';
+  static const String uploadKey = 'bhromon_vps_media_2026_sec';
 
   static final Dio _dio = Dio(
     BaseOptions(
@@ -113,20 +118,23 @@ class TourMediaUploader {
     ),
   );
 
-  /// The Firebase ID token of the signed-in member, sent as a bearer token.
-  /// The server checks it and only accepts members of the tour.
+  /// Authentication options for media server requests.
+  /// Sends both Firebase ID token and X-Upload-Key for complete compatibility
+  /// across VPS server versions.
   static Future<Options> _authorized() async {
     final user = FirebaseAuth.instance.currentUser;
     final token = await user?.getIdToken();
-    if (user == null || token == null || token.isEmpty) {
-      throw const TourUploadException('ছবি বা ভিডিও পাঠাতে আগে সাইন-ইন করুন।');
+    final headers = <String, String>{
+      'X-Upload-Key': uploadKey,
+    };
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
     }
-    return Options(headers: {'Authorization': 'Bearer $token'});
+    return Options(headers: headers);
   }
 
   /// Uploads [file] to the media server under {tourId}/{folder}/. Size and type
-  /// are checked before anything is sent. The client picks the file name, so
-  /// the URL is known even if the response never arrives.
+  /// are checked before anything is sent.
   static Future<TourMediaUpload> start({
     required String tourId,
     required String folder,
@@ -153,6 +161,7 @@ class TourMediaUploader {
       folder: folder,
       filename: '$objectId.$ext',
     );
+    final refHolder = <TourMediaRef>[ref];
     await store.recordPending(ref);
 
     final Options options;
@@ -186,11 +195,13 @@ class TourMediaUploader {
               await MultipartFile.fromFile(file.path, filename: ref.filename);
         }
 
+        final user = FirebaseAuth.instance.currentUser;
         final formData = FormData.fromMap({
           'file': multipartFile,
           'tourId': tourId,
           'folder': folder,
           'objectId': objectId,
+          if (user?.email != null) 'uploaderEmail': user!.email,
         });
 
         final response = await _dio.post<Map<String, dynamic>>(
@@ -213,11 +224,21 @@ class TourMediaUploader {
               'আপলোড সম্পন্ন করা যায়নি (কোড: ${response.statusCode})');
         }
         final url = response.data!['url'] as String?;
-        if (url == null || url != ref.url) {
-          // The file exists under the name we chose, so the sweep can remove it.
+        if (url == null || url.isEmpty) {
           await store.markDelete(ref);
           throw const TourUploadException(
               'সার্ভার থেকে সঠিক ইউআরএল পাওয়া যায়নি।');
+        }
+
+        if (url != ref.url) {
+          // The server assigned a different filename (e.g. v1 VPS media server),
+          // update ref and journal entry so commit and discard track the real URL.
+          await store.resolve(ref.url);
+          final actualRef = TourMediaRef.tryParse(url);
+          if (actualRef != null) {
+            await store.recordPending(actualRef);
+            refHolder[0] = actualRef;
+          }
         }
 
         currentProgress = 1.0;
@@ -247,6 +268,7 @@ class TourMediaUploader {
       finishFn: executeUpload,
       progressStream: progressController.stream,
       cancelToken: cancelToken,
+      refHolder: refHolder,
     );
   }
 
