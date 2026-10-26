@@ -1,4 +1,5 @@
 import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:injectable/injectable.dart';
 import '../utils/app_logger.dart';
 
@@ -19,6 +20,7 @@ class FeatureFlags {
   };
 
   Future<void> initialize() async {
+    if (kIsWeb) return;
     try {
       await _config.setDefaults(_defaults);
       await _config.setConfigSettings(RemoteConfigSettings(
@@ -34,11 +36,18 @@ class FeatureFlags {
 
   // ── Feature Getters ───────────────────────────────────────────────────────
 
-  bool get chatEnabled => _config.getBool('chat_enabled');
-  bool get premiumGuideEnabled => _config.getBool('premium_guide_enabled');
-  bool get feedV2Enabled => _config.getBool('feed_v2_enabled');
-  bool get mapClusteringEnabled => _config.getBool('map_clustering_enabled');
-  bool get offlineVaultEnabled => _config.getBool('offline_vault_enabled');
-  bool get trustSystemEnabled => _config.getBool('trust_system_enabled');
-  bool get analyticsEnabled => _config.getBool('analytics_enabled');
+  bool get chatEnabled =>
+      kIsWeb ? true : _config.getBool('chat_enabled');
+  bool get premiumGuideEnabled =>
+      kIsWeb ? true : _config.getBool('premium_guide_enabled');
+  bool get feedV2Enabled =>
+      kIsWeb ? false : _config.getBool('feed_v2_enabled');
+  bool get mapClusteringEnabled =>
+      kIsWeb ? true : _config.getBool('map_clustering_enabled');
+  bool get offlineVaultEnabled =>
+      kIsWeb ? true : _config.getBool('offline_vault_enabled');
+  bool get trustSystemEnabled =>
+      kIsWeb ? true : _config.getBool('trust_system_enabled');
+  bool get analyticsEnabled =>
+      kIsWeb ? false : _config.getBool('analytics_enabled');
 }

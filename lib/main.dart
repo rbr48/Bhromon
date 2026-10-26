@@ -230,20 +230,6 @@ void main() {
         logWarning(
             '[Firestore] Could not enable offline persistence', e, stack);
       }
-
-      if (!kIsWeb) {
-        try {
-          // SyncWorker.initialize() calls Workmanager().initialize() internally
-          // with the single unified callbackDispatcher that handles both sync
-          // and geo-fence tasks.
-          SyncWorker.initialize();
-          SyncWorker.registerPeriodicSync();
-          await registerGeoFenceWork();
-        } catch (e, stack) {
-          logWarning(
-              '[SyncWorker] Failed to initialize background sync', e, stack);
-        }
-      }
     }
 
     runApp(const MyApp());
@@ -251,7 +237,9 @@ void main() {
     // Background job registration and call listener isn't needed to draw the first frame.
     if (firebaseAvailable) {
       CallNotificationService().init();
-      unawaited(_registerBackgroundWork());
+      if (!kIsWeb) {
+        unawaited(_registerBackgroundWork());
+      }
     }
   }, (error, stack) {
     logError('[GlobalError] Asynchronous error caught in runZonedGuarded zone',
@@ -266,6 +254,7 @@ void main() {
 }
 
 Future<void> _registerBackgroundWork() async {
+  if (kIsWeb) return;
   try {
     // SyncWorker.initialize() calls Workmanager().initialize() internally
     // with the single unified callbackDispatcher that handles both sync

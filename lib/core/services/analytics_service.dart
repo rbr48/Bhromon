@@ -3,7 +3,8 @@ import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 
 class AnalyticsService {
-  static final _analytics = FirebaseAnalytics.instance;
+  static FirebaseAnalytics? get _analytics =>
+      kIsWeb ? null : FirebaseAnalytics.instance;
 
   // ── Trip & Content Events ─────────────────────────────────────────────────
 
@@ -136,7 +137,7 @@ class AnalyticsService {
   }) async {
     if (kIsWeb) return; // Firebase Analytics not available on web for Flutter
     try {
-      await _analytics.logEvent(
+      await _analytics?.logEvent(
         name: name,
         parameters: parameters?.map(
           (k, v) => MapEntry(k, (v is bool ? (v ? 1 : 0) : v) as Object),

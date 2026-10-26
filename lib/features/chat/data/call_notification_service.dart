@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -30,6 +31,7 @@ class CallNotificationService {
   bool _isCallDialogShowing = false;
 
   void init() {
+    if (Firebase.apps.isEmpty) return;
     _authSub?.cancel();
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {

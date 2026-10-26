@@ -1,0 +1,8 @@
+services:
+  web:
+    build: .
+    image: bhromon-flutter-web:latest
+    container_name: bhromon-web-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8085:80"

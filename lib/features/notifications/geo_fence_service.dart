@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
@@ -15,6 +16,7 @@ const String kGeoFenceTask = 'bhromon_geofence_check';
 
 /// Register geo-fence background work with workmanager
 Future<void> registerGeoFenceWork() async {
+  if (kIsWeb) return;
   await Workmanager().registerPeriodicTask(
     kGeoFenceTask,
     kGeoFenceTask,
