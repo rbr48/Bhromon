@@ -111,6 +111,13 @@ class HiveEncryptionService {
   Future<Box<T>> _open<T>(String boxName) async {
     if (Hive.isBoxOpen(boxName)) return Hive.box<T>(boxName);
 
+    // On Web, Hive stores data in IndexedDB — no filesystem or migration probes exist.
+    if (kIsWeb) {
+      final key = await _deviceKey();
+      if (key == null) return _openInMemory<T>(boxName);
+      return await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
+    }
+
     final key = await _deviceKey();
     if (key == null) return _openInMemory<T>(boxName);
 
@@ -242,6 +249,11 @@ class HiveEncryptionService {
   Future<Box<T>> _openInMemory<T>(String boxName) async {
     debugPrint(
         '[HiveEncryption] No device key; keeping $boxName in memory this session');
+    if (kIsWeb) {
+      final box = await Hive.openBox<T>(boxName);
+      _inMemoryBoxes.add(boxName);
+      return box;
+    }
     Map<dynamic, dynamic>? existing;
     if (await Hive.boxExists(boxName)) {
       await _resolveHome();
