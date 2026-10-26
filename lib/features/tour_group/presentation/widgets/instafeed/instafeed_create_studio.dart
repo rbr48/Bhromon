@@ -11,6 +11,7 @@ import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'package:bhromon/features/tour_group/domain/services/media_rules.dart';
 import 'package:bhromon/features/tour_group/domain/services/tour_video_compressor.dart';
+import 'package:video_compress/video_compress.dart';
 import '../../../../../core/theme/colors.dart';
 
 /// Creation Studio bottom sheet supporting multi-image posts and reels with
@@ -55,6 +56,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   VideoPlayerController? _videoCtrl;
   XFile? _coverImage;
   Uint8List? _coverBytes;
+  bool _isFirstFrameCover = false;
   double _videoPosition = 0.0;
   double _videoDuration = 1.0;
 
@@ -284,6 +286,12 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         _releaseVideoPreview();
         _videoCtrl = controller;
       });
+
+      // Automatically extract first frame as reel thumbnail by default
+      if (_coverImage == null && !kIsWeb) {
+        _extractFirstFrameCover(fileToUse);
+      }
+
       _saveCurrentDraft();
     } catch (e) {
       if (mounted) {
@@ -320,6 +328,27 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     return '$mins:$secs';
   }
 
+  Future<void> _extractFirstFrameCover(XFile videoFile) async {
+    if (kIsWeb) return;
+    try {
+      final thumbFile = await VideoCompress.getFileThumbnail(
+        videoFile.path,
+        quality: 85,
+        position: 1, // First frame in milliseconds
+      );
+      final bytes = await thumbFile.readAsBytes();
+      if (mounted && _selectedVideo?.path == videoFile.path) {
+        setState(() {
+          _coverImage = XFile(thumbFile.path, name: 'first_frame.jpg');
+          _coverBytes = bytes;
+          _isFirstFrameCover = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Auto-extract first frame thumbnail error: $e');
+    }
+  }
+
   Future<void> _pickCoverImage() async {
     try {
       final picked = await widget.picker.pickImage(
@@ -332,6 +361,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       setState(() {
         _coverImage = picked;
         _coverBytes = bytes;
+        _isFirstFrameCover = false;
       });
     } catch (e) {
       if (mounted) {
@@ -346,7 +376,12 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     setState(() {
       _coverImage = null;
       _coverBytes = null;
+      _isFirstFrameCover = false;
     });
+    // Re-extract first frame as default if a video is selected
+    if (_selectedVideo != null && !kIsWeb) {
+      _extractFirstFrameCover(_selectedVideo!);
+    }
   }
 
   Future<void> _publish() async {
@@ -391,6 +426,18 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         uploadedUrls.add(url);
 
         String? coverUrl;
+        if (_coverImage == null && _selectedVideo != null && !kIsWeb) {
+          try {
+            final thumbFile = await VideoCompress.getFileThumbnail(
+              _selectedVideo!.path,
+              quality: 85,
+              position: 1,
+            );
+            _coverImage = XFile(thumbFile.path, name: 'first_frame.jpg');
+          } catch (e) {
+            debugPrint('Auto-extract first frame on publish fallback failed: $e');
+          }
+        }
         if (_coverImage != null) {
           setState(() {
             _uploadStatusText = 'কভার থাম্বনেইল আপলোড হচ্ছে...';
@@ -1416,9 +1463,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     color: AppColors.mintGreen.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text(
-                    'নির্বাচিত',
-                    style: TextStyle(
+                  child: Text(
+                    _isFirstFrameCover ? 'ডিফল্ট (প্রথম ফ্রেম)' : 'কাস্টম ছবি',
+                    style: const TextStyle(
                       color: AppColors.mintGreen,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -1428,9 +1475,11 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
             ],
           ),
           const SizedBox(height: 6),
-          const Text(
-            'ফিড এবং এক্সপ্লোর গ্রিডে রিলটি যে ছবিতে দেখা যাবে তা বেছে নিন।',
-            style: TextStyle(color: Colors.white54, fontSize: 11),
+          Text(
+            _isFirstFrameCover
+                ? 'ভিডিওর প্রথম ফ্রেমটি থাম্বনেইল হিসেবে সেট করা আছে। আপনি চাইলে পরিবর্তন করতে পারেন।'
+                : 'ফিড এবং এক্সপ্লোর গ্রিডে রিলটি যে ছবিতে দেখা যাবে তা বেছে নিন।',
+            style: const TextStyle(color: Colors.white54, fontSize: 11),
           ),
           const SizedBox(height: 10),
           if (_coverImage != null && _coverBytes != null) ...[
@@ -1451,7 +1500,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _coverImage!.name,
+                        _isFirstFrameCover
+                            ? 'প্রথম ফ্রেম (ভিডিও কভার)'
+                            : _coverImage!.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(

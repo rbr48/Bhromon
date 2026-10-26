@@ -358,7 +358,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         indicatorColor: scheme.primary.withValues(alpha: 0.18),
         elevation: 0,
-        height: 68,
+        height: 74,
         labelTextStyle: WidgetStatePropertyAll(textTheme.labelMedium),
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(

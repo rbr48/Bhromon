@@ -10,6 +10,7 @@ import 'instafeed_carousel.dart';
 import 'instafeed_image_viewer_modal.dart';
 import 'instafeed_travel_banners.dart';
 import 'instafeed_zoomable_media.dart';
+import 'reel_thumbnail_preview.dart';
 import '../../../../../core/theme/colors.dart';
 
 /// Full-featured Post Card with pinch-to-zoom, dynamic aspect ratio, tagged
@@ -661,6 +662,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 ),
               ),
             )
+          else if (widget.post.videoUrl != null &&
+              isRemoteMediaUrl(widget.post.videoUrl!))
+            ReelThumbnailPreview(videoUrl: widget.post.videoUrl!)
           else
             Container(
               decoration: const BoxDecoration(

@@ -263,6 +263,17 @@ void main() {
       expect(r.projectedPaisa, 0);
     });
 
+    test('fund report with no collection target does not crash on unmodifiable list', () {
+      final r = FundReport.build(
+        group: tour.copyWith(fundBudget: const FundBudget()),
+        members: _members,
+        expenses: const [],
+        deposits: const [],
+        transfers: const [],
+      );
+      expect(r.collection, isEmpty);
+    });
+
     test('a foreign amount converts at the rate given', () {
       // ₹1,250.50 at ৳1.43 a rupee.
       expect(convertToPaisa(125050, 1.43), 178822);

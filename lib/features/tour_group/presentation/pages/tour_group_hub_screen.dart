@@ -263,7 +263,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           _displayedGroup = current;
 
           return ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
             children: [
               // 1. Active Tour Card
               _buildActiveTourBanner(context, current, groups),

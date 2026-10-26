@@ -49,6 +49,7 @@ class TripShell extends StatelessWidget {
         bottomNavigationBar: NavigationBar(
           selectedIndex: index,
           onDestinationSelected: select,
+          maintainBottomViewPadding: true,
           destinations: [
             for (final tab in tabs)
               NavigationDestination(

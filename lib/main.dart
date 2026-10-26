@@ -81,12 +81,13 @@ void main() {
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           backgroundColor: const Color(0xFF121212),
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Icon(Icons.error_outline_rounded,
                       color: Colors.redAccent, size: 64),
@@ -129,8 +130,9 @@ void main() {
             ),
           ),
         ),
-      );
-    };
+      ),
+    );
+  };
 
     // These three don't depend on each other: start them together rather
     // than one after another before the first frame. The integrity result
@@ -315,7 +317,18 @@ class MyApp extends StatelessWidget {
           ],
           locale: LocaleController.instance.locale,
           builder: (context, child) {
-            return OtaListenerWrapper(child: child ?? const SizedBox());
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final navBg = isDark ? const Color(0xFF161616) : Colors.white;
+            return Container(
+              color: navBg,
+              child: SafeArea(
+                top: false,
+                left: false,
+                right: false,
+                bottom: true,
+                child: OtaListenerWrapper(child: child ?? const SizedBox()),
+              ),
+            );
           },
         ),
       ),
