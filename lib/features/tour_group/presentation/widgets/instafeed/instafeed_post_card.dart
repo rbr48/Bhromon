@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
@@ -13,6 +12,7 @@ import 'instafeed_travel_banners.dart';
 import 'instafeed_zoomable_media.dart';
 import 'reel_thumbnail_preview.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/localization/localized_date.dart';
 
 /// Full-featured Post Card with pinch-to-zoom, dynamic aspect ratio, tagged
 /// members, clickable hashtags, pinned post badge, audio pill, travel logistics
@@ -924,7 +924,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     final isVideoPost =
         widget.post.videoUrl != null && widget.post.videoUrl!.isNotEmpty;
     final mediaList = widget.post.images;
-    final timeStr = DateFormat('MMM d, h:mm a').format(widget.post.createdAt);
+    final timeStr =
+        localizedDateFormat('MMM d, h:mm a').format(widget.post.createdAt);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),

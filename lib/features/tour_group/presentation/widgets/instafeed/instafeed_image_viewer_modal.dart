@@ -1,12 +1,12 @@
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_zoomable_media.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/localization/localized_date.dart';
 
 /// Full-screen high-resolution image viewer modal supporting multi-photo
 /// swipeable carousels, pinch-to-zoom (up to 4.5x), double-tap heart like,
@@ -143,8 +143,8 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
     final isLiked = _optimisticLiked ?? widget.post.isLikedBy(email);
     final likeCount =
         math.max(0, widget.post.likes.length + _optimisticLikeDelta);
-    final dateStr =
-        DateFormat('d MMMM, yyyy • h:mm a').format(widget.post.createdAt);
+    final dateStr = localizedDateFormat('d MMMM, yyyy • h:mm a')
+        .format(widget.post.createdAt);
 
     if (images.isEmpty) {
       return Scaffold(

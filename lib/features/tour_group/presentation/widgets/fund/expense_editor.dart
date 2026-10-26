@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
@@ -8,6 +7,7 @@ import '../../../domain/models/itinerary_models.dart';
 import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/fund_analytics.dart';
 import '../../../domain/services/trip_ledger_engine.dart';
+import '../../../../../core/localization/localized_date.dart';
 
 String fundCategoryLabel(AppLocalizations l10n, String category) {
   final key = 'fund_cat_${category.toLowerCase()}';
@@ -388,7 +388,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.event_rounded, color: AppColors.gold),
-              title: Text(DateFormat('EEE, d MMM yyyy').format(_date),
+              title: Text(localizedDateFormat('EEE, d MMM yyyy').format(_date),
                   style: const TextStyle(color: Colors.white)),
               subtitle: Text(l10n.translate('fund_date'),
                   style: const TextStyle(color: Colors.white54)),

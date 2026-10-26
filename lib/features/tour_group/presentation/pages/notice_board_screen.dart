@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -13,6 +12,7 @@ import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/notice_engine.dart';
 import '../widgets/notice/notice_composer.dart';
+import '../../../../core/localization/localized_date.dart';
 
 const _bg = Color(0xFF0F1A1C);
 const _card = Color(0xFF142428);
@@ -268,7 +268,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     final lines = [
       '${n.kind.emoji} ${n.title}',
       if (n.eventAt != null)
-        '🕒 ${DateFormat('EEE d MMM, h:mm a').format(n.eventAt!)}',
+        '🕒 ${localizedDateFormat('EEE d MMM, h:mm a').format(n.eventAt!)}',
       if (n.place != null) '📍 ${n.place}',
       if (n.content.isNotEmpty) n.content,
       if (NoticeEngine.mapUri(n) != null) NoticeEngine.mapUri(n).toString(),
@@ -288,11 +288,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     final lines = [
       l10n.translate('notice_today_share_title', args: {
         'tour': _group?.name ?? '',
-        'date': DateFormat('EEE d MMM').format(_now),
+        'date': localizedDateFormat('EEE d MMM').format(_now),
       }),
       '',
       for (final n in today)
-        '${DateFormat('h:mm a').format(n.eventAt!)}  ${n.kind.emoji} ${n.title}'
+        '${localizedDateFormat('h:mm a').format(n.eventAt!)}  ${n.kind.emoji} ${n.title}'
             '${n.place == null ? '' : ' · ${n.place}'}',
     ];
     // ignore: deprecated_member_use
@@ -565,7 +565,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                             fontSize: 17,
                             fontWeight: FontWeight.bold)),
                     Text(
-                        '${DateFormat('EEE, h:mm a').format(n.eventAt!)}'
+                        '${localizedDateFormat('EEE, h:mm a').format(n.eventAt!)}'
                         '${n.place == null ? '' : ' · ${n.place}'}',
                         style: const TextStyle(color: Colors.white70)),
                   ],
@@ -662,7 +662,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 children: [
                   SizedBox(
                     width: 64,
-                    child: Text(DateFormat('h:mm a').format(n.eventAt!),
+                    child: Text(
+                        localizedDateFormat('h:mm a').format(n.eventAt!),
                         style: TextStyle(
                             color: n.eventAt!.isBefore(_now)
                                 ? Colors.white38
@@ -903,7 +904,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         const Icon(Icons.schedule_rounded,
                             size: 15, color: AppColors.gold),
                         const SizedBox(width: 4),
-                        Text(DateFormat('EEE d MMM, h:mm a').format(n.eventAt!),
+                        Text(
+                            localizedDateFormat('EEE d MMM, h:mm a')
+                                .format(n.eventAt!),
                             style: const TextStyle(
                                 color: Colors.white, fontSize: 12)),
                         if (!archived) ...[
@@ -955,7 +958,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 Text(
                     l10n.translate('tour_notice_sender', args: {
                       'author': n.author,
-                      'date': DateFormat('dd MMM, hh:mm a').format(n.createdAt),
+                      'date': localizedDateFormat('dd MMM, hh:mm a')
+                          .format(n.createdAt),
                     }),
                     style:
                         const TextStyle(color: Colors.white38, fontSize: 11)),

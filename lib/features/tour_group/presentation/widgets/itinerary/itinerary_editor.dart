@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
@@ -7,6 +6,7 @@ import '../../../../../core/theme/colors.dart';
 import '../../../domain/models/itinerary_models.dart';
 import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/destination_catalog.dart';
+import '../../../../../core/localization/localized_date.dart';
 
 /// The result of editing an itinerary.
 class ItineraryEdit {
@@ -97,7 +97,7 @@ class _ItineraryEditorPageState extends State<_ItineraryEditorPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final days = DateFormat('d MMM');
+    final days = localizedDateFormat('d MMM');
     return Scaffold(
       backgroundColor: const Color(0xFF0F1A1C),
       appBar: AppBar(
@@ -236,7 +236,7 @@ class _StopSheetState extends State<_StopSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final days = DateFormat('EEE, d MMM yyyy');
+    final days = localizedDateFormat('EEE, d MMM yyyy');
     return Padding(
       padding: EdgeInsets.fromLTRB(
           16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),

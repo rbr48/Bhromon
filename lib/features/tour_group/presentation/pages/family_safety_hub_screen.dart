@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../domain/models/safety_alert_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/localization/localized_date.dart';
 
 class TourLandmark {
   final String id;
@@ -611,8 +611,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
 
   Widget _buildAlertCard(SafetyAlert alert, {required bool canResolve}) {
     final raised = alert.createdAt;
-    final when =
-        raised == null ? 'এইমাত্র' : DateFormat('dd MMM, HH:mm').format(raised);
+    final when = raised == null
+        ? 'এইমাত্র'
+        : localizedDateFormat('dd MMM, HH:mm').format(raised);
     final lat = alert.latitude;
     final lng = alert.longitude;
     return Container(

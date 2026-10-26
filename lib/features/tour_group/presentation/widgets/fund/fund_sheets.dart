@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
@@ -8,6 +7,7 @@ import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/fund_analytics.dart';
 import '../../../domain/services/trip_ledger_engine.dart';
 import 'expense_editor.dart';
+import '../../../../../core/localization/localized_date.dart';
 
 const _sheetColor = Color(0xFF142428);
 const _menuColor = Color(0xFF1B4332);
@@ -436,7 +436,7 @@ class _DepositFormState extends State<_DepositForm> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.event_rounded, color: AppColors.gold),
-            title: Text(DateFormat('EEE, d MMM yyyy').format(_date),
+            title: Text(localizedDateFormat('EEE, d MMM yyyy').format(_date),
                 style: const TextStyle(color: Colors.white)),
             onTap: () async {
               final picked = await showDatePicker(

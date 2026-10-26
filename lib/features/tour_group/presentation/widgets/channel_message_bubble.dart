@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -10,6 +9,7 @@ import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
 import '../../domain/services/chat_markdown.dart';
 import '../../domain/services/trip_ledger_engine.dart';
+import '../../../../core/localization/localized_date.dart';
 
 /// One message in a channel: its sender, quote, media, poll or expense card,
 /// formatted text, reactions and time.
@@ -176,7 +176,7 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
           const SizedBox(width: 4),
         ],
         Text(
-          DateFormat('hh:mm a').format(m.timestamp),
+          localizedDateFormat('hh:mm a').format(m.timestamp),
           style: const TextStyle(color: Colors.white54, fontSize: 10),
         ),
       ],
