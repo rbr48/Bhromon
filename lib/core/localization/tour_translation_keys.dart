@@ -972,6 +972,178 @@ class TourTranslationKeys {
       'fsh_meters_away': '{meters} m away',
       'fsh_default_destination': "Cox's Bazar",
       'fsh_default_origin': 'Rangpur',
+      'tq_s_district_question':
+          'Sajek Valley is in which district of Bangladesh?',
+      'tq_s_district_a': 'Rangamati',
+      'tq_s_district_b': 'Khagrachari',
+      'tq_s_district_c': 'Bandarban',
+      'tq_s_district_d': "Cox's Bazar",
+      'tq_s_district_why':
+          'Geographically, Sajek is in Baghaichhari upazila of Rangamati district, but the route goes through Khagrachari.',
+      'tq_s_peak_question': 'What is the highest hilltop in Sajek Valley?',
+      'tq_s_peak_a': 'Konglak Peak',
+      'tq_s_peak_b': 'Ruilui para',
+      'tq_s_peak_c': 'Helipad',
+      'tq_s_peak_d': 'Tajingdong',
+      'tq_s_peak_why':
+          'Konglak Peak is the highest point in Sajek. From there you can see the clouds all around and the Mizoram border with India.',
+      'tq_s_transport_question':
+          'What is the main and most thrilling way to travel to Sajek?',
+      'tq_s_transport_a': 'Open Chander Gari jeep',
+      'tq_s_transport_b': 'CNG auto-rickshaw',
+      'tq_s_transport_c': 'Launch',
+      'tq_s_transport_d': 'Train',
+      'tq_s_transport_why':
+          'On the winding, uneven hill roads, the four-wheel-drive Chander Gari is the main thrill of a Sajek trip.',
+      'tq_s_escort_question': 'Where does the army escort into Sajek start?',
+      'tq_s_escort_a': 'Dighinala army camp',
+      'tq_s_escort_b': 'Alutila',
+      'tq_s_escort_c': 'Maijbhandar',
+      'tq_s_escort_d': 'Manikchhari',
+      'tq_s_escort_why':
+          'For safety, an army convoy takes travellers from Dighinala to Sajek every morning and noon.',
+      'tq_s_attraction_question': "What is Sajek's most famous attraction?",
+      'tq_s_attraction_a': 'Sea of clouds and cloud touching',
+      'tq_s_attraction_b': 'Sea waves',
+      'tq_s_attraction_c': 'Tea garden',
+      'tq_s_attraction_d': 'Deer breeding',
+      'tq_s_attraction_why':
+          'At dawn, from the cottage veranda or the helipad, you see a sea of cotton-like clouds drifting below your feet.',
+      'tq_y_swamp_question':
+          "Which is Bangladesh's only recognised freshwater swamp forest?",
+      'tq_y_swamp_a': 'Ratargul Swamp Forest',
+      'tq_y_swamp_b': 'Sundarbans',
+      'tq_y_swamp_c': 'Lawachara',
+      'tq_y_swamp_d': 'Rema-Kalenga',
+      'tq_y_swamp_why':
+          'Ratargul, in Goainghat in Sylhet, is a unique and scenic freshwater swamp forest.',
+      'tq_y_river_question':
+          'Which river flows past the Bholaganj white stone point?',
+      'tq_y_river_a': 'Dhalai river',
+      'tq_y_river_b': 'Padma',
+      'tq_y_river_c': 'Surma',
+      'tq_y_river_d': 'Karnaphuli',
+      'tq_y_river_why':
+          'The white-stone area has formed in the clear, cold Dhalai river, which flows down from the Meghalaya hills.',
+      'tq_y_citrus_question':
+          "Which special citrus fruit is used in Sylhet's traditional cooking?",
+      'tq_y_citrus_a': 'Satkara',
+      'tq_y_citrus_b': 'Amloki',
+      'tq_y_citrus_c': 'Batabi lemon',
+      'tq_y_citrus_d': 'Kamranga',
+      'tq_y_citrus_why':
+          "Sylhet's traditional beef and fish are cooked with fragrant Satkara lime.",
+      'tq_y_tea_question': "What is special about Sreemangal's famous tea?",
+      'tq_y_tea_a': 'Seven-layer, seven-colour tea from Nilkantha',
+      'tq_y_tea_b': 'Iced tea',
+      'tq_y_tea_c': 'Green tea latte',
+      'tq_y_tea_d': 'Lemongrass tea',
+      'tq_y_tea_why':
+          'The seven-layer tea, with a different density in each layer, invented by Ramesh Ram Gaur, is famous across the country.',
+      'tq_c_beach_question':
+          "Cox's Bazar Sea Beach is the longest natural unbroken sandy sea beach in the world, ranked which?",
+      'tq_c_beach_a': '1st',
+      'tq_c_beach_b': '2nd',
+      'tq_c_beach_c': '3rd',
+      'tq_c_beach_d': '5th',
+      'tq_c_beach_why':
+          "Cox's Bazar Sea Beach is about 120 km long and is the world's longest natural unbroken sandy sea beach!",
+      'tq_c_inani_question': 'What is the main special feature of Inani Beach?',
+      'tq_c_inani_a': 'Red crabs',
+      'tq_c_inani_b': 'Coral and coral rocks',
+      'tq_c_inani_c': 'Deep canal',
+      'tq_c_inani_d': 'Mangrove forest',
+      'tq_c_inani_why':
+          'Inani Beach is famous for its calm setting and the naturally formed coral rocks.',
+      'tq_c_danger_question':
+          'When is swimming at the sea beach most dangerous?',
+      'tq_c_danger_a': 'At high tide',
+      'tq_c_danger_b': 'At low tide',
+      'tq_c_danger_c': 'In the calm morning breeze',
+      'tq_c_danger_d': 'In the midday sun',
+      'tq_c_danger_why':
+          'At low tide the rip current pulls swimmers out into deep sea, so going into deep water at low tide is very dangerous.',
+      'tq_c_island_question': "Which is Bangladesh's only hilly island?",
+      'tq_c_island_a': "St. Martin's",
+      'tq_c_island_b': 'Maheshkhali',
+      'tq_c_island_c': 'Chhera Dwip',
+      'tq_c_island_d': 'Hatiya',
+      'tq_c_island_why':
+          "Maheshkhali is Bangladesh's only hilly island, home to the famous Adinath Temple and betel-leaf farms.",
+      'tq_c_marine_question':
+          'Which two places does Marine Drive Road directly connect?',
+      'tq_c_marine_a': "Cox's Bazar to Teknaf",
+      'tq_c_marine_b': "Cox's Bazar to Chattogram",
+      'tq_c_marine_c': "Cox's Bazar to Bandarban",
+      'tq_c_marine_d': "Cox's Bazar to Rangamati",
+      'tq_c_marine_why':
+          "The 80 km Marine Drive runs from Kolatoli in Cox's Bazar to Teknaf, with hills on one side and the sea on the other.",
+      'tq_title': 'Tour quiz',
+      'tq_not_ready': 'A quiz for this destination is not ready yet.',
+      'tq_title_master': 'Tour quiz and quiz master',
+      'tq_progress': 'Question {n} of {total}',
+      'tq_score': 'Score: {score}',
+      'tq_explanation_heading': 'Explanation and facts',
+      'tq_next': 'Next question',
+      'tq_see_result': 'See result',
+      'tq_default_tour': 'Tour',
+      'tq_badge_learner': 'Tourist learner',
+      'tq_badge_expert': '👑 {dest} expert',
+      'tq_badge_skilled': '🌟 Skilled traveller',
+      'tq_result_summary': 'You got {score} of {total} questions right!',
+      'tq_play_again': 'Play again',
+      'tide_today_schedule': "Today's tide schedule",
+      'tide_current_state': 'Current state: {state}',
+      'tide_high_tide': 'High tide',
+      'tide_low_tide': 'Low tide',
+      'tide_default_area': 'Travel area',
+      'tide_title_beach': 'Tide and beach safety',
+      'tide_title_nature': '{dest} weather and nature safety',
+      'tide_view_hills': 'See the hills and nature guide',
+      'tide_view_beach': 'See the beach and tides',
+      'tide_tab_sea': '🌊 Sea and tides',
+      'tide_tab_hills': '⛰️ Hills, weather and trekking',
+      'tide_schedule_disclaimer':
+          'Times are estimates, not the official tide tables. Always follow the local lifeguards and the administration first.',
+      'tide_beach_safety_title': 'Beach safety and lifeguard zones',
+      'tide_quicksand_title': 'Quicksand and hidden pit warning',
+      'tide_quicksand_body':
+          'At low tide the beach sand gives way quickly, and quicksand is a real risk. At low tide, do not wade into water deeper than your waist.',
+      'tide_flag_title': 'Lifeguard flag guide',
+      'tide_flag_body':
+          '🔴 Red flag: swimming is completely banned and very dangerous.\n🟡 Yellow flag: moderate caution, do not go deeper than your waist.\n🟢 Green flag: the lifeguard says it is safe, but stay alert.',
+      'tide_sun_title': 'Sun and cloud radar: sunrise, sunset and cloud view',
+      'tide_dawn_time': 'Dawn 05:35 – 06:15 (approx.)',
+      'tide_sunrise_clouds': 'Sunrise and cloud bank (sunrise clouds)',
+      'tide_sunrise_tip':
+          'Best time to see the sea of clouds from a cottage or the eastern edge of the hill',
+      'tide_evening_time': 'Evening 05:20 – 05:55 (approx.)',
+      'tide_golden_title': 'Hill sunset and golden hour',
+      'tide_golden_tip':
+          'Red sunset over the western hilltop and golden light for photos',
+      'tide_mountain_title':
+          '{dest} hills and trekking guide (mountain guidelines)',
+      'tide_waterfall_title': 'Waterfall and slippery rock warning',
+      'tide_waterfall_body':
+          'Mountain waterfalls and river rocks have wet moss. Do not go down in ordinary sandals; wear grip sandals or trekking shoes.',
+      'tide_flash_title': 'Flash flood risk',
+      'tide_flash_body':
+          'If it rains upstream or in the Indian hills, a flash flood can reach the waterfall or river within minutes. Get out of the water at once when it turns muddy.',
+      'tide_jeep_title': 'Chander Gari and hill-bend warning (off-road travel)',
+      'tide_jeep_body':
+          'When standing in a Chander Gari or open jeep, hold the rail firmly. Do not take risky selfies on the bends.',
+      'tide_contacts_title': 'Emergency help and helplines',
+      'tide_contacts_body':
+          'Tourist police control room: 01320-163599\nHighway police control: 01320-189999\nNational emergency service: 999',
+      'tide_tracker_title': '{dest} nature and climate tracker',
+      'tide_weather_good':
+          'Weather is favourable. Mild cool breezes in the morning and evening, and a pleasant setting for hill trekking.',
+      'tide_safe_swim': 'Safe to swim',
+      'tide_caution': 'Use caution',
+      'tide_danger': 'Do not go into the sea (high danger)',
+      'tide_running': 'Running',
+      'tide_swim_ok': '🌊 Safe to bathe',
+      'tide_low_caution': '⚠️ Low tide and caution',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -1938,6 +2110,181 @@ class TourTranslationKeys {
       'fsh_meters_away': '{meters} মিটার দূরে',
       'fsh_default_destination': 'কক্সবাজার',
       'fsh_default_origin': 'রংপুর',
+      'tq_s_district_question': 'সাজেক ভ্যালি বাংলাদেশের কোন জেলায় অবস্থিত?',
+      'tq_s_district_a': 'রাঙ্গামাটি',
+      'tq_s_district_b': 'খাগড়াছড়ি',
+      'tq_s_district_c': 'বান্দরবান',
+      'tq_s_district_d': 'কক্সবাজার',
+      'tq_s_district_why':
+          'ভৌগোলিকভাবে সাজেক রাঙ্গামাটি জেলার বাঘাইছড়ি উপজেলায় অবস্থিত, তবে যাতায়াত করতে হয় খাগড়াছড়ি দিয়ে।',
+      'tq_s_peak_question': 'সাজেক ভ্যালির সর্বোচ্চ পাহাড় চূড়া কোনটি?',
+      'tq_s_peak_a': 'কংলাক পাহাড় (Konglak Peak)',
+      'tq_s_peak_b': 'রুইলুই পাড়া',
+      'tq_s_peak_c': 'হ্যালিপ্যাড',
+      'tq_s_peak_d': 'তাজিংডং',
+      'tq_s_peak_why':
+          'কংলাক পাহাড় চূড়া সাজেকের সর্বোচ্চ বিন্দু, যেখান থেকে চারপাশের মেঘ ও ভারতের মিজোরাম সীমান্ত দেখা যায়।',
+      'tq_s_transport_question':
+          'সাজেকে যাতায়াতের জন্য প্রধান ও রোমাঞ্চকর বাহন কোনটি?',
+      'tq_s_transport_a': 'খোলা চাঁদের গাড়ি (Chander Gari)',
+      'tq_s_transport_b': 'সিএনজি অটোরিকশা',
+      'tq_s_transport_c': 'লঞ্চ',
+      'tq_s_transport_d': 'ট্রেন',
+      'tq_s_transport_why':
+          'পাহাড়ি উঁচু-নিচু আঁকাবাঁকা পথে ৪-হুইল ড্রাইভ চাঁদের গাড়িই সাজেক ভ্রমণের প্রধান রোমাঞ্চ।',
+      'tq_s_escort_question':
+          'সাজেকে প্রবেশের জন্য সেনাবাহিনীর এসকর্ট কোথা থেকে শুরু হয়?',
+      'tq_s_escort_a': 'দীঘিনালা সেনা ক্যাম্প',
+      'tq_s_escort_b': 'আলুটিলা',
+      'tq_s_escort_c': 'মাইজভাণ্ডার',
+      'tq_s_escort_d': 'মানিকছড়ি',
+      'tq_s_escort_why':
+          'নিরাপত্তার স্বার্থে দীঘিনালা থেকে প্রতিদিন সকাল ও দুপুরে সেনাবাহিনীর কনভয় এসকর্ট দিয়ে সাজেক নেওয়া হয়।',
+      'tq_s_attraction_question': 'সাজেকে সবচেয়ে বিখ্যাত আকর্ষণ কী?',
+      'tq_s_attraction_a': 'মেঘের সমুদ্র ও মেঘ ছোঁয়া (Sea of Clouds)',
+      'tq_s_attraction_b': 'সমুদ্রের ঢেউ',
+      'tq_s_attraction_c': 'চা বাগান',
+      'tq_s_attraction_d': 'হরিণ প্রজনন',
+      'tq_s_attraction_why':
+          'ভোরে কটেজের বারান্দা বা হ্যালিপ্যাডে দাঁড়ালে পায়ের নিচে তুলোর মতো ভাসমান মেঘের সমুদ্র দেখা যায়।',
+      'tq_y_swamp_question':
+          'বাংলাদেশের একমাত্র স্বীকৃত মিঠাপানির জলাবন (Swamp Forest) কোনটি?',
+      'tq_y_swamp_a': 'রাতারগুল সোয়াম্প ফরেস্ট',
+      'tq_y_swamp_b': 'সুন্দরবন',
+      'tq_y_swamp_c': 'লাউয়াছড়া',
+      'tq_y_swamp_d': 'রেমা-কালেঙ্গা',
+      'tq_y_swamp_why':
+          'সিলেটের গোয়াইনঘাটে অবস্থিত রাতারগুল হলো মিঠাপানির এক অনন্য ও নৈসর্গিক জলাবন।',
+      'tq_y_river_question': 'ভোলাগঞ্জ সাদা পাথর পয়েন্টে কোন নদী বয়ে চলেছে?',
+      'tq_y_river_a': 'ধলাই নদী (Dhalai)',
+      'tq_y_river_b': 'পদ্মা',
+      'tq_y_river_c': 'সুরমা',
+      'tq_y_river_d': 'কর্ণফুলী',
+      'tq_y_river_why':
+          'মেঘালয় পাহাড় থেকে নেমে আসা স্বচ্ছ শীতল ধলাই নদীর বুকে সাদা পাথরের রাজ্য গড়ে উঠেছে।',
+      'tq_y_citrus_question':
+          'সিলেটের ঐতিহ্যবাহী রান্নায় কোন বিশেষ সাইট্রাস ফল ব্যবহার করা হয়?',
+      'tq_y_citrus_a': 'সাতকড়া (Satkara)',
+      'tq_y_citrus_b': 'আমলকী',
+      'tq_y_citrus_c': 'বাতাবি লেবু',
+      'tq_y_citrus_d': 'কামরাঙা',
+      'tq_y_citrus_why':
+          'সিলেটের ঐতিহ্যবাহী গরুর মাংস বা মাছে সুগন্ধি সাতকড়া লেবু দিয়ে রান্না করা হয়।',
+      'tq_y_tea_question': 'শ্রীমঙ্গলের বিখ্যাত চায়ের বিশেষত্ব কী?',
+      'tq_y_tea_a': 'নীলকণ্ঠের ৭ স্তরের সাত রঙের চা',
+      'tq_y_tea_b': 'আইস টি',
+      'tq_y_tea_c': 'গ্রিন টি ল্যাটে',
+      'tq_y_tea_d': 'লেমন গ্রাস টি',
+      'tq_y_tea_why':
+          'রমেশ রাম গৌড়ের আবিষ্কৃত এক গ্লাসে ৭ স্তরের বিভিন্ন ঘনত্বের চা দেশজুড়ে বিখ্যাত।',
+      'tq_c_beach_question':
+          'কক্সবাজার সমুদ্র সৈকত পৃথিবীর কততম দীর্ঘতম প্রাকৃতিক অবিচ্ছিন্ন বালুকাময় সৈকত?',
+      'tq_c_beach_a': 'প্রথম (১ম)',
+      'tq_c_beach_b': 'দ্বিতীয় (২য়)',
+      'tq_c_beach_c': 'তৃতীয় (৩য়)',
+      'tq_c_beach_d': 'পঞ্চম (৫ম)',
+      'tq_c_beach_why':
+          'কক্সবাজার সমুদ্র সৈকত প্রায় ১২০ কিলোমিটার দীর্ঘ এবং এটি পৃথিবীর দীর্ঘতম প্রাকৃতিক অবিচ্ছিন্ন বালুকাময় সমুদ্র সৈকত!',
+      'tq_c_inani_question': 'ইনানী বিচের প্রধান ও বিশেষ বৈশিষ্ট্য কী?',
+      'tq_c_inani_a': 'লাল কাঁকড়া',
+      'tq_c_inani_b': 'প্রবাল ও প্রবাল পাথর (Coral Rocks)',
+      'tq_c_inani_c': 'গভীর খাল',
+      'tq_c_inani_d': 'ম্যানগ্রোভ বন',
+      'tq_c_inani_why':
+          'ইনানী সৈকত তার শান্ত পরিবেশ এবং প্রাকৃতিকভাবে গড়ে ওঠা প্রবাল পাথরের জন্য বিখ্যাত।',
+      'tq_c_danger_question': 'সমুদ্র সৈকতে কখন গোসল করা সবচেয়ে বিপজ্জনক?',
+      'tq_c_danger_a': 'জোয়ারের সময়',
+      'tq_c_danger_b': 'ভাটার সময় (Low Tide)',
+      'tq_c_danger_c': 'সকালের শান্ত বাতাসে',
+      'tq_c_danger_d': 'দুপুরের রোদে',
+      'tq_c_danger_why':
+          'ভাটার সময় পানির টান বা রিপ কারেন্ট সমুদ্রের গভীরে টেনে নেয়, তাই ভাটার সময় গভীর সমুদ্রে নামা অত্যন্ত বিপজ্জনক।',
+      'tq_c_island_question': 'বাংলাদেশের একমাত্র পাহাড়ি দ্বীপ কোনটি?',
+      'tq_c_island_a': 'সেন্টমার্টিন',
+      'tq_c_island_b': 'মহেশখালী',
+      'tq_c_island_c': 'ছেঁড়াদ্বীপ',
+      'tq_c_island_d': 'হাতিয়া',
+      'tq_c_island_why':
+          'মহেশখালী বাংলাদেশের একমাত্র পাহাড়ি দ্বীপ, যেখানে বিখ্যাত আদিনাথ মন্দির ও পানের বরজ রয়েছে।',
+      'tq_c_marine_question':
+          'মেরিন ড্রাইভ রোড কোন দুটি স্থানকে সরাসরি সংযুক্ত করেছে?',
+      'tq_c_marine_a': 'কক্সবাজার থেকে টেকনাফ',
+      'tq_c_marine_b': 'কক্সবাজার থেকে চট্টগ্রাম',
+      'tq_c_marine_c': 'কক্সবাজার থেকে বান্দরবান',
+      'tq_c_marine_d': 'কক্সবাজার থেকে রাঙ্গামাটি',
+      'tq_c_marine_why':
+          '৮০ কি.মি. দীর্ঘ মেরিন ড্রাইভ রোড কক্সবাজার কলাতলী থেকে টেকনাফ পর্যন্ত বিস্তৃত, যার একপাশে পাহাড় ও অন্যপাশে সমুদ্র।',
+      'tq_title': 'Tour Quiz (ট্যুর কুইজ)',
+      'tq_not_ready': 'এই গন্তব্যের জন্য কুইজ এখনও তৈরি হয়নি।',
+      'tq_title_master': 'Tour Quiz (ট্যুর কুইজ ও কুইজ মাস্টার)',
+      'tq_progress': 'প্রশ্ন নং {n} / {total}',
+      'tq_score': 'স্কোর: {score}',
+      'tq_explanation_heading': 'ব্যাখ্যা ও তথ্য',
+      'tq_next': 'পরবর্তী প্রশ্ন',
+      'tq_see_result': 'ফলাফল দেখুন',
+      'tq_default_tour': 'ট্যুর',
+      'tq_badge_learner': 'পর্যটক শিক্ষার্থী',
+      'tq_badge_expert': '👑 {dest} এক্সপার্ট',
+      'tq_badge_skilled': '🌟 চৌকস ভ্রমণকারী',
+      'tq_result_summary':
+          'আপনি {score} / {total} প্রশ্নের সঠিক উত্তর দিয়েছেন!',
+      'tq_play_again': 'আবার খেলুন',
+      'tide_today_schedule':
+          "আজকের জোয়ার-ভাটার সময়সূচী (Today's Tide Schedule)",
+      'tide_current_state': 'বর্তমান অবস্থা: {state}',
+      'tide_high_tide': 'জোয়ার (High Tide)',
+      'tide_low_tide': 'ভাটা (Low Tide)',
+      'tide_default_area': 'ভ্রমণ এলাকা',
+      'tide_title_beach': 'Tide & Beach Safety (জোয়ার-ভাটা ও সৈকত)',
+      'tide_title_nature': '{dest} ওয়েদার ও নেচার সেফটি',
+      'tide_view_hills': 'পাহাড় ও নেচার গাইড দেখুন',
+      'tide_view_beach': 'বিচ ও জোয়ার-ভাটা দেখুন',
+      'tide_tab_sea': '🌊 সমুদ্র ও জোয়ার-ভাটা',
+      'tide_tab_hills': '⛰️ পাহাড়, আবহাওয়া ও ট্র্যাকিং',
+      'tide_schedule_disclaimer':
+          'সময়সূচি আনুমানিক, সরকারি জোয়ার-ভাটার তালিকা নয়। স্থানীয় লাইফগার্ড ও প্রশাসনের নির্দেশ সবার আগে মানুন।',
+      'tide_beach_safety_title':
+          'সৈকত সতর্কতা ও লাইফগার্ড জোন (Beach Safety & Checkpoints)',
+      'tide_quicksand_title':
+          'চোরাবালি ও গুপ্ত গর্ত সতর্কতা (Quicksand Advisory)',
+      'tide_quicksand_body':
+          'ভাটার সময় সৈকতের বালি দ্রুত ধসে পড়ে। বিশেষ করে চোরাবালির ঝুঁকি থাকে। ভাটার সময় কোমর পানির বেশি নামবেন না।',
+      'tide_flag_title': 'লাইফগার্ড ফ্ল্যাগ গাইড (Beach Flag Guide)',
+      'tide_flag_body':
+          '🔴 লাল পতাকা: সাগরে নামা সম্পূর্ণ নিষিদ্ধ ও মারাত্মক ঝুঁকিপূর্ণ।\n🟡 হলুদ পতাকা: মাঝারি সতর্কতা, কোমর পানির বেশি নামবেন না।\n🟢 সবুজ পতাকা: লাইফগার্ড সীমানার ভেতরে স্নান নিরাপদ।',
+      'tide_sun_title': 'সূর্যোদয়, সূর্যাস্ত ও মেঘের দৃশ্য (Sun & Cloud Radar)',
+      'tide_dawn_time': 'ভোর ০৫:৩৫ – ০৬:১৫ (আনুমানিক)',
+      'tide_sunrise_clouds': 'সূর্যোদয় ও মেঘের ভেলা (Sunrise Clouds)',
+      'tide_sunrise_tip':
+          'কটেজ বা পাহাড়ের পূর্ব কোণে মেঘের সমুদ্র দেখার সেরা সময়',
+      'tide_evening_time': 'বিকেল ০৫:২০ – ০৫:৫৫ (আনুমানিক)',
+      'tide_golden_title': 'পাহাড়ি সূর্যাস্ত ও গোধূলি (Golden Hour)',
+      'tide_golden_tip':
+          'পশ্চিম পাহাড়ের চূড়ায় রক্তিম সূর্যাস্ত ও ছবি তোলার সোনালী আলো',
+      'tide_mountain_title':
+          '{dest} পাহাড় ও ট্র্যাকিং নির্দেশিকা (Mountain Guidelines)',
+      'tide_waterfall_title':
+          'ঝর্ণা ও পিচ্ছিল পাথর সতর্কতা (Waterfall Warning)',
+      'tide_waterfall_body':
+          'পাহাড়ি ঝর্ণা ও নদীর পাথরে ভেজা শ্যাওলা থাকে। সাধারণ স্যান্ডেল পরে নামবেন না, ভালো গ্রিপযুক্ত বেল্ট স্যান্ডেল বা ট্র্যাকিং জুতো ব্যবহার করুন।',
+      'tide_flash_title': 'হড়কা বান ও আকস্মিক পাহাড়ি ঢল (Flash Flood Risk)',
+      'tide_flash_body':
+          'উজান বা ভারতের পাহাড়ে বৃষ্টি হলে মুহূর্তের মধ্যে ঝর্ণা বা নদীতে হড়কা বান নেমে আসতে পারে। পানির রং ঘোলা হলেই সাথে সাথে ডাঙায় উঠে আসুন।',
+      'tide_jeep_title': 'চাঁদের গাড়ি ও পাহাড়ি বাঁক সতর্কতা (Off-road Travel)',
+      'tide_jeep_body':
+          'চাঁদের গাড়ি বা খোলা জিপে দাঁড়িয়ে চলার সময় শক্ত করে রড ধরে রাখুন। বাঁক ঘোরার সময় কোনো ঝুঁকিপূর্ণ সেলফি তুলবেন না।',
+      'tide_contacts_title': 'জরুরি সহায়তা ও হেল্পলাইন (Emergency Contacts)',
+      'tide_contacts_body':
+          'ট্যুরিস্ট পুলিশ কন্ট্রোল রুম: 01320-163599\nহাইওয়ে পুলিশ কন্ট্রোল: 01320-189999\nজাতীয় জরুরি সেবা: 999',
+      'tide_tracker_title': '{dest} নেচার ও ক্লাইমেট ট্র্যাকার',
+      'tide_weather_good':
+          'আবহাওয়া অনুকূল। সকাল ও বিকেলে মৃদু শীতল বাতাস এবং পাহাড়ি ট্র্যাকিংয়ের মনোরম পরিবেশ থাকবে।',
+      'tide_safe_swim': 'স্নানের নিরাপদ সময় (Safe to Swim)',
+      'tide_caution': 'সতর্কতা অবলম্বন করুন (Caution)',
+      'tide_danger': 'সাগরে নামা নিষেধ (High Danger)',
+      'tide_running': 'চলমান',
+      'tide_swim_ok': '🌊 গোসল নিরাপদ',
+      'tide_low_caution': '⚠️ ভাটা ও সতর্কতা',
     },
   };
 }

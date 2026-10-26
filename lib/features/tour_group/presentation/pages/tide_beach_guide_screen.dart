@@ -4,6 +4,7 @@ import '../../domain/services/tide_schedule_engine.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class TideBeachGuideScreen extends StatefulWidget {
   final String tourId;
@@ -56,7 +57,8 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
     final now = DateTime.now();
     final safety = TideScheduleEngine.evaluateCurrentSafety(now);
     final tides = TideScheduleEngine.getTidesForDate(now);
-    final dest = _tourGroup?.destination ?? 'ভ্রমণ এলাকা';
+    final dest =
+        _tourGroup?.destination ?? context.l10n.translate('tide_default_area');
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1A12),
@@ -65,8 +67,9 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
         elevation: 0,
         title: Text(
           _isBeachView
-              ? 'Tide & Beach Safety (জোয়ার-ভাটা ও সৈকত)'
-              : '$dest ওয়েদার ও নেচার সেফটি',
+              ? context.l10n.translate('tide_title_beach')
+              : context.l10n
+                  .translate('tide_title_nature', args: {'dest': dest}),
           style: const TextStyle(
               color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
         ),
@@ -76,8 +79,8 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                 _isBeachView ? Icons.landscape_rounded : Icons.waves_rounded,
                 color: AppColors.mintGreen),
             tooltip: _isBeachView
-                ? 'পাহাড় ও নেচার গাইড দেখুন'
-                : 'বিচ ও জোয়ার-ভাটা দেখুন',
+                ? context.l10n.translate('tide_view_hills')
+                : context.l10n.translate('tide_view_beach'),
             onPressed: () {
               setState(() => _isBeachView = !_isBeachView);
             },
@@ -109,7 +112,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                       ),
                       child: Center(
                         child: Text(
-                          '🌊 সমুদ্র ও জোয়ার-ভাটা',
+                          context.l10n.translate('tide_tab_sea'),
                           style: TextStyle(
                             color: _isBeachView ? Colors.black : Colors.white70,
                             fontWeight: FontWeight.bold,
@@ -132,7 +135,7 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                       ),
                       child: Center(
                         child: Text(
-                          '⛰️ পাহাড়, আবহাওয়া ও ট্র্যাকিং',
+                          context.l10n.translate('tide_tab_hills'),
                           style: TextStyle(
                             color:
                                 !_isBeachView ? Colors.black : Colors.white70,
@@ -152,15 +155,15 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
             // ── Beach View ──
             _buildLiveSafetyBanner(safety),
             const SizedBox(height: 8),
-            const Text(
-              'সময়সূচি আনুমানিক, সরকারি জোয়ার-ভাটার তালিকা নয়। স্থানীয় লাইফগার্ড ও প্রশাসনের নির্দেশ সবার আগে মানুন।',
-              style: TextStyle(color: Colors.amberAccent, fontSize: 11),
+            Text(
+              context.l10n.translate('tide_schedule_disclaimer'),
+              style: const TextStyle(color: Colors.amberAccent, fontSize: 11),
             ),
             const SizedBox(height: 20),
 
-            const Text(
-              'আজকের জোয়ার-ভাটার সময়সূচী (Today\'s Tide Schedule)',
-              style: TextStyle(
+            Text(
+              context.l10n.translate('tide_today_schedule'),
+              style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 15),
@@ -170,26 +173,24 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
 
             const SizedBox(height: 24),
 
-            const Text(
-              'সৈকত সতর্কতা ও লাইফগার্ড জোন (Beach Safety & Checkpoints)',
-              style: TextStyle(
+            Text(
+              context.l10n.translate('tide_beach_safety_title'),
+              style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 15),
             ),
             const SizedBox(height: 12),
             _buildSafetyWarningCard(
-              title: 'চোরাবালি ও গুপ্ত গর্ত সতর্কতা (Quicksand Advisory)',
-              desc:
-                  'ভাটার সময় সৈকতের বালি দ্রুত ধসে পড়ে। বিশেষ করে চোরাবালির ঝুঁকি থাকে। ভাটার সময় কোমর পানির বেশি নামবেন না।',
+              title: context.l10n.translate('tide_quicksand_title'),
+              desc: context.l10n.translate('tide_quicksand_body'),
               icon: Icons.warning_amber_rounded,
               color: Colors.redAccent,
             ),
             const SizedBox(height: 10),
             _buildSafetyWarningCard(
-              title: 'লাইফগার্ড ফ্ল্যাগ গাইড (Beach Flag Guide)',
-              desc:
-                  '🔴 লাল পতাকা: সাগরে নামা সম্পূর্ণ নিষিদ্ধ ও মারাত্মক ঝুঁকিপূর্ণ।\n🟡 হলুদ পতাকা: মাঝারি সতর্কতা, কোমর পানির বেশি নামবেন না।\n🟢 সবুজ পতাকা: লাইফগার্ড সীমানার ভেতরে স্নান নিরাপদ।',
+              title: context.l10n.translate('tide_flag_title'),
+              desc: context.l10n.translate('tide_flag_body'),
               icon: Icons.flag_rounded,
               color: AppColors.gold,
             ),
@@ -198,32 +199,33 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
             _buildMountainSafetyBanner(dest),
             const SizedBox(height: 20),
 
-            const Text(
-              'সূর্যোদয়, সূর্যাস্ত ও মেঘের দৃশ্য (Sun & Cloud Radar)',
-              style: TextStyle(
+            Text(
+              context.l10n.translate('tide_sun_title'),
+              style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 15),
             ),
             const SizedBox(height: 10),
             _buildSunEventCard(
-                'ভোর ০৫:৩৫ – ০৬:১৫ (আনুমানিক)',
-                'সূর্যোদয় ও মেঘের ভেলা (Sunrise Clouds)',
-                'কটেজ বা পাহাড়ের পূর্ব কোণে মেঘের সমুদ্র দেখার সেরা সময়',
+                context.l10n.translate('tide_dawn_time'),
+                context.l10n.translate('tide_sunrise_clouds'),
+                context.l10n.translate('tide_sunrise_tip'),
                 Icons.wb_twilight_rounded,
                 Colors.orangeAccent),
             const SizedBox(height: 8),
             _buildSunEventCard(
-                'বিকেল ০৫:২০ – ০৫:৫৫ (আনুমানিক)',
-                'পাহাড়ি সূর্যাস্ত ও গোধূলি (Golden Hour)',
-                'পশ্চিম পাহাড়ের চূড়ায় রক্তিম সূর্যাস্ত ও ছবি তোলার সোনালী আলো',
+                context.l10n.translate('tide_evening_time'),
+                context.l10n.translate('tide_golden_title'),
+                context.l10n.translate('tide_golden_tip'),
                 Icons.wb_sunny_rounded,
                 Colors.amber),
 
             const SizedBox(height: 24),
 
             Text(
-              '$dest পাহাড় ও ট্র্যাকিং নির্দেশিকা (Mountain Guidelines)',
+              context.l10n
+                  .translate('tide_mountain_title', args: {'dest': dest}),
               style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -231,25 +233,22 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
             ),
             const SizedBox(height: 12),
             _buildSafetyWarningCard(
-              title: 'ঝর্ণা ও পিচ্ছিল পাথর সতর্কতা (Waterfall Warning)',
-              desc:
-                  'পাহাড়ি ঝর্ণা ও নদীর পাথরে ভেজা শ্যাওলা থাকে। সাধারণ স্যান্ডেল পরে নামবেন না, ভালো গ্রিপযুক্ত বেল্ট স্যান্ডেল বা ট্র্যাকিং জুতো ব্যবহার করুন।',
+              title: context.l10n.translate('tide_waterfall_title'),
+              desc: context.l10n.translate('tide_waterfall_body'),
               icon: Icons.water_drop_rounded,
               color: Colors.lightBlueAccent,
             ),
             const SizedBox(height: 10),
             _buildSafetyWarningCard(
-              title: 'হড়কা বান ও আকস্মিক পাহাড়ি ঢল (Flash Flood Risk)',
-              desc:
-                  'উজান বা ভারতের পাহাড়ে বৃষ্টি হলে মুহূর্তের মধ্যে ঝর্ণা বা নদীতে হড়কা বান নেমে আসতে পারে। পানির রং ঘোলা হলেই সাথে সাথে ডাঙায় উঠে আসুন।',
+              title: context.l10n.translate('tide_flash_title'),
+              desc: context.l10n.translate('tide_flash_body'),
               icon: Icons.thunderstorm_rounded,
               color: Colors.redAccent,
             ),
             const SizedBox(height: 10),
             _buildSafetyWarningCard(
-              title: 'চাঁদের গাড়ি ও পাহাড়ি বাঁক সতর্কতা (Off-road Travel)',
-              desc:
-                  'চাঁদের গাড়ি বা খোলা জিপে দাঁড়িয়ে চলার সময় শক্ত করে রড ধরে রাখুন। বাঁক ঘোরার সময় কোনো ঝুঁকিপূর্ণ সেলফি তুলবেন না।',
+              title: context.l10n.translate('tide_jeep_title'),
+              desc: context.l10n.translate('tide_jeep_body'),
               icon: Icons.directions_bus_rounded,
               color: AppColors.gold,
             ),
@@ -257,9 +256,8 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
 
           const SizedBox(height: 10),
           _buildSafetyWarningCard(
-            title: 'জরুরি সহায়তা ও হেল্পলাইন (Emergency Contacts)',
-            desc:
-                'ট্যুরিস্ট পুলিশ কন্ট্রোল রুম: 01320-163599\nহাইওয়ে পুলিশ কন্ট্রোল: 01320-189999\nজাতীয় জরুরি সেবা: 999',
+            title: context.l10n.translate('tide_contacts_title'),
+            desc: context.l10n.translate('tide_contacts_body'),
             icon: Icons.support_agent_rounded,
             color: const Color(0xFF38BDF8),
           ),
@@ -342,16 +340,17 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$dest নেচার ও ক্লাইমেট ট্র্যাকার',
+                  context.l10n
+                      .translate('tide_tracker_title', args: {'dest': dest}),
                   style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 15),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'আবহাওয়া অনুকূল। সকাল ও বিকেলে মৃদু শীতল বাতাস এবং পাহাড়ি ট্র্যাকিংয়ের মনোরম পরিবেশ থাকবে।',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                Text(
+                  context.l10n.translate('tide_weather_good'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
             ),
@@ -407,10 +406,10 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                   children: [
                     Text(
                       safety.status == SwimSafetyStatus.safe
-                          ? 'স্নানের নিরাপদ সময় (Safe to Swim)'
+                          ? context.l10n.translate('tide_safe_swim')
                           : (safety.status == SwimSafetyStatus.caution
-                              ? 'সতর্কতা অবলম্বন করুন (Caution)'
-                              : 'সাগরে নামা নিষেধ (High Danger)'),
+                              ? context.l10n.translate('tide_caution')
+                              : context.l10n.translate('tide_danger')),
                       style: TextStyle(
                           color: bannerColor,
                           fontWeight: FontWeight.bold,
@@ -427,7 +426,11 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                 if (safety.currentWindow != null) ...[
                   const SizedBox(height: 10),
                   Text(
-                    'বর্তমান অবস্থা: ${safety.currentWindow!.type == TideType.high ? 'জোয়ার (High Tide)' : 'ভাটা (Low Tide)'}',
+                    context.l10n.translate('tide_current_state', args: {
+                      'state': safety.currentWindow!.type == TideType.high
+                          ? context.l10n.translate('tide_high_tide')
+                          : context.l10n.translate('tide_low_tide')
+                    }),
                     style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
@@ -497,9 +500,9 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
                           color: color,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text(
-                          'চলমান',
-                          style: TextStyle(
+                        child: Text(
+                          context.l10n.translate('tide_running'),
+                          style: const TextStyle(
                               color: Colors.black,
                               fontWeight: FontWeight.bold,
                               fontSize: 10),
@@ -518,7 +521,9 @@ class _TideBeachGuideScreenState extends State<TideBeachGuideScreen> {
             ),
           ),
           Text(
-            isHigh ? '🌊 গোসল নিরাপদ' : '⚠️ ভাটা ও সতর্কতা',
+            isHigh
+                ? context.l10n.translate('tide_swim_ok')
+                : context.l10n.translate('tide_low_caution'),
             style: TextStyle(
               color: isHigh ? AppColors.mintGreen : Colors.orangeAccent,
               fontSize: 11,
