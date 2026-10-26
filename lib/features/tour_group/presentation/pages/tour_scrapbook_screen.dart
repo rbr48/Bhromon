@@ -221,7 +221,7 @@ ${(_tourGroup?.allSpots.take(5) ?? [
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           const SizedBox(height: 14),
-          const Divider(color: Colors.white24),
+          const Divider(color: Colors.white54),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -344,7 +344,7 @@ ${(_tourGroup?.allSpots.take(5) ?? [
           if (highlights.isEmpty)
             const Text(
               'এখনও কোনো ছবি বা রিলস যুক্ত হয়নি। ইনস্টাফিড থেকে প্রথম পোস্ট করুন।',
-              style: TextStyle(color: Colors.white38, fontSize: 12),
+              style: TextStyle(color: Colors.white54, fontSize: 12),
             )
           else
             for (final post in highlights)

@@ -78,11 +78,11 @@ class _SavedDiaryCard extends StatelessWidget {
             child: const Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.cloud_off_rounded, color: Colors.white24, size: 32),
+                Icon(Icons.cloud_off_rounded, color: Colors.white54, size: 32),
                 SizedBox(height: 8),
                 Text(
                   'উপলব্ধ নেই',
-                  style: TextStyle(color: Colors.white24, fontSize: 12),
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),
               ],
             ),
@@ -224,7 +224,7 @@ class _EmptySaved extends StatelessWidget {
           SizedBox(height: 6),
           Text(
             'ফিডে ডায়েরি সংরক্ষণ করতে 🔖 আইকনে ট্যাপ করুন',
-            style: TextStyle(color: Colors.white38, fontSize: 13),
+            style: TextStyle(color: Colors.white54, fontSize: 13),
             textAlign: TextAlign.center,
           ),
         ],

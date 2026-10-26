@@ -50,7 +50,7 @@ class DiaryPromptWidget extends StatelessWidget {
           const SizedBox(height: 4),
           const Text(
             'Start Your Story',
-            style: TextStyle(color: Colors.white38, fontSize: 12),
+            style: TextStyle(color: Colors.white54, fontSize: 12),
           ),
           const SizedBox(height: 20),
           _PromptButton(
@@ -139,13 +139,13 @@ class _PromptButton extends StatelessWidget {
                   ),
                   Text(
                     english,
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
                   ),
                 ],
               ),
             ),
             const Icon(Icons.add_circle_outline,
-                color: Colors.white30, size: 18),
+                color: Colors.white54, size: 18),
           ],
         ),
       ),

@@ -528,7 +528,10 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
                     fontWeight: FontWeight.w900,
                     fontSize: 12,
                     shadows: [
-                      Shadow(color: Colors.black87, blurRadius: 2, offset: Offset(0, 1))
+                      Shadow(
+                          color: Colors.black87,
+                          blurRadius: 2,
+                          offset: Offset(0, 1))
                     ],
                   ),
                 ),

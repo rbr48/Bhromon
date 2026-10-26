@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:bhromon/features/tour_group/data/tour_channel_repository.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
+import '../../../../../core/theme/colors.dart';
 
 /// In-app quick send bottom sheet allowing travelers to share a post directly
 /// into Tour Channels (#general, #food, #sightseeing, #emergency), reshare to
@@ -68,7 +69,7 @@ class InstafeedShareSheet extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('$channelName চ্যানেলে শেয়ার করা হয়েছে'),
-            backgroundColor: const Color(0xFF00C853),
+            backgroundColor: AppColors.mintGreen,
           ),
         );
       }
@@ -100,7 +101,7 @@ class InstafeedShareSheet extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('পোস্টটি আপনার স্টোরিতে শেয়ার করা হয়েছে'),
-            backgroundColor: Color(0xFF00C853),
+            backgroundColor: AppColors.mintGreen,
           ),
         );
       }
@@ -167,8 +168,9 @@ class InstafeedShareSheet extends StatelessWidget {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const CircleAvatar(
-                backgroundColor: Color(0xFF00C853),
-                child: Icon(Icons.auto_stories, color: Colors.white, size: 20),
+                backgroundColor: AppColors.mintGreen,
+                child: Icon(Icons.auto_stories,
+                    color: AppColors.darkGreen, size: 20),
               ),
               title: const Text('আপনার স্টোরিতে যোগ করুন',
                   style: TextStyle(
@@ -204,7 +206,7 @@ class InstafeedShareSheet extends StatelessWidget {
                 title: Text(ch['name'] as String,
                     style: const TextStyle(color: Colors.white, fontSize: 14)),
                 trailing: const Icon(Icons.send_rounded,
-                    size: 16, color: Colors.white38),
+                    size: 16, color: Colors.white54),
                 onTap: () => _sendToChannel(
                     context, ch['id'] as String, ch['name'] as String),
               );

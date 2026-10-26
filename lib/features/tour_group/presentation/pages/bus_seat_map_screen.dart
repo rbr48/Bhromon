@@ -342,7 +342,7 @@ class _BusSeatMapScreenState extends State<BusSeatMapScreen> {
                                   : context.l10n
                                       .translate('tour_seat_release_warning'),
                               style: const TextStyle(
-                                  color: Colors.white38, fontSize: 11),
+                                  color: Colors.white54, fontSize: 11),
                             ),
                             trailing: isHere
                                 ? const Icon(Icons.check_circle,

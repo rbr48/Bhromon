@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_zoomable_media.dart';
+import '../../../../../core/theme/colors.dart';
 
 /// Full-screen high-resolution image viewer modal supporting multi-photo
 /// swipeable carousels, pinch-to-zoom (up to 4.5x), double-tap heart like,
@@ -174,7 +175,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                       ),
                       errorWidget: (_, __, ___) => const Center(
                         child: Icon(Icons.broken_image,
-                            color: Colors.white24, size: 48),
+                            color: Colors.white54, size: 48),
                       ),
                     ),
                   ),
@@ -220,7 +221,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                   ),
                   CircleAvatar(
                     radius: 16,
-                    backgroundColor: const Color(0xFF00C853),
+                    backgroundColor: AppColors.mintGreen,
                     backgroundImage: widget.post.authorPhoto != null
                         ? NetworkImage(widget.post.authorPhoto!)
                         : null,
@@ -379,7 +380,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                       IconButton(
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.receipt_long,
-                            color: Color(0xFF00C853)),
+                            color: AppColors.mintGreen),
                         tooltip: 'ট্রিপ লেজারে যোগ করুন',
                         onPressed: () =>
                             widget.onAddToLedger?.call(widget.post),

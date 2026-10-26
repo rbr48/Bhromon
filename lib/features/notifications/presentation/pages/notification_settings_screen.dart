@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/localization/locale_controller.dart';
+import '../../../../core/theme/theme_controller.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/theme_context.dart';
 
@@ -69,6 +70,17 @@ class _NotificationSettingsScreenState
                 const SizedBox(height: 12),
                 _buildLanguagePicker(),
                 const SizedBox(height: 12),
+                const Text(
+                  'Theme / থিম',
+                  style: TextStyle(
+                      color: Colors.white60,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5),
+                ),
+                const SizedBox(height: 12),
+                _buildThemePicker(),
+                const SizedBox(height: 12),
                 const Divider(color: Colors.white10),
                 const SizedBox(height: 16),
                 const Text(
@@ -132,9 +144,9 @@ class _NotificationSettingsScreenState
                         subtitle: const Text(
                             'Add or update password for email sign-in backup',
                             style:
-                                TextStyle(color: Colors.white38, fontSize: 11)),
+                                TextStyle(color: Colors.white54, fontSize: 11)),
                         trailing: const Icon(Icons.chevron_right,
-                            color: Colors.white30),
+                            color: Colors.white54),
                         onTap: () => _showChangePasswordDialog(context),
                       ),
                       const Divider(color: Colors.white10),
@@ -150,7 +162,7 @@ class _NotificationSettingsScreenState
                         subtitle: const Text(
                             'Permanently delete your profile and travel logs',
                             style:
-                                TextStyle(color: Colors.white38, fontSize: 11)),
+                                TextStyle(color: Colors.white54, fontSize: 11)),
                         trailing: const Icon(Icons.chevron_right,
                             color: Colors.redAccent),
                         onTap: () => context.push('/delete-account'),
@@ -192,6 +204,31 @@ class _NotificationSettingsScreenState
           selected: {LocaleController.instance.locale.languageCode},
           onSelectionChanged: (selection) {
             unawaited(LocaleController.instance.setLanguage(selection.first));
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemePicker() {
+    return AnimatedBuilder(
+      animation: ThemeController.instance,
+      builder: (context, _) => SizedBox(
+        width: double.infinity,
+        child: SegmentedButton<ThemeMode>(
+          style: SegmentedButton.styleFrom(
+            selectedBackgroundColor: AppColors.midGreen,
+            selectedForegroundColor: Colors.white,
+            foregroundColor: Colors.white70,
+          ),
+          segments: const [
+            ButtonSegment(value: ThemeMode.system, label: Text('System')),
+            ButtonSegment(value: ThemeMode.light, label: Text('Light')),
+            ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+          ],
+          selected: {ThemeController.instance.mode},
+          onSelectionChanged: (selection) {
+            unawaited(ThemeController.instance.setMode(selection.first));
           },
         ),
       ),
@@ -251,7 +288,7 @@ class _NotificationSettingsScreenState
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Minimum 6 characters',
-                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                 fillColor: Colors.white.withValues(alpha: 0.05),
                 filled: true,
                 border:
@@ -264,7 +301,7 @@ class _NotificationSettingsScreenState
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child:
-                const Text('Cancel', style: TextStyle(color: Colors.white38)),
+                const Text('Cancel', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             style:

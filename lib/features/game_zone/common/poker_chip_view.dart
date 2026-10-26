@@ -19,9 +19,9 @@ class PokerChipView extends StatelessWidget {
     if (baseColor != null) return baseColor!;
     if (val >= 500) return const Color(0xFF6A1B9A); // Royal Purple
     if (val >= 100) return const Color(0xFF212121); // Onyx Black
-    if (val >= 50) return const Color(0xFF00695C);  // Emerald Teal
-    if (val >= 20) return const Color(0xFF1565C0);  // Cobalt Blue
-    return const Color(0xFFC62828);                 // Ruby Red
+    if (val >= 50) return const Color(0xFF00695C); // Emerald Teal
+    if (val >= 20) return const Color(0xFF1565C0); // Cobalt Blue
+    return const Color(0xFFC62828); // Ruby Red
   }
 
   @override

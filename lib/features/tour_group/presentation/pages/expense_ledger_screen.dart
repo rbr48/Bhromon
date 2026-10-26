@@ -230,7 +230,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   }
 
   Widget _emptyText(String text) => Center(
-        child: Text(text, style: const TextStyle(color: Colors.white38)),
+        child: Text(text, style: const TextStyle(color: Colors.white54)),
       );
 
   Widget _card({required Widget child, VoidCallback? onLongPress}) {
@@ -340,7 +340,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       if (exp.participantIds != null)
                         Text('${exp.participantIds!.length} জন ভাগ করছেন',
                             style: const TextStyle(
-                                color: Colors.white38, fontSize: 10)),
+                                color: Colors.white54, fontSize: 10)),
                     ],
                   ),
                 ),
@@ -352,7 +352,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                             color: Colors.white, fontWeight: FontWeight.bold)),
                     Text(exp.category,
                         style: const TextStyle(
-                            color: Colors.white38, fontSize: 10)),
+                            color: Colors.white54, fontSize: 10)),
                   ],
                 ),
               ],

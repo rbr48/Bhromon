@@ -10,6 +10,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/localization/locale_controller.dart';
+import 'core/theme/theme_controller.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
@@ -154,6 +155,7 @@ void main() {
 
     await hiveInit;
     await LocaleController.instance.load();
+    await ThemeController.instance.load();
     final bool firebaseAvailable = await firebaseInit;
 
     if (!firebaseAvailable) {
@@ -291,13 +293,15 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: ListenableBuilder(
-        listenable: LocaleController.instance,
+        listenable: Listenable.merge(
+          [LocaleController.instance, ThemeController.instance],
+        ),
         builder: (context, _) => MaterialApp.router(
           title: 'Bhromon',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.dark,
+          themeMode: ThemeController.instance.mode,
           routerConfig: AppRouter.router,
           localizationsDelegates: const [
             AppLocalizations.delegate,

@@ -310,7 +310,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 24),
                     child: Text(context.l10n.translate('tour_no_notices'),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white38)),
+                        style: const TextStyle(color: Colors.white54)),
                   );
                 }
                 return Column(
@@ -416,14 +416,14 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 IconButton(
                   tooltip: context.l10n.translate('tour_notice_edit_title'),
                   icon: const Icon(Icons.edit_outlined,
-                      color: Colors.white38, size: 18),
+                      color: Colors.white54, size: 18),
                   onPressed: () => _showNoticeDialog(existing: notice),
                 ),
               if (canDelete)
                 IconButton(
                   tooltip: context.l10n.translate('tour_delete_notice'),
                   icon: const Icon(Icons.delete_outline,
-                      color: Colors.white38, size: 18),
+                      color: Colors.white54, size: 18),
                   onPressed: () => _deleteNotice(notice),
                 ),
             ],
@@ -437,7 +437,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
           Text(
               context.l10n.translate('tour_notice_sender',
                   args: {'author': notice.author, 'date': dateText}),
-              style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              style: const TextStyle(color: Colors.white54, fontSize: 11)),
         ],
       ),
     );
