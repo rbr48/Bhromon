@@ -307,6 +307,47 @@ class TourTranslationKeys {
       'check_item_swimwear': 'Swimwear, or spare shorts and T-shirts',
       'check_item_sunscreen': 'Sunscreen (SPF 50+) and a wide hat',
       'check_item_sandals': 'Sandals or water shoes, and a light umbrella',
+
+      // ── Digital scrapbook ──────────────────────────────────────────────────
+      'scrap_title': 'Digital scrapbook',
+      'scrap_load_failed':
+          'Could not load the scrapbook. Check the internet connection and try again.',
+      'scrap_default_name': 'Family tour memories',
+      'scrap_dates_unknown': 'Tour dates',
+      'scrap_origin_unknown': 'Starting point',
+      'scrap_destination_unknown': 'Destination',
+      'scrap_spot_main': 'Main sights',
+      'scrap_spot_hotels': 'Hotels and resorts',
+      'scrap_share_text': '📖 {name} — digital scrapbook and keepsake\n'
+          '✨ Dates: {dates} ({duration})\n'
+          '🚌 Route: {origin} ➔ {destination}\n'
+          '🏨 Destination: {destination}\n'
+          '👥 Travellers: {members}\n\n'
+          '✨ Places to remember:\n'
+          '{spots}\n\n'
+          'Memories saved with the Bhromon app ❤️',
+      'scrap_share_subject': '{name} digital keepsake',
+      'scrap_share': 'Share the keepsake',
+      'scrap_share_button': 'Share the digital keepsake',
+      'scrap_badge_year': 'Travel keepsake {year}',
+      'scrap_cover_subtitle': 'Travel keepsake and family magazine',
+      'scrap_badge_transport': '{origin} transport',
+      'scrap_badge_stay': '{destination} stay',
+      'scrap_badge_explore': '{destination} sights',
+      'scrap_metric_posts': 'Memory posts',
+      'scrap_posts_count': '{count}',
+      'scrap_metric_members': 'Travellers',
+      'scrap_members_count': '{count}',
+      'scrap_metric_duration': 'Tour length',
+      'scrap_highlights': 'Highlights',
+      'scrap_no_highlights':
+          'No photos or reels yet. Post the first one from the feed.',
+      'scrap_honor_roll': 'Honour roll',
+      'scrap_honor_text':
+          '• Tour leader and coordinator: overall direction and route planning\n'
+              '• Treasurer: clear, shared management of the fund\n'
+              '• Families: warm and willing participation\n'
+              'Thanks to everyone, the tour was a success and a joy.',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -613,6 +654,47 @@ class TourTranslationKeys {
       'check_item_swimwear': 'সুইমিং কস্টিউম বা অতিরিক্ত হাফপ্যান্ট ও টি-শার্ট',
       'check_item_sunscreen': 'সানস্ক্রিন লোশন (SPF 50+) ও বড় হ্যাট',
       'check_item_sandals': 'স্যান্ডেল / ওয়াটার শু ও হালকা ছাতা',
+
+      // ── Digital scrapbook ──────────────────────────────────────────────────
+      'scrap_title': 'ডিজিটাল স্ক্র্যাপবুক',
+      'scrap_load_failed':
+          'স্ক্র্যাপবুক লোড করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
+      'scrap_default_name': 'ফ্যামিলি ট্যুর স্মৃতিমালা',
+      'scrap_dates_unknown': 'ট্যুর সময়কাল',
+      'scrap_origin_unknown': 'যাত্রা স্থান',
+      'scrap_destination_unknown': 'গন্তব্য',
+      'scrap_spot_main': 'প্রধান দর্শনীয় স্পট',
+      'scrap_spot_hotels': 'হোটেল ও রিসোর্ট',
+      'scrap_share_text': '📖 {name} — ডিজিটাল স্ক্র্যাপবুক ও স্মরণিকা\n'
+          '✨ ভ্রমণকাল: {dates} ({duration})\n'
+          '🚌 যাত্রাপথ: {origin} ➔ {destination}\n'
+          '🏨 গন্তব্য: {destination}\n'
+          '👥 মোট পরিভ্রমণকারী: {members} জন সদস্য\n\n'
+          '✨ স্মরণীয় দর্শনীয় স্থানসমূহ:\n'
+          '{spots}\n\n'
+          'ভ্রমণে Bhromon অ্যাপের মাধ্যমে সংরক্ষিত অবিস্মরণীয় স্মৃতিমালা ❤️',
+      'scrap_share_subject': '{name} ডিজিটাল স্মৃতিচিহ্ন',
+      'scrap_share': 'স্মৃতিচিহ্ন শেয়ার করুন',
+      'scrap_share_button': 'ডিজিটাল স্মৃতিচিহ্ন শেয়ার করুন',
+      'scrap_badge_year': 'স্মৃতিচিহ্ন ও ভ্রমণ স্মারক {year}',
+      'scrap_cover_subtitle': 'ভ্রমণ স্মৃতিচিহ্ন ও ফ্যামিলি ম্যাগাজিন',
+      'scrap_badge_transport': '{origin} পরিবহন',
+      'scrap_badge_stay': '{destination} আবাসন',
+      'scrap_badge_explore': '{destination} ভ্রমণ',
+      'scrap_metric_posts': 'স্মৃতি পোস্ট',
+      'scrap_posts_count': '{count} টি',
+      'scrap_metric_members': 'ট্যুর পার্টিসিপ্যান্ট',
+      'scrap_members_count': '{count} জন',
+      'scrap_metric_duration': 'ট্যুর ব্যাপ্তিকাল',
+      'scrap_highlights': 'ট্যুরের অবিস্মরণীয় মুহূর্তমালা',
+      'scrap_no_highlights':
+          'এখনও কোনো ছবি বা রিলস যুক্ত হয়নি। ইনস্টাফিড থেকে প্রথম পোস্ট করুন।',
+      'scrap_honor_roll': 'ট্যুর পরিচালনা ও কৃতজ্ঞতা স্বীকার',
+      'scrap_honor_text':
+          '• ট্যুর লিডার ও প্রধান সমন্বয়ক: সার্বিক দিকনির্দেশনা ও রুট পরিকল্পনা\n'
+              '• কোষাধ্যক্ষ ও হিসাবরক্ষক: স্প্লিটওয়াইজ স্বচ্ছ তহবিল ব্যবস্থাপনা\n'
+              '• পরিবারবর্গ: স্বতঃস্ফূর্ত অংশগ্রহণ ও একাত্মতা\n'
+              'সকলের আন্তরিক সহযোগিতায় ট্যুরটি সফল ও আনন্দময় হয়েছে।',
     },
   };
 }

@@ -25,6 +25,22 @@ class AppLocalizations {
     return filled;
   }
 
+  /// [n] written with this language's digits: Bengali digits in Bengali,
+  /// Western digits otherwise.
+  String number(int n) {
+    final text = '$n';
+    if (locale.languageCode != 'bn') return text;
+    const bengaliDigits = '০১২৩৪৫৬৭৮৯';
+    final out = StringBuffer();
+    for (final unit in text.codeUnits) {
+      final digit = unit - 0x30;
+      out.write(digit >= 0 && digit <= 9
+          ? bengaliDigits[digit]
+          : String.fromCharCode(unit));
+    }
+    return out.toString();
+  }
+
   static String? _lookup(String languageCode, String key) {
     return TranslationKeys.localizedValues[languageCode]?[key] ??
         TourTranslationKeys.localizedValues[languageCode]?[key];
