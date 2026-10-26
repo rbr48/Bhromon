@@ -1620,8 +1620,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     );
   }
 
-  Widget _buildAuthorNameWidget(
-      String authorId, String name, bool isPremiumGuide) {
+  Widget _buildAuthorNameWidget(String authorId, String name) {
     return GestureDetector(
       onTap: () {
         if (authorId.isNotEmpty) {
@@ -1638,10 +1637,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
               fontSize: 13,
             ),
           ),
-          if (isPremiumGuide) ...[
-            const SizedBox(width: 4),
-            const Icon(Icons.verified, color: Colors.blue, size: 14),
-          ],
         ],
       ),
     );
@@ -1734,7 +1729,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                                 log.authorId,
                                 _profileCache[log.authorId]!['displayName'] ??
                                     'Explorer',
-                                log.isPremiumGuide,
                               )
                             : FutureBuilder<Map<String, String>>(
                                 future: _fetchAuthorProfile(log.authorId),
@@ -1742,7 +1736,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                                   final name = snapshot.data?['displayName'] ??
                                       'Explorer';
                                   return _buildAuthorNameWidget(
-                                      log.authorId, name, log.isPremiumGuide);
+                                      log.authorId, name);
                                 },
                               ),
                         const SizedBox(height: 2),
@@ -2240,7 +2234,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
   Widget _buildDynamicTripLogCard(TripLog log) {
     final totalCost =
         log.costItems.fold<int>(0, (acc, item) => acc + item.amountBDT);
-    // Derive tier based on trustScore or isPremiumGuide flag
+    // Derive tier based on trustScore
     final isPremium = log.trustScore > 70;
     final tier = isPremium ? '★ Pioneer' : '✓ Community';
     final tierClass = isPremium ? 'pioneer' : 'community';

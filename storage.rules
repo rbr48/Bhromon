@@ -105,7 +105,7 @@ service firebase.storage {
     }
 
     // ── Offline vault tiles ──────────────────────────────────────────────────
-    // Read: authenticated users only (premium content)
+    // Read: authenticated users only
     // Write: blocked from client (tiles are managed by admin/Cloud Function)
     match /offline_tiles/{allPaths=**} {
       allow read:  if isAuth();

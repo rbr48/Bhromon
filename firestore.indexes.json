@@ -98,15 +98,6 @@
       "collectionGroup": "trip_logs",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "isPremiumGuide", "order": "ASCENDING" },
-        { "fieldPath": "hidden", "order": "ASCENDING" },
-        { "fieldPath": "publishedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "trip_logs",
-      "queryScope": "COLLECTION",
-      "fields": [
         { "fieldPath": "tier", "order": "ASCENDING" },
         { "fieldPath": "hidden", "order": "ASCENDING" },
         { "fieldPath": "publishedAt", "order": "DESCENDING" }

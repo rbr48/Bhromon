@@ -105,15 +105,6 @@ class _ChallengesScreenState extends State<ChallengesScreen>
       rewardBadge: '🚀',
       rewardPoints: 100,
     ),
-    ChallengeItem(
-      title: 'Guide Creator',
-      description: 'Reach 200 trust score to unlock Premium Guides',
-      category: 'guide',
-      requiredCount: 200,
-      currentCount: 45,
-      rewardBadge: '🏅',
-      rewardPoints: 60,
-    ),
   ];
 
   @override
