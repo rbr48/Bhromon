@@ -75,11 +75,12 @@ class _SosHubDialogState extends State<SosHubDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final latStr = _position?.latitude.toStringAsFixed(5) ?? 'Unknown';
     final lngStr = _position?.longitude.toStringAsFixed(5) ?? 'Unknown';
 
     return Dialog(
-      backgroundColor: AppColors.cardDark,
+      backgroundColor: cs.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -87,15 +88,15 @@ class _SosHubDialogState extends State<SosHubDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.warning_amber_rounded,
+                const Icon(Icons.warning_amber_rounded,
                     color: Colors.redAccent, size: 32),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Text(
                   'SOS EMERGENCY HUB',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: cs.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.5),
@@ -103,10 +104,10 @@ class _SosHubDialogState extends State<SosHubDialog> {
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Share your details or contact emergency support. In remote areas, SMS fallback will operate even without internet coverage.',
-              style:
-                  TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+              style: TextStyle(
+                  color: cs.onSurfaceVariant, fontSize: 13, height: 1.4),
             ),
             const SizedBox(height: 16),
 
@@ -114,9 +115,10 @@ class _SosHubDialogState extends State<SosHubDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                border: Border.all(
+                    color: cs.outlineVariant.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
@@ -127,9 +129,9 @@ class _SosHubDialogState extends State<SosHubDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('YOUR COORDINATES',
+                        Text('YOUR COORDINATES',
                             style: TextStyle(
-                                color: Colors.white54,
+                                color: cs.onSurfaceVariant,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold)),
                         const SizedBox(height: 2),
@@ -142,8 +144,8 @@ class _SosHubDialogState extends State<SosHubDialog> {
                               )
                             : Text(
                                 'Lat: $latStr, Lng: $lngStr',
-                                style: const TextStyle(
-                                    color: Colors.white,
+                                style: TextStyle(
+                                    color: cs.onSurface,
                                     fontSize: 13,
                                     fontFamily: 'monospace',
                                     fontWeight: FontWeight.bold),
@@ -211,7 +213,7 @@ class _SosHubDialogState extends State<SosHubDialog> {
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.mintGreen,
-                      foregroundColor: Colors.black,
+                      foregroundColor: AppColors.darkGreen,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
@@ -228,8 +230,8 @@ class _SosHubDialogState extends State<SosHubDialog> {
             const SizedBox(height: 12),
             Center(
               child: TextButton(
-                child: const Text('Dismiss',
-                    style: TextStyle(color: Colors.white60)),
+                child: Text('Dismiss',
+                    style: TextStyle(color: cs.onSurfaceVariant)),
                 onPressed: () => Navigator.pop(context),
               ),
             ),

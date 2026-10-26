@@ -965,7 +965,7 @@ class _MapScreenState extends State<MapScreen> {
                   child: Container(
                     constraints: const BoxConstraints(maxHeight: 230),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -982,17 +982,18 @@ class _MapScreenState extends State<MapScreen> {
                         itemCount: _searchSuggestions.length,
                         itemBuilder: (_, i) {
                           final pin = _searchSuggestions[i];
+                          final cs = Theme.of(context).colorScheme;
                           return ListTile(
                             leading: const Icon(Icons.location_on_outlined,
                                 color: AppColors.midGreen, size: 20),
                             title: Text(pin.name,
-                                style: const TextStyle(
-                                    color: Colors.black87,
+                                style: TextStyle(
+                                    color: cs.onSurface,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13)),
                             subtitle: Text('${pin.district}, ${pin.division}',
-                                style: const TextStyle(
-                                    color: Colors.black54, fontSize: 11)),
+                                style: TextStyle(
+                                    color: cs.onSurfaceVariant, fontSize: 11)),
                             onTap: () {
                               FocusScope.of(context).unfocus();
                               _searchController.text = pin.name;
@@ -1417,13 +1418,15 @@ class _MapScreenState extends State<MapScreen> {
     showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1E2E),
+        builder: (ctx, setDialogState) {
+          final cs = Theme.of(ctx).colorScheme;
+          return AlertDialog(
+          backgroundColor: cs.surface,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Add Location Pin',
+          title: Text('Add Location Pin',
               style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  TextStyle(color: cs.onSurface, fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1435,10 +1438,10 @@ class _MapScreenState extends State<MapScreen> {
                 _dialogField(divisionCtrl, 'Division *', Icons.map_outlined),
                 const SizedBox(height: 16),
                 // Category picker
-                const Align(
+                Align(
                   alignment: Alignment.centerLeft,
                   child: Text('Category',
-                      style: TextStyle(color: Colors.white60, fontSize: 12)),
+                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -1454,15 +1457,15 @@ class _MapScreenState extends State<MapScreen> {
                         decoration: BoxDecoration(
                           color: sel
                               ? AppColors.mintGreen
-                              : Colors.white.withValues(alpha: 0.07),
+                              : cs.surfaceContainerHighest.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                               color:
-                                  sel ? AppColors.mintGreen : Colors.white24),
+                                  sel ? AppColors.mintGreen : cs.outlineVariant.withValues(alpha: 0.4)),
                         ),
                         child: Text(cat,
                             style: TextStyle(
-                                color: sel ? Colors.black : Colors.white70,
+                                color: sel ? AppColors.darkGreen : cs.onSurfaceVariant,
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold)),
                       ),
@@ -1472,7 +1475,7 @@ class _MapScreenState extends State<MapScreen> {
                 const SizedBox(height: 8),
                 Text(
                   '📍 ${center.latitude.toStringAsFixed(5)}, ${center.longitude.toStringAsFixed(5)}',
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
                 ),
               ],
             ),
@@ -1481,7 +1484,7 @@ class _MapScreenState extends State<MapScreen> {
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child:
-                  const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                  Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -1525,22 +1528,24 @@ class _MapScreenState extends State<MapScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
-        ),
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
+}
 
   Widget _dialogField(TextEditingController ctrl, String hint, IconData icon) {
+    final cs = Theme.of(context).colorScheme;
     return TextField(
       controller: ctrl,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: cs.onSurface),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+        hintStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
         prefixIcon: Icon(icon, color: AppColors.mintGreen, size: 18),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white54),
+          borderSide: BorderSide(color: cs.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1650,12 +1655,13 @@ class _MapScreenState extends State<MapScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
+        final cs = Theme.of(context).colorScheme;
         return Container(
           height: MediaQuery.of(context).size.height * 0.5,
-          decoration: const BoxDecoration(
-            color: Color(0xFF0F1A13),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(top: BorderSide(color: Colors.white10, width: 0.5)),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3), width: 0.5)),
           ),
           child: Column(
             children: [
@@ -1664,7 +1670,7 @@ class _MapScreenState extends State<MapScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1678,8 +1684,8 @@ class _MapScreenState extends State<MapScreen> {
                     const SizedBox(width: 8),
                     Text(
                       'Pins in this Area (${pins.length})',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: cs.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1701,13 +1707,13 @@ class _MapScreenState extends State<MapScreen> {
                     final pin = pins[index];
                     final Color tierColor = AppColors.forTier(pin.trustTier);
                     return Card(
-                      color: Colors.white.withValues(alpha: 0.04),
+                      color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
                       elevation: 0,
                       margin: const EdgeInsets.only(bottom: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side:
-                            const BorderSide(color: Colors.white10, width: 0.5),
+                            BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4), width: 0.5),
                       ),
                       child: ListTile(
                         leading: Container(
@@ -1720,20 +1726,20 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                         title: Text(
                           pin.name,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: cs.onSurface,
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
                         ),
                         subtitle: Text(
                           '${pin.category} • ${pin.district}',
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 11),
+                          style: TextStyle(
+                              color: cs.onSurfaceVariant, fontSize: 11),
                         ),
-                        trailing: const Icon(
+                        trailing: Icon(
                           Icons.arrow_forward_ios_rounded,
-                          color: Colors.white54,
+                          color: cs.onSurfaceVariant,
                           size: 14,
                         ),
                         onTap: () {

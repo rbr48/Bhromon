@@ -184,11 +184,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         _snack('$email সফলভাবে গ্রুপে যুক্ত হয়েছে');
                       } catch (e) {
                         setDialogState(() => isAdding = false);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('যোগ করা যায়নি: $e')),
-                          );
-                        }
+                        _snack('যোগ করা যায়নি: $e', error: true);
                       }
                     },
               child: isAdding
@@ -614,9 +610,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     color: const Color(0xFF1B4332),
                     onSelected: (v) => _onGroupMenu(context, group, v),
                     itemBuilder: (_) => [
-                      PopupMenuItem(
+                      const PopupMenuItem(
                           value: 'copy_code',
-                          child: const Row(
+                          child: Row(
                             children: [
                               Icon(Icons.copy_rounded,
                                   size: 16, color: AppColors.mintGreen),
@@ -626,9 +622,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             ],
                           )),
                       if (group.ownerEmail == _repository.currentEmail) ...[
-                        PopupMenuItem(
+                        const PopupMenuItem(
                             value: 'add_member',
-                            child: const Row(
+                            child: Row(
                               children: [
                                 Icon(Icons.person_add_alt_1,
                                     size: 16, color: AppColors.mintGreen),
