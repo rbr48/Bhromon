@@ -35,7 +35,16 @@ class ChatAttachmentSheet extends StatelessWidget {
     try {
       final res = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'csv'],
+        allowedExtensions: [
+          'pdf',
+          'doc',
+          'docx',
+          'xls',
+          'xlsx',
+          'txt',
+          'zip',
+          'csv'
+        ],
       );
       if (res != null && res.files.isNotEmpty) {
         onDocumentPicked(res.files.first);
@@ -49,7 +58,8 @@ class ChatAttachmentSheet extends StatelessWidget {
     Navigator.pop(context);
     try {
       final picker = ImagePicker();
-      final photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+      final photo =
+          await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
       if (photo != null) {
         onMediaPicked(photo, false);
       }
@@ -62,7 +72,8 @@ class ChatAttachmentSheet extends StatelessWidget {
     Navigator.pop(context);
     try {
       final picker = ImagePicker();
-      final media = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+      final media =
+          await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
       if (media != null) {
         onMediaPicked(media, false);
       }

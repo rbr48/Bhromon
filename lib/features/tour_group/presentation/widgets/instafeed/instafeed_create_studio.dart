@@ -435,7 +435,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
             );
             _coverImage = XFile(thumbFile.path, name: 'first_frame.jpg');
           } catch (e) {
-            debugPrint('Auto-extract first frame on publish fallback failed: $e');
+            debugPrint(
+                'Auto-extract first frame on publish fallback failed: $e');
           }
         }
         if (_coverImage != null) {

@@ -263,7 +263,9 @@ void main() {
       expect(r.projectedPaisa, 0);
     });
 
-    test('fund report with no collection target does not crash on unmodifiable list', () {
+    test(
+        'fund report with no collection target does not crash on unmodifiable list',
+        () {
       final r = FundReport.build(
         group: tour.copyWith(fundBudget: const FundBudget()),
         members: _members,

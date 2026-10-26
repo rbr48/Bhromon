@@ -581,7 +581,8 @@ class TourGroupRepository {
       rethrow;
     } on FirebaseException catch (e) {
       // Row doesn't exist yet; proceed safely with creation.
-      debugPrint('[TourGroupRepository] Member row does not exist yet: ${e.code}');
+      debugPrint(
+          '[TourGroupRepository] Member row does not exist yet: ${e.code}');
     }
 
     final member = TourMember(

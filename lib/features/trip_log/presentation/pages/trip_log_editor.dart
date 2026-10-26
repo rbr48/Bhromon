@@ -128,11 +128,14 @@ class _TripLogEditorState extends State<TripLogEditor> {
                   widget.existingTripLog != null
                       ? 'Edit Diary'
                       : 'Write New Diary',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 11),
                 ),
               ],
             ),
-            iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            iconTheme: IconThemeData(
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
             actions: [
               // 🔒 Privacy toggle
               Padding(
@@ -143,9 +146,16 @@ class _TripLogEditorState extends State<TripLogEditor> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4)),
+                      border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outlineVariant
+                              .withValues(alpha: 0.4)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -156,7 +166,10 @@ class _TripLogEditorState extends State<TripLogEditor> {
                         Text(
                           state.visibility.label,
                           style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              fontSize: 11),
                         ),
                       ],
                     ),
@@ -183,7 +196,10 @@ class _TripLogEditorState extends State<TripLogEditor> {
                     Icons.send_rounded,
                     color: (state.isComplete && !_isUploading)
                         ? AppColors.mintGreen
-                        : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withValues(alpha: 0.6),
                   ),
                   tooltip: context.l10n.translate('editor_publish'),
                   onPressed: _isUploading
@@ -216,7 +232,8 @@ class _TripLogEditorState extends State<TripLogEditor> {
                       height: 16,
                       child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Theme.of(context).colorScheme.primary)),
+                          valueColor: AlwaysStoppedAnimation(
+                              Theme.of(context).colorScheme.primary)),
                     ),
                   ),
                 )
@@ -229,7 +246,10 @@ class _TripLogEditorState extends State<TripLogEditor> {
                               ? 'সংরক্ষিত'
                               : 'Saved',
                           style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12))),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              fontSize: 12))),
                 ),
             ],
           ),
@@ -249,7 +269,10 @@ class _TripLogEditorState extends State<TripLogEditor> {
                             padding: const EdgeInsets.all(16),
                             margin: const EdgeInsets.only(bottom: 16),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.35),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                   color: AppColors.mintGreen
@@ -268,7 +291,9 @@ class _TripLogEditorState extends State<TripLogEditor> {
                                             ? '[$_uploadCurrentFileIndex/$_uploadTotalFiles] $_uploadStatus'
                                             : _uploadStatus,
                                         style: TextStyle(
-                                            color: Theme.of(context).colorScheme.onSurface,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 13),
                                         overflow: TextOverflow.ellipsis,
@@ -287,7 +312,10 @@ class _TripLogEditorState extends State<TripLogEditor> {
                                 const SizedBox(height: 10),
                                 LinearProgressIndicator(
                                   value: _uploadProgress,
-                                  backgroundColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                                  backgroundColor: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant
+                                      .withValues(alpha: 0.3),
                                   valueColor:
                                       const AlwaysStoppedAnimation<Color>(
                                           AppColors.mintGreen),
@@ -311,9 +339,14 @@ class _TripLogEditorState extends State<TripLogEditor> {
                               letterSpacing: -0.5),
                           decoration: InputDecoration(
                             hintText: 'শিরোনাম দিন (যেমন: সুন্দরবনের গল্প)',
-                            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                            hintStyle: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant
+                                    .withValues(alpha: 0.6)),
                             border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 8),
                           ),
                         ),
                         // 🌦️ Weather stamp row
@@ -323,7 +356,12 @@ class _TripLogEditorState extends State<TripLogEditor> {
                             child: WeatherStampWidget(
                                 weather: state.weatherSnapshot!),
                           ),
-                        Divider(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4), height: 1),
+                        Divider(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outlineVariant
+                                .withValues(alpha: 0.4),
+                            height: 1),
                         const SizedBox(height: 12),
 
                         // Blocks list
@@ -1568,7 +1606,8 @@ class _TextBlockEditorState extends State<TextBlockEditor> {
       style: TextStyle(color: cs.onSurface, fontSize: 15, height: 1.5),
       decoration: InputDecoration(
         hintText: 'Share details of your experience...',
-        hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 15),
+        hintStyle: TextStyle(
+            color: cs.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 15),
         border: InputBorder.none,
         isDense: true,
         contentPadding: EdgeInsets.zero,
@@ -1647,7 +1686,10 @@ class _ImageBlockEditorState extends State<ImageBlockEditor> {
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
                     height: 200,
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.5),
                     child: const Center(
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: AppColors.mintGreen),
@@ -1655,19 +1697,25 @@ class _ImageBlockEditorState extends State<ImageBlockEditor> {
                   ),
                   errorWidget: (_, __, ___) => Container(
                     height: 200,
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                    child:
-                        Icon(Icons.broken_image, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.5),
+                    child: Icon(Icons.broken_image,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _captionController,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
           decoration: InputDecoration(
             hintText: 'Add a caption to this photo...',
-            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+            hintStyle: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13),
             border: InputBorder.none,
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(vertical: 4),
@@ -1741,7 +1789,11 @@ class _VideoBlockEditorState extends State<VideoBlockEditor> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: Colors.black45,
-                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                  border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outlineVariant
+                          .withValues(alpha: 0.3)),
                 ),
                 child: thumbnailUrl != null
                     ? CachedNetworkImage(
@@ -1750,11 +1802,13 @@ class _VideoBlockEditorState extends State<VideoBlockEditor> {
                         fit: BoxFit.cover,
                         errorWidget: (context, url, error) => Icon(
                             Icons.video_collection_rounded,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             size: 48),
                       )
                     : Icon(Icons.video_collection_rounded,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant, size: 48),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        size: 48),
               ),
             ),
             Container(
@@ -1771,10 +1825,13 @@ class _VideoBlockEditorState extends State<VideoBlockEditor> {
         const SizedBox(height: 8),
         TextField(
           controller: _captionController,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
           decoration: InputDecoration(
             hintText: 'Add a caption to this video...',
-            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+            hintStyle: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13),
             border: InputBorder.none,
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(vertical: 4),
@@ -1823,9 +1880,16 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
         if (widget.items.isNotEmpty) ...[
           Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withValues(alpha: 0.35),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4)),
+              border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outlineVariant
+                      .withValues(alpha: 0.4)),
             ),
             child: Column(
               children: [
@@ -1844,7 +1908,10 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                           child: Text(
                             item.label,
                             style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                                fontSize: 14),
                           ),
                         ),
                         Text(
@@ -1869,7 +1936,12 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                     ),
                   );
                 }),
-                Divider(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4), height: 1),
+                Divider(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .outlineVariant
+                        .withValues(alpha: 0.4),
+                    height: 1),
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
@@ -1878,7 +1950,8 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
                       Text(
                         'Total Expenses:',
                         style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.bold,
                             fontSize: 13),
                       ),
@@ -1903,16 +1976,22 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
               flex: 2,
               child: TextField(
                 controller: _nameController,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Expense item (e.g. Bus fare)',
-                  hintStyle:
-                      TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                  hintStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 13),
                   isDense: true,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                  fillColor: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest
+                      .withValues(alpha: 0.4),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -1925,16 +2004,22 @@ class _CostBlockEditorState extends State<CostBlockEditor> {
               child: TextField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Amount',
-                  hintStyle:
-                      TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                  hintStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 13),
                   isDense: true,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                  fillColor: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest
+                      .withValues(alpha: 0.4),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -2073,13 +2158,18 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
                       decoration: BoxDecoration(
                         color: isSelected
                             ? levelColor
-                            : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                            : Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         level.toUpperCase(),
                         style: TextStyle(
-                          color: isSelected ? Colors.black : Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: isSelected
+                              ? Colors.black
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2094,11 +2184,14 @@ class _SafetyBlockEditorState extends State<SafetyBlockEditor> {
           TextField(
             controller: _textController,
             maxLines: null,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
             decoration: InputDecoration(
               hintText:
                   'Describe safety warnings (e.g. steep slopes, heavy tides)',
-              hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
+              hintStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 14),
               border: InputBorder.none,
               isDense: true,
               contentPadding: EdgeInsets.zero,
@@ -2219,17 +2312,24 @@ class _RouteBlockEditorState extends State<RouteBlockEditor> {
                     Expanded(
                       child: TextField(
                         controller: _pointControllers[idx],
-                        style:
-                            TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 13),
                         decoration: InputDecoration(
                           hintText: 'Latitude, Longitude (e.g. 23.68, 90.35)',
                           hintStyle: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              fontSize: 13),
                           isDense: true,
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 8),
                           filled: true,
-                          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                          fillColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.4),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
@@ -2277,11 +2377,14 @@ class _RouteBlockEditorState extends State<RouteBlockEditor> {
         TextField(
           controller: _descController,
           maxLines: 2,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
           decoration: InputDecoration(
             hintText:
                 'Describe the route path (e.g. "Take the hiking path towards the waterfall")',
-            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
+            hintStyle: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 14),
             border: InputBorder.none,
             isDense: true,
             contentPadding: EdgeInsets.zero,

@@ -134,8 +134,8 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
     final total = _totalDuration > Duration.zero
         ? _totalDuration
         : const Duration(seconds: 1);
-    final progress = (_position.inMilliseconds / total.inMilliseconds)
-        .clamp(0.0, 1.0);
+    final progress =
+        (_position.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
 
     return Container(
       width: 250,

@@ -403,7 +403,8 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
                       Text(
                         '${trump.symbol} ${trump.name}',
                         style: TextStyle(
-                          color: _isRed(trump) ? Colors.redAccent : Colors.white,
+                          color:
+                              _isRed(trump) ? Colors.redAccent : Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -429,7 +430,8 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
                         userIsBidder
                             ? '🔒 ${trump.symbol} (only you know)'
                             : '🔒 Hidden',
-                        style: const TextStyle(color: Colors.amber, fontSize: 11),
+                        style:
+                            const TextStyle(color: Colors.amber, fontSize: 11),
                       ),
                   ],
                 ),

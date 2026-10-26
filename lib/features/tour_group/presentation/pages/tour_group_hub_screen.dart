@@ -134,8 +134,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   decoration: InputDecoration(
                     labelText: 'নাম (ঐচ্ছিক)',
                     labelStyle: const TextStyle(color: Colors.white70),
-                    prefixIcon: const Icon(Icons.badge_outlined,
-                        color: Colors.white60),
+                    prefixIcon:
+                        const Icon(Icons.badge_outlined, color: Colors.white60),
                     filled: true,
                     fillColor: Colors.black26,
                     border: OutlineInputBorder(
@@ -1004,67 +1004,69 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.white10),
                 ),
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: members.length,
-                separatorBuilder: (_, __) =>
-                    const Divider(color: Colors.white10, height: 1),
-                itemBuilder: (context, i) {
-                  final m = members[i];
-                  return ListTile(
-                    onTap: () => _showManageMemberSheet(
-                      context,
-                      tourId,
-                      m,
-                      viewerIsOwner: _viewerIsOwner(members),
-                      viewerIsAdmin: _viewerIsAdmin(members),
-                    ),
-                    leading: CircleAvatar(
-                      backgroundColor: AppColors.midGreen,
-                      backgroundImage:
-                          m.photoUrl != null ? NetworkImage(m.photoUrl!) : null,
-                      child: m.photoUrl == null
-                          ? Text(m.displayName.isNotEmpty
-                              ? m.displayName[0].toUpperCase()
-                              : 'E')
-                          : null,
-                    ),
-                    title: Text(m.displayName,
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                        _viewerIsAdmin(members)
-                            ? m.email
-                            : (m.role.isAdminOrOwner
-                                ? context.l10n.translate('hub_role_admin')
-                                : context.l10n.translate('hub_role_member')),
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12)),
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: m.role.isAdminOrOwner
-                            ? AppColors.gold.withValues(alpha: 0.2)
-                            : Colors.white10,
-                        borderRadius: BorderRadius.circular(6),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: members.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(color: Colors.white10, height: 1),
+                  itemBuilder: (context, i) {
+                    final m = members[i];
+                    return ListTile(
+                      onTap: () => _showManageMemberSheet(
+                        context,
+                        tourId,
+                        m,
+                        viewerIsOwner: _viewerIsOwner(members),
+                        viewerIsAdmin: _viewerIsAdmin(members),
                       ),
-                      child: Text(
-                        m.role.toValue().toUpperCase(),
-                        style: TextStyle(
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.midGreen,
+                        backgroundImage: m.photoUrl != null
+                            ? NetworkImage(m.photoUrl!)
+                            : null,
+                        child: m.photoUrl == null
+                            ? Text(m.displayName.isNotEmpty
+                                ? m.displayName[0].toUpperCase()
+                                : 'E')
+                            : null,
+                      ),
+                      title: Text(m.displayName,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                          _viewerIsAdmin(members)
+                              ? m.email
+                              : (m.role.isAdminOrOwner
+                                  ? context.l10n.translate('hub_role_admin')
+                                  : context.l10n.translate('hub_role_member')),
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 12)),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
                           color: m.role.isAdminOrOwner
-                              ? AppColors.gold
-                              : Colors.white70,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                              ? AppColors.gold.withValues(alpha: 0.2)
+                              : Colors.white10,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          m.role.toValue().toUpperCase(),
+                          style: TextStyle(
+                            color: m.role.isAdminOrOwner
+                                ? AppColors.gold
+                                : Colors.white70,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
           ],
         );
       },

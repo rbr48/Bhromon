@@ -89,51 +89,51 @@ void main() {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline_rounded,
-                      color: Colors.redAccent, size: 64),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Application Error',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'An unexpected error occurred in the layout interface. Please restart the application if the issue persists.',
-                    style: TextStyle(
-                        color: Colors.white60, fontSize: 14, height: 1.4),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      details.exceptionAsString(),
-                      style: const TextStyle(
-                          color: Colors.redAccent,
-                          fontFamily: 'monospace',
-                          fontSize: 11),
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
+                  children: [
+                    const Icon(Icons.error_outline_rounded,
+                        color: Colors.redAccent, size: 64),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Application Error',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    const Text(
+                      'An unexpected error occurred in the layout interface. Please restart the application if the issue persists.',
+                      style: TextStyle(
+                          color: Colors.white60, fontSize: 14, height: 1.4),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        details.exceptionAsString(),
+                        style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontFamily: 'monospace',
+                            fontSize: 11),
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
-  };
+      );
+    };
 
     // These three don't depend on each other: start them together rather
     // than one after another before the first frame. The integrity result

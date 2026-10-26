@@ -1421,118 +1421,124 @@ class _MapScreenState extends State<MapScreen> {
         builder: (ctx, setDialogState) {
           final cs = Theme.of(ctx).colorScheme;
           return AlertDialog(
-          backgroundColor: cs.surface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('Add Location Pin',
-              style:
-                  TextStyle(color: cs.onSurface, fontWeight: FontWeight.bold)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _dialogField(nameCtrl, 'Place Name *', Icons.place),
-                const SizedBox(height: 12),
-                _dialogField(districtCtrl, 'District *', Icons.location_city),
-                const SizedBox(height: 12),
-                _dialogField(divisionCtrl, 'Division *', Icons.map_outlined),
-                const SizedBox(height: 16),
-                // Category picker
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Category',
-                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: categories.map((cat) {
-                    final sel = cat == selectedCategory;
-                    return GestureDetector(
-                      onTap: () => setDialogState(() => selectedCategory = cat),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: sel
-                              ? AppColors.mintGreen
-                              : cs.surfaceContainerHighest.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color:
-                                  sel ? AppColors.mintGreen : cs.outlineVariant.withValues(alpha: 0.4)),
+            backgroundColor: cs.surface,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text('Add Location Pin',
+                style: TextStyle(
+                    color: cs.onSurface, fontWeight: FontWeight.bold)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _dialogField(nameCtrl, 'Place Name *', Icons.place),
+                  const SizedBox(height: 12),
+                  _dialogField(districtCtrl, 'District *', Icons.location_city),
+                  const SizedBox(height: 12),
+                  _dialogField(divisionCtrl, 'Division *', Icons.map_outlined),
+                  const SizedBox(height: 16),
+                  // Category picker
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Category',
+                        style: TextStyle(
+                            color: cs.onSurfaceVariant, fontSize: 12)),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: categories.map((cat) {
+                      final sel = cat == selectedCategory;
+                      return GestureDetector(
+                        onTap: () =>
+                            setDialogState(() => selectedCategory = cat),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: sel
+                                ? AppColors.mintGreen
+                                : cs.surfaceContainerHighest
+                                    .withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: sel
+                                    ? AppColors.mintGreen
+                                    : cs.outlineVariant.withValues(alpha: 0.4)),
+                          ),
+                          child: Text(cat,
+                              style: TextStyle(
+                                  color: sel
+                                      ? AppColors.darkGreen
+                                      : cs.onSurfaceVariant,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold)),
                         ),
-                        child: Text(cat,
-                            style: TextStyle(
-                                color: sel ? AppColors.darkGreen : cs.onSurfaceVariant,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '📍 ${center.latitude.toStringAsFixed(5)}, ${center.longitude.toStringAsFixed(5)}',
-                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
-                ),
-              ],
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '📍 ${center.latitude.toStringAsFixed(5)}, ${center.longitude.toStringAsFixed(5)}',
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child:
-                  Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.midGreen,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12))),
-              onPressed: () {
-                final name = nameCtrl.text.trim();
-                final district = districtCtrl.text.trim();
-                final division = divisionCtrl.text.trim();
-                if (name.isEmpty || district.isEmpty || division.isEmpty) {
-                  _showSnack('Please fill in all required fields');
-                  return;
-                }
-                final newPin = LocationPin(
-                  pinId: 'pin_${DateTime.now().millisecondsSinceEpoch}',
-                  name: name,
-                  geoHash: 'w3',
-                  lat: center.latitude,
-                  lng: center.longitude,
-                  trustTier: TrustTier.unverified,
-                  lastConfirmed: DateTime.now(),
-                  linkedTripIds: const [],
-                  linkedTipIds: const [],
-                  division: division,
-                  district: district,
-                  createdByUid:
-                      (context.read<AuthCubit>().state is Authenticated)
-                          ? (context.read<AuthCubit>().state as Authenticated)
-                              .profile
-                              .uid
-                          : 'guest',
-                  category: selectedCategory,
-                );
-                context.read<MapBloc>().add(AddPinEvent(newPin));
-                Navigator.pop(ctx);
-                _showSnack('📍 Pin "$name" added!');
-              },
-              child: const Text('Create',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        );
-      },
-    ),
-  );
-}
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel',
+                    style: TextStyle(color: cs.onSurfaceVariant)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.midGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12))),
+                onPressed: () {
+                  final name = nameCtrl.text.trim();
+                  final district = districtCtrl.text.trim();
+                  final division = divisionCtrl.text.trim();
+                  if (name.isEmpty || district.isEmpty || division.isEmpty) {
+                    _showSnack('Please fill in all required fields');
+                    return;
+                  }
+                  final newPin = LocationPin(
+                    pinId: 'pin_${DateTime.now().millisecondsSinceEpoch}',
+                    name: name,
+                    geoHash: 'w3',
+                    lat: center.latitude,
+                    lng: center.longitude,
+                    trustTier: TrustTier.unverified,
+                    lastConfirmed: DateTime.now(),
+                    linkedTripIds: const [],
+                    linkedTipIds: const [],
+                    division: division,
+                    district: district,
+                    createdByUid:
+                        (context.read<AuthCubit>().state is Authenticated)
+                            ? (context.read<AuthCubit>().state as Authenticated)
+                                .profile
+                                .uid
+                            : 'guest',
+                    category: selectedCategory,
+                  );
+                  context.read<MapBloc>().add(AddPinEvent(newPin));
+                  Navigator.pop(ctx);
+                  _showSnack('📍 Pin "$name" added!');
+                },
+                child: const Text('Create',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   Widget _dialogField(TextEditingController ctrl, String hint, IconData icon) {
     final cs = Theme.of(context).colorScheme;
@@ -1661,7 +1667,10 @@ class _MapScreenState extends State<MapScreen> {
           decoration: BoxDecoration(
             color: cs.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border(top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3), width: 0.5)),
+            border: Border(
+                top: BorderSide(
+                    color: cs.outlineVariant.withValues(alpha: 0.3),
+                    width: 0.5)),
           ),
           child: Column(
             children: [
@@ -1712,8 +1721,9 @@ class _MapScreenState extends State<MapScreen> {
                       margin: const EdgeInsets.only(bottom: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side:
-                            BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4), width: 0.5),
+                        side: BorderSide(
+                            color: cs.outlineVariant.withValues(alpha: 0.4),
+                            width: 0.5),
                       ),
                       child: ListTile(
                         leading: Container(
