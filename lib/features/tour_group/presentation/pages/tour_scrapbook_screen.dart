@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/models/tour_post_models.dart';
@@ -23,13 +24,19 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
   List<TourMember> _members = const [];
   List<TourPostItem> _posts = const [];
   bool _isLoading = true;
-  String? _loadError;
+  bool _loadFailed = false;
 
   @override
   void initState() {
     super.initState();
     _loadScrapbookData();
     _watchGroup();
+  }
+
+  @override
+  void dispose() {
+    _groupSub?.cancel();
+    super.dispose();
   }
 
   void _watchGroup() {
@@ -56,56 +63,62 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _loadError =
-            'স্ক্র্যাপবুক লোড করা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।';
+        _loadFailed = true;
       });
     }
   }
 
+  String? get _dateRange {
+    final group = _tourGroup;
+    if (group == null) return null;
+    final format = DateFormat('d MMM yyyy');
+    return '${format.format(group.startDate)} – ${format.format(group.endDate)}';
+  }
+
   void _shareScrapbookSummary() {
-    final tourName = _tourGroup?.name ?? 'ফ্যামিলি ট্যুর স্মৃতিমালা';
-    final datesStr = _tourGroup != null
-        ? '${DateFormat('d MMM yyyy').format(_tourGroup!.startDate)} – ${DateFormat('d MMM yyyy').format(_tourGroup!.endDate)}'
-        : 'ট্যুর সময়কাল';
-    final durationStr = _tourGroup?.durationText ?? '';
-    final dest = _tourGroup?.destination ?? 'কক্সবাজার';
-    final origin = _tourGroup?.originCity ?? 'যাত্রা স্থান';
+    final l10n = context.l10n;
+    final group = _tourGroup;
+    final tourName = group?.name ?? l10n.translate('scrap_default_name');
+    final spots = group?.allSpots.take(5).toList() ??
+        [
+          l10n.translate('scrap_spot_main'),
+          l10n.translate('scrap_spot_hotels'),
+        ];
 
-    final shareText = '''
-📖 $tourName — ডিজিটাল স্ক্র্যাপবুক ও স্মরণিকা
-✨ ভ্রমণকাল: $datesStr ($durationStr)
-🚌 যাত্রাপথ: $origin ➔ $dest
-🏨 গন্তব্য: $dest
-👥 মোট পরিভ্রমণকারী: ${_members.length} জন সদস্য
-
-✨ স্মরণীয় দর্শনীয় স্থানসমূহ:
-${(_tourGroup?.allSpots.take(5) ?? [
-              'প্রধান দর্শনীয় স্পট',
-              'হোটেল ও রিসোর্ট'
-            ]).map((s) => '• $s').join('\n')}
-
-ভ্রমণে Bhromon অ্যাপের মাধ্যমে সংরক্ষিত অবিস্মরণীয় স্মৃতিমালা ❤️
-''';
+    final shareText = l10n.translate('scrap_share_text', args: {
+      'name': tourName,
+      'dates': _dateRange ?? l10n.translate('scrap_dates_unknown'),
+      'duration': group?.durationText ?? '',
+      'origin': group?.originCity ?? l10n.translate('scrap_origin_unknown'),
+      'destination':
+          group?.destination ?? l10n.translate('scrap_destination_unknown'),
+      'members': l10n.number(_members.length),
+      'spots': spots.map((s) => '• $s').join('\n'),
+    });
     // ignore: deprecated_member_use
-    Share.share(shareText, subject: '$tourName ডিজিটাল স্মৃতিচিহ্ন');
+    Share.share(shareText,
+        subject: l10n.translate('scrap_share_subject', args: {
+          'name': tourName,
+        }));
   }
 
   @override
   Widget build(BuildContext context) {
-    final tourName = _tourGroup?.name ?? 'ট্যুর ডিজিটাল স্মৃতিমালা';
+    final l10n = context.l10n;
+    final tourName = _tourGroup?.name ?? l10n.translate('scrap_default_name');
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F1A1C),
       appBar: AppBar(
-        title: const Text('Digital Scrapbook & Magazine',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(l10n.translate('scrap_title'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         backgroundColor: const Color(0xFF142428),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
-            tooltip: 'স্মৃতিচিহ্ন শেয়ার করুন',
+            tooltip: l10n.translate('scrap_share'),
             onPressed: _shareScrapbookSummary,
           ),
         ],
@@ -113,11 +126,11 @@ ${(_tourGroup?.allSpots.take(5) ?? [
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: Colors.tealAccent))
-          : _loadError != null
+          : _loadFailed
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Text(_loadError!,
+                    child: Text(l10n.translate('scrap_load_failed'),
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.white70)),
                   ),
@@ -151,8 +164,9 @@ ${(_tourGroup?.allSpots.take(5) ?? [
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           icon: const Icon(Icons.download),
-                          label: const Text('ডিজিটাল স্মৃতিচিহ্ন শেয়ার করুন',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          label: Text(l10n.translate('scrap_share_button'),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.amber.shade800,
                             foregroundColor: Colors.white,
@@ -170,6 +184,13 @@ ${(_tourGroup?.allSpots.take(5) ?? [
   }
 
   Widget _buildMagazineCover(String tourName) {
+    final l10n = context.l10n;
+    final group = _tourGroup;
+    final year = (group?.startDate ?? DateTime.now()).year;
+    final origin = group?.originCity ?? l10n.translate('scrap_origin_unknown');
+    final destination =
+        group?.destination ?? l10n.translate('scrap_destination_unknown');
+
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
@@ -194,9 +215,10 @@ ${(_tourGroup?.allSpots.take(5) ?? [
               color: Colors.amber,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Text(
-              'স্মৃতিচিহ্ন ও ভ্রমণ স্মারক ২০২৬',
-              style: TextStyle(
+            child: Text(
+              l10n.translate('scrap_badge_year',
+                  args: {'year': l10n.number(year)}),
+              style: const TextStyle(
                   color: Colors.black87,
                   fontWeight: FontWeight.bold,
                   fontSize: 11),
@@ -215,9 +237,9 @@ ${(_tourGroup?.allSpots.take(5) ?? [
           ),
           const SizedBox(height: 8),
           Text(
-            _tourGroup != null
-                ? '${DateFormat('d MMM yyyy').format(_tourGroup!.startDate)} – ${DateFormat('d MMM yyyy').format(_tourGroup!.endDate)} • ${_tourGroup!.durationText}'
-                : 'ভ্রমণ স্মৃতিচিহ্ন ও ফ্যামিলি ম্যাগাজিন',
+            group != null
+                ? '$_dateRange • ${group.durationText}'
+                : l10n.translate('scrap_cover_subtitle'),
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
           const SizedBox(height: 14),
@@ -228,13 +250,16 @@ ${(_tourGroup?.allSpots.take(5) ?? [
             children: [
               _CoverBadge(
                   icon: Icons.directions_bus,
-                  label: '${_tourGroup?.originCity ?? "যাত্রা"} পরিবহন'),
+                  label: l10n.translate('scrap_badge_transport',
+                      args: {'origin': origin})),
               _CoverBadge(
                   icon: Icons.hotel,
-                  label: '${_tourGroup?.destination ?? "ট্যুর"} আবাসন'),
+                  label: l10n.translate('scrap_badge_stay',
+                      args: {'destination': destination})),
               _CoverBadge(
                   icon: Icons.explore_rounded,
-                  label: '${_tourGroup?.destination ?? "স্পট"} ভ্রমণ'),
+                  label: l10n.translate('scrap_badge_explore',
+                      args: {'destination': destination})),
             ],
           ),
         ],
@@ -243,12 +268,14 @@ ${(_tourGroup?.allSpots.take(5) ?? [
   }
 
   Widget _buildMetricsGrid() {
+    final l10n = context.l10n;
     return Row(
       children: [
         Expanded(
           child: _buildMetricTile(
-            title: 'স্মৃতি পোস্ট',
-            value: '${_posts.length} টি',
+            title: l10n.translate('scrap_metric_posts'),
+            value: l10n.translate('scrap_posts_count',
+                args: {'count': l10n.number(_posts.length)}),
             icon: Icons.photo_library,
             color: Colors.tealAccent,
           ),
@@ -256,8 +283,9 @@ ${(_tourGroup?.allSpots.take(5) ?? [
         const SizedBox(width: 10),
         Expanded(
           child: _buildMetricTile(
-            title: 'ট্যুর পার্টিসিপ্যান্ট',
-            value: '${_members.length} জন',
+            title: l10n.translate('scrap_metric_members'),
+            value: l10n.translate('scrap_members_count',
+                args: {'count': l10n.number(_members.length)}),
             icon: Icons.groups,
             color: Colors.amber,
           ),
@@ -265,7 +293,7 @@ ${(_tourGroup?.allSpots.take(5) ?? [
         const SizedBox(width: 10),
         Expanded(
           child: _buildMetricTile(
-            title: 'ট্যুর ব্যাপ্তিকাল',
+            title: l10n.translate('scrap_metric_duration'),
             value: _tourGroup?.durationText ?? '—',
             icon: Icons.calendar_month,
             color: Colors.blueAccent,
@@ -315,6 +343,7 @@ ${(_tourGroup?.allSpots.take(5) ?? [
 
   /// Recent photo and reel posts from the tour, newest first.
   Widget _buildHighlightsSection() {
+    final l10n = context.l10n;
     final highlights = _posts.where((p) => p.hasRemoteMedia).take(6).toList();
 
     return Container(
@@ -327,24 +356,26 @@ ${(_tourGroup?.allSpots.take(5) ?? [
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.stars, color: Colors.amber, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'ট্যুরের অবিস্মরণীয় মুহূর্তমালা (Highlights)',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14),
+              const Icon(Icons.stars, color: Colors.amber, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.translate('scrap_highlights'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           if (highlights.isEmpty)
-            const Text(
-              'এখনও কোনো ছবি বা রিলস যুক্ত হয়নি। ইনস্টাফিড থেকে প্রথম পোস্ট করুন।',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+            Text(
+              l10n.translate('scrap_no_highlights'),
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
             )
           else
             for (final post in highlights)
@@ -391,6 +422,7 @@ ${(_tourGroup?.allSpots.take(5) ?? [
   }
 
   Widget _buildHonorRoll() {
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -398,29 +430,29 @@ ${(_tourGroup?.allSpots.take(5) ?? [
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white12),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.military_tech, color: Colors.amber, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'ট্যুর পরিচালনা ও কৃতজ্ঞতা স্বীকার (Honor Roll)',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14),
+              const Icon(Icons.military_tech, color: Colors.amber, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.translate('scrap_honor_roll'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
+                ),
               ),
             ],
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
-            '• ট্যুর লিডার ও প্রধান সমন্বয়ক: সার্বিক দিকনির্দেশনা ও রুট পরিকল্পনা\n'
-            '• কোষাধ্যক্ষ ও হিসাবরক্ষক: স্প্লিটওয়াইজ স্বচ্ছ তহবিল ব্যবস্থাপনা\n'
-            '• পরিবারবর্গ: স্বতঃস্ফূর্ত অংশগ্রহণ ও একাত্মতা\n'
-            'সকলের আন্তরিক সহযোগিতায় ট্যুরটি সফল ও আনন্দময় হয়েছে।',
-            style: TextStyle(color: Colors.white70, fontSize: 11, height: 1.5),
+            l10n.translate('scrap_honor_text'),
+            style: const TextStyle(
+                color: Colors.white70, fontSize: 11, height: 1.5),
           ),
         ],
       ),
