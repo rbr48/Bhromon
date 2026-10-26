@@ -7,7 +7,7 @@ const {
 } = require('@firebase/rules-unit-testing');
 const fs = require('fs');
 const path = require('path');
-const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp, FieldPath } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp, FieldPath, arrayUnion, arrayRemove } = require('firebase/firestore');
 
 const PROJECT_ID = 'bhromon-rules-test-project';
 const TOUR = 't1';
@@ -229,6 +229,23 @@ describe('Tour Group Firestore rules', () => {
       const budget = { fundBudget: { categoryPaisa: { Food: 100000 }, perHeadTargetPaisa: 500000 } };
       await assertFails(updateDoc(doc(db('member'), 'tours', TOUR), budget));
       await assertSucceeds(updateDoc(doc(db('admin'), 'tours', TOUR), budget));
+    });
+
+    test('members answer a notice only for themselves', async () => {
+      const n = (who) => doc(db(who), 'tours', TOUR, 'notices', 'n1');
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', TOUR, 'notices', 'n1'),
+          { title: 'Roll call', kind: 'rollcall', ackBy: [people.other.email] });
+      });
+      await assertSucceeds(updateDoc(n('member'), { ackBy: arrayUnion(people.member.email) }));
+      await assertSucceeds(updateDoc(n('member'), { ackBy: arrayRemove(people.member.email) }));
+      // Not for someone else, not along with other fields, not by outsiders.
+      await assertFails(updateDoc(n('member'), { ackBy: arrayRemove(people.other.email) }));
+      await assertFails(updateDoc(n('member'), { ackBy: arrayUnion(people.admin.email) }));
+      await assertFails(updateDoc(n('member'), { ackBy: arrayUnion(people.member.email), title: 'Hijack' }));
+      await assertFails(updateDoc(n('outsider'), { ackBy: arrayUnion(people.outsider.email) }));
+      // An admin marks a member present.
+      await assertSucceeds(updateDoc(n('admin'), { ackBy: arrayUnion(people.member.email, people.owner.email) }));
     });
 
     test('only admins post official notices', async () => {

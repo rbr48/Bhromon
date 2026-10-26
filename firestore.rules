@@ -488,10 +488,16 @@ service cloud.firestore {
                          (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }
 
-      // Official notices are posted by admins.
+      // Official notices are posted by admins. A member answers one ("Got
+      // it", or "I'm here" in a roll call) by adding or removing only their
+      // own email in ackBy. Admins may mark anyone present.
       match /notices/{noticeId} {
         allow read: if isActiveMember(tourId);
         allow create, update, delete: if isTourAdmin(tourId);
+        allow update: if isActiveMember(tourId) &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['ackBy']) &&
+                         ownEntryOnly(resource.data.get('ackBy', []), request.resource.data.get('ackBy', []));
       }
 
       // Packing checklist: members tick items; admins remove them.
