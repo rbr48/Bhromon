@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// Full-featured Story Viewer supporting both Photos and Videos, interactive
 /// Poll stickers with real-time percentages, quick emoji reactions, author
@@ -219,19 +220,19 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title:
-            const Text('স্টোরি মুছবেন?', style: TextStyle(color: Colors.white)),
-        content: const Text('এই স্টোরিটি সবার জন্য মুছে যাবে।',
-            style: TextStyle(color: Colors.white70)),
+        title: Text(context.l10n.translate('ig_story_delete_q'),
+            style: const TextStyle(color: Colors.white)),
+        content: Text(context.l10n.translate('ig_story_delete_body'),
+            style: const TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('বাতিল'),
+            child: Text(context.l10n.translate('ig_cancel')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('মুছে ফেলুন'),
+            child: Text(context.l10n.translate('ig_story_delete_confirm')),
           ),
         ],
       ),
@@ -247,7 +248,9 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('স্টোরি মোছা যায়নি: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_story_delete_failed', args: {'error': e}))),
         );
         _resume();
       }
@@ -320,7 +323,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$emoji প্রতিক্রিয়া পাঠানো হয়েছে'),
+        content: Text(
+            context.l10n.translate('ig_reaction_sent', args: {'emoji': emoji})),
         duration: const Duration(seconds: 1),
       ),
     );
@@ -333,9 +337,9 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     _resume();
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('উত্তর পাঠানো হয়েছে'),
-        duration: Duration(seconds: 1),
+      SnackBar(
+        content: Text(context.l10n.translate('ig_reply_sent')),
+        duration: const Duration(seconds: 1),
       ),
     );
   }
@@ -376,7 +380,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                         color: AppColors.mintGreen),
                     const SizedBox(width: 8),
                     Text(
-                      'দর্শকের তালিকা (${story.viewers.length} জন দেখেছেন)',
+                      context.l10n.translate('ig_viewers_title',
+                          args: {'count': story.viewers.length}),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -400,7 +405,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'ভোট: ${story.poll!.question}',
+                          context.l10n.translate('ig_poll_label',
+                              args: {'question': story.poll!.question}),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -421,7 +427,11 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                                           color: Colors.white70, fontSize: 13)),
                                 ),
                                 Text(
-                                  '$count ভোট (${pct.toStringAsFixed(0)}%)',
+                                  context.l10n.translate('ig_poll_votes',
+                                      args: {
+                                        'count': count,
+                                        'pct': pct.toStringAsFixed(0)
+                                      }),
                                   style: const TextStyle(
                                       color: AppColors.mintGreen,
                                       fontSize: 12,
@@ -439,12 +449,12 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
                 // Viewers list
                 if (story.viewers.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
                     child: Center(
                       child: Text(
-                        'এখনও কেউ স্টোরিটি দেখেনি।',
-                        style: TextStyle(color: Colors.white54),
+                        context.l10n.translate('ig_no_viewers'),
+                        style: const TextStyle(color: Colors.white54),
                       ),
                     ),
                   )
@@ -493,31 +503,32 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     if (story == null) return;
 
     _pause();
-    final titleCtrl = TextEditingController(text: 'স্মৃতি');
+    final titleCtrl = TextEditingController(
+        text: context.l10n.translate('ig_default_highlight'));
 
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('হাইলাইটে যোগ করুন',
-            style: TextStyle(color: Colors.white)),
+        title: Text(context.l10n.translate('ig_add_highlight_title'),
+            style: const TextStyle(color: Colors.white)),
         content: TextField(
           controller: titleCtrl,
           style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
-            labelText: 'হাইলাইটের নাম',
-            labelStyle: TextStyle(color: Colors.white70),
+          decoration: InputDecoration(
+            labelText: context.l10n.translate('ig_highlight_name'),
+            labelStyle: const TextStyle(color: Colors.white70),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('বাতিল'),
+            child: Text(context.l10n.translate('ig_cancel')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
             onPressed: () => Navigator.pop(ctx, titleCtrl.text.trim()),
-            child: const Text('যোগ করুন'),
+            child: Text(context.l10n.translate('ig_add')),
           ),
         ],
       ),
@@ -536,7 +547,9 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('"$result" হাইলাইটে যোগ করা হয়েছে')),
+          SnackBar(
+              content: Text(context.l10n.translate('ig_added_to_highlight',
+                  args: {'result': result}))),
         );
       }
     }
@@ -733,7 +746,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
                         if (_canDelete)
                           IconButton(
-                            tooltip: 'মুছুন',
+                            tooltip: context.l10n.translate('ig_delete'),
                             icon: const Icon(Icons.delete_outline,
                                 color: Colors.white),
                             onPressed: _deleteCurrentStory,
@@ -741,7 +754,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
                         // Highlight button
                         IconButton(
-                          tooltip: 'হাইলাইটে যোগ করুন',
+                          tooltip:
+                              context.l10n.translate('ig_add_highlight_title'),
                           icon: const Icon(Icons.bookmark_add_outlined,
                               color: Colors.white),
                           onPressed: _saveToHighlight,
@@ -749,7 +763,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
 
                         // Close button
                         IconButton(
-                          tooltip: 'বন্ধ করুন',
+                          tooltip: context.l10n.translate('ig_close'),
                           icon: const Icon(Icons.close, color: Colors.white),
                           onPressed: () => Navigator.pop(context),
                         ),
@@ -787,7 +801,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                                     color: Colors.white, size: 18),
                                 const SizedBox(width: 8),
                                 Text(
-                                  '${story.viewers.length} জন দেখেছেন (তালিকা দেখতে ট্যাপ করুন)',
+                                  context.l10n.translate('ig_viewers_tap',
+                                      args: {'count': story.viewers.length}),
                                   style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 12,
@@ -808,7 +823,9 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                           onSubmitted: (_) => _sendReply(),
                           onTap: _pause,
                           decoration: InputDecoration(
-                            hintText: '${story.authorName}-কে বার্তা পাঠান...',
+                            hintText: context.l10n.translate(
+                                'ig_message_author',
+                                args: {'name': story.authorName}),
                             hintStyle: const TextStyle(
                                 color: Colors.white70, fontSize: 13),
                             filled: true,

@@ -13,6 +13,7 @@ import 'package:bhromon/features/tour_group/domain/services/media_rules.dart';
 import 'package:bhromon/features/tour_group/domain/services/tour_video_compressor.dart';
 import 'package:video_compress/video_compress.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// Creation Studio bottom sheet supporting multi-image posts and reels with
 /// draft auto-recovery, manual photo tuning (brightness, contrast, saturation),
@@ -46,9 +47,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   // Poll sticker controllers
   bool _includePoll = false;
   final TextEditingController _pollQuestionCtrl = TextEditingController();
-  final TextEditingController _pollOpt1Ctrl =
-      TextEditingController(text: 'হ্যাঁ');
-  final TextEditingController _pollOpt2Ctrl = TextEditingController(text: 'না');
+  final TextEditingController _pollOpt1Ctrl = TextEditingController();
+  final TextEditingController _pollOpt2Ctrl = TextEditingController();
 
   bool _isReel = false;
   final List<XFile> _photos = [];
@@ -70,8 +70,10 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       _selectedAspectRatio; // null = original, 1.0 = 1:1, 0.8 = 4:5, 16/9 = 16:9
 
   String _selectedDay = 'day1';
-  String _selectedLandmark = 'অন্যান্য স্থান (Others)';
-  bool get _isCustomSpot => _selectedLandmark == 'অন্যান্য স্থান (Others)';
+  late String _selectedLandmark;
+  bool _defaultsReady = false;
+  bool get _isCustomSpot =>
+      _selectedLandmark == context.l10n.translate('ig_place_others');
 
   final List<String> _taggedMembers = [];
   bool _hideLikeCount = false;
@@ -88,34 +90,45 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
 
   late TabController _tabCtrl;
 
-  static const List<String> _kTourLandmarks = [
-    'প্রধান হোটেল / রিসোর্ট (Hotel / Resort)',
-    'দর্শনীয় স্পট ও পয়েন্ট (Scenic Spot)',
-    'যাত্রা পথ / হাইওয়ে বিরতি (Journey / Highway)',
-    'রেস্তোরাঁ ও ফুড পয়েন্ট (Restaurant & Food)',
-    'অন্যান্য স্থান (Others)',
-  ];
+  List<String> get _kTourLandmarks => [
+        context.l10n.translate('ig_place_hotel'),
+        context.l10n.translate('ig_place_spot'),
+        context.l10n.translate('ig_place_journey'),
+        context.l10n.translate('ig_place_food'),
+        context.l10n.translate('ig_place_others'),
+      ];
 
-  static const Map<String, String> _filterLabels = {
-    'normal': 'নরমাল',
-    'clarendon': 'ক্ল্যারেন্ডন',
-    'juno': 'জুনো',
-    'valencia': 'ভ্যালেন্সিয়া',
-    'lark': 'লার্ক',
-    'sunset': 'সূর্যাস্ত',
-    'moon': 'মুন (B&W)',
-    'vintage': 'ভিন্টেজ',
-  };
+  Map<String, String> get _filterLabels => {
+        'normal': context.l10n.translate('ig_filter_normal'),
+        'clarendon': context.l10n.translate('ig_filter_clarendon'),
+        'juno': context.l10n.translate('ig_filter_juno'),
+        'valencia': context.l10n.translate('ig_filter_valencia'),
+        'lark': context.l10n.translate('ig_filter_lark'),
+        'sunset': context.l10n.translate('ig_filter_sunset'),
+        'moon': context.l10n.translate('ig_filter_moon'),
+        'vintage': context.l10n.translate('ig_filter_vintage'),
+      };
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 2, vsync: this);
-    final available = widget.group?.allSpots ?? _kTourLandmarks;
-    if (available.isNotEmpty) {
-      _selectedLandmark = available.first;
-    }
     _checkDraft();
+  }
+
+  /// Language-dependent defaults. They need the inherited localizations, so
+  /// they are set here rather than in a field initializer or initState.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_defaultsReady) return;
+    _defaultsReady = true;
+    _pollOpt1Ctrl.text = context.l10n.translate('ig_yes');
+    _pollOpt2Ctrl.text = context.l10n.translate('ig_no');
+    final available = widget.group?.allSpots ?? _kTourLandmarks;
+    _selectedLandmark = available.isNotEmpty
+        ? available.first
+        : context.l10n.translate('ig_place_others');
   }
 
   @override
@@ -199,8 +212,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     final remaining = kMaxPhotosPerPost - _photos.length;
     if (remaining <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('সর্বোচ্চ $kMaxPhotosPerPost টি ছবি যোগ করা সম্ভব।')),
+        SnackBar(
+            content: Text(context.l10n
+                .translate('ig_max_photos', args: {'max': kMaxPhotosPerPost}))),
       );
       return;
     }
@@ -251,7 +265,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           if (!mounted) return;
           setState(() => _isCompressing = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('ভিডিও অপ্টিমাইজ করা যায়নি: $e')),
+            SnackBar(
+                content: Text(context.l10n.translate('ig_video_optimize_failed',
+                    args: {'error': e}))),
           );
           return;
         }
@@ -296,7 +312,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ভিডিও নির্বাচন ত্রুটি: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_video_pick_failed', args: {'error': e}))),
         );
       }
     }
@@ -366,7 +384,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('কভার ছবি বাছাই ত্রুটি: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_cover_pick_failed', args: {'error': e}))),
         );
       }
     }
@@ -385,9 +405,10 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   }
 
   Future<void> _publish() async {
+    final l10n = context.l10n;
     if (_photos.isEmpty && _selectedVideo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('অন্তত একটি ছবি বা ভিডিও বাছাই করুন।')),
+        SnackBar(content: Text(context.l10n.translate('ig_pick_one_media'))),
       );
       return;
     }
@@ -395,7 +416,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     setState(() {
       _isPublishing = true;
       _uploadProgress = 0.0;
-      _uploadStatusText = 'আপলোড শুরু হচ্ছে...';
+      _uploadStatusText = context.l10n.translate('ig_upload_starting');
     });
 
     final uploads = <TourMediaUpload>[];
@@ -403,7 +424,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     var postSaved = false;
     try {
       if (_isReel && _selectedVideo != null) {
-        setState(() => _uploadStatusText = 'ভিডিও আপলোড হচ্ছে...');
+        setState(() =>
+            _uploadStatusText = context.l10n.translate('ig_uploading_video'));
         final ext = storedExtension(_selectedVideo!.name, 'mp4');
         final cType = videoContentType(_selectedVideo!.name) ?? 'video/mp4';
         final upload = await TourMediaUploader.start(
@@ -441,7 +463,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         }
         if (_coverImage != null) {
           setState(() {
-            _uploadStatusText = 'কভার থাম্বনেইল আপলোড হচ্ছে...';
+            _uploadStatusText = context.l10n.translate('ig_uploading_cover');
             _uploadProgress = 0.8;
           });
           final cExt = storedExtension(_coverImage!.name, 'jpg');
@@ -489,8 +511,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         for (int i = 0; i < _photos.length; i++) {
           final photo = _photos[i];
           setState(() {
-            _uploadStatusText =
-                'ছবি আপলোড হচ্ছে (${i + 1}/${_photos.length})...';
+            _uploadStatusText = context.l10n.translate('ig_uploading_photo',
+                args: {'current': i + 1, 'total': _photos.length});
           });
           final ext = storedExtension(photo.name, 'jpg');
           final cType = imageContentType(photo.name) ?? 'image/jpeg';
@@ -553,10 +575,10 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
               options: [
                 _pollOpt1Ctrl.text.trim().isNotEmpty
                     ? _pollOpt1Ctrl.text.trim()
-                    : 'হ্যাঁ',
+                    : l10n.translate('ig_yes'),
                 _pollOpt2Ctrl.text.trim().isNotEmpty
                     ? _pollOpt2Ctrl.text.trim()
-                    : 'না',
+                    : l10n.translate('ig_no'),
               ],
             ),
           );
@@ -564,7 +586,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                  content: Text('পোস্ট হয়েছে, কিন্তু পোল যোগ করা যায়নি: $e')),
+                  content: Text(context.l10n
+                      .translate('ig_poll_add_failed', args: {'error': e}))),
             );
           }
         }
@@ -581,8 +604,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         Navigator.pop(context);
         widget.onPostCreated?.call();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('পোস্ট সফলভাবে প্রকাশিত হয়েছে!'),
+          SnackBar(
+            content: Text(context.l10n.translate('ig_post_published')),
             backgroundColor: AppColors.mintGreen,
           ),
         );
@@ -598,7 +621,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       if (mounted) {
         setState(() => _isPublishing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('পোস্ট প্রকাশ ব্যর্থ: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_publish_failed', args: {'error': e}))),
         );
       }
     }
@@ -663,7 +688,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'বন্ধ করুন',
+                    tooltip: context.l10n.translate('ig_close'),
                     icon: const Icon(Icons.close, color: Colors.white70),
                     onPressed: () {
                       _saveCurrentDraft();
@@ -672,7 +697,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _isReel ? 'নতুন রিলস তৈরি' : 'নতুন পোস্ট তৈরি',
+                    _isReel
+                        ? context.l10n.translate('ig_new_reel')
+                        : context.l10n.translate('ig_new_post_title'),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -698,8 +725,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                                   AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Text('পোস্ট করুন',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        : Text(context.l10n.translate('ig_publish'),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -716,21 +744,22 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   children: [
                     const Icon(Icons.history, color: Colors.amber, size: 20),
                     const SizedBox(width: 8),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'পূর্বের অসম্পূর্ণ ড্রাফট পাওয়া গেছে।',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
+                        context.l10n.translate('ig_draft_found'),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     ),
                     TextButton(
                       onPressed: _restoreDraft,
-                      child: const Text('পুনরুদ্ধার',
-                          style: TextStyle(
+                      child: Text(context.l10n.translate('ig_restore'),
+                          style: const TextStyle(
                               color: Colors.amber,
                               fontWeight: FontWeight.bold)),
                     ),
                     IconButton(
-                      tooltip: 'বন্ধ করুন',
+                      tooltip: context.l10n.translate('ig_close'),
                       icon: const Icon(Icons.close,
                           size: 16, color: Colors.white54),
                       onPressed: _discardDraft,
@@ -750,7 +779,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     Row(
                       children: [
                         Text(
-                          _uploadStatusText ?? 'প্রক্রিয়াকরণ চলছে...',
+                          _uploadStatusText ??
+                              context.l10n.translate('ig_processing'),
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 12),
                         ),
@@ -764,7 +794,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         ),
                         if (_isCompressing)
                           IconButton(
-                            tooltip: 'বাতিল',
+                            tooltip: context.l10n.translate('ig_cancel'),
                             visualDensity: VisualDensity.compact,
                             icon: const Icon(Icons.close,
                                 color: Colors.white70, size: 18),
@@ -800,23 +830,31 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         const Icon(Icons.aspect_ratio,
                             size: 16, color: Colors.white70),
                         const SizedBox(width: 8),
-                        const Text('ফ্রেম:',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 12)),
+                        Text(context.l10n.translate('ig_frame_label'),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Row(
                               children: [
-                                _buildRatioChip('মূল ফ্রেম', null),
-                                const SizedBox(width: 6),
-                                _buildRatioChip('১:১ স্কয়ার', 1.0),
-                                const SizedBox(width: 6),
-                                _buildRatioChip('৪:৫ পোর্ট্রেট', 4.0 / 5.0),
+                                _buildRatioChip(
+                                    context.l10n.translate('ig_original_frame'),
+                                    null),
                                 const SizedBox(width: 6),
                                 _buildRatioChip(
-                                    '১৬:৯ ল্যান্ডস্কেপ', 16.0 / 9.0),
+                                    context.l10n.translate('ig_ratio_square'),
+                                    1.0),
+                                const SizedBox(width: 6),
+                                _buildRatioChip(
+                                    context.l10n.translate('ig_ratio_portrait'),
+                                    4.0 / 5.0),
+                                const SizedBox(width: 6),
+                                _buildRatioChip(
+                                    context.l10n
+                                        .translate('ig_ratio_landscape'),
+                                    16.0 / 9.0),
                               ],
                             ),
                           ),
@@ -833,7 +871,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     style: const TextStyle(color: Colors.white),
                     onChanged: (_) => _saveCurrentDraft(),
                     decoration: InputDecoration(
-                      hintText: 'ক্যাপশন লিখুন... (#হ্যাশট্যাগ যোগ করতে পারেন)',
+                      hintText: context.l10n.translate('ig_caption_hint'),
                       hintStyle: const TextStyle(color: Colors.white54),
                       filled: true,
                       fillColor: const Color(0xFF1E1E1E),
@@ -856,7 +894,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           style: const TextStyle(
                               color: Colors.white, fontSize: 13),
                           decoration: InputDecoration(
-                            labelText: 'ট্যুর দিবস',
+                            labelText: context.l10n.translate('ig_tour_day'),
                             labelStyle: const TextStyle(
                                 color: Colors.white70, fontSize: 12),
                             filled: true,
@@ -865,17 +903,27 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                                 borderRadius: BorderRadius.circular(10),
                                 borderSide: BorderSide.none),
                           ),
-                          items: const [
+                          items: [
                             DropdownMenuItem(
-                                value: 'day1', child: Text('দিন ১ (Day 1)')),
+                                value: 'day1',
+                                child:
+                                    Text(context.l10n.translate('ig_day_one'))),
                             DropdownMenuItem(
-                                value: 'day2', child: Text('দিন ২ (Day 2)')),
+                                value: 'day2',
+                                child:
+                                    Text(context.l10n.translate('ig_day_two'))),
                             DropdownMenuItem(
-                                value: 'day3', child: Text('দিন ৩ (Day 3)')),
+                                value: 'day3',
+                                child: Text(
+                                    context.l10n.translate('ig_day_three'))),
                             DropdownMenuItem(
-                                value: 'day4', child: Text('দিন ৪ (Day 4)')),
+                                value: 'day4',
+                                child: Text(
+                                    context.l10n.translate('ig_day_four'))),
                             DropdownMenuItem(
-                                value: 'day5', child: Text('দিন ৫ (Day 5)')),
+                                value: 'day5',
+                                child: Text(
+                                    context.l10n.translate('ig_day_five'))),
                           ],
                           onChanged: (val) {
                             if (val != null) {
@@ -894,7 +942,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           style: const TextStyle(
                               color: Colors.white, fontSize: 13),
                           decoration: InputDecoration(
-                            labelText: 'দর্শনীয় স্থান',
+                            labelText:
+                                context.l10n.translate('ig_sightseeing_place'),
                             labelStyle: const TextStyle(
                                 color: Colors.white70, fontSize: 12),
                             filled: true,
@@ -925,7 +974,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                       controller: _customSpotCtrl,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'নির্দিষ্ট স্থানের নাম লিখুন...',
+                        hintText: context.l10n.translate('ig_enter_place_name'),
                         hintStyle: const TextStyle(color: Colors.white54),
                         filled: true,
                         fillColor: const Color(0xFF1E1E1E),
@@ -944,9 +993,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     indicatorColor: AppColors.mintGreen,
                     labelColor: AppColors.mintGreen,
                     unselectedLabelColor: Colors.white54,
-                    tabs: const [
-                      Tab(text: 'কালার প্রিসেট'),
-                      Tab(text: 'ম্যানুয়াল টিউনিং'),
+                    tabs: [
+                      Tab(text: context.l10n.translate('ig_color_preset')),
+                      Tab(text: context.l10n.translate('ig_manual_tuning')),
                     ],
                   ),
                   SizedBox(
@@ -991,10 +1040,11 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                                   const Icon(Icons.brightness_6,
                                       size: 16, color: Colors.white70),
                                   const SizedBox(width: 8),
-                                  const SizedBox(
+                                  SizedBox(
                                     width: 55,
-                                    child: Text('উজ্জ্বলতা',
-                                        style: TextStyle(
+                                    child: Text(
+                                        context.l10n.translate('ig_brightness'),
+                                        style: const TextStyle(
                                             color: Colors.white70,
                                             fontSize: 12)),
                                   ),
@@ -1017,10 +1067,11 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                                   const Icon(Icons.contrast,
                                       size: 16, color: Colors.white70),
                                   const SizedBox(width: 8),
-                                  const SizedBox(
+                                  SizedBox(
                                     width: 55,
-                                    child: Text('কনট্রাস্ট',
-                                        style: TextStyle(
+                                    child: Text(
+                                        context.l10n.translate('ig_contrast'),
+                                        style: const TextStyle(
                                             color: Colors.white70,
                                             fontSize: 12)),
                                   ),
@@ -1043,10 +1094,11 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                                   const Icon(Icons.wb_sunny_outlined,
                                       size: 16, color: Colors.amber),
                                   const SizedBox(width: 8),
-                                  const SizedBox(
+                                  SizedBox(
                                     width: 55,
-                                    child: Text('উষ্ণতা',
-                                        style: TextStyle(
+                                    child: Text(
+                                        context.l10n.translate('ig_warmth'),
+                                        style: const TextStyle(
                                             color: Colors.white70,
                                             fontSize: 12)),
                                   ),
@@ -1069,10 +1121,11 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                                   const Icon(Icons.vignette,
                                       size: 16, color: Colors.white70),
                                   const SizedBox(width: 8),
-                                  const SizedBox(
+                                  SizedBox(
                                     width: 55,
-                                    child: Text('ভিগনেট',
-                                        style: TextStyle(
+                                    child: Text(
+                                        context.l10n.translate('ig_vignette'),
+                                        style: const TextStyle(
                                             color: Colors.white70,
                                             fontSize: 12)),
                                   ),
@@ -1105,7 +1158,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.music_note,
                           color: AppColors.mintGreen),
-                      hintText: 'ব্যাকগ্রাউন্ড গানের নাম (ঐচ্ছিক)',
+                      hintText: context.l10n.translate('ig_music_name_hint'),
                       hintStyle: const TextStyle(color: Colors.white54),
                       filled: true,
                       fillColor: const Color(0xFF1E1E1E),
@@ -1120,12 +1173,12 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   // Interactive Poll Sticker Toggle
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('স্টোরি পোল স্টিকার যোগ করুন',
-                        style: TextStyle(
+                    title: Text(context.l10n.translate('ig_add_poll_sticker'),
+                        style: const TextStyle(
                             color: Colors.white, fontWeight: FontWeight.bold)),
-                    subtitle: const Text(
-                        'ভ্রমণসঙ্গীদের মতামত ও ভোট সংগ্রহ করুন',
-                        style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    subtitle: Text(context.l10n.translate('ig_poll_hint'),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12)),
                     value: _includePoll,
                     activeThumbColor: AppColors.mintGreen,
                     onChanged: (v) => setState(() => _includePoll = v),
@@ -1139,7 +1192,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           hintText:
-                              'পোলের প্রশ্ন (উদা: রাতের খাবারে কী খাবেন?)',
+                              context.l10n.translate('ig_poll_question_hint'),
                           hintStyle: const TextStyle(color: Colors.white54),
                           filled: true,
                           fillColor: const Color(0xFF222222),
@@ -1157,7 +1210,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                             controller: _pollOpt1Ctrl,
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
-                              hintText: 'বিকল্প ১',
+                              hintText: context.l10n.translate('ig_option_one'),
                               filled: true,
                               fillColor: const Color(0xFF222222),
                               border: OutlineInputBorder(
@@ -1173,7 +1226,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                             controller: _pollOpt2Ctrl,
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
-                              hintText: 'বিকল্প ২',
+                              hintText: context.l10n.translate('ig_option_two'),
                               filled: true,
                               fillColor: const Color(0xFF222222),
                               border: OutlineInputBorder(
@@ -1191,16 +1244,18 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   // Post Preferences: Hide Like Count & Disable Comments
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('লাইক সংখ্যা লুকান',
-                        style: TextStyle(color: Colors.white, fontSize: 14)),
+                    title: Text(context.l10n.translate('ig_hide_like_count'),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 14)),
                     value: _hideLikeCount,
                     activeThumbColor: AppColors.mintGreen,
                     onChanged: (v) => setState(() => _hideLikeCount = v),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('মন্তব্য বন্ধ রাখুন',
-                        style: TextStyle(color: Colors.white, fontSize: 14)),
+                    title: Text(context.l10n.translate('ig_keep_comments_off'),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 14)),
                     value: _disableComments,
                     activeThumbColor: AppColors.mintGreen,
                     onChanged: (v) => setState(() => _disableComments = v),
@@ -1236,7 +1291,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     child: VideoPlayer(_videoCtrl!),
                   ),
                   IconButton(
-                    tooltip: _videoCtrl!.value.isPlaying ? 'থামান' : 'চালান',
+                    tooltip: _videoCtrl!.value.isPlaying
+                        ? context.l10n.translate('ig_pause')
+                        : context.l10n.translate('ig_play'),
                     icon: Icon(
                       _videoCtrl!.value.isPlaying
                           ? Icons.pause_circle
@@ -1302,8 +1359,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   ),
                   onPressed: () => _pickVideo(ImageSource.gallery),
                   icon: const Icon(Icons.sync, size: 14),
-                  label:
-                      const Text('ভিডিও বদলান', style: TextStyle(fontSize: 11)),
+                  label: Text(context.l10n.translate('ig_change_video'),
+                      style: const TextStyle(fontSize: 11)),
                 ),
               ],
             ),
@@ -1408,13 +1465,13 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         children: [
           _buildSelectTile(
             icon: Icons.photo_library_outlined,
-            label: 'গ্যালারি ছবি\n(সর্বোচ্চ ১০টি)',
+            label: context.l10n.translate('ig_gallery_photos'),
             onTap: _pickPhotos,
           ),
           Container(width: 1, height: 60, color: Colors.white10),
           _buildSelectTile(
             icon: Icons.video_library_outlined,
-            label: 'রিলস ভিডিও\n(সর্বোচ্চ ৩ মিনিট)',
+            label: context.l10n.translate('ig_reel_video'),
             onTap: () => _pickVideo(ImageSource.gallery),
           ),
         ],
@@ -1447,9 +1504,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     _coverImage != null ? AppColors.mintGreen : Colors.white70,
               ),
               const SizedBox(width: 8),
-              const Text(
-                'রিল কভার থাম্বনেইল (Cover Thumbnail)',
-                style: TextStyle(
+              Text(
+                context.l10n.translate('ig_reel_cover'),
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
@@ -1465,7 +1522,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    _isFirstFrameCover ? 'ডিফল্ট (প্রথম ফ্রেম)' : 'কাস্টম ছবি',
+                    _isFirstFrameCover
+                        ? context.l10n.translate('ig_default_first_frame')
+                        : context.l10n.translate('ig_custom_photo'),
                     style: const TextStyle(
                       color: AppColors.mintGreen,
                       fontSize: 11,
@@ -1478,8 +1537,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           const SizedBox(height: 6),
           Text(
             _isFirstFrameCover
-                ? 'ভিডিওর প্রথম ফ্রেমটি থাম্বনেইল হিসেবে সেট করা আছে। আপনি চাইলে পরিবর্তন করতে পারেন।'
-                : 'ফিড এবং এক্সপ্লোর গ্রিডে রিলটি যে ছবিতে দেখা যাবে তা বেছে নিন।',
+                ? context.l10n.translate('ig_first_frame_set')
+                : context.l10n.translate('ig_pick_feed_frame'),
             style: const TextStyle(color: Colors.white54, fontSize: 11),
           ),
           const SizedBox(height: 10),
@@ -1502,7 +1561,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     children: [
                       Text(
                         _isFirstFrameCover
-                            ? 'প্রথম ফ্রেম (ভিডিও কভার)'
+                            ? context.l10n.translate('ig_first_frame_cover')
                             : _coverImage!.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1525,8 +1584,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                             ),
                             onPressed: _pickCoverImage,
                             icon: const Icon(Icons.edit, size: 14),
-                            label: const Text('পরিবর্তন',
-                                style: TextStyle(fontSize: 11)),
+                            label: Text(context.l10n.translate('ig_change'),
+                                style: const TextStyle(fontSize: 11)),
                           ),
                           const SizedBox(width: 8),
                           TextButton.icon(
@@ -1538,8 +1597,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                             ),
                             onPressed: _clearCoverImage,
                             icon: const Icon(Icons.delete_outline, size: 14),
-                            label: const Text('মুছুন',
-                                style: TextStyle(fontSize: 11)),
+                            label: Text(context.l10n.translate('ig_delete'),
+                                style: const TextStyle(fontSize: 11)),
                           ),
                         ],
                       ),
@@ -1564,10 +1623,10 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                     onPressed: _pickCoverImage,
                     icon: const Icon(Icons.add_photo_alternate_outlined,
                         size: 18),
-                    label: const Text(
-                      'গ্যালারি থেকে কভার ছবি বাছুন',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    label: Text(
+                      context.l10n.translate('ig_pick_cover_gallery'),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ),
                 ),

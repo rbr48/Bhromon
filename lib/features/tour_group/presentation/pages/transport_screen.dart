@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -15,6 +14,7 @@ import '../../domain/services/seat_layout_engine.dart';
 import '../../domain/services/seat_planner.dart';
 import '../widgets/transport/vehicle_editor_sheet.dart';
 import '../widgets/transport/vehicle_seat_map.dart';
+import '../../../../core/localization/localized_date.dart';
 
 /// Seats on every vehicle of the tour: coaches, sleepers, microbuses, cars,
 /// trains, flights, launches and ships. The tour's original 36-seat coach
@@ -259,7 +259,7 @@ class _TransportScreenState extends State<TransportScreen> {
           '${v != null && v.number.isNotEmpty ? ' · ${v.number}' : ''}',
       if (v != null && v.route.isNotEmpty) v.route,
       if (v?.departure != null)
-        DateFormat('d MMM yyyy, h:mm a').format(v!.departure!),
+        localizedDateFormat('d MMM yyyy, h:mm a').format(v!.departure!),
       '',
       for (final id in layout.seatOrder)
         if (byId[id]?.isOccupied ?? false)
@@ -543,7 +543,7 @@ class _TransportScreenState extends State<TransportScreen> {
               [
                 if (v.route.isNotEmpty) v.route,
                 if (v.departure != null)
-                  DateFormat('d MMM, h:mm a').format(v.departure!),
+                  localizedDateFormat('d MMM, h:mm a').format(v.departure!),
               ].join(' · '),
               style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),

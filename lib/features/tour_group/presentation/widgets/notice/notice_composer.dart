@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
@@ -7,6 +6,7 @@ import '../../../domain/models/itinerary_models.dart';
 import '../../../domain/models/tour_activity_models.dart';
 import '../../../domain/models/tour_group.dart';
 import '../../../domain/services/notice_engine.dart';
+import '../../../../../core/localization/localized_date.dart';
 
 const _sheet = Color(0xFF142428);
 const _chip = Color(0xFF1E3326);
@@ -199,7 +199,7 @@ class _ComposerState extends State<_Composer> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final stops = widget.group?.effectiveStops ?? const <TourStop>[];
-    final fmt = DateFormat('EEE d MMM, h:mm a');
+    final fmt = localizedDateFormat('EEE d MMM, h:mm a');
 
     return DraggableScrollableSheet(
       expand: false,
@@ -349,7 +349,7 @@ class _ComposerState extends State<_Composer> {
                     _until == null
                         ? l10n.translate('notice_until_none')
                         : l10n.translate('notice_until', args: {
-                            'date': DateFormat('d MMM').format(_until!)
+                            'date': localizedDateFormat('d MMM').format(_until!)
                           }),
                     style: const TextStyle(color: Colors.white)),
                 trailing: _until == null

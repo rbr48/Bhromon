@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class QuizQuestion {
   final int id;
@@ -71,173 +72,180 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
     final dest = _tourGroup?.destination.toLowerCase() ?? '';
 
     if (dest.contains('sajek') || dest.contains('সাজেক')) {
-      return const [
+      return [
         QuizQuestion(
           id: 1,
-          question: 'সাজেক ভ্যালি বাংলাদেশের কোন জেলায় অবস্থিত?',
-          options: ['রাঙ্গামাটি', 'খাগড়াছড়ি', 'বান্দরবান', 'কক্সবাজার'],
+          question: context.l10n.translate('tq_s_district_question'),
+          options: [
+            context.l10n.translate('tq_s_district_a'),
+            context.l10n.translate('tq_s_district_b'),
+            context.l10n.translate('tq_s_district_c'),
+            context.l10n.translate('tq_s_district_d')
+          ],
           correctIndex: 0,
-          explanation:
-              'ভৌগোলিকভাবে সাজেক রাঙ্গামাটি জেলার বাঘাইছড়ি উপজেলায় অবস্থিত, তবে যাতায়াত করতে হয় খাগড়াছড়ি দিয়ে।',
+          explanation: context.l10n.translate('tq_s_district_why'),
         ),
         QuizQuestion(
           id: 2,
-          question: 'সাজেক ভ্যালির সর্বোচ্চ পাহাড় চূড়া কোনটি?',
+          question: context.l10n.translate('tq_s_peak_question'),
           options: [
-            'কংলাক পাহাড় (Konglak Peak)',
-            'রুইলুই পাড়া',
-            'হ্যালিপ্যাড',
-            'তাজিংডং'
+            context.l10n.translate('tq_s_peak_a'),
+            context.l10n.translate('tq_s_peak_b'),
+            context.l10n.translate('tq_s_peak_c'),
+            context.l10n.translate('tq_s_peak_d')
           ],
           correctIndex: 0,
-          explanation:
-              'কংলাক পাহাড় চূড়া সাজেকের সর্বোচ্চ বিন্দু, যেখান থেকে চারপাশের মেঘ ও ভারতের মিজোরাম সীমান্ত দেখা যায়।',
+          explanation: context.l10n.translate('tq_s_peak_why'),
         ),
         QuizQuestion(
           id: 3,
-          question: 'সাজেকে যাতায়াতের জন্য প্রধান ও রোমাঞ্চকর বাহন কোনটি?',
+          question: context.l10n.translate('tq_s_transport_question'),
           options: [
-            'খোলা চাঁদের গাড়ি (Chander Gari)',
-            'সিএনজি অটোরিকশা',
-            'লঞ্চ',
-            'ট্রেন'
+            context.l10n.translate('tq_s_transport_a'),
+            context.l10n.translate('tq_s_transport_b'),
+            context.l10n.translate('tq_s_transport_c'),
+            context.l10n.translate('tq_s_transport_d')
           ],
           correctIndex: 0,
-          explanation:
-              'পাহাড়ি উঁচু-নিচু আঁকাবাঁকা পথে ৪-হুইল ড্রাইভ চাঁদের গাড়িই সাজেক ভ্রমণের প্রধান রোমাঞ্চ।',
+          explanation: context.l10n.translate('tq_s_transport_why'),
         ),
         QuizQuestion(
           id: 4,
-          question:
-              'সাজেকে প্রবেশের জন্য সেনাবাহিনীর এসকর্ট কোথা থেকে শুরু হয়?',
+          question: context.l10n.translate('tq_s_escort_question'),
           options: [
-            'দীঘিনালা সেনা ক্যাম্প',
-            'আলুটিলা',
-            'মাইজভাণ্ডার',
-            'মানিকছড়ি'
+            context.l10n.translate('tq_s_escort_a'),
+            context.l10n.translate('tq_s_escort_b'),
+            context.l10n.translate('tq_s_escort_c'),
+            context.l10n.translate('tq_s_escort_d')
           ],
           correctIndex: 0,
-          explanation:
-              'নিরাপত্তার স্বার্থে দীঘিনালা থেকে প্রতিদিন সকাল ও দুপুরে সেনাবাহিনীর কনভয় এসকর্ট দিয়ে সাজেক নেওয়া হয়।',
+          explanation: context.l10n.translate('tq_s_escort_why'),
         ),
         QuizQuestion(
           id: 5,
-          question: 'সাজেকে সবচেয়ে বিখ্যাত আকর্ষণ কী?',
+          question: context.l10n.translate('tq_s_attraction_question'),
           options: [
-            'মেঘের সমুদ্র ও মেঘ ছোঁয়া (Sea of Clouds)',
-            'সমুদ্রের ঢেউ',
-            'চা বাগান',
-            'হরিণ প্রজনন'
+            context.l10n.translate('tq_s_attraction_a'),
+            context.l10n.translate('tq_s_attraction_b'),
+            context.l10n.translate('tq_s_attraction_c'),
+            context.l10n.translate('tq_s_attraction_d')
           ],
           correctIndex: 0,
-          explanation:
-              'ভোরে কটেজের বারান্দা বা হ্যালিপ্যাডে দাঁড়ালে পায়ের নিচে তুলোর মতো ভাসমান মেঘের সমুদ্র দেখা যায়।',
+          explanation: context.l10n.translate('tq_s_attraction_why'),
         ),
       ];
     } else if (dest.contains('sylhet') || dest.contains('সিলেট')) {
-      return const [
+      return [
         QuizQuestion(
           id: 1,
-          question:
-              'বাংলাদেশের একমাত্র স্বীকৃত মিঠাপানির জলাবন (Swamp Forest) কোনটি?',
+          question: context.l10n.translate('tq_y_swamp_question'),
           options: [
-            'রাতারগুল সোয়াম্প ফরেস্ট',
-            'সুন্দরবন',
-            'লাউয়াছড়া',
-            'রেমা-কালেঙ্গা'
+            context.l10n.translate('tq_y_swamp_a'),
+            context.l10n.translate('tq_y_swamp_b'),
+            context.l10n.translate('tq_y_swamp_c'),
+            context.l10n.translate('tq_y_swamp_d')
           ],
           correctIndex: 0,
-          explanation:
-              'সিলেটের গোয়াইনঘাটে অবস্থিত রাতারগুল হলো মিঠাপানির এক অনন্য ও নৈসর্গিক জলাবন।',
+          explanation: context.l10n.translate('tq_y_swamp_why'),
         ),
         QuizQuestion(
           id: 2,
-          question: 'ভোলাগঞ্জ সাদা পাথর পয়েন্টে কোন নদী বয়ে চলেছে?',
-          options: ['ধলাই নদী (Dhalai)', 'পদ্মা', 'সুরমা', 'কর্ণফুলী'],
+          question: context.l10n.translate('tq_y_river_question'),
+          options: [
+            context.l10n.translate('tq_y_river_a'),
+            context.l10n.translate('tq_y_river_b'),
+            context.l10n.translate('tq_y_river_c'),
+            context.l10n.translate('tq_y_river_d')
+          ],
           correctIndex: 0,
-          explanation:
-              'মেঘালয় পাহাড় থেকে নেমে আসা স্বচ্ছ শীতল ধলাই নদীর বুকে সাদা পাথরের রাজ্য গড়ে উঠেছে।',
+          explanation: context.l10n.translate('tq_y_river_why'),
         ),
         QuizQuestion(
           id: 3,
-          question:
-              'সিলেটের ঐতিহ্যবাহী রান্নায় কোন বিশেষ সাইট্রাস ফল ব্যবহার করা হয়?',
-          options: ['সাতকড়া (Satkara)', 'আমলকী', 'বাতাবি লেবু', 'কামরাঙা'],
+          question: context.l10n.translate('tq_y_citrus_question'),
+          options: [
+            context.l10n.translate('tq_y_citrus_a'),
+            context.l10n.translate('tq_y_citrus_b'),
+            context.l10n.translate('tq_y_citrus_c'),
+            context.l10n.translate('tq_y_citrus_d')
+          ],
           correctIndex: 0,
-          explanation:
-              'সিলেটের ঐতিহ্যবাহী গরুর মাংস বা মাছে সুগন্ধি সাতকড়া লেবু দিয়ে রান্না করা হয়।',
+          explanation: context.l10n.translate('tq_y_citrus_why'),
         ),
         QuizQuestion(
           id: 4,
-          question: 'শ্রীমঙ্গলের বিখ্যাত চায়ের বিশেষত্ব কী?',
+          question: context.l10n.translate('tq_y_tea_question'),
           options: [
-            'নীলকণ্ঠের ৭ স্তরের সাত রঙের চা',
-            'আইস টি',
-            'গ্রিন টি ল্যাটে',
-            'লেমন গ্রাস টি'
+            context.l10n.translate('tq_y_tea_a'),
+            context.l10n.translate('tq_y_tea_b'),
+            context.l10n.translate('tq_y_tea_c'),
+            context.l10n.translate('tq_y_tea_d')
           ],
           correctIndex: 0,
-          explanation:
-              'রমেশ রাম গৌড়ের আবিষ্কৃত এক গ্লাসে ৭ স্তরের বিভিন্ন ঘনত্বের চা দেশজুড়ে বিখ্যাত।',
+          explanation: context.l10n.translate('tq_y_tea_why'),
         ),
       ];
     } else if (dest.contains('cox') || dest.contains('কক্সবাজার')) {
-      return const [
+      return [
         QuizQuestion(
           id: 1,
-          question:
-              'কক্সবাজার সমুদ্র সৈকত পৃথিবীর কততম দীর্ঘতম প্রাকৃতিক অবিচ্ছিন্ন বালুকাময় সৈকত?',
-          options: ['প্রথম (১ম)', 'দ্বিতীয় (২য়)', 'তৃতীয় (৩য়)', 'পঞ্চম (৫ম)'],
+          question: context.l10n.translate('tq_c_beach_question'),
+          options: [
+            context.l10n.translate('tq_c_beach_a'),
+            context.l10n.translate('tq_c_beach_b'),
+            context.l10n.translate('tq_c_beach_c'),
+            context.l10n.translate('tq_c_beach_d')
+          ],
           correctIndex: 0,
-          explanation:
-              'কক্সবাজার সমুদ্র সৈকত প্রায় ১২০ কিলোমিটার দীর্ঘ এবং এটি পৃথিবীর দীর্ঘতম প্রাকৃতিক অবিচ্ছিন্ন বালুকাময় সমুদ্র সৈকত!',
+          explanation: context.l10n.translate('tq_c_beach_why'),
         ),
         QuizQuestion(
           id: 2,
-          question: 'ইনানী বিচের প্রধান ও বিশেষ বৈশিষ্ট্য কী?',
+          question: context.l10n.translate('tq_c_inani_question'),
           options: [
-            'লাল কাঁকড়া',
-            'প্রবাল ও প্রবাল পাথর (Coral Rocks)',
-            'গভীর খাল',
-            'ম্যানগ্রোভ বন'
+            context.l10n.translate('tq_c_inani_a'),
+            context.l10n.translate('tq_c_inani_b'),
+            context.l10n.translate('tq_c_inani_c'),
+            context.l10n.translate('tq_c_inani_d')
           ],
           correctIndex: 1,
-          explanation:
-              'ইনানী সৈকত তার শান্ত পরিবেশ এবং প্রাকৃতিকভাবে গড়ে ওঠা প্রবাল পাথরের জন্য বিখ্যাত।',
+          explanation: context.l10n.translate('tq_c_inani_why'),
         ),
         QuizQuestion(
           id: 3,
-          question: 'সমুদ্র সৈকতে কখন গোসল করা সবচেয়ে বিপজ্জনক?',
+          question: context.l10n.translate('tq_c_danger_question'),
           options: [
-            'জোয়ারের সময়',
-            'ভাটার সময় (Low Tide)',
-            'সকালের শান্ত বাতাসে',
-            'দুপুরের রোদে'
+            context.l10n.translate('tq_c_danger_a'),
+            context.l10n.translate('tq_c_danger_b'),
+            context.l10n.translate('tq_c_danger_c'),
+            context.l10n.translate('tq_c_danger_d')
           ],
           correctIndex: 1,
-          explanation:
-              'ভাটার সময় পানির টান বা রিপ কারেন্ট সমুদ্রের গভীরে টেনে নেয়, তাই ভাটার সময় গভীর সমুদ্রে নামা অত্যন্ত বিপজ্জনক।',
+          explanation: context.l10n.translate('tq_c_danger_why'),
         ),
         QuizQuestion(
           id: 4,
-          question: 'বাংলাদেশের একমাত্র পাহাড়ি দ্বীপ কোনটি?',
-          options: ['সেন্টমার্টিন', 'মহেশখালী', 'ছেঁড়াদ্বীপ', 'হাতিয়া'],
+          question: context.l10n.translate('tq_c_island_question'),
+          options: [
+            context.l10n.translate('tq_c_island_a'),
+            context.l10n.translate('tq_c_island_b'),
+            context.l10n.translate('tq_c_island_c'),
+            context.l10n.translate('tq_c_island_d')
+          ],
           correctIndex: 1,
-          explanation:
-              'মহেশখালী বাংলাদেশের একমাত্র পাহাড়ি দ্বীপ, যেখানে বিখ্যাত আদিনাথ মন্দির ও পানের বরজ রয়েছে।',
+          explanation: context.l10n.translate('tq_c_island_why'),
         ),
         QuizQuestion(
           id: 5,
-          question: 'মেরিন ড্রাইভ রোড কোন দুটি স্থানকে সরাসরি সংযুক্ত করেছে?',
+          question: context.l10n.translate('tq_c_marine_question'),
           options: [
-            'কক্সবাজার থেকে টেকনাফ',
-            'কক্সবাজার থেকে চট্টগ্রাম',
-            'কক্সবাজার থেকে বান্দরবান',
-            'কক্সবাজার থেকে রাঙ্গামাটি'
+            context.l10n.translate('tq_c_marine_a'),
+            context.l10n.translate('tq_c_marine_b'),
+            context.l10n.translate('tq_c_marine_c'),
+            context.l10n.translate('tq_c_marine_d')
           ],
           correctIndex: 0,
-          explanation:
-              '৮০ কি.মি. দীর্ঘ মেরিন ড্রাইভ রোড কক্সবাজার কলাতলী থেকে টেকনাফ পর্যন্ত বিস্তৃত, যার একপাশে পাহাড় ও অন্যপাশে সমুদ্র।',
+          explanation: context.l10n.translate('tq_c_marine_why'),
         ),
       ];
     }
@@ -306,17 +314,17 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
       return Scaffold(
         backgroundColor: const Color(0xFF0F1A1C),
         appBar: AppBar(
-          title: const Text('Tour Quiz (ট্যুর কুইজ)'),
+          title: Text(context.l10n.translate('tq_title')),
           backgroundColor: const Color(0xFF142428),
           foregroundColor: Colors.white,
         ),
-        body: const Center(
+        body: Center(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Text(
-              'এই গন্তব্যের জন্য কুইজ এখনও তৈরি হয়নি।',
+              context.l10n.translate('tq_not_ready'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70),
+              style: const TextStyle(color: Colors.white70),
             ),
           ),
         ),
@@ -332,8 +340,8 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F1A1C),
       appBar: AppBar(
-        title: const Text('Tour Quiz (ট্যুর কুইজ ও কুইজ মাস্টার)',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(context.l10n.translate('tq_title_master'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         backgroundColor: const Color(0xFF142428),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -358,14 +366,15 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'প্রশ্ন নং ${_currentIndex + 1} / ${_quiz.length}',
+                context.l10n.translate('tq_progress',
+                    args: {'n': _currentIndex + 1, 'total': _quiz.length}),
                 style: const TextStyle(
                     color: Colors.tealAccent,
                     fontWeight: FontWeight.bold,
                     fontSize: 13),
               ),
               Text(
-                'স্কোর: $_score',
+                context.l10n.translate('tq_score', args: {'score': _score}),
                 style: const TextStyle(
                     color: Colors.amber,
                     fontWeight: FontWeight.bold,
@@ -433,12 +442,13 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.lightbulb, color: Colors.amber, size: 16),
-                      SizedBox(width: 6),
-                      Text('ব্যাখ্যা ও তথ্য',
-                          style: TextStyle(
+                      const Icon(Icons.lightbulb,
+                          color: Colors.amber, size: 16),
+                      const SizedBox(width: 6),
+                      Text(context.l10n.translate('tq_explanation_heading'),
+                          style: const TextStyle(
                               color: Colors.amber,
                               fontWeight: FontWeight.bold,
                               fontSize: 12)),
@@ -465,8 +475,8 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
               onPressed: _nextQuestion,
               child: Text(
                 _currentIndex + 1 < _quiz.length
-                    ? 'পরবর্তী প্রশ্ন'
-                    : 'ফলাফল দেখুন',
+                    ? context.l10n.translate('tq_next')
+                    : context.l10n.translate('tq_see_result'),
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
@@ -554,12 +564,13 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
 
   Widget _buildResultView() {
     final pct = (_score / _quiz.length) * 100;
-    final dest = _tourGroup?.destination ?? 'ট্যুর';
-    String badge = 'পর্যটক শিক্ষার্থী';
+    final dest =
+        _tourGroup?.destination ?? context.l10n.translate('tq_default_tour');
+    String badge = context.l10n.translate('tq_badge_learner');
     if (pct >= 85) {
-      badge = '👑 $dest এক্সপার্ট';
+      badge = context.l10n.translate('tq_badge_expert', args: {'dest': dest});
     } else if (pct >= 60) {
-      badge = '🌟 চৌকস ভ্রমণকারী';
+      badge = context.l10n.translate('tq_badge_skilled');
     }
 
     return Center(
@@ -587,14 +598,15 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'আপনি $_score / ${_quiz.length} প্রশ্নের সঠিক উত্তর দিয়েছেন!',
+              context.l10n.translate('tq_result_summary',
+                  args: {'score': _score, 'total': _quiz.length}),
               style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               icon: const Icon(Icons.replay),
-              label: const Text('আবার খেলুন',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              label: Text(context.l10n.translate('tq_play_again'),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.tealAccent.shade700,
                 foregroundColor: Colors.white,

@@ -11,7 +11,8 @@ mkdir -p "$BACKUP_DIR"
 # 1. Backup PostgreSQL Database
 PG_FILE="$BACKUP_DIR/postgres_bhromon_${TIMESTAMP}.sql"
 echo "Starting PostgreSQL backup..."
-PGPASSWORD='MSrana@100400' pg_dump -h localhost -U bhromon_user -d bhromon_db -F p -f "$PG_FILE"
+: "${BHROMON_DB_PASSWORD:?set BHROMON_DB_PASSWORD in the environment before running this script}"
+PGPASSWORD="$BHROMON_DB_PASSWORD" pg_dump -h localhost -U bhromon_user -d bhromon_db -F p -f "$PG_FILE"
 if [ -f "$PG_FILE" ]; then
     gzip -f "$PG_FILE"
     echo "PostgreSQL backup completed: ${PG_FILE}.gz"
@@ -22,7 +23,7 @@ fi
 # 2. Backup MySQL Database
 MY_FILE="$BACKUP_DIR/mysql_bhromon_${TIMESTAMP}.sql"
 echo "Starting MySQL backup..."
-mysqldump --no-tablespaces -h localhost -u bhromon_user -p'MSrana@100400' bhromon_db > "$MY_FILE"
+mysqldump --no-tablespaces -h localhost -u bhromon_user -p"$BHROMON_DB_PASSWORD" bhromon_db > "$MY_FILE"
 if [ -f "$MY_FILE" ]; then
     gzip -f "$MY_FILE"
     echo "MySQL backup completed: ${MY_FILE}.gz"

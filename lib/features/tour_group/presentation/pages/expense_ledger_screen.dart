@@ -16,6 +16,7 @@ import '../../domain/services/fund_analytics.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/fund/expense_editor.dart';
 import '../widgets/fund/fund_sheets.dart';
+import '../../../../core/localization/localized_date.dart';
 
 const _bg = Color(0xFF0F1A1C);
 const _card = Color(0xFF142428);
@@ -657,7 +658,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       Expanded(
                         child: Tooltip(
                           message:
-                              '${DateFormat('d MMM').format(d.day)}: ${_money(d.paisa)}',
+                              '${localizedDateFormat('d MMM').format(d.day)}: ${_money(d.paisa)}',
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -685,7 +686,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                                                 .inDays +
                                             1)
                                       })
-                                    : DateFormat('d/M').format(d.day),
+                                    : localizedDateFormat('d/M').format(d.day),
                                 style: const TextStyle(
                                     color: Colors.white54, fontSize: 9),
                               ),
@@ -819,7 +820,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             padding: const EdgeInsets.only(top: 6, bottom: 6),
             child: Row(children: [
               Expanded(
-                child: Text(DateFormat('EEE, d MMM').format(day.key),
+                child: Text(localizedDateFormat('EEE, d MMM').format(day.key),
                     style: const TextStyle(
                         color: AppColors.mintGreen,
                         fontWeight: FontWeight.bold)),
@@ -938,7 +939,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               const SizedBox(height: 4),
               Text(
                   '${_money(e.amountPaisa)} · ${fundCategoryLabel(l10n, e.category)} · '
-                  '${DateFormat('d MMM yyyy').format(e.date)}',
+                  '${localizedDateFormat('d MMM yyyy').format(e.date)}',
                   style: const TextStyle(color: Colors.white70)),
               if (e.isForeign)
                 Text(
@@ -1087,7 +1088,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 ),
                 subtitle: Text(
                   [
-                    DateFormat('d MMM, h:mm a').format(t.date),
+                    localizedDateFormat('d MMM, h:mm a').format(t.date),
                     if ((t.notes ?? '').isNotEmpty) t.notes!,
                   ].join(' · '),
                   style: const TextStyle(color: Colors.white54, fontSize: 11),
@@ -1301,7 +1302,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   style: const TextStyle(color: Colors.white)),
               subtitle: Text(
                 [
-                  DateFormat('d MMM yyyy').format(d.date),
+                  localizedDateFormat('d MMM yyyy').format(d.date),
                   if ((d.notes ?? '').isNotEmpty) d.notes!,
                 ].join(' · '),
                 style: const TextStyle(color: Colors.white54, fontSize: 11),

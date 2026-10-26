@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/colors.dart';
 import '../../../domain/models/tour_group.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// The media filters the feed offers, in display order. The ids are the values
 /// the feed filters on.
-const List<({String id, String label})> instafeedMediaFilters = [
-  (id: 'all', label: 'সবগুলো (All)'),
-  (id: 'photos', label: 'ছবি (Photos)'),
-  (id: 'reels', label: 'রিলস (Reels)'),
-  (id: 'saved', label: 'সেভ করা (Saved)'),
-  (id: 'archived', label: 'আর্কাইভ (Archive)'),
-];
+List<({String id, String label})> instafeedMediaFilters(BuildContext context) =>
+    [
+      (id: 'all', label: context.l10n.translate('ig_filter_all')),
+      (id: 'photos', label: context.l10n.translate('ig_filter_photos')),
+      (id: 'reels', label: context.l10n.translate('ig_filter_reels')),
+      (id: 'saved', label: context.l10n.translate('ig_filter_saved')),
+      (id: 'archived', label: context.l10n.translate('ig_filter_archived')),
+    ];
 
 /// One pill in the feed header that shows the active media and day filters.
 /// Tapping it opens [InstafeedFilterSheet].
@@ -35,7 +37,8 @@ class InstafeedFilterBar extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: Semantics(
           button: true,
-          label: 'ফিল্টার: $summary',
+          label: context.l10n
+              .translate('ig_filter_summary', args: {'summary': summary}),
           child: InkWell(
             borderRadius: BorderRadius.circular(24),
             onTap: onTap,
@@ -111,9 +114,9 @@ class InstafeedFilterSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'ফিল্টার',
-              style: TextStyle(
+            Text(
+              context.l10n.translate('ig_filter_title'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -124,7 +127,7 @@ class InstafeedFilterSheet extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final option in instafeedMediaFilters)
+                for (final option in instafeedMediaFilters(context))
                   _choice(
                     label: option.label,
                     selected: option.id == selectedMedia,
@@ -134,9 +137,9 @@ class InstafeedFilterSheet extends StatelessWidget {
             ),
             if (days.isNotEmpty) ...[
               const SizedBox(height: 18),
-              const Text(
-                'দিন',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
+              Text(
+                context.l10n.translate('ig_day'),
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -144,7 +147,7 @@ class InstafeedFilterSheet extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   _choice(
-                    label: 'সব দিন',
+                    label: context.l10n.translate('ig_all_days'),
                     selected: selectedDay == 'all',
                     onTap: () => onDaySelected('all'),
                   ),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import '../../../../../core/theme/colors.dart';
 import 'reel_thumbnail_preview.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// 3-column Explore / Gallery Grid view matching Instagram's Explore / Profile
 /// gallery with video reel badges and multi-photo indicators.
@@ -27,9 +28,9 @@ class InstafeedExploreGrid extends StatelessWidget {
             Icon(Icons.grid_on_outlined,
                 size: 54, color: Colors.white.withValues(alpha: 0.2)),
             const SizedBox(height: 12),
-            const Text(
-              'এখনও কোনো ছবি বা ভিডিও যোগ করা হয়নি।',
-              style: TextStyle(color: Colors.white54),
+            Text(
+              context.l10n.translate('ig_grid_empty'),
+              style: const TextStyle(color: Colors.white54),
             ),
           ],
         ),

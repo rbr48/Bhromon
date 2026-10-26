@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// 2-level nested threaded comments sheet with likes, pins, author badges,
 /// and quick emoji reactions.
@@ -90,7 +91,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
       setState(() => _isSubmitting = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('মন্তব্য পাঠানো যায়নি: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_comment_failed', args: {'error': e}))),
         );
       }
     }
@@ -129,7 +132,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('লাইক করা যায়নি: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_like_failed', args: {'error': e}))),
         );
       }
     }
@@ -148,7 +153,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('পিন পরিবর্তন করা যায়নি: $e')),
+          SnackBar(
+              content: Text(
+                  context.l10n.translate('ig_pin_failed', args: {'error': e}))),
         );
       }
     }
@@ -159,21 +166,21 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('মন্তব্য মুছবেন?',
-            style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'এই মন্তব্যটি চিরতরে মুছে ফেলা হবে।',
-          style: TextStyle(color: Colors.white70),
+        title: Text(context.l10n.translate('ig_delete_comment_q'),
+            style: const TextStyle(color: Colors.white)),
+        content: Text(
+          context.l10n.translate('ig_delete_comment_body'),
+          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('বাতিল'),
+            child: Text(context.l10n.translate('ig_cancel')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('মুছুন'),
+            child: Text(context.l10n.translate('ig_delete')),
           ),
         ],
       ),
@@ -190,7 +197,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('মুছে ফেলা যায়নি: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_delete_failed', args: {'error': e}))),
         );
       }
     }
@@ -232,9 +241,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  const Text(
-                    'মন্তব্যসমূহ',
-                    style: TextStyle(
+                  Text(
+                    context.l10n.translate('ig_comments_title'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -255,7 +264,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'ছবি ${_taggedSlideIndex! + 1}',
+                            context.l10n.translate('ig_photo_number',
+                                args: {'n': _taggedSlideIndex! + 1}),
                             style: const TextStyle(
                               color: AppColors.mintGreen,
                               fontSize: 11,
@@ -275,7 +285,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                   ],
                   const Spacer(),
                   IconButton(
-                    tooltip: 'বন্ধ করুন',
+                    tooltip: context.l10n.translate('ig_close'),
                     icon: const Icon(Icons.close, color: Colors.white70),
                     onPressed: () => Navigator.pop(context),
                   ),
@@ -293,7 +303,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                   if (snapshot.hasError) {
                     return Center(
                       child: Text(
-                        'লোড করা যায়নি: ${snapshot.error}',
+                        context.l10n.translate('ig_load_failed',
+                            args: {'error': '${snapshot.error}'}),
                         style: const TextStyle(color: Colors.white54),
                       ),
                     );
@@ -314,11 +325,11 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                               size: 48,
                               color: Colors.white.withValues(alpha: 0.2)),
                           const SizedBox(height: 12),
-                          const Text(
-                            'এখনও কোনো মন্তব্য নেই।\nপ্রথম মন্তব্যটি আপনিই করুন!',
+                          Text(
+                            context.l10n.translate('ig_no_comments'),
                             textAlign: TextAlign.center,
-                            style:
-                                TextStyle(color: Colors.white54, height: 1.4),
+                            style: const TextStyle(
+                                color: Colors.white54, height: 1.4),
                           ),
                         ],
                       ),
@@ -382,8 +393,13 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                                       ),
                                       Text(
                                         isExpanded
-                                            ? 'উত্তর লুকান'
-                                            : '${replies.length}টি উত্তর দেখুন',
+                                            ? context.l10n
+                                                .translate('ig_hide_replies')
+                                            : context.l10n.translate(
+                                                'ig_view_replies',
+                                                args: {
+                                                    'count': replies.length
+                                                  }),
                                         style: const TextStyle(
                                           color: Colors.white54,
                                           fontSize: 12,
@@ -430,13 +446,14 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         size: 16, color: AppColors.mintGreen),
                     const SizedBox(width: 8),
                     Text(
-                      'উত্তর দিচ্ছেন: ${_replyingTo!.authorName}',
+                      context.l10n.translate('ig_replying_to',
+                          args: {'name': _replyingTo!.authorName}),
                       style:
                           const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                     const Spacer(),
                     IconButton(
-                      tooltip: 'বন্ধ করুন',
+                      tooltip: context.l10n.translate('ig_close'),
                       icon: const Icon(Icons.close,
                           size: 18, color: Colors.white54),
                       onPressed: _cancelReply,
@@ -485,8 +502,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         onSubmitted: (_) => _submitComment(),
                         decoration: InputDecoration(
                           hintText: _replyingTo == null
-                              ? 'মন্তব্য লিখুন...'
-                              : '${_replyingTo!.authorName}-এর উত্তরে লিখুন...',
+                              ? context.l10n.translate('ig_write_comment')
+                              : context.l10n.translate('ig_write_reply',
+                                  args: {'name': _replyingTo!.authorName}),
                           hintStyle: const TextStyle(color: Colors.white54),
                           filled: true,
                           fillColor: const Color(0xFF2C2C2C),
@@ -501,7 +519,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                     ),
                     const SizedBox(width: 8),
                     IconButton(
-                      tooltip: 'মন্তব্য পাঠান',
+                      tooltip: context.l10n.translate('ig_send_comment'),
                       onPressed: _isSubmitting ? null : () => _submitComment(),
                       icon: _isSubmitting
                           ? const SizedBox(
@@ -582,9 +600,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                           color: AppColors.mintGreen.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text(
-                          'লেখক',
-                          style: TextStyle(
+                        child: Text(
+                          context.l10n.translate('ig_author_badge'),
+                          style: const TextStyle(
                             color: AppColors.mintGreen,
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
@@ -595,9 +613,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                     if (comment.isPinned) ...[
                       const SizedBox(width: 6),
                       const Icon(Icons.push_pin, size: 12, color: Colors.amber),
-                      const Text(
-                        ' পিন্ড',
-                        style: TextStyle(
+                      Text(
+                        context.l10n.translate('ig_pinned'),
+                        style: const TextStyle(
                           color: Colors.amber,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -628,9 +646,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                     children: [
                       GestureDetector(
                         onTap: () => _startReply(comment),
-                        child: const Text(
-                          'উত্তর দিন',
-                          style: TextStyle(
+                        child: Text(
+                          context.l10n.translate('ig_reply'),
+                          style: const TextStyle(
                             color: Colors.white54,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -639,14 +657,14 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                       ),
                       if (comment.isAuthorLiked) ...[
                         const SizedBox(width: 12),
-                        const Row(
+                        Row(
                           children: [
-                            Icon(Icons.favorite,
+                            const Icon(Icons.favorite,
                                 size: 12, color: Colors.redAccent),
-                            SizedBox(width: 3),
+                            const SizedBox(width: 3),
                             Text(
-                              'লেখকের পছন্দ',
-                              style: TextStyle(
+                              context.l10n.translate('ig_author_liked'),
+                              style: const TextStyle(
                                 color: Colors.white54,
                                 fontSize: 11,
                               ),
@@ -659,7 +677,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         GestureDetector(
                           onTap: () => _togglePin(comment),
                           child: Text(
-                            comment.isPinned ? 'আনপিন' : 'পিন করুন',
+                            comment.isPinned
+                                ? context.l10n.translate('ig_unpin')
+                                : context.l10n.translate('ig_pin'),
                             style: TextStyle(
                               color: comment.isPinned
                                   ? Colors.amber
@@ -674,9 +694,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                         const SizedBox(width: 12),
                         GestureDetector(
                           onTap: () => _deleteComment(comment),
-                          child: const Text(
-                            'মুছুন',
-                            style: TextStyle(
+                          child: Text(
+                            context.l10n.translate('ig_delete'),
+                            style: const TextStyle(
                               color: Colors.redAccent,
                               fontSize: 11,
                             ),
@@ -695,7 +715,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                tooltip: isLiked ? 'লাইক সরান' : 'লাইক করুন',
+                tooltip: isLiked
+                    ? context.l10n.translate('ig_unlike')
+                    : context.l10n.translate('ig_like'),
                 icon: Icon(
                   isLiked ? Icons.favorite : Icons.favorite_border,
                   size: 18,

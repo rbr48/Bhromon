@@ -6,6 +6,7 @@ import 'package:bhromon/features/tour_group/data/tour_channel_repository.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// In-app quick send bottom sheet allowing travelers to share a post directly
 /// into Tour Channels (#general, #food, #sightseeing, #emergency), reshare to
@@ -51,6 +52,16 @@ class InstafeedShareSheet extends StatelessWidget {
     },
   ];
 
+  /// The name a channel is shown with. The stored channel ids do not change.
+  static String _channelTitle(BuildContext context, String channelId) {
+    return switch (channelId) {
+      'general' => context.l10n.translate('ig_channel_general'),
+      'food' => context.l10n.translate('ig_channel_food'),
+      'sightseeing' => context.l10n.translate('ig_channel_sightseeing'),
+      _ => context.l10n.translate('ig_channel_emergency'),
+    };
+  }
+
   Future<void> _sendToChannel(
       BuildContext context, String channelId, String channelName) async {
     try {
@@ -68,7 +79,8 @@ class InstafeedShareSheet extends StatelessWidget {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$channelName চ্যানেলে শেয়ার করা হয়েছে'),
+            content: Text(context.l10n.translate('ig_shared_to_channel',
+                args: {'name': channelName})),
             backgroundColor: AppColors.mintGreen,
           ),
         );
@@ -76,7 +88,9 @@ class InstafeedShareSheet extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('শেয়ার করা যায়নি: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_share_failed', args: {'error': e}))),
         );
       }
     }
@@ -90,7 +104,8 @@ class InstafeedShareSheet extends StatelessWidget {
       await repository.addStory(
         tourId: tourId,
         mediaUrl: media,
-        caption: 'পুনঃশেয়ার: ${post.authorName}-এর পোস্ট',
+        caption: context.l10n
+            .translate('ig_reshare_label', args: {'name': post.authorName}),
         isVideo: post.isReel,
         videoUrl: post.videoUrl,
       );
@@ -99,8 +114,8 @@ class InstafeedShareSheet extends StatelessWidget {
         Navigator.pop(context);
         onResharedToStory?.call();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('পোস্টটি আপনার স্টোরিতে শেয়ার করা হয়েছে'),
+          SnackBar(
+            content: Text(context.l10n.translate('ig_shared_to_story')),
             backgroundColor: AppColors.mintGreen,
           ),
         );
@@ -108,7 +123,9 @@ class InstafeedShareSheet extends StatelessWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('স্টোরিতে শেয়ার ব্যর্থ: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_story_share_failed', args: {'error': e}))),
         );
       }
     }
@@ -119,7 +136,7 @@ class InstafeedShareSheet extends StatelessWidget {
     Clipboard.setData(ClipboardData(text: link));
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('পোস্টের লিঙ্ক কপি করা হয়েছে')),
+      SnackBar(content: Text(context.l10n.translate('ig_link_copied'))),
     );
   }
 
@@ -154,9 +171,9 @@ class InstafeedShareSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            const Text(
-              'পোস্টটি শেয়ার করুন',
-              style: TextStyle(
+            Text(
+              context.l10n.translate('ig_share_post_title'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -172,21 +189,21 @@ class InstafeedShareSheet extends StatelessWidget {
                 child: Icon(Icons.auto_stories,
                     color: AppColors.darkGreen, size: 20),
               ),
-              title: const Text('আপনার স্টোরিতে যোগ করুন',
-                  style: TextStyle(
+              title: Text(context.l10n.translate('ig_add_to_story'),
+                  style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold)),
-              subtitle: const Text('স্টোরি ট্রে-তে ২৪ ঘণ্টার জন্য থাকবে',
-                  style: TextStyle(color: Colors.white54, fontSize: 12)),
+              subtitle: Text(context.l10n.translate('ig_story_lasts'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
               onTap: () => _shareToStory(context),
             ),
             const Divider(color: Colors.white10),
 
             // Send to Tour Channels
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
               child: Text(
-                'ট্যুর গ্রুপ চ্যানেলে পাঠান',
-                style: TextStyle(
+                context.l10n.translate('ig_send_to_channel'),
+                style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 13,
                     fontWeight: FontWeight.w600),
@@ -203,12 +220,12 @@ class InstafeedShareSheet extends StatelessWidget {
                   child: Icon(ch['icon'] as IconData,
                       size: 16, color: ch['color'] as Color),
                 ),
-                title: Text(ch['name'] as String,
+                title: Text(_channelTitle(context, ch['id'] as String),
                     style: const TextStyle(color: Colors.white, fontSize: 14)),
                 trailing: const Icon(Icons.send_rounded,
                     size: 16, color: Colors.white54),
-                onTap: () => _sendToChannel(
-                    context, ch['id'] as String, ch['name'] as String),
+                onTap: () => _sendToChannel(context, ch['id'] as String,
+                    _channelTitle(context, ch['id'] as String)),
               );
             }),
 
@@ -220,12 +237,12 @@ class InstafeedShareSheet extends StatelessWidget {
               children: [
                 _buildActionButton(
                   icon: Icons.link,
-                  label: 'লিঙ্ক কপি',
+                  label: context.l10n.translate('ig_copy_link'),
                   onTap: () => _copyLink(context),
                 ),
                 _buildActionButton(
                   icon: Icons.share,
-                  label: 'অন্যান্য অ্যাপে',
+                  label: context.l10n.translate('ig_other_apps'),
                   onTap: () {
                     Navigator.pop(context);
                     _shareExternal();
