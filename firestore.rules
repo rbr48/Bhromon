@@ -355,25 +355,57 @@ service cloud.firestore {
         function validMessage() {
           let d = request.resource.data;
           return d.senderId == request.auth.uid
-              && d.type in ['text', 'image', 'video', 'audio']
-              && (d.type != 'text' || (d.text is string && d.text.size() <= 4096))
+              && d.type in ['text', 'image', 'video', 'audio', 'document', 'location', 'contact', 'deleted', 'call', 'expense']
+              && (!('text' in d) || d.text == null || (d.text is string && d.text.size() <= 4096))
               && ('timestamp' in d && d.timestamp == request.time);
         }
 
         allow read:   if isParticipant();
         allow create: if isParticipant() && validMessage();
-        // Only the recipient may flip `seen` to true; no other fields may change.
+        // Allow updates for delivery receipts, reactions, edits, Delete for Me, and Delete for Everyone
         allow update: if isParticipant()
-                      && request.resource.data.diff(resource.data)
-                         .affectedKeys().hasOnly(['seen', 'status', 'deliveredAt', 'readAt'])
-                      && request.auth.uid != resource.data.senderId;
+                      && (
+                        // Recipient marking seen or delivered
+                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seen', 'status', 'deliveredAt', 'readAt'])
+                         && request.auth.uid != resource.data.senderId)
+                        // Participant adding own UID to deletedFor array ("Delete for Me")
+                        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedFor'])
+                            && request.auth.uid in request.resource.data.deletedFor)
+                        // Participant adding or changing their own reaction
+                        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']))
+                        // Sender editing their own text message within 15 minutes
+                        || (request.auth.uid == resource.data.senderId
+                            && resource.data.type == 'text'
+                            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'isEdited', 'editedAt'])
+                            && request.resource.data.isEdited == true
+                            && request.time < resource.data.timestamp + duration.value(15, 'm'))
+                        // Sender tombstoning their own message ("Delete for Everyone") within 60 hours
+                        || (request.auth.uid == resource.data.senderId
+                            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['type', 'text', 'isDeleted', 'deletedAt'])
+                            && request.resource.data.type == 'deleted'
+                            && request.resource.data.isDeleted == true
+                            && request.time < resource.data.timestamp + duration.value(60, 'h'))
+                        // Star toggle for participant
+                        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isStarred', 'starredBy']))
+                        // View-once media opened mark
+                        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isOpened', 'openedAt']))
+                        // Travel expense split settlement
+                        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isSettled']))
+                      );
         allow delete: if false;
       }
     }
 
     // ── WebRTC Calling & Signaling ───────────────────────────────────────────
     match /calls/{callId} {
-      allow read, write: if isAuth();
+      function isCallParticipant() {
+        return isAuth() && (
+          (resource != null && (request.auth.uid == resource.data.callerId || request.auth.uid == resource.data.calleeId)) ||
+          (resource == null && (request.auth.uid == request.resource.data.callerId || request.auth.uid == request.resource.data.calleeId))
+        );
+      }
+
+      allow read, write: if isCallParticipant();
 
       match /offerCandidates/{candidateId} {
         allow read, write: if isAuth();

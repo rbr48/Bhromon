@@ -189,7 +189,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _endCall() {
-    _signaling.endCall();
+    _signaling.endCall(durationSeconds: _callDuration.inSeconds);
     _safeExit();
   }
 

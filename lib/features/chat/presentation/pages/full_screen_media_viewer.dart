@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../../core/utils/image_sizing.dart';
 
 /// Full-screen viewer for chat images and videos.
@@ -119,11 +120,19 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       const Spacer(),
-                      // Share placeholder
+                      // Share media link
                       IconButton(
                         icon: const Icon(Icons.share_outlined,
                             color: Colors.white),
-                        onPressed: () {},
+                        tooltip: 'Share',
+                        onPressed: () {
+                          SharePlus.instance.share(
+                            ShareParams(
+                              text: widget.mediaUrl,
+                              subject: 'Media from Bhromon Chat',
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
