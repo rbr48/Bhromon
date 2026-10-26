@@ -53,11 +53,14 @@ class _NotificationSettingsScreenState
           backgroundColor: Colors.transparent,
           elevation: 0,
         ),
-        body: Stack(
-          children: [
-            ListView(
-              padding: const EdgeInsets.all(24),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Stack(
               children: [
+                ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
                 const Text(
                   'Language / ভাষা',
                   style: TextStyle(
@@ -170,8 +173,10 @@ class _NotificationSettingsScreenState
           ],
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   /// Bengali or English for the whole app. The choice is saved on this device.
   Widget _buildLanguagePicker() {

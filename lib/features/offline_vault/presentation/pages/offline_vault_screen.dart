@@ -158,7 +158,10 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
           elevation: 0,
           centerTitle: true,
         ),
-        body: BlocConsumer<VaultCubit, VaultState>(
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 880),
+            child: BlocConsumer<VaultCubit, VaultState>(
           listener: (context, state) {
             if (state.errorMessage != null) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -462,8 +465,10 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
           },
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   List<String> _getDefaultDistricts() {
     return const [
