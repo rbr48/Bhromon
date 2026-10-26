@@ -572,9 +572,16 @@ class TourGroupRepository {
     final tourName = tourDoc.data()?['name'] as String? ?? 'Tour';
 
     final membershipRef = _memberships.doc(_membershipId(tourId, cleanEmail));
-    final existing = await membershipRef.get();
-    if (existing.exists && existing.data()?['status'] == 'active') {
-      throw StateError('$cleanEmail ইতিমধ্যে এই গ্রুপের সদস্য।');
+    try {
+      final existing = await membershipRef.get();
+      if (existing.exists && existing.data()?['status'] == 'active') {
+        throw StateError('$cleanEmail ইতিমধ্যে এই গ্রুপের সদস্য।');
+      }
+    } on StateError {
+      rethrow;
+    } on FirebaseException catch (e) {
+      // Row doesn't exist yet; proceed safely with creation.
+      debugPrint('[TourGroupRepository] Member row does not exist yet: ${e.code}');
     }
 
     final member = TourMember(

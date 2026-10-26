@@ -440,7 +440,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             children: [
               // 1. Active Tour Card
               _buildActiveTourBanner(context, current, groups),
-              const SizedBox(height: 24),
+              const SizedBox(height: 18),
 
               // 2. Feature Launchpad Grid
               Text(
@@ -448,14 +448,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 15,
                   letterSpacing: 0.5,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               _buildModulesGrid(context, current),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
 
               // 3. Tour Members List
               _buildMembersSection(current.id),
@@ -885,59 +885,67 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       itemCount: modules.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 1.15,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
+        childAspectRatio: 2.35,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
       ),
       itemBuilder: (context, index) {
         final m = modules[index];
-        return GestureDetector(
-          onTap: m.onTap,
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF14241B),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: m.color.withValues(alpha: 0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: m.color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: m.onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF14241B),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: m.color.withValues(alpha: 0.18)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: m.color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(m.icon, color: m.color, size: 20),
                   ),
-                  child: Icon(m.icon, color: m.color, size: 22),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      m.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          m.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          m.subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      m.subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         );
