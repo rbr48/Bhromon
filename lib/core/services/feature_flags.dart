@@ -36,12 +36,10 @@ class FeatureFlags {
 
   // ── Feature Getters ───────────────────────────────────────────────────────
 
-  bool get chatEnabled =>
-      kIsWeb ? true : _config.getBool('chat_enabled');
+  bool get chatEnabled => kIsWeb ? true : _config.getBool('chat_enabled');
   bool get premiumGuideEnabled =>
       kIsWeb ? true : _config.getBool('premium_guide_enabled');
-  bool get feedV2Enabled =>
-      kIsWeb ? false : _config.getBool('feed_v2_enabled');
+  bool get feedV2Enabled => kIsWeb ? false : _config.getBool('feed_v2_enabled');
   bool get mapClusteringEnabled =>
       kIsWeb ? true : _config.getBool('map_clustering_enabled');
   bool get offlineVaultEnabled =>
