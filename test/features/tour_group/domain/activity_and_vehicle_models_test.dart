@@ -98,7 +98,7 @@ void main() {
     });
 
     test('RouteCheckpoint round-trips correctly', () {
-      final cp = RouteCheckpoint(
+      const cp = RouteCheckpoint(
         id: 'cp1',
         name: 'Highway Rest Stop',
         highlight: 'Fresh tea',
