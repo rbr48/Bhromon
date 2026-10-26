@@ -7,6 +7,7 @@ This document serves as the persistent system memory, architectural guidelines, 
 ## 1. Project Overview & Architecture
 - **Repository**: [https://github.com/rbr48/Bhromon](https://github.com/rbr48/Bhromon)
 - **Primary Branch**: `main` (active and default).
+- **GitHub PR Workflow (MANDATORY)**: Never push directly to `main` on GitHub. Always create a feature/fix branch, commit changes, push the branch, and open a Pull Request via `gh pr create --base main`.
 - **Architecture**: Clean Architecture (Domain, Data, Presentation) with BLoC state management, injectable DI, Drift (SQLite) for offline relational storage, and Hive for encrypted local boxes.
 - **Backend**: Firebase Firestore (with offline persistence), Cloud Functions (TypeScript), Firebase Auth, Firebase Storage, and Firebase Hosting.
 - **Live Deployments**:
