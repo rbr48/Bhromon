@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'bus_seat_map_screen.dart';
 import 'hotel_room_map_screen.dart';
+import 'transport_screen.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 
@@ -48,8 +48,8 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
           unselectedLabelColor: Colors.white60,
           tabs: [
             Tab(
-                icon: const Icon(Icons.directions_bus_rounded),
-                text: context.l10n.translate('tour_tab_bus')),
+                icon: const Icon(Icons.commute_rounded),
+                text: context.l10n.translate('tour_tab_transport')),
             Tab(
                 icon: const Icon(Icons.hotel_rounded),
                 text: context.l10n.translate('tour_tab_hotel')),
@@ -59,7 +59,7 @@ class _TourLogisticsHubScreenState extends State<TourLogisticsHubScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          BusSeatMapScreen(tourId: widget.tourId, embedded: true),
+          TransportScreen(tourId: widget.tourId, embedded: true),
           HotelRoomMapScreen(tourId: widget.tourId, embedded: true),
         ],
       ),

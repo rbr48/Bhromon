@@ -713,6 +713,35 @@ service cloud.firestore {
         allow read, write: if isActiveMember(tourId);
       }
 
+      // Buses, trains, flights, launches and the like. Admins set them up.
+      match /vehicles/{vehicleId} {
+        allow read: if isActiveMember(tourId);
+        allow create, update: if isTourAdmin(tourId) &&
+                                 request.resource.data.id == vehicleId &&
+                                 request.resource.data.rows is int &&
+                                 request.resource.data.rows >= 1 &&
+                                 request.resource.data.rows <= 40;
+        allow delete: if isTourAdmin(tourId);
+      }
+
+      // One document per seat, named "<vehicleId>__<seatNumber>". Members
+      // change seats unless an admin has locked the vehicle.
+      match /vehicle_seats/{seatId} {
+        function vehicleLocked(vId) {
+          return get(/databases/$(database)/documents/tours/$(tourId)/vehicles/$(vId)).data.get('locked', false) == true;
+        }
+        allow read: if isActiveMember(tourId);
+        allow create, update: if isActiveMember(tourId) &&
+                                 seatId == request.resource.data.vehicleId + '__' + request.resource.data.seatNumber &&
+                                 exists(/databases/$(database)/documents/tours/$(tourId)/vehicles/$(request.resource.data.vehicleId)) &&
+                                 (isTourAdmin(tourId) || !vehicleLocked(request.resource.data.vehicleId)) &&
+                                 request.resource.data.keys().hasOnly([
+                                   'seatNumber', 'vehicleId', 'assignedMemberEmail',
+                                   'assignedMemberName', 'isWindow', 'familySlot']);
+        allow delete: if isActiveMember(tourId) &&
+                         (isTourAdmin(tourId) || !vehicleLocked(resource.data.vehicleId));
+      }
+
       // Rooms are created and removed by admins; members update guest lists.
       match /hotel_rooms/{roomId} {
         allow read: if isActiveMember(tourId);
