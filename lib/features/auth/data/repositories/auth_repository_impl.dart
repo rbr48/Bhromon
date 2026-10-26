@@ -143,8 +143,10 @@ class AuthRepositoryImpl implements IAuthRepository {
       UserCredential userCredential;
       if (kIsWeb) {
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-        await _auth.signInWithRedirect(googleProvider);
-        return const Left(AuthFailure('Redirecting to Google...'));
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+        googleProvider.setCustomParameters({'prompt': 'select_account'});
+        userCredential = await _auth.signInWithPopup(googleProvider);
       } else {
         final googleUser = await _googleSignIn.signIn();
         if (googleUser == null) {
@@ -157,8 +159,15 @@ class AuthRepositoryImpl implements IAuthRepository {
         );
         userCredential = await _auth.signInWithCredential(credential);
       }
-      return await _syncUserWithFirestore(userCredential.user!);
+      final user = userCredential.user;
+      if (user == null) {
+        return const Left(AuthFailure('Google Sign-In failed: No user returned'));
+      }
+      return await _syncUserWithFirestore(user);
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'popup-closed-by-user') {
+        return const Left(AuthFailure('Google Sign-In was cancelled.'));
+      }
       return Left(AuthFailure(e.message ?? 'Google Sign-In failed'));
     } catch (e) {
       return Left(AuthFailure(e.toString()));
