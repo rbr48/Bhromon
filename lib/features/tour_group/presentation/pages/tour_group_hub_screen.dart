@@ -372,93 +372,98 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           ),
         ],
       ),
-      body: StreamBuilder<List<TourGroup>>(
-        stream: _groupsStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.midGreen),
-            );
-          }
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 960),
+          child: StreamBuilder<List<TourGroup>>(
+            stream: _groupsStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  !snapshot.hasData) {
+                return const Center(
+                  child: CircularProgressIndicator(color: AppColors.midGreen),
+                );
+              }
 
-          if (snapshot.hasError &&
-              (snapshot.data == null || snapshot.data!.isEmpty)) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.cloud_off_rounded,
-                        color: Colors.redAccent, size: 54),
-                    const SizedBox(height: 16),
-                    Text(
-                      context.l10n.translate('hub_groups_load_failed'),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18),
+              if (snapshot.hasError &&
+                  (snapshot.data == null || snapshot.data!.isEmpty)) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.cloud_off_rounded,
+                            color: Colors.redAccent, size: 54),
+                        const SizedBox(height: 16),
+                        Text(
+                          context.l10n.translate('hub_groups_load_failed'),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${snapshot.error}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.midGreen),
+                          onPressed: () => setState(() {}),
+                          child: Text(context.l10n.translate('hub_try_again')),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${snapshot.error}',
-                      textAlign: TextAlign.center,
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                );
+              }
+
+              final groups = snapshot.data ?? [];
+              if (groups.isEmpty) {
+                return _buildEmptyState(context);
+              }
+
+              final current = _activeGroup != null &&
+                      groups.any((g) => g.id == _activeGroup!.id)
+                  ? groups.firstWhere((g) => g.id == _activeGroup!.id)
+                  : groups.first;
+
+              _displayedGroup = current;
+
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                children: [
+                  // 1. Active Tour Card
+                  _buildActiveTourBanner(context, current, groups),
+                  const SizedBox(height: 18),
+
+                  // 2. Feature Launchpad Grid
+                  Text(
+                    context.l10n.translate('hub_modules_heading'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      letterSpacing: 0.5,
                     ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.midGreen),
-                      onPressed: () => setState(() {}),
-                      child: Text(context.l10n.translate('hub_try_again')),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
+                  ),
+                  const SizedBox(height: 10),
+                  _buildModulesGrid(context, current),
 
-          final groups = snapshot.data ?? [];
-          if (groups.isEmpty) {
-            return _buildEmptyState(context);
-          }
+                  const SizedBox(height: 20),
 
-          final current = _activeGroup != null &&
-                  groups.any((g) => g.id == _activeGroup!.id)
-              ? groups.firstWhere((g) => g.id == _activeGroup!.id)
-              : groups.first;
-
-          _displayedGroup = current;
-
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            children: [
-              // 1. Active Tour Card
-              _buildActiveTourBanner(context, current, groups),
-              const SizedBox(height: 18),
-
-              // 2. Feature Launchpad Grid
-              Text(
-                context.l10n.translate('hub_modules_heading'),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 10),
-              _buildModulesGrid(context, current),
-
-              const SizedBox(height: 20),
-
-              // 3. Tour Members List
-              _buildMembersSection(current.id),
-            ],
-          );
-        },
+                  // 3. Tour Members List
+                  _buildMembersSection(current.id),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }

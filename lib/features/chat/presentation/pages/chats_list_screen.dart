@@ -188,237 +188,256 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             ),
           ],
         ),
-        body: _bottomNavIndex == 0
-            ? Column(
-                children: [
-                  // WhatsApp styled Search Bar
-                  Container(
-                    color: const Color(0xFF1F2C34),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2A3942),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: TextField(
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 13),
-                        decoration: InputDecoration(
-                          hintText: 'Search chats or messages...',
-                          hintStyle: const TextStyle(
-                              color: Colors.white54, fontSize: 13),
-                          prefixIcon: const Icon(Icons.search,
-                              color: Colors.white54, size: 18),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear,
-                                      color: Colors.white54, size: 16),
-                                  onPressed: () =>
-                                      setState(() => _searchQuery = ''),
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 10),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: _bottomNavIndex == 0
+                ? Column(
+                    children: [
+                      // WhatsApp styled Search Bar
+                      Container(
+                        color: const Color(0xFF1F2C34),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2A3942),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: TextField(
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText: 'Search chats or messages...',
+                              hintStyle: const TextStyle(
+                                  color: Colors.white54, fontSize: 13),
+                              prefixIcon: const Icon(Icons.search,
+                                  color: Colors.white54, size: 18),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear,
+                                          color: Colors.white54, size: 16),
+                                      onPressed: () =>
+                                          setState(() => _searchQuery = ''),
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            onChanged: (val) {
+                              setState(() {
+                                _searchQuery = val.trim().toLowerCase();
+                              });
+                            },
+                          ),
                         ),
-                        onChanged: (val) {
-                          setState(() {
-                            _searchQuery = val.trim().toLowerCase();
-                          });
-                        },
                       ),
-                    ),
-                  ),
 
-                  // WhatsApp tabs (All, Unread, Favourites, Groups)
-                  Container(
-                    color: const Color(0xFF0B141A),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildTabButton('All'),
-                          const SizedBox(width: 8),
-                          _buildTabButton('Unread'),
-                          const SizedBox(width: 8),
-                          _buildTabButton('Favourites'),
-                          const SizedBox(width: 8),
-                          _buildTabButton('Groups'),
-                        ],
+                      // WhatsApp tabs (All, Unread, Favourites, Groups)
+                      Container(
+                        color: const Color(0xFF0B141A),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildTabButton('All'),
+                              const SizedBox(width: 8),
+                              _buildTabButton('Unread'),
+                              const SizedBox(width: 8),
+                              _buildTabButton('Favourites'),
+                              const SizedBox(width: 8),
+                              _buildTabButton('Groups'),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
 
-                  // Conversations List
-                  Expanded(
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: _blockedStream,
-                      builder: (context, blockSnapshot) {
-                        final blockedUids = blockSnapshot.hasData
-                            ? blockSnapshot.data!.docs.map((d) => d.id).toSet()
-                            : <String>{};
+                      // Conversations List
+                      Expanded(
+                        child: StreamBuilder<QuerySnapshot>(
+                          stream: _blockedStream,
+                          builder: (context, blockSnapshot) {
+                            final blockedUids = blockSnapshot.hasData
+                                ? blockSnapshot.data!.docs
+                                    .map((d) => d.id)
+                                    .toSet()
+                                : <String>{};
 
-                        return StreamBuilder<QuerySnapshot>(
-                          stream: _chatsStream,
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              if (_offlineConversations.isNotEmpty) {
-                                return _buildOfflineConversationsList(
-                                    blockedUids, currentUid);
-                              }
-                              return const Center(
-                                  child: CircularProgressIndicator(
-                                      color: Color(0xFF00A884)));
-                            }
-                            if (snapshot.hasError) {
-                              return Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(24.0),
-                                  child: Text(
-                                    'Error loading chats: ${snapshot.error}',
-                                    style: const TextStyle(
-                                        color: Colors.redAccent, fontSize: 13),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            final allDocs = snapshot.data?.docs ?? [];
-                            for (final doc in allDocs) {
-                              final d = doc.data() as Map<String, dynamic>;
-                              ChatLocalCache().cacheConversation(
-                                  doc.id, {'id': doc.id, ...d});
-                            }
-
-                            final chatListItems = allDocs.where((doc) {
-                              final data = doc.data() as Map<String, dynamic>;
-                              final participants = List<String>.from(
-                                  data['participants'] as Iterable? ??
-                                      <dynamic>[]);
-                              final otherUser = participants.firstWhere(
-                                  (p) => p != currentUid,
-                                  orElse: () => '');
-
-                              if (blockedUids.contains(otherUser)) return false;
-                              if (_lockedChatIds.contains(doc.id)) return false;
-
-                              // Match Search Query against UID or last message text
-                              if (_searchQuery.isNotEmpty) {
-                                final lastMsg =
-                                    (data['lastMessage'] as String? ?? '')
-                                        .toLowerCase();
-                                final otherUserLower = otherUser.toLowerCase();
-                                if (!lastMsg.contains(_searchQuery) &&
-                                    !otherUserLower.contains(_searchQuery)) {
-                                  return false;
+                            return StreamBuilder<QuerySnapshot>(
+                              stream: _chatsStream,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  if (_offlineConversations.isNotEmpty) {
+                                    return _buildOfflineConversationsList(
+                                        blockedUids, currentUid);
+                                  }
+                                  return const Center(
+                                      child: CircularProgressIndicator(
+                                          color: Color(0xFF00A884)));
                                 }
-                              }
-
-                              return true;
-                            }).toList();
-
-                            if (chatListItems.isEmpty) {
-                              return Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.chat_bubble_outline,
-                                        size: 64,
-                                        color: Colors.white
-                                            .withValues(alpha: 0.08)),
-                                    const SizedBox(height: 16),
-                                    const Text(
-                                      'No conversations here yet.',
-                                      style: TextStyle(
-                                          color: Colors.white54, fontSize: 13),
+                                if (snapshot.hasError) {
+                                  return Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24.0),
+                                      child: Text(
+                                        'Error loading chats: ${snapshot.error}',
+                                        style: const TextStyle(
+                                            color: Colors.redAccent,
+                                            fontSize: 13),
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
-                                    const SizedBox(height: 8),
-                                    const Text(
-                                      'Tap the green button to start a chat!',
-                                      style: TextStyle(
-                                          color: Color(0xFF00A884),
-                                          fontSize: 11),
+                                  );
+                                }
+
+                                final allDocs = snapshot.data?.docs ?? [];
+                                for (final doc in allDocs) {
+                                  final d = doc.data() as Map<String, dynamic>;
+                                  ChatLocalCache().cacheConversation(
+                                      doc.id, {'id': doc.id, ...d});
+                                }
+
+                                final chatListItems = allDocs.where((doc) {
+                                  final data =
+                                      doc.data() as Map<String, dynamic>;
+                                  final participants = List<String>.from(
+                                      data['participants'] as Iterable? ??
+                                          <dynamic>[]);
+                                  final otherUser = participants.firstWhere(
+                                      (p) => p != currentUid,
+                                      orElse: () => '');
+
+                                  if (blockedUids.contains(otherUser)) {
+                                    return false;
+                                  }
+                                  if (_lockedChatIds.contains(doc.id)) {
+                                    return false;
+                                  }
+
+                                  // Match Search Query against UID or last message text
+                                  if (_searchQuery.isNotEmpty) {
+                                    final lastMsg =
+                                        (data['lastMessage'] as String? ?? '')
+                                            .toLowerCase();
+                                    final otherUserLower =
+                                        otherUser.toLowerCase();
+                                    if (!lastMsg.contains(_searchQuery) &&
+                                        !otherUserLower
+                                            .contains(_searchQuery)) {
+                                      return false;
+                                    }
+                                  }
+
+                                  return true;
+                                }).toList();
+
+                                if (chatListItems.isEmpty) {
+                                  return Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.chat_bubble_outline,
+                                            size: 64,
+                                            color: Colors.white
+                                                .withValues(alpha: 0.08)),
+                                        const SizedBox(height: 16),
+                                        const Text(
+                                          'No conversations here yet.',
+                                          style: TextStyle(
+                                              color: Colors.white54,
+                                              fontSize: 13),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'Tap the green button to start a chat!',
+                                          style: TextStyle(
+                                              color: Color(0xFF00A884),
+                                              fontSize: 11),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              );
-                            }
+                                  );
+                                }
 
-                            return ListView.separated(
-                              separatorBuilder: (context, index) =>
-                                  const Divider(
-                                color: Color(0xFF1F2C34),
-                                height: 1,
-                                indent: 72,
-                                endIndent: 16,
-                              ),
-                              padding: const EdgeInsets.fromLTRB(0, 8, 0, 80),
-                              itemCount: chatListItems.length,
-                              itemBuilder: (context, index) {
-                                final doc = chatListItems[index];
-                                final data = doc.data() as Map<String, dynamic>;
-                                final chatId = doc.id;
-                                final participants = List<String>.from(
-                                    data['participants'] as Iterable? ??
-                                        <dynamic>[]);
-                                final otherUserUid = participants.firstWhere(
-                                    (p) => p != currentUid,
-                                    orElse: () => 'Guest');
+                                return ListView.separated(
+                                  separatorBuilder: (context, index) =>
+                                      const Divider(
+                                    color: Color(0xFF1F2C34),
+                                    height: 1,
+                                    indent: 72,
+                                    endIndent: 16,
+                                  ),
+                                  padding:
+                                      const EdgeInsets.fromLTRB(0, 8, 0, 80),
+                                  itemCount: chatListItems.length,
+                                  itemBuilder: (context, index) {
+                                    final doc = chatListItems[index];
+                                    final data =
+                                        doc.data() as Map<String, dynamic>;
+                                    final chatId = doc.id;
+                                    final participants = List<String>.from(
+                                        data['participants'] as Iterable? ??
+                                            <dynamic>[]);
+                                    final otherUserUid = participants
+                                        .firstWhere((p) => p != currentUid,
+                                            orElse: () => 'Guest');
 
-                                final String lastMsgMeta =
-                                    (data['lastMessage'] as String?) ?? '';
-                                final String lastMsgType =
-                                    (data['lastMessageType'] as String?) ??
-                                        'text';
-                                final lastTimeMeta =
-                                    data['lastMessageTime'] as Timestamp?;
-                                final lastSenderId =
-                                    data['lastMessageSenderId'] as String?;
-                                final unreadCounts = data['unreadCounts']
-                                        as Map<String, dynamic>? ??
-                                    {};
-                                final unreadCount =
-                                    (unreadCounts[currentUid] as num?)
-                                            ?.toInt() ??
-                                        0;
-                                final participantProfiles =
-                                    data['participantProfiles']
-                                        as Map<String, dynamic>?;
-                                final cachedProfile =
-                                    participantProfiles?[otherUserUid]
-                                        as Map<String, dynamic>?;
+                                    final String lastMsgMeta =
+                                        (data['lastMessage'] as String?) ?? '';
+                                    final String lastMsgType =
+                                        (data['lastMessageType'] as String?) ??
+                                            'text';
+                                    final lastTimeMeta =
+                                        data['lastMessageTime'] as Timestamp?;
+                                    final lastSenderId =
+                                        data['lastMessageSenderId'] as String?;
+                                    final unreadCounts = data['unreadCounts']
+                                            as Map<String, dynamic>? ??
+                                        {};
+                                    final unreadCount =
+                                        (unreadCounts[currentUid] as num?)
+                                                ?.toInt() ??
+                                            0;
+                                    final participantProfiles =
+                                        data['participantProfiles']
+                                            as Map<String, dynamic>?;
+                                    final cachedProfile =
+                                        participantProfiles?[otherUserUid]
+                                            as Map<String, dynamic>?;
 
-                                return ChatTile(
-                                  chatId: chatId,
-                                  otherUserUid: otherUserUid,
-                                  currentUid: currentUid,
-                                  lastMessage: lastMsgMeta,
-                                  lastMessageType: lastMsgType,
-                                  lastTime: lastTimeMeta,
-                                  lastMessageSenderId: lastSenderId,
-                                  unreadCount: unreadCount,
-                                  cachedOtherProfile: cachedProfile,
-                                  activeTabFilter: _activeTab,
-                                  onTap: () => context.push('/chat/$chatId',
-                                      extra: {'otherUid': otherUserUid}),
-                                  onLongPress: () => _showChatTileOptions(
-                                      context, chatId, otherUserUid),
+                                    return ChatTile(
+                                      chatId: chatId,
+                                      otherUserUid: otherUserUid,
+                                      currentUid: currentUid,
+                                      lastMessage: lastMsgMeta,
+                                      lastMessageType: lastMsgType,
+                                      lastTime: lastTimeMeta,
+                                      lastMessageSenderId: lastSenderId,
+                                      unreadCount: unreadCount,
+                                      cachedOtherProfile: cachedProfile,
+                                      activeTabFilter: _activeTab,
+                                      onTap: () => context.push('/chat/$chatId',
+                                          extra: {'otherUid': otherUserUid}),
+                                      onLongPress: () => _showChatTileOptions(
+                                          context, chatId, otherUserUid),
+                                    );
+                                  },
                                 );
                               },
                             );
                           },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              )
-            : _buildCallsView(currentUid),
+                        ),
+                      ),
+                    ],
+                  )
+                : _buildCallsView(currentUid),
+          ),
+        ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _bottomNavIndex,
           onTap: (index) => setState(() => _bottomNavIndex = index),

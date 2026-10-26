@@ -7,6 +7,7 @@ This document serves as the persistent system memory, architectural guidelines, 
 ## 1. Project Overview & Architecture
 - **Repository**: [https://github.com/rbr48/Bhromon](https://github.com/rbr48/Bhromon)
 - **Primary Branch**: `main` (active and default).
+- **GitHub PR Workflow (MANDATORY)**: Never push directly to `main` on GitHub. Always create a feature/fix branch, commit changes, push the branch, and open a Pull Request via `gh pr create --base main`.
 - **Architecture**: Clean Architecture (Domain, Data, Presentation) with injectable DI, Drift (SQLite) for offline relational storage, and Hive for encrypted local boxes.
 - **State management**: by feature. `tour_group` screens use `StatefulWidget`s that call repositories directly and listen to their streams. BLoC and Cubit remain in the other features. New tour-group code follows the direct pattern; don't add BLoC there.
 - **Status**: free and open source, with no business model. No feature is sold, and no paywall or payments should be added. The Game Zone is a core feature and stays.

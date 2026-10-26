@@ -158,308 +158,329 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
           elevation: 0,
           centerTitle: true,
         ),
-        body: BlocConsumer<VaultCubit, VaultState>(
-          listener: (context, state) {
-            if (state.errorMessage != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.errorMessage!),
-                  backgroundColor: Colors.redAccent,
-                ),
-              );
-            }
-          },
-          builder: (context, state) {
-            // If still loading initial districts, show a spinner
-            if (state.status == VaultStatus.loading &&
-                state.districts.isEmpty) {
-              return const Center(
-                child: CircularProgressIndicator(color: AppColors.mintGreen),
-              );
-            }
-
-            final districts = state.districts.isNotEmpty
-                ? state.districts
-                : _getDefaultDistricts();
-            final downloaded = state.downloadedDistricts;
-            final progressMap = state.downloadProgress;
-
-            return RefreshIndicator(
-              onRefresh: () async {
-                context.read<VaultCubit>().refreshDistricts();
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 880),
+            child: BlocConsumer<VaultCubit, VaultState>(
+              listener: (context, state) {
+                if (state.errorMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.errorMessage!),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
               },
-              color: AppColors.mintGreen,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Outbox Sync Header Card
-                    Card(
-                      color: AppColors.cardDark,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          children: [
-                            Icon(
-                              state.isSyncing ? Icons.sync : Icons.cloud_done,
-                              color: state.isSyncing
-                                  ? AppColors.gold
-                                  : AppColors.mintGreen,
-                              size: 32,
+              builder: (context, state) {
+                // If still loading initial districts, show a spinner
+                if (state.status == VaultStatus.loading &&
+                    state.districts.isEmpty) {
+                  return const Center(
+                    child:
+                        CircularProgressIndicator(color: AppColors.mintGreen),
+                  );
+                }
+
+                final districts = state.districts.isNotEmpty
+                    ? state.districts
+                    : _getDefaultDistricts();
+                final downloaded = state.downloadedDistricts;
+                final progressMap = state.downloadProgress;
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    context.read<VaultCubit>().refreshDistricts();
+                  },
+                  color: AppColors.mintGreen,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Outbox Sync Header Card
+                        Card(
+                          color: AppColors.cardDark,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  state.isSyncing
+                                      ? Icons.sync
+                                      : Icons.cloud_done,
+                                  color: state.isSyncing
+                                      ? AppColors.gold
+                                      : AppColors.mintGreen,
+                                  size: 32,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        state.isSyncing
+                                            ? 'Syncing Outbox...'
+                                            : 'All changes synced',
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16),
+                                      ),
+                                      Text(
+                                        state.isSyncing
+                                            ? 'Pushing offline edits to server...'
+                                            : 'Local client is up to date',
+                                        style: const TextStyle(
+                                            color: Colors.white54,
+                                            fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (!state.isSyncing)
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.mintGreen,
+                                      foregroundColor: AppColors.darkGreen,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                    ),
+                                    onPressed: () => context
+                                        .read<VaultCubit>()
+                                        .syncPendingData(),
+                                    icon: const Icon(Icons.sync, size: 16),
+                                    label: const Text('Sync Now'),
+                                  ),
+                              ],
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
+                          ),
+                        ),
+                        if (state.conflicts.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Card(
+                            color: const Color(0xFF2C1E1A),
+                            shape: RoundedRectangleBorder(
+                              side: const BorderSide(
+                                  color: Colors.redAccent, width: 1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    state.isSyncing
-                                        ? 'Syncing Outbox...'
-                                        : 'All changes synced',
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16),
+                                  const Row(
+                                    children: [
+                                      Icon(Icons.warning_amber_rounded,
+                                          color: Colors.redAccent, size: 20),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'SYNC CONFLICTS DETECTED',
+                                        style: TextStyle(
+                                            color: Colors.redAccent,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            letterSpacing: 1),
+                                      ),
+                                    ],
                                   ),
-                                  Text(
-                                    state.isSyncing
-                                        ? 'Pushing offline edits to server...'
-                                        : 'Local client is up to date',
-                                    style: const TextStyle(
-                                        color: Colors.white54, fontSize: 12),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Some items could not be uploaded due to conflicting edits. Select a conflict below to resolve.',
+                                    style: TextStyle(
+                                        color: Colors.white70, fontSize: 12),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: state.conflicts.length,
+                                    itemBuilder: (context, idx) {
+                                      final entry = state.conflicts[idx];
+                                      return ListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        title: Text(
+                                          '${entry.operation.toUpperCase()}: ${entry.collectionPath}/${entry.documentId}',
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        subtitle: Text(
+                                          'Enqueued: ${DateTime.fromMillisecondsSinceEpoch(entry.enqueuedAt.millisecondsSinceEpoch).toLocal().toString().substring(0, 16)}',
+                                          style: const TextStyle(
+                                              color: Colors.white54,
+                                              fontSize: 11),
+                                        ),
+                                        trailing: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppColors.amber,
+                                            foregroundColor: Colors.black,
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 4),
+                                            minimumSize: Size.zero,
+                                            tapTargetSize: MaterialTapTargetSize
+                                                .shrinkWrap,
+                                          ),
+                                          onPressed: () =>
+                                              _showRealConflictDialog(
+                                                  context, entry),
+                                          child: const Text('Resolve',
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold)),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ],
                               ),
                             ),
-                            if (!state.isSyncing)
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.mintGreen,
-                                  foregroundColor: AppColors.darkGreen,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                ),
-                                onPressed: () => context
-                                    .read<VaultCubit>()
-                                    .syncPendingData(),
-                                icon: const Icon(Icons.sync, size: 16),
-                                label: const Text('Sync Now'),
-                              ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'OFFLINE DISTRICTS',
+                              style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1),
+                            ),
+                            TextButton.icon(
+                              onPressed: () {
+                                // Sync all districts – download each not yet downloaded
+                                for (final district in districts) {
+                                  if (!downloaded.containsKey(district) &&
+                                      !progressMap.containsKey(district)) {
+                                    context
+                                        .read<VaultCubit>()
+                                        .downloadDistrict(district);
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.sync,
+                                  size: 16, color: AppColors.mintGreen),
+                              label: const Text('Sync All',
+                                  style: TextStyle(
+                                      color: AppColors.mintGreen,
+                                      fontSize: 12)),
+                            ),
                           ],
                         ),
-                      ),
-                    ),
-                    if (state.conflicts.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Card(
-                        color: const Color(0xFF2C1E1A),
-                        shape: RoundedRectangleBorder(
-                          side: const BorderSide(
-                              color: Colors.redAccent, width: 1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Row(
-                                children: [
-                                  Icon(Icons.warning_amber_rounded,
-                                      color: Colors.redAccent, size: 20),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'SYNC CONFLICTS DETECTED',
-                                    style: TextStyle(
-                                        color: Colors.redAccent,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        letterSpacing: 1),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Some items could not be uploaded due to conflicting edits. Select a conflict below to resolve.',
-                                style: TextStyle(
-                                    color: Colors.white70, fontSize: 12),
-                              ),
-                              const SizedBox(height: 12),
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: state.conflicts.length,
-                                itemBuilder: (context, idx) {
-                                  final entry = state.conflicts[idx];
-                                  return ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    title: Text(
-                                      '${entry.operation.toUpperCase()}: ${entry.collectionPath}/${entry.documentId}',
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: districts.length,
+                            itemBuilder: (context, index) {
+                              final district = districts[index];
+                              final isDownloaded =
+                                  downloaded.containsKey(district);
+                              final isDownloading =
+                                  progressMap.containsKey(district);
+                              final progress = progressMap[district] ?? 0.0;
+
+                              return Card(
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                color: Colors.black26,
+                                child: ListTile(
+                                  title: Text(district,
                                       style: const TextStyle(
                                           color: Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    subtitle: Text(
-                                      'Enqueued: ${DateTime.fromMillisecondsSinceEpoch(entry.enqueuedAt.millisecondsSinceEpoch).toLocal().toString().substring(0, 16)}',
-                                      style: const TextStyle(
-                                          color: Colors.white54, fontSize: 11),
-                                    ),
-                                    trailing: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.amber,
-                                        foregroundColor: Colors.black,
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 4),
-                                        minimumSize: Size.zero,
-                                        tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                      onPressed: () => _showRealConflictDialog(
-                                          context, entry),
-                                      child: const Text('Resolve',
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold)),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
+                                          fontWeight: FontWeight.bold)),
+                                  subtitle: isDownloading
+                                      ? Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const SizedBox(height: 8),
+                                            LinearProgressIndicator(
+                                              value: progress,
+                                              backgroundColor: Colors.white10,
+                                              valueColor:
+                                                  const AlwaysStoppedAnimation<
+                                                          Color>(
+                                                      AppColors.mintGreen),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                                '${(progress * 100).toInt()}% downloaded',
+                                                style: const TextStyle(
+                                                    color: Colors.white54,
+                                                    fontSize: 11)),
+                                          ],
+                                        )
+                                      : Text(
+                                          isDownloaded
+                                              ? 'Downloaded (${downloaded[district]} MB) • OSM Zoom 10-16'
+                                              : 'Offline maps, pins, ProTips, and logs.',
+                                          style: const TextStyle(
+                                              color: Colors.white54,
+                                              fontSize: 12),
+                                        ),
+                                  trailing: isDownloading
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                      AppColors.mintGreen)),
+                                        )
+                                      : isDownloaded
+                                          ? IconButton(
+                                              icon: const Icon(
+                                                  Icons.delete_outline,
+                                                  color: Colors.redAccent),
+                                              onPressed: () {
+                                                context
+                                                    .read<VaultCubit>()
+                                                    .deleteDistrict(district);
+                                              },
+                                            )
+                                          : ElevatedButton.icon(
+                                              onPressed: () {
+                                                context
+                                                    .read<VaultCubit>()
+                                                    .downloadDistrict(district);
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    AppColors.midGreen,
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8)),
+                                              ),
+                                              icon: const Icon(
+                                                  Icons
+                                                      .download_for_offline_outlined,
+                                                  size: 16),
+                                              label: const Text('Get'),
+                                            ),
+                                ),
+                              );
+                            },
                           ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'OFFLINE DISTRICTS',
-                          style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1),
-                        ),
-                        TextButton.icon(
-                          onPressed: () {
-                            // Sync all districts – download each not yet downloaded
-                            for (final district in districts) {
-                              if (!downloaded.containsKey(district) &&
-                                  !progressMap.containsKey(district)) {
-                                context
-                                    .read<VaultCubit>()
-                                    .downloadDistrict(district);
-                              }
-                            }
-                          },
-                          icon: const Icon(Icons.sync,
-                              size: 16, color: AppColors.mintGreen),
-                          label: const Text('Sync All',
-                              style: TextStyle(
-                                  color: AppColors.mintGreen, fontSize: 12)),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        itemCount: districts.length,
-                        itemBuilder: (context, index) {
-                          final district = districts[index];
-                          final isDownloaded = downloaded.containsKey(district);
-                          final isDownloading =
-                              progressMap.containsKey(district);
-                          final progress = progressMap[district] ?? 0.0;
-
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            color: Colors.black26,
-                            child: ListTile(
-                              title: Text(district,
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold)),
-                              subtitle: isDownloading
-                                  ? Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const SizedBox(height: 8),
-                                        LinearProgressIndicator(
-                                          value: progress,
-                                          backgroundColor: Colors.white10,
-                                          valueColor:
-                                              const AlwaysStoppedAnimation<
-                                                  Color>(AppColors.mintGreen),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                            '${(progress * 100).toInt()}% downloaded',
-                                            style: const TextStyle(
-                                                color: Colors.white54,
-                                                fontSize: 11)),
-                                      ],
-                                    )
-                                  : Text(
-                                      isDownloaded
-                                          ? 'Downloaded (${downloaded[district]} MB) • OSM Zoom 10-16'
-                                          : 'Offline maps, pins, ProTips, and logs.',
-                                      style: const TextStyle(
-                                          color: Colors.white54, fontSize: 12),
-                                    ),
-                              trailing: isDownloading
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                  AppColors.mintGreen)),
-                                    )
-                                  : isDownloaded
-                                      ? IconButton(
-                                          icon: const Icon(Icons.delete_outline,
-                                              color: Colors.redAccent),
-                                          onPressed: () {
-                                            context
-                                                .read<VaultCubit>()
-                                                .deleteDistrict(district);
-                                          },
-                                        )
-                                      : ElevatedButton.icon(
-                                          onPressed: () {
-                                            context
-                                                .read<VaultCubit>()
-                                                .downloadDistrict(district);
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.midGreen,
-                                            foregroundColor: Colors.white,
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8)),
-                                          ),
-                                          icon: const Icon(
-                                              Icons
-                                                  .download_for_offline_outlined,
-                                              size: 16),
-                                          label: const Text('Get'),
-                                        ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+                  ),
+                );
+              },
+            ),
+          ),
         ),
       ),
     );

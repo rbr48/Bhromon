@@ -53,121 +53,127 @@ class _NotificationSettingsScreenState
           backgroundColor: Colors.transparent,
           elevation: 0,
         ),
-        body: Stack(
-          children: [
-            ListView(
-              padding: const EdgeInsets.all(24),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Stack(
               children: [
-                const Text(
-                  'Language / ভাষা',
-                  style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5),
-                ),
-                const SizedBox(height: 12),
-                _buildLanguagePicker(),
-                const SizedBox(height: 16),
-                const Divider(color: Colors.white10),
-                const SizedBox(height: 16),
-                const Text(
-                  'Push Notification Preferences',
-                  style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5),
-                ),
-                const SizedBox(height: 16),
-                _buildToggle(
-                  'Sync Conflicts',
-                  'Get notified immediately when offline outbox conflicts occur.',
-                  _syncAlerts,
-                  (v) => setState(() => _syncAlerts = v),
-                ),
-                _buildToggle(
-                  'Trust Upgrades',
-                  'Get notified when your score upgrades your explorer status tier.',
-                  _trustUpgrades,
-                  (v) => setState(() => _trustUpgrades = v),
-                ),
-                _buildToggle(
-                  'Moderation Alerts',
-                  'Get notified when user reviews require content updates.',
-                  _moderationAlerts,
-                  (v) => setState(() => _moderationAlerts = v),
-                ),
-                const SizedBox(height: 12),
-                const Divider(color: Colors.white10),
-                const SizedBox(height: 16),
-                const Text(
-                  'Account Security & Session',
-                  style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: context.surfacePanel,
-                    borderRadius: BorderRadius.circular(12),
-                    border:
-                        Border.all(color: Colors.white.withValues(alpha: 0.04)),
-                  ),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.lock_outline,
-                            color: AppColors.mintGreen),
-                        title: const Text('Change / Set Password',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold)),
-                        subtitle: const Text(
-                            'Add or update password for email sign-in backup',
-                            style:
-                                TextStyle(color: Colors.white54, fontSize: 11)),
-                        trailing: const Icon(Icons.chevron_right,
-                            color: Colors.white54),
-                        onTap: () => _showChangePasswordDialog(context),
+                ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    const Text(
+                      'Language / ভাষা',
+                      style: TextStyle(
+                          color: Colors.white60,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildLanguagePicker(),
+                    const SizedBox(height: 16),
+                    const Divider(color: Colors.white10),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Push Notification Preferences',
+                      style: TextStyle(
+                          color: Colors.white60,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildToggle(
+                      'Sync Conflicts',
+                      'Get notified immediately when offline outbox conflicts occur.',
+                      _syncAlerts,
+                      (v) => setState(() => _syncAlerts = v),
+                    ),
+                    _buildToggle(
+                      'Trust Upgrades',
+                      'Get notified when your score upgrades your explorer status tier.',
+                      _trustUpgrades,
+                      (v) => setState(() => _trustUpgrades = v),
+                    ),
+                    _buildToggle(
+                      'Moderation Alerts',
+                      'Get notified when user reviews require content updates.',
+                      _moderationAlerts,
+                      (v) => setState(() => _moderationAlerts = v),
+                    ),
+                    const SizedBox(height: 12),
+                    const Divider(color: Colors.white10),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Account Security & Session',
+                      style: TextStyle(
+                          color: Colors.white60,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: context.surfacePanel,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.04)),
                       ),
-                      const Divider(color: Colors.white10),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.delete_forever,
-                            color: Colors.redAccent),
-                        title: const Text('Delete Profile & Account',
-                            style: TextStyle(
-                                color: Colors.redAccent,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold)),
-                        subtitle: const Text(
-                            'Permanently delete your profile and travel logs',
-                            style:
-                                TextStyle(color: Colors.white54, fontSize: 11)),
-                        trailing: const Icon(Icons.chevron_right,
-                            color: Colors.redAccent),
-                        onTap: () => context.push('/delete-account'),
+                      child: Column(
+                        children: [
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.lock_outline,
+                                color: AppColors.mintGreen),
+                            title: const Text('Change / Set Password',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold)),
+                            subtitle: const Text(
+                                'Add or update password for email sign-in backup',
+                                style: TextStyle(
+                                    color: Colors.white54, fontSize: 11)),
+                            trailing: const Icon(Icons.chevron_right,
+                                color: Colors.white54),
+                            onTap: () => _showChangePasswordDialog(context),
+                          ),
+                          const Divider(color: Colors.white10),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.delete_forever,
+                                color: Colors.redAccent),
+                            title: const Text('Delete Profile & Account',
+                                style: TextStyle(
+                                    color: Colors.redAccent,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold)),
+                            subtitle: const Text(
+                                'Permanently delete your profile and travel logs',
+                                style: TextStyle(
+                                    color: Colors.white54, fontSize: 11)),
+                            trailing: const Icon(Icons.chevron_right,
+                                color: Colors.redAccent),
+                            onTap: () => context.push('/delete-account'),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+                if (_isLoading)
+                  Container(
+                    color: Colors.black54,
+                    child: const Center(
+                      child:
+                          CircularProgressIndicator(color: AppColors.mintGreen),
+                    ),
+                  ),
               ],
             ),
-            if (_isLoading)
-              Container(
-                color: Colors.black54,
-                child: const Center(
-                  child: CircularProgressIndicator(color: AppColors.mintGreen),
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     );

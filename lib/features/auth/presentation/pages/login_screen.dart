@@ -131,28 +131,33 @@ class _LoginScreenState extends State<LoginScreen>
                       horizontal: 24,
                       vertical: 24,
                     ),
-                    child: FadeTransition(
-                      opacity: _fade,
-                      child: SlideTransition(
-                        position: _slide,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const _BrandHeader(),
-                            const SizedBox(height: 36),
-                            _loginCard(ctx, state),
-                            const SizedBox(height: 20),
-                            Center(
-                              child: Text(
-                                'Powered by Bhromon $_appVersion',
-                                style: const TextStyle(
-                                  color: _kWhite30,
-                                  fontSize: 11,
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 440),
+                        child: FadeTransition(
+                          opacity: _fade,
+                          child: SlideTransition(
+                            position: _slide,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const _BrandHeader(),
+                                const SizedBox(height: 36),
+                                _loginCard(ctx, state),
+                                const SizedBox(height: 20),
+                                Center(
+                                  child: Text(
+                                    'Powered by Bhromon $_appVersion',
+                                    style: const TextStyle(
+                                      color: _kWhite30,
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
                     ),

@@ -1327,10 +1327,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     ),
                 ],
         ),
-        body: RefreshIndicator(
-          onRefresh: _loadProfile,
-          color: AppColors.mintGreen,
-          child: _buildBody(),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: RefreshIndicator(
+              onRefresh: _loadProfile,
+              color: AppColors.mintGreen,
+              child: _buildBody(),
+            ),
+          ),
         ),
       ),
     );
