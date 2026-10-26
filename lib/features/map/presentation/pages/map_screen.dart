@@ -641,7 +641,7 @@ class _MapScreenState extends State<MapScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        context.go('/feed');
+        context.go('/group-hub');
       },
       child: Scaffold(
         body: BlocListener<MapBloc, MapState>(

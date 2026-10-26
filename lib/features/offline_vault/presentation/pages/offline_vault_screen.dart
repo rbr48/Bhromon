@@ -75,7 +75,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
         canPop: false,
         onPopInvokedWithResult: (didPop, result) {
           if (didPop) return;
-          context.go('/feed');
+          context.go('/group-hub');
         },
         child: Scaffold(
           backgroundColor: AppColors.backgroundDark,
@@ -130,9 +130,9 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: () => context.go('/feed'),
+                    onPressed: () => context.go('/group-hub'),
                     child: const Text(
-                      'Back to Feed',
+                      'Back to Tours',
                       style: TextStyle(color: Colors.white54, fontSize: 14),
                     ),
                   ),
@@ -148,7 +148,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        context.go('/feed');
+        context.go('/group-hub');
       },
       child: Scaffold(
         backgroundColor: AppColors.backgroundDark,

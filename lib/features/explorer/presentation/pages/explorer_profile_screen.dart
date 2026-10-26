@@ -1263,7 +1263,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        context.go('/feed');
+        context.go('/group-hub');
       },
       child: Scaffold(
         backgroundColor: Colors.black,

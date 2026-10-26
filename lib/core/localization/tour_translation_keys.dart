@@ -294,6 +294,13 @@ class TourTranslationKeys {
       'shell_plan': 'Plan',
       'shell_money': 'Money',
       'shell_safety': 'Safety',
+      'hub_open_tour': 'Open Tour Experience',
+      'hub_nav_tours': 'Tours',
+      'hub_nav_moments': 'Moments',
+      'hub_nav_channels': 'Channels',
+      'hub_nav_games': 'Game Zone',
+      'hub_nav_vault': 'Vault',
+      'hub_no_active_tour_hint': 'Please create or join a tour group first.',
 
       // ── Packing checklist ──────────────────────────────────────────────────
       'check_title': 'Packing checklist',
@@ -1734,6 +1741,13 @@ class TourTranslationKeys {
       'shell_plan': 'পরিকল্পনা',
       'shell_money': 'খরচ',
       'shell_safety': 'নিরাপত্তা',
+      'hub_open_tour': 'ট্যুর ওপেন করুন',
+      'hub_nav_tours': 'ট্যুরস',
+      'hub_nav_moments': 'মোমেন্টস',
+      'hub_nav_channels': 'চ্যানেলস',
+      'hub_nav_games': 'গেম জোন',
+      'hub_nav_vault': 'ভল্ট',
+      'hub_no_active_tour_hint': 'প্রথমে একটি ট্যুর গ্রুপ তৈরি করুন বা যোগ দিন।',
 
       // ── Packing checklist ──────────────────────────────────────────────────
       'check_title': 'ট্যুর চেকলিস্ট',
