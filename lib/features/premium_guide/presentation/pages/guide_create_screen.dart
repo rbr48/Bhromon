@@ -105,7 +105,7 @@ class GuideCreateScreen extends StatelessWidget {
             labelText: 'Guide Title',
             labelStyle: TextStyle(color: Colors.white70),
             enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white24)),
+                borderSide: BorderSide(color: Colors.white54)),
             focusedBorder: OutlineInputBorder(
                 borderSide: BorderSide(color: AppColors.mintGreen)),
           ),
@@ -119,7 +119,7 @@ class GuideCreateScreen extends StatelessWidget {
             labelText: 'Description (optional)',
             labelStyle: TextStyle(color: Colors.white70),
             enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white24)),
+                borderSide: BorderSide(color: Colors.white54)),
             focusedBorder: OutlineInputBorder(
                 borderSide: BorderSide(color: AppColors.mintGreen)),
           ),

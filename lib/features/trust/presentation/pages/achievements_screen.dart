@@ -184,7 +184,7 @@ class AchievementsScreen extends StatelessWidget {
                               const Text(
                                 'XP',
                                 style: TextStyle(
-                                    color: Colors.white38,
+                                    color: Colors.white54,
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold),
                               ),
@@ -381,7 +381,7 @@ class AchievementsScreen extends StatelessWidget {
                 ),
                 Text(
                   tier,
-                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  style: const TextStyle(color: Colors.white54, fontSize: 10),
                 ),
               ],
             ),

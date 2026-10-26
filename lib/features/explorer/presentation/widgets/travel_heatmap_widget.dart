@@ -107,7 +107,7 @@ class TravelHeatmapWidget extends StatelessWidget {
               ),
               Text(
                 '$totalLogs logs · $activeDays active days',
-                style: const TextStyle(color: Colors.white30, fontSize: 10),
+                style: const TextStyle(color: Colors.white54, fontSize: 10),
               ),
             ],
           ),
@@ -129,7 +129,7 @@ class TravelHeatmapWidget extends StatelessWidget {
                             ? Text(
                                 months[idx],
                                 style: const TextStyle(
-                                  color: Colors.white38,
+                                  color: Colors.white54,
                                   fontSize: 7,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -193,7 +193,7 @@ class TravelHeatmapWidget extends StatelessWidget {
             children: [
               const Text(
                 'Less',
-                style: TextStyle(color: Colors.white24, fontSize: 9),
+                style: TextStyle(color: Colors.white54, fontSize: 9),
               ),
               const SizedBox(width: 4),
               ...List.generate(5, (i) {
@@ -212,7 +212,7 @@ class TravelHeatmapWidget extends StatelessWidget {
               const SizedBox(width: 4),
               const Text(
                 'More',
-                style: TextStyle(color: Colors.white24, fontSize: 9),
+                style: TextStyle(color: Colors.white54, fontSize: 9),
               ),
             ],
           ),

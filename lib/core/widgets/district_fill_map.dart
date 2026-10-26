@@ -199,7 +199,7 @@ class DistrictFillMapWidget extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   e.key,
-                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  style: const TextStyle(color: Colors.white54, fontSize: 10),
                 ),
               ],
             );

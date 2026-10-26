@@ -255,7 +255,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Text(
                         'এখনও কোনো ফোল্ডার তৈরি করা হয়নি। নিচে নতুন ফোল্ডার তৈরি করুন।',
-                        style: TextStyle(color: Colors.white38, fontSize: 13),
+                        style: TextStyle(color: Colors.white54, fontSize: 13),
                       ),
                     )
                   else
@@ -274,9 +274,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                 style: const TextStyle(color: Colors.white)),
                             subtitle: Text('${list.length}টি পোস্ট সংরক্ষিত',
                                 style: const TextStyle(
-                                    color: Colors.white38, fontSize: 11)),
+                                    color: Colors.white54, fontSize: 11)),
                             value: isIncluded,
-                            activeColor: const Color(0xFF00C853),
+                            activeColor: AppColors.mintGreen,
                             onChanged: (bool? val) {
                               setSheetState(() {
                                 if (val == true) {
@@ -307,7 +307,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           decoration: InputDecoration(
                             hintText: 'নতুন ফোল্ডারের নাম (যেমন: খাবার, হোটেল)',
                             hintStyle: const TextStyle(
-                                color: Colors.white38, fontSize: 13),
+                                color: Colors.white54, fontSize: 13),
                             filled: true,
                             fillColor: const Color(0xFF2C2C2C),
                             contentPadding: const EdgeInsets.symmetric(
@@ -322,7 +322,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       const SizedBox(width: 8),
                       FilledButton(
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF00C853),
+                          backgroundColor: AppColors.mintGreen,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 12),
                         ),
@@ -396,7 +396,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               child: Row(
                 children: [
                   const Icon(Icons.explore_rounded,
-                      color: Color(0xFF00C853), size: 24),
+                      color: AppColors.mintGreen, size: 24),
                   const SizedBox(width: 8),
                   const Text(
                     'ল্যান্ডমার্ক ও স্পট ম্যাপ (Tour Landmarks)',
@@ -437,15 +437,14 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
                   return Card(
                     color: isSelected
-                        ? const Color(0xFF00C853).withValues(alpha: 0.15)
+                        ? AppColors.mintGreen.withValues(alpha: 0.15)
                         : const Color(0xFF1E1E1E),
                     margin: const EdgeInsets.only(bottom: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                       side: BorderSide(
-                        color: isSelected
-                            ? const Color(0xFF00C853)
-                            : Colors.white10,
+                        color:
+                            isSelected ? AppColors.mintGreen : Colors.white10,
                       ),
                     ),
                     child: ListTile(
@@ -464,11 +463,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                       Container(color: Colors.grey.shade900),
                                   errorWidget: (_, __, ___) => const Icon(
                                       Icons.location_on,
-                                      color: Color(0xFF00C853)),
+                                      color: AppColors.mintGreen),
                                 )
                               : const Center(
                                   child: Icon(Icons.location_on,
-                                      color: Color(0xFF00C853))),
+                                      color: AppColors.mintGreen)),
                         ),
                       ),
                       title: Text(
@@ -486,9 +485,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       ),
                       trailing: FilledButton.tonal(
                         style: FilledButton.styleFrom(
-                          backgroundColor: isSelected
-                              ? const Color(0xFF00C853)
-                              : Colors.white12,
+                          backgroundColor:
+                              isSelected ? AppColors.mintGreen : Colors.white12,
                         ),
                         onPressed: () {
                           setState(() {
@@ -734,7 +732,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         backgroundColor: const Color(0xFF1E1E1E),
         title: const Row(
           children: [
-            Icon(Icons.receipt_long, color: Color(0xFF00C853)),
+            Icon(Icons.receipt_long, color: AppColors.mintGreen),
             SizedBox(width: 8),
             Text('ট্রিপ লেজারে যোগ করুন',
                 style: TextStyle(color: Colors.white)),
@@ -761,7 +759,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 labelText: 'টাকার পরিমাণ (BDT)',
                 labelStyle: TextStyle(color: Colors.white70),
                 prefixText: '৳ ',
-                prefixStyle: TextStyle(color: Color(0xFF00C853)),
+                prefixStyle: TextStyle(color: AppColors.mintGreen),
               ),
             ),
             const SizedBox(height: 12),
@@ -795,8 +793,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             child: const Text('বাতিল'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF00C853)),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('যোগ করুন'),
           ),
@@ -830,7 +827,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('খরচটি সফলভাবে ট্রিপ লেজারে যুক্ত হয়েছে!'),
-              backgroundColor: Color(0xFF00C853),
+              backgroundColor: AppColors.mintGreen,
             ),
           );
         }
@@ -902,7 +899,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             icon: Icon(
               Icons.explore_outlined,
               color: _selectedLandmarkFilter != null
-                  ? const Color(0xFF00C853)
+                  ? AppColors.mintGreen
                   : Colors.white70,
             ),
             tooltip: 'স্পট ও ল্যান্ডমার্ক ম্যাপ',
@@ -913,7 +910,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           IconButton(
             icon: Icon(
               _sortByPopular ? Icons.trending_up : Icons.access_time_rounded,
-              color: _sortByPopular ? const Color(0xFF00C853) : Colors.white70,
+              color: _sortByPopular ? AppColors.mintGreen : Colors.white70,
             ),
             tooltip: _sortByPopular ? 'জনপ্রিয় পোস্ট' : 'সাম্প্রতিক পোস্ট',
             onPressed: () => setState(() => _sortByPopular = !_sortByPopular),
@@ -1086,14 +1083,15 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                   child: Row(
                                     children: [
                                       Chip(
-                                        backgroundColor: const Color(0xFF00C853)
+                                        backgroundColor: AppColors.mintGreen
                                             .withValues(alpha: 0.2),
                                         avatar: const Icon(Icons.tag,
-                                            size: 16, color: Color(0xFF00C853)),
+                                            size: 16,
+                                            color: AppColors.mintGreen),
                                         label: Text(
                                           _activeHashtagFilter!,
                                           style: const TextStyle(
-                                              color: Color(0xFF00C853),
+                                              color: AppColors.mintGreen,
                                               fontWeight: FontWeight.bold),
                                         ),
                                         deleteIcon: const Icon(Icons.close,
@@ -1115,14 +1113,15 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                   child: Row(
                                     children: [
                                       Chip(
-                                        backgroundColor: const Color(0xFF00C853)
+                                        backgroundColor: AppColors.mintGreen
                                             .withValues(alpha: 0.2),
                                         avatar: const Icon(Icons.location_on,
-                                            size: 16, color: Color(0xFF00C853)),
+                                            size: 16,
+                                            color: AppColors.mintGreen),
                                         label: Text(
                                           _selectedLandmarkFilter!,
                                           style: const TextStyle(
-                                              color: Color(0xFF00C853),
+                                              color: AppColors.mintGreen,
                                               fontWeight: FontWeight.bold),
                                         ),
                                         deleteIcon: const Icon(Icons.close,
@@ -1405,7 +1404,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(2),
                             decoration: const BoxDecoration(
-                              color: Color(0xFF00C853),
+                              color: AppColors.mintGreen,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.add,
@@ -1559,7 +1558,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             child: ChoiceChip(
               label: Text(f['label']!),
               selected: isSelected,
-              selectedColor: const Color(0xFF00C853),
+              selectedColor: AppColors.mintGreen,
               backgroundColor: const Color(0xFF1E1E1E),
               labelStyle: TextStyle(
                 color: isSelected ? Colors.black : Colors.white70,
@@ -1605,7 +1604,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 selectedColor: Colors.white24,
                 backgroundColor: Colors.transparent,
                 labelStyle: TextStyle(
-                  color: isSelected ? const Color(0xFF00C853) : Colors.white70,
+                  color: isSelected ? AppColors.mintGreen : Colors.white70,
                   fontSize: 11,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
@@ -1626,7 +1625,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.cloud_off_rounded,
-                size: 48, color: Colors.white38),
+                size: 48, color: Colors.white54),
             const SizedBox(height: 12),
             const Text(
               'পোস্টগুলো লোড করা যায়নি',
@@ -1663,7 +1662,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.filter_alt_off_outlined,
-                      size: 54, color: Colors.white24),
+                      size: 54, color: Colors.white54),
                   const SizedBox(height: 16),
                   const Text(
                     'এই ফিল্টারে কোনো পোস্ট নেই',
@@ -1694,7 +1693,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.photo_library_outlined,
-                size: 54, color: Colors.white24),
+                size: 54, color: Colors.white54),
             const SizedBox(height: 16),
             const Text(
               'এখনও কোনো পোস্ট নেই',
@@ -1711,8 +1710,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
-              style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF00C853)),
+              style:
+                  FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
               icon: const Icon(Icons.add_a_photo, color: Colors.black),
               label: const Text('পোস্ট তৈরি করুন',
                   style: TextStyle(

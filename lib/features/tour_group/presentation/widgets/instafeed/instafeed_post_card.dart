@@ -10,6 +10,7 @@ import 'instafeed_carousel.dart';
 import 'instafeed_image_viewer_modal.dart';
 import 'instafeed_travel_banners.dart';
 import 'instafeed_zoomable_media.dart';
+import '../../../../../core/theme/colors.dart';
 
 /// Full-featured Post Card with pinch-to-zoom, dynamic aspect ratio, tagged
 /// members, clickable hashtags, pinned post badge, audio pill, travel logistics
@@ -306,7 +307,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'ক্যাপশন লিখুন...',
-                    hintStyle: const TextStyle(color: Colors.white38),
+                    hintStyle: const TextStyle(color: Colors.white54),
                     filled: true,
                     fillColor: const Color(0xFF2A2A2A),
                     border: OutlineInputBorder(
@@ -323,9 +324,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.location_on,
-                        color: Color(0xFF00C853), size: 18),
+                        color: AppColors.mintGreen, size: 18),
                     hintText: 'যেমন: ইনানী বিচ, লালবাগ কেল্লা...',
-                    hintStyle: const TextStyle(color: Colors.white38),
+                    hintStyle: const TextStyle(color: Colors.white54),
                     filled: true,
                     fillColor: const Color(0xFF2A2A2A),
                     border: OutlineInputBorder(
@@ -374,8 +375,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   const Text('বাতিল', style: TextStyle(color: Colors.white60)),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF00C853)),
+              style:
+                  FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('সংরক্ষণ করুন',
                   style: TextStyle(
@@ -546,7 +547,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               ],
               ListTile(
                 leading:
-                    const Icon(Icons.receipt_long, color: Color(0xFF00C853)),
+                    const Icon(Icons.receipt_long, color: AppColors.mintGreen),
                 title: const Text('ট্রিপ লেজারে খরচ হিসেবে যোগ করুন',
                     style: TextStyle(color: Colors.white)),
                 onTap: () {
@@ -617,7 +618,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
           TextSpan(
             text: '$word ',
             style: const TextStyle(
-              color: Color(0xFF00C853),
+              color: AppColors.mintGreen,
               fontWeight: FontWeight.bold,
             ),
             recognizer: TapGestureRecognizer()
@@ -656,7 +657,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 color: const Color(0xFF1B1B1B),
                 child: const Center(
                   child: Icon(Icons.slow_motion_video,
-                      size: 40, color: Colors.white24),
+                      size: 40, color: Colors.white54),
                 ),
               ),
             )
@@ -671,7 +672,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               ),
               child: const Center(
                 child: Icon(Icons.slow_motion_video,
-                    size: 40, color: Colors.white24),
+                    size: 40, color: Colors.white54),
               ),
             ),
 
@@ -909,7 +910,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   onTap: _showAuthorLogistics,
                   child: CircleAvatar(
                     radius: 18,
-                    backgroundColor: const Color(0xFF00C853),
+                    backgroundColor: AppColors.mintGreen,
                     backgroundImage: widget.post.authorPhoto != null
                         ? NetworkImage(widget.post.authorPhoto!)
                         : null,
@@ -960,7 +961,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                               child: Text(
                                 widget.seatNumber!,
                                 style: const TextStyle(
-                                  color: Color(0xFF00C853),
+                                  color: AppColors.mintGreen,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -993,7 +994,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       margin: const EdgeInsets.only(right: 6),
                       decoration: BoxDecoration(
                         color: _isPlayingAudio
-                            ? const Color(0xFF00C853).withValues(alpha: 0.2)
+                            ? AppColors.mintGreen.withValues(alpha: 0.2)
                             : Colors.white10,
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -1005,7 +1006,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                                 : Icons.play_circle_fill,
                             size: 14,
                             color: _isPlayingAudio
-                                ? const Color(0xFF00C853)
+                                ? AppColors.mintGreen
                                 : Colors.white70,
                           ),
                           const SizedBox(width: 4),
@@ -1013,7 +1014,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                             widget.post.audioTitle!,
                             style: TextStyle(
                               color: _isPlayingAudio
-                                  ? const Color(0xFF00C853)
+                                  ? AppColors.mintGreen
                                   : Colors.white70,
                               fontSize: 11,
                             ),
@@ -1154,7 +1155,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 // Add to Trip Ledger 1-tap button
                 IconButton(
                   icon: const Icon(Icons.receipt_long_rounded,
-                      color: Color(0xFF00C853), size: 24),
+                      color: AppColors.mintGreen, size: 24),
                   tooltip: 'ট্রিপ লেজারে যোগ করুন',
                   onPressed: () => widget.onAddToLedger?.call(widget.post),
                 ),
@@ -1172,7 +1173,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                           ? Icons.bookmark
                           : Icons.bookmark_border,
                       color: widget.isBookmarked
-                          ? const Color(0xFF00C853)
+                          ? AppColors.mintGreen
                           : Colors.white,
                       size: 24,
                     ),
@@ -1235,14 +1236,14 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               children: [
                 Text(
                   timeStr,
-                  style: const TextStyle(color: Colors.white30, fontSize: 11),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
                 if (widget.post.isEdited) ...[
                   const SizedBox(width: 6),
                   const Text(
                     '• (সম্পাদিত)',
                     style: TextStyle(
-                        color: Colors.white38,
+                        color: Colors.white54,
                         fontSize: 11,
                         fontStyle: FontStyle.italic),
                   ),

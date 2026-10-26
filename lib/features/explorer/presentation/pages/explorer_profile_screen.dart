@@ -867,7 +867,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               // Display Name
                               const Text('DISPLAY NAME',
                                   style: TextStyle(
-                                      color: Colors.white30,
+                                      color: Colors.white54,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 1.0)),
@@ -882,7 +882,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   filled: true,
                                   hintText: 'Enter your name',
                                   hintStyle:
-                                      const TextStyle(color: Colors.white30),
+                                      const TextStyle(color: Colors.white54),
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 14),
                                   enabledBorder: OutlineInputBorder(
@@ -901,7 +901,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               // Bio English
                               const Text('BIO (ENGLISH)',
                                   style: TextStyle(
-                                      color: Colors.white30,
+                                      color: Colors.white54,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 1.0)),
@@ -917,7 +917,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   filled: true,
                                   hintText: 'Describe your journeys...',
                                   hintStyle:
-                                      const TextStyle(color: Colors.white30),
+                                      const TextStyle(color: Colors.white54),
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 14),
                                   enabledBorder: OutlineInputBorder(
@@ -936,7 +936,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               // Bio Bangla
                               const Text('BIO (BANGLA / বাংলা)',
                                   style: TextStyle(
-                                      color: Colors.white30,
+                                      color: Colors.white54,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 1.0)),
@@ -952,7 +952,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   filled: true,
                                   hintText: 'আপনার ভ্রমণ নিয়ে কিছু বলুন...',
                                   hintStyle:
-                                      const TextStyle(color: Colors.white30),
+                                      const TextStyle(color: Colors.white54),
                                   contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 14),
                                   enabledBorder: OutlineInputBorder(
@@ -971,7 +971,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               // Division
                               const Text('DIVISION',
                                   style: TextStyle(
-                                      color: Colors.white30,
+                                      color: Colors.white54,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 1.0)),
@@ -1590,7 +1590,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             const SizedBox(height: 8),
             const Text(
               'Unblock to view their profile and travel logs.',
-              style: TextStyle(color: Colors.white30, fontSize: 12),
+              style: TextStyle(color: Colors.white54, fontSize: 12),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -2714,7 +2714,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               child: Text(
                 _t('BADGES'),
                 style: const TextStyle(
-                    color: Colors.white30,
+                    color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1),
@@ -2888,7 +2888,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           Text(
             _t('HOW TO EARN SCORE POINTS:'),
             style: const TextStyle(
-              color: Colors.white30,
+              color: Colors.white54,
               fontSize: 9,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.0,
@@ -2980,11 +2980,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ),
         child: const Row(
           children: [
-            Icon(Icons.pie_chart_outline, color: Colors.white38, size: 24),
+            Icon(Icons.pie_chart_outline, color: Colors.white54, size: 24),
             SizedBox(width: 12),
             Text(
               'No expense logs found in travel logs.',
-              style: TextStyle(color: Colors.white38, fontSize: 13),
+              style: TextStyle(color: Colors.white54, fontSize: 13),
             ),
           ],
         ),
@@ -3106,7 +3106,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             child: Center(
               child: Text(
                 'No travel logs shared yet.',
-                style: TextStyle(color: Colors.white38, fontSize: 13),
+                style: TextStyle(color: Colors.white54, fontSize: 13),
               ),
             ),
           ),
@@ -3118,7 +3118,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           const Text(
             'TRAVEL LOGS',
             style: TextStyle(
-              color: Colors.white38,
+              color: Colors.white54,
               fontSize: 11,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.5,
@@ -3179,7 +3179,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           Text(
                             dateStr,
                             style: const TextStyle(
-                                color: Colors.white38, fontSize: 11),
+                                color: Colors.white54, fontSize: 11),
                           ),
                         ],
                       ),
@@ -3301,7 +3301,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           ? 'ভ্রমণের নতুন গল্প লিখুন...'
                           : "What's on your mind?",
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 13),
+                          const TextStyle(color: Colors.white54, fontSize: 13),
                     ),
                   ),
                 ),
@@ -3368,7 +3368,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child:
-                const Text('Cancel', style: TextStyle(color: Colors.white38)),
+                const Text('Cancel', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
@@ -3444,7 +3444,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         const SizedBox(height: 4),
         Text(
           _t(labelKey),
-          style: const TextStyle(color: Colors.white30, fontSize: 10),
+          style: const TextStyle(color: Colors.white54, fontSize: 10),
         ),
       ],
     );
@@ -3582,7 +3582,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           const Text(
             'ACCOUNT ACTIONS',
             style: TextStyle(
-                color: Colors.white30,
+                color: Colors.white54,
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5),
@@ -3596,8 +3596,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 style: TextStyle(color: Colors.white, fontSize: 14)),
             subtitle: const Text(
                 'Access your traveler chats and message history',
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white30),
+                style: TextStyle(color: Colors.white54, fontSize: 11)),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white54),
             onTap: () => context.push('/chats'),
           ),
           ListTile(
@@ -3607,8 +3607,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 style: TextStyle(color: Colors.white, fontSize: 14)),
             subtitle: const Text(
                 'Add or update password for email sign-in backup',
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white30),
+                style: TextStyle(color: Colors.white54, fontSize: 11)),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white54),
             onTap: () => _showChangePasswordDialog(context),
           ),
           ListTile(
@@ -3617,8 +3617,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             title: const Text('Milestones & Leaderboards',
                 style: TextStyle(color: Colors.white, fontSize: 14)),
             subtitle: const Text('View your unlocked badges and explorer ranks',
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white30),
+                style: TextStyle(color: Colors.white54, fontSize: 11)),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white54),
             onTap: () {
               Navigator.push(
                 context,
@@ -3634,8 +3634,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             title: const Text('Log Out',
                 style: TextStyle(color: Colors.white, fontSize: 14)),
             subtitle: const Text('Sign out of your active explorer session',
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white30),
+                style: TextStyle(color: Colors.white54, fontSize: 11)),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white54),
             onTap: () => _confirmLogout(context),
           ),
           ListTile(
@@ -3645,7 +3645,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 style: TextStyle(color: Colors.redAccent, fontSize: 14)),
             subtitle: const Text(
                 'Permanently delete your profile and travel logs',
-                style: TextStyle(color: Colors.white38, fontSize: 11)),
+                style: TextStyle(color: Colors.white54, fontSize: 11)),
             trailing: const Icon(Icons.chevron_right, color: Colors.redAccent),
             onTap: () => context.push('/delete-account'),
           ),
@@ -3684,7 +3684,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Minimum 6 characters',
-                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
                 fillColor: Colors.white.withValues(alpha: 0.05),
                 filled: true,
                 border:
@@ -3697,7 +3697,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child:
-                const Text('Cancel', style: TextStyle(color: Colors.white38)),
+                const Text('Cancel', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             style:
@@ -4062,7 +4062,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           child: Text(
                             'No connections found here.',
                             style:
-                                TextStyle(color: Colors.white30, fontSize: 13),
+                                TextStyle(color: Colors.white54, fontSize: 13),
                           ),
                         ),
                       );
@@ -4117,7 +4117,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.explore_outlined, color: Colors.white30, size: 20),
+            const Icon(Icons.explore_outlined, color: Colors.white54, size: 20),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -4329,7 +4329,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             const TextStyle(color: Colors.white, fontSize: 13),
                       ),
                       trailing: const Icon(Icons.chevron_right,
-                          color: Colors.white24, size: 16),
+                          color: Colors.white54, size: 16),
                       onTap: () async {
                         Navigator.pop(dialogContext);
                         try {
@@ -4867,12 +4867,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           const SizedBox(height: 8),
           const Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.white30, size: 12),
+              Icon(Icons.info_outline, color: Colors.white54, size: 12),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Earnings are calculated from community helpful votes (BDT 50/vote) as part of the Creator Fund.',
-                  style: TextStyle(color: Colors.white38, fontSize: 10),
+                  style: TextStyle(color: Colors.white54, fontSize: 10),
                 ),
               ),
             ],
@@ -4893,7 +4893,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(color: Colors.white30, fontSize: 10),
+          style: const TextStyle(color: Colors.white54, fontSize: 10),
         ),
       ],
     );
@@ -5111,7 +5111,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         ? 'সেরা ৫ অভিযাত্রী'
                         : 'TOP 5 LEADERBOARD',
                     style: const TextStyle(
-                      color: Colors.white30,
+                      color: Colors.white54,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.0,
@@ -5221,7 +5221,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   Text(
                                     _t(displayName).toUpperCase(),
                                     style: const TextStyle(
-                                        color: Colors.white30,
+                                        color: Colors.white54,
                                         fontSize: 8,
                                         fontWeight: FontWeight.bold),
                                   ),
@@ -5357,7 +5357,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   padding: EdgeInsets.symmetric(vertical: 12.0),
                   child: Text(
                     'No destinations added to your bucket list yet.',
-                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                 ),
               ] else ...[
@@ -5443,7 +5443,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 Text(
                                   division,
                                   style: const TextStyle(
-                                      color: Colors.white30, fontSize: 10),
+                                      color: Colors.white54, fontSize: 10),
                                 ),
                               ],
                             ),
@@ -5451,7 +5451,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           if (isOwnProfile)
                             IconButton(
                               icon: const Icon(Icons.delete_outline,
-                                  color: Colors.white30, size: 18),
+                                  color: Colors.white54, size: 18),
                               onPressed: () => FirebaseFirestore.instance
                                   .collection('explorer_profiles')
                                   .doc(uid)
@@ -5585,7 +5585,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child:
-                  const Text('Cancel', style: TextStyle(color: Colors.white38)),
+                  const Text('Cancel', style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -5643,11 +5643,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         child: Row(
           children: [
             const Icon(Icons.photo_library_outlined,
-                color: Colors.white38, size: 24),
+                color: Colors.white54, size: 24),
             const SizedBox(width: 12),
             Text(
               _t('No memories found. Add images to trip logs!'),
-              style: const TextStyle(color: Colors.white38, fontSize: 13),
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
             ),
           ],
         ),
@@ -5687,7 +5687,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 _bioLanguage == 'bn'
                     ? '${imageUrls.length}${_t('photos')}'
                     : '${imageUrls.length} photos',
-                style: const TextStyle(color: Colors.white38, fontSize: 11),
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
               ),
             ],
           ),
@@ -5725,7 +5725,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     errorWidget: (context, url, error) => Container(
                       color: Colors.white.withValues(alpha: 0.05),
                       child: const Icon(Icons.broken_image_outlined,
-                          color: Colors.white24),
+                          color: Colors.white54),
                     ),
                   ),
                 ),

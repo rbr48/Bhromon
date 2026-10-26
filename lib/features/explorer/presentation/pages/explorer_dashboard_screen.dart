@@ -261,7 +261,7 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
             const SizedBox(height: 12),
             _categoriesCount.isEmpty
                 ? const Text('No categories logged yet.',
-                    style: TextStyle(color: Colors.white38, fontSize: 12))
+                    style: TextStyle(color: Colors.white54, fontSize: 12))
                 : Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -313,7 +313,7 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                     child: const Text(
                       'No badges earned yet. Start exploring to unlock!',
                       style: TextStyle(
-                          color: Colors.white30,
+                          color: Colors.white54,
                           fontSize: 12,
                           fontStyle: FontStyle.italic),
                     ),
@@ -385,7 +385,7 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                         style: const TextStyle(
                             color: Colors.white54, fontSize: 11)),
                     trailing: const Icon(Icons.arrow_forward_ios_rounded,
-                        color: Colors.white30, size: 14),
+                        color: Colors.white54, size: 14),
                     onTap: () {
                       context.push('/map');
                     },

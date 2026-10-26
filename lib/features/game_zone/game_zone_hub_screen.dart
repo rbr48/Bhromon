@@ -29,7 +29,8 @@ class GameZoneHubScreen extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.amber.withValues(alpha: 0.35), width: 1.2),
+                border: Border.all(
+                    color: Colors.amber.withValues(alpha: 0.35), width: 1.2),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.amber.withValues(alpha: 0.12),
@@ -198,7 +199,8 @@ class GameZoneHubScreen extends StatelessWidget {
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
-          const BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4)),
+          const BoxShadow(
+              color: Colors.black45, blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
       child: Material(
@@ -276,7 +278,7 @@ class GameZoneHubScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 const Icon(Icons.arrow_forward_ios,
-                    color: Colors.white38, size: 16),
+                    color: Colors.white54, size: 16),
               ],
             ),
           ),

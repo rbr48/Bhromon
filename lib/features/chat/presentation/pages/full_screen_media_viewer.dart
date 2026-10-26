@@ -87,7 +87,7 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                         ),
                         errorWidget: (_, __, ___) => const Icon(
                           Icons.broken_image_outlined,
-                          color: Colors.white38,
+                          color: Colors.white54,
                           size: 64,
                         ),
                       ),

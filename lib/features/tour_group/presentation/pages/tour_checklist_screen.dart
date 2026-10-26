@@ -171,7 +171,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         'প্রতিটি সদস্য নিজের আইটেম নিজে টিক দেবেন।',
-                        style: TextStyle(color: Colors.white38, fontSize: 11),
+                        style: TextStyle(color: Colors.white54, fontSize: 11),
                       ),
                     ),
                   ],
@@ -276,7 +276,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
       secondary: deletable
           ? IconButton(
               tooltip: 'আইটেম মুছুন',
-              icon: const Icon(Icons.delete_outline, color: Colors.white38),
+              icon: const Icon(Icons.delete_outline, color: Colors.white54),
               onPressed: () => _confirmDelete(id, title),
             )
           : null,

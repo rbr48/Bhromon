@@ -171,13 +171,13 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
         if (m.editedAt != null) ...[
           Text(
             l10n.translate('chan_edited'),
-            style: const TextStyle(color: Colors.white38, fontSize: 10),
+            style: const TextStyle(color: Colors.white54, fontSize: 10),
           ),
           const SizedBox(width: 4),
         ],
         Text(
           DateFormat('hh:mm a').format(m.timestamp),
-          style: const TextStyle(color: Colors.white38, fontSize: 10),
+          style: const TextStyle(color: Colors.white54, fontSize: 10),
         ),
       ],
     );
@@ -276,7 +276,7 @@ class _AttachmentGrid extends StatelessWidget {
       errorBuilder: (_, __, ___) => const ColoredBox(
         color: Colors.black38,
         child: Center(
-          child: Icon(Icons.broken_image_outlined, color: Colors.white38),
+          child: Icon(Icons.broken_image_outlined, color: Colors.white54),
         ),
       ),
     );
@@ -427,7 +427,7 @@ class _PollBlock extends StatelessWidget {
           ),
         Text(
           context.l10n.translate('chan_poll_votes', args: {'count': total}),
-          style: const TextStyle(color: Colors.white38, fontSize: 11),
+          style: const TextStyle(color: Colors.white54, fontSize: 11),
         ),
       ],
     );

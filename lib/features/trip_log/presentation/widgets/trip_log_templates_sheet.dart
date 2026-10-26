@@ -173,7 +173,7 @@ class TripLogTemplatesSheet extends StatelessWidget {
                         fontWeight: FontWeight.bold)),
                 SizedBox(width: 8),
                 Text('(optional)',
-                    style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    style: TextStyle(color: Colors.white54, fontSize: 12)),
               ],
             ),
           ),

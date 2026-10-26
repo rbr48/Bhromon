@@ -1027,7 +1027,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                                     icon: const Icon(Icons.delete_outline,
                                         size: 16, color: Colors.redAccent),
                                     padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
                                     onPressed: () async {
                                       await FirebaseFirestore.instance
                                           .collection(log.isArchived
@@ -2104,7 +2103,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                   ),
                   const Icon(
                     Icons.chevron_right_rounded,
-                    color: Colors.white30,
+                    color: Colors.white54,
                     size: 20,
                   ),
                 ],
@@ -4550,7 +4549,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
             Text(
               subtitle,
               style: const TextStyle(
-                color: Colors.white38,
+                color: Colors.white54,
                 fontSize: 10,
               ),
             ),
@@ -5243,12 +5242,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.notifications_off_outlined,
-                                size: 48, color: Colors.white24),
+                                size: 48, color: Colors.white54),
                             SizedBox(height: 12),
                             Text(
                               'No notifications yet',
                               style: TextStyle(
-                                  color: Colors.white30, fontSize: 13),
+                                  color: Colors.white54, fontSize: 13),
                             ),
                           ],
                         ),
@@ -5349,7 +5348,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
             ),
             Text(
               time,
-              style: const TextStyle(color: Colors.white38, fontSize: 10),
+              style: const TextStyle(color: Colors.white54, fontSize: 10),
             ),
           ],
         ),

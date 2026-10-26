@@ -112,7 +112,7 @@ class _StatPill extends StatelessWidget {
           ),
           Text(
             label,
-            style: const TextStyle(color: Colors.white38, fontSize: 11),
+            style: const TextStyle(color: Colors.white54, fontSize: 11),
           ),
         ],
       ),
@@ -225,7 +225,7 @@ class _TimelineEntry extends StatelessWidget {
                   Text(
                     _monthLabel,
                     style: const TextStyle(
-                      color: Colors.white38,
+                      color: Colors.white54,
                       fontSize: 11,
                     ),
                   ),
@@ -304,7 +304,7 @@ class _EmptyTimeline extends StatelessWidget {
           SizedBox(height: 6),
           Text(
             'আপনার প্রথম ডায়েরি লিখুন!',
-            style: TextStyle(color: Colors.white38, fontSize: 13),
+            style: TextStyle(color: Colors.white54, fontSize: 13),
           ),
         ],
       ),

@@ -304,7 +304,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 cursorColor: AppColors.mintGreen,
                 decoration: InputDecoration(
                   hintText: l10n.translate('chan_search_hint'),
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: const TextStyle(color: Colors.white54),
                   border: InputBorder.none,
                 ),
                 onChanged: (v) => _update(() => _searchText = v),
@@ -399,7 +399,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               child: Text(
                 l10n.translate('chan_read_only'),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white38, fontSize: 12),
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
               ),
             ),
         ],
@@ -494,7 +494,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                               color: Colors.white, fontSize: 13)),
                       subtitle: Text('${s.kmFromStart} km',
                           style: const TextStyle(
-                              color: Colors.white38, fontSize: 11)),
+                              color: Colors.white54, fontSize: 11)),
                       onTap: _isAdmin ? () => _setStop(s.id) : null,
                     ),
                   if (_isAdmin && _liveStopId != null)
@@ -689,7 +689,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                   ? 'tour_no_messages'
                   : 'chan_no_search_results'),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white38),
+              style: const TextStyle(color: Colors.white54),
             ),
           );
         }
@@ -870,7 +870,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       padding: const EdgeInsets.all(24),
                       child: Text(l10n.translate('chan_pins_empty'),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white38)),
+                          style: const TextStyle(color: Colors.white54)),
                     ),
                   for (final p in pins)
                     ListTile(
@@ -1304,7 +1304,7 @@ class _ChannelChip extends StatelessWidget {
                     if (muted) ...[
                       const SizedBox(width: 4),
                       const Icon(Icons.notifications_off_outlined,
-                          size: 13, color: Colors.white38),
+                          size: 13, color: Colors.white54),
                     ],
                     if (hasNew) ...[
                       const SizedBox(width: 6),
