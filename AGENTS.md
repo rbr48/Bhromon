@@ -25,7 +25,7 @@ This document serves as the persistent system memory, architectural guidelines, 
    - In `pubspec.yaml`, increment version and version code monotonically on each release (e.g., `1.8.4+58`).
 4. **Windows Gradle Build Contention**:
    - Always keep `org.gradle.vfs.watch=false` in `android/gradle.properties` to avoid Windows directory locks (`AccessDeniedException` during `mergeReleaseNativeLibs` or `packageRelease`).
-   - In `android/app/build.gradle`, disable intermediate tasks: `artprofile`, `nativesymboltable`, `cleanmergereleaseassets`, `cleanmergereleasenativelibs`, and `cleanpackagerelease`.
+   - In `android/app/build.gradle`, on Windows only, disable intermediate tasks: `artprofile`, `nativesymboltable`, `nativedebugmetadata`, `cleanmergereleaseassets`, `cleanmergereleasenativelibs`, and `cleanpackagerelease`. Keep `ndk { debugSymbolLevel 'SYMBOL_TABLE' }` on every platform: the release AAB fails to strip native libraries without it.
 
 ---
 
