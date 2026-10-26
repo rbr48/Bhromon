@@ -372,9 +372,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           ),
         ],
       ),
-      body: StreamBuilder<List<TourGroup>>(
-        stream: _groupsStream,
-        builder: (context, snapshot) {
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 960),
+          child: StreamBuilder<List<TourGroup>>(
+            stream: _groupsStream,
+            builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting &&
               !snapshot.hasData) {
             return const Center(
@@ -460,8 +463,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           );
         },
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 
   Widget _buildEmptyState(BuildContext context) {
     return Center(

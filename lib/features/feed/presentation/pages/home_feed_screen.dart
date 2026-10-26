@@ -527,11 +527,22 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     final uid = authState is Authenticated ? authState.profile.uid : '';
     final displayName =
         authState is Authenticated ? authState.profile.displayName : 'Guest';
+    final double screenWidth = MediaQuery.sizeOf(context).width;
+    final bool isWideScreen = screenWidth >= 840;
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
-    final double bottomSpacerHeight = 96.0 + bottomPadding;
+    final double bottomSpacerHeight =
+        isWideScreen ? 48.0 : (96.0 + bottomPadding);
 
     // Specific colors from the ultra mockup
     const Color mockBackground = Color(0xFFF6F5F1);
+
+    final feedBody = _buildFeedScrollView(
+      context: context,
+      displayName: displayName,
+      uid: uid,
+      bottomSpacerHeight: bottomSpacerHeight,
+      isWide: isWideScreen,
+    );
 
     return Scaffold(
       backgroundColor: mockBackground,
@@ -542,74 +553,103 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
             _viewerFor(current) != null &&
             _viewerFor(current)?.uid != _viewerFor(previous)?.uid,
         listener: (context, state) => _loadFeedFor(state),
-        child: Stack(
-          children: [
-            // Scrollable Body
-            Positioned.fill(
-              child: RefreshIndicator(
-                onRefresh: _refreshFeed,
-                color: const Color(0xFF52B788), // Mint-green spinner
-                backgroundColor:
-                    const Color(0xFF0D1A12), // Dark card background
-                // A CustomScrollView builds only the cards on screen; the
-                // old Column-in-SingleChildScrollView laid out every card.
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: _onFeedScroll,
-                  child: CustomScrollView(
-                    controller: _scrollController,
-                    physics: const ClampingScrollPhysics(),
-                    slivers: [
-                      // 1. HERO HEADER AREA
-                      SliverToBoxAdapter(
-                          child: _buildAnimatedHeroHeader(context)),
+        child: isWideScreen
+            ? Row(
+                children: [
+                  // ── Desktop Left Sidebar / Navigation Rail ──
+                  _buildWebNavigationSidebar(
+                      context, uid, displayName, screenWidth),
 
-                      // 2. TABS & SCROLLABLE BODY SECTIONS
-                      SliverToBoxAdapter(child: _buildSubNavigation()),
-
-                      if (_selectedTab == 'Discover') ...[
-                        SliverToBoxAdapter(child: _buildSyncBar()),
-                        SliverToBoxAdapter(
-                            child: _buildCreatePostComposer(displayName, uid)),
-                        SliverToBoxAdapter(
-                            child: _buildFeaturedTripLogsSection()),
-                        SliverToBoxAdapter(
-                            child: _buildProTipsHorizontalFeed()),
-                        SliverToBoxAdapter(
-                            child: _buildExplorerSpotlightSection()),
-                        _buildFacebookFeedSliver(),
-                      ] else if (_selectedTab == 'Near me') ...[
-                        SliverToBoxAdapter(child: _buildNearMeTabContent()),
-                      ] else if (_selectedTab == 'Saved') ...[
-                        _buildSavedTabSliver(),
-                      ] else if (_selectedTab == 'Divisions') ...[
-                        SliverToBoxAdapter(child: _buildDivisionsTabContent()),
-                      ] else if (_selectedTab == 'Trending') ...[
-                        SliverToBoxAdapter(child: _buildTrendingTabContent()),
-                      ] else if (_selectedTab == 'Archive') ...[
-                        _buildArchiveTabSliver(),
-                      ],
-                      SliverToBoxAdapter(
-                          child: SizedBox(height: bottomSpacerHeight)),
-                    ],
+                  const VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: Color(0xFFE5E3DC),
                   ),
-                ),
-              ),
-            ),
 
-            // 3. CUSTOM BOTTOM GLASSMORPHIC NAV BAR
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _buildCustomBottomNavigationBar(uid),
-            ),
+                  // ── Centered Constrained Feed Column ──
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 960),
+                        child: feedBody,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Stack(
+                children: [
+                  // Scrollable Body
+                  Positioned.fill(
+                    child: feedBody,
+                  ),
+
+                  // 3. CUSTOM BOTTOM GLASSMORPHIC NAV BAR (mobile only)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _buildCustomBottomNavigationBar(uid),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildFeedScrollView({
+    required BuildContext context,
+    required String displayName,
+    required String uid,
+    required double bottomSpacerHeight,
+    required bool isWide,
+  }) {
+    return RefreshIndicator(
+      onRefresh: _refreshFeed,
+      color: const Color(0xFF52B788), // Mint-green spinner
+      backgroundColor: const Color(0xFF0D1A12), // Dark card background
+      // A CustomScrollView builds only the cards on screen; the
+      // old Column-in-SingleChildScrollView laid out every card.
+      child: NotificationListener<ScrollNotification>(
+        onNotification: _onFeedScroll,
+        child: CustomScrollView(
+          controller: _scrollController,
+          physics: const ClampingScrollPhysics(),
+          slivers: [
+            // 1. HERO HEADER AREA
+            SliverToBoxAdapter(
+                child: _buildAnimatedHeroHeader(context, isWide: isWide)),
+
+            // 2. TABS & SCROLLABLE BODY SECTIONS
+            SliverToBoxAdapter(child: _buildSubNavigation()),
+
+            if (_selectedTab == 'Discover') ...[
+              SliverToBoxAdapter(child: _buildSyncBar()),
+              SliverToBoxAdapter(
+                  child: _buildCreatePostComposer(displayName, uid)),
+              SliverToBoxAdapter(child: _buildFeaturedTripLogsSection()),
+              SliverToBoxAdapter(child: _buildProTipsHorizontalFeed()),
+              SliverToBoxAdapter(child: _buildExplorerSpotlightSection()),
+              _buildFacebookFeedSliver(),
+            ] else if (_selectedTab == 'Near me') ...[
+              SliverToBoxAdapter(child: _buildNearMeTabContent()),
+            ] else if (_selectedTab == 'Saved') ...[
+              _buildSavedTabSliver(),
+            ] else if (_selectedTab == 'Divisions') ...[
+              SliverToBoxAdapter(child: _buildDivisionsTabContent()),
+            ] else if (_selectedTab == 'Trending') ...[
+              SliverToBoxAdapter(child: _buildTrendingTabContent()),
+            ] else if (_selectedTab == 'Archive') ...[
+              _buildArchiveTabSliver(),
+            ],
+            SliverToBoxAdapter(child: SizedBox(height: bottomSpacerHeight)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAnimatedHeroHeader(BuildContext context) {
+  Widget _buildAnimatedHeroHeader(BuildContext context, {bool isWide = false}) {
     final authState = context.watch<AuthCubit>().state;
     final uid = authState is Authenticated ? authState.profile.uid : '';
     final displayName =
@@ -619,8 +659,23 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     // drives: FadeTransition repaints that one layer without rebuilding the
     // hero (search field, greeting, stats) on every frame.
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
+      margin:
+          isWide ? const EdgeInsets.fromLTRB(16, 16, 16, 8) : EdgeInsets.zero,
+      clipBehavior: isWide ? Clip.antiAlias : Clip.none,
+      decoration: BoxDecoration(
+        borderRadius: isWide
+            ? BorderRadius.circular(20)
+            : const BorderRadius.vertical(bottom: Radius.circular(24)),
+        boxShadow: isWide
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
@@ -847,16 +902,20 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                   ),
                 ),
 
-                // Rounded curves connecting to the body
-                const SizedBox(height: 14),
-                Container(
-                  height: 22,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF6F5F1), // mockBackground
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(22)),
+                // Rounded curves connecting to the body on mobile
+                if (!isWide) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    height: 22,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF6F5F1), // mockBackground
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(22)),
+                    ),
                   ),
-                ),
+                ] else ...[
+                  const SizedBox(height: 18),
+                ],
               ],
             ),
           ),
@@ -4602,6 +4661,361 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebNavigationSidebar(
+    BuildContext context,
+    String uid,
+    String displayName,
+    double screenWidth,
+  ) {
+    final bool isExtended = screenWidth >= 1100;
+    final double sidebarWidth = isExtended ? 240.0 : 84.0;
+
+    return Container(
+      width: sidebarWidth,
+      color: Colors.white,
+      child: SafeArea(
+        right: false,
+        child: Column(
+          crossAxisAlignment:
+              isExtended ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+          children: [
+            // ── Top Brand Header ──
+            if (isExtended)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFF1B4332),
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/logo.png',
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.explore,
+                            color: Color(0xFF52B788),
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bhromon',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1B4332),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        Text(
+                          'ভ্রমণ · Travel Club',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF40916C),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF1B4332),
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/logo.png',
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.explore,
+                        color: Color(0xFF52B788),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            const Divider(height: 1, color: Color(0xFFECEAE4)),
+            const SizedBox(height: 12),
+
+            // ── Primary Navigation Items ──
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                children: [
+                  _buildWebNavItem(
+                    icon: Icons.explore,
+                    label: 'Discover',
+                    isActive: _selectedTab == 'Discover',
+                    isExtended: isExtended,
+                    onTap: () {
+                      if (_selectedTab != 'Discover') {
+                        _selectTab('Discover');
+                      } else if (_scrollController.hasClients) {
+                        _scrollController.animateTo(
+                          0,
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.easeOut,
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  _buildWebNavItem(
+                    icon: Icons.groups_outlined,
+                    label: 'Tour Groups',
+                    isActive: false,
+                    isExtended: isExtended,
+                    onTap: () => context.push('/group-hub'),
+                  ),
+                  const SizedBox(height: 4),
+                  _buildWebNavItem(
+                    icon: Icons.chat_bubble_outline,
+                    label: 'Inbox',
+                    isActive: false,
+                    isExtended: isExtended,
+                    onTap: () => context.push('/chats'),
+                  ),
+                  const SizedBox(height: 4),
+                  _buildWebNavItem(
+                    icon: Icons.map_outlined,
+                    label: 'Interactive Map',
+                    isActive: false,
+                    isExtended: isExtended,
+                    onTap: () => context.push('/map'),
+                  ),
+                  const SizedBox(height: 4),
+                  _buildWebNavItem(
+                    icon: Icons.cloud_off_rounded,
+                    label: 'Offline Vault',
+                    isActive: false,
+                    isExtended: isExtended,
+                    onTap: () => context.push('/vault'),
+                  ),
+                  const SizedBox(height: 4),
+                  _buildWebNavItem(
+                    icon: Icons.military_tech_outlined,
+                    label: 'Leaderboard',
+                    isActive: false,
+                    isExtended: isExtended,
+                    onTap: () => context.push('/leaderboard'),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── New Post Action Button ──
+                  if (isExtended)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showCreateDialog(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1B4332),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.add_circle_outline,
+                            size: 18, color: Color(0xFF74C69D)),
+                        label: const Text(
+                          'New TripLog',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Center(
+                        child: IconButton.filled(
+                          onPressed: () => _showCreateDialog(context),
+                          style: IconButton.styleFrom(
+                            backgroundColor: const Color(0xFF1B4332),
+                            foregroundColor: const Color(0xFF74C69D),
+                            padding: const EdgeInsets.all(12),
+                          ),
+                          icon: const Icon(Icons.add, size: 22),
+                          tooltip: 'New TripLog',
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1, color: Color(0xFFECEAE4)),
+
+            // ── Bottom Profile Section ──
+            InkWell(
+              onTap: () {
+                final targetUid = uid.isNotEmpty ? uid : 'explorer_user';
+                _showProfileNavigationMenu(context, targetUid);
+              },
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isExtended ? 16 : 8,
+                  vertical: 14,
+                ),
+                child: isExtended
+                    ? Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            backgroundColor: const Color(0xFF1B4332),
+                            child: Text(
+                              displayName.isNotEmpty
+                                  ? displayName.substring(0, 1).toUpperCase()
+                                  : 'G',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  displayName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: Color(0xFF1B4332),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const Text(
+                                  'View Profile',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF40916C),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.more_horiz,
+                            color: Colors.black45,
+                            size: 18,
+                          ),
+                        ],
+                      )
+                    : Center(
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: const Color(0xFF1B4332),
+                          child: Text(
+                            displayName.isNotEmpty
+                                ? displayName.substring(0, 1).toUpperCase()
+                                : 'G',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebNavItem({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required bool isExtended,
+    required VoidCallback onTap,
+  }) {
+    final activeBg = const Color(0xFF1B4332).withValues(alpha: 0.08);
+    const activeColor = Color(0xFF1B4332);
+    const inactiveColor = Color(0xFF555555);
+
+    if (!isExtended) {
+      return Tooltip(
+        message: label,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: isActive ? activeBg : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              size: 22,
+              color: isActive ? activeColor : inactiveColor,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive ? activeBg : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isActive ? activeColor : inactiveColor,
+            ),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                color: isActive ? activeColor : inactiveColor,
               ),
             ),
           ],

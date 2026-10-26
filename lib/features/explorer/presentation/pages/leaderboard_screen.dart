@@ -42,7 +42,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         ),
         centerTitle: true,
       ),
-      body: FutureBuilder<dynamic>(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 880),
+          child: FutureBuilder<dynamic>(
         future: _topExplorers,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -254,6 +257,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           );
         },
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 }

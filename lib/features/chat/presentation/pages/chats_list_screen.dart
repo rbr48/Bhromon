@@ -188,8 +188,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             ),
           ],
         ),
-        body: _bottomNavIndex == 0
-            ? Column(
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: _bottomNavIndex == 0
+                ? Column(
                 children: [
                   // WhatsApp styled Search Bar
                   Container(
@@ -419,6 +422,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 ],
               )
             : _buildCallsView(currentUid),
+          ),
+        ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _bottomNavIndex,
           onTap: (index) => setState(() => _bottomNavIndex = index),
