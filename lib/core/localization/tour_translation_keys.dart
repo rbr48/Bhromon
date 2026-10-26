@@ -1398,6 +1398,26 @@ class TourTranslationKeys {
       'ig_first_frame_cover': 'First frame (video cover)',
       'ig_change': 'Change',
       'ig_pick_cover_gallery': 'Choose a cover photo from the gallery',
+      'fsh_national_health_helpline': 'National health helpline',
+      'fsh_important_points': 'Important tour points and compass directions',
+      'fsh_alert_on': 'Emergency alert is on!',
+      'fsh_family_sos': 'Family emergency SOS',
+      'fsh_alert_on_hint':
+          'Everyone in the group can see the alert. Tap the button to turn it off. Press and hold the button to send your location.',
+      'fsh_alert_off_hint':
+          'In danger? Turn on the alert and the group will see it. Press and hold to share your location, or call 999.',
+      'fsh_alert_turn_off': 'Turn off the alert',
+      'fsh_alert_turn_on': 'Turn on the emergency alert',
+      'fsh_group_alerts': 'Group emergency alerts',
+      'fsh_view_location': 'View location',
+      'fsh_mark_safe': 'Safe, close',
+      'fsh_national_emergency': 'National emergency service',
+      'fsh_999_free': '999 (free)',
+      'fsh_google_directions': 'Directions in Google Maps',
+      'fsh_sea_guide_title': 'Family safety and sea caution guide',
+      'ig_sea_safety_title': 'Sea safety and tide information',
+      'fsh_sea_guide_body':
+          "• When the red flag is up, do not go into the sea under any circumstances.\n• At low tide the sea's pull (rip current) is very strong, so do not wade deeper than your waist.\n• Save the compass directions to Hotel Sea Moon and the bus parking point so you do not lose your way in a crowd.\n• In any unexpected situation, call the tourist police (01320-163599) or 999 directly.",
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -2790,6 +2810,26 @@ class TourTranslationKeys {
       'ig_first_frame_cover': 'প্রথম ফ্রেম (ভিডিও কভার)',
       'ig_change': 'পরিবর্তন',
       'ig_pick_cover_gallery': 'গ্যালারি থেকে কভার ছবি বাছুন',
+      'fsh_national_health_helpline': 'জাতীয় স্বাস্থ্য হেল্পলাইন',
+      'fsh_important_points': 'গুরুত্বপূর্ণ ট্যুর পয়েন্ট ও কম্পাস ডিরেকশন',
+      'fsh_alert_on': 'জরুরি এলার্ট চালু আছে!',
+      'fsh_family_sos': 'ফ্যামিলি ইমার্জেন্সি এসওএস',
+      'fsh_alert_on_hint':
+          'গ্রুপের সবাই এলার্ট দেখছেন। বন্ধ করতে বোতাম চাপুন। অবস্থান পাঠাতে বোতাম চেপে ধরুন।',
+      'fsh_alert_off_hint':
+          'বিপদে পড়লে এলার্ট চালু করুন, গ্রুপের সবাই দেখতে পাবেন। অবস্থান শেয়ার করতে চেপে ধরুন, অথবা ৯৯৯ কল করুন।',
+      'fsh_alert_turn_off': 'এলার্ট বন্ধ করুন',
+      'fsh_alert_turn_on': 'জরুরি এলার্ট চালু করুন',
+      'fsh_group_alerts': 'গ্রুপের জরুরি এলার্ট',
+      'fsh_view_location': 'অবস্থান দেখুন',
+      'fsh_mark_safe': 'নিরাপদ, বন্ধ করুন',
+      'fsh_national_emergency': 'জাতীয় জরুরি সেবা',
+      'fsh_999_free': '999 (ফ্রি)',
+      'fsh_google_directions': 'গুগল ম্যাপে ডিরেকশন',
+      'fsh_sea_guide_title': 'পরিবারের সুরক্ষা ও সমুদ্র সতর্কতা নির্দেশিকা',
+      'ig_sea_safety_title': 'সমুদ্র নিরাপত্তা ও জোয়ার-ভাটা তথ্য',
+      'fsh_sea_guide_body':
+          '• লাল পতাকা ওড়ালে কোনোভাবেই সমুদ্রে নামবেন না।\n• ভাটার সময় সমুদ্রের টান (Rip Current) অত্যন্ত তীব্র থাকে, কোমর পানির বেশি নামবেন না।\n• হোটেল সি মুন ও বাস পার্কিং পয়েন্টের কম্পাস ডিরেকশন সেভ রাখুন যাতে ভিড়ের মধ্যে পথ হারিয়ে না যায়।\n• যেকোনো অনাকাঙ্ক্ষিত পরিস্থিতিতে সরাসরি ট্যুরিস্ট পুলিশ (01320-163599) বা ৯৯৯ নম্বরে ফোন দিন।',
     },
   };
 }

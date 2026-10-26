@@ -453,7 +453,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                     ),
                     const Spacer(),
                     IconButton(
-                      tooltip: 'বন্ধ করুন',
+                      tooltip: context.l10n.translate('ig_close'),
                       icon: const Icon(Icons.close,
                           size: 18, color: Colors.white54),
                       onPressed: _cancelReply,

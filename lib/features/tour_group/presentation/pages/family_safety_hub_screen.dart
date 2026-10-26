@@ -239,7 +239,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   /// because none could be verified; the tour admin can add them on the notice board.
   ({String title, String number, String display}) _getLocalHospitalContact() {
     return (
-      title: 'জাতীয় স্বাস্থ্য হেল্পলাইন',
+      title: context.l10n.translate('fsh_national_health_helpline'),
       number: '16263',
       display: '16263',
     );
@@ -459,9 +459,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             const SizedBox(height: 20),
 
             // Live Landmark Direction Cards
-            const Text(
-              'গুরুত্বপূর্ণ ট্যুর পয়েন্ট ও কম্পাস ডিরেকশন',
-              style: TextStyle(
+            Text(
+              context.l10n.translate('fsh_important_points'),
+              style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 15),
@@ -534,8 +534,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                       children: [
                         Text(
                           _isSirenActive
-                              ? 'জরুরি এলার্ট চালু আছে!'
-                              : 'ফ্যামিলি ইমার্জেন্সি এসওএস',
+                              ? context.l10n.translate('fsh_alert_on')
+                              : context.l10n.translate('fsh_family_sos'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -545,8 +545,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                         const SizedBox(height: 2),
                         Text(
                           _isSirenActive
-                              ? 'গ্রুপের সবাই এলার্ট দেখছেন। বন্ধ করতে বোতাম চাপুন। অবস্থান পাঠাতে বোতাম চেপে ধরুন।'
-                              : 'বিপদে পড়লে এলার্ট চালু করুন, গ্রুপের সবাই দেখতে পাবেন। অবস্থান শেয়ার করতে চেপে ধরুন, অথবা ৯৯৯ কল করুন।',
+                              ? context.l10n.translate('fsh_alert_on_hint')
+                              : context.l10n.translate('fsh_alert_off_hint'),
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 12),
                         ),
@@ -563,8 +563,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                       Icon(_isSirenActive ? Icons.volume_off : Icons.volume_up),
                   label: Text(
                     _isSirenActive
-                        ? 'এলার্ট বন্ধ করুন'
-                        : 'জরুরি এলার্ট চালু করুন',
+                        ? context.l10n.translate('fsh_alert_turn_off')
+                        : context.l10n.translate('fsh_alert_turn_on'),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -604,9 +604,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'গ্রুপের জরুরি এলার্ট',
-              style: TextStyle(
+            Text(
+              context.l10n.translate('fsh_group_alerts'),
+              style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 15),
@@ -666,13 +666,13 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               if (lat != null && lng != null)
                 OutlinedButton.icon(
                   icon: const Icon(Icons.map_rounded, size: 16),
-                  label: const Text('অবস্থান দেখুন'),
+                  label: Text(context.l10n.translate('fsh_view_location')),
                   onPressed: () => _openMapNavigation(lat, lng),
                 ),
               if (canResolve)
                 OutlinedButton.icon(
                   icon: const Icon(Icons.check_circle_outline, size: 16),
-                  label: const Text('নিরাপদ, বন্ধ করুন'),
+                  label: Text(context.l10n.translate('fsh_mark_safe')),
                   onPressed: () => _resolveFromCard(alert),
                 ),
             ],
@@ -700,9 +700,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           children: [
             Expanded(
               child: _buildDialCard(
-                title: 'জাতীয় জরুরি সেবা',
+                title: context.l10n.translate('fsh_national_emergency'),
                 number: '999',
-                displayNumber: '999 (ফ্রি)',
+                displayNumber: context.l10n.translate('fsh_999_free'),
                 icon: Icons.emergency,
                 color: Colors.redAccent,
               ),
@@ -904,7 +904,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           ),
           IconButton(
             icon: const Icon(Icons.directions, color: Colors.tealAccent),
-            tooltip: 'গুগল ম্যাপে ডিরেকশন',
+            tooltip: context.l10n.translate('fsh_google_directions'),
             onPressed: () => _openMapNavigation(landmark.lat, landmark.lng),
           ),
         ],
@@ -920,29 +920,27 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white10),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.amber, size: 18),
-              SizedBox(width: 8),
+              const Icon(Icons.info_outline, color: Colors.amber, size: 18),
+              const SizedBox(width: 8),
               Text(
-                'পরিবারের সুরক্ষা ও সমুদ্র সতর্কতা নির্দেশিকা',
-                style: TextStyle(
+                context.l10n.translate('fsh_sea_guide_title'),
+                style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 13),
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            '• লাল পতাকা ওড়ালে কোনোভাবেই সমুদ্রে নামবেন না।\n'
-            '• ভাটার সময় সমুদ্রের টান (Rip Current) অত্যন্ত তীব্র থাকে, কোমর পানির বেশি নামবেন না।\n'
-            '• হোটেল সি মুন ও বাস পার্কিং পয়েন্টের কম্পাস ডিরেকশন সেভ রাখুন যাতে ভিড়ের মধ্যে পথ হারিয়ে না যায়।\n'
-            '• যেকোনো অনাকাঙ্ক্ষিত পরিস্থিতিতে সরাসরি ট্যুরিস্ট পুলিশ (01320-163599) বা ৯৯৯ নম্বরে ফোন দিন।',
-            style: TextStyle(color: Colors.white70, fontSize: 11, height: 1.5),
+            context.l10n.translate('fsh_sea_guide_body'),
+            style: const TextStyle(
+                color: Colors.white70, fontSize: 11, height: 1.5),
           ),
         ],
       ),

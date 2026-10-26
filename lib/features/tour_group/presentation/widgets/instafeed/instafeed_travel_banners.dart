@@ -27,7 +27,8 @@ class InstafeedTideBanner extends StatelessWidget {
     }
 
     final isHighTide = current?.type == TideType.high;
-    final title = current?.name ?? 'সমুদ্র নিরাপত্তা ও জোয়ার-ভাটা তথ্য';
+    final title =
+        current?.name ?? context.l10n.translate('ig_sea_safety_title');
     final subtitle = isHighTide
         ? context.l10n.translate('ig_tide_high_banner')
         : context.l10n.translate('ig_tide_low_banner');
