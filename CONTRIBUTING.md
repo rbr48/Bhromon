@@ -37,4 +37,4 @@ cd functions && npx tsc --noEmit && npx jest src
 
 ## License
 
-Contributions have no license until the project chooses one. See the README.
+Bhromon is licensed under the Apache License, Version 2.0 (see [LICENSE](LICENSE)). By submitting a contribution, you agree that it is licensed under the same terms.

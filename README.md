@@ -10,7 +10,7 @@ Bhromon is free and open source, with no business model. No feature is sold.
 
 ## License
 
-No license has been chosen yet. Until one is added, the code is not licensed for reuse, modification or redistribution. See [CONTRIBUTING.md](CONTRIBUTING.md) to take part.
+Bhromon is licensed under the [Apache License, Version 2.0](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) to take part.
 
 ---
 
