@@ -1002,39 +1002,45 @@ class TourGroupRepository {
             s.docs.map((d) => TourNotice.fromMap(d.id, d.data())).toList());
   }
 
-  /// Admins post notices. The author is the signed-in admin, not free text.
-  Future<void> postNotice({
-    required String tourId,
-    required String title,
-    required String content,
-    required bool urgent,
-  }) async {
+  /// Admins post notices. The author is the signed-in admin, not free text;
+  /// [notice] supplies everything else.
+  Future<void> postNotice(String tourId, TourNotice notice) async {
     final email = _requireEmail();
     await _sub(tourId, 'notices').add({
-      'title': title,
-      'content': content,
+      ...notice.toEditableMap(),
       'author': currentDisplayName,
       'authorEmail': email,
-      'urgent': urgent,
+      'ackBy': <String>[],
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
-  /// Edits a notice's text and urgency. The author and original time stay as
+  /// Saves an edited notice. The author, original time and answers stay as
   /// they were; only the edit time is added.
-  Future<void> updateNotice({
-    required String tourId,
-    required String noticeId,
-    required String title,
-    required String content,
-    required bool urgent,
-  }) async {
+  Future<void> updateNotice(String tourId, TourNotice notice) async {
     _requireEmail();
-    await _sub(tourId, 'notices').doc(noticeId).update({
-      'title': title,
-      'content': content,
-      'urgent': urgent,
+    await _sub(tourId, 'notices').doc(notice.id).update({
+      ...notice.toEditableMap(),
       'editedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> setNoticePinned(
+      String tourId, String noticeId, bool pinned) async {
+    _requireEmail();
+    await _sub(tourId, 'notices').doc(noticeId).update({'pinned': pinned});
+  }
+
+  /// Answers a notice for [email] ("Got it", or "I'm here" in a roll call),
+  /// or takes the answer back. Members may answer only for themselves;
+  /// admins may mark anyone present.
+  Future<void> answerNotice(String tourId, String noticeId,
+      {String? email, required bool answered}) async {
+    final who = normalizeEmail(email ?? _requireEmail());
+    await _sub(tourId, 'notices').doc(noticeId).update({
+      'ackBy': answered
+          ? FieldValue.arrayUnion([who])
+          : FieldValue.arrayRemove([who]),
     });
   }
 

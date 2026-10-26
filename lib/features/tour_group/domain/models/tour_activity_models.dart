@@ -2,6 +2,35 @@
 
 import 'date_codec.dart';
 
+/// What a notice is for. Older notices have none and read as announcements.
+enum NoticeKind {
+  announcement('📢'),
+  schedule('🕒'),
+  meetup('📍'),
+  reminder('⏰'),
+  emergency('🚨'),
+  rule('📜'),
+  rollcall('🙋');
+
+  const NoticeKind(this.emoji);
+
+  final String emoji;
+
+  /// Kinds that happen at a time, so they count down and can expire.
+  bool get isTimed =>
+      this == schedule ||
+      this == meetup ||
+      this == reminder ||
+      this == rollcall;
+
+  /// Kinds that ask every member to answer.
+  bool get asksEveryone =>
+      this == rollcall || this == emergency || this == rule;
+
+  static NoticeKind fromName(String? name) => NoticeKind.values
+      .firstWhere((k) => k.name == name, orElse: () => NoticeKind.announcement);
+}
+
 class TourNotice {
   final String id;
   final String title;
@@ -10,6 +39,26 @@ class TourNotice {
   final String authorEmail;
   final bool urgent;
   final DateTime createdAt;
+  final NoticeKind kind;
+  final bool pinned;
+
+  /// When it happens: departure, meet-up, roll call. Null for plain notices.
+  final DateTime? eventAt;
+
+  /// After this the notice moves to the archive.
+  final DateTime? expiresAt;
+  final String? place;
+  final String? mapUrl;
+
+  /// The itinerary stop it belongs to.
+  final String? stopId;
+
+  /// Whether members are asked to answer ("Got it", or "I'm here").
+  final bool requireAck;
+
+  /// Members who answered.
+  final List<String> ackBy;
+  final DateTime? editedAt;
 
   const TourNotice({
     required this.id,
@@ -19,9 +68,44 @@ class TourNotice {
     this.authorEmail = '',
     this.urgent = false,
     required this.createdAt,
+    this.kind = NoticeKind.announcement,
+    this.pinned = false,
+    this.eventAt,
+    this.expiresAt,
+    this.place,
+    this.mapUrl,
+    this.stopId,
+    this.requireAck = false,
+    this.ackBy = const [],
+    this.editedAt,
   });
 
+  bool get asksAnswer => requireAck || kind == NoticeKind.rollcall;
+
+  bool ackedBy(String email) => ackBy.contains(normalizeEmail(email));
+
+  /// The fields an admin writes. Answers (ackBy) are left out, so editing a
+  /// notice keeps who already answered.
+  Map<String, dynamic> toEditableMap() => {
+        'title': title,
+        'content': content,
+        'urgent': urgent,
+        'kind': kind.name,
+        'pinned': pinned,
+        'eventAt': eventAt == null ? null : writeDate(eventAt!),
+        'expiresAt': expiresAt == null ? null : writeDate(expiresAt!),
+        'place': place,
+        'mapUrl': mapUrl,
+        'stopId': stopId,
+        'requireAck': requireAck,
+      };
+
   factory TourNotice.fromMap(String id, Map<String, dynamic> map) {
+    String? text(String key) {
+      final v = map[key];
+      return v is String && v.trim().isNotEmpty ? v : null;
+    }
+
     return TourNotice(
       id: id,
       title: map['title'] as String? ?? 'নোটিশ',
@@ -30,6 +114,19 @@ class TourNotice {
       authorEmail: normalizeEmail(map['authorEmail'] as String? ?? ''),
       urgent: map['urgent'] as bool? ?? false,
       createdAt: readDate(map['createdAt']) ?? DateTime.now(),
+      kind: NoticeKind.fromName(map['kind'] as String?),
+      pinned: map['pinned'] as bool? ?? false,
+      eventAt: readDate(map['eventAt']),
+      expiresAt: readDate(map['expiresAt']),
+      place: text('place'),
+      mapUrl: text('mapUrl'),
+      stopId: text('stopId'),
+      requireAck: map['requireAck'] as bool? ?? false,
+      ackBy: (map['ackBy'] as List<dynamic>?)
+              ?.map((e) => normalizeEmail(e.toString()))
+              .toList() ??
+          const [],
+      editedAt: readDate(map['editedAt']),
     );
   }
 }
