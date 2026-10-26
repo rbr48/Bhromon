@@ -1,7 +1,9 @@
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/tour_group/domain/models/channel_models.dart';
+import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/channel_composer.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/channel_message_bubble.dart';
+import 'package:bhromon/features/tour_group/presentation/widgets/channel_sheets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -205,6 +207,83 @@ void main() {
           ));
       await tester.tap(find.text('@everyone · the whole tour'));
       expect(picked?.label, 'everyone');
+    });
+  });
+
+  group('showChannelMembersSheet', () {
+    testWidgets('shows audio and video call buttons for other members',
+        (tester) async {
+      final members = [
+        TourMember(
+          tourId: 't1',
+          email: 'me@x.com',
+          displayName: 'Me User',
+          role: TourRole.owner,
+          status: TourMemberStatus.active,
+          joinedAt: DateTime(2026, 1, 1),
+          uid: 'uid_me',
+        ),
+        TourMember(
+          tourId: 't1',
+          email: 'alice@x.com',
+          displayName: 'Alice Explorer',
+          role: TourRole.member,
+          status: TourMemberStatus.active,
+          joinedAt: DateTime(2026, 1, 2),
+          uid: 'uid_alice',
+        ),
+      ];
+
+      TourMember? calledMember;
+      bool? calledIsVideo;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: const [Locale('en'), Locale('bn')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            DefaultMaterialLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate,
+          ],
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () => showChannelMembersSheet(
+                  ctx,
+                  members: members,
+                  myEmail: 'me@x.com',
+                  badgeFor: (_) => '',
+                  onStartCall: (m, isVideo) {
+                    calledMember = m;
+                    calledIsVideo = isVideo;
+                  },
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Members'), findsOneWidget);
+      expect(find.text('Me User (you)'), findsOneWidget);
+      expect(find.text('Alice Explorer'), findsOneWidget);
+
+      // Call buttons exist for Alice
+      expect(find.byIcon(Icons.call), findsOneWidget);
+      expect(find.byIcon(Icons.videocam), findsOneWidget);
+
+      // Tap Audio Call
+      await tester.tap(find.byIcon(Icons.call));
+      await tester.pumpAndSettle();
+
+      expect(calledMember?.email, 'alice@x.com');
+      expect(calledIsVideo, isFalse);
     });
   });
 }

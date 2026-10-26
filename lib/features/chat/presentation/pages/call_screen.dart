@@ -18,6 +18,8 @@ class CallScreen extends StatefulWidget {
   final String? remoteAvatarUrl;
   final bool isCaller;
   final bool isVideoCall;
+  final String? localUserName;
+  final String? localAvatarUrl;
 
   const CallScreen({
     super.key,
@@ -28,6 +30,8 @@ class CallScreen extends StatefulWidget {
     this.remoteAvatarUrl,
     required this.isCaller,
     required this.isVideoCall,
+    this.localUserName,
+    this.localAvatarUrl,
   });
 
   @override
@@ -128,6 +132,8 @@ class _CallScreenState extends State<CallScreen> {
           widget.localUid,
           widget.remoteUid,
           videoEnabled: widget.isVideoCall,
+          callerName: widget.localUserName,
+          callerAvatar: widget.localAvatarUrl,
         );
       } else {
         await _signaling.answerCall(

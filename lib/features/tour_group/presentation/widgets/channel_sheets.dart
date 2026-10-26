@@ -171,11 +171,13 @@ class ChannelDraft {
   final String name;
   final String topic;
   final bool adminOnly;
+  final ChannelKind kind;
 
   const ChannelDraft({
     required this.name,
     required this.topic,
     required this.adminOnly,
+    this.kind = ChannelKind.text,
   });
 }
 
@@ -218,6 +220,7 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
   late final TextEditingController _topic =
       TextEditingController(text: widget.existing?.topic ?? '');
   late bool _adminOnly = widget.existing?.adminOnly ?? false;
+  late ChannelKind _kind = widget.existing?.kind ?? ChannelKind.text;
   bool _nameMissing = false;
 
   @override
@@ -236,7 +239,11 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
     Navigator.pop(
       context,
       ChannelDraft(
-          name: name, topic: _topic.text.trim(), adminOnly: _adminOnly),
+        name: name,
+        topic: _topic.text.trim(),
+        adminOnly: _adminOnly,
+        kind: _kind,
+      ),
     );
   }
 
@@ -250,7 +257,7 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (widget.nameEditable)
+            if (widget.nameEditable) ...[
               TextField(
                 controller: _name,
                 autofocus: true,
@@ -264,6 +271,25 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
                       : null,
                 ),
               ),
+              const SizedBox(height: 8),
+              SegmentedButton<ChannelKind>(
+                segments: [
+                  ButtonSegment<ChannelKind>(
+                    value: ChannelKind.text,
+                    label: Text(l10n.translate('chan_kind_text')),
+                    icon: const Icon(Icons.tag, size: 16),
+                  ),
+                  ButtonSegment<ChannelKind>(
+                    value: ChannelKind.voice,
+                    label: Text(l10n.translate('chan_kind_voice')),
+                    icon: const Icon(Icons.volume_up, size: 16),
+                  ),
+                ],
+                selected: {_kind},
+                onSelectionChanged: (s) => setState(() => _kind = s.first),
+              ),
+              const SizedBox(height: 8),
+            ],
             TextField(
               controller: _topic,
               maxLength: 200,
@@ -306,6 +332,7 @@ Future<void> showChannelMembersSheet(
   required List<TourMember> members,
   required String myEmail,
   required String Function(String email) badgeFor,
+  void Function(TourMember member, bool isVideo)? onStartCall,
 }) {
   final l10n = context.l10n;
   return showModalBottomSheet<void>(
@@ -351,13 +378,40 @@ Future<void> showChannelMembersSheet(
                   _roleLabel(l10n, m.role),
                   style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
-                trailing: badgeFor(m.email).isEmpty
-                    ? null
-                    : Text(
-                        badgeFor(m.email),
-                        style: const TextStyle(
-                            color: AppColors.mintGreen, fontSize: 11),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (badgeFor(m.email).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Text(
+                          badgeFor(m.email),
+                          style: const TextStyle(
+                              color: AppColors.mintGreen, fontSize: 11),
+                        ),
                       ),
+                    if (m.email != myEmail && onStartCall != null) ...[
+                      IconButton(
+                        icon: const Icon(Icons.call,
+                            size: 19, color: AppColors.mintGreen),
+                        tooltip: l10n.translate('chan_call_audio'),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          onStartCall(m, false);
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.videocam,
+                            size: 21, color: AppColors.mintGreen),
+                        tooltip: l10n.translate('chan_call_video'),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          onStartCall(m, true);
+                        },
+                      ),
+                    ],
+                  ],
+                ),
               ),
           ],
         ),

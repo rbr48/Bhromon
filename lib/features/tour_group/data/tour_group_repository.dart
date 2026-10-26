@@ -75,6 +75,8 @@ class TourGroupRepository {
     return 'Explorer';
   }
 
+  String? get currentPhotoUrl => _auth.currentUser?.photoURL;
+
   String _requireEmail() {
     if (!isSignedIn || currentEmail.isEmpty) {
       throw const TourAccessException(
@@ -475,6 +477,7 @@ class TourGroupRepository {
           role: TourRole.owner,
           status: TourMemberStatus.active,
           joinedAt: now,
+          uid: currentUid,
         ).toMap(),
       );
       batch.set(_invites.doc(inviteCode), {
@@ -532,6 +535,7 @@ class TourGroupRepository {
         role: TourRole.member,
         status: TourMemberStatus.active,
         joinedAt: DateTime.now(),
+        uid: currentUid,
       ).toMap()
         ..['joinCode'] = code;
       try {
@@ -768,6 +772,18 @@ class TourGroupRepository {
         .where('status', isEqualTo: 'active')
         .snapshots()
         .map((snapshot) {
+      final myEmail = currentEmail;
+      final myUid = currentUid;
+      if (myEmail.isNotEmpty && myUid.isNotEmpty) {
+        for (final d in snapshot.docs) {
+          final data = d.data();
+          if (normalizeEmail(data['email'] as String? ?? '') == myEmail &&
+              (data['uid'] == null || (data['uid'] as String).isEmpty)) {
+            unawaited(d.reference.update({'uid': myUid}).catchError((_) {}));
+            break;
+          }
+        }
+      }
       final members =
           snapshot.docs.map((d) => TourMember.fromMap(d.data())).toList();
       members.sort((a, b) {

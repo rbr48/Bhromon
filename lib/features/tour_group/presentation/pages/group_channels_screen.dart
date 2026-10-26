@@ -1,9 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
@@ -11,6 +14,7 @@ import '../../data/channel_read_store.dart';
 import '../../data/tour_channel_repository.dart';
 import '../../data/tour_group_repository.dart';
 import '../../data/tour_media_uploader.dart';
+import '../../data/voice_room_service.dart';
 import '../../domain/models/channel_models.dart';
 import '../../domain/models/date_codec.dart';
 import '../../domain/models/logistics_models.dart';
@@ -41,6 +45,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   late final TourChannelRepository _repo =
       TourChannelRepository(groups: _groups);
   final ChannelReadStore _store = ChannelReadStore();
+  final VoiceRoomService _voiceService = VoiceRoomService();
 
   final List<StreamSubscription<dynamic>> _subs = [];
   List<TourChannel> _channelDocs = const [];
@@ -119,6 +124,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       _repo
           .watchLiveStop(widget.tourId)
           .listen((id) => _update(() => _liveStopId = id), onError: (_) {}),
+      _voiceService.changes.listen((_) => _update(() {})),
     ]);
     for (final id in kBuiltInChannelIds) {
       unawaited(_ensurePrefs(id));
@@ -205,6 +211,12 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
 
   String _titleOf(TourChannel channel) {
     final l10n = context.l10n;
+    if (channel.id == kBuiltInVoiceChannelId) {
+      return l10n.translate('chan_voice_lounge');
+    }
+    if (channel.kind == ChannelKind.voice) {
+      return channel.name.isEmpty ? '🔊 Voice' : '🔊 ${channel.name}';
+    }
     switch (channel.id) {
       case 'general':
         return l10n.translate('tour_channel_general');
@@ -336,6 +348,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               members: _members,
               myEmail: _me,
               badgeFor: _badgeFor,
+              onStartCall: (m, isVideo) =>
+                  _startDirectCall(m, isVideo: isVideo),
             ),
           ),
           PopupMenuButton<_ChannelMenu>(
@@ -389,19 +403,26 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 ),
               ),
             ),
-          Expanded(child: _buildMessages(selected)),
-          _TypingLine(stream: _typingOf(selected.id), myEmail: _me),
-          if (canPost)
-            _buildComposer(selected)
-          else
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-              child: Text(
-                l10n.translate('chan_read_only'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+          if (selected.isVoice)
+            Expanded(child: _buildVoiceRoom(selected))
+          else ...[
+            Expanded(child: _buildMessages(selected)),
+            _TypingLine(stream: _typingOf(selected.id), myEmail: _me),
+            if (_voiceService.isConnected &&
+                _voiceService.currentChannelId != selected.id)
+              _buildDockedVoiceBar(channels),
+            if (canPost)
+              _buildComposer(selected)
+            else
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                child: Text(
+                  l10n.translate('chan_read_only'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
               ),
-            ),
+          ],
         ],
       ),
     );
@@ -534,6 +555,10 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
             selected: c.id == selected.id,
             muted: _muted.contains(c.id),
             adminOnly: c.adminOnly,
+            isVoice: c.isVoice,
+            voiceParticipants: c.isVoice
+                ? _voiceService.watchParticipants(widget.tourId, c.id)
+                : null,
             lastRead: _lastRead[c.id],
             myEmail: _me,
             latest: _latestOf(c.id),
@@ -584,6 +609,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         name: draft.name,
         topic: draft.topic,
         adminOnly: draft.adminOnly,
+        kind: draft.kind,
       );
       if (!mounted) return;
       _selectChannel(id);
@@ -650,6 +676,453 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         _searchCtrl.clear();
       }
     });
+  }
+
+  void _startDirectCall(TourMember member, {required bool isVideo}) {
+    final l10n = context.l10n;
+    final me = _groups.currentEmail;
+    final myUid = _groups.currentUid.isNotEmpty ? _groups.currentUid : me;
+    final remoteId = (member.uid != null && member.uid!.isNotEmpty)
+        ? member.uid!
+        : member.email;
+    if (remoteId.isEmpty) {
+      _snack(l10n.translate('chan_call_offline'), error: true);
+      return;
+    }
+    final myName = _groups.currentDisplayName;
+    final myAvatar = _groups.currentPhotoUrl;
+    final callId = const Uuid().v4();
+    context.push(
+      '/call/$callId',
+      extra: {
+        'localUid': myUid,
+        'remoteUid': remoteId,
+        'remoteUserName': member.displayName.isNotEmpty
+            ? member.displayName
+            : member.email.split('@').first,
+        'remoteAvatarUrl': member.photoUrl,
+        'isCaller': true,
+        'isVideoCall': isVideo,
+        'localUserName': myName,
+        'localAvatarUrl': myAvatar,
+      },
+    );
+  }
+
+  Future<void> _joinVoice(TourChannel channel) async {
+    try {
+      final myName = _groups.currentDisplayName;
+      final myPhoto = _groups.currentPhotoUrl;
+      final myUid = _groups.currentUid.isNotEmpty ? _groups.currentUid : _me;
+      await _voiceService.joinVoiceRoom(
+        tourId: widget.tourId,
+        channelId: channel.id,
+        myEmail: _me,
+        myName: myName,
+        photoUrl: myPhoto,
+        myUid: myUid,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _snack(
+        context.l10n.translate('chan_call_failed', args: {'error': e}),
+        error: true,
+      );
+    }
+  }
+
+  Widget _buildVoiceRoom(TourChannel channel) {
+    final l10n = context.l10n;
+    final isConnectedToThis = _voiceService.isConnected &&
+        _voiceService.currentChannelId == channel.id;
+
+    return StreamBuilder<List<VoiceParticipant>>(
+      stream: _voiceService.watchParticipants(widget.tourId, channel.id),
+      builder: (context, snapshot) {
+        final participants = snapshot.data ?? const <VoiceParticipant>[];
+
+        return Column(
+          children: [
+            Expanded(
+              child: participants.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color:
+                                    AppColors.midGreen.withValues(alpha: 0.2),
+                              ),
+                              child: const Icon(Icons.headset_mic_rounded,
+                                  size: 64, color: AppColors.mintGreen),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              _titleOf(channel),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              l10n.translate('chan_voice_empty'),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: Colors.white60, fontSize: 14),
+                            ),
+                            const SizedBox(height: 24),
+                            if (!isConnectedToThis)
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.mintGreen,
+                                  foregroundColor: AppColors.darkGreen,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 28, vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24)),
+                                ),
+                                icon: const Icon(Icons.call),
+                                label: Text(
+                                  l10n.translate('chan_voice_join'),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15),
+                                ),
+                                onPressed: () => _joinVoice(channel),
+                              ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: GridView.builder(
+                        itemCount: participants.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1.1,
+                        ),
+                        itemBuilder: (context, i) {
+                          final p = participants[i];
+                          return _buildParticipantCard(p);
+                        },
+                      ),
+                    ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: isConnectedToThis
+                    ? _buildVoiceRoomControls()
+                    : (participants.isNotEmpty
+                        ? SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.mintGreen,
+                                foregroundColor: AppColors.darkGreen,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(28)),
+                              ),
+                              icon: const Icon(Icons.call),
+                              label: Text(
+                                l10n.translate('chan_voice_join'),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              onPressed: () => _joinVoice(channel),
+                            ),
+                          )
+                        : const SizedBox.shrink()),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildParticipantCard(VoiceParticipant p) {
+    final isMe = p.email == _me;
+    final isVideoActive = isMe
+        ? (_voiceService.isVideoOn &&
+            _voiceService.localRenderer.srcObject != null)
+        : (_voiceService.remoteRenderers.containsKey(p.email) &&
+            _voiceService.remoteRenderers[p.email]!.srcObject != null &&
+            p.isVideoOn);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2C34),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: !p.isAudioMuted
+              ? AppColors.mintGreen.withValues(alpha: 0.6)
+              : Colors.white10,
+          width: !p.isAudioMuted ? 2 : 1,
+        ),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (isVideoActive)
+            Positioned.fill(
+              child: RTCVideoView(
+                isMe
+                    ? _voiceService.localRenderer
+                    : _voiceService.remoteRenderers[p.email]!,
+                mirror: isMe,
+                objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+              ),
+            )
+          else
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.midGreen,
+                    boxShadow: !p.isAudioMuted
+                        ? [
+                            BoxShadow(
+                              color: AppColors.mintGreen.withValues(alpha: 0.4),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      p.displayName.isNotEmpty
+                          ? p.displayName.substring(0, 1).toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    isMe ? '${p.displayName} (you)' : p.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          Positioned(
+            left: 8,
+            right: 8,
+            bottom: 8,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (isVideoActive)
+                  Expanded(
+                    child: Text(
+                      isMe ? '${p.displayName} (you)' : p.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(color: Colors.black87, blurRadius: 4),
+                          ]),
+                    ),
+                  )
+                else
+                  const Spacer(),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    p.isAudioMuted ? Icons.mic_off : Icons.mic,
+                    size: 14,
+                    color:
+                        p.isAudioMuted ? Colors.redAccent : AppColors.mintGreen,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVoiceRoomControls() {
+    final l10n = context.l10n;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1F2C34),
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          IconButton(
+            icon: Icon(
+              _voiceService.isSpeakerOn
+                  ? Icons.volume_up
+                  : Icons.volume_down_rounded,
+              color: _voiceService.isSpeakerOn
+                  ? AppColors.mintGreen
+                  : Colors.white70,
+            ),
+            tooltip: l10n.translate('chan_voice_speaker'),
+            onPressed: () => _voiceService.toggleSpeaker(),
+          ),
+          IconButton(
+            icon: Icon(
+              _voiceService.isAudioMuted ? Icons.mic_off : Icons.mic,
+              color: _voiceService.isAudioMuted
+                  ? Colors.redAccent
+                  : AppColors.mintGreen,
+            ),
+            tooltip: l10n.translate(_voiceService.isAudioMuted
+                ? 'chan_voice_unmute'
+                : 'chan_voice_mute'),
+            onPressed: () => _voiceService.toggleAudio(),
+          ),
+          IconButton(
+            icon: Icon(
+              _voiceService.isVideoOn ? Icons.videocam : Icons.videocam_off,
+              color: _voiceService.isVideoOn
+                  ? AppColors.mintGreen
+                  : Colors.white70,
+            ),
+            tooltip: l10n.translate(_voiceService.isVideoOn
+                ? 'chan_voice_video_off'
+                : 'chan_voice_video_on'),
+            onPressed: () => _voiceService.toggleVideo(),
+          ),
+          if (!kIsWeb && _voiceService.isVideoOn)
+            IconButton(
+              icon: const Icon(Icons.cameraswitch, color: Colors.white70),
+              onPressed: () => _voiceService.switchCamera(),
+            ),
+          GestureDetector(
+            onTap: () => _voiceService.leaveVoiceRoom(),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                color: Colors.redAccent,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.call_end, color: Colors.white, size: 22),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDockedVoiceBar(List<TourChannel> channels) {
+    final activeId = _voiceService.currentChannelId;
+    if (activeId == null) return const SizedBox.shrink();
+
+    final activeChan = channels.firstWhere(
+      (c) => c.id == activeId,
+      orElse: () => TourChannel(id: activeId),
+    );
+    final l10n = context.l10n;
+
+    return Material(
+      color: const Color(0xFF13261A),
+      child: InkWell(
+        onTap: () => _selectChannel(activeId),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: const BoxDecoration(
+            border:
+                Border(left: BorderSide(color: AppColors.mintGreen, width: 3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.volume_up, color: AppColors.mintGreen, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.translate('chan_voice_connected'),
+                      style: const TextStyle(
+                          color: AppColors.mintGreen,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      _titleOf(activeChan),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  _voiceService.isAudioMuted ? Icons.mic_off : Icons.mic,
+                  color: _voiceService.isAudioMuted
+                      ? Colors.redAccent
+                      : AppColors.mintGreen,
+                  size: 20,
+                ),
+                tooltip: l10n.translate(_voiceService.isAudioMuted
+                    ? 'chan_voice_unmute'
+                    : 'chan_voice_mute'),
+                onPressed: () => _voiceService.toggleAudio(),
+              ),
+              IconButton(
+                icon: const Icon(Icons.call_end,
+                    color: Colors.redAccent, size: 20),
+                tooltip: l10n.translate('chan_voice_leave'),
+                onPressed: () => _voiceService.leaveVoiceRoom(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -1240,6 +1713,8 @@ class _ChannelChip extends StatelessWidget {
   final bool selected;
   final bool muted;
   final bool adminOnly;
+  final bool isVoice;
+  final Stream<List<VoiceParticipant>>? voiceParticipants;
   final DateTime? lastRead;
   final String myEmail;
   final Stream<List<ChannelMessage>> latest;
@@ -1251,6 +1726,8 @@ class _ChannelChip extends StatelessWidget {
     required this.selected,
     required this.muted,
     required this.adminOnly,
+    this.isVoice = false,
+    this.voiceParticipants,
     required this.lastRead,
     required this.myEmail,
     required this.latest,
@@ -1260,6 +1737,62 @@ class _ChannelChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isVoice && voiceParticipants != null) {
+      return StreamBuilder<List<VoiceParticipant>>(
+        stream: voiceParticipants,
+        builder: (context, snap) {
+          final count = snap.data?.length ?? 0;
+          return InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: selected
+                    ? AppColors.midGreen
+                    : Colors.white.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: selected ? Colors.white : Colors.white70,
+                      fontSize: 13,
+                      fontWeight:
+                          selected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  if (count > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      constraints: const BoxConstraints(minWidth: 18),
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.mintGreen,
+                        borderRadius: BorderRadius.all(Radius.circular(9)),
+                      ),
+                      height: 18,
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                            color: AppColors.darkGreen,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    }
+
     return StreamBuilder<List<ChannelMessage>>(
       stream: latest,
       builder: (context, latestSnap) {

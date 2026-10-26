@@ -1,3 +1,4 @@
+import 'package:bhromon/features/tour_group/data/voice_room_service.dart';
 import 'package:bhromon/features/tour_group/domain/models/channel_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/date_codec.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -100,6 +101,57 @@ void main() {
       expect(const TourChannel(id: 'food').isBuiltIn, isTrue);
       expect(
           const TourChannel(id: 'k7x2qa9p', name: 'Photos').isBuiltIn, isFalse);
+    });
+
+    test('supports voice kind and built-in voice lounge', () {
+      const lounge = TourChannel(id: kBuiltInVoiceChannelId);
+      expect(lounge.isBuiltIn, isTrue);
+      expect(lounge.isVoice, isTrue);
+
+      final customVoice = TourChannel.fromMap('v1', {
+        'name': 'Campfire Chat',
+        'kind': 'voice',
+        'adminOnly': true,
+      });
+      expect(customVoice.isVoice, isTrue);
+      expect(customVoice.kind, ChannelKind.voice);
+      expect(customVoice.name, 'Campfire Chat');
+      expect(customVoice.adminOnly, isTrue);
+
+      final map = customVoice.toMap();
+      expect(map['kind'], 'voice');
+      expect(map['name'], 'Campfire Chat');
+    });
+  });
+
+  group('VoiceParticipant', () {
+    test('serializes and deserializes correctly', () {
+      final now = DateTime(2026, 10, 26, 12, 0);
+      final p = VoiceParticipant(
+        email: 'Alice@Example.Com',
+        displayName: 'Alice',
+        uid: 'uid_alice',
+        photoUrl: 'https://example.com/alice.jpg',
+        isAudioMuted: true,
+        isVideoOn: false,
+        joinedAt: now,
+      );
+
+      final map = p.toMap();
+      expect(map['email'], 'alice@example.com');
+      expect(map['displayName'], 'Alice');
+      expect(map['uid'], 'uid_alice');
+      expect(map['photoUrl'], 'https://example.com/alice.jpg');
+      expect(map['isAudioMuted'], isTrue);
+      expect(map['isVideoOn'], isFalse);
+
+      final deserialized = VoiceParticipant.fromMap(map);
+      expect(deserialized.email, 'alice@example.com');
+      expect(deserialized.displayName, 'Alice');
+      expect(deserialized.uid, 'uid_alice');
+      expect(deserialized.photoUrl, 'https://example.com/alice.jpg');
+      expect(deserialized.isAudioMuted, isTrue);
+      expect(deserialized.isVideoOn, isFalse);
     });
   });
 

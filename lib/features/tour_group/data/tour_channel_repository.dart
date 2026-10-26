@@ -62,6 +62,7 @@ class TourChannelRepository {
     required String name,
     required String topic,
     required bool adminOnly,
+    ChannelKind kind = ChannelKind.text,
   }) async {
     final email = _groups.requireEmail();
     final id = _uuid.v4().substring(0, 8);
@@ -72,6 +73,7 @@ class TourChannelRepository {
         topic: topic.trim(),
         adminOnly: adminOnly,
         createdByEmail: email,
+        kind: kind,
       ).toMap(),
       'createdAt': FieldValue.serverTimestamp(),
     });

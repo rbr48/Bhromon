@@ -103,6 +103,8 @@ class CallSignalingService {
     String localUid,
     String remoteUid, {
     bool videoEnabled = true,
+    String? callerName,
+    String? callerAvatar,
   }) async {
     _callId = callId;
     _isCaller = true;
@@ -120,6 +122,8 @@ class CallSignalingService {
       'calleeId': remoteUid,
       'participants': [localUid, remoteUid],
       'isVideo': videoEnabled,
+      if (callerName != null) 'callerName': callerName,
+      if (callerAvatar != null) 'callerAvatar': callerAvatar,
       'offer': {
         'type': offer.type,
         'sdp': offer.sdp,
