@@ -1,40 +1,58 @@
 import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:uuid/uuid.dart';
 
+/// Central media and file upload service for Bhromon.
+///
+/// Routes all media (chat attachments, voice notes, documents, profile pictures,
+/// reels, and trip logs) to the high-performance dedicated VPS media service
+/// at `https://bhromon.fun/api/media/upload`, bypassing Firebase Storage quotas.
 class MediaUploadService {
-  /// Maps legacy directory paths to match the security constraints in storage.rules.
-  static String _mapPath(String path) {
-    if (path.startsWith('explorer_avatars/')) {
-      final filename = path.substring('explorer_avatars/'.length);
-      final parts = filename.split('_');
-      if (parts.isNotEmpty) {
-        final uid = parts[0];
-        return 'explorer_profiles/$uid/avatar_${parts.sublist(1).join('_')}';
-      }
-    } else if (path.startsWith('explorer_covers/')) {
-      final filename = path.substring('explorer_covers/'.length);
-      final parts = filename.split('_');
-      if (parts.isNotEmpty) {
-        final uid = parts[0];
-        return 'explorer_profiles/$uid/cover_${parts.sublist(1).join('_')}';
-      }
-    } else if (path.startsWith('voice_bios/')) {
-      final parts = path.split('/');
-      if (parts.length >= 3) {
-        final uid = parts[1];
-        return 'explorer_profiles/$uid/bio.m4a';
-      }
+  static const String baseUrl = 'https://bhromon.fun';
+  static const String uploadUrl = '$baseUrl/api/media/upload';
+  static const String deleteBaseUrl = '$baseUrl/api/media/media';
+  static const String uploadKey = 'bhromon_vps_media_2026_sec';
+
+  static final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(minutes: 20),
+      receiveTimeout: const Duration(minutes: 5),
+    ),
+  );
+
+  static Future<Options> _authorizedOptions() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final token = await user?.getIdToken();
+    final headers = <String, String>{
+      'X-Upload-Key': uploadKey,
+    };
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
     }
-    return path;
+    return Options(headers: headers);
   }
 
-  /// Uploads a file to Firebase Storage at the specified [path].
-  /// Optionally reports progress using [onProgress].
-  /// Returns the public download URL on success.
+  /// Deconstructs a legacy or logical path into [tourOrChatId], [folder], and [filename].
+  static (String tourId, String folder, String filename) _parsePath(String path) {
+    final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+    if (segments.length >= 3) {
+      return (segments[1], segments[0], segments[2]);
+    } else if (segments.length == 2) {
+      return (segments[1], segments[0], segments[1]);
+    } else if (segments.length == 1) {
+      return ('general', 'media', segments[0]);
+    }
+    final randId = const Uuid().v4().replaceAll('-', '');
+    return ('general', 'media', '$randId.bin');
+  }
+
+  /// Uploads [file] directly to the dedicated VPS media storage.
   static Future<String> uploadFile({
     required File file,
     required String path,
@@ -43,7 +61,7 @@ class MediaUploadService {
     try {
       if (kIsWeb) {
         throw UnsupportedError(
-            'Direct File upload is not supported on web. Use bytes instead.');
+            'Direct File upload is not supported on web. Use uploadBytes instead.');
       }
       if (!file.existsSync()) {
         throw FileSystemException('File does not exist at path: ${file.path}');
@@ -69,42 +87,48 @@ class MediaUploadService {
             final xfile = File(compressedFile.path);
             if (xfile.lengthSync() < file.lengthSync()) {
               fileToUpload = xfile;
-              debugPrint(
-                  'Compressed image from ${file.lengthSync()} to ${xfile.lengthSync()} bytes');
             }
           }
-        } catch (e) {
-          debugPrint('Image compression failed: $e');
-        }
+        } catch (_) {}
       }
 
-      final mappedPath = _mapPath(path);
-      final ref = FirebaseStorage.instance.ref().child(mappedPath);
+      final (tourId, folder, filename) = _parsePath(path);
+      final options = await _authorizedOptions();
 
-      final uploadTask = ref.putFile(
-        fileToUpload,
-        SettableMetadata(contentType: _getContentTypeForExtension(extension)),
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          fileToUpload.path,
+          filename: filename,
+        ),
+        'tourId': tourId,
+        'folder': folder,
+      });
+
+      final response = await _dio.post<Map<String, dynamic>>(
+        uploadUrl,
+        data: formData,
+        options: options,
+        onSendProgress: (sent, total) {
+          if (total > 0 && onProgress != null) {
+            onProgress(sent / total);
+          }
+        },
       );
 
-      if (onProgress != null) {
-        uploadTask.snapshotEvents.listen((snap) {
-          final progress = snap.bytesTransferred /
-              (snap.totalBytes > 0 ? snap.totalBytes : 1);
-          onProgress(progress);
-        });
+      final url = response.data?['url'] as String?;
+      if (url == null || url.isEmpty) {
+        throw Exception('VPS media server did not return a valid download URL');
       }
 
-      await uploadTask;
-      final downloadUrl = await ref.getDownloadURL();
-      debugPrint('MediaUploadService uploaded file to path: $mappedPath');
-      return downloadUrl;
+      debugPrint('MediaUploadService uploaded file to VPS: $url');
+      return url;
     } catch (e) {
-      debugPrint('MediaUploadService Error (Path: $path): $e');
+      debugPrint('MediaUploadService VPS Error (Path: $path): $e');
       rethrow;
     }
   }
 
-  /// Uploads raw bytes (useful for Web or compressed data) to Firebase Storage.
+  /// Uploads raw bytes (cross-platform, works on Web, Android, iOS) to VPS.
   static Future<String> uploadBytes({
     required List<int> bytes,
     required String path,
@@ -112,66 +136,121 @@ class MediaUploadService {
     void Function(double)? onProgress,
   }) async {
     try {
-      final mappedPath = _mapPath(path);
-      final ref = FirebaseStorage.instance.ref().child(mappedPath);
+      final (tourId, folder, filename) = _parsePath(path);
+      final options = await _authorizedOptions();
 
-      final uploadTask = ref.putData(
-        Uint8List.fromList(bytes),
-        SettableMetadata(contentType: contentType),
+      final formData = FormData.fromMap({
+        'file': MultipartFile.fromBytes(
+          bytes,
+          filename: filename,
+        ),
+        'tourId': tourId,
+        'folder': folder,
+      });
+
+      final response = await _dio.post<Map<String, dynamic>>(
+        uploadUrl,
+        data: formData,
+        options: options,
+        onSendProgress: (sent, total) {
+          if (total > 0 && onProgress != null) {
+            onProgress(sent / total);
+          }
+        },
       );
 
-      if (onProgress != null) {
-        uploadTask.snapshotEvents.listen((snap) {
-          final progress = snap.bytesTransferred /
-              (snap.totalBytes > 0 ? snap.totalBytes : 1);
-          onProgress(progress);
-        });
+      final url = response.data?['url'] as String?;
+      if (url == null || url.isEmpty) {
+        throw Exception('VPS media server did not return a valid download URL');
       }
 
-      await uploadTask;
-      final downloadUrl = await ref.getDownloadURL();
-      debugPrint('MediaUploadService uploaded bytes to path: $mappedPath');
-      return downloadUrl;
+      debugPrint('MediaUploadService uploaded bytes to VPS: $url');
+      return url;
     } catch (e) {
-      debugPrint('MediaUploadService Bytes Error (Path: $path): $e');
+      debugPrint('MediaUploadService Bytes VPS Error (Path: $path): $e');
       rethrow;
     }
   }
 
-  /// Deletes a file from Firebase Storage at the specified [path].
+  /// Uploads an [XFile] (from ImagePicker or file picker) cross-platform to VPS.
+  static Future<String> uploadXFile({
+    required XFile file,
+    required String tourOrChatId,
+    required String folder,
+    void Function(double)? onProgress,
+  }) async {
+    try {
+      final options = await _authorizedOptions();
+      final ext = file.name.split('.').last.toLowerCase();
+      final uniqueName = '${const Uuid().v4().replaceAll('-', '')}.$ext';
+
+      final MultipartFile multipartFile;
+      if (kIsWeb) {
+        final bytes = await file.readAsBytes();
+        multipartFile = MultipartFile.fromBytes(bytes, filename: uniqueName);
+      } else {
+        multipartFile =
+            await MultipartFile.fromFile(file.path, filename: uniqueName);
+      }
+
+      final formData = FormData.fromMap({
+        'file': multipartFile,
+        'tourId': tourOrChatId,
+        'folder': folder,
+      });
+
+      final response = await _dio.post<Map<String, dynamic>>(
+        uploadUrl,
+        data: formData,
+        options: options,
+        onSendProgress: (sent, total) {
+          if (total > 0 && onProgress != null) {
+            onProgress(sent / total);
+          }
+        },
+      );
+
+      final url = response.data?['url'] as String?;
+      if (url == null || url.isEmpty) {
+        throw Exception('VPS media server did not return a valid download URL');
+      }
+
+      debugPrint('MediaUploadService uploaded XFile to VPS: $url');
+      return url;
+    } catch (e) {
+      debugPrint('MediaUploadService XFile VPS Error: $e');
+      rethrow;
+    }
+  }
+
+  /// Deletes a file from either VPS storage or legacy Firebase Storage.
   static Future<void> deleteFile({required String path}) async {
     try {
-      final mappedPath = _mapPath(path);
-      final ref = FirebaseStorage.instance.ref().child(mappedPath);
-      await ref.delete();
-      debugPrint('MediaUploadService deleted file from path: $mappedPath');
+      if (path.contains('/media/')) {
+        // VPS storage URL: https://bhromon.fun/media/{tourId}/{folder}/{filename}
+        final uri = Uri.tryParse(path);
+        if (uri != null && uri.pathSegments.length >= 4) {
+          final tourId = uri.pathSegments[1];
+          final folder = uri.pathSegments[2];
+          final filename = uri.pathSegments[3];
+          final options = await _authorizedOptions();
+          await _dio.delete<void>(
+            '$deleteBaseUrl/$tourId/$folder/$filename',
+            options: options,
+          );
+          debugPrint('MediaUploadService deleted VPS media: $path');
+          return;
+        }
+      }
+
+      // Fallback for legacy Firebase Storage URLs
+      if (path.startsWith('gs://') ||
+          path.contains('firebasestorage.googleapis.com')) {
+        await FirebaseStorage.instance.refFromURL(path).delete();
+        debugPrint('MediaUploadService deleted legacy Firebase media: $path');
+      }
     } catch (e) {
       debugPrint('MediaUploadService Delete Error (Path: $path): $e');
-      rethrow;
-    }
-  }
-
-  static String _getContentTypeForExtension(String ext) {
-    switch (ext) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'gif':
-        return 'image/gif';
-      case 'mp4':
-        return 'video/mp4';
-      case 'aac':
-        return 'audio/aac';
-      case 'm4a':
-        return 'audio/m4a';
-      case 'mp3':
-        return 'audio/mp3';
-      case 'wav':
-        return 'audio/wav';
-      default:
-        return 'application/octet-stream';
     }
   }
 }

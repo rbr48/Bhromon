@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -30,6 +31,31 @@ class ChatLocalCache {
     }
   }
 
+  /// Sanitizes Firestore Timestamps and nested objects so Hive can serialize them without missing adapters
+  Map<String, dynamic> _sanitizeForHive(Map<dynamic, dynamic> raw) {
+    final clean = <String, dynamic>{};
+    raw.forEach((key, value) {
+      final strKey = key.toString();
+      if (value is Timestamp) {
+        clean[strKey] = value.toDate().toIso8601String();
+      } else if (value is DateTime) {
+        clean[strKey] = value.toIso8601String();
+      } else if (value is Map) {
+        clean[strKey] = _sanitizeForHive(value);
+      } else if (value is List) {
+        clean[strKey] = value.map((item) {
+          if (item is Timestamp) return item.toDate().toIso8601String();
+          if (item is DateTime) return item.toIso8601String();
+          if (item is Map) return _sanitizeForHive(item);
+          return item;
+        }).toList();
+      } else {
+        clean[strKey] = value;
+      }
+    });
+    return clean;
+  }
+
   /// Caches the latest messages for [chatId].
   Future<void> cacheMessages(
       String chatId, List<Map<String, dynamic>> messages) async {
@@ -40,7 +66,7 @@ class ChatLocalCache {
       for (final msg in messages) {
         final id = msg['id'] as String?;
         if (id != null && id.isNotEmpty) {
-          mapToStore[id] = msg;
+          mapToStore[id] = _sanitizeForHive(msg);
         }
       }
       await box.putAll(mapToStore);
@@ -70,7 +96,7 @@ class ChatLocalCache {
       String chatId, Map<String, dynamic> data) async {
     try {
       await init();
-      await _convBox?.put(chatId, data);
+      await _convBox?.put(chatId, _sanitizeForHive(data));
     } catch (e) {
       debugPrint('Error caching conversation $chatId: $e');
     }
