@@ -43,7 +43,7 @@ void logWarning(String message, [Object? error, StackTrace? stack]) {
   final safe = _maskPii(message);
   appLogger.warning(safe, error, stack);
   // Forward warnings to Crashlytics as non-fatal in release builds
-  if (kReleaseMode) {
+  if (!kIsWeb && kReleaseMode) {
     try {
       FirebaseCrashlytics.instance.recordError(
         error ?? Exception(safe),
@@ -59,7 +59,7 @@ void logError(String message, [Object? error, StackTrace? stack]) {
   final safe = _maskPii(message);
   appLogger.error(safe, error, stack);
   // Forward errors to Crashlytics as non-fatal in release builds
-  if (kReleaseMode) {
+  if (!kIsWeb && kReleaseMode) {
     try {
       FirebaseCrashlytics.instance.recordError(
         error ?? Exception(safe),
