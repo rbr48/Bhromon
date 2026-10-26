@@ -5,7 +5,9 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 UPLOAD_FOLDER = '/var/www/bhromon/uploads'
-API_KEY = "bhromon_secure_upload_key_2026"
+API_KEY = os.environ.get('BHROMON_UPLOAD_API_KEY', '')
+if not API_KEY:
+    raise RuntimeError('Set BHROMON_UPLOAD_API_KEY before starting the upload server')
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)

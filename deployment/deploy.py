@@ -90,13 +90,16 @@ def deploy():
     print('Connecting to VPS via SSH (key auth)...')
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    if os.path.exists(VPS_KEY_PATH):
-        print(f"Connecting using SSH key: {VPS_KEY_PATH}")
-        ssh.connect(VPS_IP, port=VPS_PORT, username=VPS_USER, key_filename=VPS_KEY_PATH, timeout=30)
-    else:
-        print("Connecting using password...")
-        ssh.connect(VPS_IP, port=VPS_PORT, username=VPS_USER, password="WcT/VxM86?Dv)GzR", timeout=30)
-    print('Connected successfully!')
+    try:
+        if os.path.exists(VPS_KEY_PATH):
+            print(f"Connecting using SSH key: {VPS_KEY_PATH}")
+            ssh.connect(VPS_IP, port=VPS_PORT, username=VPS_USER, key_filename=VPS_KEY_PATH, timeout=30)
+        else:
+            if not os.environ.get('VPS_PASS'):
+                sys.exit('No SSH key at VPS_KEY_PATH, and VPS_PASS is not set')
+            print("Connecting using password...")
+            ssh.connect(VPS_IP, port=VPS_PORT, username=VPS_USER, password=os.environ.get('VPS_PASS', ''), timeout=30)
+        print('Connected successfully!')
         
         # Open SFTP client
         sftp = ssh.open_sftp()

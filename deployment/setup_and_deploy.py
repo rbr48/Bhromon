@@ -17,7 +17,10 @@ VPS_IP = os.environ.get('VPS_IP', '148.135.137.245')
 VPS_PORT = int(os.environ.get('VPS_PORT', '2222'))
 VPS_USER = os.environ.get('VPS_USER', 'root')
 VPS_KEY_PATH = os.environ.get('VPS_KEY_PATH', os.path.join(os.path.expanduser('~'), '.ssh', 'bhromon_vps'))
-VPS_PASS = os.environ.get('VPS_PASS', 'WcT/VxM86?Dv)GzR')
+VPS_PASS = os.environ.get('VPS_PASS', '')
+DB_PASSWORD = os.environ.get('BHROMON_DB_PASSWORD', '')
+if __name__ == "__main__" and not DB_PASSWORD:
+    sys.exit('Set BHROMON_DB_PASSWORD to the password for the bhromon_user database role')
 DEPLOY_DIR = "/root/bhromon-deploy"
 
 def build_flutter_web():
@@ -144,6 +147,8 @@ def deploy():
             print(f"Connecting using SSH key: {VPS_KEY_PATH}")
             ssh.connect(VPS_IP, port=VPS_PORT, username=VPS_USER, key_filename=VPS_KEY_PATH, timeout=30)
         else:
+            if not VPS_PASS:
+                sys.exit('No SSH key at VPS_KEY_PATH, and VPS_PASS is not set')
             print("Connecting using password...")
             ssh.connect(VPS_IP, port=VPS_PORT, username=VPS_USER, password=VPS_PASS, timeout=30)
         print("Connected successfully!")
@@ -188,7 +193,7 @@ def deploy():
             "systemctl start postgresql",
             "systemctl enable postgresql",
             "sudo -u postgres psql -c \"CREATE DATABASE bhromon_db;\" || echo 'Postgres DB already exists or failed'",
-            "sudo -u postgres psql -c \"CREATE USER bhromon_user WITH PASSWORD 'MSrana@100400';\" || echo 'Postgres User already exists or failed'",
+            "sudo -u postgres psql -c \"CREATE USER bhromon_user WITH PASSWORD '" + DB_PASSWORD + "';\" || echo 'Postgres User already exists or failed'",
             "sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE bhromon_db TO bhromon_user;\" || echo 'Grant failed'",
             
             # 3. Setup MySQL / MariaDB
@@ -197,7 +202,7 @@ def deploy():
             "systemctl start mysql || systemctl start mariadb",
             "systemctl enable mysql || systemctl enable mariadb",
             "mysql -e \"CREATE DATABASE IF NOT EXISTS bhromon_db;\" || echo 'MySQL DB already exists or failed'",
-            "mysql -e \"CREATE USER IF NOT EXISTS 'bhromon_user'@'localhost' IDENTIFIED BY 'MSrana@100400';\" || echo 'MySQL User already exists or failed'",
+            "mysql -e \"CREATE USER IF NOT EXISTS 'bhromon_user'@'localhost' IDENTIFIED BY '" + DB_PASSWORD + "';\" || echo 'MySQL User already exists or failed'",
             "mysql -e \"GRANT ALL PRIVILEGES ON bhromon_db.* TO 'bhromon_user'@'localhost';\" || echo 'Grant failed'",
             "mysql -e \"FLUSH PRIVILEGES;\" || echo 'Flush failed'",
             

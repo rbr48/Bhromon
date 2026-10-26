@@ -81,9 +81,11 @@ def connect() -> paramiko.SSHClient:
         ssh.connect(VPS_IP, port=VPS_PORT, username=VPS_USER,
                     key_filename=VPS_KEY_PATH, timeout=30)
     else:
+        if not os.environ.get('VPS_PASS'):
+            sys.exit('No SSH key at VPS_KEY_PATH, and VPS_PASS is not set')
         print("  SSH key not found. Connecting using password fallback...")
         ssh.connect(VPS_IP, port=VPS_PORT, username=VPS_USER,
-                    password="WcT/VxM86?Dv)GzR", timeout=30)
+                    password=os.environ.get("VPS_PASS", ""), timeout=30)
     print("  Connected!")
     return ssh
 
