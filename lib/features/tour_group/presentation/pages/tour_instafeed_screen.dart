@@ -1043,21 +1043,23 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                 ),
                               ),
 
-                            // 2. Beach Tide & Ocean Safety Banner
-                            SliverToBoxAdapter(
-                              child: InstafeedTideBanner(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => TideBeachGuideScreen(
-                                        tourId: widget.tourId,
+                            // 2. Beach Tide & Ocean Safety Banner, on beach
+                            // trips only (hidden until the tour has loaded)
+                            if (_tourGroup?.tourType == TourType.beach)
+                              SliverToBoxAdapter(
+                                child: InstafeedTideBanner(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => TideBeachGuideScreen(
+                                          tourId: widget.tourId,
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
 
                             // 3. Stories & Story Highlights Tray
                             SliverToBoxAdapter(
