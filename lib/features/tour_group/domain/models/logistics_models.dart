@@ -11,11 +11,21 @@ class BusSeat {
   final String? assignedMemberName;
   final bool isWindow;
 
+  /// The vehicle this seat belongs to, or null for the tour's original coach
+  /// (stored in `bus_seats`).
+  final String? vehicleId;
+
+  /// Which of the member's family seats this is: 0 for the member, 1 and up
+  /// for the people travelling with them.
+  final int familySlot;
+
   const BusSeat({
     required this.seatNumber,
     this.assignedMemberEmail,
     this.assignedMemberName,
     this.isWindow = false,
+    this.vehicleId,
+    this.familySlot = 0,
   });
 
   bool get isOccupied =>
@@ -27,6 +37,8 @@ class BusSeat {
       'assignedMemberEmail': assignedMemberEmail,
       'assignedMemberName': assignedMemberName,
       'isWindow': isWindow,
+      if (vehicleId != null) 'vehicleId': vehicleId,
+      'familySlot': familySlot,
     };
   }
 
@@ -36,6 +48,8 @@ class BusSeat {
       assignedMemberEmail: map['assignedMemberEmail'] as String?,
       assignedMemberName: map['assignedMemberName'] as String?,
       isWindow: map['isWindow'] as bool? ?? false,
+      vehicleId: map['vehicleId'] as String?,
+      familySlot: (map['familySlot'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -53,9 +67,14 @@ class BusSeat {
           ? this.assignedMemberName
           : assignedMemberName as String?,
       isWindow: isWindow,
+      vehicleId: vehicleId,
+      familySlot: familySlot,
     );
   }
 }
+
+/// The bed types a room may have.
+const List<String> kBedTypes = ['single', 'double', 'twin', 'king', 'family'];
 
 class HotelRoom {
   final String id;
@@ -65,6 +84,14 @@ class HotelRoom {
   final int floor;
   final bool isAc;
   final bool hasSeaView;
+  final bool hasBalcony;
+
+  /// The hotel or resort, for tours that stay in more than one. Empty when
+  /// the tour has one hotel.
+  final String hotelName;
+
+  /// One of [kBedTypes], or empty when not set.
+  final String bedType;
 
   /// Guest emails and names. The two lists are kept the same length; the name
   /// at index i belongs to the email at index i. Use [addGuest]/[removeGuest]
@@ -80,11 +107,24 @@ class HotelRoom {
     this.floor = 1,
     this.isAc = true,
     this.hasSeaView = false,
+    this.hasBalcony = false,
+    this.hotelName = '',
+    this.bedType = '',
     this.assignedMemberEmails = const [],
     this.assignedMemberNames = const [],
   });
 
   bool get isFull => assignedMemberEmails.length >= capacity;
+
+  /// People in the room, counting each guest's family: a member travelling
+  /// with three others takes four places. Guests missing from [familySizes]
+  /// count as one.
+  int peopleIn(Map<String, int> familySizes) => assignedMemberEmails.fold(
+      0, (n, e) => n + (familySizes[e] ?? 1).clamp(1, 20));
+
+  /// Whether a family of [size] still fits, counting families already in.
+  bool fitsFamily(int size, Map<String, int> familySizes) =>
+      !isFull && peopleIn(familySizes) + size <= capacity;
   int get availableSlots => capacity - assignedMemberEmails.length;
 
   bool hasGuest(String email) =>
@@ -123,6 +163,9 @@ class HotelRoom {
     int? floor,
     bool? isAc,
     bool? hasSeaView,
+    bool? hasBalcony,
+    String? hotelName,
+    String? bedType,
   }) {
     return HotelRoom(
       id: id,
@@ -132,6 +175,9 @@ class HotelRoom {
       floor: floor ?? this.floor,
       isAc: isAc ?? this.isAc,
       hasSeaView: hasSeaView ?? this.hasSeaView,
+      hasBalcony: hasBalcony ?? this.hasBalcony,
+      hotelName: hotelName ?? this.hotelName,
+      bedType: bedType ?? this.bedType,
       assignedMemberEmails: assignedMemberEmails,
       assignedMemberNames: assignedMemberNames,
     );
@@ -149,6 +195,9 @@ class HotelRoom {
       floor: floor,
       isAc: isAc,
       hasSeaView: hasSeaView,
+      hasBalcony: hasBalcony,
+      hotelName: hotelName,
+      bedType: bedType,
       assignedMemberEmails: emails,
       assignedMemberNames: names,
     );
@@ -163,6 +212,9 @@ class HotelRoom {
       'floor': floor,
       'isAc': isAc,
       'hasSeaView': hasSeaView,
+      'hasBalcony': hasBalcony,
+      'hotelName': hotelName,
+      'bedType': bedType,
       'assignedMemberEmails': assignedMemberEmails,
       'assignedMemberNames': _alignedNames(),
     };
@@ -185,6 +237,10 @@ class HotelRoom {
       floor: (map['floor'] as num?)?.toInt() ?? 1,
       isAc: map['isAc'] as bool? ?? true,
       hasSeaView: map['hasSeaView'] as bool? ?? false,
+      hasBalcony: map['hasBalcony'] as bool? ?? false,
+      hotelName: map['hotelName'] as String? ?? '',
+      bedType:
+          kBedTypes.contains(map['bedType']) ? map['bedType'] as String : '',
       assignedMemberEmails: emails,
       assignedMemberNames: names,
     );

@@ -376,6 +376,47 @@ describe('Tour Group Firestore rules', () => {
       await assertSucceeds(updateDoc(doc(db('member'), 'tours', TOUR, 'hotel_rooms', 'r1'), { assignedMemberEmails: [people.member.email] }));
       await assertFails(deleteDoc(doc(db('member'), 'tours', TOUR, 'hotel_rooms', 'r1')));
     });
+
+    const vehicle = (extra = {}) => ({ id: 'v1', kind: 'trainChair', name: 'Sonar Bangla', rows: 15, pattern: '2-2', locked: false, ...extra });
+    const seat = (extra = {}) => ({ vehicleId: 'v1', seatNumber: '12', assignedMemberEmail: people.member.email, assignedMemberName: 'M', isWindow: false, familySlot: 0, ...extra });
+
+    test('vehicles: admins add, edit and delete them; members only read', async () => {
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'vehicles', 'v1'), vehicle()));
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle()));
+      await assertSucceeds(getDocs(collection(db('member'), 'tours', TOUR, 'vehicles')));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', TOUR, 'vehicles')));
+      await assertFails(updateDoc(doc(db('member'), 'tours', TOUR, 'vehicles', 'v1'), { locked: true }));
+      await assertFails(deleteDoc(doc(db('member'), 'tours', TOUR, 'vehicles', 'v1')));
+      await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1')));
+    });
+
+    test('vehicles: the id must match and the seat map stays a sensible size', async () => {
+      await assertFails(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle({ id: 'other' })));
+      await assertFails(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle({ rows: 500 })));
+      await assertFails(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle({ rows: 0 })));
+    });
+
+    test('vehicle seats: members take seats on an existing vehicle under the right id', async () => {
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle()));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__12'), seat()));
+      await assertSucceeds(getDocs(collection(db('member'), 'tours', TOUR, 'vehicle_seats')));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', TOUR, 'vehicle_seats')));
+      // The document id must be "<vehicleId>__<seatNumber>".
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__13'), seat()));
+      // No seats on a vehicle that does not exist.
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v9__12'), seat({ vehicleId: 'v9' })));
+      // Only the seat fields.
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__12'), seat({ price: 5 })));
+      await assertSucceeds(deleteDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__12')));
+    });
+
+    test('vehicle seats: a locked vehicle is changed by admins only', async () => {
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle({ locked: true })));
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__12'), seat()));
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicle_seats', 'v1__12'), seat()));
+      await assertFails(deleteDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__12')));
+      await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', TOUR, 'vehicle_seats', 'v1__12')));
+    });
   });
 
   describe('safety alerts', () => {
