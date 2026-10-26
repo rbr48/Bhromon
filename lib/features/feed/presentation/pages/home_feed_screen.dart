@@ -755,7 +755,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                         // Brand top bar (Left: Logo and Title)
                         const BhromonBrandLogo(height: 38),
 
-                        // Brand top bar (Right: Search, Bell notification, Profile)
+                        // Brand top bar (Right: Search, Map, Bell notification, Filter, Profile)
                         Row(
                           children: [
                             _buildIconButton(
@@ -765,6 +765,11 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                                   _isSearching = true;
                                 });
                               },
+                            ),
+                            const SizedBox(width: 8),
+                            _buildIconButton(
+                              icon: Icons.map_outlined,
+                              onTap: () => context.push('/map'),
                             ),
                             const SizedBox(width: 8),
                             _buildIconButtonWithDot(
@@ -4322,12 +4327,12 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
               },
             ),
 
-            // 2. Map Icon
+            // 2. Tour Group Icon
             _buildBottomNavItem(
-              icon: Icons.map_outlined,
-              label: 'Map',
+              icon: Icons.groups_outlined,
+              label: 'Groups',
               isActive: false,
-              onTap: () => context.push('/map'),
+              onTap: () => context.push('/group-hub'),
             ),
 
             // 3. Post Icon (unified with other nav items)

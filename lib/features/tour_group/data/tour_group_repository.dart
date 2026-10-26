@@ -553,6 +553,56 @@ class TourGroupRepository {
     return group;
   }
 
+  /// Directly adds a new member by email address (for owners and admins).
+  Future<void> addMemberByEmail({
+    required String tourId,
+    required String email,
+    String? displayName,
+  }) async {
+    _requireEmail();
+    final cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail.isEmpty || !cleanEmail.contains('@')) {
+      throw const FormatException('সঠিক ইমেইল ঠিকানা দিন।');
+    }
+
+    final tourDoc = await _tour(tourId).get();
+    if (!tourDoc.exists) {
+      throw StateError('ট্যুরটি খুঁজে পাওয়া যায়নি।');
+    }
+    final tourName = tourDoc.data()?['name'] as String? ?? 'Tour';
+
+    final membershipRef = _memberships.doc(_membershipId(tourId, cleanEmail));
+    final existing = await membershipRef.get();
+    if (existing.exists && existing.data()?['status'] == 'active') {
+      throw StateError('$cleanEmail ইতিমধ্যে এই গ্রুপের সদস্য।');
+    }
+
+    final member = TourMember(
+      tourId: tourId,
+      email: cleanEmail,
+      displayName: displayName?.trim().isNotEmpty == true
+          ? displayName!.trim()
+          : cleanEmail.split('@').first,
+      photoUrl: null,
+      role: TourRole.member,
+      status: TourMemberStatus.active,
+      tourName: tourName,
+      joinedAt: DateTime.now(),
+    ).toMap();
+
+    try {
+      final synced = await _awaitServer(
+          membershipRef.set(member, SetOptions(merge: true)));
+      if (!synced) {
+        throw const TourAccessException(
+            'ইন্টারনেট সংযোগ নেই। সংযোগ ফিরে এলে আবার চেষ্টা করুন।');
+      }
+    } on FirebaseException catch (e) {
+      throw TourAccessException(
+          'সদস্য যোগ করার অনুমতি নেই: ${e.message ?? e.code}');
+    }
+  }
+
   /// Reads the caller's own membership row. Returns null when there is none.
   Future<DocumentSnapshot<Map<String, dynamic>>?> _readOwnRow(
       DocumentReference<Map<String, dynamic>> ref) async {

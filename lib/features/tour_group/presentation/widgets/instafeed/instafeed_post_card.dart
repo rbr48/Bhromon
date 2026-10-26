@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +24,7 @@ class InstafeedPostCard extends StatefulWidget {
   final bool isBookmarked;
   final bool isAdmin;
   final ColorFilter? colorFilter;
-  final void Function(TourPostItem post)? onOpenComments;
+  final void Function(TourPostItem post, {int? targetMediaIndex})? onOpenComments;
   final void Function(TourPostItem post)? onShare;
   final void Function(TourPostItem post)? onAddToLedger;
   final void Function(TourPostItem post)? onReelTap;
@@ -70,6 +71,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   bool _showHeartBurst = false;
   bool _showTags = false;
   bool _isPlayingAudio = false;
+  bool? _optimisticLiked;
+  int _optimisticLikeDelta = 0;
 
   VideoPlayerController? _videoCtrl;
   bool _isVideoInitialized = false;
@@ -127,6 +130,11 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   @override
   void didUpdateWidget(InstafeedPostCard oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.id != widget.post.id ||
+        oldWidget.post.likes.length != widget.post.likes.length) {
+      _optimisticLiked = null;
+      _optimisticLikeDelta = 0;
+    }
     if (oldWidget.post.videoUrl != widget.post.videoUrl) {
       _disposeVideo();
       _checkAndInitVideo();
@@ -168,16 +176,29 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
       widget.post.authorEmail == widget.repository.currentEmail;
 
   Future<void> _toggleLike() async {
-    final isLiked = widget.post.isLikedBy(widget.repository.currentEmail);
+    final currentLiked = _optimisticLiked ??
+        widget.post.isLikedBy(widget.repository.currentEmail);
+    final targetLiked = !currentLiked;
+
+    // Instant optimistic update
+    setState(() {
+      _optimisticLiked = targetLiked;
+      _optimisticLikeDelta = targetLiked ? 1 : -1;
+    });
+
     try {
       await widget.repository.setPostLiked(
         widget.tourId,
         widget.post.id,
-        liked: !isLiked,
+        liked: targetLiked,
       );
       widget.onPostChanged?.call();
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _optimisticLiked = currentLiked;
+          _optimisticLikeDelta = 0;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('লাইক করা যায়নি: $e')),
         );
@@ -187,7 +208,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
 
   void _onDoubleTap() {
     setState(() => _showHeartBurst = true);
-    if (!widget.post.isLikedBy(widget.repository.currentEmail)) {
+    final currentLiked = _optimisticLiked ??
+        widget.post.isLikedBy(widget.repository.currentEmail);
+    if (!currentLiked) {
       _toggleLike();
     }
   }
@@ -444,153 +467,170 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
 
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+          top: false,
+          bottom: true,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                0,
+                0,
+                0,
+                MediaQuery.of(ctx).padding.bottom + 28,
               ),
-              if (canManage) ...[
-                ListTile(
-                  leading: const Icon(Icons.edit_outlined,
-                      color: Colors.lightBlueAccent),
-                  title: const Text('পোস্ট এডিট করুন',
-                      style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _showEditDialog();
-                  },
-                ),
-                ListTile(
-                  leading: Icon(
-                    widget.post.isArchived
-                        ? Icons.unarchive_outlined
-                        : Icons.archive_outlined,
-                    color: Colors.purpleAccent,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  title: Text(
-                    widget.post.isArchived
-                        ? 'আর্কাইভ থেকে ফিরিয়ে আনুন'
-                        : 'পোস্টটি আর্কাইভ করুন',
-                    style: const TextStyle(color: Colors.white),
+                  if (canManage) ...[
+                    ListTile(
+                      leading: const Icon(Icons.edit_outlined,
+                          color: Colors.lightBlueAccent),
+                      title: const Text('পোস্ট এডিট করুন',
+                          style: TextStyle(color: Colors.white)),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showEditDialog();
+                      },
+                    ),
+                    ListTile(
+                      leading: Icon(
+                        widget.post.isArchived
+                            ? Icons.unarchive_outlined
+                            : Icons.archive_outlined,
+                        color: Colors.purpleAccent,
+                      ),
+                      title: Text(
+                        widget.post.isArchived
+                            ? 'আর্কাইভ থেকে ফিরিয়ে আনুন'
+                            : 'পোস্টটি আর্কাইভ করুন',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _toggleArchive();
+                      },
+                    ),
+                    ListTile(
+                      leading: Icon(
+                        widget.post.isPinned
+                            ? Icons.push_pin_outlined
+                            : Icons.push_pin,
+                        color: Colors.amber,
+                      ),
+                      title: Text(
+                        widget.post.isPinned
+                            ? 'ফিড থেকে আনপিন করুন'
+                            : 'ফিডের শীর্ষে পিন করুন',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _togglePin();
+                      },
+                    ),
+                    ListTile(
+                      leading: Icon(
+                        widget.post.hideLikeCount
+                            ? Icons.visibility
+                            : Icons.visibility_off_outlined,
+                        color: Colors.white70,
+                      ),
+                      title: Text(
+                        widget.post.hideLikeCount
+                            ? 'লাইক সংখ্যা দেখান'
+                            : 'লাইক সংখ্যা লুকান',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _toggleLikeCountVisibility();
+                      },
+                    ),
+                    ListTile(
+                      leading: Icon(
+                        widget.post.disableComments
+                            ? Icons.chat_bubble
+                            : Icons.chat_bubble_outline,
+                        color: Colors.white70,
+                      ),
+                      title: Text(
+                        widget.post.disableComments
+                            ? 'মন্তব্য চালু করুন'
+                            : 'মন্তব্য বন্ধ করুন',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _toggleCommentsDisabled();
+                      },
+                    ),
+                  ],
+                  ListTile(
+                    leading:
+                        const Icon(Icons.receipt_long, color: AppColors.mintGreen),
+                    title: const Text('ট্রিপ লেজারে খরচ হিসেবে যোগ করুন',
+                        style: TextStyle(color: Colors.white)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      widget.onAddToLedger?.call(widget.post);
+                    },
                   ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _toggleArchive();
-                  },
-                ),
-                ListTile(
-                  leading: Icon(
-                    widget.post.isPinned
-                        ? Icons.push_pin_outlined
-                        : Icons.push_pin,
-                    color: Colors.amber,
+                  ListTile(
+                    leading:
+                        const Icon(Icons.bookmark_border, color: Colors.white70),
+                    title: Text(
+                      widget.isBookmarked ? 'সংগ্রহ থেকে সরান' : 'সংগ্রহে সেভ করুন',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      widget.onBookmarkToggle();
+                    },
                   ),
-                  title: Text(
-                    widget.post.isPinned
-                        ? 'ফিড থেকে আনপিন করুন'
-                        : 'ফিডের শীর্ষে পিন করুন',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _togglePin();
-                  },
-                ),
-                ListTile(
-                  leading: Icon(
-                    widget.post.hideLikeCount
-                        ? Icons.visibility
-                        : Icons.visibility_off_outlined,
-                    color: Colors.white70,
-                  ),
-                  title: Text(
-                    widget.post.hideLikeCount
-                        ? 'লাইক সংখ্যা দেখান'
-                        : 'লাইক সংখ্যা লুকান',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _toggleLikeCountVisibility();
-                  },
-                ),
-                ListTile(
-                  leading: Icon(
-                    widget.post.disableComments
-                        ? Icons.chat_bubble
-                        : Icons.chat_bubble_outline,
-                    color: Colors.white70,
-                  ),
-                  title: Text(
-                    widget.post.disableComments
-                        ? 'মন্তব্য চালু করুন'
-                        : 'মন্তব্য বন্ধ করুন',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _toggleCommentsDisabled();
-                  },
-                ),
-              ],
-              ListTile(
-                leading:
-                    const Icon(Icons.receipt_long, color: AppColors.mintGreen),
-                title: const Text('ট্রিপ লেজারে খরচ হিসেবে যোগ করুন',
-                    style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  widget.onAddToLedger?.call(widget.post);
-                },
+                  if (widget.onSaveToCollection != null)
+                    ListTile(
+                      leading: const Icon(Icons.folder_special_outlined,
+                          color: Colors.amber),
+                      title: const Text('কালেকশনে যোগ করুন',
+                          style: TextStyle(color: Colors.white)),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        widget.onSaveToCollection!(widget.post);
+                      },
+                    ),
+                  if (canManage)
+                    ListTile(
+                      leading:
+                          const Icon(Icons.delete_outline, color: Colors.redAccent),
+                      title: const Text('পোস্ট মুছুন',
+                          style: TextStyle(color: Colors.redAccent)),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _deletePost();
+                      },
+                    ),
+                ],
               ),
-              ListTile(
-                leading:
-                    const Icon(Icons.bookmark_border, color: Colors.white70),
-                title: Text(
-                  widget.isBookmarked ? 'সংগ্রহ থেকে সরান' : 'সংগ্রহে সেভ করুন',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  widget.onBookmarkToggle();
-                },
-              ),
-              if (widget.onSaveToCollection != null)
-                ListTile(
-                  leading: const Icon(Icons.folder_special_outlined,
-                      color: Colors.amber),
-                  title: const Text('কালেকশনে যোগ করুন',
-                      style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    widget.onSaveToCollection!(widget.post);
-                  },
-                ),
-              if (canManage)
-                ListTile(
-                  leading:
-                      const Icon(Icons.delete_outline, color: Colors.redAccent),
-                  title: const Text('পোস্ট মুছুন',
-                      style: TextStyle(color: Colors.redAccent)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _deletePost();
-                  },
-                ),
-            ],
+            ),
           ),
         );
       },
@@ -872,7 +912,12 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isLiked = widget.post.isLikedBy(widget.repository.currentEmail);
+    final isLiked = _optimisticLiked ??
+        widget.post.isLikedBy(widget.repository.currentEmail);
+    final effectiveLikeCount = math.max(
+      0,
+      widget.post.likes.length + _optimisticLikeDelta,
+    );
     final isVideoPost =
         widget.post.videoUrl != null && widget.post.videoUrl!.isNotEmpty;
     final mediaList = widget.post.images;
@@ -1189,11 +1234,11 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
           ),
 
           // Like counter (unless hidden)
-          if (!widget.post.hideLikeCount && widget.post.likes.isNotEmpty)
+          if (!widget.post.hideLikeCount && effectiveLikeCount > 0)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Text(
-                '${widget.post.likes.length} জন পছন্দ করেছেন',
+                '$effectiveLikeCount জন পছন্দ করেছেন',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

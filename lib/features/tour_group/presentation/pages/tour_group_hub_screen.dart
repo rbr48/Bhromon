@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:go_router/go_router.dart';
@@ -43,6 +43,175 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       backgroundColor: error ? Colors.redAccent : AppColors.midGreen,
       behavior: SnackBarBehavior.floating,
     ));
+  }
+
+  void _copyInviteCode(String code) {
+    Clipboard.setData(ClipboardData(text: code));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded,
+                color: AppColors.mintGreen, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'ইনভাইট কোড কপি হয়েছে: $code',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF14241B),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _showAddMemberDialog(BuildContext context, String tourId) async {
+    final emailCtrl = TextEditingController();
+    final nameCtrl = TextEditingController();
+    var isAdding = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF1B4332),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.person_add_alt_1,
+                  color: AppColors.mintGreen, size: 22),
+              SizedBox(width: 8),
+              Text(
+                'সদস্য যোগ করুন',
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'সদস্যের ইমেইল ঠিকানা দিয়ে সরাসরি এই ট্যুর গ্রুপে যুক্ত করুন। ব্যবহারকারী অ্যাপে লগইন করলেই সরাসরি গ্রুপটি দেখতে পাবেন।',
+                  style: TextStyle(
+                      color: Colors.white70, fontSize: 13, height: 1.4),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'ইমেইল ঠিকানা *',
+                    hintText: 'example@gmail.com',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    prefixIcon: const Icon(Icons.email_outlined,
+                        color: AppColors.mintGreen),
+                    filled: true,
+                    fillColor: Colors.black26,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.white24),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppColors.mintGreen),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: nameCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'নাম (ঐচ্ছিক)',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    prefixIcon: const Icon(Icons.badge_outlined,
+                        color: Colors.white60),
+                    filled: true,
+                    fillColor: Colors.black26,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.white24),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: AppColors.mintGreen),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isAdding ? null : () => Navigator.pop(ctx),
+              child:
+                  const Text('বাতিল', style: TextStyle(color: Colors.white70)),
+            ),
+            FilledButton(
+              style:
+                  FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
+              onPressed: isAdding
+                  ? null
+                  : () async {
+                      final email = emailCtrl.text.trim().toLowerCase();
+                      if (email.isEmpty || !email.contains('@')) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('সঠিক ইমেইল ঠিকানা দিন')),
+                        );
+                        return;
+                      }
+                      setDialogState(() => isAdding = true);
+                      try {
+                        await _repository.addMemberByEmail(
+                          tourId: tourId,
+                          email: email,
+                          displayName: nameCtrl.text.trim().isNotEmpty
+                              ? nameCtrl.text.trim()
+                              : null,
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        _snack('$email সফলভাবে গ্রুপে যুক্ত হয়েছে');
+                      } catch (e) {
+                        setDialogState(() => isAdding = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('যোগ করা যায়নি: $e')),
+                          );
+                        }
+                      }
+                    },
+              child: isAdding
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.darkGreen),
+                      ),
+                    )
+                  : const Text(
+                      'যোগ করুন',
+                      style: TextStyle(
+                          color: AppColors.darkGreen,
+                          fontWeight: FontWeight.bold),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _reportFailure(Object e) {
@@ -128,6 +297,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       BuildContext context, TourGroup group, String action) async {
     final l10n = context.l10n;
     switch (action) {
+      case 'copy_code':
+        _copyInviteCode(group.inviteCode);
+      case 'add_member':
+        _showAddMemberDialog(context, group.id);
       case 'code':
         final ok = await _confirm(l10n.translate('hub_rotate_code_title'),
             l10n.translate('hub_rotate_code_body'));
@@ -441,7 +614,29 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     color: const Color(0xFF1B4332),
                     onSelected: (v) => _onGroupMenu(context, group, v),
                     itemBuilder: (_) => [
+                      PopupMenuItem(
+                          value: 'copy_code',
+                          child: const Row(
+                            children: [
+                              Icon(Icons.copy_rounded,
+                                  size: 16, color: AppColors.mintGreen),
+                              SizedBox(width: 8),
+                              Text('ইনভাইট কোড কপি করুন',
+                                  style: TextStyle(color: Colors.white)),
+                            ],
+                          )),
                       if (group.ownerEmail == _repository.currentEmail) ...[
+                        PopupMenuItem(
+                            value: 'add_member',
+                            child: const Row(
+                              children: [
+                                Icon(Icons.person_add_alt_1,
+                                    size: 16, color: AppColors.mintGreen),
+                                SizedBox(width: 8),
+                                Text('সদস্য যোগ করুন (ইমেইল)',
+                                    style: TextStyle(color: Colors.white)),
+                              ],
+                            )),
                         PopupMenuItem(
                             value: 'code',
                             child: Text(
@@ -538,30 +733,41 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.3),
+              Tooltip(
+                message: 'ট্যাপ করে ইনভাইট কোড কপি করুন',
+                child: InkWell(
+                  onTap: () => _copyInviteCode(group.inviteCode),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.vpn_key_rounded,
-                        size: 14, color: AppColors.gold),
-                    const SizedBox(width: 6),
-                    Text(
-                      context.l10n.translate('hub_invite_line',
-                          args: {'code': group.inviteCode}),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        letterSpacing: 1.2,
-                      ),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white12),
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.vpn_key_rounded,
+                            size: 14, color: AppColors.gold),
+                        const SizedBox(width: 6),
+                        Text(
+                          context.l10n.translate('hub_invite_line',
+                              args: {'code': group.inviteCode}),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.copy_rounded,
+                            size: 14, color: AppColors.mintGreen),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -740,35 +946,60 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   Widget _buildMembersSection(String tourId) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          context.l10n.translate('hub_members_heading'),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 12),
-        StreamBuilder<List<TourMember>>(
-          stream: _membersOf(tourId),
-          builder: (context, snapshot) {
-            final members = snapshot.data ?? [];
-            if (members.isEmpty) {
-              return snapshot.connectionState == ConnectionState.waiting
+    return StreamBuilder<List<TourMember>>(
+      stream: _membersOf(tourId),
+      builder: (context, snapshot) {
+        final members = snapshot.data ?? [];
+        final canAddMember = _viewerIsAdmin(members);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  context.l10n.translate('hub_members_heading'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                if (canAddMember)
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.person_add_alt_1,
+                        size: 16, color: AppColors.mintGreen),
+                    label: const Text(
+                      'সদস্য যোগ করুন',
+                      style: TextStyle(
+                        color: AppColors.mintGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onPressed: () => _showAddMemberDialog(context, tourId),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (members.isEmpty)
+              snapshot.connectionState == ConnectionState.waiting
                   ? const CircularProgressIndicator(color: AppColors.midGreen)
                   : Text(context.l10n.translate('hub_no_members'),
-                      style: const TextStyle(color: Colors.white54));
-            }
-
-            return Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF14241B),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white10),
-              ),
+                      style: const TextStyle(color: Colors.white54))
+            else
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF14241B),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white10),
+                ),
               child: ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -829,10 +1060,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   );
                 },
               ),
-            );
-          },
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 

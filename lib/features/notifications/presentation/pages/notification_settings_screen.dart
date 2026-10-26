@@ -69,18 +69,7 @@ class _NotificationSettingsScreenState
                 ),
                 const SizedBox(height: 12),
                 _buildLanguagePicker(),
-                const SizedBox(height: 12),
-                const Text(
-                  'Theme / থিম',
-                  style: TextStyle(
-                      color: Colors.white60,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5),
-                ),
-                const SizedBox(height: 12),
-                _buildThemePicker(),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 const Divider(color: Colors.white10),
                 const SizedBox(height: 16),
                 const Text(
@@ -204,31 +193,6 @@ class _NotificationSettingsScreenState
           selected: {LocaleController.instance.locale.languageCode},
           onSelectionChanged: (selection) {
             unawaited(LocaleController.instance.setLanguage(selection.first));
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildThemePicker() {
-    return AnimatedBuilder(
-      animation: ThemeController.instance,
-      builder: (context, _) => SizedBox(
-        width: double.infinity,
-        child: SegmentedButton<ThemeMode>(
-          style: SegmentedButton.styleFrom(
-            selectedBackgroundColor: AppColors.midGreen,
-            selectedForegroundColor: Colors.white,
-            foregroundColor: Colors.white70,
-          ),
-          segments: const [
-            ButtonSegment(value: ThemeMode.system, label: Text('System')),
-            ButtonSegment(value: ThemeMode.light, label: Text('Light')),
-            ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
-          ],
-          selected: {ThemeController.instance.mode},
-          onSelectionChanged: (selection) {
-            unawaited(ThemeController.instance.setMode(selection.first));
           },
         ),
       ),

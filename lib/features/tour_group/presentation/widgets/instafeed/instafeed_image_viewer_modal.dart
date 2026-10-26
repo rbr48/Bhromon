@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +16,7 @@ class InstafeedImageViewerModal extends StatefulWidget {
   final String tourId;
   final TourPostItem post;
   final int initialIndex;
-  final void Function(TourPostItem post)? onOpenComments;
+  final void Function(TourPostItem post, {int? targetMediaIndex})? onOpenComments;
   final void Function(TourPostItem post)? onShare;
   final void Function(TourPostItem post)? onAddToLedger;
 
@@ -37,7 +38,7 @@ class InstafeedImageViewerModal extends StatefulWidget {
     required String tourId,
     required TourPostItem post,
     int initialIndex = 0,
-    void Function(TourPostItem post)? onOpenComments,
+    void Function(TourPostItem post, {int? targetMediaIndex})? onOpenComments,
     void Function(TourPostItem post)? onShare,
     void Function(TourPostItem post)? onAddToLedger,
   }) {
@@ -68,6 +69,8 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
   late int _currentIndex;
   bool _showOverlays = true;
   bool _showHeartBurst = false;
+  bool? _optimisticLiked;
+  int _optimisticLikeDelta = 0;
 
   List<String> get _images {
     if (widget.post.images.isNotEmpty) {
@@ -96,16 +99,26 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
 
   Future<void> _toggleLike() async {
     final email = widget.repository.currentEmail;
-    final isLiked = widget.post.isLikedBy(email);
+    final currentLiked = _optimisticLiked ?? widget.post.isLikedBy(email);
+    final targetLiked = !currentLiked;
+
+    setState(() {
+      _optimisticLiked = targetLiked;
+      _optimisticLikeDelta = targetLiked ? 1 : -1;
+    });
+
     try {
       await widget.repository.setPostLiked(
         widget.tourId,
         widget.post.id,
-        liked: !isLiked,
+        liked: targetLiked,
       );
-      setState(() {});
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _optimisticLiked = currentLiked;
+          _optimisticLikeDelta = 0;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('লাইক পরিবর্তন ব্যর্থ: $e')),
         );
@@ -115,7 +128,9 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
 
   void _onDoubleTap() {
     setState(() => _showHeartBurst = true);
-    if (!widget.post.isLikedBy(widget.repository.currentEmail)) {
+    final email = widget.repository.currentEmail;
+    final currentLiked = _optimisticLiked ?? widget.post.isLikedBy(email);
+    if (!currentLiked) {
       _toggleLike();
     }
   }
@@ -124,7 +139,9 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
   Widget build(BuildContext context) {
     final images = _images;
     final email = widget.repository.currentEmail;
-    final isLiked = widget.post.isLikedBy(email);
+    final isLiked = _optimisticLiked ?? widget.post.isLikedBy(email);
+    final likeCount =
+        math.max(0, widget.post.likes.length + _optimisticLikeDelta);
     final dateStr =
         DateFormat('d MMMM, yyyy • h:mm a').format(widget.post.createdAt);
 
@@ -353,7 +370,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                         onPressed: _toggleLike,
                       ),
                       Text(
-                        '${widget.post.likes.length}',
+                        '$likeCount',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -366,8 +383,8 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.chat_bubble_outline,
                             color: Colors.white),
-                        onPressed: () =>
-                            widget.onOpenComments?.call(widget.post),
+                        onPressed: () => widget.onOpenComments
+                            ?.call(widget.post, targetMediaIndex: _currentIndex),
                       ),
                       IconButton(
                         tooltip: 'শেয়ার করুন',
