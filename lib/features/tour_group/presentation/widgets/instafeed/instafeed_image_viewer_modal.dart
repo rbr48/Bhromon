@@ -7,6 +7,7 @@ import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart'
 import 'instafeed_zoomable_media.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/localized_date.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// Full-screen high-resolution image viewer modal supporting multi-photo
 /// swipeable carousels, pinch-to-zoom (up to 4.5x), double-tap heart like,
@@ -121,7 +122,9 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
           _optimisticLikeDelta = 0;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('লাইক পরিবর্তন ব্যর্থ: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_like_change_failed', args: {'error': e}))),
         );
       }
     }
@@ -153,10 +156,10 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
           backgroundColor: Colors.transparent,
           iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: const Center(
+        body: Center(
           child: Text(
-            'কোনো ছবি পাওয়া যায়নি।',
-            style: TextStyle(color: Colors.white70),
+            context.l10n.translate('ig_no_photos_found'),
+            style: const TextStyle(color: Colors.white70),
           ),
         ),
       );
@@ -233,7 +236,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'ফিরে যান',
+                    tooltip: context.l10n.translate('ig_back'),
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
@@ -302,7 +305,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                     ),
                   const SizedBox(width: 4),
                   IconButton(
-                    tooltip: 'বন্ধ করুন',
+                    tooltip: context.l10n.translate('ig_close'),
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
@@ -362,7 +365,9 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                   Row(
                     children: [
                       IconButton(
-                        tooltip: isLiked ? 'লাইক সরান' : 'লাইক করুন',
+                        tooltip: isLiked
+                            ? context.l10n.translate('ig_unlike')
+                            : context.l10n.translate('ig_like'),
                         visualDensity: VisualDensity.compact,
                         icon: Icon(
                           isLiked ? Icons.favorite : Icons.favorite_border,
@@ -380,7 +385,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                       ),
                       const SizedBox(width: 12),
                       IconButton(
-                        tooltip: 'মন্তব্য করুন',
+                        tooltip: context.l10n.translate('ig_comment'),
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.chat_bubble_outline,
                             color: Colors.white),
@@ -389,7 +394,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                             targetMediaIndex: _currentIndex),
                       ),
                       IconButton(
-                        tooltip: 'শেয়ার করুন',
+                        tooltip: context.l10n.translate('ig_share'),
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.send_outlined,
                             color: Colors.white),
@@ -400,7 +405,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.receipt_long,
                             color: AppColors.mintGreen),
-                        tooltip: 'ট্রিপ লেজারে যোগ করুন',
+                        tooltip: context.l10n.translate('ig_add_to_ledger'),
                         onPressed: () =>
                             widget.onAddToLedger?.call(widget.post),
                       ),

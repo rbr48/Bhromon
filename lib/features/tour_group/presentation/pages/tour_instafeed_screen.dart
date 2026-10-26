@@ -1831,7 +1831,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   /// The header pill's text: the media filter, then the day when the tour has
   /// days.
   String _filterSummary() {
-    final media = instafeedMediaFilters
+    final media = instafeedMediaFilters(context)
         .firstWhere((option) => option.id == _selectedMediaFilter)
         .label;
     if (_tourDays.isEmpty) return media;

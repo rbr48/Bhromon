@@ -4,6 +4,7 @@ import 'package:bhromon/features/tour_group/domain/models/safety_alert_models.da
 import 'package:bhromon/features/tour_group/domain/services/tide_schedule_engine.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/family_safety_hub_screen.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// Live Beach Tide & Ocean Safety pill banner shown at the top of InstaFeed.
 class InstafeedTideBanner extends StatelessWidget {
@@ -28,8 +29,8 @@ class InstafeedTideBanner extends StatelessWidget {
     final isHighTide = current?.type == TideType.high;
     final title = current?.name ?? 'সমুদ্র নিরাপত্তা ও জোয়ার-ভাটা তথ্য';
     final subtitle = isHighTide
-        ? 'জোয়ার চলছে • লাইফগার্ড চিহ্নিত স্থানে গোসল করুন'
-        : 'ভাটা চলছে • সাগরে নামা বিপজ্জনক (চোরাবালি ঝুঁকি)';
+        ? context.l10n.translate('ig_tide_high_banner')
+        : context.l10n.translate('ig_tide_low_banner');
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
@@ -121,16 +122,17 @@ class InstafeedSosBanner extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'জরুরি এসওএস সতর্কবার্তা: ${alert.senderName}',
+                  context.l10n.translate('ig_sos_banner',
+                      args: {'name': alert.senderName}),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
                 ),
-                const Text(
-                  'সাহায্যের জন্য অবিলম্বে সেফটি হাবে যোগাযোগ করুন',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                Text(
+                  context.l10n.translate('ig_sos_help'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
                 ),
               ],
             ),
@@ -148,9 +150,9 @@ class InstafeedSosBanner extends StatelessWidget {
                 ),
               );
             },
-            child: const Text(
-              'দেখুন',
-              style: TextStyle(
+            child: Text(
+              context.l10n.translate('ig_view'),
+              style: const TextStyle(
                 color: Color(0xFFB71C1C),
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
@@ -252,20 +254,22 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
           const Divider(color: Colors.white10),
           _buildInfoRow(
             icon: Icons.directions_bus,
-            label: 'বাসের আসন',
+            label: context.l10n.translate('ig_bus_seat_label'),
             value: seatNumber != null && seatNumber!.isNotEmpty
-                ? 'আসন $seatNumber'
-                : 'বরাদ্দ নেই',
+                ? context.l10n
+                    .translate('ig_seat_number', args: {'seat': '$seatNumber'})
+                : context.l10n.translate('ig_not_assigned'),
             valueColor:
                 seatNumber != null ? AppColors.mintGreen : Colors.white54,
           ),
           const SizedBox(height: 10),
           _buildInfoRow(
             icon: Icons.hotel,
-            label: 'হোটেল রুম',
+            label: context.l10n.translate('ig_hotel_room_label'),
             value: roomNumber != null && roomNumber!.isNotEmpty
-                ? 'রুম $roomNumber'
-                : 'বরাদ্দ নেই',
+                ? context.l10n
+                    .translate('ig_room_number', args: {'room': '$roomNumber'})
+                : context.l10n.translate('ig_not_assigned'),
             valueColor:
                 roomNumber != null ? Colors.amberAccent : Colors.white54,
           ),
@@ -273,8 +277,9 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
             const SizedBox(height: 10),
             _buildInfoRow(
               icon: Icons.family_restroom,
-              label: 'পরিবারের সদস্য',
-              value: '$familyCount জন',
+              label: context.l10n.translate('ig_family_members'),
+              value: context.l10n.translate('ig_people_count',
+                  args: {'count': '$familyCount'}),
               valueColor: Colors.lightBlueAccent,
             ),
           ],
@@ -288,7 +293,7 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onPressed: () => Navigator.pop(context),
-          child: const Text('ঠিক আছে'),
+          child: Text(context.l10n.translate('ig_ok')),
         ),
       ],
     );

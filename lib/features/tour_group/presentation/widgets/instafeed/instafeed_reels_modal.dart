@@ -7,6 +7,7 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_zoomable_media.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// Full-screen vertical Reels player modal with video pre-caching, hold-to-pause
 /// clean screen mode, interactive draggable timeline scrubber, rotating vinyl
@@ -106,7 +107,9 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('লাইক করা যায়নি: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_like_failed', args: {'error': e}))),
         );
       }
     }
@@ -155,9 +158,9 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
           backgroundColor: Colors.transparent,
           iconTheme: const IconThemeData(color: Colors.white),
         ),
-        body: const Center(
-          child: Text('কোনো রিলস পাওয়া যায়নি।',
-              style: TextStyle(color: Colors.white70)),
+        body: Center(
+          child: Text(context.l10n.translate('ig_no_reels'),
+              style: const TextStyle(color: Colors.white70)),
         ),
       );
     }
@@ -349,13 +352,13 @@ class _ReelPageItemState extends State<_ReelPageItem>
                 child: Row(
                   children: [
                     IconButton(
-                      tooltip: 'ফিরে যান',
+                      tooltip: context.l10n.translate('ig_back'),
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.pop(context),
                     ),
-                    const Text(
-                      'রিলস',
-                      style: TextStyle(
+                    Text(
+                      context.l10n.translate('ig_reels_title'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -364,8 +367,9 @@ class _ReelPageItemState extends State<_ReelPageItem>
                     ),
                     const Spacer(),
                     IconButton(
-                      tooltip:
-                          widget.isMuted ? 'শব্দ চালু করুন' : 'শব্দ বন্ধ করুন',
+                      tooltip: widget.isMuted
+                          ? context.l10n.translate('ig_unmute')
+                          : context.l10n.translate('ig_mute'),
                       icon: Icon(
                         widget.isMuted
                             ? Icons.volume_off_rounded
@@ -386,7 +390,9 @@ class _ReelPageItemState extends State<_ReelPageItem>
                   children: [
                     // Like button
                     IconButton(
-                      tooltip: isLiked ? 'লাইক সরান' : 'লাইক করুন',
+                      tooltip: isLiked
+                          ? context.l10n.translate('ig_unlike')
+                          : context.l10n.translate('ig_like'),
                       icon: Icon(
                         isLiked ? Icons.favorite : Icons.favorite_border,
                         color: isLiked ? Colors.redAccent : Colors.white,
@@ -414,7 +420,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
 
                     // Comments button
                     IconButton(
-                      tooltip: 'মন্তব্য করুন',
+                      tooltip: context.l10n.translate('ig_comment'),
                       icon: const Icon(Icons.chat_bubble_outline,
                           color: Colors.white, size: 30),
                       onPressed: widget.onOpenComments,
@@ -431,7 +437,7 @@ class _ReelPageItemState extends State<_ReelPageItem>
 
                     // Share button
                     IconButton(
-                      tooltip: 'শেয়ার করুন',
+                      tooltip: context.l10n.translate('ig_share'),
                       icon: const Icon(Icons.send_rounded,
                           color: Colors.white, size: 28),
                       onPressed: widget.onShare,
@@ -442,12 +448,12 @@ class _ReelPageItemState extends State<_ReelPageItem>
                     IconButton(
                       icon: const Icon(Icons.receipt_long_rounded,
                           color: AppColors.mintGreen, size: 28),
-                      tooltip: 'ট্রিপ লেজারে যোগ করুন',
+                      tooltip: context.l10n.translate('ig_add_to_ledger'),
                       onPressed: widget.onAddToLedger,
                     ),
-                    const Text(
-                      'লেজার',
-                      style: TextStyle(
+                    Text(
+                      context.l10n.translate('ig_ledger_short'),
+                      style: const TextStyle(
                         color: AppColors.mintGreen,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -566,7 +572,8 @@ class _ReelPageItemState extends State<_ReelPageItem>
                             color: Colors.white70, size: 14),
                         const SizedBox(width: 4),
                         Text(
-                          widget.post.audioTitle ?? 'মূল অডিও (Original Audio)',
+                          widget.post.audioTitle ??
+                              context.l10n.translate('ig_original_audio'),
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 12,

@@ -47,10 +47,12 @@ void main() {
       onDaySelected: (_) {},
     )));
 
-    for (final option in instafeedMediaFilters) {
+    final filters = instafeedMediaFilters(
+        tester.element(find.byType(InstafeedFilterSheet)));
+    for (final option in filters) {
       expect(find.text(option.label), findsOneWidget);
     }
-    await tester.tap(find.text(instafeedMediaFilters[1].label));
+    await tester.tap(find.text(filters[1].label));
     expect(picked, 'photos');
   });
 
