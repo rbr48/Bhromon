@@ -8,12 +8,16 @@ import 'package:uuid/uuid.dart';
 
 import '../domain/models/date_codec.dart';
 import '../domain/models/expense_models.dart';
+import '../domain/models/itinerary_models.dart';
 import '../domain/models/logistics_models.dart';
 import '../domain/models/safety_alert_models.dart';
 import '../domain/models/tour_activity_models.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
+import '../domain/models/vehicle_models.dart';
 import '../domain/services/invite_code.dart';
+import '../domain/services/seat_layout_engine.dart';
+import '../domain/services/seat_planner.dart';
 import 'tour_media_journal.dart';
 import 'tour_media_uploader.dart';
 
@@ -589,6 +593,49 @@ class TourGroupRepository {
     await _tour(tourId).update(updates);
   }
 
+  /// Admins save the itinerary. The summary fields older screens read are
+  /// kept in step: the destination becomes "A → B → C", the tour type is
+  /// beach when any stop is (so beach items and tide tools show), and the
+  /// tour's dates widen to cover every stop.
+  Future<void> saveItinerary(
+    String tourId, {
+    required List<TourStop> stops,
+    required bool returnHome,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    _requireEmail();
+    final ordered = [...stops]..sort((a, b) => a.arrive.compareTo(b.arrive));
+    final updates = <String, dynamic>{
+      'stops': [for (final s in ordered) s.toMap()],
+      'returnHome': returnHome,
+    };
+    if (ordered.isNotEmpty) {
+      updates['destination'] = ordered.map((s) => s.name).join(' → ');
+      updates['tourType'] = (ordered.any((s) => s.kind == TourType.beach)
+              ? TourType.beach
+              : ordered.first.kind)
+          .toValue();
+      var start = startDate, end = endDate;
+      for (final s in ordered) {
+        if (s.arrive.isBefore(start)) start = s.arrive;
+        if (s.leave.isAfter(end)) end = s.leave;
+      }
+      updates['startDate'] = writeDate(start);
+      updates['endDate'] = writeDate(end);
+    }
+    await _tour(tourId).update(updates);
+  }
+
+  /// Admins save one leg's plan or progress. The key has a '>' in it, so it
+  /// is written with a field path rather than a dotted string.
+  Future<void> saveLegPlan(String tourId, String legKey, LegPlan plan) async {
+    _requireEmail();
+    await _tour(tourId).update({
+      FieldPath(['legPlans', legKey]): plan.toMap(),
+    });
+  }
+
   /// Saves the meeting point. Empty values remove the field rather than
   /// storing an empty string.
   Future<void> updateMeetingPoint(
@@ -806,6 +853,12 @@ class TourGroupRepository {
     DateTime? date,
     String? notes,
     List<String>? participantIds,
+    SplitMode splitMode = SplitMode.family,
+    Map<String, int>? splitShares,
+    String? stopId,
+    String? currency,
+    int? originalMinor,
+    double? fxRate,
   }) async {
     final email = _requireEmail();
     final expense = ExpenseItem(
@@ -820,6 +873,12 @@ class TourGroupRepository {
       notes: notes,
       addedByEmail: email,
       participantIds: participantIds,
+      splitMode: splitMode,
+      splitShares: splitShares,
+      stopId: stopId,
+      currency: currency,
+      originalMinor: originalMinor,
+      fxRate: fxRate,
     );
     await _sub(tourId, 'expenses').doc(expense.id).set(expense.toMap());
     return expense.id;
@@ -880,6 +939,56 @@ class TourGroupRepository {
     await _sub(tourId, 'deposits').doc(depositId).delete();
   }
 
+  /// Settle-up payments, newest first.
+  Stream<List<TransferItem>> watchTransfers(String tourId) {
+    return _sub(tourId, 'transfers').snapshots().map((snapshot) {
+      final items = snapshot.docs
+          .map((d) => TransferItem.fromMap(d.id, d.data()))
+          .toList();
+      items.sort((a, b) => b.date.compareTo(a.date));
+      return items;
+    });
+  }
+
+  /// Records money handed over to settle up. A null [fromId] is the fund
+  /// paying out; a null [toId] is money paid into the fund.
+  Future<void> addTransfer({
+    required String tourId,
+    String? fromId,
+    required String fromName,
+    String? toId,
+    required String toName,
+    required int amountPaisa,
+    DateTime? date,
+    String? notes,
+  }) async {
+    final email = _requireEmail();
+    final t = TransferItem(
+      id: _uuid.v4(),
+      tourId: tourId,
+      fromId: fromId,
+      fromName: fromName,
+      toId: toId,
+      toName: toName,
+      amountPaisa: amountPaisa,
+      date: date ?? DateTime.now(),
+      notes: notes,
+      addedByEmail: email,
+    );
+    await _sub(tourId, 'transfers').doc(t.id).set(t.toMap());
+  }
+
+  Future<void> deleteTransfer(String tourId, String transferId) async {
+    _requireEmail();
+    await _sub(tourId, 'transfers').doc(transferId).delete();
+  }
+
+  /// Admins set the budget and the per-person collection target.
+  Future<void> saveFundBudget(String tourId, FundBudget budget) async {
+    _requireEmail();
+    await _tour(tourId).update({'fundBudget': budget.toMap()});
+  }
+
   // ---------------------------------------------------------------------------
   // Notices & meeting point
   // ---------------------------------------------------------------------------
@@ -893,39 +1002,45 @@ class TourGroupRepository {
             s.docs.map((d) => TourNotice.fromMap(d.id, d.data())).toList());
   }
 
-  /// Admins post notices. The author is the signed-in admin, not free text.
-  Future<void> postNotice({
-    required String tourId,
-    required String title,
-    required String content,
-    required bool urgent,
-  }) async {
+  /// Admins post notices. The author is the signed-in admin, not free text;
+  /// [notice] supplies everything else.
+  Future<void> postNotice(String tourId, TourNotice notice) async {
     final email = _requireEmail();
     await _sub(tourId, 'notices').add({
-      'title': title,
-      'content': content,
+      ...notice.toEditableMap(),
       'author': currentDisplayName,
       'authorEmail': email,
-      'urgent': urgent,
+      'ackBy': <String>[],
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
-  /// Edits a notice's text and urgency. The author and original time stay as
+  /// Saves an edited notice. The author, original time and answers stay as
   /// they were; only the edit time is added.
-  Future<void> updateNotice({
-    required String tourId,
-    required String noticeId,
-    required String title,
-    required String content,
-    required bool urgent,
-  }) async {
+  Future<void> updateNotice(String tourId, TourNotice notice) async {
     _requireEmail();
-    await _sub(tourId, 'notices').doc(noticeId).update({
-      'title': title,
-      'content': content,
-      'urgent': urgent,
+    await _sub(tourId, 'notices').doc(notice.id).update({
+      ...notice.toEditableMap(),
       'editedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> setNoticePinned(
+      String tourId, String noticeId, bool pinned) async {
+    _requireEmail();
+    await _sub(tourId, 'notices').doc(noticeId).update({'pinned': pinned});
+  }
+
+  /// Answers a notice for [email] ("Got it", or "I'm here" in a roll call),
+  /// or takes the answer back. Members may answer only for themselves;
+  /// admins may mark anyone present.
+  Future<void> answerNotice(String tourId, String noticeId,
+      {String? email, required bool answered}) async {
+    final who = normalizeEmail(email ?? _requireEmail());
+    await _sub(tourId, 'notices').doc(noticeId).update({
+      'ackBy': answered
+          ? FieldValue.arrayUnion([who])
+          : FieldValue.arrayRemove([who]),
     });
   }
 
@@ -992,6 +1107,10 @@ class TourGroupRepository {
     String highlight = '',
     double? lat,
     double? lng,
+    String? legKey,
+    CheckpointKind kind = CheckpointKind.custom,
+    DateTime? plannedAt,
+    String notes = '',
   }) async {
     final email = _requireEmail();
     final id = _uuid.v4();
@@ -1003,6 +1122,35 @@ class TourGroupRepository {
       if (lat != null) 'lat': lat,
       if (lng != null) 'lng': lng,
       'addedByEmail': email,
+      if (legKey != null) 'legKey': legKey,
+      'kind': kind.name,
+      if (plannedAt != null) 'plannedAt': writeDate(plannedAt),
+      'notes': notes,
+    });
+  }
+
+  /// The author or an admin edits a stop. The author stays the same.
+  Future<void> updateCheckpoint(String tourId, RouteCheckpoint c) async {
+    _requireEmail();
+    await _sub(tourId, 'checkpoints').doc(c.id).update({
+      'name': c.name,
+      'kmFromStart': c.kmFromStart,
+      'highlight': c.highlight,
+      'lat': c.lat,
+      'lng': c.lng,
+      'legKey': c.legKey,
+      'kind': c.kind.name,
+      'plannedAt': c.plannedAt == null ? null : writeDate(c.plannedAt!),
+      'notes': c.notes,
+    });
+  }
+
+  /// Marks a stop as passed now, or clears the mark.
+  Future<void> setCheckpointVisited(
+      String tourId, String checkpointId, bool visited) async {
+    _requireEmail();
+    await _sub(tourId, 'checkpoints').doc(checkpointId).update({
+      'visitedAt': visited ? FieldValue.serverTimestamp() : null,
     });
   }
 
@@ -1063,35 +1211,114 @@ class TourGroupRepository {
   // Bus seats
   // ---------------------------------------------------------------------------
 
+  /// Every seat anyone holds: the original coach and every vehicle. The
+  /// channels and the feed read this for seat badges. Vehicle seats that
+  /// cannot be read yet (rules not deployed) count as none.
   Stream<List<BusSeat>> watchBusSeats(String tourId) {
+    StreamSubscription<List<BusSeat>>? coach;
+    StreamSubscription<List<BusSeat>>? vehicles;
+    List<BusSeat>? coachSeats;
+    List<BusSeat>? vehicleSeats;
+    late final StreamController<List<BusSeat>> out;
+    void emit() {
+      if (coachSeats != null && vehicleSeats != null) {
+        out.add([...coachSeats!, ...vehicleSeats!]);
+      }
+    }
+
+    out = StreamController<List<BusSeat>>(
+      onListen: () {
+        coach = watchCoachSeats(tourId).listen((s) {
+          coachSeats = s;
+          emit();
+        }, onError: out.addError);
+        vehicles = _sub(tourId, 'vehicle_seats')
+            .snapshots()
+            .map((s) => s.docs.map((d) => BusSeat.fromMap(d.data())).toList())
+            .listen((s) {
+          vehicleSeats = s;
+          emit();
+        }, onError: (Object _) {
+          vehicleSeats = const [];
+          emit();
+        });
+      },
+      onCancel: () async {
+        await coach?.cancel();
+        await vehicles?.cancel();
+      },
+    );
+    return out.stream;
+  }
+
+  /// The tour's original coach, stored in `bus_seats`.
+  Stream<List<BusSeat>> watchCoachSeats(String tourId) {
     return _sub(tourId, 'bus_seats')
         .snapshots()
         .map((s) => s.docs.map((d) => BusSeat.fromMap(d.data())).toList());
   }
 
-  /// Puts [email] in [seatNumber], first freeing any other seat they hold, so
-  /// one member never holds two seats. A null [email] vacates the seat.
-  Future<void> assignBusSeat(
+  /// The seats of one vehicle, or of the original coach when [vehicleId] is
+  /// null.
+  Stream<List<BusSeat>> watchSeatsOf(String tourId, String? vehicleId) {
+    if (vehicleId == null) return watchCoachSeats(tourId);
+    return _sub(tourId, 'vehicle_seats')
+        .where('vehicleId', isEqualTo: vehicleId)
+        .snapshots()
+        .map((s) => s.docs.map((d) => BusSeat.fromMap(d.data())).toList());
+  }
+
+  CollectionReference<Map<String, dynamic>> _seatCollection(
+          String tourId, String? vehicleId) =>
+      _sub(tourId, vehicleId == null ? 'bus_seats' : 'vehicle_seats');
+
+  static String _seatDocId(String? vehicleId, String seatNumber) =>
+      vehicleId == null ? seatNumber : '${vehicleId}__$seatNumber';
+
+  /// Puts [email] in [seatNumber] on a vehicle (the original coach when
+  /// [vehicleId] is null). A member may hold up to [familySize] seats on one
+  /// vehicle, one for each person travelling with them; at that limit their
+  /// last seat moves here. A null [email] frees the seat.
+  Future<void> assignSeat(
     String tourId,
     String seatNumber, {
+    String? vehicleId,
     String? email,
     String? name,
+    int familySize = 1,
+    bool isWindow = false,
   }) async {
     _requireEmail();
-    final seats = _sub(tourId, 'bus_seats');
+    final seats = _seatCollection(tourId, vehicleId);
     final batch = _firestore.batch();
     final target = email == null ? null : normalizeEmail(email);
+    var slot = 0;
 
     if (target != null) {
-      final held =
-          await seats.where('assignedMemberEmail', isEqualTo: target).get();
-      for (final doc in held.docs) {
-        if (doc.id != seatNumber) {
-          batch.set(
-              doc.reference,
-              BusSeat.fromMap(doc.data())
-                  .copyWith(assignedMemberEmail: null, assignedMemberName: null)
-                  .toMap());
+      Query<Map<String, dynamic>> query =
+          seats.where('assignedMemberEmail', isEqualTo: target);
+      if (vehicleId != null) {
+        query = query.where('vehicleId', isEqualTo: vehicleId);
+      }
+      final held = (await query.get())
+          .docs
+          .where((d) => d.id != _seatDocId(vehicleId, seatNumber))
+          .map((d) => (d, BusSeat.fromMap(d.data())))
+          .toList()
+        ..sort((a, b) => a.$2.familySlot.compareTo(b.$2.familySlot));
+      final used = {for (final h in held) h.$2.familySlot};
+      if (held.length >= familySize.clamp(1, 20)) {
+        // At the limit: the member's last seat moves here.
+        final last = held.last;
+        slot = last.$2.familySlot;
+        batch.set(
+            last.$1.reference,
+            last.$2
+                .copyWith(assignedMemberEmail: null, assignedMemberName: null)
+                .toMap());
+      } else {
+        while (used.contains(slot)) {
+          slot++;
         }
       }
     }
@@ -1100,15 +1327,108 @@ class TourGroupRepository {
       seatNumber: seatNumber,
       assignedMemberEmail: target,
       assignedMemberName: target == null ? null : name,
-      isWindow: _isWindowSeat(seatNumber),
+      isWindow: vehicleId == null ? _isWindowSeat(seatNumber) : isWindow,
+      vehicleId: vehicleId,
+      familySlot: target == null ? 0 : slot,
     );
-    batch.set(seats.doc(seatNumber), seat.toMap());
+    batch.set(seats.doc(_seatDocId(vehicleId, seatNumber)), seat.toMap());
     await batch.commit();
   }
 
-  /// Window seats are the outer columns: A1/A4, B1/B4 and so on.
+  /// Writes an auto-seating plan in one batch.
+  Future<void> applySeatPlan(
+    String tourId,
+    String? vehicleId,
+    List<SeatAssignment> plan, {
+    Set<String> windowSeats = const {},
+  }) async {
+    _requireEmail();
+    if (plan.isEmpty) return;
+    final seats = _seatCollection(tourId, vehicleId);
+    for (var i = 0; i < plan.length; i += 400) {
+      final batch = _firestore.batch();
+      for (final a in plan.skip(i).take(400)) {
+        batch.set(
+          seats.doc(_seatDocId(vehicleId, a.seatId)),
+          BusSeat(
+            seatNumber: a.seatId,
+            assignedMemberEmail: normalizeEmail(a.email),
+            assignedMemberName: a.name,
+            isWindow: vehicleId == null
+                ? _isWindowSeat(a.seatId)
+                : windowSeats.contains(a.seatId),
+            vehicleId: vehicleId,
+            familySlot: a.familySlot,
+          ).toMap(),
+        );
+      }
+      await batch.commit();
+    }
+  }
+
+  /// Frees every seat on a vehicle (the original coach when [vehicleId] is
+  /// null).
+  Future<void> clearSeats(String tourId, String? vehicleId) async {
+    _requireEmail();
+    Query<Map<String, dynamic>> query = _seatCollection(tourId, vehicleId);
+    if (vehicleId != null) {
+      query = query.where('vehicleId', isEqualTo: vehicleId);
+    }
+    final docs = (await query.get()).docs;
+    for (var i = 0; i < docs.length; i += 400) {
+      final batch = _firestore.batch();
+      for (final d in docs.skip(i).take(400)) {
+        batch.delete(d.reference);
+      }
+      await batch.commit();
+    }
+  }
+
+  /// Window seats on the original coach are the outer columns: A1/A4 and so on.
   static bool _isWindowSeat(String seatNumber) =>
-      seatNumber.endsWith('1') || seatNumber.endsWith('4');
+      legacyCoachLayout().windowSeats.contains(seatNumber);
+
+  // ---------------------------------------------------------------------------
+  // Vehicles
+  // ---------------------------------------------------------------------------
+
+  /// The tour's vehicles in the order they were added.
+  Stream<List<TourVehicle>> watchVehicles(String tourId) {
+    return _sub(tourId, 'vehicles').snapshots().map((s) {
+      final list =
+          s.docs.map((d) => TourVehicle.fromMap(d.id, d.data())).toList();
+      list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      return list;
+    });
+  }
+
+  /// Admins add or edit a vehicle. A smaller seat map frees the seats that
+  /// no longer exist on it.
+  Future<void> saveVehicle(String tourId, TourVehicle vehicle) async {
+    _requireEmail();
+    final v = vehicle.normalized();
+    await _sub(tourId, 'vehicles').doc(v.id).set(v.toMap());
+    final seatIds = buildLayout(v).seatOrder.toSet();
+    final stale = (await _sub(tourId, 'vehicle_seats')
+            .where('vehicleId', isEqualTo: v.id)
+            .get())
+        .docs
+        .where((d) => !seatIds.contains(d.data()['seatNumber']))
+        .toList();
+    if (stale.isEmpty) return;
+    final batch = _firestore.batch();
+    for (final d in stale) {
+      batch.delete(d.reference);
+    }
+    await batch.commit();
+  }
+
+  /// Admins remove a vehicle and its seats. Seats go first, while the
+  /// vehicle still exists for the rules to read.
+  Future<void> deleteVehicle(String tourId, String vehicleId) async {
+    await clearSeats(tourId, vehicleId);
+    await _sub(tourId, 'vehicles').doc(vehicleId).delete();
+  }
 
   // ---------------------------------------------------------------------------
   // Hotel rooms
@@ -1134,7 +1454,7 @@ class TourGroupRepository {
     await _sub(tourId, 'hotel_rooms').doc(roomId).delete();
   }
 
-  /// Moves a guest into a room, out of any other room, inside one transaction.
+  /// Moves a guest into a room, out of any other room in the same hotel.
   /// Throws [StateError] when the room is full.
   Future<void> assignHotelGuest(
     String tourId,
@@ -1145,10 +1465,16 @@ class TourGroupRepository {
     _requireEmail();
     final guest = normalizeEmail(email);
     final rooms = _sub(tourId, 'hotel_rooms');
+    final target = await rooms.doc(roomId).get();
+    final hotel = target.data()?['hotelName'] as String? ?? '';
+    // One room per hotel: a guest moves out of other rooms in the same hotel
+    // and keeps their rooms in other hotels.
     final elsewhere =
         await rooms.where('assignedMemberEmails', arrayContains: guest).get();
     for (final doc in elsewhere.docs) {
-      if (doc.id != roomId) await _removeGuestFromRoom(tourId, doc.id, guest);
+      if (doc.id == roomId) continue;
+      if ((doc.data()['hotelName'] as String? ?? '') != hotel) continue;
+      await _removeGuestFromRoom(tourId, doc.id, guest);
     }
     await _firestore.runTransaction((tx) async {
       final ref = rooms.doc(roomId);
@@ -1157,6 +1483,13 @@ class TourGroupRepository {
       final room = HotelRoom.fromMap(snap.id, snap.data()!);
       tx.set(ref, room.addGuest(guest, name).toMap());
     });
+  }
+
+  /// Applies an auto-rooming plan, one guest at a time.
+  Future<void> applyRoomPlan(String tourId, List<RoomAssignment> plan) async {
+    for (final a in plan) {
+      await assignHotelGuest(tourId, a.roomId, email: a.email, name: a.name);
+    }
   }
 
   Future<void> removeHotelGuest(
@@ -1751,10 +2084,13 @@ class TourGroupRepository {
           .toList(),
       'expenses': await collect('expenses'),
       'deposits': await collect('deposits'),
+      'transfers': await collect('transfers'),
       'notices': await collect('notices'),
       'checklist': await collect('checklist'),
       'checkpoints': await collect('checkpoints'),
       'bus_seats': await collect('bus_seats'),
+      'vehicles': await collect('vehicles'),
+      'vehicle_seats': await collect('vehicle_seats'),
       'hotel_rooms': await collect('hotel_rooms'),
       'posts': posts.docs.map((d) => d.data()).toList(),
       'comments': comments,

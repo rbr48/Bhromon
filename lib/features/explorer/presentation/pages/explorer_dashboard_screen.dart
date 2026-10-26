@@ -7,6 +7,7 @@ import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:bhromon/features/auth/presentation/cubit/auth_state.dart';
 import 'package:bhromon/core/entities/location_pin.dart';
+import 'package:bhromon/core/widgets/adaptive_columns.dart';
 
 class ExplorerDashboardScreen extends StatefulWidget {
   const ExplorerDashboardScreen({super.key});
@@ -171,7 +172,8 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
           children: [
             // Hero Stat Cards Grid
             GridView.count(
-              crossAxisCount: 2,
+              // All four in one row on tablets, two by two on phones.
+              crossAxisCount: MediaQuery.sizeOf(context).width >= 600 ? 4 : 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 12,
@@ -362,15 +364,11 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                   fontSize: 16),
             ),
             const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _undiscoveredPins.length,
-              itemBuilder: (context, index) {
-                final pin = _undiscoveredPins[index];
+            AdaptiveColumns(
+              children: _undiscoveredPins.map((pin) {
                 return Card(
                   color: Colors.white.withValues(alpha: 0.04),
-                  margin: const EdgeInsets.only(bottom: 10),
+                  margin: EdgeInsets.zero,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: const BorderSide(color: Colors.white10),
@@ -391,7 +389,7 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
                     },
                   ),
                 );
-              },
+              }).toList(),
             ),
           ],
         ),
