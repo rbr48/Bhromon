@@ -33,6 +33,7 @@ import '../widgets/chat_attachment_sheet.dart';
 import '../widgets/chat_forward_dialog.dart';
 import '../widgets/chat_media_caption_screen.dart';
 import '../widgets/chat_expense_bubble.dart';
+import '../widgets/chat_emoji_picker.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/travel_ai_service.dart';
 import '../../../../core/utils/image_sizing.dart';
@@ -64,6 +65,7 @@ class _PendingUpload {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
+  final FocusNode _messageFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
   bool _isBlocked = false;
   bool _isLoadingBlock = true;
@@ -72,6 +74,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Timer? _typingTimer;
 
   bool _isRecordingVoice = false;
+  bool _showEmojiPicker = false;
 
   // ── WhatsApp Parity State ──────────────────────────────────────────────────
   ReplyMessageInfo? _replyingMessage;
@@ -128,6 +131,11 @@ class _ChatScreenState extends State<ChatScreen> {
     ChatLocalCache().init();
     _checkBlockStatus();
     _messageController.addListener(_onTextChanged);
+    _messageFocusNode.addListener(() {
+      if (_messageFocusNode.hasFocus && _showEmojiPicker) {
+        setState(() => _showEmojiPicker = false);
+      }
+    });
     _scrollController.addListener(_onScroll);
     _startChatOpenTrace();
     _subscribeToLatestMessages();
@@ -320,6 +328,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _updateTypingStatus(authState.profile.uid, false);
     }
     _messageController.dispose();
+    _messageFocusNode.dispose();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -334,6 +343,52 @@ class _ChatScreenState extends State<ChatScreen> {
       return parts[0] == currentUid ? parts[1] : parts[0];
     }
     return null;
+  }
+
+  void _insertEmoji(String emoji) {
+    final text = _messageController.text;
+    final selection = _messageController.selection;
+    final start = selection.isValid ? selection.start : text.length;
+    final end = selection.isValid ? selection.end : text.length;
+    final newText = text.replaceRange(start, end, emoji);
+    _messageController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: start + emoji.length),
+    );
+  }
+
+  void _backspaceEmoji() {
+    final text = _messageController.text;
+    final selection = _messageController.selection;
+    final start = selection.isValid ? selection.start : text.length;
+    final end = selection.isValid ? selection.end : text.length;
+    if (start == 0 && end == 0) return;
+    if (start != end) {
+      final newText = text.replaceRange(start, end, '');
+      _messageController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: start),
+      );
+    } else {
+      final characters = text.characters;
+      if (characters.isNotEmpty) {
+        final newText = characters.skipLast(1).toString();
+        _messageController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newText.length),
+        );
+      }
+    }
+  }
+
+  void _toggleEmojiPicker() {
+    if (_showEmojiPicker) {
+      setState(() => _showEmojiPicker = false);
+      _messageFocusNode.requestFocus();
+    } else {
+      _messageFocusNode.unfocus();
+      setState(() => _showEmojiPicker = true);
+    }
   }
 
   void _sendMessage(String currentUid, String currentName) async {
@@ -1682,819 +1737,760 @@ class _ChatScreenState extends State<ChatScreen> {
                 ? otherName.substring(0, 2).toUpperCase()
                 : 'TR');
 
-        return Scaffold(
-          backgroundColor:
-              const Color(0xFF0B141A), // WhatsApp wallpaper base color
-          appBar: _selectedMessageIds.isNotEmpty
-              ? AppBar(
-                  backgroundColor: const Color(0xFF1F2C34),
-                  leading: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => setState(() {
-                      _selectedMessageIds.clear();
-                      _reactionTargetDoc = null;
-                    }),
-                  ),
-                  title: Text(
-                    '${_selectedMessageIds.length}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+        return PopScope(
+          canPop: !_showEmojiPicker,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            if (_showEmojiPicker) {
+              setState(() => _showEmojiPicker = false);
+            }
+          },
+          child: Scaffold(
+            backgroundColor:
+                const Color(0xFF0B141A), // WhatsApp wallpaper base color
+            appBar: _selectedMessageIds.isNotEmpty
+                ? AppBar(
+                    backgroundColor: const Color(0xFF1F2C34),
+                    leading: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => setState(() {
+                        _selectedMessageIds.clear();
+                        _reactionTargetDoc = null;
+                      }),
                     ),
-                  ),
-                  actions: [
-                    if (_selectedMessageIds.length == 1) ...[
-                      IconButton(
-                        icon: const Icon(Icons.reply, color: Colors.white),
-                        tooltip: 'Reply',
-                        onPressed: () {
+                    title: Text(
+                      '${_selectedMessageIds.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    actions: [
+                      if (_selectedMessageIds.length == 1) ...[
+                        IconButton(
+                          icon: const Icon(Icons.reply, color: Colors.white),
+                          tooltip: 'Reply',
+                          onPressed: () {
+                            final doc = _allMessages.firstWhere(
+                                (d) => d.id == _selectedMessageIds.first);
+                            _setReplyToMessage(doc);
+                            setState(() {
+                              _selectedMessageIds.clear();
+                              _reactionTargetDoc = null;
+                            });
+                          },
+                        ),
+                        Builder(builder: (context) {
                           final doc = _allMessages.firstWhere(
                               (d) => d.id == _selectedMessageIds.first);
-                          _setReplyToMessage(doc);
-                          setState(() {
-                            _selectedMessageIds.clear();
-                            _reactionTargetDoc = null;
-                          });
-                        },
-                      ),
-                      Builder(builder: (context) {
-                        final doc = _allMessages.firstWhere(
-                            (d) => d.id == _selectedMessageIds.first);
-                        final data = doc.data() as Map<String, dynamic>;
-                        final isMe = data['senderId'] == currentUid;
-                        final isText = data['type'] == 'text';
-                        final ts = data['timestamp'] as Timestamp?;
-                        final isWithin15Min = ts != null &&
-                            DateTime.now().difference(ts.toDate()).inMinutes <=
-                                15;
-                        if (isMe && isText && isWithin15Min) {
-                          return IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.white),
-                            tooltip: 'Edit',
-                            onPressed: () => _startEditingMessage(doc),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      }),
+                          final data = doc.data() as Map<String, dynamic>;
+                          final isMe = data['senderId'] == currentUid;
+                          final isText = data['type'] == 'text';
+                          final ts = data['timestamp'] as Timestamp?;
+                          final isWithin15Min = ts != null &&
+                              DateTime.now()
+                                      .difference(ts.toDate())
+                                      .inMinutes <=
+                                  15;
+                          if (isMe && isText && isWithin15Min) {
+                            return IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.white),
+                              tooltip: 'Edit',
+                              onPressed: () => _startEditingMessage(doc),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        }),
+                        IconButton(
+                          icon: const Icon(Icons.push_pin_outlined,
+                              color: Colors.white),
+                          tooltip: 'Pin',
+                          onPressed: _pinSelectedMessage,
+                        ),
+                      ],
                       IconButton(
-                        icon: const Icon(Icons.push_pin_outlined,
+                        icon:
+                            const Icon(Icons.star_outline, color: Colors.white),
+                        tooltip: 'Star',
+                        onPressed: () =>
+                            _toggleStarSelectedMessages(currentUid),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline,
                             color: Colors.white),
-                        tooltip: 'Pin',
-                        onPressed: _pinSelectedMessage,
+                        tooltip: 'Delete',
+                        onPressed: () => _deleteSelectedMessages(currentUid),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.forward, color: Colors.white),
+                        tooltip: 'Forward',
+                        onPressed: () => _openForwardDialog(currentUid),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.copy, color: Colors.white),
+                        tooltip: 'Copy',
+                        onPressed: _copySelectedMessages,
                       ),
                     ],
-                    IconButton(
-                      icon: const Icon(Icons.star_outline, color: Colors.white),
-                      tooltip: 'Star',
-                      onPressed: () => _toggleStarSelectedMessages(currentUid),
-                    ),
-                    IconButton(
-                      icon:
-                          const Icon(Icons.delete_outline, color: Colors.white),
-                      tooltip: 'Delete',
-                      onPressed: () => _deleteSelectedMessages(currentUid),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.forward, color: Colors.white),
-                      tooltip: 'Forward',
-                      onPressed: () => _openForwardDialog(currentUid),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.copy, color: Colors.white),
-                      tooltip: 'Copy',
-                      onPressed: _copySelectedMessages,
-                    ),
-                  ],
-                )
-              : _isSearchingInChat
-                  ? AppBar(
-                      backgroundColor: const Color(0xFF1F2C34),
-                      leading: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => setState(() {
-                          _isSearchingInChat = false;
-                          _searchController.clear();
-                          _matchingIndices.clear();
-                        }),
-                      ),
-                      title: TextField(
-                        controller: _searchController,
-                        autofocus: true,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 14),
-                        decoration: const InputDecoration(
-                          hintText: 'Search in conversation...',
-                          hintStyle:
-                              TextStyle(color: Colors.white38, fontSize: 14),
-                          border: InputBorder.none,
-                        ),
-                        onChanged: _onSearchQueryChanged,
-                      ),
-                      actions: [
-                        if (_matchingIndices.isNotEmpty) ...[
-                          Center(
-                            child: Text(
-                              '${_searchMatchIndex + 1}/${_matchingIndices.length}',
-                              style: const TextStyle(
-                                  color: Colors.white70, fontSize: 12),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.keyboard_arrow_up,
-                                color: Colors.white),
-                            onPressed: () => _navigateSearchMatch(false),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.keyboard_arrow_down,
-                                color: Colors.white),
-                            onPressed: () => _navigateSearchMatch(true),
-                          ),
-                        ],
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white),
+                  )
+                : _isSearchingInChat
+                    ? AppBar(
+                        backgroundColor: const Color(0xFF1F2C34),
+                        leading: IconButton(
+                          icon:
+                              const Icon(Icons.arrow_back, color: Colors.white),
                           onPressed: () => setState(() {
                             _isSearchingInChat = false;
                             _searchController.clear();
                             _matchingIndices.clear();
                           }),
                         ),
-                      ],
-                    )
-                  : AppBar(
-                      backgroundColor:
-                          const Color(0xFF1F2C34), // WhatsApp slate dark
-                      elevation: 1.5,
-                      leadingWidth: 90,
-                      leading: Row(
-                        children: [
-                          const SizedBox(width: 4),
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: const Icon(Icons.arrow_back,
-                                color: Colors.white),
-                            onPressed: () => context.pop(),
+                        title: TextField(
+                          controller: _searchController,
+                          autofocus: true,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 14),
+                          decoration: const InputDecoration(
+                            hintText: 'Search in conversation...',
+                            hintStyle:
+                                TextStyle(color: Colors.white38, fontSize: 14),
+                            border: InputBorder.none,
                           ),
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: const Color(0xFF005C4B),
-                            backgroundImage:
-                                (avatarUrl != null && avatarUrl.isNotEmpty)
-                                    ? sizedImage(NetworkImage(avatarUrl),
-                                        context.decodeWidth(36))
-                                    : null,
-                            child: (avatarUrl == null || avatarUrl.isEmpty)
-                                ? Text(initials,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11))
-                                : null,
-                          ),
-                        ],
-                      ),
-                      titleSpacing: 8,
-                      title: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                otherName,
+                          onChanged: _onSearchQueryChanged,
+                        ),
+                        actions: [
+                          if (_matchingIndices.isNotEmpty) ...[
+                            Center(
+                              child: Text(
+                                '${_searchMatchIndex + 1}/${_matchingIndices.length}',
                                 style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                    color: Colors.white70, fontSize: 12),
                               ),
-                              if (_disappearingTimerSeconds > 0)
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 4),
-                                  child: Icon(Icons.timer_outlined,
-                                      size: 13, color: Colors.white70),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          // Typing / Online status stream
-                          StreamBuilder<DocumentSnapshot>(
-                            stream: _chatDocStream,
-                            builder: (context, chatSnap) {
-                              final data = chatSnap.data?.data()
-                                  as Map<String, dynamic>?;
-                              final bool isOtherTyping =
-                                  (data?['typing_$resolvedOtherUid']
-                                          as bool?) ??
-                                      false;
-                              return Text(
-                                isOtherTyping ? 'typing...' : 'online',
-                                style: TextStyle(
-                                  color: isOtherTyping
-                                      ? const Color(0xFF00A884)
-                                      : Colors.white54,
-                                  fontSize: 10,
-                                  fontWeight: isOtherTyping
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
-                              );
-                            },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.keyboard_arrow_up,
+                                  color: Colors.white),
+                              onPressed: () => _navigateSearchMatch(false),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.keyboard_arrow_down,
+                                  color: Colors.white),
+                              onPressed: () => _navigateSearchMatch(true),
+                            ),
+                          ],
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => setState(() {
+                              _isSearchingInChat = false;
+                              _searchController.clear();
+                              _matchingIndices.clear();
+                            }),
                           ),
                         ],
-                      ),
-                      actions: [
-                        IconButton(
-                          icon: const Icon(Icons.call,
-                              color: Colors.white, size: 21),
-                          tooltip: 'Audio Call',
-                          onPressed: () => _initiateCall(
-                            isVideo: false,
-                            currentUid: currentUid,
-                            otherUid: resolvedOtherUid,
-                            otherName: otherName,
-                            avatarUrl: avatarUrl,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.videocam,
-                              color: Colors.white, size: 23),
-                          tooltip: 'Video Call',
-                          onPressed: () => _initiateCall(
-                            isVideo: true,
-                            currentUid: currentUid,
-                            otherUid: resolvedOtherUid,
-                            otherName: otherName,
-                            avatarUrl: avatarUrl,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.search,
-                              color: Colors.white, size: 21),
-                          tooltip: 'Search in conversation',
-                          onPressed: () =>
-                              setState(() => _isSearchingInChat = true),
-                        ),
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert,
-                              color: Colors.white, size: 20),
-                          color: const Color(0xFF1F2C34),
-                          onSelected: (val) {
-                            if (val == 'search') {
-                              setState(() => _isSearchingInChat = true);
-                            } else if (val == 'split') {
-                              _showSplitBillDialog(currentUid, currentName);
-                            } else if (val == 'disappearing') {
-                              _showDisappearingMessagesSheet(context);
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'search',
-                              child: Text('Search',
-                                  style: TextStyle(color: Colors.white)),
+                      )
+                    : AppBar(
+                        backgroundColor:
+                            const Color(0xFF1F2C34), // WhatsApp slate dark
+                        elevation: 1.5,
+                        leadingWidth: 90,
+                        leading: Row(
+                          children: [
+                            const SizedBox(width: 4),
+                            IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.arrow_back,
+                                  color: Colors.white),
+                              onPressed: () => context.pop(),
                             ),
-                            const PopupMenuItem(
-                              value: 'split',
-                              child: Text('Split Travel Bill',
-                                  style: TextStyle(color: Colors.white)),
-                            ),
-                            const PopupMenuItem(
-                              value: 'disappearing',
-                              child: Text('Disappearing messages',
-                                  style: TextStyle(color: Colors.white)),
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: const Color(0xFF005C4B),
+                              backgroundImage:
+                                  (avatarUrl != null && avatarUrl.isNotEmpty)
+                                      ? sizedImage(NetworkImage(avatarUrl),
+                                          context.decodeWidth(36))
+                                      : null,
+                              child: (avatarUrl == null || avatarUrl.isEmpty)
+                                  ? Text(initials,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11))
+                                  : null,
                             ),
                           ],
                         ),
-                      ],
-                    ),
-          body: WhatsappWallpaper(
-            child: Column(
-              children: [
-                // Pinned message & disappearing messages banner
-                StreamBuilder<DocumentSnapshot>(
-                  stream: _chatDocStream,
-                  builder: (context, chatSnap) {
-                    final data = chatSnap.data?.data() as Map<String, dynamic>?;
-                    final pinned =
-                        data?['pinnedMessage'] as Map<String, dynamic>?;
-                    final disappearingSeconds =
-                        (data?['disappearingTimerSeconds'] as num?)?.toInt() ??
-                            0;
-
-                    String? disappearingLabel;
-                    if (disappearingSeconds >= 7776000) {
-                      disappearingLabel = '90 days';
-                    } else if (disappearingSeconds >= 604800) {
-                      disappearingLabel = '7 days';
-                    } else if (disappearingSeconds >= 86400) {
-                      disappearingLabel = '24 hours';
-                    }
-
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (pinned != null) ...[
-                          InkWell(
-                            onTap: () => _scrollToMessage(
-                                (pinned['id'] as String?) ?? ''),
-                            child: Container(
-                              color: const Color(0xFF1F2C34),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.push_pin,
-                                      color: Color(0xFF00A884), size: 16),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Pinned: ${(pinned['text'] as String?) ?? ''}',
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 12),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.close,
-                                        color: Colors.white54, size: 16),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () {
-                                      FirebaseFirestore.instance
-                                          .collection('chats')
-                                          .doc(widget.chatId)
-                                          .update({
-                                        'pinnedMessage': FieldValue.delete(),
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (disappearingLabel != null) ...[
-                          InkWell(
-                            onTap: () =>
-                                _showDisappearingMessagesSheet(context),
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 6),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF182229),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                    color: Colors.white12, width: 0.5),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.timer_outlined,
-                                      size: 15, color: Colors.white70),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      'Messages disappear after $disappearingLabel. Tap to change.',
-                                      style: const TextStyle(
-                                          color: Colors.white70, fontSize: 11),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    );
-                  },
-                ),
-
-                // Floating quick reaction bar
-                if (_reactionTargetDoc != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: ChatReactionBar(
-                      onSelectEmoji: (emoji) => _toggleReaction(
-                          _reactionTargetDoc!, emoji, currentUid),
-                      onMore: () {
-                        _toggleReaction(_reactionTargetDoc!, '❤️', currentUid);
-                      },
-                    ),
-                  ),
-                Expanded(
-                  child: RepaintBoundary(
-                    child: () {
-                      final docs = _visibleMessages;
-                      if (docs.isEmpty && _messagesSub == null) {
-                        return const Center(
-                            child: CircularProgressIndicator(
-                                color: Color(0xFF00A884)));
-                      }
-                      if (docs.isEmpty) {
-                        return Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1F2C34),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Start the conversation with $otherName!',
-                              style: const TextStyle(
-                                  color: Colors.white70, fontSize: 12),
-                            ),
-                          ),
-                        );
-                      }
-
-                      // Automatically mark unread messages as read/seen
-                      _markMessagesAsSeen(docs, currentUid);
-
-                      return ListView.builder(
-                        reverse: true,
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 16),
-                        itemCount: docs.length +
-                            _pendingUploads.length +
-                            (_isLoadingMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          // ── Loading more indicator at the bottom ────────
-                          if (index == docs.length + _pendingUploads.length) {
-                            return const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Color(0xFF00A884),
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-
-                          // ── Pending upload bubbles ──────────────────────
-                          if (index < _pendingUploads.length) {
-                            final pending = _pendingUploads[
-                                _pendingUploads.length - 1 - index];
-                            return Semantics(
-                              label:
-                                  'Uploading ${pending.type}. ${((pending.progress) * 100).toInt()}% complete.',
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(
-                                      bottom: 8, left: 48),
-                                  child: ChatMediaBubble(
-                                    localFile: pending.file,
-                                    type: pending.type,
-                                    uploadProgress: pending.progress,
-                                    isMe: true,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-
-                          // ── Real Firestore messages ─────────────────────
-                          final realIndex = index - _pendingUploads.length;
-                          final doc = docs[realIndex];
-                          final data = doc.data() as Map<String, dynamic>;
-                          final String msgType =
-                              (data['type'] as String?) ?? 'text';
-                          final String text = (data['text'] as String?) ?? '';
-                          final String mediaUrl =
-                              (data['mediaUrl'] as String?) ?? '';
-                          final senderId = data['senderId'] ?? '';
-                          final isMe = senderId == currentUid;
-                          final bool seen = data['seen'] as bool? ?? false;
-                          // Delivery status: 'pending' (clock) | 'sent' (single check) | 'delivered' (double grey) | 'read' (double blue)
-                          final bool hasPendingWrites =
-                              doc.metadata.hasPendingWrites;
-                          final String status = hasPendingWrites
-                              ? 'pending'
-                              : ((data['status'] as String?) ??
-                                  (seen ? 'read' : 'sent'));
-                          final timestamp = data['timestamp'] as Timestamp?;
-
-                          // Locale-aware time string
-                          String timeStr = '';
-                          if (timestamp != null) {
-                            final date = timestamp.toDate();
-                            try {
-                              timeStr = _formatTime(date);
-                            } catch (_) {
-                              timeStr =
-                                  '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-                            }
-                          }
-
-                          // Delivery tick icon: WhatsApp 4-phase delivery status
-                          Widget deliveryIcon() {
-                            if (status == 'pending') {
-                              return const Icon(Icons.access_time,
-                                  size: 11,
-                                  color: Colors.white54); // pending / clock
-                            } else if (status == 'read' || seen) {
-                              return const Icon(Icons.done_all,
-                                  size: 13, color: Color(0xFF53BDEB)); // blue
-                            } else if (status == 'delivered') {
-                              return const Icon(Icons.done_all,
-                                  size: 13, color: Colors.white54); // grey
-                            } else {
-                              return const Icon(Icons.done,
-                                  size: 13, color: Colors.white54); // single
-                            }
-                          }
-
-                          final isSelected =
-                              _selectedMessageIds.contains(doc.id);
-                          final isHighlighted = _highlightedMessageId == doc.id;
-                          final replyData =
-                              data['replyTo'] as Map<String, dynamic>?;
-                          final replyModel = replyData != null
-                              ? ReplyMessageInfo.fromMap(replyData)
-                              : null;
-                          final reactions =
-                              (data['reactions'] as Map<String, dynamic>?) ??
-                                  {};
-                          final starredBy =
-                              (data['starredBy'] as Map<String, dynamic>?) ??
-                                  {};
-                          final isStarred = starredBy[currentUid] == true;
-                          final isEdited = data['isEdited'] == true;
-                          final isForwarded = data['isForwarded'] == true;
-
-                          Widget metaRow() {
-                            return Row(
+                        titleSpacing: 8,
+                        title: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (isEdited) ...[
-                                  const Text(' (edited)',
-                                      style: TextStyle(
-                                          color: Colors.white38, fontSize: 9)),
-                                  const SizedBox(width: 3),
-                                ],
                                 Text(
-                                  timeStr,
+                                  otherName,
                                   style: const TextStyle(
-                                      color: Colors.white54, fontSize: 9.5),
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                                if (isStarred) ...[
-                                  const SizedBox(width: 3),
-                                  const Icon(Icons.star,
-                                      size: 10, color: Colors.white60),
-                                ],
-                                if (isMe) ...[
-                                  const SizedBox(width: 4),
-                                  deliveryIcon(),
-                                ],
+                                if (_disappearingTimerSeconds > 0)
+                                  const Padding(
+                                    padding: EdgeInsets.only(left: 4),
+                                    child: Icon(Icons.timer_outlined,
+                                        size: 13, color: Colors.white70),
+                                  ),
                               ],
-                            );
-                          }
+                            ),
+                            const SizedBox(height: 2),
+                            // Typing / Online status stream
+                            StreamBuilder<DocumentSnapshot>(
+                              stream: _chatDocStream,
+                              builder: (context, chatSnap) {
+                                final data = chatSnap.data?.data()
+                                    as Map<String, dynamic>?;
+                                final bool isOtherTyping =
+                                    (data?['typing_$resolvedOtherUid']
+                                            as bool?) ??
+                                        false;
+                                return Text(
+                                  isOtherTyping ? 'typing...' : 'online',
+                                  style: TextStyle(
+                                    color: isOtherTyping
+                                        ? const Color(0xFF00A884)
+                                        : Colors.white54,
+                                    fontSize: 10,
+                                    fontWeight: isOtherTyping
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          IconButton(
+                            icon: const Icon(Icons.call,
+                                color: Colors.white, size: 21),
+                            tooltip: 'Audio Call',
+                            onPressed: () => _initiateCall(
+                              isVideo: false,
+                              currentUid: currentUid,
+                              otherUid: resolvedOtherUid,
+                              otherName: otherName,
+                              avatarUrl: avatarUrl,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.videocam,
+                                color: Colors.white, size: 23),
+                            tooltip: 'Video Call',
+                            onPressed: () => _initiateCall(
+                              isVideo: true,
+                              currentUid: currentUid,
+                              otherUid: resolvedOtherUid,
+                              otherName: otherName,
+                              avatarUrl: avatarUrl,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.search,
+                                color: Colors.white, size: 21),
+                            tooltip: 'Search in conversation',
+                            onPressed: () =>
+                                setState(() => _isSearchingInChat = true),
+                          ),
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert,
+                                color: Colors.white, size: 20),
+                            color: const Color(0xFF1F2C34),
+                            onSelected: (val) {
+                              if (val == 'search') {
+                                setState(() => _isSearchingInChat = true);
+                              } else if (val == 'split') {
+                                _showSplitBillDialog(currentUid, currentName);
+                              } else if (val == 'disappearing') {
+                                _showDisappearingMessagesSheet(context);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'search',
+                                child: Text('Search',
+                                    style: TextStyle(color: Colors.white)),
+                              ),
+                              const PopupMenuItem(
+                                value: 'split',
+                                child: Text('Split Travel Bill',
+                                    style: TextStyle(color: Colors.white)),
+                              ),
+                              const PopupMenuItem(
+                                value: 'disappearing',
+                                child: Text('Disappearing messages',
+                                    style: TextStyle(color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+            body: WhatsappWallpaper(
+              child: Column(
+                children: [
+                  // Pinned message & disappearing messages banner
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: _chatDocStream,
+                    builder: (context, chatSnap) {
+                      final data =
+                          chatSnap.data?.data() as Map<String, dynamic>?;
+                      final pinned =
+                          data?['pinnedMessage'] as Map<String, dynamic>?;
+                      final disappearingSeconds =
+                          (data?['disappearingTimerSeconds'] as num?)
+                                  ?.toInt() ??
+                              0;
 
-                          Widget bubbleBody;
+                      String? disappearingLabel;
+                      if (disappearingSeconds >= 7776000) {
+                        disappearingLabel = '90 days';
+                      } else if (disappearingSeconds >= 604800) {
+                        disappearingLabel = '7 days';
+                      } else if (disappearingSeconds >= 86400) {
+                        disappearingLabel = '24 hours';
+                      }
 
-                          // ── Deleted Message Tombstone (WhatsApp Style) ──
-                          if (msgType == 'deleted' ||
-                              data['isDeleted'] == true) {
-                            bubbleBody = Container(
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (pinned != null) ...[
+                            InkWell(
+                              onTap: () => _scrollToMessage(
+                                  (pinned['id'] as String?) ?? ''),
+                              child: Container(
+                                color: const Color(0xFF1F2C34),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.push_pin,
+                                        color: Color(0xFF00A884), size: 16),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Pinned: ${(pinned['text'] as String?) ?? ''}',
+                                        style: const TextStyle(
+                                            color: Colors.white, fontSize: 12),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close,
+                                          color: Colors.white54, size: 16),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () {
+                                        FirebaseFirestore.instance
+                                            .collection('chats')
+                                            .doc(widget.chatId)
+                                            .update({
+                                          'pinnedMessage': FieldValue.delete(),
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (disappearingLabel != null) ...[
+                            InkWell(
+                              onTap: () =>
+                                  _showDisappearingMessagesSheet(context),
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: 24, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF182229),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                      color: Colors.white12, width: 0.5),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.timer_outlined,
+                                        size: 15, color: Colors.white70),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        'Messages disappear after $disappearingLabel. Tap to change.',
+                                        style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 11),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+
+                  // Floating quick reaction bar
+                  if (_reactionTargetDoc != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: ChatReactionBar(
+                        onSelectEmoji: (emoji) => _toggleReaction(
+                            _reactionTargetDoc!, emoji, currentUid),
+                        onMore: () {
+                          _toggleReaction(
+                              _reactionTargetDoc!, '❤️', currentUid);
+                        },
+                      ),
+                    ),
+                  Expanded(
+                    child: RepaintBoundary(
+                      child: () {
+                        final docs = _visibleMessages;
+                        if (docs.isEmpty && _messagesSub == null) {
+                          return const Center(
+                              child: CircularProgressIndicator(
+                                  color: Color(0xFF00A884)));
+                        }
+                        if (docs.isEmpty) {
+                          return Center(
+                            child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
+                                  horizontal: 20, vertical: 10),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF1F2C34),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.white10,
-                                  width: 1,
-                                ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.block_flipped,
-                                    size: 14,
-                                    color: Colors.white38,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    isMe
-                                        ? 'You deleted this message'
-                                        : 'This message was deleted',
-                                    style: const TextStyle(
-                                      fontStyle: FontStyle.italic,
-                                      color: Colors.white54,
-                                      fontSize: 13,
+                              child: Text(
+                                'Start the conversation with $otherName!',
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 12),
+                              ),
+                            ),
+                          );
+                        }
+
+                        // Automatically mark unread messages as read/seen
+                        _markMessagesAsSeen(docs, currentUid);
+
+                        return ListView.builder(
+                          reverse: true,
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 16),
+                          itemCount: docs.length +
+                              _pendingUploads.length +
+                              (_isLoadingMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            // ── Loading more indicator at the bottom ────────
+                            if (index == docs.length + _pendingUploads.length) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFF00A884),
+                                      strokeWidth: 2,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                ),
+                              );
+                            }
+
+                            // ── Pending upload bubbles ──────────────────────
+                            if (index < _pendingUploads.length) {
+                              final pending = _pendingUploads[
+                                  _pendingUploads.length - 1 - index];
+                              return Semantics(
+                                label:
+                                    'Uploading ${pending.type}. ${((pending.progress) * 100).toInt()}% complete.',
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                        bottom: 8, left: 48),
+                                    child: ChatMediaBubble(
+                                      localFile: pending.file,
+                                      type: pending.type,
+                                      uploadProgress: pending.progress,
+                                      isMe: true,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+
+                            // ── Real Firestore messages ─────────────────────
+                            final realIndex = index - _pendingUploads.length;
+                            final doc = docs[realIndex];
+                            final data = doc.data() as Map<String, dynamic>;
+                            final String msgType =
+                                (data['type'] as String?) ?? 'text';
+                            final String text = (data['text'] as String?) ?? '';
+                            final String mediaUrl =
+                                (data['mediaUrl'] as String?) ?? '';
+                            final senderId = data['senderId'] ?? '';
+                            final isMe = senderId == currentUid;
+                            final bool seen = data['seen'] as bool? ?? false;
+                            // Delivery status: 'pending' (clock) | 'sent' (single check) | 'delivered' (double grey) | 'read' (double blue)
+                            final bool hasPendingWrites =
+                                doc.metadata.hasPendingWrites;
+                            final String status = hasPendingWrites
+                                ? 'pending'
+                                : ((data['status'] as String?) ??
+                                    (seen ? 'read' : 'sent'));
+                            final timestamp = data['timestamp'] as Timestamp?;
+
+                            // Locale-aware time string
+                            String timeStr = '';
+                            if (timestamp != null) {
+                              final date = timestamp.toDate();
+                              try {
+                                timeStr = _formatTime(date);
+                              } catch (_) {
+                                timeStr =
+                                    '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+                              }
+                            }
+
+                            // Delivery tick icon: WhatsApp 4-phase delivery status
+                            Widget deliveryIcon() {
+                              if (status == 'pending') {
+                                return const Icon(Icons.access_time,
+                                    size: 11,
+                                    color: Colors.white54); // pending / clock
+                              } else if (status == 'read' || seen) {
+                                return const Icon(Icons.done_all,
+                                    size: 13, color: Color(0xFF53BDEB)); // blue
+                              } else if (status == 'delivered') {
+                                return const Icon(Icons.done_all,
+                                    size: 13, color: Colors.white54); // grey
+                              } else {
+                                return const Icon(Icons.done,
+                                    size: 13, color: Colors.white54); // single
+                              }
+                            }
+
+                            final isSelected =
+                                _selectedMessageIds.contains(doc.id);
+                            final isHighlighted =
+                                _highlightedMessageId == doc.id;
+                            final replyData =
+                                data['replyTo'] as Map<String, dynamic>?;
+                            final replyModel = replyData != null
+                                ? ReplyMessageInfo.fromMap(replyData)
+                                : null;
+                            final reactions =
+                                (data['reactions'] as Map<String, dynamic>?) ??
+                                    {};
+                            final starredBy =
+                                (data['starredBy'] as Map<String, dynamic>?) ??
+                                    {};
+                            final isStarred = starredBy[currentUid] == true;
+                            final isEdited = data['isEdited'] == true;
+                            final isForwarded = data['isForwarded'] == true;
+
+                            Widget metaRow() {
+                              return Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isEdited) ...[
+                                    const Text(' (edited)',
+                                        style: TextStyle(
+                                            color: Colors.white38,
+                                            fontSize: 9)),
+                                    const SizedBox(width: 3),
+                                  ],
                                   Text(
                                     timeStr,
                                     style: const TextStyle(
-                                      color: Colors.white30,
-                                      fontSize: 9.5,
+                                        color: Colors.white54, fontSize: 9.5),
+                                  ),
+                                  if (isStarred) ...[
+                                    const SizedBox(width: 3),
+                                    const Icon(Icons.star,
+                                        size: 10, color: Colors.white60),
+                                  ],
+                                  if (isMe) ...[
+                                    const SizedBox(width: 4),
+                                    deliveryIcon(),
+                                  ],
+                                ],
+                              );
+                            }
+
+                            Widget bubbleBody;
+
+                            // ── Deleted Message Tombstone (WhatsApp Style) ──
+                            if (msgType == 'deleted' ||
+                                data['isDeleted'] == true) {
+                              bubbleBody = Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1F2C34),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.white10,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.block_flipped,
+                                      size: 14,
+                                      color: Colors.white38,
                                     ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      isMe
+                                          ? 'You deleted this message'
+                                          : 'This message was deleted',
+                                      style: const TextStyle(
+                                        fontStyle: FontStyle.italic,
+                                        color: Colors.white54,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      timeStr,
+                                      style: const TextStyle(
+                                        color: Colors.white30,
+                                        fontSize: 9.5,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                            // ── Document Message ──────────────────────────────
+                            else if (msgType == 'document') {
+                              bubbleBody = Column(
+                                crossAxisAlignment: isMe
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                                children: [
+                                  if (replyModel != null)
+                                    ChatQuotedBubble(
+                                      reply: replyModel,
+                                      isMe: isMe,
+                                      onTap: () => _scrollToMessage(
+                                          replyModel.messageId),
+                                    ),
+                                  ChatDocumentBubble(
+                                    documentUrl:
+                                        (data['documentUrl'] as String?) ?? '',
+                                    fileName: (data['fileName'] as String?) ??
+                                        'Document',
+                                    fileSizeBytes:
+                                        (data['fileSizeBytes'] as num?)
+                                                ?.toInt() ??
+                                            0,
+                                    isMe: isMe,
+                                    timeStr: timeStr,
+                                    deliveryIcon: isMe ? deliveryIcon() : null,
                                   ),
                                 ],
-                              ),
-                            );
-                          }
-                          // ── Document Message ──────────────────────────────
-                          else if (msgType == 'document') {
-                            bubbleBody = Column(
-                              crossAxisAlignment: isMe
-                                  ? CrossAxisAlignment.end
-                                  : CrossAxisAlignment.start,
-                              children: [
-                                if (replyModel != null)
-                                  ChatQuotedBubble(
-                                    reply: replyModel,
+                              );
+                            }
+                            // ── Location Message ──────────────────────────────
+                            else if (msgType == 'location') {
+                              bubbleBody = Column(
+                                crossAxisAlignment: isMe
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                                children: [
+                                  if (replyModel != null)
+                                    ChatQuotedBubble(
+                                      reply: replyModel,
+                                      isMe: isMe,
+                                      onTap: () => _scrollToMessage(
+                                          replyModel.messageId),
+                                    ),
+                                  ChatLocationBubble(
+                                    latitude: (data['latitude'] as num?)
+                                            ?.toDouble() ??
+                                        0.0,
+                                    longitude: (data['longitude'] as num?)
+                                            ?.toDouble() ??
+                                        0.0,
+                                    title: (data['title'] as String?) ??
+                                        'Shared Location',
+                                    address: (data['address'] as String?) ?? '',
                                     isMe: isMe,
-                                    onTap: () =>
-                                        _scrollToMessage(replyModel.messageId),
+                                    timeStr: timeStr,
+                                    deliveryIcon: isMe ? deliveryIcon() : null,
                                   ),
-                                ChatDocumentBubble(
-                                  documentUrl:
-                                      (data['documentUrl'] as String?) ?? '',
-                                  fileName: (data['fileName'] as String?) ??
-                                      'Document',
-                                  fileSizeBytes: (data['fileSizeBytes'] as num?)
-                                          ?.toInt() ??
-                                      0,
-                                  isMe: isMe,
-                                  timeStr: timeStr,
-                                  deliveryIcon: isMe ? deliveryIcon() : null,
-                                ),
-                              ],
-                            );
-                          }
-                          // ── Location Message ──────────────────────────────
-                          else if (msgType == 'location') {
-                            bubbleBody = Column(
-                              crossAxisAlignment: isMe
-                                  ? CrossAxisAlignment.end
-                                  : CrossAxisAlignment.start,
-                              children: [
-                                if (replyModel != null)
-                                  ChatQuotedBubble(
-                                    reply: replyModel,
-                                    isMe: isMe,
-                                    onTap: () =>
-                                        _scrollToMessage(replyModel.messageId),
+                                ],
+                              );
+                            }
+                            // ── Travel Expense / Split Message ────────────────
+                            else if (msgType == 'expense') {
+                              bubbleBody = Column(
+                                crossAxisAlignment: isMe
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                                children: [
+                                  if (replyModel != null)
+                                    ChatQuotedBubble(
+                                      reply: replyModel,
+                                      isMe: isMe,
+                                      onTap: () => _scrollToMessage(
+                                          replyModel.messageId),
+                                    ),
+                                  ChatExpenseBubble(
+                                    title: (data['expenseTitle'] as String?) ??
+                                        'Travel Split',
+                                    amount:
+                                        (data['amount'] as num?)?.toDouble() ??
+                                            0.0,
+                                    paidByName:
+                                        (data['paidByName'] as String?) ??
+                                            'Traveler',
+                                    isPaidByMe: data['paidById'] == currentUid,
+                                    isSettled: data['isSettled'] == true,
+                                    timeStr: timeStr,
+                                    deliveryIcon: isMe ? deliveryIcon() : null,
+                                    onSettle: data['isSettled'] == true
+                                        ? null
+                                        : () {
+                                            doc.reference
+                                                .update({'isSettled': true});
+                                          },
                                   ),
-                                ChatLocationBubble(
-                                  latitude:
-                                      (data['latitude'] as num?)?.toDouble() ??
-                                          0.0,
-                                  longitude:
-                                      (data['longitude'] as num?)?.toDouble() ??
-                                          0.0,
-                                  title: (data['title'] as String?) ??
-                                      'Shared Location',
-                                  address: (data['address'] as String?) ?? '',
-                                  isMe: isMe,
-                                  timeStr: timeStr,
-                                  deliveryIcon: isMe ? deliveryIcon() : null,
-                                ),
-                              ],
-                            );
-                          }
-                          // ── Travel Expense / Split Message ────────────────
-                          else if (msgType == 'expense') {
-                            bubbleBody = Column(
-                              crossAxisAlignment: isMe
-                                  ? CrossAxisAlignment.end
-                                  : CrossAxisAlignment.start,
-                              children: [
-                                if (replyModel != null)
-                                  ChatQuotedBubble(
-                                    reply: replyModel,
-                                    isMe: isMe,
-                                    onTap: () =>
-                                        _scrollToMessage(replyModel.messageId),
-                                  ),
-                                ChatExpenseBubble(
-                                  title: (data['expenseTitle'] as String?) ??
-                                      'Travel Split',
-                                  amount:
-                                      (data['amount'] as num?)?.toDouble() ??
-                                          0.0,
-                                  paidByName: (data['paidByName'] as String?) ??
-                                      'Traveler',
-                                  isPaidByMe: data['paidById'] == currentUid,
-                                  isSettled: data['isSettled'] == true,
-                                  timeStr: timeStr,
-                                  deliveryIcon: isMe ? deliveryIcon() : null,
-                                  onSettle: data['isSettled'] == true
-                                      ? null
-                                      : () {
-                                          doc.reference
-                                              .update({'isSettled': true});
-                                        },
-                                ),
-                              ],
-                            );
-                          }
-                          // ── Media Message (Photo / Video with Caption) ───
-                          else if (msgType == 'image' || msgType == 'video') {
-                            final bool isViewOnce = data['isViewOnce'] == true;
-                            final bool isOpened = data['isOpened'] == true;
+                                ],
+                              );
+                            }
+                            // ── Media Message (Photo / Video with Caption) ───
+                            else if (msgType == 'image' || msgType == 'video') {
+                              final bool isViewOnce =
+                                  data['isViewOnce'] == true;
+                              final bool isOpened = data['isOpened'] == true;
 
-                            if (isViewOnce) {
-                              if (isOpened) {
-                                bubbleBody = Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: isMe
-                                        ? const Color(0xFF005C4B)
-                                        : const Color(0xFF202C33),
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.looks_one_outlined,
-                                          color: Colors.white54, size: 18),
-                                      const SizedBox(width: 6),
-                                      const Text('Opened',
-                                          style: TextStyle(
-                                              color: Colors.white54,
-                                              fontStyle: FontStyle.italic,
-                                              fontSize: 13)),
-                                      const SizedBox(width: 8),
-                                      Text(timeStr,
-                                          style: const TextStyle(
-                                              color: Colors.white38,
-                                              fontSize: 10)),
-                                      if (isMe) ...[
-                                        const SizedBox(width: 4),
-                                        deliveryIcon(),
-                                      ],
-                                    ],
-                                  ),
-                                );
-                              } else {
-                                bubbleBody = InkWell(
-                                  onTap: () {
-                                    if (isMe) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                            content: Text(
-                                                'You sent a view-once media')),
-                                      );
-                                      return;
-                                    }
-                                    Navigator.of(context)
-                                        .push(
-                                      MaterialPageRoute<void>(
-                                        builder: (ctx) => Scaffold(
-                                          backgroundColor: Colors.black,
-                                          appBar: AppBar(
-                                            backgroundColor: Colors.black,
-                                            iconTheme: const IconThemeData(
-                                                color: Colors.white),
-                                            title: Text(
-                                                msgType == 'video'
-                                                    ? 'View Once Video'
-                                                    : 'View Once Photo',
-                                                style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 16)),
-                                          ),
-                                          body: Center(
-                                            child: InteractiveViewer(
-                                              child: CachedNetworkImage(
-                                                imageUrl: mediaUrl,
-                                                fit: BoxFit.contain,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    )
-                                        .then((_) {
-                                      doc.reference.update({
-                                        'isOpened': true,
-                                        'openedAt':
-                                            FieldValue.serverTimestamp(),
-                                      });
-                                    });
-                                  },
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: Container(
+                              if (isViewOnce) {
+                                if (isOpened) {
+                                  bubbleBody = Container(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12, vertical: 8),
                                     decoration: BoxDecoration(
@@ -2506,36 +2502,18 @@ class _ChatScreenState extends State<ChatScreen> {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Container(
-                                          width: 22,
-                                          height: 22,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                                color: const Color(0xFF00A884),
-                                                width: 1.5),
-                                          ),
-                                          child: const Center(
-                                            child: Text('1',
-                                                style: TextStyle(
-                                                    color: Color(0xFF00A884),
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 11)),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                            msgType == 'video'
-                                                ? 'Video'
-                                                : 'Photo',
-                                            style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w600,
+                                        const Icon(Icons.looks_one_outlined,
+                                            color: Colors.white54, size: 18),
+                                        const SizedBox(width: 6),
+                                        const Text('Opened',
+                                            style: TextStyle(
+                                                color: Colors.white54,
+                                                fontStyle: FontStyle.italic,
                                                 fontSize: 13)),
                                         const SizedBox(width: 8),
                                         Text(timeStr,
                                             style: const TextStyle(
-                                                color: Colors.white54,
+                                                color: Colors.white38,
                                                 fontSize: 10)),
                                         if (isMe) ...[
                                           const SizedBox(width: 4),
@@ -2543,533 +2521,674 @@ class _ChatScreenState extends State<ChatScreen> {
                                         ],
                                       ],
                                     ),
+                                  );
+                                } else {
+                                  bubbleBody = InkWell(
+                                    onTap: () {
+                                      if (isMe) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content: Text(
+                                                  'You sent a view-once media')),
+                                        );
+                                        return;
+                                      }
+                                      Navigator.of(context)
+                                          .push(
+                                        MaterialPageRoute<void>(
+                                          builder: (ctx) => Scaffold(
+                                            backgroundColor: Colors.black,
+                                            appBar: AppBar(
+                                              backgroundColor: Colors.black,
+                                              iconTheme: const IconThemeData(
+                                                  color: Colors.white),
+                                              title: Text(
+                                                  msgType == 'video'
+                                                      ? 'View Once Video'
+                                                      : 'View Once Photo',
+                                                  style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 16)),
+                                            ),
+                                            body: Center(
+                                              child: InteractiveViewer(
+                                                child: CachedNetworkImage(
+                                                  imageUrl: mediaUrl,
+                                                  fit: BoxFit.contain,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                          .then((_) {
+                                        doc.reference.update({
+                                          'isOpened': true,
+                                          'openedAt':
+                                              FieldValue.serverTimestamp(),
+                                        });
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: isMe
+                                            ? const Color(0xFF005C4B)
+                                            : const Color(0xFF202C33),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 22,
+                                            height: 22,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                  color:
+                                                      const Color(0xFF00A884),
+                                                  width: 1.5),
+                                            ),
+                                            child: const Center(
+                                              child: Text('1',
+                                                  style: TextStyle(
+                                                      color: Color(0xFF00A884),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 11)),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                              msgType == 'video'
+                                                  ? 'Video'
+                                                  : 'Photo',
+                                              style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13)),
+                                          const SizedBox(width: 8),
+                                          Text(timeStr,
+                                              style: const TextStyle(
+                                                  color: Colors.white54,
+                                                  fontSize: 10)),
+                                          if (isMe) ...[
+                                            const SizedBox(width: 4),
+                                            deliveryIcon(),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } else {
+                                bubbleBody = Container(
+                                  decoration: BoxDecoration(
+                                    color: isMe
+                                        ? const Color(0xFF005C4B)
+                                        : const Color(0xFF202C33),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.all(4),
+                                  child: Column(
+                                    crossAxisAlignment: isMe
+                                        ? CrossAxisAlignment.end
+                                        : CrossAxisAlignment.start,
+                                    children: [
+                                      if (isForwarded)
+                                        const Padding(
+                                          padding:
+                                              EdgeInsets.fromLTRB(6, 4, 6, 2),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.forward,
+                                                  size: 11,
+                                                  color: Colors.white54),
+                                              SizedBox(width: 3),
+                                              Text('Forwarded',
+                                                  style: TextStyle(
+                                                      fontStyle:
+                                                          FontStyle.italic,
+                                                      color: Colors.white54,
+                                                      fontSize: 10)),
+                                            ],
+                                          ),
+                                        ),
+                                      if (replyModel != null)
+                                        ChatQuotedBubble(
+                                          reply: replyModel,
+                                          isMe: isMe,
+                                          onTap: () => _scrollToMessage(
+                                              replyModel.messageId),
+                                        ),
+                                      ChatMediaBubble(
+                                        mediaUrl: mediaUrl,
+                                        type: msgType,
+                                        isMe: isMe,
+                                      ),
+                                      if (text.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                              6, 6, 6, 2),
+                                          child: Text(
+                                            text,
+                                            style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 13.5),
+                                          ),
+                                        ),
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            6, 2, 6, 4),
+                                        child: metaRow(),
+                                      ),
+                                    ],
                                   ),
                                 );
                               }
-                            } else {
+                            }
+                            // ── Voice / Audio message ────────────────────────
+                            else if (msgType == 'audio') {
                               bubbleBody = Container(
                                 decoration: BoxDecoration(
                                   color: isMe
                                       ? const Color(0xFF005C4B)
                                       : const Color(0xFF202C33),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(12),
+                                    topRight: const Radius.circular(12),
+                                    bottomLeft: isMe
+                                        ? const Radius.circular(12)
+                                        : Radius.zero,
+                                    bottomRight: isMe
+                                        ? Radius.zero
+                                        : const Radius.circular(12),
+                                  ),
                                 ),
-                                padding: const EdgeInsets.all(4),
                                 child: Column(
                                   crossAxisAlignment: isMe
                                       ? CrossAxisAlignment.end
                                       : CrossAxisAlignment.start,
                                   children: [
-                                    if (isForwarded)
-                                      const Padding(
-                                        padding:
-                                            EdgeInsets.fromLTRB(6, 4, 6, 2),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.forward,
-                                                size: 11,
-                                                color: Colors.white54),
-                                            SizedBox(width: 3),
-                                            Text('Forwarded',
-                                                style: TextStyle(
-                                                    fontStyle: FontStyle.italic,
-                                                    color: Colors.white54,
-                                                    fontSize: 10)),
-                                          ],
-                                        ),
-                                      ),
                                     if (replyModel != null)
-                                      ChatQuotedBubble(
-                                        reply: replyModel,
-                                        isMe: isMe,
-                                        onTap: () => _scrollToMessage(
-                                            replyModel.messageId),
-                                      ),
-                                    ChatMediaBubble(
-                                      mediaUrl: mediaUrl,
-                                      type: msgType,
-                                      isMe: isMe,
-                                    ),
-                                    if (text.isNotEmpty)
                                       Padding(
                                         padding: const EdgeInsets.fromLTRB(
-                                            6, 6, 6, 2),
-                                        child: Text(
-                                          text,
-                                          style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13.5),
+                                            8, 8, 8, 0),
+                                        child: ChatQuotedBubble(
+                                          reply: replyModel,
+                                          isMe: isMe,
+                                          onTap: () => _scrollToMessage(
+                                              replyModel.messageId),
                                         ),
                                       ),
+                                    VoiceMessageBubble(
+                                      audioUrl: mediaUrl,
+                                      durationSeconds:
+                                          (data['durationSeconds'] as num?)
+                                              ?.toInt(),
+                                      isMe: isMe,
+                                    ),
                                     Padding(
-                                      padding:
-                                          const EdgeInsets.fromLTRB(6, 2, 6, 4),
+                                      padding: const EdgeInsets.fromLTRB(
+                                          10, 0, 10, 6),
                                       child: metaRow(),
                                     ),
                                   ],
                                 ),
                               );
                             }
-                          }
-                          // ── Voice / Audio message ────────────────────────
-                          else if (msgType == 'audio') {
-                            bubbleBody = Container(
-                              decoration: BoxDecoration(
+                            // ── Text bubble ─────────────────────────────────
+                            else {
+                              bubbleBody = PhysicalShape(
+                                clipper: isMe
+                                    ? SenderBubbleClipper()
+                                    : ReceiverBubbleClipper(),
                                 color: isMe
                                     ? const Color(0xFF005C4B)
                                     : const Color(0xFF202C33),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(12),
-                                  topRight: const Radius.circular(12),
-                                  bottomLeft: isMe
-                                      ? const Radius.circular(12)
-                                      : Radius.zero,
-                                  bottomRight: isMe
-                                      ? Radius.zero
-                                      : const Radius.circular(12),
+                                elevation: 1,
+                                child: Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                      isMe ? 10 : 16, 6, isMe ? 16 : 10, 6),
+                                  child: Column(
+                                    crossAxisAlignment: isMe
+                                        ? CrossAxisAlignment.end
+                                        : CrossAxisAlignment.start,
+                                    children: [
+                                      if (isForwarded)
+                                        const Padding(
+                                          padding: EdgeInsets.only(bottom: 2),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.forward,
+                                                  size: 11,
+                                                  color: Colors.white54),
+                                              SizedBox(width: 3),
+                                              Text('Forwarded',
+                                                  style: TextStyle(
+                                                      fontStyle:
+                                                          FontStyle.italic,
+                                                      color: Colors.white54,
+                                                      fontSize: 10)),
+                                            ],
+                                          ),
+                                        ),
+                                      if (replyModel != null)
+                                        ChatQuotedBubble(
+                                          reply: replyModel,
+                                          isMe: isMe,
+                                          onTap: () => _scrollToMessage(
+                                              replyModel.messageId),
+                                        ),
+                                      Text(
+                                        text,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13.5),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      metaRow(),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return SwipeToReply(
+                              isMe: isMe,
+                              onReply: () => _setReplyToMessage(doc),
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (_selectedMessageIds.isNotEmpty) {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedMessageIds.remove(doc.id);
+                                      } else {
+                                        _selectedMessageIds.add(doc.id);
+                                      }
+                                    });
+                                  } else if (_reactionTargetDoc != null) {
+                                    setState(() => _reactionTargetDoc = null);
+                                  }
+                                },
+                                onLongPress: () {
+                                  HapticFeedback.mediumImpact();
+                                  setState(() {
+                                    _selectedMessageIds.add(doc.id);
+                                    _reactionTargetDoc = doc;
+                                  });
+                                },
+                                child: Container(
+                                  color: isSelected
+                                      ? const Color(0xFF00A884)
+                                          .withValues(alpha: 0.18)
+                                      : isHighlighted
+                                          ? const Color(0xFF00A884)
+                                              .withValues(alpha: 0.28)
+                                          : Colors.transparent,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 2),
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      Align(
+                                        alignment: isMe
+                                            ? Alignment.centerRight
+                                            : Alignment.centerLeft,
+                                        child: Padding(
+                                          padding: EdgeInsets.only(
+                                            bottom: 8,
+                                            left: isMe ? 48 : 0,
+                                            right: isMe ? 0 : 48,
+                                          ),
+                                          child: bubbleBody,
+                                        ),
+                                      ),
+                                      if (reactions.isNotEmpty)
+                                        Positioned(
+                                          bottom: 0,
+                                          right: isMe ? 8 : null,
+                                          left: isMe ? null : 8,
+                                          child: ChatReactionBadge(
+                                            reactions: reactions,
+                                            onTap: () =>
+                                                showReactionDetailsSheet(
+                                              context,
+                                              reactions: reactions,
+                                              currentUid: currentUid,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              child: Column(
-                                crossAxisAlignment: isMe
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                                children: [
-                                  if (replyModel != null)
-                                    Padding(
-                                      padding:
-                                          const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                                      child: ChatQuotedBubble(
-                                        reply: replyModel,
-                                        isMe: isMe,
-                                        onTap: () => _scrollToMessage(
-                                            replyModel.messageId),
-                                      ),
-                                    ),
-                                  VoiceMessageBubble(
-                                    audioUrl: mediaUrl,
-                                    durationSeconds:
-                                        (data['durationSeconds'] as num?)
-                                            ?.toInt(),
-                                    isMe: isMe,
-                                  ),
-                                  Padding(
-                                    padding:
-                                        const EdgeInsets.fromLTRB(10, 0, 10, 6),
-                                    child: metaRow(),
-                                  ),
-                                ],
-                              ),
                             );
-                          }
-                          // ── Text bubble ─────────────────────────────────
-                          else {
-                            bubbleBody = PhysicalShape(
-                              clipper: isMe
-                                  ? SenderBubbleClipper()
-                                  : ReceiverBubbleClipper(),
-                              color: isMe
-                                  ? const Color(0xFF005C4B)
-                                  : const Color(0xFF202C33),
-                              elevation: 1,
-                              child: Padding(
-                                padding: EdgeInsets.fromLTRB(
-                                    isMe ? 10 : 16, 6, isMe ? 16 : 10, 6),
-                                child: Column(
-                                  crossAxisAlignment: isMe
-                                      ? CrossAxisAlignment.end
-                                      : CrossAxisAlignment.start,
+                          },
+                        );
+                      }(),
+                    ),
+                  ),
+
+                  // Typing indicator message overlay
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: _chatDocStream,
+                    builder: (context, chatSnap) {
+                      final data =
+                          chatSnap.data?.data() as Map<String, dynamic>?;
+                      final bool isOtherTyping =
+                          (data?['typing_$resolvedOtherUid'] as bool?) ?? false;
+
+                      if (isOtherTyping) {
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.only(left: 20, bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF202C33),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$otherName is typing...',
+                              style: const TextStyle(
+                                color: Color(0xFF00A884),
+                                fontSize: 10.5,
+                                fontStyle: FontStyle.italic,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+
+                  // Input bar
+                  _isLoadingBlock
+                      ? const SizedBox.shrink()
+                      : _isBlocked
+                          ? Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.fromLTRB(16, 16, 16,
+                                  16 + MediaQuery.of(context).padding.bottom),
+                              color: Colors.redAccent.withValues(alpha: 0.08),
+                              child: const Center(
+                                child: Text(
+                                  'Messaging is disabled because one of you has blocked the other.',
+                                  style: TextStyle(
+                                      color: Colors.redAccent,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            )
+                          : _isRecordingVoice
+                              ? Container(
+                                  padding: EdgeInsets.fromLTRB(
+                                      8,
+                                      6,
+                                      8,
+                                      8 +
+                                          MediaQuery.of(context)
+                                              .padding
+                                              .bottom),
+                                  child: VoiceMessageRecorder(
+                                    onVoiceSent: (path, dur) {
+                                      setState(() => _isRecordingVoice = false);
+                                      _sendVoiceMessage(
+                                          path, dur, currentUid, currentName);
+                                    },
+                                    onCancel: () {
+                                      setState(() => _isRecordingVoice = false);
+                                    },
+                                  ),
+                                )
+                              : Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (isForwarded)
-                                      const Padding(
-                                        padding: EdgeInsets.only(bottom: 2),
+                                    if (_replyingMessage != null)
+                                      ChatReplyInputBanner(
+                                        reply: _replyingMessage!,
+                                        onCancel: () => setState(
+                                            () => _replyingMessage = null),
+                                      ),
+                                    if (_editingMessage != null)
+                                      Container(
+                                        margin: const EdgeInsets.fromLTRB(
+                                            10, 0, 10, 4),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF1F2C34),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: const Border(
+                                            left: BorderSide(
+                                                color: Color(0xFF00A884),
+                                                width: 4),
+                                          ),
+                                        ),
                                         child: Row(
-                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.forward,
-                                                size: 11,
-                                                color: Colors.white54),
-                                            SizedBox(width: 3),
-                                            Text('Forwarded',
+                                            const Icon(Icons.edit,
+                                                color: Color(0xFF00A884),
+                                                size: 16),
+                                            const SizedBox(width: 8),
+                                            const Expanded(
+                                              child: Text(
+                                                'Editing message',
                                                 style: TextStyle(
-                                                    fontStyle: FontStyle.italic,
-                                                    color: Colors.white54,
-                                                    fontSize: 10)),
+                                                  color: Color(0xFF00A884),
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.close,
+                                                  color: Colors.white60,
+                                                  size: 18),
+                                              padding: EdgeInsets.zero,
+                                              constraints:
+                                                  const BoxConstraints(),
+                                              onPressed: () {
+                                                setState(() =>
+                                                    _editingMessage = null);
+                                                _messageController.clear();
+                                              },
+                                            ),
                                           ],
                                         ),
                                       ),
-                                    if (replyModel != null)
-                                      ChatQuotedBubble(
-                                        reply: replyModel,
-                                        isMe: isMe,
-                                        onTap: () => _scrollToMessage(
-                                            replyModel.messageId),
-                                      ),
-                                    Text(
-                                      text,
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 13.5),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    metaRow(),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-
-                          return SwipeToReply(
-                            isMe: isMe,
-                            onReply: () => _setReplyToMessage(doc),
-                            child: GestureDetector(
-                              onTap: () {
-                                if (_selectedMessageIds.isNotEmpty) {
-                                  setState(() {
-                                    if (isSelected) {
-                                      _selectedMessageIds.remove(doc.id);
-                                    } else {
-                                      _selectedMessageIds.add(doc.id);
-                                    }
-                                  });
-                                } else if (_reactionTargetDoc != null) {
-                                  setState(() => _reactionTargetDoc = null);
-                                }
-                              },
-                              onLongPress: () {
-                                HapticFeedback.mediumImpact();
-                                setState(() {
-                                  _selectedMessageIds.add(doc.id);
-                                  _reactionTargetDoc = doc;
-                                });
-                              },
-                              child: Container(
-                                color: isSelected
-                                    ? const Color(0xFF00A884)
-                                        .withValues(alpha: 0.18)
-                                    : isHighlighted
-                                        ? const Color(0xFF00A884)
-                                            .withValues(alpha: 0.28)
-                                        : Colors.transparent,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 2),
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Align(
-                                      alignment: isMe
-                                          ? Alignment.centerRight
-                                          : Alignment.centerLeft,
-                                      child: Padding(
-                                        padding: EdgeInsets.only(
-                                          bottom: 8,
-                                          left: isMe ? 48 : 0,
-                                          right: isMe ? 0 : 48,
-                                        ),
-                                        child: bubbleBody,
-                                      ),
-                                    ),
-                                    if (reactions.isNotEmpty)
-                                      Positioned(
-                                        bottom: 0,
-                                        right: isMe ? 8 : null,
-                                        left: isMe ? null : 8,
-                                        child: ChatReactionBadge(
-                                          reactions: reactions,
-                                          onTap: () => showReactionDetailsSheet(
-                                            context,
-                                            reactions: reactions,
-                                            currentUid: currentUid,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    }(),
-                  ),
-                ),
-
-                // Typing indicator message overlay
-                StreamBuilder<DocumentSnapshot>(
-                  stream: _chatDocStream,
-                  builder: (context, chatSnap) {
-                    final data = chatSnap.data?.data() as Map<String, dynamic>?;
-                    final bool isOtherTyping =
-                        (data?['typing_$resolvedOtherUid'] as bool?) ?? false;
-
-                    if (isOtherTyping) {
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.only(left: 20, bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF202C33),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '$otherName is typing...',
-                            style: const TextStyle(
-                              color: Color(0xFF00A884),
-                              fontSize: 10.5,
-                              fontStyle: FontStyle.italic,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-
-                // Input bar
-                _isLoadingBlock
-                    ? const SizedBox.shrink()
-                    : _isBlocked
-                        ? Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.fromLTRB(16, 16, 16,
-                                16 + MediaQuery.of(context).padding.bottom),
-                            color: Colors.redAccent.withValues(alpha: 0.08),
-                            child: const Center(
-                              child: Text(
-                                'Messaging is disabled because one of you has blocked the other.',
-                                style: TextStyle(
-                                    color: Colors.redAccent,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          )
-                        : _isRecordingVoice
-                            ? Container(
-                                padding: EdgeInsets.fromLTRB(8, 6, 8,
-                                    8 + MediaQuery.of(context).padding.bottom),
-                                child: VoiceMessageRecorder(
-                                  onVoiceSent: (path, dur) {
-                                    setState(() => _isRecordingVoice = false);
-                                    _sendVoiceMessage(
-                                        path, dur, currentUid, currentName);
-                                  },
-                                  onCancel: () {
-                                    setState(() => _isRecordingVoice = false);
-                                  },
-                                ),
-                              )
-                            : Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (_replyingMessage != null)
-                                    ChatReplyInputBanner(
-                                      reply: _replyingMessage!,
-                                      onCancel: () => setState(
-                                          () => _replyingMessage = null),
-                                    ),
-                                  if (_editingMessage != null)
                                     Container(
-                                      margin: const EdgeInsets.fromLTRB(
-                                          10, 0, 10, 4),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF1F2C34),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: const Border(
-                                          left: BorderSide(
-                                              color: Color(0xFF00A884),
-                                              width: 4),
-                                        ),
-                                      ),
+                                      padding: EdgeInsets.fromLTRB(
+                                          8,
+                                          6,
+                                          8,
+                                          8 +
+                                              MediaQuery.of(context)
+                                                  .padding
+                                                  .bottom),
+                                      color:
+                                          Colors.transparent, // Floating look
                                       child: Row(
                                         children: [
-                                          const Icon(Icons.edit,
-                                              color: Color(0xFF00A884),
-                                              size: 16),
-                                          const SizedBox(width: 8),
-                                          const Expanded(
-                                            child: Text(
-                                              'Editing message',
-                                              style: TextStyle(
-                                                color: Color(0xFF00A884),
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 12,
+                                          // WhatsApp left rounded input container
+                                          Expanded(
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF202C33),
+                                                borderRadius:
+                                                    BorderRadius.circular(24),
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8),
+                                              child: Row(
+                                                children: [
+                                                  Semantics(
+                                                    label: _showEmojiPicker
+                                                        ? 'Open keyboard'
+                                                        : 'Open emoji picker',
+                                                    button: true,
+                                                    child: SizedBox(
+                                                      width: 48,
+                                                      height: 48,
+                                                      child: IconButton(
+                                                        icon: Icon(
+                                                            _showEmojiPicker
+                                                                ? Icons
+                                                                    .keyboard_outlined
+                                                                : Icons
+                                                                    .sentiment_satisfied_alt_outlined,
+                                                            color: const Color(
+                                                                0xFF8696A0)),
+                                                        onPressed:
+                                                            _toggleEmojiPicker,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    child: TextField(
+                                                      controller:
+                                                          _messageController,
+                                                      focusNode:
+                                                          _messageFocusNode,
+                                                      onTap: () {
+                                                        if (_showEmojiPicker) {
+                                                          setState(() =>
+                                                              _showEmojiPicker =
+                                                                  false);
+                                                        }
+                                                      },
+                                                      style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 14),
+                                                      decoration:
+                                                          InputDecoration(
+                                                        hintText: context.l10n
+                                                            .translate(
+                                                                'chat_message_placeholder'),
+                                                        hintStyle:
+                                                            const TextStyle(
+                                                                color: Color(
+                                                                    0xFF8696A0),
+                                                                fontSize: 14),
+                                                        border:
+                                                            InputBorder.none,
+                                                        contentPadding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                vertical: 10),
+                                                      ),
+                                                      onSubmitted: (_) =>
+                                                          _sendMessage(
+                                                              currentUid,
+                                                              currentName),
+                                                    ),
+                                                  ),
+                                                  Semantics(
+                                                    label:
+                                                        'Attach document, photo, video, or location',
+                                                    button: true,
+                                                    child: SizedBox(
+                                                      width: 48,
+                                                      height: 48,
+                                                      child: IconButton(
+                                                        icon: const Icon(
+                                                            Icons.attach_file,
+                                                            color: Color(
+                                                                0xFF8696A0)),
+                                                        onPressed: () =>
+                                                            _openAttachmentSheet(
+                                                                currentUid,
+                                                                currentName),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Semantics(
+                                                    label: 'Open camera',
+                                                    button: true,
+                                                    child: SizedBox(
+                                                      width: 48,
+                                                      height: 48,
+                                                      child: IconButton(
+                                                        icon: const Icon(
+                                                            Icons
+                                                                .camera_alt_outlined,
+                                                            color: Color(
+                                                                0xFF8696A0)),
+                                                        onPressed: () =>
+                                                            _openCameraDirect(
+                                                                currentUid,
+                                                                currentName),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ),
-                                          IconButton(
-                                            icon: const Icon(Icons.close,
-                                                color: Colors.white60,
-                                                size: 18),
-                                            padding: EdgeInsets.zero,
-                                            constraints: const BoxConstraints(),
-                                            onPressed: () {
-                                              setState(
-                                                  () => _editingMessage = null);
-                                              _messageController.clear();
+                                          const SizedBox(width: 6),
+                                          // WhatsApp right circular action button
+                                          ValueListenableBuilder<
+                                              TextEditingValue>(
+                                            valueListenable: _messageController,
+                                            builder: (context, val, child) {
+                                              final hasText =
+                                                  val.text.trim().isNotEmpty;
+                                              final isEditing =
+                                                  _editingMessage != null;
+                                              return GestureDetector(
+                                                onTap: () {
+                                                  if (hasText || isEditing) {
+                                                    _sendMessage(currentUid,
+                                                        currentName);
+                                                  } else {
+                                                    setState(() =>
+                                                        _isRecordingVoice =
+                                                            true);
+                                                  }
+                                                },
+                                                child: CircleAvatar(
+                                                  radius: 22,
+                                                  backgroundColor:
+                                                      const Color(0xFF00A884),
+                                                  child: Icon(
+                                                    isEditing
+                                                        ? Icons.check
+                                                        : (hasText
+                                                            ? Icons.send
+                                                            : Icons.mic),
+                                                    color: Colors.white,
+                                                    size: 19,
+                                                  ),
+                                                ),
+                                              );
                                             },
                                           ),
                                         ],
                                       ),
                                     ),
-                                  Container(
-                                    padding: EdgeInsets.fromLTRB(
-                                        8,
-                                        6,
-                                        8,
-                                        8 +
-                                            MediaQuery.of(context)
-                                                .padding
-                                                .bottom),
-                                    color: Colors.transparent, // Floating look
-                                    child: Row(
-                                      children: [
-                                        // WhatsApp left rounded input container
-                                        Expanded(
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF202C33),
-                                              borderRadius:
-                                                  BorderRadius.circular(24),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8),
-                                            child: Row(
-                                              children: [
-                                                Semantics(
-                                                  label: 'Open emoji picker',
-                                                  button: true,
-                                                  child: SizedBox(
-                                                    width: 48,
-                                                    height: 48,
-                                                    child: IconButton(
-                                                      icon: const Icon(
-                                                          Icons
-                                                              .sentiment_satisfied_alt_outlined,
-                                                          color: Color(
-                                                              0xFF8696A0)),
-                                                      onPressed: () {},
-                                                    ),
-                                                  ),
-                                                ),
-                                                Expanded(
-                                                  child: TextField(
-                                                    controller:
-                                                        _messageController,
-                                                    style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 14),
-                                                    decoration: InputDecoration(
-                                                      hintText: context.l10n
-                                                          .translate(
-                                                              'chat_message_placeholder'),
-                                                      hintStyle:
-                                                          const TextStyle(
-                                                              color: Color(
-                                                                  0xFF8696A0),
-                                                              fontSize: 14),
-                                                      border: InputBorder.none,
-                                                      contentPadding:
-                                                          const EdgeInsets
-                                                              .symmetric(
-                                                              vertical: 10),
-                                                    ),
-                                                    onSubmitted: (_) =>
-                                                        _sendMessage(currentUid,
-                                                            currentName),
-                                                  ),
-                                                ),
-                                                Semantics(
-                                                  label:
-                                                      'Attach document, photo, video, or location',
-                                                  button: true,
-                                                  child: SizedBox(
-                                                    width: 48,
-                                                    height: 48,
-                                                    child: IconButton(
-                                                      icon: const Icon(
-                                                          Icons.attach_file,
-                                                          color: Color(
-                                                              0xFF8696A0)),
-                                                      onPressed: () =>
-                                                          _openAttachmentSheet(
-                                                              currentUid,
-                                                              currentName),
-                                                    ),
-                                                  ),
-                                                ),
-                                                Semantics(
-                                                  label: 'Open camera',
-                                                  button: true,
-                                                  child: SizedBox(
-                                                    width: 48,
-                                                    height: 48,
-                                                    child: IconButton(
-                                                      icon: const Icon(
-                                                          Icons
-                                                              .camera_alt_outlined,
-                                                          color: Color(
-                                                              0xFF8696A0)),
-                                                      onPressed: () =>
-                                                          _openCameraDirect(
-                                                              currentUid,
-                                                              currentName),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        // WhatsApp right circular action button
-                                        ValueListenableBuilder<
-                                            TextEditingValue>(
-                                          valueListenable: _messageController,
-                                          builder: (context, val, child) {
-                                            final hasText =
-                                                val.text.trim().isNotEmpty;
-                                            final isEditing =
-                                                _editingMessage != null;
-                                            return GestureDetector(
-                                              onTap: () {
-                                                if (hasText || isEditing) {
-                                                  _sendMessage(
-                                                      currentUid, currentName);
-                                                } else {
-                                                  setState(() =>
-                                                      _isRecordingVoice = true);
-                                                }
-                                              },
-                                              child: CircleAvatar(
-                                                radius: 22,
-                                                backgroundColor:
-                                                    const Color(0xFF00A884),
-                                                child: Icon(
-                                                  isEditing
-                                                      ? Icons.check
-                                                      : (hasText
-                                                          ? Icons.send
-                                                          : Icons.mic),
-                                                  color: Colors.white,
-                                                  size: 19,
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-              ],
+                                    if (_showEmojiPicker)
+                                      ChatEmojiPicker(
+                                        onEmojiSelected: _insertEmoji,
+                                        onBackspace: _backspaceEmoji,
+                                      ),
+                                  ],
+                                ),
+                ],
+              ),
             ),
           ),
         );

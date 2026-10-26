@@ -12,6 +12,8 @@ import 'package:bhromon/features/chat/presentation/widgets/chat_document_bubble.
 import 'package:bhromon/features/chat/presentation/widgets/chat_location_bubble.dart';
 import 'package:bhromon/features/chat/presentation/widgets/chat_expense_bubble.dart';
 import 'package:bhromon/features/chat/presentation/widgets/chat_media_caption_screen.dart';
+import 'package:bhromon/features/chat/presentation/widgets/chat_emoji_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() {
   group('Chat Features - Media & Voice', () {
@@ -293,6 +295,72 @@ void main() {
       expect(identical(cache, ChatLocalCache()), isTrue);
       expect(cache.isChatLocked('non_existent_chat'), isFalse);
       expect(cache.getLockedChatIds(), isEmpty);
+    });
+
+    testWidgets(
+        'ChatEmojiPicker renders, allows selection, and supports backspace',
+        (tester) async {
+      String? selectedEmoji;
+      bool backspaceTapped = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ChatEmojiPicker(
+              onEmojiSelected: (emoji) => selectedEmoji = emoji,
+              onBackspace: () => backspaceTapped = true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(ChatEmojiPicker), findsOneWidget);
+      expect(
+          find.byIcon(Icons.sentiment_satisfied_alt_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.backspace_outlined), findsOneWidget);
+
+      // Verify emojis are rendered
+      expect(find.text('😀'), findsOneWidget);
+
+      // Tap an emoji
+      await tester.tap(find.text('😀'));
+      await tester.pump();
+      expect(selectedEmoji, '😀');
+
+      // Tap backspace
+      await tester.tap(find.byIcon(Icons.backspace_outlined));
+      await tester.pump();
+      expect(backspaceTapped, isTrue);
+
+      // Tap another category (e.g. Animals & Nature)
+      await tester.tap(find.byIcon(Icons.pets_outlined));
+      await tester.pumpAndSettle();
+      expect(find.text('🐶'), findsOneWidget);
+
+      // Select animal emoji
+      await tester.tap(find.text('🐶'));
+      await tester.pump();
+      expect(selectedEmoji, '🐶');
+    });
+
+    test(
+        'Call date parser handles Timestamp, ISO string, and epoch milliseconds',
+        () {
+      // 1. Timestamp
+      final ts = Timestamp.fromDate(DateTime(2026, 10, 26, 12, 30));
+      final parsedFromTs = (ts is Timestamp) ? ts.toDate() : null;
+      expect(parsedFromTs, DateTime(2026, 10, 26, 12, 30));
+
+      // 2. ISO String
+      const isoStr = '2026-10-26T12:30:00.000';
+      final parsedFromStr = DateTime.tryParse(isoStr);
+      expect(parsedFromStr, isNotNull);
+      expect(parsedFromStr!.year, 2026);
+
+      // 3. Epoch milliseconds
+      final epoch = DateTime(2026, 10, 26, 12, 30).millisecondsSinceEpoch;
+      final parsedFromNum = DateTime.fromMillisecondsSinceEpoch(epoch);
+      expect(parsedFromNum.year, 2026);
     });
   });
 }
