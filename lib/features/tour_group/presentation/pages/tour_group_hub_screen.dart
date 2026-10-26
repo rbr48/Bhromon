@@ -8,6 +8,7 @@ import '../../domain/models/tour_group.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/localization/localized_date.dart';
 
 class TourGroupHubScreen extends StatefulWidget {
   const TourGroupHubScreen({super.key});
@@ -705,7 +706,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   size: 12, color: Colors.white60),
               const SizedBox(width: 5),
               Text(
-                '${DateFormat('d MMM yyyy').format(group.startDate)} – ${DateFormat('d MMM yyyy').format(group.endDate)}',
+                '${localizedDateFormat('d MMM yyyy').format(group.startDate)} – ${localizedDateFormat('d MMM yyyy').format(group.endDate)}',
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
               const SizedBox(width: 12),
@@ -1364,7 +1365,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      '${DateFormat('d MMM yyyy').format(startDate)} – ${DateFormat('d MMM yyyy').format(endDate)}',
+                                      '${localizedDateFormat('d MMM yyyy').format(startDate)} – ${localizedDateFormat('d MMM yyyy').format(endDate)}',
                                       style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
@@ -1703,7 +1704,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      '${DateFormat('d MMM yyyy').format(startDate)} – ${DateFormat('d MMM yyyy').format(endDate)}',
+                                      '${localizedDateFormat('d MMM yyyy').format(startDate)} – ${localizedDateFormat('d MMM yyyy').format(endDate)}',
                                       style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,

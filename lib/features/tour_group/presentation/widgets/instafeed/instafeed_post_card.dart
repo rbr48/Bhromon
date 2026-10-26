@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
@@ -13,6 +12,8 @@ import 'instafeed_travel_banners.dart';
 import 'instafeed_zoomable_media.dart';
 import 'reel_thumbnail_preview.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/localization/localized_date.dart';
+import '../../../../../core/localization/app_localizations.dart';
 
 /// Full-featured Post Card with pinch-to-zoom, dynamic aspect ratio, tagged
 /// members, clickable hashtags, pinned post badge, audio pill, travel logistics
@@ -201,7 +202,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
           _optimisticLikeDelta = 0;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('লাইক করা যায়নি: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_like_failed', args: {'error': e}))),
         );
       }
     }
@@ -227,7 +230,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('পিন পরিবর্তন ব্যর্থ: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_pin_change_failed', args: {'error': e}))),
         );
       }
     }
@@ -244,7 +249,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('সেটিংস পরিবর্তন ব্যর্থ: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_settings_failed', args: {'error': e}))),
         );
       }
     }
@@ -261,7 +268,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('সেটিংস পরিবর্তন ব্যর্থ: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_settings_failed', args: {'error': e}))),
         );
       }
     }
@@ -272,21 +281,21 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title:
-            const Text('পোস্ট মুছবেন?', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'পোস্ট এবং এর সকল মন্তব্য ও মিডিয়া চিরতরে মুছে যাবে।',
-          style: TextStyle(color: Colors.white70),
+        title: Text(context.l10n.translate('ig_post_delete_q'),
+            style: const TextStyle(color: Colors.white)),
+        content: Text(
+          context.l10n.translate('ig_post_delete_body'),
+          style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('বাতিল'),
+            child: Text(context.l10n.translate('ig_cancel')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('মুছুন'),
+            child: Text(context.l10n.translate('ig_delete')),
           ),
         ],
       ),
@@ -300,7 +309,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('পোস্ট মুছে ফেলা যায়নি: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_post_delete_failed', args: {'error': e}))),
         );
       }
     }
@@ -316,22 +327,23 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlgState) => AlertDialog(
           backgroundColor: const Color(0xFF1E1E1E),
-          title: const Text('পোস্ট এডিট করুন',
-              style: TextStyle(color: Colors.white)),
+          title: Text(context.l10n.translate('ig_edit_post'),
+              style: const TextStyle(color: Colors.white)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('ক্যাপশন',
-                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                Text(context.l10n.translate('ig_caption'),
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 12)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: captionCtrl,
                   maxLines: 3,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    hintText: 'ক্যাপশন লিখুন...',
+                    hintText: context.l10n.translate('ig_write_caption'),
                     hintStyle: const TextStyle(color: Colors.white54),
                     filled: true,
                     fillColor: const Color(0xFF2A2A2A),
@@ -341,8 +353,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text('স্থান / ল্যান্ডমার্ক',
-                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                Text(context.l10n.translate('ig_place_label'),
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 12)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: locationCtrl,
@@ -350,7 +363,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.location_on,
                         color: AppColors.mintGreen, size: 18),
-                    hintText: 'যেমন: ইনানী বিচ, লালবাগ কেল্লা...',
+                    hintText: context.l10n.translate('ig_place_hint'),
                     hintStyle: const TextStyle(color: Colors.white54),
                     filled: true,
                     fillColor: const Color(0xFF2A2A2A),
@@ -360,8 +373,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text('ট্যুর ডে',
-                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                Text(context.l10n.translate('ig_tour_day'),
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 12)),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   initialValue: selectedDay,
@@ -374,17 +388,22 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide.none),
                   ),
-                  items: const [
+                  items: [
                     DropdownMenuItem(
-                        value: 'day1', child: Text('দিন ১ (Day 1)')),
+                        value: 'day1',
+                        child: Text(context.l10n.translate('ig_day_one'))),
                     DropdownMenuItem(
-                        value: 'day2', child: Text('দিন ২ (Day 2)')),
+                        value: 'day2',
+                        child: Text(context.l10n.translate('ig_day_two'))),
                     DropdownMenuItem(
-                        value: 'day3', child: Text('দিন ৩ (Day 3)')),
+                        value: 'day3',
+                        child: Text(context.l10n.translate('ig_day_three'))),
                     DropdownMenuItem(
-                        value: 'day4', child: Text('দিন ৪ (Day 4)')),
+                        value: 'day4',
+                        child: Text(context.l10n.translate('ig_day_four'))),
                     DropdownMenuItem(
-                        value: 'day5', child: Text('দিন ৫ (Day 5)')),
+                        value: 'day5',
+                        child: Text(context.l10n.translate('ig_day_five'))),
                   ],
                   onChanged: (val) {
                     if (val != null) setDlgState(() => selectedDay = val);
@@ -396,15 +415,15 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child:
-                  const Text('বাতিল', style: TextStyle(color: Colors.white60)),
+              child: Text(context.l10n.translate('ig_cancel'),
+                  style: const TextStyle(color: Colors.white60)),
             ),
             FilledButton(
               style:
                   FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('সংরক্ষণ করুন',
-                  style: TextStyle(
+              child: Text(context.l10n.translate('ig_save'),
+                  style: const TextStyle(
                       color: Colors.black, fontWeight: FontWeight.bold)),
             ),
           ],
@@ -424,13 +443,15 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
         widget.onPostChanged?.call();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('পোস্ট সফলভাবে সম্পাদিত হয়েছে')),
+            SnackBar(content: Text(context.l10n.translate('ig_post_edited'))),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('পোস্ট সম্পাদনা ব্যর্থ: $e')),
+            SnackBar(
+                content: Text(context.l10n
+                    .translate('ig_post_edit_failed', args: {'error': e}))),
           );
         }
       }
@@ -450,14 +471,16 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(newArchived
-                  ? 'পোস্টটি আর্কাইভে রাখা হয়েছে'
-                  : 'পোস্টটি আর্কাইভ থেকে পুনরুদ্ধার করা হয়েছে')),
+                  ? context.l10n.translate('ig_post_archived')
+                  : context.l10n.translate('ig_post_restored'))),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('আর্কাইভ পরিবর্তন ব্যর্থ: $e')),
+          SnackBar(
+              content: Text(context.l10n
+                  .translate('ig_archive_failed', args: {'error': e}))),
         );
       }
     }
@@ -505,8 +528,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     ListTile(
                       leading: const Icon(Icons.edit_outlined,
                           color: Colors.lightBlueAccent),
-                      title: const Text('পোস্ট এডিট করুন',
-                          style: TextStyle(color: Colors.white)),
+                      title: Text(context.l10n.translate('ig_edit_post'),
+                          style: const TextStyle(color: Colors.white)),
                       onTap: () {
                         Navigator.pop(ctx);
                         _showEditDialog();
@@ -521,8 +544,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       ),
                       title: Text(
                         widget.post.isArchived
-                            ? 'আর্কাইভ থেকে ফিরিয়ে আনুন'
-                            : 'পোস্টটি আর্কাইভ করুন',
+                            ? context.l10n.translate('ig_unarchive')
+                            : context.l10n.translate('ig_archive'),
                         style: const TextStyle(color: Colors.white),
                       ),
                       onTap: () {
@@ -539,8 +562,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       ),
                       title: Text(
                         widget.post.isPinned
-                            ? 'ফিড থেকে আনপিন করুন'
-                            : 'ফিডের শীর্ষে পিন করুন',
+                            ? context.l10n.translate('ig_unpin_feed')
+                            : context.l10n.translate('ig_pin_feed'),
                         style: const TextStyle(color: Colors.white),
                       ),
                       onTap: () {
@@ -557,8 +580,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       ),
                       title: Text(
                         widget.post.hideLikeCount
-                            ? 'লাইক সংখ্যা দেখান'
-                            : 'লাইক সংখ্যা লুকান',
+                            ? context.l10n.translate('ig_show_like_count')
+                            : context.l10n.translate('ig_hide_like_count'),
                         style: const TextStyle(color: Colors.white),
                       ),
                       onTap: () {
@@ -575,8 +598,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       ),
                       title: Text(
                         widget.post.disableComments
-                            ? 'মন্তব্য চালু করুন'
-                            : 'মন্তব্য বন্ধ করুন',
+                            ? context.l10n.translate('ig_turn_on_comments')
+                            : context.l10n.translate('ig_turn_off_comments'),
                         style: const TextStyle(color: Colors.white),
                       ),
                       onTap: () {
@@ -588,8 +611,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   ListTile(
                     leading: const Icon(Icons.receipt_long,
                         color: AppColors.mintGreen),
-                    title: const Text('ট্রিপ লেজারে খরচ হিসেবে যোগ করুন',
-                        style: TextStyle(color: Colors.white)),
+                    title: Text(context.l10n.translate('ig_add_as_expense'),
+                        style: const TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(ctx);
                       widget.onAddToLedger?.call(widget.post);
@@ -600,8 +623,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                         color: Colors.white70),
                     title: Text(
                       widget.isBookmarked
-                          ? 'সংগ্রহ থেকে সরান'
-                          : 'সংগ্রহে সেভ করুন',
+                          ? context.l10n.translate('ig_remove_from_collection')
+                          : context.l10n.translate('ig_save_to_collection'),
                       style: const TextStyle(color: Colors.white),
                     ),
                     onTap: () {
@@ -613,8 +636,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     ListTile(
                       leading: const Icon(Icons.folder_special_outlined,
                           color: Colors.amber),
-                      title: const Text('কালেকশনে যোগ করুন',
-                          style: TextStyle(color: Colors.white)),
+                      title: Text(
+                          context.l10n.translate('ig_add_to_collection'),
+                          style: const TextStyle(color: Colors.white)),
                       onTap: () {
                         Navigator.pop(ctx);
                         widget.onSaveToCollection!(widget.post);
@@ -624,8 +648,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     ListTile(
                       leading: const Icon(Icons.delete_outline,
                           color: Colors.redAccent),
-                      title: const Text('পোস্ট মুছুন',
-                          style: TextStyle(color: Colors.redAccent)),
+                      title: Text(
+                          context.l10n.translate('ig_delete_post_label'),
+                          style: const TextStyle(color: Colors.redAccent)),
                       onTap: () {
                         Navigator.pop(ctx);
                         _deletePost();
@@ -802,15 +827,15 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       ),
                     ],
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.slow_motion_video,
+                      const Icon(Icons.slow_motion_video,
                           size: 14, color: Colors.white),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Text(
-                        'রিল দেখুন',
-                        style: TextStyle(
+                        context.l10n.translate('ig_watch_reel'),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -924,7 +949,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     final isVideoPost =
         widget.post.videoUrl != null && widget.post.videoUrl!.isNotEmpty;
     final mediaList = widget.post.images;
-    final timeStr = DateFormat('MMM d, h:mm a').format(widget.post.createdAt);
+    final timeStr =
+        localizedDateFormat('MMM d, h:mm a').format(widget.post.createdAt);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -937,13 +963,13 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               color: Colors.amber.withValues(alpha: 0.12),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.push_pin, size: 14, color: Colors.amber),
-                  SizedBox(width: 6),
+                  const Icon(Icons.push_pin, size: 14, color: Colors.amber),
+                  const SizedBox(width: 6),
                   Text(
-                    'পিন্ড পোস্ট (Pinned Post)',
-                    style: TextStyle(
+                    context.l10n.translate('ig_pinned_post'),
+                    style: const TextStyle(
                       color: Colors.amber,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -1077,7 +1103,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   ),
 
                 IconButton(
-                  tooltip: 'আরও বিকল্প',
+                  tooltip: context.l10n.translate('ig_more_options'),
                   icon: const Icon(Icons.more_vert, color: Colors.white70),
                   onPressed: _showPostMenu,
                 ),
@@ -1181,7 +1207,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             child: Row(
               children: [
                 IconButton(
-                  tooltip: isLiked ? 'লাইক সরান' : 'লাইক করুন',
+                  tooltip: isLiked
+                      ? context.l10n.translate('ig_unlike')
+                      : context.l10n.translate('ig_like'),
                   icon: Icon(
                     isLiked ? Icons.favorite : Icons.favorite_border,
                     color: isLiked ? Colors.redAccent : Colors.white,
@@ -1191,13 +1219,13 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 ),
                 if (!widget.post.disableComments)
                   IconButton(
-                    tooltip: 'মন্তব্য করুন',
+                    tooltip: context.l10n.translate('ig_comment'),
                     icon: const Icon(Icons.chat_bubble_outline,
                         color: Colors.white, size: 24),
                     onPressed: () => widget.onOpenComments?.call(widget.post),
                   ),
                 IconButton(
-                  tooltip: 'শেয়ার করুন',
+                  tooltip: context.l10n.translate('ig_share'),
                   icon: const Icon(Icons.send_rounded,
                       color: Colors.white, size: 22),
                   onPressed: () => widget.onShare?.call(widget.post),
@@ -1208,7 +1236,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 IconButton(
                   icon: const Icon(Icons.receipt_long_rounded,
                       color: AppColors.mintGreen, size: 24),
-                  tooltip: 'ট্রিপ লেজারে যোগ করুন',
+                  tooltip: context.l10n.translate('ig_add_to_ledger'),
                   onPressed: () => widget.onAddToLedger?.call(widget.post),
                 ),
 
@@ -1218,8 +1246,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       ? () => widget.onSaveToCollection!(widget.post)
                       : null,
                   child: IconButton(
-                    tooltip:
-                        widget.isBookmarked ? 'সংরক্ষণ সরান' : 'সংরক্ষণ করুন',
+                    tooltip: widget.isBookmarked
+                        ? context.l10n.translate('ig_unsave')
+                        : context.l10n.translate('ig_save'),
                     icon: Icon(
                       widget.isBookmarked
                           ? Icons.bookmark
@@ -1241,7 +1270,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Text(
-                '$effectiveLikeCount জন পছন্দ করেছেন',
+                context.l10n.translate('ig_liked_by_count',
+                    args: {'count': effectiveLikeCount}),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -1275,7 +1305,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               child: GestureDetector(
                 onTap: () => widget.onOpenComments?.call(widget.post),
                 child: Text(
-                  'সকল ${widget.post.commentCount}টি মন্তব্য দেখুন',
+                  context.l10n.translate('ig_view_all_comments',
+                      args: {'count': widget.post.commentCount}),
                   style: const TextStyle(color: Colors.white54, fontSize: 13),
                 ),
               ),
@@ -1292,9 +1323,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                 ),
                 if (widget.post.isEdited) ...[
                   const SizedBox(width: 6),
-                  const Text(
-                    '• (সম্পাদিত)',
-                    style: TextStyle(
+                  Text(
+                    context.l10n.translate('ig_edited_marker'),
+                    style: const TextStyle(
                         color: Colors.white54,
                         fontSize: 11,
                         fontStyle: FontStyle.italic),
@@ -1311,9 +1342,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                       border: Border.all(
                           color: Colors.purpleAccent.withValues(alpha: 0.4)),
                     ),
-                    child: const Text(
-                      'আর্কাইভড',
-                      style: TextStyle(
+                    child: Text(
+                      context.l10n.translate('ig_archived_badge'),
+                      style: const TextStyle(
                           color: Colors.purpleAccent,
                           fontSize: 10,
                           fontWeight: FontWeight.w600),

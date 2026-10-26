@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
@@ -13,6 +12,7 @@ import '../../../domain/models/tour_group.dart';
 import '../../../domain/models/tour_post_models.dart';
 import '../../../domain/services/scrapbook_engine.dart';
 import '../instafeed/reel_thumbnail_preview.dart';
+import '../../../../../core/localization/localized_date.dart';
 
 const _paper = Color(0xFF15110D);
 const _ink = Color(0xFFF5EEDC);
@@ -477,7 +477,7 @@ class _CoverPage extends StatelessWidget {
     final year = (g?.startDate ?? DateTime.now()).year;
     final dates = g == null
         ? l10n.translate('scrap_cover_subtitle')
-        : '${DateFormat('d MMM').format(g.startDate)} – ${DateFormat('d MMM yyyy').format(g.endDate)} · ${g.durationText}';
+        : '${localizedDateFormat('d MMM').format(g.startDate)} – ${localizedDateFormat('d MMM yyyy').format(g.endDate)} · ${g.durationText}';
 
     return Stack(
       fit: StackFit.expand,
@@ -760,7 +760,7 @@ class _ChapterPage extends StatelessWidget {
     final l10n = context.l10n;
     final hero = chapter.hero;
     final title = chapter.day?.label ??
-        '${l10n.translate('mag_chapter_extra')} · ${DateFormat('d MMM').format(chapter.date)}';
+        '${l10n.translate('mag_chapter_extra')} · ${localizedDateFormat('d MMM').format(chapter.date)}';
     final quote = chapter.posts
         .map((p) => p.caption.replaceAll(RegExp(r'#\S+'), '').trim())
         .firstWhere((c) => c.length >= 20, orElse: () => '');
@@ -1104,7 +1104,7 @@ class _PlacesPage extends StatelessWidget {
                               fontSize: 16,
                               fontWeight: FontWeight.w700)),
                       Text(
-                        '${DateFormat('d MMM, h:mm a').format(places[i].firstVisit)} · ${l10n.translate('mag_place_line', args: {
+                        '${localizedDateFormat('d MMM, h:mm a').format(places[i].firstVisit)} · ${l10n.translate('mag_place_line', args: {
                               'count': l10n.number(places[i].posts)
                             })}',
                         style: const TextStyle(color: _muted, fontSize: 12),

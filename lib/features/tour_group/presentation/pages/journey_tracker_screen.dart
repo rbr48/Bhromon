@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -16,6 +15,7 @@ import '../../domain/services/destination_catalog.dart';
 import '../../domain/services/route_engine.dart';
 import '../../domain/services/route_suggestions.dart';
 import '../widgets/itinerary/itinerary_editor.dart';
+import '../../../../core/localization/localized_date.dart';
 
 String transportModeKey(TransportMode m) => 'route_mode_${m.name}';
 
@@ -124,7 +124,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     }
   }
 
-  String _when(DateTime t) => DateFormat('d MMM, h:mm a').format(t);
+  String _when(DateTime t) => localizedDateFormat('d MMM, h:mm a').format(t);
 
   String _duration(AppLocalizations l10n, Duration d) {
     final h = d.inHours, m = d.inMinutes % 60;
@@ -324,7 +324,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
 
   void _share(RoutePlan plan, TourGroup g) {
     final l10n = context.l10n;
-    final days = DateFormat('d MMM');
+    final days = localizedDateFormat('d MMM');
     final lines = <String>[
       '${g.name} — ${l10n.translate('route_title')}',
       '',
@@ -498,7 +498,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
       status = l10n.translate('route_status_live', args: {
         'km': l10n.number(live.kmToNext),
         'place': live.leg.to.name,
-        'time': DateFormat('h:mm a').format(live.eta),
+        'time': localizedDateFormat('h:mm a').format(live.eta),
       });
     } else if (current != null) {
       final eta = current.eta;
@@ -580,7 +580,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
 
   Widget _pointTile(AppLocalizations l10n, RoutePoint p, bool isStart) {
     final s = p.stop;
-    final days = DateFormat('EEE d MMM');
+    final days = localizedDateFormat('EEE d MMM');
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -868,7 +868,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                           args: {'km': l10n.number(c.kmFromStart)}),
                       l10n.translate(checkpointKindKey(c.kind)),
                       if (c.plannedAt != null)
-                        DateFormat('h:mm a').format(c.plannedAt!),
+                        localizedDateFormat('h:mm a').format(c.plannedAt!),
                       if (c.highlight.isNotEmpty) c.highlight,
                     ].join(' · '),
                     style: const TextStyle(color: Colors.white54, fontSize: 11),
@@ -930,7 +930,7 @@ class _LegSheetState extends State<_LegSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final when = DateFormat('d MMM yyyy, h:mm a');
+    final when = localizedDateFormat('d MMM yyyy, h:mm a');
     return Padding(
       padding: EdgeInsets.fromLTRB(
           16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
@@ -1142,7 +1142,7 @@ class _CheckpointSheetState extends State<_CheckpointSheet> {
               title: Text(
                   _planned == null
                       ? l10n.translate('route_time_unset')
-                      : DateFormat('d MMM, h:mm a').format(_planned!),
+                      : localizedDateFormat('d MMM, h:mm a').format(_planned!),
                   style: const TextStyle(color: Colors.white)),
               subtitle: Text(l10n.translate('route_cp_planned'),
                   style: const TextStyle(color: Colors.white54)),

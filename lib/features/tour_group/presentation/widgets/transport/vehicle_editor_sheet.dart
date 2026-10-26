@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
@@ -7,6 +6,7 @@ import '../../../../../core/theme/colors.dart';
 import '../../../domain/models/vehicle_models.dart';
 import '../../../domain/services/seat_layout_engine.dart';
 import 'vehicle_seat_map.dart';
+import '../../../../../core/localization/localized_date.dart';
 
 /// The translation key for a vehicle kind's name.
 String vehicleKindKey(VehicleKind kind) => 'veh_kind_${kind.name}';
@@ -226,7 +226,8 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
               title: Text(
                 _v.departure == null
                     ? l10n.translate('veh_departure_pick')
-                    : DateFormat('d MMM yyyy, h:mm a').format(_v.departure!),
+                    : localizedDateFormat('d MMM yyyy, h:mm a')
+                        .format(_v.departure!),
                 style: const TextStyle(color: Colors.white),
               ),
               subtitle: Text(l10n.translate('veh_departure'),

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -11,6 +10,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/models/tour_post_models.dart';
 import '../../domain/services/scrapbook_engine.dart';
 import '../widgets/scrapbook/scrapbook_magazine.dart';
+import '../../../../core/localization/localized_date.dart';
 
 /// The tour's magazine. This screen loads the tour, its members, posts and
 /// ledger; [ScrapbookMagazine] lays them out as pages.
@@ -97,7 +97,7 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
           l10n.translate('scrap_spot_main'),
           l10n.translate('scrap_spot_hotels'),
         ];
-    final format = DateFormat('d MMM yyyy');
+    final format = localizedDateFormat('d MMM yyyy');
 
     final shareText = l10n.translate('scrap_share_text', args: {
       'name': tourName,

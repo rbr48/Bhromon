@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -41,6 +42,10 @@ import 'features/notifications/geo_fence_service.dart'
 void main() {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Month and weekday names for both languages; see localizedDateFormat.
+    await initializeDateFormatting('en');
+    await initializeDateFormatting('bn');
 
     // Edge-to-edge: Android 15 (targetSdk 35) enforces it; opting in here
     // keeps the look identical on older Android versions.
