@@ -1,40 +1,39 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../domain/models/tour_group.dart';
+
+import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
+import '../../domain/models/itinerary_models.dart';
 import '../../domain/models/tour_activity_models.dart';
+import '../../domain/models/tour_group.dart';
+import '../../domain/services/destination_catalog.dart';
+import '../../domain/services/route_engine.dart';
+import '../../domain/services/route_suggestions.dart';
+import '../widgets/itinerary/itinerary_editor.dart';
 
-class HighwayMilestone {
-  final String id;
-  final String name;
-  final String nameEn;
-  final int kmFromStart;
-  final double lat;
-  final double lng;
-  final String estDuration;
-  final String highlight;
-  final String details;
-  final List<String> amenities;
-  final String iconEmoji;
+String transportModeKey(TransportMode m) => 'route_mode_${m.name}';
 
-  const HighwayMilestone({
-    required this.id,
-    required this.name,
-    required this.nameEn,
-    required this.kmFromStart,
-    required this.lat,
-    required this.lng,
-    required this.estDuration,
-    required this.highlight,
-    required this.details,
-    required this.amenities,
-    required this.iconEmoji,
-  });
-}
+IconData transportModeIcon(TransportMode m) => switch (m) {
+      TransportMode.road => Icons.directions_bus_filled_rounded,
+      TransportMode.rail => Icons.train_rounded,
+      TransportMode.air => Icons.flight_rounded,
+      TransportMode.river => Icons.directions_boat_filled_rounded,
+      TransportMode.sea => Icons.sailing_rounded,
+      TransportMode.jeep => Icons.airport_shuttle_rounded,
+      TransportMode.boat => Icons.rowing_rounded,
+      TransportMode.trek => Icons.hiking_rounded,
+    };
 
+String checkpointKindKey(CheckpointKind k) => 'route_cp_${k.name}';
+
+/// The tour's route: every stop on the itinerary, how the group travels
+/// between them, the stops along each leg and where the group is now.
 class JourneyTrackerScreen extends StatefulWidget {
   final String tourId;
 
@@ -46,95 +45,44 @@ class JourneyTrackerScreen extends StatefulWidget {
 
 class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   final TourGroupRepository _repository = TourGroupRepository();
-  TourGroup? _tourGroup;
-  StreamSubscription<TourGroup?>? _groupSub;
+  final List<StreamSubscription<Object?>> _subs = [];
+  TourGroup? _group;
   TourRole? _myRole;
-  Position? _currentPosition;
-  int _activeFilterIndex = 0; // 0: All, 1: Rest/Food, 2: Prayer, 3: Fuel
-  // Stops that group members added; shared by everyone on the tour.
+  Position? _position;
   List<RouteCheckpoint> _checkpoints = const [];
-  StreamSubscription<List<RouteCheckpoint>>? _checkpointSub;
+  CheckpointKind? _filter;
+  Timer? _clock;
 
-  /// The curated stop lists were measured from Dhaka. From any other origin
-  /// they would be wrong, so they are hidden.
-  bool get _isDhakaOrigin {
-    if (_tourGroup == null) return true;
-    final origin = _tourGroup!.originCity.toLowerCase();
-    return origin.contains('dhaka') || origin.contains('ঢাকা');
-  }
+  bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
 
   @override
   void initState() {
     super.initState();
-    _watchGroup();
-    _loadRole();
-    _fetchGps();
-    _checkpointSub = _repository.watchCheckpoints(widget.tourId).listen(
-      (cps) {
-        if (mounted) setState(() => _checkpoints = cps);
-      },
-      onError: (Object _) {},
-    );
+    _subs.addAll([
+      _repository.watchGroup(widget.tourId).listen((g) {
+        if (mounted) setState(() => _group = g);
+      }, onError: (Object _) {}),
+      _repository.watchCheckpoints(widget.tourId).listen((c) {
+        if (mounted) setState(() => _checkpoints = c);
+      }, onError: (Object _) {}),
+    ]);
+    _repository.myRole(widget.tourId).then((r) {
+      if (mounted) setState(() => _myRole = r);
+    });
+    unawaited(_fetchGps());
+    // ETAs and countdowns move on their own.
+    _clock = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
-    _checkpointSub?.cancel();
-    _groupSub?.cancel();
-    super.dispose();
-  }
-
-  void _watchGroup() {
-    _groupSub?.cancel();
-    _groupSub = _repository.watchGroup(widget.tourId).listen((g) {
-      if (mounted) setState(() => _tourGroup = g);
-    });
-  }
-
-  Future<void> _loadRole() async {
-    final role = await _repository.myRole(widget.tourId);
-    if (mounted) setState(() => _myRole = role);
-  }
-
-  /// Only the member who added a stop, or an admin, may remove it. Route stops
-  /// from the built-in itinerary are never removable.
-  bool _canDeleteStop(HighwayMilestone m) {
-    final checkpoint = _checkpoints.where((c) => c.id == m.id).firstOrNull;
-    if (checkpoint == null) return false;
-    return checkpoint.addedByEmail == _repository.currentEmail ||
-        (_myRole?.isAdminOrOwner ?? false);
-  }
-
-  Future<void> _confirmDeleteStop(HighwayMilestone m) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF142428),
-        title:
-            const Text('স্টপটি মুছবেন?', style: TextStyle(color: Colors.white)),
-        content: Text(m.name, style: const TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('না')),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('মুছুন',
-                  style: TextStyle(color: Colors.redAccent))),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await _repository.deleteCheckpoint(widget.tourId, m.id);
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text(
-            'স্টপ মোছা যায়নি। শুধু যিনি যোগ করেছেন বা অ্যাডমিন মুছতে পারবেন।'),
-        backgroundColor: Colors.redAccent,
-      ));
+    _clock?.cancel();
+    for (final s in _subs) {
+      unawaited(s.cancel());
     }
+    super.dispose();
   }
 
   Future<void> _fetchGps() async {
@@ -148,893 +96,739 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
         return;
       }
       final pos = await Geolocator.getCurrentPosition();
-      if (mounted) setState(() => _currentPosition = pos);
+      if (mounted) setState(() => _position = pos);
     } catch (_) {}
   }
 
-  Future<void> _openLocationOnMap(double lat, double lng) async {
-    final uri =
-        Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  void _snack(String text, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(text), backgroundColor: error ? Colors.redAccent : null));
+  }
+
+  Future<void> _open(Uri uri) async {
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        _snack(context.l10n.translate('route_open_failed'), error: true);
+      }
     }
   }
 
-  List<HighwayMilestone> _getRouteMilestones() {
-    final dest = _tourGroup?.destination.toLowerCase() ?? '';
-    final origin = _tourGroup?.originCity ?? 'রংপুর';
-
-    List<HighwayMilestone> baseList = const [];
-
-    if (dest.contains('sajek') || dest.contains('সাজেক')) {
-      baseList = [
-        HighwayMilestone(
-          id: 'SAJEK_1',
-          name: '$origin জিরো পয়েন্ট (যাত্রার শুরু)',
-          nameEn: '$origin Starting Point',
-          kmFromStart: 0,
-          lat: 23.8103,
-          lng: 90.4125,
-          estDuration: '০০:০০ ঘণ্টা',
-          highlight: 'নিরাপদ পাহাড়ি ভ্রমণের দোয়া ও শুভ সূচনা',
-          details: 'চাঁদের গাড়ি বা বাসে আসন গ্রহণ ও মালামাল সুরক্ষা।',
-          amenities: const ['বাস ডিপো', 'চা ও নাস্তা', 'নামাজ'],
-          iconEmoji: '🚙',
-        ),
-        const HighwayMilestone(
-          id: 'SAJEK_2',
-          name: 'খাগড়াছড়ি শহর ও রিছাং ঝর্ণা মোড়',
-          nameEn: 'Khagrachhari Town & Richang',
-          kmFromStart: 250,
-          lat: 23.1118,
-          lng: 91.9847,
-          estDuration: '০৬:০০ ঘণ্টা',
-          highlight: 'পাহাড়ি উপত্যকার প্রবেশদ্বার ও ঝর্ণা পয়েন্ট',
-          details: 'হালকা নাস্তা, রিফ্রেশমেন্ট ও চাঁদের গাড়ির তেল চেক।',
-          amenities: ['রেস্তোরাঁ', 'ওয়াশরুম', 'নামাজঘর', 'পাম্প'],
-          iconEmoji: '🏞️',
-        ),
-        const HighwayMilestone(
-          id: 'SAJEK_3',
-          name: 'দীঘিনালা সেনা ক্যাম্প ও এসকর্ট পয়েন্ট',
-          nameEn: 'Dighinala Army Escort Checkpost',
-          kmFromStart: 285,
-          lat: 23.2562,
-          lng: 92.0583,
-          estDuration: '০৭:৩০ ঘণ্টা',
-          highlight: 'নিরাপত্তা এসকর্ট ও সেনাবাহিনীর ছাড়পত্র',
-          details:
-              'সকাল ১০টা বা দুপুর ২টার এসকর্ট কনভয়ে সাজেকের পাহাড়ে প্রবেশ।',
-          amenities: ['সেনা চেকপোস্ট', 'নিরাপত্তা ও সহায়তা'],
-          iconEmoji: '🛡️',
-        ),
-        const HighwayMilestone(
-          id: 'SAJEK_4',
-          name: 'বাঘাইহাট ও কাসালং নদী ব্রিজ',
-          nameEn: 'Baghaihat & Kasalong Bridge',
-          kmFromStart: 305,
-          lat: 23.3421,
-          lng: 92.1782,
-          estDuration: '০৮:৩০ ঘণ্টা',
-          highlight: 'মেঘের কাছাকাছি পাহাড়ি আঁকাবাঁকা রাস্তা',
-          details: 'রোলার-কোস্টারের মতো পাহাড়ি উঁচু-নিচু রোমাঞ্চকর পথ।',
-          amenities: ['ভিউ পয়েন্ট', 'চা দোকান'],
-          iconEmoji: '⛰️',
-        ),
-        const HighwayMilestone(
-          id: 'SAJEK_5',
-          name: 'সাজেক ভ্যালি (রুইলুই পাড়া ও কংলাক)',
-          nameEn: 'Sajek Valley (Ruilui & Konglak)',
-          kmFromStart: 340,
-          lat: 23.3828,
-          lng: 92.2938,
-          estDuration: '০৯:৩০ ঘণ্টা',
-          highlight: 'মেঘের বাড়ি সাজেক ও কংলাক পাহাড় চূড়া',
-          details:
-              'রিসোর্টে চেক-ইন, কটেজে বসে সূর্যাস্ত দেখা ও মেঘের ভেলা উপভোগ।',
-          amenities: ['রিসোর্ট', 'ক্যাফে', 'হেলিপ্যাড', 'মার্কেট'],
-          iconEmoji: '☁️',
-        ),
-      ];
-    } else if (dest.contains('sylhet') ||
-        dest.contains('সিলেট') ||
-        dest.contains('sreemangal')) {
-      baseList = [
-        HighwayMilestone(
-          id: 'SYL_1',
-          name: '$origin কাউন্টার (যাত্রা শুরু)',
-          nameEn: '$origin Departure Counter',
-          kmFromStart: 0,
-          lat: 23.8103,
-          lng: 90.4125,
-          estDuration: '০০:০০ ঘণ্টা',
-          highlight: 'সিলেট অভিমুখে হাইওয়ে এক্সপ্রেস যাত্রা',
-          details: 'যাত্রার প্রাক্কালে শুভকামনা ও বাসে আরোহণ।',
-          amenities: const ['বাস টার্মিনাল', 'চা', 'নামাজ'],
-          iconEmoji: '🚌',
-        ),
-        const HighwayMilestone(
-          id: 'SYL_2',
-          name: 'ভৈরব মেঘনা নদী সেতু ও উজানভাটি',
-          nameEn: 'Bhairab Meghna Bridge & Ujanbhati',
-          kmFromStart: 85,
-          lat: 24.0512,
-          lng: 90.9832,
-          estDuration: '০২:০০ ঘণ্টা',
-          highlight: 'মেঘনা নদীর নৈসর্গিক ভিউ ও ঐতিহ্যবাহী খাবার',
-          details: 'উজানভাটি হাইওয়ে রেস্তোরাঁয় সকালের গরম পরোটা ও স্পেশাল চা।',
-          amenities: ['রেস্তোরাঁ', 'ওয়াশরুম', 'নামাজঘর', 'পাম্প'],
-          iconEmoji: '🍲',
-        ),
-        const HighwayMilestone(
-          id: 'SYL_3',
-          name: 'মাধবপুর লেক ও শ্রীমঙ্গল চা বাগান জোন',
-          nameEn: 'Sreemangal Tea Estates Valley',
-          kmFromStart: 180,
-          lat: 24.3065,
-          lng: 91.7296,
-          estDuration: '০৪:৩০ ঘণ্টা',
-          highlight: 'সবুজ চা পাতার মখমল পাহাড় ও সাত রঙের চা',
-          details: 'চা বাগানের অপরূপ স্নিগ্ধ সমারোহ ও ছবি তোলার সেরা স্পট।',
-          amenities: ['চা বাগান', 'ভিউ পয়েন্ট', 'ওয়াশরুম'],
-          iconEmoji: '🍃',
-        ),
-        const HighwayMilestone(
-          id: 'SYL_4',
-          name: 'সিলেট শহর ও শাহজালাল (র.) মাজার',
-          nameEn: 'Sylhet City & Hazrat Shahjalal Dargah',
-          kmFromStart: 250,
-          lat: 24.8949,
-          lng: 91.8687,
-          estDuration: '০৬:০০ ঘণ্টা',
-          highlight: 'ঐতিহ্যবাহী পুণ্যভূমি সিলেট ও সাতকড়া বিফ',
-          details:
-              'হোটেল চেক-ইন, ফ্রেশ হওয়া এবং শহরের বিখ্যাত খাবারের স্বাদ গ্রহণ।',
-          amenities: ['হোটেল', 'মাজার', 'রেস্তোরাঁ', 'শপিং'],
-          iconEmoji: '🕌',
-        ),
-        const HighwayMilestone(
-          id: 'SYL_5',
-          name: 'জাফলং ও ভোলাগঞ্জ সাদা পাথর জিরো পয়েন্ট',
-          nameEn: 'Jaflong & Sada Pathor Zero Point',
-          kmFromStart: 310,
-          lat: 25.1634,
-          lng: 92.0189,
-          estDuration: '০৮:০০ ঘণ্টা',
-          highlight: 'মেঘালয় পাহাড়ের পাদদেশে স্বচ্ছ জল ও সাদা পাথর',
-          details: 'নৌকায় করে সাদা পাথরে স্নান এবং মায়াবী ঝর্ণা দর্শন।',
-          amenities: ['নৌকা ঘাট', 'ঝর্ণা', 'পাথুরে নদী'],
-          iconEmoji: '💎',
-        ),
-      ];
-    } else if (dest.contains('bandarban') || dest.contains('বান্দরবান')) {
-      baseList = [
-        HighwayMilestone(
-          id: 'BAN_1',
-          name: '$origin কাউন্টার (যাত্রা শুরু)',
-          nameEn: '$origin Starting Point',
-          kmFromStart: 0,
-          lat: 23.8103,
-          lng: 90.4125,
-          estDuration: '০০:০০ ঘণ্টা',
-          highlight: 'বান্দরবান পাহাড় ও ঝর্ণা অভিযানের শুভ সূচনা',
-          details: 'যাত্রার প্রারম্ভিক চেক ও বাসে আসন গ্রহণ।',
-          amenities: const ['টার্মিনাল', 'চা', 'নামাজ'],
-          iconEmoji: '🚌',
-        ),
-        const HighwayMilestone(
-          id: 'BAN_2',
-          name: 'চট্টগ্রাম সিটি গেইট ও কর্ণফুলী শাহ আমানত সেতু',
-          nameEn: 'Chittagong City Gate & Karnaphuli',
-          kmFromStart: 250,
-          lat: 22.3384,
-          lng: 91.8317,
-          estDuration: '০৫:৩০ ঘণ্টা',
-          highlight: 'বাণিজ্যিক রাজধানী অতিক্রম ও কর্ণফুলী পারাপার',
-          details: 'হাইওয়ে রিফ্রেশমেন্ট ও পাহাড়ি রোডের জন্য প্রস্তুতি।',
-          amenities: ['হাইওয়ে রেস্তোরাঁ', 'ওয়াশরুম', 'পাম্প'],
-          iconEmoji: '🌉',
-        ),
-        const HighwayMilestone(
-          id: 'BAN_3',
-          name: 'কেরানীহাট ও বান্দরবান প্রবেশ মোড়',
-          nameEn: 'Keranihat Hill Entry Point',
-          kmFromStart: 310,
-          lat: 22.0945,
-          lng: 92.0721,
-          estDuration: '০৭:০০ ঘণ্টা',
-          highlight: 'পাহাড়ি আঁকাবাঁকা ও নৈসর্গিক সবুজ উপত্যকা',
-          details: 'পাহাড়ে প্রবেশের চমৎকার অনুভূতি ও শীতল বাতাস।',
-          amenities: ['পাহাড়ি বাজার', 'ওয়াশরুম'],
-          iconEmoji: '⛰️',
-        ),
-        const HighwayMilestone(
-          id: 'BAN_4',
-          name: 'বান্দরবান শহর ও মেঘলা পর্যটন কমপ্লেক্স',
-          nameEn: 'Bandarban Town & Meghla',
-          kmFromStart: 335,
-          lat: 22.1953,
-          lng: 92.2184,
-          estDuration: '০৮:০০ ঘণ্টা',
-          highlight: 'ঝুলন্ত সেতু ও পাহাড়ি লেকের সৌন্দর্য',
-          details: 'রিসোর্টে চেক-ইন ও চাঁদের গাড়ি বুকিং।',
-          amenities: ['হোটেল', 'রেস্তোরাঁ', 'মার্কেট'],
-          iconEmoji: '🏞️',
-        ),
-        const HighwayMilestone(
-          id: 'BAN_5',
-          name: 'নীলাচল ও নীলগিরি মেঘের স্বর্গরাজ্য',
-          nameEn: 'Nilachal & Nilgiri Peak',
-          kmFromStart: 380,
-          lat: 21.9189,
-          lng: 92.3364,
-          estDuration: '১০:০০ ঘণ্টা',
-          highlight: 'সমুদ্রপৃষ্ঠ থেকে ২৪০০ ফুট উঁচুতে মেঘ ছোঁয়ার রোমাঞ্চ',
-          details: 'নীলগিরির চূড়ায় সূর্যোদয় ও সূর্যাস্তের অপার্থিব রূপ।',
-          amenities: ['ভিউ পয়েন্ট', 'সেনা ক্যাফে', 'কটেজ'],
-          iconEmoji: '☁️',
-        ),
-      ];
-    } else if (dest.contains('kuakata') || dest.contains('কুয়াকাটা')) {
-      baseList = [
-        HighwayMilestone(
-          id: 'KUA_1',
-          name: '$origin কাউন্টার (যাত্রা শুরু)',
-          nameEn: '$origin Starting Point',
-          kmFromStart: 0,
-          lat: 23.8103,
-          lng: 90.4125,
-          estDuration: '০০:০০ ঘণ্টা',
-          highlight: 'পদ্মা সেতু হয়ে সাগরকন্যা কুয়াকাটা যাত্রা',
-          details: 'এক্সপ্রেসওয়ে ধরে যাত্রা শুরু।',
-          amenities: const ['টার্মিনাল', 'চা', 'নামাজ'],
-          iconEmoji: '🚌',
-        ),
-        const HighwayMilestone(
-          id: 'KUA_2',
-          name: 'পদ্মা বহুমুখী সেতু ও ভাঙ্গা এক্সপ্রেসওয়ে',
-          nameEn: 'Padma Multipurpose Bridge & Bhanga',
-          kmFromStart: 60,
-          lat: 23.4475,
-          lng: 90.2647,
-          estDuration: '০১:১৫ ঘণ্টা',
-          highlight: 'জাতীয় গৌরবের ৬.১৫ কিমি পদ্মা সেতু পারাপার',
-          details:
-              'দক্ষিণাঞ্চলের স্বপ্নিল এক্সপ্রেসওয়ে দিয়ে দ্রুতিতে ছুটে চলা।',
-          amenities: ['টোল প্লাজা', 'ভিউ পয়েন্ট'],
-          iconEmoji: '🌉',
-        ),
-        const HighwayMilestone(
-          id: 'KUA_3',
-          name: 'পায়রা সেতু (লেবুখালী) ও পটুয়াখালী',
-          nameEn: 'Payra Bridge & Patuakhali',
-          kmFromStart: 210,
-          lat: 22.4832,
-          lng: 90.3341,
-          estDuration: '০৪:৩০ ঘণ্টা',
-          highlight: 'পায়রা নদীর সুবিশাল নান্দনিক সেতু',
-          details: 'হাইওয়ে রিফ্রেশমেন্ট ও তাজা ইলিশের স্বাদ।',
-          amenities: ['রেস্তোরাঁ', 'ওয়াশরুম', 'পাম্প'],
-          iconEmoji: '🌊',
-        ),
-        const HighwayMilestone(
-          id: 'KUA_4',
-          name: 'কুয়াকাটা সৈকত সূর্যোদয় ও সূর্যাস্ত পয়েন্ট',
-          nameEn: 'Kuakata Beach Zero Point',
-          kmFromStart: 280,
-          lat: 21.8167,
-          lng: 90.1167,
-          estDuration: '০৬:০০ ঘণ্টা',
-          highlight: 'একই সৈকত থেকে সূর্যোদয় ও সূর্যাস্ত দর্শন',
-          details: 'হোটেল চেক-ইন, ঝাউবন ও লাল কাঁকড়ার চরে ঘুরে বেড়ানো।',
-          amenities: ['হোটেল', 'সৈকত', 'রেস্তোরাঁ', 'মার্কেট'],
-          iconEmoji: '🌅',
-        ),
-      ];
-    } else if (dest.contains('cox')) {
-      // Cox's Bazar route. Other destinations get no curated stops.
-      // Default: Comprehensive Cox's Bazar / Universal Route
-      baseList = [
-        HighwayMilestone(
-          id: 'START_01',
-          name: '$origin জিরো পয়েন্ট (যাত্রার শুভ সূচনা)',
-          nameEn: '$origin Starting Zero Point',
-          kmFromStart: 0,
-          lat: 25.7439,
-          lng: 89.2752,
-          estDuration: '০০:০০ ঘণ্টা',
-          highlight: 'যাত্রার শুভ সূচনা ও ভ্রমণ দোয়া',
-          details:
-              'পরিবারের সকলের বাসে আসন গ্রহণ, লাগেজ চেকিং ও নিরাপদ ভ্রমণের শুভ দোয়া।',
-          amenities: const ['বাস ডিপো', 'চা ও কফি', 'নামাজ'],
-          iconEmoji: '🚌',
-        ),
-        const HighwayMilestone(
-          id: 'BOGRA_SHERPUR',
-          name: 'বগুড়া শেরপুর (ফুড ভিলেজ প্লাস)',
-          nameEn: 'Sherpur, Bogra',
-          kmFromStart: 110,
-          lat: 24.6738,
-          lng: 89.4187,
-          estDuration: '০২:১৫ ঘণ্টা',
-          highlight: 'শেরপুরের বিখ্যাত দই ও রাতের হালকা নাস্তা',
-          details:
-              'ফুড ভিলেজে হাইওয়ে বিরতি, পরিষ্কার ওয়াশরুম এবং স্পেশাল চা ও মিষ্টি দই।',
-          amenities: ['রেস্তোরাঁ', 'ওয়াশরুম', 'নামাজঘর', 'এটিএম'],
-          iconEmoji: '🍲',
-        ),
-        const HighwayMilestone(
-          id: 'JAMUNA_BRIDGE',
-          name: 'বঙ্গবন্ধু যমুনা বহুমুখী সেতু',
-          nameEn: 'Jamuna Bridge',
-          kmFromStart: 180,
-          lat: 24.3985,
-          lng: 89.7828,
-          estDuration: '০৩:৪৫ ঘণ্টা',
-          highlight: 'যমুনা নদীর নৈসর্গিক রূপ ও সেতু পারাপার',
-          details: 'পশ্চিম টোল প্লাজা অতিক্রম করে ঐতিহ্যবাহী যমুনা পারাপার।',
-          amenities: ['টোল প্লাজা', 'ভিউ পয়েন্ট'],
-          iconEmoji: '🌉',
-        ),
-        const HighwayMilestone(
-          id: 'KANCHPUR_MEGHNA',
-          name: 'কাঁচপুর ও মেঘনা ঘাট (হাইওয়ে ইন)',
-          nameEn: 'Kanchpur / Meghna Ghat',
-          kmFromStart: 330,
-          lat: 23.5937,
-          lng: 90.6128,
-          estDuration: '০৭:১৫ ঘণ্টা',
-          highlight: 'দ্বিতীয় মেঘনা সেতু ও হাইওয়ে কফি ব্রেক',
-          details: 'মেঘনা ব্রিজে ভোররাতের মৃদু বাতাস ও তাজা কফি।',
-          amenities: ['হাইওয়ে ইন', 'ওয়াশরুম', 'নামাজঘর'],
-          iconEmoji: '☕',
-        ),
-        const HighwayMilestone(
-          id: 'PADUAR_BAZAR',
-          name: 'পদুয়ার বাজার বিশ্বরোড, কুমিল্লা',
-          nameEn: 'Paduar Bazar, Cumilla',
-          kmFromStart: 420,
-          lat: 23.4287,
-          lng: 91.1783,
-          estDuration: '০৯:১৫ ঘণ্টা',
-          highlight: 'কুমিল্লার বিখ্যাত রসমালাই ও সকালের নাস্তা',
-          details:
-              'মাতৃভাণ্ডারের খাঁটি রসমালাইয়ের স্বাদ ও ফজরের নামাজের বিরতি।',
-          amenities: ['রসমালাই', 'রেস্তোরাঁ', 'নামাজঘর', 'পাম্প'],
-          iconEmoji: '🍮',
-        ),
-        const HighwayMilestone(
-          id: 'CHITTAGONG_GATE',
-          name: 'চট্টগ্রাম সিটি গেইট ও অলংকার মোড়',
-          nameEn: 'Chittagong City Gate',
-          kmFromStart: 580,
-          lat: 22.3789,
-          lng: 91.7765,
-          estDuration: '১২:৩০ ঘণ্টা',
-          highlight: 'বন্দরনগরী চট্টগ্রাম আগমন ও পাহাড়ের হাতছানি',
-          details:
-              'একে খান মোড় হয়ে চট্টগ্রাম বাইপাস রোড ধরে সরাসরি কক্সবাজারমুখী।',
-          amenities: ['সিটি বাইপাস', 'ট্রাফিক সহায়তা'],
-          iconEmoji: '🏙️',
-        ),
-        HighwayMilestone(
-          id: 'DEST_FINAL',
-          name:
-              '${_tourGroup?.destination ?? "কক্সবাজার"} ডলফিন মোড় ও হোটেল এরিয়া',
-          nameEn: '${_tourGroup?.destination ?? "Coxs Bazar"} Dolphin Point',
-          kmFromStart: 820,
-          lat: 21.4326,
-          lng: 91.9774,
-          estDuration: '১৬:০০ ঘণ্টা',
-          highlight: 'গন্তব্যে সফল আগমন ও ভ্রমণ শুভ সমাপ্তি',
-          details: 'হোটেলে চেক-ইন, ফ্রেশ হওয়া এবং সুন্দর মুহূর্তের সূচনা।',
-          amenities: const ['হোটেল', 'সৈকত/স্পট', 'রেস্তোরাঁ', 'মার্কেট'],
-          iconEmoji: '🏖️',
-        ),
-      ];
+  Future<void> _guard(Future<void> Function() action) async {
+    final l10n = context.l10n;
+    try {
+      await action();
+    } catch (e) {
+      _snack(l10n.translate('route_save_failed', args: {'error': e}),
+          error: true);
     }
-
-    final combined = List<HighwayMilestone>.from(
-        _isDhakaOrigin ? baseList : const <HighwayMilestone>[])
-      ..addAll(_checkpoints.map(_milestoneFromCheckpoint));
-    return combined;
   }
 
-  HighwayMilestone _milestoneFromCheckpoint(RouteCheckpoint c) {
-    return HighwayMilestone(
-      id: c.id,
-      name: c.name,
-      nameEn: c.name,
-      kmFromStart: c.kmFromStart,
-      lat: c.lat ?? 0,
-      lng: c.lng ?? 0,
-      estDuration: 'ট্যুর সদস্য যুক্ত করেছেন',
-      highlight: c.highlight.isEmpty ? 'চেকপয়েন্ট' : c.highlight,
-      details: 'এই স্টপটি ট্যুরের একজন সদস্য যুক্ত করেছেন।',
-      amenities: const ['কাস্টম স্টপ'],
-      iconEmoji: '📍',
-    );
+  String _when(DateTime t) => DateFormat('d MMM, h:mm a').format(t);
+
+  String _duration(AppLocalizations l10n, Duration d) {
+    final h = d.inHours, m = d.inMinutes % 60;
+    if (h == 0) {
+      return l10n.translate('route_minutes', args: {'m': l10n.number(m)});
+    }
+    return l10n.translate('route_hours',
+        args: {'h': l10n.number(h), 'm': l10n.number(m)});
   }
 
-  /// Whether a stop passes the active filter (the same rules the timeline uses).
-  bool _matchesFilter(HighwayMilestone m) {
-    if (_activeFilterIndex == 1 &&
-        !m.amenities.any((a) =>
-            a.contains('রেস্তোরাঁ') ||
-            a.contains('নাস্তা') ||
-            a.contains('খাবার') ||
-            a.contains('ক্যাফে'))) {
-      return false;
-    }
-    if (_activeFilterIndex == 2 &&
-        !m.amenities.any((a) => a.contains('নামাজ'))) {
-      return false;
-    }
-    if (_activeFilterIndex == 3 &&
-        !m.amenities.any((a) =>
-            a.contains('পাম্প') || a.contains('তেল') || a.contains('ফুয়েল'))) {
-      return false;
-    }
-
-    return true;
+  String _km(AppLocalizations l10n, RouteLeg leg) {
+    final km = leg.km;
+    if (km == null) return l10n.translate('route_km_unknown');
+    return l10n.translate(leg.isEstimated ? 'route_km_about' : 'route_km',
+        args: {'km': l10n.number(km)});
   }
 
-  /// Adds a stop for everyone on the tour. The stop's place is not the
-  /// adder's GPS position, so no coordinates are stored.
-  void _showAddMilestoneDialog() {
-    final nameCtrl = TextEditingController();
-    final kmCtrl = TextEditingController();
-    final highlightCtrl = TextEditingController();
+  // ── Actions ────────────────────────────────────────────────────────────
 
-    showDialog<void>(
+  Future<void> _editItinerary(TourGroup g) async {
+    final edit = await showItineraryEditor(context, g);
+    if (edit == null) return;
+    await _guard(() => _repository.saveItinerary(
+          widget.tourId,
+          stops: edit.stops,
+          returnHome: edit.returnHome,
+          startDate: g.startDate,
+          endDate: g.endDate,
+        ));
+  }
+
+  Future<void> _markLeg(RouteLeg leg, {required bool depart}) async {
+    final now = DateTime.now();
+    final plan = depart
+        ? leg.plan.copyWith(departedAt: now, arrivedAt: null)
+        : leg.plan
+            .copyWith(departedAt: leg.plan.departedAt ?? now, arrivedAt: now);
+    await _guard(() => _repository.saveLegPlan(widget.tourId, leg.key, plan));
+  }
+
+  Future<void> _resetLeg(RouteLeg leg) => _guard(() => _repository.saveLegPlan(
+      widget.tourId,
+      leg.key,
+      leg.plan.copyWith(departedAt: null, arrivedAt: null)));
+
+  Future<void> _editLeg(RouteLeg leg) async {
+    final plan = await showModalBottomSheet<LegPlan>(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF142428),
-          title: const Text('নতুন চেকপয়েন্ট যোগ করুন',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'স্টপ বা চেকপয়েন্টের নাম',
-                  labelStyle: TextStyle(color: Colors.white70),
-                ),
-              ),
-              TextField(
-                controller: kmCtrl,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'শুরু থেকে দূরত্ব (কি.মি.)',
-                  labelStyle: TextStyle(color: Colors.white70),
-                ),
-              ),
-              TextField(
-                controller: highlightCtrl,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'বিশেষ আকর্ষণ বা হাইলাইট',
-                  labelStyle: TextStyle(color: Colors.white70),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child:
-                  const Text('বাতিল', style: TextStyle(color: Colors.white54)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.tealAccent.shade700),
-              onPressed: () async {
-                final name = nameCtrl.text.trim();
-                final km = int.tryParse(kmCtrl.text.trim());
-                if (name.isEmpty || km == null || km < 0) return;
-                Navigator.pop(ctx);
-                try {
-                  await _repository.addCheckpoint(
-                    tourId: widget.tourId,
-                    name: name,
-                    kmFromStart: km,
-                    highlight: highlightCtrl.text.trim(),
-                  );
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('স্টপ যোগ করা যায়নি: $e'),
-                      backgroundColor: Colors.redAccent,
-                    ));
-                  }
-                }
-              },
-              child: const Text('যোগ করুন',
-                  style: TextStyle(
-                      color: Colors.black, fontWeight: FontWeight.bold)),
-            ),
-          ],
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF142428),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _LegSheet(leg: leg),
+    );
+    if (plan == null) return;
+    await _guard(() => _repository.saveLegPlan(widget.tourId, leg.key, plan));
+  }
+
+  Future<void> _addSuggested(RouteLeg leg, List<SuggestedStop> stops) async {
+    final l10n = context.l10n;
+    final existing = {
+      for (final c in _checkpoints)
+        if (c.legKey == leg.key) c.name,
+    };
+    final fresh = stops.where((s) => !existing.contains(s.name)).toList();
+    if (fresh.isEmpty) {
+      _snack(l10n.translate('route_suggested_none'));
+      return;
+    }
+    await _guard(() async {
+      for (final s in fresh) {
+        await _repository.addCheckpoint(
+          tourId: widget.tourId,
+          name: s.name,
+          kmFromStart: s.km,
+          highlight: s.highlight,
+          lat: s.lat,
+          lng: s.lng,
+          legKey: leg.key,
+          kind: s.kind,
         );
-      },
-    ).whenComplete(() {
-      nameCtrl.dispose();
-      kmCtrl.dispose();
-      highlightCtrl.dispose();
+      }
+    });
+    _snack(l10n.translate('route_suggested_added',
+        args: {'n': l10n.number(fresh.length)}));
+  }
+
+  Future<void> _editCheckpoint(RouteLeg leg,
+      {RouteCheckpoint? existing}) async {
+    final result = await showModalBottomSheet<RouteCheckpoint>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF142428),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _CheckpointSheet(
+        legKey: leg.key,
+        existing: existing,
+        position: _position,
+      ),
+    );
+    if (result == null) return;
+    await _guard(() async {
+      if (existing == null) {
+        await _repository.addCheckpoint(
+          tourId: widget.tourId,
+          name: result.name,
+          kmFromStart: result.kmFromStart,
+          highlight: result.highlight,
+          lat: result.lat,
+          lng: result.lng,
+          legKey: leg.key,
+          kind: result.kind,
+          plannedAt: result.plannedAt,
+          notes: result.notes,
+        );
+      } else {
+        await _repository.updateCheckpoint(widget.tourId, result);
+      }
     });
   }
 
+  bool _canChange(RouteCheckpoint c) =>
+      _isAdmin || c.addedByEmail == _repository.currentEmail;
+
+  void _checkpointActions(RouteLeg leg, RouteCheckpoint c) {
+    final l10n = context.l10n;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF142428),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text('${c.kind.emoji} ${c.name}',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+            if (c.hasLocation)
+              ListTile(
+                leading:
+                    const Icon(Icons.map_rounded, color: AppColors.mintGreen),
+                title: Text(l10n.translate('route_open_map'),
+                    style: const TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _open(Uri.https('www.google.com', '/maps/search/',
+                      {'api': '1', 'query': '${c.lat},${c.lng}'}));
+                },
+              ),
+            if (_isAdmin)
+              ListTile(
+                leading: Icon(
+                    c.visitedAt == null
+                        ? Icons.check_circle_outline
+                        : Icons.undo_rounded,
+                    color: AppColors.gold),
+                title: Text(
+                    l10n.translate(c.visitedAt == null
+                        ? 'route_cp_mark_passed'
+                        : 'route_cp_unmark'),
+                    style: const TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _guard(() => _repository.setCheckpointVisited(
+                      widget.tourId, c.id, c.visitedAt == null));
+                },
+              ),
+            if (_canChange(c)) ...[
+              ListTile(
+                leading: const Icon(Icons.edit_rounded, color: Colors.white70),
+                title: Text(l10n.translate('route_cp_edit'),
+                    style: const TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _editCheckpoint(leg, existing: c);
+                },
+              ),
+              ListTile(
+                leading:
+                    const Icon(Icons.delete_outline, color: Colors.redAccent),
+                title: Text(l10n.translate('route_cp_delete'),
+                    style: const TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _guard(
+                      () => _repository.deleteCheckpoint(widget.tourId, c.id));
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _share(RoutePlan plan, TourGroup g) {
+    final l10n = context.l10n;
+    final days = DateFormat('d MMM');
+    final lines = <String>[
+      '${g.name} — ${l10n.translate('route_title')}',
+      '',
+    ];
+    for (var i = 0; i < plan.points.length; i++) {
+      final p = plan.points[i];
+      final s = p.stop;
+      lines.add(s == null
+          ? '🏠 ${p.name}'
+          : '📍 ${p.name} (${days.format(s.arrive)} – ${days.format(s.leave)})'
+              '${s.stay.isNotEmpty ? ' · ${s.stay}' : ''}');
+      if (i < plan.legs.length) {
+        final leg = plan.legs[i];
+        final d = leg.duration;
+        lines.add('   ↓ ${l10n.translate(transportModeKey(leg.plan.mode))}'
+            ' · ${_km(l10n, leg)}'
+            '${d == null ? '' : ' · ${_duration(l10n, d)}'}'
+            '${leg.plan.departAt == null ? '' : ' · ${_when(leg.plan.departAt!)}'}');
+      }
+    }
+    final uri = plan.directionsUri;
+    if (uri != null) lines.addAll(['', uri.toString()]);
+    // ignore: deprecated_member_use
+    Share.share(lines.join('\n'), subject: g.name);
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final milestones = _getRouteMilestones();
-    final visible = milestones.where(_matchesFilter).toList();
-    final origin = _tourGroup?.originCity ?? 'রংপুর';
-    final dest = _tourGroup?.destination ?? 'কক্সবাজার';
-
+    final l10n = context.l10n;
+    final g = _group;
     return Scaffold(
       backgroundColor: const Color(0xFF0F1A1C),
       appBar: AppBar(
-        title: Text('$origin ➔ $dest রোডম্যাপ',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         backgroundColor: const Color(0xFF142428),
         foregroundColor: Colors.white,
         elevation: 0,
+        title: Text(l10n.translate('route_title'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
+          if (_isAdmin && g != null)
+            IconButton(
+              tooltip: l10n.translate('route_edit_itinerary'),
+              icon: const Icon(Icons.edit_road_rounded),
+              onPressed: () => _editItinerary(g),
+            ),
           IconButton(
-            icon: const Icon(Icons.add_location_alt_rounded,
-                color: Colors.tealAccent),
-            tooltip: 'নতুন চেকপয়েন্ট যোগ করুন',
-            onPressed: _showAddMilestoneDialog,
-          ),
-          IconButton(
+            tooltip: l10n.translate('route_refresh_gps'),
             icon: const Icon(Icons.my_location),
-            tooltip: 'আমার লোকেশন রিফ্রেশ',
             onPressed: _fetchGps,
           ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top Overview Card
-            _buildOverviewHeader(milestones),
-
-            if (!_isDhakaOrigin)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 10, 16, 0),
-                child: Text(
-                  'এই রুমের দূরত্ব ও স্টপ ঢাকা থেকে যাত্রার জন্য হিসাব করা। অন্য শহর থেকে যাত্রায় নিজের স্টপ যোগ করুন।',
-                  style: TextStyle(color: Colors.amberAccent, fontSize: 11),
-                ),
-              ),
-            // Filter Chips
-            _buildFilterTabs(milestones),
-
-            // Milestones Timeline
-            Expanded(
-              child: ListView.builder(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                itemCount: visible.length,
-                itemBuilder: (context, index) {
-                  final stop = visible[index];
-                  return GestureDetector(
-                    onLongPress: _canDeleteStop(stop)
-                        ? () => _confirmDeleteStop(stop)
-                        : null,
-                    child: _buildMilestoneTile(stop, index, visible.length),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: g == null
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.mintGreen))
+          : _body(l10n, g),
     );
   }
 
-  Widget _buildOverviewHeader(List<HighwayMilestone> milestones) {
-    final totalKm = milestones.isNotEmpty ? milestones.last.kmFromStart : 100;
-    double progress = 0.25;
-    String statusSubtitle = 'যাত্রাপথ শুরু হয়েছে';
-    final origin = _tourGroup?.originCity ?? 'যাত্রা স্থান';
-    final dest = _tourGroup?.destination ?? 'গন্তব্য';
-
-    if (_currentPosition != null && milestones.isNotEmpty) {
-      // Progress follows the nearest stop that has coordinates. The old
-      // straight-line estimate was wrong on bent roads.
-      HighwayMilestone? nearest;
-      var nearestMetres = double.infinity;
-      for (final m in milestones) {
-        if (m.lat == 0 && m.lng == 0) continue;
-        final d = Geolocator.distanceBetween(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-          m.lat,
-          m.lng,
-        );
-        if (d < nearestMetres) {
-          nearestMetres = d;
-          nearest = m;
-        }
-      }
-      if (nearest != null && totalKm > 0) {
-        progress = (nearest.kmFromStart / totalKm).clamp(0.0, 1.0);
-        statusSubtitle =
-            'কাছের স্টপ: ${nearest.name} (প্রায় ${(nearestMetres / 1000).toStringAsFixed(1)} কি.মি.)';
-      }
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: const Color(0xFF142428),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _body(AppLocalizations l10n, TourGroup g) {
+    final plan = RoutePlan.of(g);
+    final pos = _position;
+    final live = pos == null
+        ? null
+        : plan.locate(pos.latitude, pos.longitude, DateTime.now());
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 32),
+      children: [
+        _header(l10n, g, plan, live),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (plan.directionsUri != null)
+              FilledButton.tonalIcon(
+                onPressed: () => _open(plan.directionsUri!),
+                icon: const Icon(Icons.directions_rounded),
+                label: Text(l10n.translate('route_directions_all')),
+              ),
+            OutlinedButton.icon(
+              onPressed: () => _share(plan, g),
+              icon: const Icon(Icons.ios_share_rounded),
+              label: Text(l10n.translate('route_share')),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(l10n.translate('route_nearby'),
+            style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final n in const [
+              ('hospital', Icons.local_hospital_rounded, 'route_near_hospital'),
+              (
+                'police station',
+                Icons.local_police_rounded,
+                'route_near_police'
+              ),
+              ('pharmacy', Icons.medication_rounded, 'route_near_pharmacy'),
+              (
+                'petrol pump',
+                Icons.local_gas_station_rounded,
+                'route_near_fuel'
+              ),
+              ('mosque', Icons.mosque_rounded, 'route_near_mosque'),
+              ('ATM', Icons.atm_rounded, 'route_near_atm'),
+              ('restaurant', Icons.restaurant_rounded, 'route_near_food'),
+              ('public toilet', Icons.wc_rounded, 'route_near_toilet'),
+            ])
+              ActionChip(
+                avatar: Icon(n.$2, size: 16, color: AppColors.mintGreen),
+                label: Text(l10n.translate(n.$3)),
+                backgroundColor: const Color(0xFF142428),
+                labelStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                onPressed: () => _open(nearbySearchUri(n.$1,
+                    lat: pos?.latitude, lng: pos?.longitude)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.alt_route,
-                      color: Colors.tealAccent, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    '$origin ➔ $dest জাতীয় মহাসড়ক',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.teal.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: ChoiceChip(
+                  label: Text(l10n.translate('route_filter_all')),
+                  selected: _filter == null,
+                  onSelected: (_) => setState(() => _filter = null),
                 ),
-                child: Text('~$totalKm কি.মি.',
-                    style: const TextStyle(
-                        color: Colors.tealAccent,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12)),
               ),
+              for (final k in CheckpointKind.values)
+                if (_checkpoints.any((c) => c.kind == k))
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      label: Text(
+                          '${k.emoji} ${l10n.translate(checkpointKindKey(k))}'),
+                      selected: _filter == k,
+                      onSelected: (_) => setState(() => _filter = k),
+                    ),
+                  ),
             ],
           ),
-          const SizedBox(height: 12),
-          // Route Progress Bar
+        ),
+        const SizedBox(height: 8),
+        for (var i = 0; i < plan.points.length; i++) ...[
+          _pointTile(l10n, plan.points[i], i == 0),
+          if (i < plan.legs.length) _legTile(l10n, g, plan.legs[i], live),
+        ],
+      ],
+    );
+  }
+
+  Widget _header(
+      AppLocalizations l10n, TourGroup g, RoutePlan plan, LivePosition? live) {
+    final current = plan.currentLeg;
+    final next = plan.nextLeg;
+    String status;
+    if (plan.isFinished) {
+      status = l10n.translate('route_status_done');
+    } else if (live != null && current != null) {
+      status = l10n.translate('route_status_live', args: {
+        'km': l10n.number(live.kmToNext),
+        'place': live.leg.to.name,
+        'time': DateFormat('h:mm a').format(live.eta),
+      });
+    } else if (current != null) {
+      final eta = current.eta;
+      status = eta == null
+          ? l10n.translate('route_status_underway',
+              args: {'place': current.to.name})
+          : l10n.translate('route_status_eta', args: {
+              'place': current.to.name,
+              'time': _when(eta),
+            });
+    } else if (next?.plan.departAt != null) {
+      final left = next!.plan.departAt!.difference(DateTime.now());
+      status = left.isNegative
+          ? l10n.translate('route_status_due', args: {'place': next.to.name})
+          : l10n.translate('route_status_next', args: {
+              'place': next.to.name,
+              'in': _duration(l10n, left),
+            });
+    } else {
+      status = l10n.translate('route_status_planned');
+    }
+
+    final nights = g.effectiveStops.fold<int>(0, (n, s) => n + s.nights);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142428),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+              [
+                g.originCity,
+                ...g.effectiveStops.map((s) => s.name),
+                if (g.returnHome) g.originCity,
+              ].join(' → '),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15)),
+          const SizedBox(height: 6),
+          Text(
+            l10n.translate('route_summary', args: {
+              'km': l10n.number(plan.totalKm),
+              'legs': l10n.number(plan.legs.length),
+              'nights': l10n.number(nights),
+            }),
+            style: const TextStyle(color: AppColors.gold, fontSize: 12),
+          ),
+          const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
-              value: progress,
+              value: plan.progress,
               minHeight: 8,
-              backgroundColor: const Color(0xFF263D42),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(Colors.tealAccent),
+              backgroundColor: Colors.white10,
+              valueColor: const AlwaysStoppedAnimation(AppColors.mintGreen),
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('$origin (০ কি.মি.)',
-                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
-              Text(statusSubtitle,
-                  style: const TextStyle(
-                      color: Colors.tealAccent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold)),
-              Text('$dest ($totalKm কি.মি.)',
-                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
-            ],
-          ),
+          Text(status,
+              style: const TextStyle(
+                  color: AppColors.mintGreen,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13)),
+          if (g.stops.isEmpty && _isAdmin)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(l10n.translate('route_add_more_hint'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterTabs(List<HighwayMilestone> milestones) {
-    final filters = [
-      'সব চেকপয়েন্ট (${milestones.length})',
-      'বিরতি ও খাবার',
-      'নামাজঘর',
-      'ফুয়েল/পাম্প'
-    ];
-
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: filters.length,
-        itemBuilder: (context, i) {
-          final isSelected = _activeFilterIndex == i;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(filters[i]),
-              selected: isSelected,
-              selectedColor: Colors.tealAccent.shade700,
-              backgroundColor: const Color(0xFF182B30),
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : Colors.white70,
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-              onSelected: (val) {
-                if (val) setState(() => _activeFilterIndex = i);
-              },
+  Widget _pointTile(AppLocalizations l10n, RoutePoint p, bool isStart) {
+    final s = p.stop;
+    final days = DateFormat('EEE d MMM');
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: s == null ? AppColors.gold : AppColors.mintGreen,
+          child: Icon(s == null ? Icons.home_rounded : tourTypeIcon(s.kind),
+              size: 18, color: AppColors.darkGreen),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF142428),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white12),
             ),
-          );
-        },
-      ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(p.name,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15)),
+                    ),
+                    if (p.hasLocation)
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        tooltip: l10n.translate('route_open_map'),
+                        icon: const Icon(Icons.map_rounded,
+                            color: AppColors.mintGreen, size: 20),
+                        onPressed: () => _open(Uri.https(
+                            'www.google.com',
+                            '/maps/search/',
+                            {'api': '1', 'query': p.mapsQuery})),
+                      ),
+                  ],
+                ),
+                Text(
+                  s == null
+                      ? l10n.translate(isStart ? 'itin_start' : 'route_home')
+                      : [
+                          '${days.format(s.arrive)} – ${days.format(s.leave)}',
+                          l10n.translate('itin_nights',
+                              args: {'n': l10n.number(s.nights)}),
+                        ].join(' · '),
+                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+                if (s != null && s.stay.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text('🏨 ${s.stay}',
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12)),
+                  ),
+                if (s != null && s.notes.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(s.notes,
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12)),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildMilestoneTile(HighwayMilestone m, int index, int totalCount) {
-    // Check filters
-    if (_activeFilterIndex == 1 &&
-        !m.amenities.any((a) =>
-            a.contains('রেস্তোরাঁ') ||
-            a.contains('নাস্তা') ||
-            a.contains('খাবার') ||
-            a.contains('ক্যাফে'))) {
-      return const SizedBox.shrink();
-    }
-    if (_activeFilterIndex == 2 &&
-        !m.amenities.any((a) => a.contains('নামাজ'))) {
-      return const SizedBox.shrink();
-    }
-    if (_activeFilterIndex == 3 &&
-        !m.amenities.any((a) =>
-            a.contains('পাম্প') || a.contains('তেল') || a.contains('ফুয়েল'))) {
-      return const SizedBox.shrink();
-    }
-
-    final isFirst = index == 0;
-    final isLast = index == totalCount - 1;
+  Widget _legTile(
+      AppLocalizations l10n, TourGroup g, RouteLeg leg, LivePosition? live) {
+    final status = leg.status;
+    final statusColor = switch (status) {
+      LegStatus.done => AppColors.mintGreen,
+      LegStatus.underway => AppColors.gold,
+      LegStatus.planned => Colors.white38,
+    };
+    final checkpoints = [
+      for (final c in _checkpoints)
+        if ((c.legKey == leg.key || (c.legKey == null && leg.index == 0)) &&
+            (_filter == null || c.kind == _filter))
+          c,
+    ]..sort((a, b) => a.kmFromStart.compareTo(b.kmFromStart));
+    final toPreset = leg.to.stop == null
+        ? null
+        : (presetById(leg.to.stop!.presetId) ?? presetForName(leg.to.name));
+    final suggestions = leg.plan.mode == TransportMode.road
+        ? suggestedStopsFor(leg, toPresetId: toPreset?.id)
+        : const <SuggestedStop>[];
+    final d = leg.duration;
 
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Timeline Indicator
           SizedBox(
-            width: 40,
-            child: Column(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: isLast
-                        ? Colors.amber
-                        : (isFirst ? Colors.green : const Color(0xFF1E3A40)),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: Center(
-                    child: Text(
-                      m.iconEmoji,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: Colors.teal.withValues(alpha: 0.3),
-                    ),
-                  ),
-              ],
+            width: 36,
+            child: Center(
+              child: Container(
+                  width: 3, color: statusColor.withValues(alpha: 0.6)),
             ),
           ),
           const SizedBox(width: 12),
-          // Milestone Card
           Expanded(
             child: Container(
-              margin: const EdgeInsets.only(bottom: 14),
-              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF142428),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white12),
+                color: const Color(0xFF10201A),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: statusColor.withValues(alpha: 0.5)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Icon(transportModeIcon(leg.plan.mode),
+                          color: statusColor, size: 20),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          m.name,
+                          '${l10n.translate(transportModeKey(leg.plan.mode))} · ${_km(l10n, leg)}'
+                          '${d == null ? '' : ' · ${_duration(l10n, d)}'}',
                           style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13),
+                              color: Colors.white, fontWeight: FontWeight.w600),
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.tealAccent.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
+                          color: statusColor.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
-                          '${m.kmFromStart} কি.মি.',
-                          style: const TextStyle(
-                              color: Colors.tealAccent,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11),
-                        ),
+                        child: Text(l10n.translate('route_leg_${status.name}'),
+                            style: TextStyle(color: statusColor, fontSize: 11)),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${m.nameEn} • সময়: ${m.estDuration}',
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                  if (leg.plan.departAt != null || leg.plan.arriveAt != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        [
+                          if (leg.plan.departAt != null)
+                            l10n.translate('route_departs',
+                                args: {'time': _when(leg.plan.departAt!)}),
+                          if (leg.plan.arriveAt != null)
+                            l10n.translate('route_arrives',
+                                args: {'time': _when(leg.plan.arriveAt!)}),
+                        ].join(' · '),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
+                      ),
                     ),
-                    child: Text(
-                      '✨ ${m.highlight}',
-                      style: const TextStyle(
-                          color: Colors.amberAccent,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500),
+                  if (leg.plan.departedAt != null)
+                    Text(
+                      [
+                        l10n.translate('route_left_at',
+                            args: {'time': _when(leg.plan.departedAt!)}),
+                        if (leg.plan.arrivedAt != null)
+                          l10n.translate('route_arrived_at',
+                              args: {'time': _when(leg.plan.arrivedAt!)})
+                        else if (leg.eta != null)
+                          l10n.translate('route_eta',
+                              args: {'time': _when(leg.eta!)}),
+                      ].join(' · '),
+                      style: TextStyle(color: statusColor, fontSize: 12),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    m.details,
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
-                  ),
-                  const SizedBox(height: 8),
-                  // Amenities chips & Map button
-                  Row(
+                  if (live != null &&
+                      live.leg.key == leg.key &&
+                      status == LegStatus.underway) ...[
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: live.fraction,
+                      minHeight: 4,
+                      backgroundColor: Colors.white10,
+                      valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+                    ),
+                  ],
+                  if (leg.plan.notes.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(leg.plan.notes,
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 12)),
+                    ),
+                  if (checkpoints.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    for (final c in checkpoints) _checkpointRow(l10n, leg, c),
+                  ],
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 0,
                     children: [
-                      Expanded(
-                        child: Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
-                          children: m.amenities.map((a) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(a,
-                                  style: const TextStyle(
-                                      color: Colors.white60, fontSize: 10)),
-                            );
-                          }).toList(),
+                      TextButton.icon(
+                        onPressed: () => _open(leg.directionsUri),
+                        icon: const Icon(Icons.directions_rounded, size: 18),
+                        label: Text(l10n.translate('route_directions')),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _editCheckpoint(leg),
+                        icon: const Icon(Icons.add_location_alt_rounded,
+                            size: 18),
+                        label: Text(l10n.translate('route_add_stop')),
+                      ),
+                      if (_isAdmin) ...[
+                        if (status == LegStatus.planned)
+                          TextButton.icon(
+                            onPressed: () => _markLeg(leg, depart: true),
+                            icon:
+                                const Icon(Icons.play_arrow_rounded, size: 18),
+                            label: Text(l10n.translate('route_mark_departed')),
+                          ),
+                        if (status == LegStatus.underway)
+                          TextButton.icon(
+                            onPressed: () => _markLeg(leg, depart: false),
+                            icon: const Icon(Icons.flag_rounded, size: 18),
+                            label: Text(l10n.translate('route_mark_arrived')),
+                          ),
+                        if (status != LegStatus.planned)
+                          TextButton.icon(
+                            onPressed: () => _resetLeg(leg),
+                            icon: const Icon(Icons.undo_rounded, size: 18),
+                            label: Text(l10n.translate('route_reset')),
+                          ),
+                        TextButton.icon(
+                          onPressed: () => _editLeg(leg),
+                          icon: const Icon(Icons.tune_rounded, size: 18),
+                          label: Text(l10n.translate('route_edit_leg')),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.map,
-                            size: 18, color: Colors.tealAccent),
-                        tooltip: 'ম্যাপে দেখুন',
-                        onPressed: (m.lat == 0 && m.lng == 0)
-                            ? null
-                            : () => _openLocationOnMap(m.lat, m.lng),
-                      ),
+                        if (suggestions.isNotEmpty)
+                          TextButton.icon(
+                            onPressed: () => _addSuggested(leg, suggestions),
+                            icon: const Icon(Icons.auto_awesome_rounded,
+                                size: 18),
+                            label: Text(l10n.translate('route_suggested',
+                                args: {'n': l10n.number(suggestions.length)})),
+                          ),
+                      ],
                     ],
                   ),
                 ],
@@ -1042,6 +836,388 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _checkpointRow(
+      AppLocalizations l10n, RouteLeg leg, RouteCheckpoint c) {
+    final passed = c.visitedAt != null;
+    return InkWell(
+      onTap: () => _checkpointActions(leg, c),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(c.kind.emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(c.name,
+                      style: TextStyle(
+                          color: passed ? Colors.white54 : Colors.white,
+                          decoration:
+                              passed ? TextDecoration.lineThrough : null,
+                          fontSize: 13)),
+                  Text(
+                    [
+                      l10n.translate('route_km',
+                          args: {'km': l10n.number(c.kmFromStart)}),
+                      l10n.translate(checkpointKindKey(c.kind)),
+                      if (c.plannedAt != null)
+                        DateFormat('h:mm a').format(c.plannedAt!),
+                      if (c.highlight.isNotEmpty) c.highlight,
+                    ].join(' · '),
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                  if (c.notes.isNotEmpty)
+                    Text(c.notes,
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 11)),
+                ],
+              ),
+            ),
+            if (passed)
+              const Icon(Icons.check_circle,
+                  color: AppColors.mintGreen, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// How a leg is travelled: mode, distance, planned times and notes.
+class _LegSheet extends StatefulWidget {
+  const _LegSheet({required this.leg});
+
+  final RouteLeg leg;
+
+  @override
+  State<_LegSheet> createState() => _LegSheetState();
+}
+
+class _LegSheetState extends State<_LegSheet> {
+  late LegPlan _p = widget.leg.plan;
+  late final _km = TextEditingController(text: _p.distanceKm?.toString() ?? '');
+  late final _notes = TextEditingController(text: _p.notes);
+
+  @override
+  void dispose() {
+    _km.dispose();
+    _notes.dispose();
+    super.dispose();
+  }
+
+  Future<DateTime?> _pickTime(DateTime? initial) async {
+    final start = initial ?? DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: start,
+      firstDate: DateTime(start.year - 1),
+      lastDate: DateTime(start.year + 3),
+    );
+    if (date == null || !mounted) return null;
+    final time = await showTimePicker(
+        context: context, initialTime: TimeOfDay.fromDateTime(start));
+    return DateTime(
+        date.year, date.month, date.day, time?.hour ?? 0, time?.minute ?? 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final when = DateFormat('d MMM yyyy, h:mm a');
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('${widget.leg.from.name} → ${widget.leg.to.name}',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final m in TransportMode.values)
+                  ChoiceChip(
+                    avatar: Icon(transportModeIcon(m),
+                        size: 16,
+                        color: m == _p.mode
+                            ? AppColors.darkGreen
+                            : Colors.white70),
+                    label: Text(l10n.translate(transportModeKey(m))),
+                    selected: m == _p.mode,
+                    selectedColor: AppColors.mintGreen,
+                    backgroundColor: const Color(0xFF1E3326),
+                    labelStyle: TextStyle(
+                        color:
+                            m == _p.mode ? AppColors.darkGreen : Colors.white),
+                    onSelected: (_) =>
+                        setState(() => _p = _p.copyWith(mode: m)),
+                  ),
+              ],
+            ),
+            TextField(
+              controller: _km,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                  labelText: l10n.translate('route_distance'),
+                  helperText: l10n.translate('route_distance_help'),
+                  helperStyle: const TextStyle(color: Colors.white38)),
+            ),
+            for (final (label, value, set) in [
+              (
+                'route_plan_depart',
+                _p.departAt,
+                (DateTime? v) => _p = _p.copyWith(departAt: v)
+              ),
+              (
+                'route_plan_arrive',
+                _p.arriveAt,
+                (DateTime? v) => _p = _p.copyWith(arriveAt: v)
+              ),
+            ])
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading:
+                    const Icon(Icons.schedule_rounded, color: AppColors.gold),
+                title: Text(
+                    value == null
+                        ? l10n.translate('route_time_unset')
+                        : when.format(value),
+                    style: const TextStyle(color: Colors.white)),
+                subtitle: Text(l10n.translate(label),
+                    style: const TextStyle(color: Colors.white54)),
+                trailing: value == null
+                    ? null
+                    : IconButton(
+                        tooltip: l10n.translate('route_time_clear'),
+                        icon: const Icon(Icons.close, color: Colors.white54),
+                        onPressed: () => setState(() => set(null)),
+                      ),
+                onTap: () async {
+                  final t = await _pickTime(value);
+                  if (t != null) setState(() => set(t));
+                },
+              ),
+            TextField(
+              controller: _notes,
+              maxLines: 2,
+              maxLength: 300,
+              style: const TextStyle(color: Colors.white),
+              decoration:
+                  InputDecoration(labelText: l10n.translate('route_leg_notes')),
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.mintGreen,
+                    foregroundColor: AppColors.darkGreen),
+                onPressed: () {
+                  final km = int.tryParse(_km.text.trim());
+                  Navigator.pop(
+                      context,
+                      _p.copyWith(
+                        distanceKm:
+                            km != null && km > 0 && km < 5000 ? km : null,
+                        notes: _notes.text.trim(),
+                      ));
+                },
+                child: Text(l10n.translate('tour_save')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Adds or edits a stop along a leg.
+class _CheckpointSheet extends StatefulWidget {
+  const _CheckpointSheet({
+    required this.legKey,
+    this.existing,
+    this.position,
+  });
+
+  final String legKey;
+  final RouteCheckpoint? existing;
+  final Position? position;
+
+  @override
+  State<_CheckpointSheet> createState() => _CheckpointSheetState();
+}
+
+class _CheckpointSheetState extends State<_CheckpointSheet> {
+  late final _name = TextEditingController(text: widget.existing?.name ?? '');
+  late final _km = TextEditingController(
+      text: widget.existing == null ? '' : '${widget.existing!.kmFromStart}');
+  late final _highlight =
+      TextEditingController(text: widget.existing?.highlight ?? '');
+  late final _notes = TextEditingController(text: widget.existing?.notes ?? '');
+  late CheckpointKind _kind = widget.existing?.kind ?? CheckpointKind.food;
+  late DateTime? _planned = widget.existing?.plannedAt;
+  bool _useGps = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _km.dispose();
+    _highlight.dispose();
+    _notes.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+                l10n.translate(widget.existing == null
+                    ? 'route_add_stop'
+                    : 'route_cp_edit'),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
+            TextField(
+              controller: _name,
+              style: const TextStyle(color: Colors.white),
+              decoration:
+                  InputDecoration(labelText: l10n.translate('route_cp_name')),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final k in CheckpointKind.values)
+                  ChoiceChip(
+                    label: Text(
+                        '${k.emoji} ${l10n.translate(checkpointKindKey(k))}'),
+                    selected: k == _kind,
+                    onSelected: (_) => setState(() => _kind = k),
+                  ),
+              ],
+            ),
+            TextField(
+              controller: _km,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Colors.white),
+              decoration:
+                  InputDecoration(labelText: l10n.translate('route_cp_km')),
+            ),
+            TextField(
+              controller: _highlight,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                  labelText: l10n.translate('route_cp_highlight')),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading:
+                  const Icon(Icons.schedule_rounded, color: AppColors.gold),
+              title: Text(
+                  _planned == null
+                      ? l10n.translate('route_time_unset')
+                      : DateFormat('d MMM, h:mm a').format(_planned!),
+                  style: const TextStyle(color: Colors.white)),
+              subtitle: Text(l10n.translate('route_cp_planned'),
+                  style: const TextStyle(color: Colors.white54)),
+              onTap: () async {
+                final now = _planned ?? DateTime.now();
+                final date = await showDatePicker(
+                    context: context,
+                    initialDate: now,
+                    firstDate: DateTime(now.year - 1),
+                    lastDate: DateTime(now.year + 3));
+                if (date == null || !context.mounted) return;
+                final time = await showTimePicker(
+                    context: context, initialTime: TimeOfDay.fromDateTime(now));
+                setState(() => _planned = DateTime(date.year, date.month,
+                    date.day, time?.hour ?? 0, time?.minute ?? 0));
+              },
+            ),
+            if (widget.position != null)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _useGps,
+                activeThumbColor: AppColors.mintGreen,
+                title: Text(l10n.translate('route_cp_use_gps'),
+                    style: const TextStyle(color: Colors.white)),
+                onChanged: (v) => setState(() => _useGps = v),
+              ),
+            TextField(
+              controller: _notes,
+              maxLines: 2,
+              maxLength: 300,
+              style: const TextStyle(color: Colors.white),
+              decoration:
+                  InputDecoration(labelText: l10n.translate('itin_notes')),
+            ),
+            if (_error != null)
+              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.mintGreen,
+                    foregroundColor: AppColors.darkGreen),
+                onPressed: () {
+                  final name = _name.text.trim();
+                  final km = int.tryParse(_km.text.trim()) ?? 0;
+                  if (name.isEmpty) {
+                    setState(() =>
+                        _error = l10n.translate('route_cp_name_required'));
+                    return;
+                  }
+                  final e = widget.existing;
+                  final pos = _useGps ? widget.position : null;
+                  Navigator.pop(
+                    context,
+                    RouteCheckpoint(
+                      id: e?.id ?? '',
+                      name: name,
+                      kmFromStart: km < 0 ? 0 : km,
+                      highlight: _highlight.text.trim(),
+                      lat: pos?.latitude ?? e?.lat,
+                      lng: pos?.longitude ?? e?.lng,
+                      addedByEmail: e?.addedByEmail ?? '',
+                      legKey: e?.legKey ?? widget.legKey,
+                      kind: _kind,
+                      plannedAt: _planned,
+                      notes: _notes.text.trim(),
+                      visitedAt: e?.visitedAt,
+                    ),
+                  );
+                },
+                child: Text(l10n.translate('tour_save')),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

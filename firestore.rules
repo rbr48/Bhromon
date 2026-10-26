@@ -686,6 +686,11 @@ service cloud.firestore {
         allow read: if isActiveMember(tourId);
         allow create: if isActiveMember(tourId) &&
                          request.resource.data.addedByEmail == tourUserEmail();
+        // The author or an admin edits a stop or marks it passed; the author
+        // stays the same.
+        allow update: if isActiveMember(tourId) &&
+                         (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId)) &&
+                         request.resource.data.get('addedByEmail', '') == resource.data.get('addedByEmail', '');
         allow delete: if isActiveMember(tourId) &&
                          (resource.data.get('addedByEmail', '') == tourUserEmail() || isTourAdmin(tourId));
       }

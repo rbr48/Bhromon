@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../domain/models/date_codec.dart';
 import '../domain/models/expense_models.dart';
+import '../domain/models/itinerary_models.dart';
 import '../domain/models/logistics_models.dart';
 import '../domain/models/safety_alert_models.dart';
 import '../domain/models/tour_activity_models.dart';
@@ -592,6 +593,49 @@ class TourGroupRepository {
     await _tour(tourId).update(updates);
   }
 
+  /// Admins save the itinerary. The summary fields older screens read are
+  /// kept in step: the destination becomes "A → B → C", the tour type is
+  /// beach when any stop is (so beach items and tide tools show), and the
+  /// tour's dates widen to cover every stop.
+  Future<void> saveItinerary(
+    String tourId, {
+    required List<TourStop> stops,
+    required bool returnHome,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    _requireEmail();
+    final ordered = [...stops]..sort((a, b) => a.arrive.compareTo(b.arrive));
+    final updates = <String, dynamic>{
+      'stops': [for (final s in ordered) s.toMap()],
+      'returnHome': returnHome,
+    };
+    if (ordered.isNotEmpty) {
+      updates['destination'] = ordered.map((s) => s.name).join(' → ');
+      updates['tourType'] = (ordered.any((s) => s.kind == TourType.beach)
+              ? TourType.beach
+              : ordered.first.kind)
+          .toValue();
+      var start = startDate, end = endDate;
+      for (final s in ordered) {
+        if (s.arrive.isBefore(start)) start = s.arrive;
+        if (s.leave.isAfter(end)) end = s.leave;
+      }
+      updates['startDate'] = writeDate(start);
+      updates['endDate'] = writeDate(end);
+    }
+    await _tour(tourId).update(updates);
+  }
+
+  /// Admins save one leg's plan or progress. The key has a '>' in it, so it
+  /// is written with a field path rather than a dotted string.
+  Future<void> saveLegPlan(String tourId, String legKey, LegPlan plan) async {
+    _requireEmail();
+    await _tour(tourId).update({
+      FieldPath(['legPlans', legKey]): plan.toMap(),
+    });
+  }
+
   /// Saves the meeting point. Empty values remove the field rather than
   /// storing an empty string.
   Future<void> updateMeetingPoint(
@@ -995,6 +1039,10 @@ class TourGroupRepository {
     String highlight = '',
     double? lat,
     double? lng,
+    String? legKey,
+    CheckpointKind kind = CheckpointKind.custom,
+    DateTime? plannedAt,
+    String notes = '',
   }) async {
     final email = _requireEmail();
     final id = _uuid.v4();
@@ -1006,6 +1054,35 @@ class TourGroupRepository {
       if (lat != null) 'lat': lat,
       if (lng != null) 'lng': lng,
       'addedByEmail': email,
+      if (legKey != null) 'legKey': legKey,
+      'kind': kind.name,
+      if (plannedAt != null) 'plannedAt': writeDate(plannedAt),
+      'notes': notes,
+    });
+  }
+
+  /// The author or an admin edits a stop. The author stays the same.
+  Future<void> updateCheckpoint(String tourId, RouteCheckpoint c) async {
+    _requireEmail();
+    await _sub(tourId, 'checkpoints').doc(c.id).update({
+      'name': c.name,
+      'kmFromStart': c.kmFromStart,
+      'highlight': c.highlight,
+      'lat': c.lat,
+      'lng': c.lng,
+      'legKey': c.legKey,
+      'kind': c.kind.name,
+      'plannedAt': c.plannedAt == null ? null : writeDate(c.plannedAt!),
+      'notes': c.notes,
+    });
+  }
+
+  /// Marks a stop as passed now, or clears the mark.
+  Future<void> setCheckpointVisited(
+      String tourId, String checkpointId, bool visited) async {
+    _requireEmail();
+    await _sub(tourId, 'checkpoints').doc(checkpointId).update({
+      'visitedAt': visited ? FieldValue.serverTimestamp() : null,
     });
   }
 

@@ -65,15 +65,72 @@ class ChecklistItem {
   }
 }
 
-/// A stop on the highway roadmap that a member added.
+/// What a stop along the way is for.
+enum CheckpointKind {
+  food,
+  prayer,
+  fuel,
+  washroom,
+  viewpoint,
+
+  /// An army checkpost or escort point, such as Dighinala before Sajek.
+  checkpost,
+
+  /// A ferry, ghat or jetty.
+  ferry,
+  toll,
+  hospital,
+  police,
+  hotel,
+  shopping,
+  custom;
+
+  static CheckpointKind fromString(String? value) {
+    for (final k in values) {
+      if (k.name == value) return k;
+    }
+    return CheckpointKind.custom;
+  }
+
+  String get emoji => switch (this) {
+        food => '🍲',
+        prayer => '🕌',
+        fuel => '⛽',
+        washroom => '🚻',
+        viewpoint => '📸',
+        checkpost => '🛡️',
+        ferry => '⛴️',
+        toll => '🎫',
+        hospital => '🏥',
+        police => '👮',
+        hotel => '🏨',
+        shopping => '🛍️',
+        custom => '📍',
+      };
+}
+
+/// A stop along a leg of the route that a member added: a meal break, a
+/// prayer stop, the army escort point, a ferry ghat…
 class RouteCheckpoint {
   final String id;
   final String name;
   final String highlight;
+
+  /// Km from the start of its leg.
   final int kmFromStart;
   final double? lat;
   final double? lng;
   final String addedByEmail;
+
+  /// The leg it belongs to ("<fromId>><toId>"). Stops added before legs
+  /// existed have none and show on the first leg.
+  final String? legKey;
+  final CheckpointKind kind;
+  final DateTime? plannedAt;
+  final String notes;
+
+  /// When the group passed it, set by an admin.
+  final DateTime? visitedAt;
 
   const RouteCheckpoint({
     required this.id,
@@ -83,17 +140,29 @@ class RouteCheckpoint {
     this.lat,
     this.lng,
     this.addedByEmail = '',
+    this.legKey,
+    this.kind = CheckpointKind.custom,
+    this.plannedAt,
+    this.notes = '',
+    this.visitedAt,
   });
+
+  bool get hasLocation => lat != null && lng != null;
 
   factory RouteCheckpoint.fromMap(String id, Map<String, dynamic> map) {
     return RouteCheckpoint(
       id: id,
-      name: map['name'] as String? ?? 'চেকপয়েন্ট',
+      name: map['name'] as String? ?? '',
       highlight: map['highlight'] as String? ?? '',
       kmFromStart: (map['kmFromStart'] as num?)?.toInt() ?? 0,
       lat: (map['lat'] as num?)?.toDouble(),
       lng: (map['lng'] as num?)?.toDouble(),
       addedByEmail: normalizeEmail(map['addedByEmail'] as String? ?? ''),
+      legKey: map['legKey'] as String?,
+      kind: CheckpointKind.fromString(map['kind'] as String?),
+      plannedAt: readDate(map['plannedAt']),
+      notes: map['notes'] as String? ?? '',
+      visitedAt: readDate(map['visitedAt']),
     );
   }
 }
