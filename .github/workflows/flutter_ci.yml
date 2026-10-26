@@ -81,15 +81,15 @@ jobs:
       - name: Run tests with coverage
         run: flutter test --coverage
 
-      # Regression floor, not a target: current line coverage is ~4%.
-      # Raise this number as test coverage grows.
-      - name: Check coverage regression floor (min 3%)
+      # Regression floor, not a target. Line coverage was 24.8% (9874 of 39811
+      # lines) when this was last measured. Raise the floor as coverage grows.
+      - name: Check coverage regression floor (min 24%)
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq lcov
           COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | grep -oP '\d+\.\d+(?=%)' | head -1)
           echo "Line coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 3" | bc -l) )); then
-            echo "Coverage ${COVERAGE}% fell below the 3% regression floor"
+          if (( $(echo "$COVERAGE < 24" | bc -l) )); then
+            echo "Coverage ${COVERAGE}% fell below the 24% regression floor"
             exit 1
           fi
 
