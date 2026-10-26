@@ -23,6 +23,7 @@ import '../widgets/instafeed/instafeed_reels_modal.dart';
 import '../widgets/instafeed/instafeed_share_sheet.dart';
 import '../widgets/instafeed/instafeed_story_viewer.dart';
 import '../widgets/instafeed/instafeed_travel_banners.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 // Bengali numeral helper
 String toBengaliNum(int number) {
@@ -234,28 +235,29 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'সংগ্রহ ফোল্ডারে যোগ করুন (Collections)',
-                    style: TextStyle(
+                  Text(
+                    context.l10n.translate('ig_collections_title'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'পছন্দের পোস্টগুলোকে আলাদা ফোল্ডারে সংরক্ষণ করুন',
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  Text(
+                    context.l10n.translate('ig_collections_hint'),
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                   const Divider(color: Colors.white12, height: 20),
 
                   // Existing Collections
                   if (_bookmarkCollections.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Text(
-                        'এখনও কোনো ফোল্ডার তৈরি করা হয়নি। নিচে নতুন ফোল্ডার তৈরি করুন।',
-                        style: TextStyle(color: Colors.white54, fontSize: 13),
+                        context.l10n.translate('ig_no_folders'),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 13),
                       ),
                     )
                   else
@@ -272,7 +274,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                             contentPadding: EdgeInsets.zero,
                             title: Text(collectionName,
                                 style: const TextStyle(color: Colors.white)),
-                            subtitle: Text('${list.length}টি পোস্ট সংরক্ষিত',
+                            subtitle: Text(
+                                context.l10n.translate('ig_saved_count',
+                                    args: {'count': list.length}),
                                 style: const TextStyle(
                                     color: Colors.white54, fontSize: 11)),
                             value: isIncluded,
@@ -305,7 +309,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           controller: newCollectionCtrl,
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
-                            hintText: 'নতুন ফোল্ডারের নাম (যেমন: খাবার, হোটেল)',
+                            hintText:
+                                context.l10n.translate('ig_folder_name_hint'),
                             hintStyle: const TextStyle(
                                 color: Colors.white54, fontSize: 13),
                             filled: true,
@@ -340,8 +345,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                             _saveFeedPrefs();
                           }
                         },
-                        child: const Text('তৈরি',
-                            style: TextStyle(
+                        child: Text(context.l10n.translate('ig_create'),
+                            style: const TextStyle(
                                 color: Colors.black,
                                 fontWeight: FontWeight.bold)),
                       ),
@@ -361,7 +366,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     for (final p in posts) {
       final loc = p.location.trim().isNotEmpty
           ? p.location.trim()
-          : (_tourGroup?.destination ?? 'প্রধান পর্যটন কেন্দ্র');
+          : (_tourGroup?.destination ??
+              context.l10n.translate('ig_main_tourist_centre'));
       byLandmark.putIfAbsent(loc, () => []).add(p);
     }
 
@@ -398,9 +404,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   const Icon(Icons.explore_rounded,
                       color: AppColors.mintGreen, size: 24),
                   const SizedBox(width: 8),
-                  const Text(
-                    'ল্যান্ডমার্ক ও স্পট ম্যাপ (Tour Landmarks)',
-                    style: TextStyle(
+                  Text(
+                    context.l10n.translate('ig_landmark_map'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -413,8 +419,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         setState(() => _selectedLandmarkFilter = null);
                         Navigator.pop(ctx);
                       },
-                      child: const Text('ফিল্টার মুছুন',
-                          style: TextStyle(color: Colors.redAccent)),
+                      child: Text(context.l10n.translate('ig_clear_filter'),
+                          style: const TextStyle(color: Colors.redAccent)),
                     ),
                 ],
               ),
@@ -479,7 +485,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        '${spotPosts.length}টি স্মৃতি ও ছবি সংগৃহীত',
+                        context.l10n.translate('ig_memories_count',
+                            args: {'count': spotPosts.length}),
                         style: const TextStyle(
                             color: Colors.white54, fontSize: 12),
                       ),
@@ -496,7 +503,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           Navigator.pop(ctx);
                         },
                         child: Text(
-                          isSelected ? 'নির্বাচিত' : 'ফিড ফিল্টার',
+                          isSelected
+                              ? context.l10n.translate('ig_selected')
+                              : context.l10n.translate('ig_feed_filter'),
                           style: TextStyle(
                             color: isSelected ? Colors.black : Colors.white,
                             fontSize: 12,
@@ -724,7 +733,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     final titleCtrl = TextEditingController(
       text: post.caption.isNotEmpty
           ? post.caption
-          : 'ট্যুর খরচ (${post.authorName})',
+          : context.l10n
+              .translate('ig_trip_expense', args: {'name': post.authorName}),
     );
     String selectedCategory = post.expenseCategory ?? 'Food';
 
@@ -732,12 +742,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.receipt_long, color: AppColors.mintGreen),
-            SizedBox(width: 8),
-            Text('ট্রিপ লেজারে যোগ করুন',
-                style: TextStyle(color: Colors.white)),
+            const Icon(Icons.receipt_long, color: AppColors.mintGreen),
+            const SizedBox(width: 8),
+            Text(context.l10n.translate('ig_add_to_ledger'),
+                style: const TextStyle(color: Colors.white)),
           ],
         ),
         content: Column(
@@ -746,9 +756,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             TextField(
               controller: titleCtrl,
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'খরচের বিবরণ',
-                labelStyle: TextStyle(color: Colors.white70),
+              decoration: InputDecoration(
+                labelText: context.l10n.translate('ig_expense_details'),
+                labelStyle: const TextStyle(color: Colors.white70),
               ),
             ),
             const SizedBox(height: 12),
@@ -757,11 +767,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'টাকার পরিমাণ (BDT)',
-                labelStyle: TextStyle(color: Colors.white70),
+              decoration: InputDecoration(
+                labelText: context.l10n.translate('ig_amount_bdt'),
+                labelStyle: const TextStyle(color: Colors.white70),
                 prefixText: '৳ ',
-                prefixStyle: TextStyle(color: AppColors.mintGreen),
+                prefixStyle: const TextStyle(color: AppColors.mintGreen),
               ),
             ),
             const SizedBox(height: 12),
@@ -769,19 +779,26 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               initialValue: selectedCategory,
               dropdownColor: const Color(0xFF222222),
               style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'ক্যাটাগরি',
-                labelStyle: TextStyle(color: Colors.white70),
+              decoration: InputDecoration(
+                labelText: context.l10n.translate('ig_category'),
+                labelStyle: const TextStyle(color: Colors.white70),
               ),
-              items: const [
-                DropdownMenuItem(value: 'Food', child: Text('খাবার (Food)')),
+              items: [
                 DropdownMenuItem(
-                    value: 'Transport', child: Text('পরিবহন (Transport)')),
+                    value: 'Food',
+                    child: Text(context.l10n.translate('ig_cat_food'))),
                 DropdownMenuItem(
-                    value: 'Hotel', child: Text('হোটেল / থাকার ব্যবস্থা')),
+                    value: 'Transport',
+                    child: Text(context.l10n.translate('ig_cat_transport'))),
                 DropdownMenuItem(
-                    value: 'Activity', child: Text('দর্শনীয় ও স্পট')),
-                DropdownMenuItem(value: 'Other', child: Text('অন্যান্য')),
+                    value: 'Hotel',
+                    child: Text(context.l10n.translate('ig_cat_hotel'))),
+                DropdownMenuItem(
+                    value: 'Activity',
+                    child: Text(context.l10n.translate('ig_cat_activity'))),
+                DropdownMenuItem(
+                    value: 'Other',
+                    child: Text(context.l10n.translate('ig_cat_other'))),
               ],
               onChanged: (v) {
                 if (v != null) selectedCategory = v;
@@ -792,12 +809,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('বাতিল'),
+            child: Text(context.l10n.translate('ig_cancel')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('যোগ করুন'),
+            child: Text(context.l10n.translate('ig_add')),
           ),
         ],
       ),
@@ -808,7 +825,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       if (paisa == null || paisa <= 0) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('সঠিক টাকার পরিমাণ দিন।')),
+            SnackBar(
+                content: Text(context.l10n.translate('ig_enter_valid_amount'))),
           );
         }
         return;
@@ -827,8 +845,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('খরচটি সফলভাবে ট্রিপ লেজারে যুক্ত হয়েছে!'),
+            SnackBar(
+              content: Text(context.l10n.translate('ig_expense_added')),
               backgroundColor: AppColors.mintGreen,
             ),
           );
@@ -836,7 +854,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('লেজারে যোগ করা যায়নি: $e')),
+            SnackBar(
+                content: Text(context.l10n
+                    .translate('ig_ledger_add_failed', args: {'error': e}))),
           );
         }
       }
@@ -892,7 +912,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               _isGridView ? Icons.view_agenda_outlined : Icons.grid_on_outlined,
               color: Colors.white70,
             ),
-            tooltip: _isGridView ? 'ফিড ভিউ' : 'এক্সপ্লোর গ্রিড ভিউ',
+            tooltip: _isGridView
+                ? context.l10n.translate('ig_feed_view')
+                : context.l10n.translate('ig_grid_view'),
             onPressed: () => setState(() => _isGridView = !_isGridView),
           ),
 
@@ -904,7 +926,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   ? AppColors.mintGreen
                   : Colors.white70,
             ),
-            tooltip: 'স্পট ও ল্যান্ডমার্ক ম্যাপ',
+            tooltip: context.l10n.translate('ig_spot_map'),
             onPressed: () => _showLandmarkMapModal(context, _latestPosts),
           ),
 
@@ -914,14 +936,16 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               _sortByPopular ? Icons.trending_up : Icons.access_time_rounded,
               color: _sortByPopular ? AppColors.mintGreen : Colors.white70,
             ),
-            tooltip: _sortByPopular ? 'জনপ্রিয় পোস্ট' : 'সাম্প্রতিক পোস্ট',
+            tooltip: _sortByPopular
+                ? context.l10n.translate('ig_popular_posts')
+                : context.l10n.translate('ig_recent_posts'),
             onPressed: () => setState(() => _sortByPopular = !_sortByPopular),
           ),
 
           IconButton(
             icon: const Icon(Icons.add_photo_alternate_rounded,
                 color: AppColors.mintGreen),
-            tooltip: 'নতুন পোস্ট শেয়ার করুন',
+            tooltip: context.l10n.translate('ig_share_new_post'),
             onPressed: () => _showCreatePostModal(context),
           ),
         ],
@@ -936,7 +960,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           backgroundColor: AppColors.mintGreen,
           foregroundColor: Colors.black,
           elevation: 6,
-          tooltip: 'ক্যামেরা / ছবি যুক্ত করুন',
+          tooltip: context.l10n.translate('ig_add_camera_photo'),
           onPressed: () => _showCreatePostModal(context),
           child: const Icon(Icons.camera_alt_rounded, size: 28),
         ),
@@ -1144,7 +1168,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                         padding:
                                             const EdgeInsets.only(right: 6),
                                         child: ChoiceChip(
-                                          label: const Text('সব সেভ করা'),
+                                          label: Text(context.l10n
+                                              .translate('ig_all_saved')),
                                           selected:
                                               _selectedBookmarkCollection ==
                                                   null,
@@ -1249,7 +1274,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                       return Center(
                                         child: TextButton(
                                           onPressed: _loadMorePosts,
-                                          child: const Text('আরও পোস্ট দেখুন'),
+                                          child: Text(context.l10n
+                                              .translate('ig_more_posts')),
                                         ),
                                       );
                                     }
@@ -1491,15 +1517,15 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     ),
                   ),
                 ),
-                const Positioned(
+                Positioned(
                   bottom: 8,
                   left: 8,
                   right: 8,
                   child: Text(
-                    'আপনার স্টোরি',
+                    context.l10n.translate('ig_your_story'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11.5,
                       fontWeight: FontWeight.bold,
@@ -1560,11 +1586,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         color: const Color(0xFF242526),
                         padding:
                             const EdgeInsets.only(top: 18, left: 4, right: 4),
-                        child: const Text(
-                          'স্টোরি তৈরি করুন',
+                        child: Text(
+                          context.l10n.translate('ig_create_story'),
                           textAlign: TextAlign.center,
                           maxLines: 2,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -1835,7 +1861,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         .firstWhere((option) => option.id == _selectedMediaFilter)
         .label;
     if (_tourDays.isEmpty) return media;
-    var day = 'সব দিন';
+    var day = context.l10n.translate('ig_all_days');
     for (final d in _tourDays) {
       if (d.id == _selectedDayFilter) day = d.label;
     }
@@ -1878,9 +1904,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             const Icon(Icons.cloud_off_rounded,
                 size: 48, color: Colors.white54),
             const SizedBox(height: 12),
-            const Text(
-              'পোস্টগুলো লোড করা যায়নি',
-              style: TextStyle(color: Colors.white70, fontSize: 16),
+            Text(
+              context.l10n.translate('ig_posts_load_failed'),
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
             ),
             const SizedBox(height: 12),
             FilledButton.tonal(
@@ -1893,7 +1919,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 );
                 _postsStream = _feed.stream;
               }),
-              child: const Text('পুনরায় চেষ্টা করুন'),
+              child: Text(context.l10n.translate('ig_retry')),
             ),
           ],
         ),
@@ -1915,10 +1941,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   const Icon(Icons.filter_alt_off_outlined,
                       size: 54, color: Colors.white54),
                   const SizedBox(height: 16),
-                  const Text(
-                    'এই ফিল্টারে কোনো পোস্ট নেই',
+                  Text(
+                    context.l10n.translate('ig_no_posts_filter'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.white,
                         fontSize: 17,
                         fontWeight: FontWeight.bold),
@@ -1927,7 +1953,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     const SizedBox(height: 16),
                     FilledButton.tonal(
                       onPressed: _loadMorePosts,
-                      child: const Text('আরও পোস্ট দেখুন'),
+                      child: Text(context.l10n.translate('ig_more_posts')),
                     ),
                   ],
                 ],
@@ -1946,26 +1972,26 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             const Icon(Icons.photo_library_outlined,
                 size: 54, color: Colors.white54),
             const SizedBox(height: 16),
-            const Text(
-              'এখনও কোনো পোস্ট নেই',
-              style: TextStyle(
+            Text(
+              context.l10n.translate('ig_no_posts'),
+              style: const TextStyle(
                   color: Colors.white,
                   fontSize: 17,
                   fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'ট্যুরের প্রথম ছবিটি আপনিই সবার সাথে শেয়ার করুন!',
+            Text(
+              context.l10n.translate('ig_share_first_photo'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 13),
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
             ),
             const SizedBox(height: 20),
             FilledButton.icon(
               style:
                   FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
               icon: const Icon(Icons.add_a_photo, color: Colors.black),
-              label: const Text('পোস্ট তৈরি করুন',
-                  style: TextStyle(
+              label: Text(context.l10n.translate('ig_create_post'),
+                  style: const TextStyle(
                       color: Colors.black, fontWeight: FontWeight.bold)),
               onPressed: () => _showCreatePostModal(context),
             ),
