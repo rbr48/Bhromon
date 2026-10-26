@@ -43,18 +43,19 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return AlertDialog(
-      backgroundColor: const Color(0xFF1E1E2E),
+      backgroundColor: cs.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.report_problem_outlined,
+          const Icon(Icons.report_problem_outlined,
               color: Colors.redAccent, size: 22),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Expanded(
             child: Text('Report Safety Issue',
                 style: TextStyle(
-                    color: Colors.white,
+                    color: cs.onSurface,
                     fontSize: 17,
                     fontWeight: FontWeight.bold)),
           ),
@@ -65,21 +66,21 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('📍 ${widget.pin.name}',
-              style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
           const SizedBox(height: 14),
-          const Text('Reason:',
+          Text('Reason:',
               style: TextStyle(
-                  color: Colors.white70,
+                  color: cs.onSurface,
                   fontSize: 12,
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             initialValue: _selectedReason,
-            dropdownColor: const Color(0xFF2A2A3E),
-            style: const TextStyle(color: Colors.white, fontSize: 13),
+            dropdownColor: cs.surfaceContainerHigh,
+            style: TextStyle(color: cs.onSurface, fontSize: 13),
             decoration: InputDecoration(
               filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.06),
+              fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none),
@@ -93,9 +94,9 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
                 setState(() => _selectedReason = v ?? _selectedReason),
           ),
           const SizedBox(height: 12),
-          const Text('Additional details (optional):',
+          Text('Additional details (optional):',
               style: TextStyle(
-                  color: Colors.white70,
+                  color: cs.onSurface,
                   fontSize: 12,
                   fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
@@ -103,16 +104,19 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
             controller: _detailCtrl,
             maxLines: 3,
             maxLength: 300,
-            style: const TextStyle(color: Colors.white, fontSize: 12),
+            style: TextStyle(color: cs.onSurface, fontSize: 12),
             decoration: InputDecoration(
               hintText: 'Describe the safety issue...',
-              hintStyle: const TextStyle(color: Colors.white54, fontSize: 12),
+              hintStyle: TextStyle(
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                  fontSize: 12),
               filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.06),
+              fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none),
-              counterStyle: const TextStyle(color: Colors.white54, fontSize: 9),
+              counterStyle:
+                  TextStyle(color: cs.onSurfaceVariant, fontSize: 9),
               contentPadding: const EdgeInsets.all(12),
             ),
           ),
@@ -121,7 +125,7 @@ class _SafetyReportDialogState extends State<SafetyReportDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          child: Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(

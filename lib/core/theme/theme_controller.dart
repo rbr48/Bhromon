@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 /// The theme the user picked: follow the system, light or dark. Dark stays the
-/// default, because many screens still assume it. The choice is kept on this
-/// device only, in the same box as the language.
+/// default before a preference is loaded. The choice is kept on this device
+/// only, in the same box as the language.
 class ThemeController extends ChangeNotifier {
   ThemeController._();
 
@@ -14,28 +14,59 @@ class ThemeController extends ChangeNotifier {
 
   ThemeMode _mode = ThemeMode.dark;
 
-  ThemeMode get mode => ThemeMode.dark;
+  ThemeMode get mode => _mode;
 
-  /// The stored name for [mode]: always `dark`.
-  static String nameOf(ThemeMode mode) => 'dark';
+  /// The stored name for [mode].
+  static String nameOf(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return 'system';
+      case ThemeMode.light:
+        return 'light';
+      case ThemeMode.dark:
+        return 'dark';
+    }
+  }
 
   /// The mode for a stored name, or null when the name is not one of the three.
-  static ThemeMode? modeFor(String? name) => ThemeMode.dark;
+  static ThemeMode? modeFor(String? name) {
+    switch (name) {
+      case 'system':
+        return ThemeMode.system;
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return null;
+    }
+  }
 
-  /// Reads the saved choice. Bhromon enforces dark theme.
+  /// Reads the saved choice.
   Future<void> load() async {
-    _mode = ThemeMode.dark;
     try {
       final box = await _openBox();
-      await box.put(_key, 'dark');
+      final saved = box.get(_key) as String?;
+      final parsed = modeFor(saved);
+      if (parsed != null) {
+        _mode = parsed;
+        notifyListeners();
+      }
     } catch (e) {
-      debugPrint('[ThemeController] Could not set dark theme: $e');
+      debugPrint('[ThemeController] Could not load theme preference: $e');
     }
   }
 
   Future<void> setMode(ThemeMode mode) async {
-    _mode = ThemeMode.dark;
+    if (_mode == mode) return;
+    _mode = mode;
     notifyListeners();
+    try {
+      final box = await _openBox();
+      await box.put(_key, nameOf(mode));
+    } catch (e) {
+      debugPrint('[ThemeController] Could not save theme preference: $e');
+    }
   }
 
   Future<Box<dynamic>> _openBox() async {
