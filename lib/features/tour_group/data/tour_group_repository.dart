@@ -853,6 +853,12 @@ class TourGroupRepository {
     DateTime? date,
     String? notes,
     List<String>? participantIds,
+    SplitMode splitMode = SplitMode.family,
+    Map<String, int>? splitShares,
+    String? stopId,
+    String? currency,
+    int? originalMinor,
+    double? fxRate,
   }) async {
     final email = _requireEmail();
     final expense = ExpenseItem(
@@ -867,6 +873,12 @@ class TourGroupRepository {
       notes: notes,
       addedByEmail: email,
       participantIds: participantIds,
+      splitMode: splitMode,
+      splitShares: splitShares,
+      stopId: stopId,
+      currency: currency,
+      originalMinor: originalMinor,
+      fxRate: fxRate,
     );
     await _sub(tourId, 'expenses').doc(expense.id).set(expense.toMap());
     return expense.id;
@@ -925,6 +937,56 @@ class TourGroupRepository {
   Future<void> deleteDeposit(String tourId, String depositId) async {
     _requireEmail();
     await _sub(tourId, 'deposits').doc(depositId).delete();
+  }
+
+  /// Settle-up payments, newest first.
+  Stream<List<TransferItem>> watchTransfers(String tourId) {
+    return _sub(tourId, 'transfers').snapshots().map((snapshot) {
+      final items = snapshot.docs
+          .map((d) => TransferItem.fromMap(d.id, d.data()))
+          .toList();
+      items.sort((a, b) => b.date.compareTo(a.date));
+      return items;
+    });
+  }
+
+  /// Records money handed over to settle up. A null [fromId] is the fund
+  /// paying out; a null [toId] is money paid into the fund.
+  Future<void> addTransfer({
+    required String tourId,
+    String? fromId,
+    required String fromName,
+    String? toId,
+    required String toName,
+    required int amountPaisa,
+    DateTime? date,
+    String? notes,
+  }) async {
+    final email = _requireEmail();
+    final t = TransferItem(
+      id: _uuid.v4(),
+      tourId: tourId,
+      fromId: fromId,
+      fromName: fromName,
+      toId: toId,
+      toName: toName,
+      amountPaisa: amountPaisa,
+      date: date ?? DateTime.now(),
+      notes: notes,
+      addedByEmail: email,
+    );
+    await _sub(tourId, 'transfers').doc(t.id).set(t.toMap());
+  }
+
+  Future<void> deleteTransfer(String tourId, String transferId) async {
+    _requireEmail();
+    await _sub(tourId, 'transfers').doc(transferId).delete();
+  }
+
+  /// Admins set the budget and the per-person collection target.
+  Future<void> saveFundBudget(String tourId, FundBudget budget) async {
+    _requireEmail();
+    await _tour(tourId).update({'fundBudget': budget.toMap()});
   }
 
   // ---------------------------------------------------------------------------
@@ -2016,6 +2078,7 @@ class TourGroupRepository {
           .toList(),
       'expenses': await collect('expenses'),
       'deposits': await collect('deposits'),
+      'transfers': await collect('transfers'),
       'notices': await collect('notices'),
       'checklist': await collect('checklist'),
       'checkpoints': await collect('checkpoints'),

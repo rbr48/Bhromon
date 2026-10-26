@@ -25,6 +25,10 @@ class LedgerMemberRow {
   final int sharePaisa;
   final int netPaisa;
 
+  /// Settle-up money this person handed over, and money they were handed.
+  final int transfersOutPaisa;
+  final int transfersInPaisa;
+
   /// Someone who paid or deposited but has since left the tour. They keep
   /// their balance so the books still add up, but they owe no share.
   final bool isFormerMember;
@@ -39,6 +43,8 @@ class LedgerMemberRow {
     required this.sharePaisa,
     required this.netPaisa,
     this.isFormerMember = false,
+    this.transfersOutPaisa = 0,
+    this.transfersInPaisa = 0,
   });
 
   double get depositTaka => depositPaisa / 100.0;
@@ -51,6 +57,10 @@ class LedgerMemberRow {
 class SettlementTransaction {
   final String from;
   final String to;
+
+  /// Member ids (emails) of the two sides; null for the fund.
+  final String? fromId;
+  final String? toId;
   final bool fromFund;
   final bool toFund;
   final int amountPaisa;
@@ -58,6 +68,8 @@ class SettlementTransaction {
   const SettlementTransaction({
     required this.from,
     required this.to,
+    this.fromId,
+    this.toId,
     this.fromFund = false,
     this.toFund = false,
     required this.amountPaisa,
@@ -211,7 +223,7 @@ class TripLedgerEngine {
   /// all balances are cleared. This greedy method is simple and usually close
   /// to the fewest transfers possible, but it is not guaranteed to be minimal.
   static List<SettlementTransaction> settle(
-      List<({String name, int netPaisa, bool fund})> parties) {
+      List<({String name, int netPaisa, bool fund, String? id})> parties) {
     final balanceSum = parties.fold<int>(0, (sum, p) => sum + p.netPaisa);
     if (balanceSum.abs() > 1) {
       throw StateError(
@@ -221,14 +233,14 @@ class TripLedgerEngine {
     final debtors = parties
         .where((p) => p.netPaisa < 0)
         .map((p) => _PartyBalance(
-            name: p.name, amountPaisa: -p.netPaisa, isFund: p.fund))
+            name: p.name, id: p.id, amountPaisa: -p.netPaisa, isFund: p.fund))
         .toList()
       ..sort((a, b) => b.amountPaisa.compareTo(a.amountPaisa));
 
     final creditors = parties
         .where((p) => p.netPaisa > 0)
         .map((p) => _PartyBalance(
-            name: p.name, amountPaisa: p.netPaisa, isFund: p.fund))
+            name: p.name, id: p.id, amountPaisa: p.netPaisa, isFund: p.fund))
         .toList()
       ..sort((a, b) => b.amountPaisa.compareTo(a.amountPaisa));
 
@@ -249,6 +261,8 @@ class TripLedgerEngine {
         SettlementTransaction(
           from: debtors[d].name,
           to: creditors[c].name,
+          fromId: debtors[d].id,
+          toId: creditors[c].id,
           fromFund: debtors[d].isFund,
           toFund: creditors[c].isFund,
           amountPaisa: amount,
@@ -267,6 +281,31 @@ class TripLedgerEngine {
 
   static String _key(String id) => id.trim().toLowerCase();
 
+  /// Each sharer's part of [exp], in paisa, by its [ExpenseItem.splitMode].
+  /// [sharers] are member indexes; [familyWeights] gives each member's family
+  /// size. Parts always add up to the expense, to the paisa.
+  static List<int> splitParts(ExpenseItem exp, List<int> sharers,
+      List<int> familyWeights, List<String> memberKeys) {
+    List<int> by(List<int> weights) => allocate(exp.amountPaisa, weights);
+    final shares = exp.splitShares;
+    switch (exp.splitMode) {
+      case SplitMode.equal:
+        return by(List.filled(sharers.length, 1));
+      case SplitMode.exact:
+      case SplitMode.shares:
+        if (shares == null) break;
+        final weights = [
+          for (final i in sharers) max(0, shares[memberKeys[i]] ?? 0),
+        ];
+        // Amounts or parts for people who have left are shared by the rest
+        // in proportion, so the books still balance.
+        if (weights.fold<int>(0, (a, b) => a + b) > 0) return by(weights);
+      case SplitMode.family:
+        break;
+    }
+    return by([for (final i in sharers) familyWeights[i]]);
+  }
+
   /// Computes the complete multi-member ledger summary.
   ///
   /// Each expense is split only among its [ExpenseItem.participantIds] (or all
@@ -277,12 +316,14 @@ class TripLedgerEngine {
     required List<LedgerMemberInput> members,
     required List<ExpenseItem> expenses,
     List<DepositItem> deposits = const [],
+    List<TransferItem> transfers = const [],
   }) {
     final memberIndex = <String, int>{};
     for (var i = 0; i < members.length; i++) {
       memberIndex.putIfAbsent(_key(members[i].id), () => i);
     }
     final weights = members.map((m) => max(1, m.familyCount)).toList();
+    final memberKeys = [for (final m in members) _key(m.id)];
     final headcount = weights.fold<int>(0, (sum, w) => sum + w);
     final allMemberIdx = List.generate(members.length, (i) => i);
 
@@ -332,19 +373,56 @@ class TripLedgerEngine {
 
       // Pick who shares this expense: the named participants who are still
       // members, or everyone when none are named.
-      var sharers = exp.participantIds == null
+      // Exact and custom splits name their sharers in the split itself.
+      final named = exp.participantIds ??
+          ((exp.splitMode == SplitMode.exact ||
+                      exp.splitMode == SplitMode.shares) &&
+                  exp.splitShares != null
+              ? exp.splitShares!.keys.toList()
+              : null);
+      var sharers = named == null
           ? allMemberIdx
-          : exp.participantIds!
+          : named
               .map((id) => memberIndex[_key(id)])
               .whereType<int>()
               .toSet()
               .toList();
       if (sharers.isEmpty) sharers = allMemberIdx;
       if (sharers.isEmpty) continue; // No members yet, so nothing to share.
+      sharers.sort();
 
-      final parts = allocate(paisa, sharers.map((i) => weights[i]).toList());
+      final parts = splitParts(exp, sharers, weights, memberKeys);
       for (var k = 0; k < sharers.length; k++) {
         sharePaisa[sharers[k]] += parts[k];
+      }
+    }
+
+    // Settle-up payments: handing money over raises your balance, being
+    // handed money lowers it. Payments into the fund add to its balance and
+    // refunds from it reduce it.
+    final outPaisa = <String, int>{};
+    final inPaisa = <String, int>{};
+    var intoFund = 0, outOfFund = 0;
+    for (final t in transfers) {
+      final amount = t.amountPaisa;
+      if (amount <= 0) continue;
+      if (t.fromId == null) {
+        outOfFund += amount;
+      } else {
+        final key = _key(t.fromId!);
+        outPaisa[key] = (outPaisa[key] ?? 0) + amount;
+        if (!memberIndex.containsKey(key)) {
+          extraNames.putIfAbsent(key, () => t.fromName);
+        }
+      }
+      if (t.toId == null) {
+        intoFund += amount;
+      } else {
+        final key = _key(t.toId!);
+        inPaisa[key] = (inPaisa[key] ?? 0) + amount;
+        if (!memberIndex.containsKey(key)) {
+          extraNames.putIfAbsent(key, () => t.toName);
+        }
       }
     }
 
@@ -355,6 +433,7 @@ class TripLedgerEngine {
       final deposit = depositByKey[key] ?? 0;
       final direct = directPaisa[key] ?? 0;
       final contributed = deposit + direct;
+      final out = outPaisa[key] ?? 0, received = inPaisa[key] ?? 0;
       rows.add(
         LedgerMemberRow(
           id: m.id,
@@ -364,7 +443,9 @@ class TripLedgerEngine {
           directPaidPaisa: direct,
           contributedPaisa: contributed,
           sharePaisa: sharePaisa[i],
-          netPaisa: contributed - sharePaisa[i],
+          netPaisa: contributed + out - received - sharePaisa[i],
+          transfersOutPaisa: out,
+          transfersInPaisa: received,
         ),
       );
     }
@@ -372,6 +453,7 @@ class TripLedgerEngine {
     for (final key in extraNames.keys) {
       final deposit = depositByKey[key] ?? 0;
       final direct = directPaisa[key] ?? 0;
+      final out = outPaisa[key] ?? 0, received = inPaisa[key] ?? 0;
       rows.add(
         LedgerMemberRow(
           id: key,
@@ -381,18 +463,22 @@ class TripLedgerEngine {
           directPaidPaisa: direct,
           contributedPaisa: deposit + direct,
           sharePaisa: 0,
-          netPaisa: deposit + direct,
+          netPaisa: deposit + direct + out - received,
           isFormerMember: true,
+          transfersOutPaisa: out,
+          transfersInPaisa: received,
         ),
       );
     }
 
-    final fundBalancePaisa = totalDepositsPaisa - fundPaidPaisa;
+    final fundBalancePaisa =
+        totalDepositsPaisa - fundPaidPaisa + intoFund - outOfFund;
     final netSumPaisa = rows.fold<int>(0, (sum, r) => sum + r.netPaisa);
 
     final parties = [
-      ...rows.map((r) => (name: r.name, netPaisa: r.netPaisa, fund: false)),
-      (name: fundLabel, netPaisa: -netSumPaisa, fund: true),
+      ...rows.map(
+          (r) => (name: r.name, netPaisa: r.netPaisa, fund: false, id: r.id)),
+      (name: fundLabel, netPaisa: -netSumPaisa, fund: true, id: null),
     ];
 
     final settlements = settle(parties);
@@ -419,11 +505,13 @@ class TripLedgerEngine {
 
 class _PartyBalance {
   final String name;
+  final String? id;
   int amountPaisa;
   final bool isFund;
 
   _PartyBalance({
     required this.name,
+    this.id,
     required this.amountPaisa,
     this.isFund = false,
   });
