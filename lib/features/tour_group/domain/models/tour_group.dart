@@ -1,5 +1,7 @@
 // Pure domain models for Tour Group Engine
 
+import 'expense_models.dart';
+import 'itinerary_models.dart';
 import 'date_codec.dart';
 
 /// Used by copyWith to tell "not passed" apart from an explicit null.
@@ -227,6 +229,19 @@ class TourGroup {
   final String? meetingPointMapUrl;
   final DateTime createdAt;
 
+  /// The places the tour visits, in order. Empty for tours made before
+  /// itineraries; use [effectiveStops], which falls back to [destination].
+  final List<TourStop> stops;
+
+  /// How each leg is travelled, keyed "<fromId>><toId>" (see [routeLegKeys]).
+  final Map<String, LegPlan> legPlans;
+
+  /// Whether the route ends back at [originCity].
+  final bool returnHome;
+
+  /// The fund's budget and collection target.
+  final FundBudget fundBudget;
+
   const TourGroup({
     required this.id,
     required this.name,
@@ -245,7 +260,50 @@ class TourGroup {
     this.meetingPointNote,
     this.meetingPointMapUrl,
     required this.createdAt,
+    this.stops = const [],
+    this.legPlans = const {},
+    this.returnHome = true,
+    this.fundBudget = const FundBudget(),
   });
+
+  /// The id the origin city has in leg keys.
+  static const String originId = 'origin';
+
+  /// The itinerary, or one stop at [destination] covering the whole tour for
+  /// tours made before itineraries.
+  List<TourStop> get effectiveStops => stops.isNotEmpty
+      ? stops
+      : [
+          TourStop(
+            id: 'main',
+            name: destination,
+            kind: tourType,
+            arrive: startDate,
+            leave: endDate,
+          ),
+        ];
+
+  /// "Cox's Bazar → Saint Martin's → Bandarban".
+  String get destinationSummary =>
+      effectiveStops.map((s) => s.name).join(' → ');
+
+  /// The stop the group is at on [day], or null between stops.
+  TourStop? stopOn(DateTime day) {
+    for (final s in effectiveStops) {
+      if (s.covers(day)) return s;
+    }
+    return null;
+  }
+
+  /// The legs in order: origin to the first stop, stop to stop, and back to
+  /// the origin when [returnHome] is set.
+  List<String> get routeLegKeys {
+    final ids = [originId, ...effectiveStops.map((s) => s.id)];
+    if (returnHome) ids.add(originId);
+    return [
+      for (var i = 0; i + 1 < ids.length; i++) '${ids[i]}>${ids[i + 1]}',
+    ];
+  }
 
   /// Calendar days the tour covers, counting the start and end dates whatever
   /// time of day they were picked at.
@@ -320,8 +378,11 @@ class TourGroup {
     return '';
   }
 
-  List<String> get recommendedSpots {
-    final dest = destination.toLowerCase();
+  List<String> get recommendedSpots => recommendedSpotsFor(destination);
+
+  /// Well-known spots for a destination name, or generic ones.
+  static List<String> recommendedSpotsFor(String name) {
+    final dest = name.toLowerCase();
     if (dest.contains('cox') || dest.contains('কক্সবাজার')) {
       return const [
         'লাবণী বিচ (Laboni Point)',
@@ -411,9 +472,11 @@ class TourGroup {
         list.add(s.trim());
       }
     }
-    for (final s in recommendedSpots) {
-      if (!list.contains(s)) {
-        list.add(s);
+    // Spots for every stop on the itinerary, not just the first destination.
+    final names = stops.isEmpty ? [destination] : stops.map((s) => s.name);
+    for (final name in names) {
+      for (final s in recommendedSpotsFor(name)) {
+        if (!list.contains(s)) list.add(s);
       }
     }
     return list;
@@ -437,6 +500,10 @@ class TourGroup {
     Object? meetingPointNote = _keep,
     Object? meetingPointMapUrl = _keep,
     DateTime? createdAt,
+    List<TourStop>? stops,
+    Map<String, LegPlan>? legPlans,
+    bool? returnHome,
+    FundBudget? fundBudget,
   }) {
     return TourGroup(
       id: id ?? this.id,
@@ -463,6 +530,10 @@ class TourGroup {
           ? this.meetingPointMapUrl
           : meetingPointMapUrl as String?,
       createdAt: createdAt ?? this.createdAt,
+      stops: stops ?? this.stops,
+      legPlans: legPlans ?? this.legPlans,
+      returnHome: returnHome ?? this.returnHome,
+      fundBudget: fundBudget ?? this.fundBudget,
     );
   }
 
@@ -482,6 +553,10 @@ class TourGroup {
       'modules': modules.toMap(),
       'customSpots': customSpots,
       'createdAt': writeDate(createdAt),
+      'stops': [for (final st in stops) st.toMap()],
+      'legPlans': {for (final e in legPlans.entries) e.key: e.value.toMap()},
+      'returnHome': returnHome,
+      if (!fundBudget.isEmpty) 'fundBudget': fundBudget.toMap(),
       'schemaVersion': 4,
     };
   }
@@ -516,6 +591,10 @@ class TourGroup {
       meetingPointMapUrl: map['meetingPointMapUrl'] as String? ??
           legacyMeeting?['mapUrl'] as String?,
       createdAt: createdAt,
+      stops: readStops(map['stops']),
+      legPlans: readLegPlans(map['legPlans']),
+      returnHome: map['returnHome'] as bool? ?? true,
+      fundBudget: FundBudget.fromMap(map['fundBudget']),
     );
   }
 }

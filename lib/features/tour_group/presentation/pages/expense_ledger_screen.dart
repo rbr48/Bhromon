@@ -1,24 +1,28 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/expense_models.dart';
+import '../../domain/models/itinerary_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/fund_analytics.dart';
 import '../../domain/services/trip_ledger_engine.dart';
-import '../../../../core/theme/colors.dart';
+import '../widgets/fund/expense_editor.dart';
+import '../widgets/fund/fund_sheets.dart';
 
-const List<String> _expenseCategories = [
-  'Food',
-  'Transport',
-  'Hotel',
-  'Tickets',
-  'Others',
-];
+const _bg = Color(0xFF0F1A1C);
+const _card = Color(0xFF142428);
+const _fundBlue = Color(0xFF38BDF8);
 
+/// The tour fund: what was collected and spent, against the budget, who owes
+/// whom, and the record of payments that settled it.
 class ExpenseLedgerScreen extends StatefulWidget {
   final String tourId;
 
@@ -31,470 +35,1478 @@ class ExpenseLedgerScreen extends StatefulWidget {
 class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     with SingleTickerProviderStateMixin {
   final TourGroupRepository _repository = TourGroupRepository();
-  late final TabController _tabController =
-      TabController(length: 4, vsync: this);
+  late final TabController _tabs = TabController(length: 5, vsync: this);
+  final List<StreamSubscription<Object?>> _subs = [];
 
-  // Streams are created once; the screen rebuilds them only when data changes.
-  late final Stream<List<TourMember>> _members =
-      _repository.watchMembers(widget.tourId);
-  late final Stream<List<DepositItem>> _deposits =
-      _repository.watchDeposits(widget.tourId);
-  late final Stream<List<ExpenseItem>> _expenses =
-      _repository.watchExpenses(widget.tourId);
-
-  TourGroup? _tourGroup;
-  StreamSubscription<TourGroup?>? _groupSub;
+  TourGroup? _group;
   TourRole? _myRole;
-  List<TourMember> _latestMembers = const [];
-  LedgerSummary? _latestSummary;
-  List<ExpenseItem> _latestExpenses = const [];
+  List<TourMember> _members = const [];
+  List<ExpenseItem> _expenses = const [];
+  List<DepositItem> _deposits = const [];
+  List<TransferItem> _transfers = const [];
+  bool _loaded = false;
+
+  // Expense list filters.
+  final _search = TextEditingController();
+  String? _catFilter;
+  String? _stopFilter;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
+  String get _me => _repository.currentEmail;
 
   @override
   void initState() {
     super.initState();
-    _loadContext();
-    _watchGroup();
+    _repository.myRole(widget.tourId).then((r) {
+      if (mounted) setState(() => _myRole = r);
+    });
+    void on<T>(Stream<T> s, void Function(T) apply) {
+      _subs.add(s.listen((v) {
+        if (mounted) setState(() => apply(v));
+      }, onError: (Object _) {}));
+    }
+
+    on(_repository.watchGroup(widget.tourId), (g) => _group = g);
+    on(_repository.watchMembers(widget.tourId), (m) => _members = m);
+    on(_repository.watchDeposits(widget.tourId), (d) => _deposits = d);
+    on(_repository.watchTransfers(widget.tourId), (t) => _transfers = t);
+    on(_repository.watchExpenses(widget.tourId), (e) {
+      _expenses = e;
+      _loaded = true;
+    });
   }
 
   @override
   void dispose() {
-    _groupSub?.cancel();
-    _tabController.dispose();
+    for (final s in _subs) {
+      s.cancel();
+    }
+    _tabs.dispose();
+    _search.dispose();
     super.dispose();
   }
 
-  Future<void> _loadContext() async {
-    final role = await _repository.myRole(widget.tourId);
-    if (mounted) setState(() => _myRole = role);
-  }
-
-  void _watchGroup() {
-    _groupSub?.cancel();
-    _groupSub = _repository.watchGroup(widget.tourId).listen((g) {
-      if (mounted) setState(() => _tourGroup = g);
-    });
-  }
-
-  void _showError(String text) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text), backgroundColor: Colors.redAccent),
-    );
-  }
-
-  bool _canEdit(String addedByEmail) =>
-      _isAdmin || addedByEmail == _repository.currentEmail;
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
 
   String _money(int paisa) => TripLedgerEngine.formatTaka(paisa);
 
+  List<LedgerMemberInput> get _inputs => [
+        for (final m in _members)
+          LedgerMemberInput(
+              id: m.email, name: m.displayName, familyCount: m.familyCount),
+      ];
+
+  int get _headcount =>
+      _members.fold<int>(0, (n, m) => n + m.familyCount.clamp(1, 20));
+
+  bool _canEdit(String addedByEmail) =>
+      _isAdmin || addedByEmail.toLowerCase() == _me;
+
+  String _party(AppLocalizations l10n, String name, bool fund) =>
+      fund ? l10n.translate('fund_the_fund') : name;
+
+  String? _stopName(String? id) {
+    if (id == null) return null;
+    for (final s in _group?.effectiveStops ?? const <TourStop>[]) {
+      if (s.id == id) return s.name;
+    }
+    return null;
+  }
+
+  void _toast(String text, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(text),
+        backgroundColor: error ? Colors.redAccent : AppColors.darkGreen));
+  }
+
+  Future<void> _run(Future<void> Function() action, String failKey) async {
+    try {
+      await action();
+    } catch (e) {
+      if (mounted) {
+        _toast('${context.l10n.translate(failKey)} $e', error: true);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final summary = TripLedgerEngine.computeLedger(
+      members: _inputs,
+      expenses: _expenses,
+      deposits: _deposits,
+      transfers: _transfers,
+    );
+    final group = _group;
+    final report = group == null
+        ? null
+        : FundReport.build(
+            group: group,
+            members: _inputs,
+            expenses: _expenses,
+            deposits: _deposits,
+            transfers: _transfers,
+          );
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1A1C),
+      backgroundColor: _bg,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xFF142428),
+        backgroundColor: _card,
         foregroundColor: Colors.white,
-        title: const Text('Tour Fund & Ledger',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(l10n.translate('fund_title'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
+          if (_isAdmin && group != null)
+            IconButton(
+              icon: const Icon(Icons.savings_outlined),
+              tooltip: l10n.translate('fund_budget_title'),
+              onPressed: () => _editBudget(group),
+            ),
           IconButton(
             icon: const Icon(Icons.table_view_rounded),
-            tooltip: 'Excel CSV অডিট এক্সপোর্ট',
-            onPressed: _exportLedgerCsv,
+            tooltip: l10n.translate('fund_export_csv'),
+            onPressed: () => _exportCsv(summary, report),
           ),
         ],
         bottom: TabBar(
-          controller: _tabController,
+          controller: _tabs,
           indicatorColor: AppColors.mintGreen,
           labelColor: AppColors.mintGreen,
           unselectedLabelColor: Colors.white60,
           isScrollable: true,
-          tabs: const [
-            Tab(text: 'Settlements'),
-            Tab(text: 'Expenses'),
-            Tab(text: 'Deposits'),
-            Tab(text: 'Balances'),
+          tabAlignment: TabAlignment.start,
+          tabs: [
+            Tab(text: l10n.translate('fund_tab_overview')),
+            Tab(text: l10n.translate('fund_tab_expenses')),
+            Tab(
+                text: summary.settlements.isEmpty
+                    ? l10n.translate('fund_tab_settle')
+                    : '${l10n.translate('fund_tab_settle')} '
+                        '(${l10n.number(summary.settlements.length)})'),
+            Tab(text: l10n.translate('fund_tab_people')),
+            Tab(text: l10n.translate('fund_tab_deposits')),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.midGreen,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Entry'),
-        onPressed: () => _showAddEntryMenu(context),
+        backgroundColor: AppColors.mintGreen,
+        foregroundColor: AppColors.darkGreen,
+        icon: const Icon(Icons.add_rounded),
+        label: Text(l10n.translate('fund_add')),
+        onPressed: () => _addMenu(group),
       ),
-      body: StreamBuilder<List<TourMember>>(
-        stream: _members,
-        builder: (context, membersSnap) {
-          if (membersSnap.hasData) _latestMembers = membersSnap.data!;
-          return StreamBuilder<List<DepositItem>>(
-            stream: _deposits,
-            builder: (context, depositsSnap) {
-              final deposits = depositsSnap.data ?? const <DepositItem>[];
-              return StreamBuilder<List<ExpenseItem>>(
-                stream: _expenses,
-                builder: (context, expensesSnap) {
-                  final expenses = expensesSnap.data ?? const <ExpenseItem>[];
-                  final members = _latestMembers;
-                  final summary = TripLedgerEngine.computeLedger(
-                    members: [
-                      for (final m in members)
-                        LedgerMemberInput(
-                          id: m.email,
-                          name: m.displayName,
-                          familyCount: m.familyCount,
-                        ),
-                    ],
-                    expenses: expenses,
-                    deposits: deposits,
-                  );
-                  _latestSummary = summary;
-                  _latestExpenses = expenses;
+      body: !_loaded
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.mintGreen))
+          : TabBarView(
+              controller: _tabs,
+              children: [
+                _overview(l10n, summary, report),
+                _expensesTab(l10n),
+                _settleTab(l10n, summary),
+                _peopleTab(l10n, summary, report),
+                _depositsTab(l10n),
+              ],
+            ),
+    );
+  }
 
-                  return Column(
-                    children: [
-                      _buildSummaryHeader(summary),
-                      Expanded(
-                        child: TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildSettlementsTab(summary),
-                            _buildExpensesTab(expenses),
-                            _buildDepositsTab(deposits),
-                            _buildBalancesTab(summary),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-          );
-        },
+  Widget _box({required Widget child, EdgeInsets? padding}) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: padding ?? const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white10),
+        ),
+        child: child,
+      );
+
+  Widget _heading(String text, {Widget? trailing}) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(children: [
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15)),
+          ),
+          if (trailing != null) trailing,
+        ]),
+      );
+
+  Widget _empty(String text) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54)),
+        ),
+      );
+
+  Widget _stat(String label, String value, Color color) => Expanded(
+        child: Column(children: [
+          FittedBox(
+            child: Text(value,
+                style: TextStyle(
+                    color: color, fontWeight: FontWeight.bold, fontSize: 17)),
+          ),
+          const SizedBox(height: 2),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 11)),
+        ]),
+      );
+
+  /// A labelled bar for a share of [max].
+  Widget _bar({
+    required String label,
+    required int value,
+    required int max,
+    Color color = AppColors.mintGreen,
+    String? trailing,
+    IconData? icon,
+  }) {
+    final ratio = max <= 0 ? 0.0 : (value / max).clamp(0.0, 1.0);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            if (icon != null) ...[
+              Icon(icon, size: 16, color: Colors.white70),
+              const SizedBox(width: 6),
+            ],
+            Expanded(
+                child: Text(label,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontSize: 13))),
+            Text(trailing ?? _money(value),
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ]),
+          const SizedBox(height: 5),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 7,
+              color: color,
+              backgroundColor: Colors.white10,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSummaryHeader(LedgerSummary summary) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 14, 14, 6),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF142428),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _headerStat(
-                  'Fund Balance',
+  // ---------------------------------------------------------------------------
+  // Overview
+  // ---------------------------------------------------------------------------
+
+  Widget _overview(
+      AppLocalizations l10n, LedgerSummary summary, FundReport? report) {
+    final mine =
+        summary.rows.where((r) => r.id.toLowerCase() == _me).firstOrNull;
+    final myDue =
+        report?.collection.where((c) => c.id.toLowerCase() == _me).firstOrNull;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 96),
+      children: [
+        _box(
+          child: Column(children: [
+            Row(children: [
+              _stat(
+                  l10n.translate('fund_balance'),
                   _money(summary.fundBalancePaisa),
                   summary.fundBalancePaisa >= 0
                       ? AppColors.mintGreen
                       : Colors.redAccent),
-              _headerStat('Total Spent', _money(summary.totalExpensePaisa),
-                  Colors.white),
-              _headerStat('Total Deposits', _money(summary.totalDepositsPaisa),
-                  AppColors.gold),
+              _stat(l10n.translate('fund_spent'),
+                  _money(summary.totalExpensePaisa), Colors.white),
+              _stat(l10n.translate('fund_collected'),
+                  _money(summary.totalDepositsPaisa), AppColors.gold),
+            ]),
+            const SizedBox(height: 10),
+            Text(
+              l10n.translate('fund_per_head_line', args: {
+                'people': l10n.number(summary.headcount),
+                'amount': _money(summary.perHeadCostPaisa),
+              }),
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            if (summary.fundBalancePaisa < 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(l10n.translate('fund_negative_warning'),
+                    textAlign: TextAlign.center,
+                    style:
+                        const TextStyle(color: Colors.redAccent, fontSize: 12)),
+              ),
+          ]),
+        ),
+        if (mine != null) _myCard(l10n, mine, myDue),
+        if (report != null) ..._budgetSection(l10n, report),
+        if (report != null && report.collection.isNotEmpty)
+          _collectionCard(l10n, report),
+        if (report != null) ..._spendSections(l10n, report, summary),
+        if (_expenses.isEmpty) _empty(l10n.translate('fund_empty_overview')),
+      ],
+    );
+  }
+
+  Widget _myCard(
+      AppLocalizations l10n, LedgerMemberRow mine, CollectionRow? due) {
+    final settled = mine.netPaisa == 0;
+    final gets = mine.netPaisa > 0;
+    final color = settled
+        ? Colors.white70
+        : (gets ? AppColors.mintGreen : AppColors.gold);
+    return _box(
+      child: Row(children: [
+        CircleAvatar(
+          backgroundColor: color.withValues(alpha: 0.18),
+          child: Icon(
+              settled
+                  ? Icons.check_rounded
+                  : (gets
+                      ? Icons.call_received_rounded
+                      : Icons.call_made_rounded),
+              color: color),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                settled
+                    ? l10n.translate('fund_me_settled')
+                    : l10n.translate(gets ? 'fund_me_gets' : 'fund_me_owes',
+                        args: {'amount': _money(mine.netPaisa.abs())}),
+                style: TextStyle(
+                    color: color, fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                l10n.translate('fund_me_detail', args: {
+                  'paid': _money(mine.contributedPaisa),
+                  'share': _money(mine.sharePaisa),
+                }),
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              ),
+              if (due != null && due.duePaisa > 0)
+                Text(
+                  l10n.translate('fund_me_due',
+                      args: {'amount': _money(due.duePaisa)}),
+                  style: const TextStyle(color: AppColors.gold, fontSize: 11),
+                ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            'সদস্য: ${summary.headcount} জন • মাথাপিছু খরচ: ${_money(summary.perHeadCostPaisa)}',
-            style: const TextStyle(color: Colors.white54, fontSize: 11),
+        ),
+        if (!settled)
+          TextButton(
+            onPressed: () => _tabs.animateTo(2),
+            child: Text(l10n.translate('fund_tab_settle'),
+                style: const TextStyle(color: AppColors.mintGreen)),
           ),
+      ]),
+    );
+  }
+
+  List<Widget> _budgetSection(AppLocalizations l10n, FundReport r) {
+    final hasBudget = r.budgetPaisa > 0;
+    final group = _group;
+    if (!hasBudget && r.lines.isEmpty) {
+      if (!_isAdmin || group == null) return const [];
+      return [
+        _box(
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading:
+                const Icon(Icons.savings_outlined, color: AppColors.mintGreen),
+            title: Text(l10n.translate('fund_budget_cta'),
+                style: const TextStyle(color: Colors.white)),
+            subtitle: Text(l10n.translate('fund_budget_cta_help'),
+                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            onTap: () => _editBudget(group),
+          ),
+        ),
+      ];
+    }
+
+    final over = r.isOverBudget;
+    final projectedOver = hasBudget && r.projectedPaisa > r.budgetPaisa;
+    return [
+      _box(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _heading(
+              l10n.translate('fund_budget_vs_spent'),
+              trailing: _isAdmin && group != null
+                  ? IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.edit_rounded,
+                          size: 18, color: Colors.white54),
+                      onPressed: () => _editBudget(group),
+                    )
+                  : null,
+            ),
+            if (hasBudget) ...[
+              _bar(
+                label: l10n.translate('fund_budget_total'),
+                value: r.spentPaisa,
+                max: r.budgetPaisa,
+                color: over ? Colors.redAccent : AppColors.mintGreen,
+                trailing: '${_money(r.spentPaisa)} / ${_money(r.budgetPaisa)}',
+              ),
+              Text(
+                over
+                    ? l10n.translate('fund_over_by',
+                        args: {'amount': _money(-r.leftPaisa)})
+                    : l10n.translate('fund_left',
+                        args: {'amount': _money(r.leftPaisa)}),
+                style: TextStyle(
+                    color: over ? Colors.redAccent : Colors.white70,
+                    fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (r.daysElapsed > 0) ...[
+              Row(children: [
+                const Icon(Icons.speed_rounded, size: 18, color: _fundBlue),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.translate('fund_burn', args: {
+                      'perDay': _money(r.perDayPaisa),
+                      'day': l10n.number(r.daysElapsed),
+                      'days': l10n.number(r.totalDays),
+                    }),
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+              ]),
+              if (r.daysElapsed < r.totalDays)
+                Padding(
+                  padding: const EdgeInsets.only(left: 26, top: 2, bottom: 8),
+                  child: Text(
+                    l10n.translate(
+                        projectedOver
+                            ? 'fund_projection_over'
+                            : 'fund_projection',
+                        args: {
+                          'amount': _money(r.projectedPaisa),
+                          'over': _money(r.projectedPaisa - r.budgetPaisa),
+                        }),
+                    style: TextStyle(
+                        color: projectedOver ? AppColors.gold : Colors.white54,
+                        fontSize: 12),
+                  ),
+                ),
+            ],
+            for (final line in r.lines)
+              _bar(
+                icon: fundCategoryIcon(line.category),
+                label: fundCategoryLabel(l10n, line.category),
+                value: line.spentPaisa,
+                max: line.budgetPaisa > 0
+                    ? line.budgetPaisa
+                    : (r.spentPaisa == 0 ? 1 : r.spentPaisa),
+                color: line.isOver
+                    ? Colors.redAccent
+                    : (line.budgetPaisa > 0 && line.ratio > 0.85
+                        ? AppColors.gold
+                        : AppColors.mintGreen),
+                trailing: line.budgetPaisa > 0
+                    ? '${_money(line.spentPaisa)} / ${_money(line.budgetPaisa)}'
+                    : _money(line.spentPaisa),
+              ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  Widget _collectionCard(AppLocalizations l10n, FundReport r) {
+    final dues = r.collection.where((c) => c.duePaisa > 0).toList();
+    return _box(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _heading(
+            l10n.translate('fund_collection'),
+            trailing: dues.isEmpty
+                ? null
+                : TextButton.icon(
+                    onPressed: () => _shareReminder(r),
+                    icon: const Icon(Icons.campaign_rounded,
+                        size: 18, color: AppColors.gold),
+                    label: Text(l10n.translate('fund_remind'),
+                        style: const TextStyle(color: AppColors.gold)),
+                  ),
+          ),
+          _bar(
+            label: l10n.translate('fund_collected'),
+            value: r.collectedPaisa.clamp(0, r.collectionTargetPaisa),
+            max: r.collectionTargetPaisa,
+            color: AppColors.gold,
+            trailing:
+                '${_money(r.collectedPaisa)} / ${_money(r.collectionTargetPaisa)}',
+          ),
+          if (dues.isEmpty)
+            Text(l10n.translate('fund_collection_done'),
+                style: const TextStyle(color: AppColors.mintGreen))
+          else
+            for (final c in dues)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title:
+                    Text(c.name, style: const TextStyle(color: Colors.white)),
+                subtitle: Text(
+                  l10n.translate('fund_paid_of', args: {
+                    'paid': _money(c.paidPaisa),
+                    'target': _money(c.targetPaisa),
+                  }),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+                trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text(_money(c.duePaisa),
+                      style: const TextStyle(
+                          color: AppColors.gold, fontWeight: FontWeight.bold)),
+                  if (_isAdmin || c.id.toLowerCase() == _me)
+                    IconButton(
+                      tooltip: l10n.translate('fund_add_deposit'),
+                      icon: const Icon(Icons.add_card_rounded,
+                          color: AppColors.mintGreen, size: 20),
+                      onPressed: () =>
+                          _deposit(memberId: c.id, suggestedPaisa: c.duePaisa),
+                    ),
+                ]),
+              ),
         ],
       ),
     );
   }
 
-  Widget _headerStat(String label, String value, Color color) {
-    return Column(
+  List<Widget> _spendSections(
+      AppLocalizations l10n, FundReport r, LedgerSummary summary) {
+    final stops = _group?.effectiveStops ?? const <TourStop>[];
+    final maxDay = r.byDay.fold<int>(0, (m, d) => d.paisa > m ? d.paisa : m);
+    final start = _group?.startDate;
+    return [
+      if (stops.length > 1 && r.byStop.isNotEmpty)
+        _box(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _heading(l10n.translate('fund_by_destination')),
+              for (final s in stops)
+                if ((r.byStop[s.id] ?? 0) > 0)
+                  _bar(
+                    icon: Icons.place_rounded,
+                    label: s.name,
+                    value: r.byStop[s.id]!,
+                    max: r.spentPaisa,
+                    color: _fundBlue,
+                    trailing: s.nights > 0
+                        ? '${_money(r.byStop[s.id]!)} · '
+                            '${l10n.translate('fund_per_night', args: {
+                                'amount': _money(r.byStop[s.id]! ~/ s.nights)
+                              })}'
+                        : null,
+                  ),
+              if ((r.byStop[null] ?? 0) > 0)
+                _bar(
+                  icon: Icons.route_rounded,
+                  label: l10n.translate('fund_where_none'),
+                  value: r.byStop[null]!,
+                  max: r.spentPaisa,
+                  color: Colors.white38,
+                ),
+            ],
+          ),
+        ),
+      if (r.byDay.length > 1)
+        _box(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _heading(l10n.translate('fund_by_day')),
+              SizedBox(
+                height: 130,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    for (final d in r.byDay.length > 14
+                        ? r.byDay.sublist(r.byDay.length - 14)
+                        : r.byDay)
+                      Expanded(
+                        child: Tooltip(
+                          message:
+                              '${DateFormat('d MMM').format(d.day)}: ${_money(d.paisa)}',
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Container(
+                                height: maxDay == 0 ? 0 : 96 * d.paisa / maxDay,
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 3),
+                                decoration: BoxDecoration(
+                                  color: d.paisa == maxDay
+                                      ? AppColors.gold
+                                      : AppColors.mintGreen,
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(4)),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                start != null &&
+                                        !d.day.isBefore(DateTime(
+                                            start.year, start.month, start.day))
+                                    ? l10n.translate('fund_day_short', args: {
+                                        'n': l10n.number(d.day
+                                                .difference(DateTime(start.year,
+                                                    start.month, start.day))
+                                                .inDays +
+                                            1)
+                                      })
+                                    : DateFormat('d/M').format(d.day),
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 9),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      if (r.topExpenses.isNotEmpty)
+        _box(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _heading(l10n.translate('fund_top_expenses')),
+              for (final e in r.topExpenses)
+                _bar(
+                  icon: fundCategoryIcon(e.category),
+                  label: e.title,
+                  value: e.amountPaisa,
+                  max: r.topExpenses.first.amountPaisa,
+                  color: AppColors.gold,
+                ),
+            ],
+          ),
+        ),
+    ];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Expenses
+  // ---------------------------------------------------------------------------
+
+  Widget _expensesTab(AppLocalizations l10n) {
+    if (_expenses.isEmpty) return _empty(l10n.translate('fund_empty_expenses'));
+    final q = _search.text.trim().toLowerCase();
+    final stops = _group?.effectiveStops ?? const <TourStop>[];
+    final filtered = _expenses.where((e) {
+      if (_catFilter != null && e.category != _catFilter) return false;
+      if (_stopFilter != null &&
+          (e.stopId ?? _group?.stopOn(e.date)?.id) != _stopFilter) {
+        return false;
+      }
+      if (q.isEmpty) return true;
+      return e.title.toLowerCase().contains(q) ||
+          (e.notes ?? '').toLowerCase().contains(q) ||
+          (e.paidByName ?? '').toLowerCase().contains(q);
+    }).toList();
+    final total = filtered.fold<int>(0, (n, e) => n + e.amountPaisa);
+    final categories = {for (final e in _expenses) e.category}.toList()
+      ..sort((a, b) {
+        final ia = kExpenseCategories.indexOf(a);
+        final ib = kExpenseCategories.indexOf(b);
+        return (ia < 0 ? 99 : ia).compareTo(ib < 0 ? 99 : ib);
+      });
+
+    // Grouped by day, newest first.
+    final days = <DateTime, List<ExpenseItem>>{};
+    for (final e in filtered) {
+      days
+          .putIfAbsent(
+              DateTime(e.date.year, e.date.month, e.date.day), () => [])
+          .add(e);
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 96),
       children: [
-        Text(label,
-            style: const TextStyle(color: Colors.white54, fontSize: 11)),
-        const SizedBox(height: 4),
-        Text(value,
-            style: TextStyle(
-                color: color, fontWeight: FontWeight.bold, fontSize: 15)),
+        TextField(
+          controller: _search,
+          onChanged: (_) => setState(() {}),
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            isDense: true,
+            prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54),
+            hintText: l10n.translate('fund_search'),
+            hintStyle: const TextStyle(color: Colors.white38),
+            filled: true,
+            fillColor: _card,
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 38,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _filterChip(l10n.translate('fund_all'), _catFilter == null,
+                  () => setState(() => _catFilter = null)),
+              for (final c in categories)
+                _filterChip(fundCategoryLabel(l10n, c), _catFilter == c,
+                    () => setState(() => _catFilter = c)),
+            ],
+          ),
+        ),
+        if (stops.length > 1)
+          SizedBox(
+            height: 38,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _filterChip(
+                    l10n.translate('fund_all_places'),
+                    _stopFilter == null,
+                    () => setState(() => _stopFilter = null)),
+                for (final s in stops)
+                  _filterChip(s.name, _stopFilter == s.id,
+                      () => setState(() => _stopFilter = s.id)),
+              ],
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            l10n.translate('fund_showing', args: {
+              'count': l10n.number(filtered.length),
+              'amount': _money(total),
+            }),
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+        ),
+        for (final day in days.entries) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 6),
+            child: Row(children: [
+              Expanded(
+                child: Text(DateFormat('EEE, d MMM').format(day.key),
+                    style: const TextStyle(
+                        color: AppColors.mintGreen,
+                        fontWeight: FontWeight.bold)),
+              ),
+              Text(_money(day.value.fold<int>(0, (n, e) => n + e.amountPaisa)),
+                  style: const TextStyle(color: Colors.white70)),
+            ]),
+          ),
+          for (final e in day.value) _expenseTile(l10n, e),
+        ],
       ],
     );
   }
 
-  Widget _emptyText(String text) => Center(
-        child: Text(text, style: const TextStyle(color: Colors.white54)),
+  Widget _filterChip(String label, bool selected, VoidCallback onTap) =>
+      Padding(
+        padding: const EdgeInsets.only(right: 6),
+        child: ChoiceChip(
+          label: Text(label, style: const TextStyle(fontSize: 12)),
+          selected: selected,
+          selectedColor: AppColors.mintGreen,
+          backgroundColor: _card,
+          labelStyle:
+              TextStyle(color: selected ? AppColors.darkGreen : Colors.white),
+          onSelected: (_) => onTap(),
+        ),
       );
 
-  Widget _card({required Widget child, VoidCallback? onLongPress}) {
-    return GestureDetector(
-      onLongPress: onLongPress,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF142428),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white10),
+  String _splitLabel(AppLocalizations l10n, ExpenseItem e) {
+    final count =
+        e.splitShares?.length ?? e.participantIds?.length ?? _members.length;
+    return l10n.translate('fund_split_label', args: {
+      'mode': l10n.translate('fund_split_${e.splitMode.name}'),
+      'count': l10n.number(count),
+    });
+  }
+
+  Widget _expenseTile(AppLocalizations l10n, ExpenseItem e) {
+    final stop = _stopName(e.stopId);
+    final fromFund = e.paidById == null;
+    final symbol = kFundCurrencies
+            .where((c) => c.code == e.currency)
+            .map((c) => c.symbol)
+            .firstOrNull ??
+        e.currency;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: ListTile(
+        onTap: () => _expenseDetails(l10n, e),
+        onLongPress: _canEdit(e.addedByEmail) ? () => _expenseActions(e) : null,
+        leading: CircleAvatar(
+          backgroundColor:
+              (fromFund ? _fundBlue : AppColors.gold).withValues(alpha: 0.16),
+          child: Icon(fundCategoryIcon(e.category),
+              color: fromFund ? _fundBlue : AppColors.gold, size: 20),
         ),
-        child: child,
+        title: Text(e.title,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          [
+            fromFund
+                ? l10n.translate('fund_paid_by_fund')
+                : l10n.translate('fund_paid_by',
+                    args: {'name': e.paidByName ?? e.paidById ?? ''}),
+            _splitLabel(l10n, e),
+            if (stop != null) stop,
+          ].join(' · '),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white54, fontSize: 11),
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(_money(e.amountPaisa),
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+            if (e.isForeign)
+              Text(
+                  '$symbol${TripLedgerEngine.formatTaka(e.originalMinor ?? 0).replaceAll('৳', '')}',
+                  style: const TextStyle(color: Colors.white38, fontSize: 10)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSettlementsTab(LedgerSummary summary) {
-    if (summary.settlements.isEmpty) {
-      return _emptyText('সবার হিসাব মেলানো আছে। কোনো লেনদেন দরকার নেই।');
-    }
-    return ListView(
-      padding: const EdgeInsets.all(14),
-      children: [
-        for (final s in summary.settlements)
-          _card(
-            child: Row(
-              children: [
-                const Icon(Icons.swap_horiz_rounded,
-                    color: AppColors.mintGreen),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${s.from} ➔ ${s.to}',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 2),
-                      Text(
-                        s.fromFund
-                            ? 'ফান্ড থেকে ${s.to}-কে ফেরত'
-                            : s.toFund
-                                ? '${s.from} ফান্ডে বাকি অংশ দেবেন'
-                                : 'সরাসরি লেনদেন',
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 11),
-                      ),
-                    ],
-                  ),
+  /// Who pays what for one expense, worked out the same way as the books.
+  void _expenseDetails(AppLocalizations l10n, ExpenseItem e) {
+    final s = TripLedgerEngine.computeLedger(members: _inputs, expenses: [e]);
+    final shares = s.rows.where((r) => r.sharePaisa > 0).toList()
+      ..sort((a, b) => b.sharePaisa.compareTo(a.sharePaisa));
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: _card,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(e.title,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(
+                  '${_money(e.amountPaisa)} · ${fundCategoryLabel(l10n, e.category)} · '
+                  '${DateFormat('d MMM yyyy').format(e.date)}',
+                  style: const TextStyle(color: Colors.white70)),
+              if (e.isForeign)
+                Text(
+                    l10n.translate('fund_fx_line', args: {
+                      'currency': e.currency!,
+                      'amount':
+                          TripLedgerEngine.plainTakaInput(e.originalMinor ?? 0),
+                      'rate': '${e.fxRate}',
+                    }),
+                    style: const TextStyle(color: Colors.white54)),
+              if ((e.notes ?? '').isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(e.notes!,
+                      style: const TextStyle(color: Colors.white70)),
                 ),
-                Text(_money(s.amountPaisa),
+              const SizedBox(height: 12),
+              Text(_splitLabel(l10n, e),
+                  style: const TextStyle(
+                      color: AppColors.mintGreen, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              for (final r in shares)
+                _bar(
+                  label: r.familyCount > 1 && e.splitMode == SplitMode.family
+                      ? '${r.name} ×${l10n.number(r.familyCount)}'
+                      : r.name,
+                  value: r.sharePaisa,
+                  max: e.amountPaisa,
+                ),
+              if (_canEdit(e.addedByEmail))
+                Row(children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _editExpense(e);
+                    },
+                    icon: const Icon(Icons.edit_rounded,
+                        color: AppColors.mintGreen),
+                    label: Text(l10n.translate('fund_edit'),
+                        style: const TextStyle(color: AppColors.mintGreen)),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _confirmDelete(e.title,
+                          () => _repository.deleteExpense(widget.tourId, e.id));
+                    },
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: Colors.redAccent),
+                    label: Text(l10n.translate('fund_delete'),
+                        style: const TextStyle(color: Colors.redAccent)),
+                  ),
+                ]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _expenseActions(ExpenseItem e) => _itemActions(
+        onEdit: () => _editExpense(e),
+        onDuplicate: () => _editExpense(e, true),
+        subject: e.title,
+        delete: () => _repository.deleteExpense(widget.tourId, e.id),
+      );
+
+  // ---------------------------------------------------------------------------
+  // Settle up
+  // ---------------------------------------------------------------------------
+
+  bool _mayRecord(SettlementTransaction s) =>
+      _isAdmin ||
+      s.fromId?.toLowerCase() == _me ||
+      s.toId?.toLowerCase() == _me;
+
+  Widget _settleTab(AppLocalizations l10n, LedgerSummary summary) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 96),
+      children: [
+        _box(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _heading(
+                l10n.translate('fund_settle_plan'),
+                trailing: summary.settlements.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: l10n.translate('fund_share_plan'),
+                        icon: const Icon(Icons.share_rounded,
+                            color: AppColors.mintGreen),
+                        onPressed: () => _sharePlan(summary),
+                      ),
+              ),
+              if (summary.settlements.isEmpty)
+                Row(children: [
+                  const Icon(Icons.verified_rounded,
+                      color: AppColors.mintGreen),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(l10n.translate('fund_all_settled'),
+                        style: const TextStyle(color: Colors.white70)),
+                  ),
+                ])
+              else ...[
+                Text(
+                  l10n.translate('fund_settle_help', args: {
+                    'count': l10n.number(summary.settlements.length),
+                  }),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                for (final s in summary.settlements) _settlementTile(l10n, s),
+              ],
+            ],
+          ),
+        ),
+        _heading(
+          l10n.translate('fund_payments'),
+          trailing: TextButton.icon(
+            onPressed: () => _transfer(),
+            icon: const Icon(Icons.add_rounded, color: AppColors.mintGreen),
+            label: Text(l10n.translate('fund_record_payment'),
+                style: const TextStyle(color: AppColors.mintGreen)),
+          ),
+        ),
+        if (_transfers.isEmpty)
+          Text(l10n.translate('fund_no_payments'),
+              style: const TextStyle(color: Colors.white54, fontSize: 12))
+        else
+          for (final t in _transfers)
+            _box(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: ListTile(
+                onLongPress: _canEdit(t.addedByEmail)
+                    ? () => _confirmDelete('${t.fromName} → ${t.toName}',
+                        () => _repository.deleteTransfer(widget.tourId, t.id))
+                    : null,
+                leading: const Icon(Icons.payments_rounded,
+                    color: AppColors.mintGreen),
+                title: Text(
+                  '${_party(l10n, t.fromName, t.fromId == null)} → '
+                  '${_party(l10n, t.toName, t.toId == null)}',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                subtitle: Text(
+                  [
+                    DateFormat('d MMM, h:mm a').format(t.date),
+                    if ((t.notes ?? '').isNotEmpty) t.notes!,
+                  ].join(' · '),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+                trailing: Text(_money(t.amountPaisa),
                     style: const TextStyle(
                         color: AppColors.gold, fontWeight: FontWeight.bold)),
-              ],
+              ),
             ),
-          ),
       ],
     );
   }
 
-  Widget _buildExpensesTab(List<ExpenseItem> expenses) {
-    if (expenses.isEmpty) return _emptyText('এখনও কোনো খরচ যোগ হয়নি।');
-    final dateFormat = DateFormat('dd MMM yyyy');
-    return ListView(
-      padding: const EdgeInsets.all(14),
-      children: [
-        for (final exp in expenses)
-          _card(
-            onLongPress: _canEdit(exp.addedByEmail)
-                ? () => _showItemActions(
-                      onEdit: () => _showExpenseDialog(existing: exp),
-                      deleteTitle: 'খরচটি মুছবেন?',
-                      subject: exp.title,
-                      delete: () =>
-                          _repository.deleteExpense(widget.tourId, exp.id),
-                    )
-                : null,
-            child: Row(
-              children: [
-                Icon(
-                  exp.paidById == null
-                      ? Icons.account_balance_rounded
-                      : Icons.person_rounded,
-                  color: exp.paidById == null
-                      ? const Color(0xFF38BDF8)
-                      : AppColors.gold,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(exp.title,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${exp.paidById == null ? 'ফান্ড থেকে' : 'দিয়েছেন: ${exp.paidByName ?? exp.paidById}'} • ${dateFormat.format(exp.date)}',
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 11),
-                      ),
-                      if (exp.participantIds != null)
-                        Text('${exp.participantIds!.length} জন ভাগ করছেন',
-                            style: const TextStyle(
-                                color: Colors.white54, fontSize: 10)),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(_money(exp.amountPaisa),
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold)),
-                    Text(exp.category,
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 10)),
-                  ],
-                ),
-              ],
-            ),
+  Widget _settlementTile(AppLocalizations l10n, SettlementTransaction s) {
+    final mineOut = s.fromId?.toLowerCase() == _me;
+    final mineIn = s.toId?.toLowerCase() == _me;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: (mineOut || mineIn)
+            ? AppColors.mintGreen.withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: (mineOut || mineIn)
+                ? AppColors.mintGreen.withValues(alpha: 0.4)
+                : Colors.white10),
+      ),
+      child: Row(children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${_party(l10n, s.from, s.fromFund)} → ${_party(l10n, s.to, s.toFund)}',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                l10n.translate(s.fromFund
+                    ? 'fund_settle_refund'
+                    : s.toFund
+                        ? 'fund_settle_topup'
+                        : 'fund_settle_direct'),
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              ),
+            ],
           ),
-      ],
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(_money(s.amountPaisa),
+                style: const TextStyle(
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15)),
+            if (_mayRecord(s))
+              TextButton(
+                style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8)),
+                onPressed: () => _transfer(suggestion: s),
+                child: Text(l10n.translate('fund_mark_paid'),
+                    style: const TextStyle(color: AppColors.mintGreen)),
+              ),
+          ],
+        ),
+      ]),
     );
   }
 
-  Widget _buildDepositsTab(List<DepositItem> deposits) {
-    if (deposits.isEmpty) return _emptyText('এখনও কোনো জমা যোগ হয়নি।');
-    return ListView(
-      padding: const EdgeInsets.all(14),
-      children: [
-        for (final d in deposits)
-          _card(
-            onLongPress: _canEdit(d.addedByEmail)
-                ? () => _showItemActions(
-                      onEdit: () => _showDepositDialog(existing: d),
-                      deleteTitle: 'জমাটি মুছবেন?',
-                      subject: '${d.memberName} — ${_money(d.amountPaisa)}',
-                      delete: () =>
-                          _repository.deleteDeposit(widget.tourId, d.id),
-                    )
-                : null,
-            child: Row(
-              children: [
-                const Icon(Icons.arrow_downward_rounded,
-                    color: AppColors.mintGreen),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(d.memberName,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                      const Text('ফান্ডে জমা',
-                          style:
-                              TextStyle(color: Colors.white54, fontSize: 11)),
-                    ],
-                  ),
-                ),
-                Text(_money(d.amountPaisa),
-                    style: const TextStyle(
-                        color: AppColors.gold, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
+  // ---------------------------------------------------------------------------
+  // People
+  // ---------------------------------------------------------------------------
 
-  Widget _buildBalancesTab(LedgerSummary summary) {
+  Widget _peopleTab(
+      AppLocalizations l10n, LedgerSummary summary, FundReport? report) {
+    if (summary.rows.isEmpty) return _empty(l10n.translate('fund_no_members'));
+    final rows = [...summary.rows]
+      ..sort((a, b) => a.netPaisa.compareTo(b.netPaisa));
+    final due = {
+      for (final c in report?.collection ?? const <CollectionRow>[])
+        c.id.toLowerCase(): c,
+    };
     return ListView(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 96),
       children: [
-        for (final r in summary.rows)
-          _card(
+        for (final r in rows)
+          _box(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        r.isFormerMember ? '${r.name} (আর সদস্য নন)' : r.name,
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
+                Row(children: [
+                  Expanded(
+                    child: Text(
+                      [
+                        r.name,
+                        if (r.familyCount > 1)
+                          '(${l10n.translate('fund_family_of', args: {
+                                'n': l10n.number(r.familyCount)
+                              })})',
+                        if (r.isFormerMember) l10n.translate('fund_former'),
+                      ].join(' '),
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: (r.netPaisa >= 0
-                                ? AppColors.mintGreen
-                                : Colors.redAccent)
-                            .withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        r.netPaisa >= 0
-                            ? '+${_money(r.netPaisa)} (পাবেন)'
-                            : '-${_money(-r.netPaisa)} (দেবেন)',
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 11),
-                      ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: (r.netPaisa == 0
+                              ? Colors.white24
+                              : r.netPaisa > 0
+                                  ? AppColors.mintGreen
+                                  : Colors.redAccent)
+                          .withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ],
-                ),
+                    child: Text(
+                      r.netPaisa == 0
+                          ? l10n.translate('fund_settled')
+                          : l10n.translate(
+                              r.netPaisa > 0 ? 'fund_gets' : 'fund_owes',
+                              args: {'amount': _money(r.netPaisa.abs())}),
+                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                    ),
+                  ),
+                ]),
                 const SizedBox(height: 8),
-                Text(
-                  'জমা: ${_money(r.depositPaisa)} • নিজে দিয়েছেন: ${_money(r.directPaidPaisa)} • ভাগ: ${_money(r.sharePaisa)}',
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
-                ),
+                Wrap(spacing: 14, runSpacing: 4, children: [
+                  _kv(l10n.translate('fund_k_deposit'), r.depositPaisa),
+                  _kv(l10n.translate('fund_k_paid'), r.directPaidPaisa),
+                  _kv(l10n.translate('fund_k_share'), r.sharePaisa),
+                  if (r.transfersOutPaisa > 0)
+                    _kv(l10n.translate('fund_k_sent'), r.transfersOutPaisa),
+                  if (r.transfersInPaisa > 0)
+                    _kv(l10n.translate('fund_k_received'), r.transfersInPaisa),
+                  if ((due[r.id.toLowerCase()]?.duePaisa ?? 0) > 0)
+                    _kv(l10n.translate('fund_k_due'),
+                        due[r.id.toLowerCase()]!.duePaisa,
+                        color: AppColors.gold),
+                ]),
               ],
             ),
           ),
-        if (summary.rows.isEmpty) _emptyText('এখনও কোনো সদস্য নেই।'),
       ],
     );
   }
 
-  Future<void> _confirmDelete(
-      String title, String subject, Future<void> Function() delete) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF142428),
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        content: Text(subject, style: const TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(c, false),
-              child: const Text('না')),
-          TextButton(
-              onPressed: () => Navigator.pop(c, true),
-              child: const Text('মুছুন',
-                  style: TextStyle(color: Colors.redAccent))),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await delete();
-    } catch (_) {
-      _showError('মোছা যায়নি। শুধু যিনি যোগ করেছেন বা অ্যাডমিন মুছতে পারবেন।');
+  Widget _kv(String k, int paisa, {Color color = Colors.white70}) => Text.rich(
+        TextSpan(children: [
+          TextSpan(
+              text: '$k ',
+              style: const TextStyle(color: Colors.white38, fontSize: 11)),
+          TextSpan(
+              text: _money(paisa),
+              style: TextStyle(color: color, fontSize: 12)),
+        ]),
+      );
+
+  // ---------------------------------------------------------------------------
+  // Deposits
+  // ---------------------------------------------------------------------------
+
+  Widget _depositsTab(AppLocalizations l10n) {
+    if (_deposits.isEmpty) return _empty(l10n.translate('fund_empty_deposits'));
+    final byMember = <String, int>{};
+    for (final d in _deposits) {
+      byMember[d.memberName] = (byMember[d.memberName] ?? 0) + d.amountPaisa;
     }
+    final total = byMember.values.fold<int>(0, (a, b) => a + b);
+    final top = byMember.values.fold<int>(0, (m, v) => v > m ? v : m);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 96),
+      children: [
+        _box(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _heading(l10n.translate('fund_deposits_by_member'),
+                  trailing: Text(_money(total),
+                      style: const TextStyle(
+                          color: AppColors.gold, fontWeight: FontWeight.bold))),
+              for (final e in byMember.entries)
+                _bar(
+                    label: e.key,
+                    value: e.value,
+                    max: top,
+                    color: AppColors.gold),
+            ],
+          ),
+        ),
+        for (final d in _deposits)
+          _box(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: ListTile(
+              onLongPress: _canEdit(d.addedByEmail)
+                  ? () => _itemActions(
+                        onEdit: () => _deposit(existing: d),
+                        subject: '${d.memberName} — ${_money(d.amountPaisa)}',
+                        delete: () =>
+                            _repository.deleteDeposit(widget.tourId, d.id),
+                      )
+                  : null,
+              leading: const Icon(Icons.south_west_rounded,
+                  color: AppColors.mintGreen),
+              title: Text(d.memberName,
+                  style: const TextStyle(color: Colors.white)),
+              subtitle: Text(
+                [
+                  DateFormat('d MMM yyyy').format(d.date),
+                  if ((d.notes ?? '').isNotEmpty) d.notes!,
+                ].join(' · '),
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              ),
+              trailing: Text(_money(d.amountPaisa),
+                  style: const TextStyle(
+                      color: AppColors.gold, fontWeight: FontWeight.bold)),
+            ),
+          ),
+      ],
+    );
   }
 
-  /// Long press on an entry you may change: edit it or delete it.
-  void _showItemActions({
+  // ---------------------------------------------------------------------------
+  // Actions
+  // ---------------------------------------------------------------------------
+
+  void _addMenu(TourGroup? group) {
+    final l10n = context.l10n;
+    Widget item(IconData icon, Color color, String title, String sub,
+            VoidCallback onTap) =>
+        ListTile(
+          leading: Icon(icon, color: color),
+          title: Text(title, style: const TextStyle(color: Colors.white)),
+          subtitle: Text(sub, style: const TextStyle(color: Colors.white54)),
+          onTap: () {
+            Navigator.pop(context);
+            onTap();
+          },
+        );
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: _card,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            item(
+                Icons.receipt_long_rounded,
+                AppColors.mintGreen,
+                l10n.translate('fund_add_expense'),
+                l10n.translate('fund_add_expense_sub'),
+                _editExpense),
+            item(
+                Icons.savings_rounded,
+                AppColors.gold,
+                l10n.translate('fund_add_deposit'),
+                l10n.translate('fund_add_deposit_sub'),
+                _deposit),
+            item(
+                Icons.payments_rounded,
+                _fundBlue,
+                l10n.translate('fund_record_payment'),
+                l10n.translate('fund_record_payment_sub'),
+                _transfer),
+            if (_isAdmin && group != null)
+              item(
+                  Icons.pie_chart_rounded,
+                  Colors.white70,
+                  l10n.translate('fund_budget_title'),
+                  l10n.translate('fund_budget_sub'),
+                  () => _editBudget(group)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editExpense(
+      [ExpenseItem? existing, bool duplicate = false]) async {
+    if (_members.isEmpty) return;
+    final draft = await showExpenseEditor(
+      context,
+      members: _members,
+      group: _group,
+      me: _me,
+      existing: existing,
+    );
+    if (draft == null || !mounted) return;
+    await _run(() async {
+      if (existing == null || duplicate) {
+        await _repository.addExpense(
+          tourId: widget.tourId,
+          title: draft.title,
+          amountPaisa: draft.amountPaisa,
+          paidById: draft.paidById,
+          paidByName: draft.paidByName,
+          category: draft.category,
+          date: draft.date,
+          notes: draft.notes,
+          participantIds: draft.participantIds,
+          splitMode: draft.splitMode,
+          splitShares: draft.splitShares,
+          stopId: draft.stopId,
+          currency: draft.currency,
+          originalMinor: draft.originalMinor,
+          fxRate: draft.fxRate,
+        );
+      } else {
+        await _repository.updateExpense(ExpenseItem(
+          id: existing.id,
+          tourId: widget.tourId,
+          title: draft.title,
+          amountPaisa: draft.amountPaisa,
+          paidById: draft.paidById,
+          paidByName: draft.paidByName,
+          category: draft.category,
+          date: draft.date,
+          notes: draft.notes,
+          addedByEmail: existing.addedByEmail,
+          participantIds: draft.participantIds,
+          splitMode: draft.splitMode,
+          splitShares: draft.splitShares,
+          stopId: draft.stopId,
+          currency: draft.currency,
+          originalMinor: draft.originalMinor,
+          fxRate: draft.fxRate,
+        ));
+      }
+    }, 'fund_err_save');
+  }
+
+  Future<void> _deposit(
+      {DepositItem? existing, String? memberId, int? suggestedPaisa}) async {
+    final draft = await showDepositSheet(
+      context,
+      members: _members,
+      me: _me,
+      existing: existing,
+      memberId: memberId,
+      suggestedPaisa: suggestedPaisa,
+    );
+    if (draft == null || !mounted) return;
+    await _run(() async {
+      if (existing == null) {
+        await _repository.addDeposit(
+          tourId: widget.tourId,
+          memberId: draft.memberId,
+          memberName: draft.memberName,
+          amountPaisa: draft.amountPaisa,
+          date: draft.date,
+          notes: draft.notes,
+        );
+      } else {
+        await _repository.updateDeposit(DepositItem(
+          id: existing.id,
+          tourId: widget.tourId,
+          memberId: draft.memberId,
+          memberName: draft.memberName,
+          amountPaisa: draft.amountPaisa,
+          date: draft.date,
+          notes: draft.notes,
+          addedByEmail: existing.addedByEmail,
+        ));
+      }
+    }, 'fund_err_save');
+  }
+
+  Future<void> _transfer({SettlementTransaction? suggestion}) async {
+    final draft = await showTransferSheet(
+      context,
+      members: _members,
+      me: _me,
+      isAdmin: _isAdmin,
+      suggestion: suggestion,
+    );
+    if (draft == null || !mounted) return;
+    final l10n = context.l10n;
+    await _run(() async {
+      await _repository.addTransfer(
+        tourId: widget.tourId,
+        fromId: draft.fromId,
+        fromName: draft.fromName,
+        toId: draft.toId,
+        toName: draft.toName,
+        amountPaisa: draft.amountPaisa,
+        date: draft.date,
+        notes: draft.notes,
+      );
+      _toast(l10n.translate('fund_payment_saved'));
+    }, 'fund_err_save');
+  }
+
+  Future<void> _editBudget(TourGroup group) async {
+    final budget = await showBudgetSheet(
+      context,
+      budget: group.fundBudget,
+      headcount: _headcount,
+      totalDays: group.totalDays,
+    );
+    if (budget == null || !mounted) return;
+    await _run(() => _repository.saveFundBudget(widget.tourId, budget),
+        'fund_err_save');
+  }
+
+  void _itemActions({
     required VoidCallback onEdit,
-    required String deleteTitle,
+    VoidCallback? onDuplicate,
     required String subject,
     required Future<void> Function() delete,
   }) {
+    final l10n = context.l10n;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF142428),
+      backgroundColor: _card,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -502,20 +1514,31 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             ListTile(
               leading:
                   const Icon(Icons.edit_rounded, color: AppColors.mintGreen),
-              title: const Text('সম্পাদনা করুন',
-                  style: TextStyle(color: Colors.white)),
+              title: Text(l10n.translate('fund_edit'),
+                  style: const TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(ctx);
                 onEdit();
               },
             ),
+            if (onDuplicate != null)
+              ListTile(
+                leading: const Icon(Icons.copy_rounded, color: _fundBlue),
+                title: Text(l10n.translate('fund_duplicate'),
+                    style: const TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  onDuplicate();
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded,
                   color: Colors.redAccent),
-              title: const Text('মুছুন', style: TextStyle(color: Colors.white)),
+              title: Text(l10n.translate('fund_delete'),
+                  style: const TextStyle(color: Colors.white)),
               onTap: () {
                 Navigator.pop(ctx);
-                _confirmDelete(deleteTitle, subject, delete);
+                _confirmDelete(subject, delete);
               },
             ),
           ],
@@ -524,395 +1547,74 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     );
   }
 
-  /// Members to pick from. A former member already on a row stays selectable,
-  /// so editing that row does not force a different name.
-  Map<String, String> _memberOptions(
-      String? currentEmail, String? currentName) {
-    final options = {for (final m in _latestMembers) m.email: m.displayName};
-    if (currentEmail != null && currentName != null) {
-      options.putIfAbsent(currentEmail, () => currentName);
-    }
-    return options;
-  }
-
-  void _showAddEntryMenu(BuildContext context) {
-    showModalBottomSheet<void>(
+  Future<void> _confirmDelete(
+      String subject, Future<void> Function() delete) async {
+    final l10n = context.l10n;
+    final ok = await showDialog<bool>(
       context: context,
-      backgroundColor: const Color(0xFF142428),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.receipt_long_rounded,
-                  color: AppColors.mintGreen),
-              title: const Text('খরচ যোগ করুন',
-                  style: TextStyle(color: Colors.white)),
-              subtitle: const Text('হোটেল, খাবার, টিকিট, যাতায়াত ইত্যাদি',
-                  style: TextStyle(color: Colors.white54)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showExpenseDialog();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.savings_rounded, color: AppColors.gold),
-              title: const Text('ফান্ডে জমা দিন',
-                  style: TextStyle(color: Colors.white)),
-              subtitle: const Text('সদস্যের ফান্ডে টাকা জমা',
-                  style: TextStyle(color: Colors.white54)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showDepositDialog();
-              },
-            ),
-          ],
-        ),
+      builder: (c) => AlertDialog(
+        backgroundColor: _card,
+        title: Text(l10n.translate('fund_delete_confirm'),
+            style: const TextStyle(color: Colors.white)),
+        content: Text(subject, style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: Text(l10n.translate('tour_cancel'))),
+          TextButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: Text(l10n.translate('fund_delete'),
+                  style: const TextStyle(color: Colors.redAccent))),
+        ],
       ),
     );
+    if (ok != true) return;
+    await _run(delete, 'fund_err_delete');
   }
 
-  /// Adds an expense, or edits [existing] when it is given.
-  void _showExpenseDialog({ExpenseItem? existing}) {
-    final titleCtrl = TextEditingController(text: existing?.title ?? '');
-    final amountCtrl = TextEditingController(
-        text: existing == null
-            ? ''
-            : TripLedgerEngine.plainTakaInput(existing.amountPaisa));
-    final members = _latestMembers;
-    final me = _repository.currentEmail;
-    final payers = _memberOptions(existing?.paidById, existing?.paidByName);
-    final categories = [
-      ..._expenseCategories,
-      if (existing != null && !_expenseCategories.contains(existing.category))
-        existing.category,
+  // ---------------------------------------------------------------------------
+  // Sharing and export
+  // ---------------------------------------------------------------------------
+
+  void _sharePlan(LedgerSummary summary) {
+    final l10n = context.l10n;
+    final lines = [
+      l10n.translate('fund_share_plan_title',
+          args: {'tour': _group?.name ?? ''}),
+      '',
+      for (final s in summary.settlements)
+        '• ${_party(l10n, s.from, s.fromFund)} → '
+            '${_party(l10n, s.to, s.toFund)}: ${_money(s.amountPaisa)}',
+      '',
+      l10n.translate('fund_share_totals', args: {
+        'spent': _money(summary.totalExpensePaisa),
+        'perHead': _money(summary.perHeadCostPaisa),
+      }),
     ];
-    String category = existing?.category ?? 'Food';
-    DateTime date = existing?.date ?? DateTime.now();
-    bool paidFromFund = existing == null || existing.paidById == null;
-    String? payerEmail = existing?.paidById ??
-        (members.any((m) => m.email == me)
-            ? me
-            : (members.isNotEmpty ? members.first.email : null));
-    final participants = {
-      ...(existing?.participantIds ?? [for (final m in members) m.email]),
-    };
-    String? error;
-
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.75),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF142428),
-          title: Text(existing == null ? 'খরচ যোগ করুন' : 'খরচ সম্পাদনা',
-              style: const TextStyle(color: Colors.white)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleCtrl,
-                  maxLength: 80,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'খরচের বিবরণ'),
-                ),
-                TextField(
-                  controller: amountCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'পরিমাণ (টাকা)'),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: category,
-                  dropdownColor: const Color(0xFF1B4332),
-                  decoration: const InputDecoration(labelText: 'খাত'),
-                  items: categories
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v != null) setDialogState(() => category = v);
-                  },
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () async {
-                    // An older saved date must stay inside the picker's range.
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: date,
-                      firstDate:
-                          date.isBefore(DateTime(2022)) ? date : DateTime(2022),
-                      lastDate:
-                          date.isAfter(DateTime(2035)) ? date : DateTime(2035),
-                    );
-                    if (picked != null) setDialogState(() => date = picked);
-                  },
-                  child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'তারিখ'),
-                    child: Text(DateFormat('dd MMM yyyy').format(date),
-                        style: const TextStyle(color: Colors.white)),
-                  ),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('ফান্ড থেকে দেওয়া হয়েছে',
-                      style: TextStyle(color: Colors.white)),
-                  subtitle: Text(
-                    paidFromFund
-                        ? 'সরাসরি ফান্ড থেকে কাটা হবে'
-                        : 'একজন সদস্য নিজের পকেট থেকে দিয়েছেন',
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
-                  ),
-                  value: paidFromFund,
-                  activeThumbColor: AppColors.mintGreen,
-                  onChanged: (v) => setDialogState(() => paidFromFund = v),
-                ),
-                if (!paidFromFund && payers.isNotEmpty)
-                  DropdownButtonFormField<String>(
-                    initialValue: payerEmail,
-                    dropdownColor: const Color(0xFF1B4332),
-                    decoration: const InputDecoration(labelText: 'কে দিয়েছেন'),
-                    items: [
-                      for (final e in payers.entries)
-                        DropdownMenuItem(
-                          value: e.key,
-                          child: Text(e.value, overflow: TextOverflow.ellipsis),
-                        ),
-                    ],
-                    onChanged: (v) => setDialogState(() => payerEmail = v),
-                  ),
-                const SizedBox(height: 12),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('এই খরচ কারা ভাগ করবেন',
-                      style: TextStyle(color: Colors.white70, fontSize: 12)),
-                ),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    for (final m in members)
-                      FilterChip(
-                        label: Text(m.displayName,
-                            style: const TextStyle(fontSize: 11)),
-                        selected: participants.contains(m.email),
-                        selectedColor: AppColors.mintGreen,
-                        onSelected: (v) => setDialogState(() {
-                          v
-                              ? participants.add(m.email)
-                              : participants.remove(m.email);
-                        }),
-                      ),
-                  ],
-                ),
-                if (error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(error!,
-                        style: const TextStyle(
-                            color: Colors.redAccent, fontSize: 12)),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('বাতিল')),
-            ElevatedButton(
-              onPressed: () async {
-                final title = titleCtrl.text.trim();
-                final paisa = TripLedgerEngine.parseTakaInput(amountCtrl.text);
-                if (title.isEmpty) {
-                  setDialogState(() => error = 'খরচের বিবরণ লিখুন।');
-                  return;
-                }
-                if (paisa == null) {
-                  setDialogState(() => error =
-                      'সঠিক পরিমাণ লিখুন (০ এর বেশি, সর্বোচ্চ ১ কোটি)।');
-                  return;
-                }
-                if (participants.isEmpty) {
-                  setDialogState(
-                      () => error = 'অন্তত একজন সদস্য নির্বাচন করুন।');
-                  return;
-                }
-                final payerKey = paidFromFund ? null : payerEmail;
-                if (!paidFromFund &&
-                    (payerKey == null || !payers.containsKey(payerKey))) {
-                  setDialogState(() => error = 'কে দিয়েছেন তা নির্বাচন করুন।');
-                  return;
-                }
-                final payerName = payerKey == null ? null : payers[payerKey];
-                final selection = TripLedgerEngine.participantSelection(
-                  selected: participants,
-                  memberEmails: [for (final m in members) m.email],
-                );
-                Navigator.pop(ctx);
-                try {
-                  if (existing == null) {
-                    await _repository.addExpense(
-                      tourId: widget.tourId,
-                      title: title,
-                      amountPaisa: paisa,
-                      paidById: payerKey,
-                      paidByName: payerName,
-                      category: category,
-                      date: date,
-                      participantIds: selection,
-                    );
-                  } else {
-                    await _repository.updateExpense(ExpenseItem(
-                      id: existing.id,
-                      tourId: widget.tourId,
-                      title: title,
-                      amountPaisa: paisa,
-                      paidById: payerKey,
-                      paidByName: payerName,
-                      category: category,
-                      date: date,
-                      notes: existing.notes,
-                      addedByEmail: existing.addedByEmail,
-                      participantIds: selection,
-                    ));
-                  }
-                } catch (e) {
-                  _showError('খরচ সংরক্ষণ করা যায়নি: $e');
-                }
-              },
-              child:
-                  const Text('সংরক্ষণ', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    ).whenComplete(() {
-      titleCtrl.dispose();
-      amountCtrl.dispose();
-    });
+    // ignore: deprecated_member_use
+    Share.share(lines.join('\n'), subject: _group?.name);
   }
 
-  /// Adds a deposit, or edits [existing] when it is given.
-  void _showDepositDialog({DepositItem? existing}) {
-    final amountCtrl = TextEditingController(
-        text: existing == null
-            ? ''
-            : TripLedgerEngine.plainTakaInput(existing.amountPaisa));
-    final members = _latestMembers;
-    final me = _repository.currentEmail;
-    final options = _memberOptions(existing?.memberId, existing?.memberName);
-    String? memberEmail = existing?.memberId ??
-        (members.any((m) => m.email == me)
-            ? me
-            : (members.isNotEmpty ? members.first.email : null));
-    String? error;
-
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.75),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF142428),
-          title: Text(existing == null ? 'ফান্ডে জমা' : 'জমা সম্পাদনা',
-              style: const TextStyle(color: Colors.white)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (options.isNotEmpty)
-                DropdownButtonFormField<String>(
-                  initialValue: memberEmail,
-                  dropdownColor: const Color(0xFF1B4332),
-                  decoration:
-                      const InputDecoration(labelText: 'কে জমা দিচ্ছেন'),
-                  items: [
-                    for (final e in options.entries)
-                      DropdownMenuItem(
-                        value: e.key,
-                        child: Text(e.value, overflow: TextOverflow.ellipsis),
-                      ),
-                  ],
-                  onChanged: (v) => setDialogState(() => memberEmail = v),
-                ),
-              TextField(
-                controller: amountCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(color: Colors.white),
-                decoration:
-                    const InputDecoration(labelText: 'জমার পরিমাণ (টাকা)'),
-              ),
-              if (error != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(error!,
-                      style: const TextStyle(
-                          color: Colors.redAccent, fontSize: 12)),
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('বাতিল')),
-            ElevatedButton(
-              onPressed: () async {
-                final paisa = TripLedgerEngine.parseTakaInput(amountCtrl.text);
-                final email = memberEmail;
-                final name = email == null ? null : options[email];
-                if (paisa == null) {
-                  setDialogState(() => error =
-                      'সঠিক পরিমাণ লিখুন (০ এর বেশি, সর্বোচ্চ ১ কোটি)।');
-                  return;
-                }
-                if (email == null || name == null) {
-                  setDialogState(() => error = 'সদস্য নির্বাচন করুন।');
-                  return;
-                }
-                Navigator.pop(ctx);
-                try {
-                  if (existing == null) {
-                    await _repository.addDeposit(
-                      tourId: widget.tourId,
-                      memberId: email,
-                      memberName: name,
-                      amountPaisa: paisa,
-                    );
-                  } else {
-                    await _repository.updateDeposit(DepositItem(
-                      id: existing.id,
-                      tourId: widget.tourId,
-                      memberId: email,
-                      memberName: name,
-                      amountPaisa: paisa,
-                      date: existing.date,
-                      notes: existing.notes,
-                      addedByEmail: existing.addedByEmail,
-                    ));
-                  }
-                } catch (e) {
-                  _showError('জমা সংরক্ষণ করা যায়নি: $e');
-                }
-              },
-              child:
-                  const Text('জমা দিন', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    ).whenComplete(amountCtrl.dispose);
+  void _shareReminder(FundReport r) {
+    final l10n = context.l10n;
+    final lines = [
+      l10n.translate('fund_remind_title', args: {'tour': _group?.name ?? ''}),
+      '',
+      for (final c in r.collection.where((c) => c.duePaisa > 0))
+        '• ${c.name}: ${_money(c.duePaisa)}',
+      '',
+      l10n.translate('fund_remind_footer', args: {
+        'collected': _money(r.collectedPaisa),
+        'target': _money(r.collectionTargetPaisa),
+      }),
+    ];
+    // ignore: deprecated_member_use
+    Share.share(lines.join('\n'), subject: _group?.name);
   }
 
   /// CSV for the audit. Member emails are left out; names and amounts are kept.
-  Future<void> _exportLedgerCsv() async {
-    final summary = _latestSummary;
-    if (summary == null) {
-      _showError('হিসাবের ডেটা লোড হচ্ছে, অপেক্ষা করুন।');
-      return;
-    }
-    final group = _tourGroup;
+  Future<void> _exportCsv(LedgerSummary summary, FundReport? report) async {
+    final group = _group;
     final buffer = StringBuffer();
 
     String cell(Object? value) {
@@ -927,74 +1629,116 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         buffer.writeln(values.map(cell).join(','));
     String taka(int paisa) => (paisa / 100).toStringAsFixed(2);
 
-    line([group?.name ?? 'ট্যুর ফান্ড', 'অডিট বিবরণী']);
+    line([group?.name ?? 'Tour fund', 'Audit statement']);
+    line(['Route', group == null ? '' : group.destinationSummary]);
     line([
-      'ভ্রমণ রুট',
-      group == null ? '' : '${group.originCity} ➔ ${group.destination}'
-    ]);
-    line([
-      'তৈরির সময়',
+      'Generated',
       DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now())
     ]);
     line([]);
-    line(['সারসংক্ষেপ']);
-    line(['মোট জমা (টাকা)', taka(summary.totalDepositsPaisa)]);
-    line(['মোট খরচ (টাকা)', taka(summary.totalExpensePaisa)]);
-    line(['ফান্ড ব্যালেন্স (টাকা)', taka(summary.fundBalancePaisa)]);
-    line(['সদস্য সংখ্যা', summary.headcount]);
-    line([]);
-    line(['খাত', 'মোট (টাকা)', 'শতাংশ']);
-    for (final ct in summary.categoryTotals) {
-      final pct = summary.totalExpensePaisa > 0
-          ? (ct.amountPaisa * 100 / summary.totalExpensePaisa)
-              .toStringAsFixed(1)
-          : '0.0';
-      line([ct.category, taka(ct.amountPaisa), pct]);
+    line(['Summary']);
+    line(['Deposits (BDT)', taka(summary.totalDepositsPaisa)]);
+    line(['Expenses (BDT)', taka(summary.totalExpensePaisa)]);
+    line(['Fund balance (BDT)', taka(summary.fundBalancePaisa)]);
+    line(['People', summary.headcount]);
+    if (report != null && report.budgetPaisa > 0) {
+      line(['Budget (BDT)', taka(report.budgetPaisa)]);
+      line(['Projected (BDT)', taka(report.projectedPaisa)]);
     }
     line([]);
-    line(['তারিখ', 'খাত', 'বিবরণ', 'কে দিয়েছেন', 'টাকা']);
-    for (final exp in _latestExpenses) {
+    line(['Category', 'Budget (BDT)', 'Spent (BDT)', 'Left (BDT)']);
+    for (final l in report?.lines ?? const <BudgetLine>[]) {
       line([
-        DateFormat('yyyy-MM-dd').format(exp.date),
-        exp.category,
-        exp.title,
-        exp.paidById == null ? 'ফান্ড' : (exp.paidByName ?? 'সদস্য'),
-        taka(exp.amountPaisa),
+        l.category,
+        taka(l.budgetPaisa),
+        taka(l.spentPaisa),
+        l.budgetPaisa > 0 ? taka(l.leftPaisa) : '',
       ]);
     }
     line([]);
     line([
-      'সদস্য',
-      'জমা (টাকা)',
-      'নিজে দিয়েছেন (টাকা)',
-      'ভাগ (টাকা)',
-      'হিসাব (+ পাবেন / - দেবেন)'
+      'Date',
+      'Category',
+      'Title',
+      'Paid by',
+      'Split',
+      'Place',
+      'Original',
+      'Rate',
+      'BDT',
+    ]);
+    for (final e in _expenses) {
+      line([
+        DateFormat('yyyy-MM-dd').format(e.date),
+        e.category,
+        e.title,
+        e.paidById == null ? 'Fund' : (e.paidByName ?? 'Member'),
+        e.splitMode.name,
+        _stopName(e.stopId ?? group?.stopOn(e.date)?.id) ?? '',
+        e.isForeign
+            ? '${e.currency} ${TripLedgerEngine.plainTakaInput(e.originalMinor ?? 0)}'
+            : '',
+        e.isForeign ? e.fxRate : '',
+        taka(e.amountPaisa),
+      ]);
+    }
+    line([]);
+    line(['Date', 'Member', 'Deposit (BDT)', 'Note']);
+    for (final d in _deposits) {
+      line([
+        DateFormat('yyyy-MM-dd').format(d.date),
+        d.memberName,
+        taka(d.amountPaisa),
+        d.notes ?? '',
+      ]);
+    }
+    line([]);
+    line(['Date', 'From', 'To', 'Payment (BDT)', 'Note']);
+    for (final t in _transfers) {
+      line([
+        DateFormat('yyyy-MM-dd').format(t.date),
+        t.fromName,
+        t.toName,
+        taka(t.amountPaisa),
+        t.notes ?? '',
+      ]);
+    }
+    line([]);
+    line([
+      'Member',
+      'Deposits',
+      'Paid directly',
+      'Payments sent',
+      'Payments received',
+      'Share',
+      'Net (+ gets / - owes)',
     ]);
     for (final r in summary.rows) {
       line([
-        r.isFormerMember ? '${r.name} (প্রাক্তন)' : r.name,
+        r.isFormerMember ? '${r.name} (former)' : r.name,
         taka(r.depositPaisa),
         taka(r.directPaidPaisa),
+        taka(r.transfersOutPaisa),
+        taka(r.transfersInPaisa),
         taka(r.sharePaisa),
         taka(r.netPaisa),
       ]);
     }
     line([]);
-    line(['কে দেবেন', 'কাকে দেবেন', 'টাকা']);
-    for (final st in summary.settlements) {
-      line([st.from, st.to, taka(st.amountPaisa)]);
+    line(['Who pays', 'To whom', 'BDT']);
+    for (final s in summary.settlements) {
+      line([s.from, s.to, taka(s.amountPaisa)]);
     }
 
-    // A BOM lets Excel read the Bengali text correctly.
-    final bytes = '﻿${buffer.toString()}'.codeUnits;
+    // A BOM lets Excel read the Bengali text correctly. UTF-16 code units
+    // would corrupt it, so the text is encoded as UTF-8.
+    final bytes =
+        Uint8List.fromList(const Utf8Codec().encode('﻿${buffer.toString()}'));
     final name =
-        'Bhromon_Ledger_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv';
+        'Bhromon_Fund_${DateFormat('yyyyMMdd').format(DateTime.now())}.csv';
     // ignore: deprecated_member_use
     await Share.shareXFiles(
-      [
-        XFile.fromData(Uint8List.fromList(bytes),
-            mimeType: 'text/csv', name: name)
-      ],
+      [XFile.fromData(bytes, mimeType: 'text/csv', name: name)],
       subject: name,
     );
   }

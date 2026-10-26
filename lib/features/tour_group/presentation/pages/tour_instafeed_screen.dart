@@ -17,6 +17,7 @@ import 'tide_beach_guide_screen.dart';
 import '../widgets/instafeed/instafeed_create_studio.dart';
 import '../widgets/instafeed/instafeed_comments_sheet.dart';
 import '../widgets/instafeed/instafeed_explore_grid.dart';
+import '../widgets/instafeed/instafeed_filter_sheet.dart';
 import '../widgets/instafeed/instafeed_image_viewer_modal.dart';
 import '../widgets/instafeed/instafeed_post_card.dart';
 import '../widgets/instafeed/instafeed_reels_modal.dart';
@@ -1049,21 +1050,23 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                 ),
                               ),
 
-                            // 2. Beach Tide & Ocean Safety Banner
-                            SliverToBoxAdapter(
-                              child: InstafeedTideBanner(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => TideBeachGuideScreen(
-                                        tourId: widget.tourId,
+                            // 2. Beach Tide & Ocean Safety Banner, on beach
+                            // trips only (hidden until the tour has loaded)
+                            if (_tourGroup?.tourType == TourType.beach)
+                              SliverToBoxAdapter(
+                                child: InstafeedTideBanner(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => TideBeachGuideScreen(
+                                          tourId: widget.tourId,
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
 
                             // 3. Stories & Story Highlights Tray
                             SliverToBoxAdapter(
@@ -1134,9 +1137,12 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                 ),
                               ),
 
-                            // 5. Media Filter Tabs (All, Photos, Reels, Saved, Archived)
+                            // 5. Filter pill: media and day filters live in one sheet
                             SliverToBoxAdapter(
-                              child: _buildMediaFilterTabs(),
+                              child: InstafeedFilterBar(
+                                summary: _filterSummary(),
+                                onTap: () => unawaited(_showFilterSheet()),
+                              ),
                             ),
 
                             // 5b. Bookmark Collection Chips (When Saved Tab is active)
@@ -1205,11 +1211,6 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                   ),
                                 ),
                               ),
-
-                            // 6. Day-wise Filter Chips
-                            SliverToBoxAdapter(
-                              child: _buildDayFilterChips(),
-                            ),
 
                             // 7. Posts: Grid View vs Feed List View
                             if (postsSnap.hasError && !postsSnap.hasData)
@@ -1537,82 +1538,42 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     );
   }
 
-  Widget _buildMediaFilterTabs() {
-    final filters = [
-      {'id': 'all', 'label': 'সবগুলো (All)'},
-      {'id': 'photos', 'label': 'ছবি (Photos)'},
-      {'id': 'reels', 'label': 'রিলস (Reels)'},
-      {'id': 'saved', 'label': 'সেভ করা (Saved)'},
-      {'id': 'archived', 'label': 'আর্কাইভ (Archive)'},
-    ];
-
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: filters.map((f) {
-          final isSelected = _selectedMediaFilter == f['id'];
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(f['label']!),
-              selected: isSelected,
-              selectedColor: AppColors.mintGreen,
-              backgroundColor: const Color(0xFF1E1E1E),
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.black : Colors.white70,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 12,
-              ),
-              onSelected: (_) {
-                setState(() => _selectedMediaFilter = f['id']!);
-                if (f['id'] == 'saved') unawaited(_refreshSavedPosts());
-              },
-            ),
-          );
-        }).toList(),
-      ),
-    );
+  /// The header pill's text: the media filter, then the day when the tour has
+  /// days.
+  String _filterSummary() {
+    final media = instafeedMediaFilters
+        .firstWhere((option) => option.id == _selectedMediaFilter)
+        .label;
+    if (_tourDays.isEmpty) return media;
+    var day = 'সব দিন';
+    for (final d in _tourDays) {
+      if (d.id == _selectedDayFilter) day = d.label;
+    }
+    return '$media · $day';
   }
 
-  Widget _buildDayFilterChips() {
-    if (_tourDays.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          ChoiceChip(
-            label: const Text('সব দিন'),
-            selected: _selectedDayFilter == 'all',
-            selectedColor: Colors.white24,
-            backgroundColor: Colors.transparent,
-            labelStyle: const TextStyle(color: Colors.white, fontSize: 11),
-            onSelected: (_) => setState(() => _selectedDayFilter = 'all'),
-          ),
-          const SizedBox(width: 6),
-          ..._tourDays.map((d) {
-            final isSelected = _selectedDayFilter == d.id;
-            return Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: ChoiceChip(
-                label: Text(d.label),
-                selected: isSelected,
-                selectedColor: Colors.white24,
-                backgroundColor: Colors.transparent,
-                labelStyle: TextStyle(
-                  color: isSelected ? AppColors.mintGreen : Colors.white70,
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                ),
-                onSelected: (_) => setState(() => _selectedDayFilter = d.id),
-              ),
-            );
-          }),
-        ],
+  /// Opens the filter choices. Each choice updates the feed and the sheet at
+  /// once, so the sheet can stay open while the user tries more than one.
+  Future<void> _showFilterSheet() {
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      showDragHandle: true,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setSheetState) => InstafeedFilterSheet(
+          selectedMedia: _selectedMediaFilter,
+          onMediaSelected: (id) {
+            setState(() => _selectedMediaFilter = id);
+            setSheetState(() {});
+            if (id == 'saved') unawaited(_refreshSavedPosts());
+          },
+          days: _tourDays,
+          selectedDay: _selectedDayFilter,
+          onDaySelected: (id) {
+            setState(() => _selectedDayFilter = id);
+            setSheetState(() {});
+          },
+        ),
       ),
     );
   }

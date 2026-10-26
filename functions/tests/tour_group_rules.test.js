@@ -7,7 +7,7 @@ const {
 } = require('@firebase/rules-unit-testing');
 const fs = require('fs');
 const path = require('path');
-const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp, FieldPath } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, serverTimestamp, FieldPath, arrayUnion, arrayRemove } = require('firebase/firestore');
 
 const PROJECT_ID = 'bhromon-rules-test-project';
 const TOUR = 't1';
@@ -203,6 +203,51 @@ describe('Tour Group Firestore rules', () => {
       await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', TOUR, 'expenses', 'e1')));
     });
 
+    const transfer = (by, from, to, amountPaisa = 50000) => ({ tourId: TOUR, fromId: from, fromName: 'x', toId: to, toName: 'y', amountPaisa, addedByEmail: by });
+
+    test('settle-up payments: members record ones they took part in; admins any', async () => {
+      const t = (id) => doc(db('member'), 'tours', TOUR, 'transfers', id);
+      await assertSucceeds(setDoc(t('t1'), transfer(people.member.email, people.member.email, people.other.email)));
+      await assertSucceeds(setDoc(t('t2'), transfer(people.member.email, people.other.email, people.member.email)));
+      await assertSucceeds(setDoc(t('t3'), transfer(people.member.email, people.member.email, null)));
+      // Not between two other people, not under someone else's name, not zero.
+      await assertFails(setDoc(t('t4'), transfer(people.member.email, people.other.email, people.admin.email)));
+      await assertFails(setDoc(t('t5'), transfer(people.admin.email, people.member.email, null)));
+      await assertFails(setDoc(t('t6'), transfer(people.member.email, people.member.email, null, 0)));
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', TOUR, 'transfers', 't7'), transfer(people.admin.email, null, people.other.email)));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', TOUR, 'transfers')));
+    });
+
+    test('settle-up payments are never edited; the author or an admin deletes', async () => {
+      await setDoc(doc(db('member'), 'tours', TOUR, 'transfers', 't1'), transfer(people.member.email, people.member.email, people.other.email));
+      await assertFails(updateDoc(doc(db('member'), 'tours', TOUR, 'transfers', 't1'), { amountPaisa: 1 }));
+      await assertFails(deleteDoc(doc(db('other'), 'tours', TOUR, 'transfers', 't1')));
+      await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', TOUR, 'transfers', 't1')));
+    });
+
+    test('only admins set the fund budget', async () => {
+      const budget = { fundBudget: { categoryPaisa: { Food: 100000 }, perHeadTargetPaisa: 500000 } };
+      await assertFails(updateDoc(doc(db('member'), 'tours', TOUR), budget));
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', TOUR), budget));
+    });
+
+    test('members answer a notice only for themselves', async () => {
+      const n = (who) => doc(db(who), 'tours', TOUR, 'notices', 'n1');
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', TOUR, 'notices', 'n1'),
+          { title: 'Roll call', kind: 'rollcall', ackBy: [people.other.email] });
+      });
+      await assertSucceeds(updateDoc(n('member'), { ackBy: arrayUnion(people.member.email) }));
+      await assertSucceeds(updateDoc(n('member'), { ackBy: arrayRemove(people.member.email) }));
+      // Not for someone else, not along with other fields, not by outsiders.
+      await assertFails(updateDoc(n('member'), { ackBy: arrayRemove(people.other.email) }));
+      await assertFails(updateDoc(n('member'), { ackBy: arrayUnion(people.admin.email) }));
+      await assertFails(updateDoc(n('member'), { ackBy: arrayUnion(people.member.email), title: 'Hijack' }));
+      await assertFails(updateDoc(n('outsider'), { ackBy: arrayUnion(people.outsider.email) }));
+      // An admin marks a member present.
+      await assertSucceeds(updateDoc(n('admin'), { ackBy: arrayUnion(people.member.email, people.owner.email) }));
+    });
+
     test('only admins post official notices', async () => {
       await assertFails(addDoc(collection(db('member'), 'tours', TOUR, 'notices'), { title: 'x', createdAt: serverTimestamp() }));
       await assertSucceeds(addDoc(collection(db('admin'), 'tours', TOUR, 'notices'), { title: 'x', createdAt: serverTimestamp() }));
@@ -375,6 +420,68 @@ describe('Tour Group Firestore rules', () => {
       await assertSucceeds(setDoc(doc(db('admin'), 'tours', TOUR, 'hotel_rooms', 'r1'), { roomNumber: '301' }));
       await assertSucceeds(updateDoc(doc(db('member'), 'tours', TOUR, 'hotel_rooms', 'r1'), { assignedMemberEmails: [people.member.email] }));
       await assertFails(deleteDoc(doc(db('member'), 'tours', TOUR, 'hotel_rooms', 'r1')));
+    });
+
+    test('route stops: anyone adds their own; the author or an admin edits; the author stays', async () => {
+      const path = ['tours', TOUR, 'checkpoints', 'c1'];
+      const cp = { id: 'c1', name: 'Paduar Bazar', kmFromStart: 100, kind: 'food', legKey: 'origin>a', addedByEmail: people.member.email };
+      await assertFails(setDoc(doc(db('member'), ...path), { ...cp, addedByEmail: people.admin.email }));
+      await assertSucceeds(setDoc(doc(db('member'), ...path), cp));
+      await assertSucceeds(updateDoc(doc(db('member'), ...path), { name: 'Paduar Bazar Bishwaroad' }));
+      await assertSucceeds(updateDoc(doc(db('admin'), ...path), { visitedAt: serverTimestamp() }));
+      await assertFails(updateDoc(doc(db('other'), ...path), { name: 'x' }));
+      await assertFails(updateDoc(doc(db('member'), ...path), { addedByEmail: people.other.email }));
+      await assertFails(deleteDoc(doc(db('other'), ...path)));
+      await assertSucceeds(deleteDoc(doc(db('member'), ...path)));
+    });
+
+    test('admins save the itinerary and leg plans on the tour; members cannot', async () => {
+      const stops = [{ id: 'a', name: "Cox's Bazar", kind: 'beach' }];
+      await assertFails(updateDoc(doc(db('member'), 'tours', TOUR), { stops }));
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', TOUR), { stops, returnHome: true }));
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', TOUR), new FieldPath('legPlans', 'origin>a'), { mode: 'road' }));
+      await assertFails(updateDoc(doc(db('member'), 'tours', TOUR), new FieldPath('legPlans', 'origin>a'), { mode: 'air' }));
+    });
+
+    const vehicle = (extra = {}) => ({ id: 'v1', kind: 'trainChair', name: 'Sonar Bangla', rows: 15, pattern: '2-2', locked: false, ...extra });
+    const seat = (extra = {}) => ({ vehicleId: 'v1', seatNumber: '12', assignedMemberEmail: people.member.email, assignedMemberName: 'M', isWindow: false, familySlot: 0, ...extra });
+
+    test('vehicles: admins add, edit and delete them; members only read', async () => {
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'vehicles', 'v1'), vehicle()));
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle()));
+      await assertSucceeds(getDocs(collection(db('member'), 'tours', TOUR, 'vehicles')));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', TOUR, 'vehicles')));
+      await assertFails(updateDoc(doc(db('member'), 'tours', TOUR, 'vehicles', 'v1'), { locked: true }));
+      await assertFails(deleteDoc(doc(db('member'), 'tours', TOUR, 'vehicles', 'v1')));
+      await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1')));
+    });
+
+    test('vehicles: the id must match and the seat map stays a sensible size', async () => {
+      await assertFails(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle({ id: 'other' })));
+      await assertFails(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle({ rows: 500 })));
+      await assertFails(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle({ rows: 0 })));
+    });
+
+    test('vehicle seats: members take seats on an existing vehicle under the right id', async () => {
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle()));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__12'), seat()));
+      await assertSucceeds(getDocs(collection(db('member'), 'tours', TOUR, 'vehicle_seats')));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', TOUR, 'vehicle_seats')));
+      // The document id must be "<vehicleId>__<seatNumber>".
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__13'), seat()));
+      // No seats on a vehicle that does not exist.
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v9__12'), seat({ vehicleId: 'v9' })));
+      // Only the seat fields.
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__12'), seat({ price: 5 })));
+      await assertSucceeds(deleteDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__12')));
+    });
+
+    test('vehicle seats: a locked vehicle is changed by admins only', async () => {
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicles', 'v1'), vehicle({ locked: true })));
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__12'), seat()));
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', TOUR, 'vehicle_seats', 'v1__12'), seat()));
+      await assertFails(deleteDoc(doc(db('member'), 'tours', TOUR, 'vehicle_seats', 'v1__12')));
+      await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', TOUR, 'vehicle_seats', 'v1__12')));
     });
   });
 
