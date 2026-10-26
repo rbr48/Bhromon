@@ -6,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/utils/shared_latest_stream.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:go_router/go_router.dart';
@@ -37,6 +36,7 @@ import '../widgets/chat_expense_bubble.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/travel_ai_service.dart';
 import '../../../../core/utils/image_sizing.dart';
+import '../../../../core/services/media_upload_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
@@ -568,36 +568,14 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       }
 
-      final ext = type == 'video' ? 'mp4' : 'jpg';
-      final mimeType = type == 'video' ? 'video/mp4' : 'image/jpeg';
-      final storageRef = FirebaseStorage.instance
-          .ref('chat_media/${widget.chatId}/$uploadId.$ext');
-
-      final UploadTask uploadTask;
-      if (!kIsWeb && fileToUpload != null && fileToUpload.existsSync()) {
-        // Native mobile: stream directly from file via background thread without Binder limit
-        uploadTask = storageRef.putFile(
-          fileToUpload,
-          SettableMetadata(contentType: mimeType),
-        );
-      } else {
-        // Web fallback: read bytes and upload
-        final Uint8List bytes = await xFile.readAsBytes();
-        uploadTask = storageRef.putData(
-          bytes,
-          SettableMetadata(contentType: mimeType),
-        );
-      }
-
-      uploadTask.snapshotEvents.listen((snap) {
-        if (!mounted) return;
-        final progress =
-            snap.bytesTransferred / (snap.totalBytes > 0 ? snap.totalBytes : 1);
-        setState(() => pending.progress = progress);
-      });
-
-      await uploadTask;
-      final downloadUrl = await storageRef.getDownloadURL();
+      final downloadUrl = await MediaUploadService.uploadXFile(
+        file: xFile,
+        tourOrChatId: widget.chatId,
+        folder: 'chat_media',
+        onProgress: (progress) {
+          if (mounted) setState(() => pending.progress = progress);
+        },
+      );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
       final batch = FirebaseFirestore.instance.batch();
@@ -716,27 +694,15 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       }
 
-      final storageRef = FirebaseStorage.instance
-          .ref('chat_media/${widget.chatId}/$uploadId.m4a');
+      final Uint8List voiceBytes = kIsWeb
+          ? await XFile(filePath).readAsBytes()
+          : await File(filePath).readAsBytes();
 
-      final UploadTask uploadTask;
-      final voiceFile = File(filePath);
-      if (!kIsWeb && voiceFile.existsSync()) {
-        uploadTask = storageRef.putFile(
-          voiceFile,
-          SettableMetadata(contentType: 'audio/mp4'),
-        );
-      } else {
-        final xFile = XFile(filePath);
-        final bytes = await xFile.readAsBytes();
-        uploadTask = storageRef.putData(
-          bytes,
-          SettableMetadata(contentType: 'audio/mp4'),
-        );
-      }
-
-      await uploadTask;
-      final downloadUrl = await storageRef.getDownloadURL();
+      final downloadUrl = await MediaUploadService.uploadBytes(
+        bytes: voiceBytes,
+        path: 'chat_voice/${widget.chatId}/$uploadId.m4a',
+        contentType: 'audio/mp4',
+      );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
       final batch = FirebaseFirestore.instance.batch();
@@ -823,19 +789,20 @@ class _ChatScreenState extends State<ChatScreen> {
   ) async {
     final uploadId = const Uuid().v4();
     try {
-      final storageRef = FirebaseStorage.instance
-          .ref('chat_docs/${widget.chatId}/${uploadId}_${pFile.name}');
-      final UploadTask uploadTask;
-      if (!kIsWeb && pFile.path != null && pFile.path!.isNotEmpty) {
-        uploadTask = storageRef.putFile(File(pFile.path!));
-      } else if (pFile.bytes != null) {
-        uploadTask = storageRef.putData(pFile.bytes!);
+      final Uint8List docBytes;
+      if (pFile.bytes != null) {
+        docBytes = pFile.bytes!;
+      } else if (!kIsWeb && pFile.path != null && pFile.path!.isNotEmpty) {
+        docBytes = await File(pFile.path!).readAsBytes();
       } else {
         return;
       }
 
-      await uploadTask;
-      final downloadUrl = await storageRef.getDownloadURL();
+      final downloadUrl = await MediaUploadService.uploadBytes(
+        bytes: docBytes,
+        path: 'chat_docs/${widget.chatId}/${uploadId}_${pFile.name}',
+        contentType: 'application/octet-stream',
+      );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
       final batch = FirebaseFirestore.instance.batch();

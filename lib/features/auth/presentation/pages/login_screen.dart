@@ -11,7 +11,6 @@ import '../cubit/auth_state.dart';
 // ─── Constants ────────────────────────────────────────────────────────────────
 const Color _kBg = Color(0xFF050C08); // deepest dark green-black
 const Color _kCardBg = Color(0xFF0D1A12); // dark card, fully opaque
-const Color _kFieldBg = Color(0xFF0A140D); // even darker for inputs
 const Color _kBorder = Color(0xFF1E3A26); // subtle border
 const Color _kGreen = Color(0xFF52B788); // vibrant mint-green
 const Color _kGreenDark = Color(0xFF1B4332);
@@ -224,9 +223,7 @@ class _LoginScreenState extends State<LoginScreen>
             FadeTransition(opacity: anim, child: child),
         child: state is AuthLoading
             ? const _LoadingView()
-            : state is AuthOtpSent
-                ? const _OtpForm()
-                : const _LoginForm(),
+            : const _LoginForm(),
       ),
     );
   }
@@ -352,8 +349,6 @@ class _LoginForm extends StatefulWidget {
 }
 
 class _LoginFormState extends State<_LoginForm> {
-  final _emailController = TextEditingController();
-  bool _acceptedTerms = false;
   late final TapGestureRecognizer _termsRecognizer;
   late final TapGestureRecognizer _privacyRecognizer;
 
@@ -384,35 +379,9 @@ class _LoginFormState extends State<_LoginForm> {
 
   @override
   void dispose() {
-    _emailController.dispose();
     _termsRecognizer.dispose();
     _privacyRecognizer.dispose();
     super.dispose();
-  }
-
-  void _showConsentWarning() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.white),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Please accept the Terms of Use and Privacy Policy to continue.',
-                style:
-                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.orange.shade800,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    );
   }
 
   void _showTermsDialog(BuildContext context) {
@@ -542,213 +511,51 @@ class _LoginFormState extends State<_LoginForm> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Sign in to discover and share remote destination updates in Bangladesh.',
+          'Sign in with Google to explore Bangladesh, coordinate tour groups, and share verified journey logs.',
           style: TextStyle(color: _kWhite54, fontSize: 13, height: 1.4),
         ),
-        const SizedBox(height: 20),
-
-        // Terms acceptance checkbox
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              height: 24,
-              width: 24,
-              child: Checkbox(
-                value: _acceptedTerms,
-                activeColor: _kGreen,
-                checkColor: Colors.black,
-                side: const BorderSide(color: _kBorder, width: 1.5),
-                onChanged: (val) {
-                  setState(() {
-                    _acceptedTerms = val ?? false;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  text: 'I agree to the ',
-                  style: const TextStyle(color: _kWhite54, fontSize: 12),
-                  children: [
-                    TextSpan(
-                      text: 'Terms of Use',
-                      style: const TextStyle(
-                        color: _kGreen,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
-                      ),
-                      recognizer: _termsRecognizer,
-                    ),
-                    const TextSpan(text: ' & '),
-                    TextSpan(
-                      text: 'Privacy Policy',
-                      style: const TextStyle(
-                        color: _kGreen,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
-                      ),
-                      recognizer: _privacyRecognizer,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 28),
 
         // Google button
         _GoogleButton(
           onTap: () {
-            if (!_acceptedTerms) {
-              _showConsentWarning();
-              return;
-            }
             context.read<AuthCubit>().signInWithGoogle();
           },
         ),
 
-        const SizedBox(height: 20),
-
-        // OR Divider
-        const Row(
-          children: [
-            Expanded(child: Divider(color: _kBorder)),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'OR',
-                style: TextStyle(
-                    color: _kWhite30,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-            Expanded(child: Divider(color: _kBorder)),
-          ],
-        ),
-
-        const SizedBox(height: 20),
-
-        const _Label('EMAIL ADDRESS'),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          style: const TextStyle(color: Colors.white),
-          decoration: _inputDeco(
-            hint: 'example@gmail.com',
-            icon: Icons.email_outlined,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _GreenButton(
-          label: 'Send Verification Code',
-          onTap: () {
-            if (!_acceptedTerms) {
-              _showConsentWarning();
-              return;
-            }
-            final email = _emailController.text.trim();
-            if (email.isNotEmpty) {
-              context.read<AuthCubit>().signInWithEmail(email);
-            }
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _OtpForm extends StatefulWidget {
-  const _OtpForm();
-
-  @override
-  State<_OtpForm> createState() => _OtpFormState();
-}
-
-class _OtpFormState extends State<_OtpForm> {
-  final _otpController = TextEditingController();
-
-  @override
-  void dispose() {
-    _otpController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      key: const ValueKey('otp_form'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 22,
-              decoration: BoxDecoration(
-                color: _kGreen,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'Verify Identity',
-              style: TextStyle(
-                color: _kWhite,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'We sent a verification code to your email. Please enter it below.',
-          style: TextStyle(color: _kWhite54, fontSize: 13, height: 1.4),
-        ),
         const SizedBox(height: 24),
-        const _Label('VERIFICATION CODE'),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _otpController,
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-          style: const TextStyle(
-              color: Colors.white,
-              letterSpacing: 8,
-              fontSize: 18,
-              fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
-          decoration: _inputDeco(
-            hint: '777777',
-            icon: Icons.lock_outline,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _GreenButton(
-          label: 'Verify & Continue',
-          onTap: () {
-            final code = _otpController.text.trim();
-            if (code.isNotEmpty) {
-              context.read<AuthCubit>().verifyOtp(code);
-            }
-          },
-        ),
-        const SizedBox(height: 12),
+
+        // Terms & Privacy statement
         Center(
-          child: TextButton(
-            onPressed: () {
-              context.read<AuthCubit>().checkAuthStatus();
-            },
-            child: const Text('Back to Sign In',
-                style: TextStyle(color: _kWhite54, fontSize: 13)),
+          child: Text.rich(
+            TextSpan(
+              text: 'By continuing, you agree to our ',
+              style: const TextStyle(color: _kWhite54, fontSize: 12),
+              children: [
+                TextSpan(
+                  text: 'Terms of Use',
+                  style: const TextStyle(
+                    color: _kGreen,
+                    fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.underline,
+                  ),
+                  recognizer: _termsRecognizer,
+                ),
+                const TextSpan(text: ' & '),
+                TextSpan(
+                  text: 'Privacy Policy',
+                  style: const TextStyle(
+                    color: _kGreen,
+                    fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.underline,
+                  ),
+                  recognizer: _privacyRecognizer,
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
           ),
-        )
+        ),
       ],
     );
   }
@@ -772,101 +579,6 @@ class _LoadingView extends StatelessWidget {
     );
   }
 }
-
-// ─── Shared widgets ─────────────────────────────────────────────────────────
-class _Label extends StatelessWidget {
-  final String text;
-
-  const _Label(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: _kWhite54,
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        letterSpacing: .5,
-      ),
-    );
-  }
-}
-
-InputDecoration _inputDeco({
-  required String hint,
-  required IconData icon,
-  Widget? prefix,
-}) {
-  return InputDecoration(
-    filled: true,
-    fillColor: _kFieldBg,
-    hintText: hint,
-    hintStyle: const TextStyle(color: _kWhite30, fontSize: 14),
-    prefixIcon: Icon(icon, color: _kGreen, size: 20),
-    prefix: prefix,
-    counterText: '',
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: _kBorder),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: _kBorder),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: _kGreen, width: 2),
-    ),
-  );
-}
-
-class _GreenButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _GreenButton({
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return BouncyButton(
-      onTap: onTap,
-      child: Container(
-        height: 54,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [_kGreen, Color(0xFF2D9053)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: _kGreen.withValues(alpha: .35),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            letterSpacing: .5,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _GoogleButton extends StatelessWidget {
   final VoidCallback onTap;
 
