@@ -839,8 +839,10 @@ service cloud.firestore {
     // ---- Memberships ----
     // Each person can read their own rows; members see the roster of their tour.
     match /memberships/{membershipId} {
-      allow get, list: if isAuth() &&
-                          (resource.data.email == tourUserEmail() || isActiveMember(resource.data.tourId));
+      allow get: if isAuth() &&
+                    (resource == null || resource.data.email == tourUserEmail() || isActiveMember(resource.data.tourId));
+      allow list: if isAuth() &&
+                     (resource.data.email == tourUserEmail() || isActiveMember(resource.data.tourId));
       // Owners are created with the tour; members join with a valid invite code,
       // or are added directly by an owner or admin.
       allow create: if isAuth() &&
@@ -862,7 +864,8 @@ service cloud.firestore {
                        request.resource.data.email == resource.data.email && (
                          isOwnerOfTour(resource.data.tourId) ||
                          (isTourAdmin(resource.data.tourId) &&
-                          resource.data.role == 'member' && request.resource.data.role == 'member') ||
+                          request.resource.data.role == 'member' &&
+                          !isTargetBanned(resource.data.tourId, resource.data.email)) ||
                          (resource.data.email == tourUserEmail() &&
                           request.resource.data.role == resource.data.role &&
                           request.resource.data.status == resource.data.status &&
