@@ -824,8 +824,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Quick emoji reaction chips
-                      ...['❤️', '🔥', '😂'].map((emoji) {
+                      // Facebook quick emoji reactions
+                      ...['👍', '❤️', '😂', '😮', '😢', '🔥'].map((emoji) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 2),
                           child: InkWell(

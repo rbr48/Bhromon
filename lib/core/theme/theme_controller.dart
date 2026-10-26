@@ -14,47 +14,28 @@ class ThemeController extends ChangeNotifier {
 
   ThemeMode _mode = ThemeMode.dark;
 
-  ThemeMode get mode => _mode;
+  ThemeMode get mode => ThemeMode.dark;
 
-  /// The stored name for [mode]: `system`, `light` or `dark`.
-  static String nameOf(ThemeMode mode) => switch (mode) {
-        ThemeMode.system => 'system',
-        ThemeMode.light => 'light',
-        ThemeMode.dark => 'dark',
-      };
+  /// The stored name for [mode]: always `dark`.
+  static String nameOf(ThemeMode mode) => 'dark';
 
   /// The mode for a stored name, or null when the name is not one of the three.
-  static ThemeMode? modeFor(String? name) => switch (name) {
-        'system' => ThemeMode.system,
-        'light' => ThemeMode.light,
-        'dark' => ThemeMode.dark,
-        _ => null,
-      };
+  static ThemeMode? modeFor(String? name) => ThemeMode.dark;
 
-  /// Reads the saved choice. A missing or unknown value keeps dark.
+  /// Reads the saved choice. Bhromon enforces dark theme.
   Future<void> load() async {
+    _mode = ThemeMode.dark;
     try {
       final box = await _openBox();
-      final saved = modeFor(box.get(_key) as String?);
-      if (saved != null && saved != _mode) {
-        _mode = saved;
-        notifyListeners();
-      }
+      await box.put(_key, 'dark');
     } catch (e) {
-      debugPrint('[ThemeController] Could not read the theme: $e');
+      debugPrint('[ThemeController] Could not set dark theme: $e');
     }
   }
 
   Future<void> setMode(ThemeMode mode) async {
-    if (mode == _mode) return;
-    _mode = mode;
+    _mode = ThemeMode.dark;
     notifyListeners();
-    try {
-      final box = await _openBox();
-      await box.put(_key, nameOf(mode));
-    } catch (e) {
-      debugPrint('[ThemeController] Could not save the theme: $e');
-    }
   }
 
   Future<Box<dynamic>> _openBox() async {

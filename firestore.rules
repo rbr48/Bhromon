@@ -420,6 +420,9 @@ service cloud.firestore {
     function isBanned(tId) {
       return exists(/databases/$(database)/documents/tours/$(tId)/bans/$(tourUserEmail()));
     }
+    function isTargetBanned(tId, email) {
+      return exists(/databases/$(database)/documents/tours/$(tId)/bans/$(email));
+    }
 
     // A list of member emails (likes, viewers) changes by one entry: the caller's
     // own. Either nothing changes, the caller is added, or the caller is removed.
@@ -806,16 +809,21 @@ service cloud.firestore {
     match /memberships/{membershipId} {
       allow get, list: if isAuth() &&
                           (resource.data.email == tourUserEmail() || isActiveMember(resource.data.tourId));
-      // Owners are created with the tour; members join with a valid invite code.
+      // Owners are created with the tour; members join with a valid invite code,
+      // or are added directly by an owner or admin.
       allow create: if isAuth() &&
-                       request.resource.data.email == tourUserEmail() &&
-                       membershipId == request.resource.data.tourId + '__' + tourUserEmail() &&
+                       membershipId == request.resource.data.tourId + '__' + request.resource.data.email &&
                        request.resource.data.status == 'active' && (
-                         (request.resource.data.role == 'owner' &&
+                         (request.resource.data.email == tourUserEmail() &&
+                          request.resource.data.role == 'owner' &&
                           isOwnerOfTour(request.resource.data.tourId)) ||
-                         (request.resource.data.role == 'member' &&
+                         (request.resource.data.email == tourUserEmail() &&
+                          request.resource.data.role == 'member' &&
                           get(/databases/$(database)/documents/tours/$(request.resource.data.tourId)).data.inviteCode == request.resource.data.joinCode &&
-                          !isBanned(request.resource.data.tourId))
+                          !isBanned(request.resource.data.tourId)) ||
+                         ((isOwnerOfTour(request.resource.data.tourId) || isTourAdmin(request.resource.data.tourId)) &&
+                          request.resource.data.role == 'member' &&
+                          !isTargetBanned(request.resource.data.tourId, request.resource.data.email))
                        );
       allow update: if isAuth() &&
                        request.resource.data.tourId == resource.data.tourId &&

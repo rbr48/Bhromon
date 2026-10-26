@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -223,7 +224,19 @@ class _ReelPageItemState extends State<_ReelPageItem>
     with SingleTickerProviderStateMixin {
   bool _isCleanScreen = false;
   bool _showHeartBurst = false;
+  bool? _optimisticLiked;
+  int _optimisticLikeDelta = 0;
   late final AnimationController _discRotCtrl;
+
+  @override
+  void didUpdateWidget(_ReelPageItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.id != widget.post.id ||
+        oldWidget.post.likes.length != widget.post.likes.length) {
+      _optimisticLiked = null;
+      _optimisticLikeDelta = 0;
+    }
+  }
 
   @override
   void initState() {
@@ -242,7 +255,10 @@ class _ReelPageItemState extends State<_ReelPageItem>
 
   @override
   Widget build(BuildContext context) {
-    final isLiked = widget.post.isLikedBy(widget.currentEmail);
+    final isLiked =
+        _optimisticLiked ?? widget.post.isLikedBy(widget.currentEmail);
+    final likeCount =
+        math.max(0, widget.post.likes.length + _optimisticLikeDelta);
     final ctrl = widget.controller;
     final isReady = ctrl != null && ctrl.value.isInitialized;
 
@@ -261,7 +277,15 @@ class _ReelPageItemState extends State<_ReelPageItem>
             }
           },
           onDoubleTap: () {
-            setState(() => _showHeartBurst = true);
+            setState(() {
+              _showHeartBurst = true;
+              final current = _optimisticLiked ??
+                  widget.post.isLikedBy(widget.currentEmail);
+              if (!current) {
+                _optimisticLiked = true;
+                _optimisticLikeDelta = 1;
+              }
+            });
             widget.onLikeToggle();
           },
           onLongPressStart: (_) {
@@ -368,10 +392,18 @@ class _ReelPageItemState extends State<_ReelPageItem>
                         color: isLiked ? Colors.redAccent : Colors.white,
                         size: 32,
                       ),
-                      onPressed: widget.onLikeToggle,
+                      onPressed: () {
+                        setState(() {
+                          final current = _optimisticLiked ??
+                              widget.post.isLikedBy(widget.currentEmail);
+                          _optimisticLiked = !current;
+                          _optimisticLikeDelta = !current ? 1 : -1;
+                        });
+                        widget.onLikeToggle();
+                      },
                     ),
                     Text(
-                      '${widget.post.likes.length}',
+                      '$likeCount',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,

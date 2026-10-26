@@ -11,6 +11,7 @@ class InstafeedCommentsSheet extends StatefulWidget {
   final String tourId;
   final TourPostItem post;
   final bool isAdmin;
+  final int? targetMediaIndex;
 
   const InstafeedCommentsSheet({
     super.key,
@@ -18,6 +19,7 @@ class InstafeedCommentsSheet extends StatefulWidget {
     required this.tourId,
     required this.post,
     this.isAdmin = false,
+    this.targetMediaIndex,
   });
 
   @override
@@ -29,10 +31,19 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
   final FocusNode _focusNode = FocusNode();
 
   TourCommentItem? _replyingTo;
+  int? _taggedSlideIndex;
   final Set<String> _expandedParentIds = {};
   bool _isSubmitting = false;
 
   static const List<String> _quickEmojis = ['❤️', '🔥', '👏', '😍', '😂', '🙌'];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.targetMediaIndex != null) {
+      _taggedSlideIndex = widget.targetMediaIndex;
+    }
+  }
 
   @override
   void dispose() {
@@ -45,15 +56,19 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
       widget.repository.currentEmail == widget.post.authorEmail;
 
   Future<void> _submitComment({String? overrideText, String? reaction}) async {
-    final text = overrideText ?? _commentCtrl.text;
-    if (text.trim().isEmpty && reaction == null) return;
+    var text = (overrideText ?? _commentCtrl.text).trim();
+    if (text.isEmpty && reaction == null) return;
+
+    if (_taggedSlideIndex != null && text.isNotEmpty && !text.startsWith('[ছবি')) {
+      text = '[ছবি ${_taggedSlideIndex! + 1}] $text';
+    }
 
     setState(() => _isSubmitting = true);
     try {
       await widget.repository.addComment(
         tourId: widget.tourId,
         postId: widget.post.id,
-        text: text.trim(),
+        text: text,
         reaction: reaction,
         parentId: _replyingTo?.id,
       );
@@ -65,6 +80,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
       _commentCtrl.clear();
       setState(() {
         _replyingTo = null;
+        _taggedSlideIndex = null;
         _isSubmitting = false;
       });
       _focusNode.unfocus();
@@ -180,47 +196,88 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.78,
-      decoration: const BoxDecoration(
-        color: Color(0xFF121212),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          // Drag handle
-          Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 6),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
+    final mediaQuery = MediaQuery.of(context);
+    final bottomInset = mediaQuery.viewInsets.bottom;
+    final totalHeight = mediaQuery.size.height * 0.85;
 
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                const Text(
-                  'মন্তব্যসমূহ',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  tooltip: 'বন্ধ করুন',
-                  icon: const Icon(Icons.close, color: Colors.white70),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
+    return AnimatedPadding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      child: Container(
+        height: bottomInset > 0
+            ? totalHeight - bottomInset
+            : (mediaQuery.size.height * 0.78),
+        decoration: const BoxDecoration(
+          color: Color(0xFF121212),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Drag handle
+            Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 6),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  const Text(
+                    'মন্তব্যসমূহ',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (_taggedSlideIndex != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkGreen,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.mintGreen, width: 0.8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'ছবি ${_taggedSlideIndex! + 1}',
+                            style: const TextStyle(
+                              color: AppColors.mintGreen,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: () => setState(() => _taggedSlideIndex = null),
+                            child: const Icon(Icons.close,
+                                size: 12, color: AppColors.mintGreen),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'বন্ধ করুন',
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
           const Divider(height: 1, color: Colors.white10),
 
           // Comments List
@@ -403,6 +460,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
           // Input field
           SafeArea(
             top: false,
+            bottom: bottomInset == 0,
             child: Container(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               color: const Color(0xFF1E1E1E),
@@ -450,8 +508,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildCommentRow(TourCommentItem comment, {bool isReply = false}) {
     final currentEmail = widget.repository.currentEmail;

@@ -13,7 +13,6 @@ import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/models/tour_post_models.dart';
 import '../../domain/services/trip_ledger_engine.dart';
-import 'tide_beach_guide_screen.dart';
 import '../widgets/instafeed/instafeed_create_studio.dart';
 import '../widgets/instafeed/instafeed_comments_sheet.dart';
 import '../widgets/instafeed/instafeed_explore_grid.dart';
@@ -669,7 +668,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     );
   }
 
-  void _showCommentsModal(BuildContext context, TourPostItem post) {
+  void _showCommentsModal(BuildContext context, TourPostItem post,
+      {int? targetMediaIndex}) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -679,6 +679,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         tourId: widget.tourId,
         post: post,
         isAdmin: _isAdmin,
+        targetMediaIndex: targetMediaIndex,
       ),
     );
   }
@@ -1050,25 +1051,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                 ),
                               ),
 
-                            // 2. Beach Tide & Ocean Safety Banner, on beach
-                            // trips only (hidden until the tour has loaded)
-                            if (_tourGroup?.tourType == TourType.beach)
-                              SliverToBoxAdapter(
-                                child: InstafeedTideBanner(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute<void>(
-                                        builder: (_) => TideBeachGuideScreen(
-                                          tourId: widget.tourId,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-
-                            // 3. Stories & Story Highlights Tray
+                            // 2. Stories & Story Highlights Tray (Facebook card style)
                             SliverToBoxAdapter(
                               child: _buildStoriesAndHighlightsBar(
                                 context,
@@ -1244,8 +1227,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                         repository: _repository,
                                         tourId: widget.tourId,
                                         post: post,
-                                        onOpenComments: (p) =>
-                                            _showCommentsModal(context, p),
+                                        onOpenComments:
+                                            (p, {targetMediaIndex}) =>
+                                                _showCommentsModal(context, p,
+                                                    targetMediaIndex:
+                                                        targetMediaIndex),
                                         onShare: (p) =>
                                             _showShareModal(context, p),
                                         onAddToLedger: (p) =>
@@ -1293,8 +1279,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                           _toggleBookmark(post.id),
                                       onSaveToCollection:
                                           _showSaveToCollectionSheet,
-                                      onOpenComments: (p) =>
-                                          _showCommentsModal(context, p),
+                                      onOpenComments:
+                                          (p, {targetMediaIndex}) =>
+                                              _showCommentsModal(context, p,
+                                                  targetMediaIndex:
+                                                      targetMediaIndex),
                                       onShare: (p) =>
                                           _showShareModal(context, p),
                                       onAddToLedger: (p) =>
@@ -1363,177 +1352,479 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     List<List<TourStoryItem>> authorGroups,
     List<TourStoryHighlight> highlights,
   ) {
-    // Your own stories open from the Your Story bubble, so they are not listed twice.
+    // Your own stories open from the Your Story card, so they are not listed twice.
     final me = _repository.currentEmail;
     final ownIndex = me.isEmpty
         ? -1
         : authorGroups.indexWhere((g) => g.first.authorEmail == me);
 
     return Container(
-      height: 110,
+      height: 195,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
-          // Your Story add button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: GestureDetector(
-              onTap: () => ownIndex >= 0
-                  ? _openStoryViewer(context, authorGroups, ownIndex)
-                  : _showCreatePostModal(context),
-              child: Column(
-                children: [
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Colors.grey.shade900,
-                        backgroundImage: _repository.isSignedIn &&
-                                _repository.currentDisplayName.isNotEmpty
-                            ? null
-                            : null,
-                        child: const Icon(Icons.person,
-                            color: Colors.white54, size: 28),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () => _showCreatePostModal(context),
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: AppColors.mintGreen,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.add,
-                                size: 14, color: Colors.black),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  const Text('আপনার স্টোরি',
-                      style: TextStyle(color: Colors.white70, fontSize: 11)),
-                ],
-              ),
-            ),
-          ),
+          // 1. Facebook "Create Story" or "Your Story" Card
+          _buildFacebookCreateStoryCard(context, authorGroups, ownIndex),
 
-          // Author Stories Bubbles
+          // 2. Member Story Cards (Facebook style)
           ...List.generate(authorGroups.length, (idx) {
             if (idx == ownIndex) return const SizedBox.shrink();
             final group = authorGroups[idx];
             final first = group.first;
             final isUnseen = group.any((s) => !_seenStoryIds.contains(s.id));
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: GestureDetector(
-                onTap: () => _openStoryViewer(context, authorGroups, idx),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(2.5),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: isUnseen
-                            ? const LinearGradient(
-                                colors: [
-                                  Color(0xFF00E676),
-                                  Color(0xFF1DE9B6),
-                                  Color(0xFF00B0FF)
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : LinearGradient(
-                                colors: [
-                                  Colors.grey.shade700,
-                                  Colors.grey.shade800
-                                ],
-                              ),
-                      ),
-                      child: CircleAvatar(
-                        radius: 26,
-                        backgroundColor: Colors.black,
-                        backgroundImage: first.authorPhoto != null
-                            ? NetworkImage(first.authorPhoto!)
-                            : null,
-                        child: first.authorPhoto == null
-                            ? Text(
-                                first.authorName.isNotEmpty
-                                    ? first.authorName[0].toUpperCase()
-                                    : 'M',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold),
-                              )
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      width: 64,
-                      child: Text(
-                        first.authorName,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 11),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            return _buildFacebookStoryCard(
+              context: context,
+              story: first,
+              storyCount: group.length,
+              isUnseen: isUnseen,
+              onTap: () => _openStoryViewer(context, authorGroups, idx),
             );
           }),
 
-          // Tour Story Highlights
+          // 3. Tour Story Highlights
           if (highlights.isNotEmpty) ...[
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
               width: 1,
               color: Colors.white12,
             ),
-            ...highlights.map((h) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.grey.shade900,
-                      backgroundImage: h.coverUrl.isNotEmpty
-                          ? NetworkImage(h.coverUrl)
-                          : null,
-                      child: h.coverUrl.isEmpty
-                          ? const Icon(Icons.star,
-                              color: Colors.amber, size: 24)
-                          : null,
+            ...highlights.map((h) => _buildFacebookHighlightCard(h)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFacebookCreateStoryCard(
+    BuildContext context,
+    List<List<TourStoryItem>> authorGroups,
+    int ownIndex,
+  ) {
+    const cardWidth = 112.0;
+    const cardHeight = 178.0;
+
+    // If the current user already has active stories posted:
+    if (ownIndex >= 0) {
+      final myGroup = authorGroups[ownIndex];
+      final latestStory = myGroup.first;
+
+      return Container(
+        width: cardWidth,
+        height: cardHeight,
+        margin: const EdgeInsets.only(right: 8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _openStoryViewer(context, authorGroups, ownIndex),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CachedNetworkImage(
+                  imageUrl: latestStory.mediaUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) =>
+                      Container(color: const Color(0xFF1E1E1E)),
+                  errorWidget: (_, __, ___) => Container(
+                    color: const Color(0xFF1E1E1E),
+                    child: const Icon(Icons.person, color: Colors.white38),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white12, width: 0.5),
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.45),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.85),
+                      ],
+                      stops: const [0.0, 0.45, 1.0],
                     ),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      width: 60,
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF00E676), Color(0xFF00B0FF)],
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.black,
                       child: Text(
-                        h.title,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        latestStory.authorName.isNotEmpty
+                            ? latestStory.authorName[0].toUpperCase()
+                            : 'M',
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 11),
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: () => _showCreatePostModal(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.mintGreen,
+                      ),
+                      child: const Icon(Icons.add,
+                          size: 14, color: AppColors.darkGreen),
+                    ),
+                  ),
+                ),
+                const Positioned(
+                  bottom: 8,
+                  left: 8,
+                  right: 8,
+                  child: Text(
+                    'আপনার স্টোরি',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                            color: Colors.black87,
+                            blurRadius: 4,
+                            offset: Offset(0, 1)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Classic Facebook "Create Story" Card
+    return Container(
+      width: cardWidth,
+      height: cardHeight,
+      margin: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _showCreatePostModal(context),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF242526),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white12, width: 0.5),
+            ),
+            child: Stack(
+              children: [
+                Column(
+                  children: [
+                    Expanded(
+                      flex: 65,
+                      child: Container(
+                        width: double.infinity,
+                        color: const Color(0xFF1B1B1B),
+                        child: Center(
+                          child: Icon(
+                            Icons.person,
+                            size: 40,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 35,
+                      child: Container(
+                        width: double.infinity,
+                        color: const Color(0xFF242526),
+                        padding:
+                            const EdgeInsets.only(top: 18, left: 4, right: 4),
+                        child: const Text(
+                          'স্টোরি তৈরি করুন',
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
-              );
-            }),
+                Positioned(
+                  top: cardHeight * 0.65 - 18,
+                  left: (cardWidth - 36) / 2,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.mintGreen,
+                      border:
+                          Border.all(color: const Color(0xFF242526), width: 3),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black38,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.add,
+                      color: AppColors.darkGreen,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFacebookStoryCard({
+    required BuildContext context,
+    required TourStoryItem story,
+    required int storyCount,
+    required bool isUnseen,
+    required VoidCallback onTap,
+  }) {
+    const cardWidth = 112.0;
+    const cardHeight = 178.0;
+
+    return Container(
+      width: cardWidth,
+      height: cardHeight,
+      margin: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CachedNetworkImage(
+                imageUrl: story.mediaUrl,
+                fit: BoxFit.cover,
+                placeholder: (_, __) =>
+                    Container(color: const Color(0xFF1E1E1E)),
+                errorWidget: (_, __, ___) => Container(
+                  color: const Color(0xFF1E1E1E),
+                  child: const Center(
+                    child: Icon(Icons.broken_image, color: Colors.white38),
+                  ),
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white12, width: 0.5),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.55),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.85),
+                    ],
+                    stops: const [0.0, 0.45, 1.0],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: isUnseen
+                        ? const LinearGradient(
+                            colors: [Color(0xFF00E676), Color(0xFF00B0FF)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : LinearGradient(
+                            colors: [
+                              Colors.grey.shade600,
+                              Colors.grey.shade700
+                            ],
+                          ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Colors.black,
+                    backgroundImage: story.authorPhoto != null
+                        ? NetworkImage(story.authorPhoto!)
+                        : null,
+                    child: story.authorPhoto == null
+                        ? Text(
+                            story.authorName.isNotEmpty
+                                ? story.authorName[0].toUpperCase()
+                                : 'M',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+              if (storyCount > 1 || story.isVideo)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (story.isVideo)
+                          const Icon(Icons.play_arrow_rounded,
+                              size: 12, color: Colors.white),
+                        if (storyCount > 1)
+                          Text(
+                            '$storyCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              Positioned(
+                bottom: 8,
+                left: 8,
+                right: 8,
+                child: Text(
+                  story.authorName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                          color: Colors.black87,
+                          blurRadius: 4,
+                          offset: Offset(0, 1)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFacebookHighlightCard(TourStoryHighlight highlight) {
+    const cardWidth = 100.0;
+    const cardHeight = 178.0;
+
+    return Container(
+      width: cardWidth,
+      height: cardHeight,
+      margin: const EdgeInsets.only(right: 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (highlight.coverUrl.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: highlight.coverUrl,
+                fit: BoxFit.cover,
+                placeholder: (_, __) =>
+                    Container(color: const Color(0xFF1E1E1E)),
+                errorWidget: (_, __, ___) => Container(
+                  color: const Color(0xFF1E1E1E),
+                  child: const Icon(Icons.star, color: Colors.amber),
+                ),
+              )
+            else
+              Container(
+                color: const Color(0xFF1E1E1E),
+                child: const Icon(Icons.star, color: Colors.amber, size: 32),
+              ),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white12, width: 0.5),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.4),
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.85),
+                  ],
+                  stops: const [0.0, 0.45, 1.0],
+                ),
+              ),
+            ),
+            const Positioned(
+              top: 8,
+              left: 8,
+              child: Icon(Icons.star, color: Colors.amber, size: 18),
+            ),
+            Positioned(
+              bottom: 8,
+              left: 8,
+              right: 8,
+              child: Text(
+                highlight.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
           ],
-        ],
+        ),
       ),
     );
   }
