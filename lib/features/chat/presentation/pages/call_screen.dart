@@ -237,229 +237,233 @@ class _CallScreenState extends State<CallScreen> {
     final isVideo = widget.isVideoCall;
 
     return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) {
-          _hasExited = true;
-          _signaling.endCall();
-        }
-      },
-      child: Scaffold(
-      backgroundColor: const Color(0xFF0B141A), // WhatsApp dark background
-      body: GestureDetector(
-        onTap: isVideo ? _toggleControlsVisibility : null,
-        behavior: HitTestBehavior.opaque,
-        child: Stack(
-          children: [
-            // ── Background / Remote Video Layer ───────────────────────────────
-            if (isVideo && _remoteVideoConnected && !_isVideoOff)
-              Positioned.fill(
-                child: RTCVideoView(
-                  _remoteRenderer,
-                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                ),
-              )
-            else
-              _buildAudioOrPlaceholderBackground(),
-
-            // ── Top Header (Name, Status / Duration) ──────────────────────────
-            AnimatedOpacity(
-              duration: const Duration(milliseconds: 250),
-              opacity: _controlsVisible ? 1.0 : 0.0,
-              child: SafeArea(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back,
-                            color: Colors.white, size: 24),
-                        onPressed: _endCall,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              widget.remoteUserName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black87,
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _callDuration > Duration.zero
-                                  ? _formatDuration(_callDuration)
-                                  : _callStatusText,
-                              style: TextStyle(
-                                color: _callDuration > Duration.zero
-                                    ? const Color(0xFF00A884)
-                                    : Colors.white70,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                shadows: const [
-                                  Shadow(
-                                    color: Colors.black87,
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (isVideo)
-                        IconButton(
-                          icon: const Icon(Icons.cameraswitch,
-                              color: Colors.white, size: 24),
-                          onPressed: _switchCamera,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // ── Local Video PIP (Picture-In-Picture for Video Calls) ─────────
-            if (isVideo && !_isVideoOff)
-              Positioned(
-                right: _pipOffset.dx,
-                top: _pipOffset.dy,
-                child: GestureDetector(
-                  onPanUpdate: (details) {
-                    setState(() {
-                      _pipOffset = Offset(
-                        (_pipOffset.dx - details.delta.dx).clamp(
-                            10, MediaQuery.of(context).size.width - 120),
-                        (_pipOffset.dy + details.delta.dy).clamp(
-                            60, MediaQuery.of(context).size.height - 200),
-                      );
-                    });
-                  },
-                  child: Container(
-                    width: 100,
-                    height: 145,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1F2C34),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: const Color(0xFF00A884).withValues(alpha: 0.5),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    clipBehavior: Clip.hardEdge,
+        canPop: true,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) {
+            _hasExited = true;
+            _signaling.endCall();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF0B141A), // WhatsApp dark background
+          body: GestureDetector(
+            onTap: isVideo ? _toggleControlsVisibility : null,
+            behavior: HitTestBehavior.opaque,
+            child: Stack(
+              children: [
+                // ── Background / Remote Video Layer ───────────────────────────────
+                if (isVideo && _remoteVideoConnected && !_isVideoOff)
+                  Positioned.fill(
                     child: RTCVideoView(
-                      _localRenderer,
-                      mirror: true,
+                      _remoteRenderer,
                       objectFit:
                           RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                     ),
+                  )
+                else
+                  _buildAudioOrPlaceholderBackground(),
+
+                // ── Top Header (Name, Status / Duration) ──────────────────────────
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 250),
+                  opacity: _controlsVisible ? 1.0 : 0.0,
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back,
+                                color: Colors.white, size: 24),
+                            onPressed: _endCall,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  widget.remoteUserName,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black87,
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _callDuration > Duration.zero
+                                      ? _formatDuration(_callDuration)
+                                      : _callStatusText,
+                                  style: TextStyle(
+                                    color: _callDuration > Duration.zero
+                                        ? const Color(0xFF00A884)
+                                        : Colors.white70,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    shadows: const [
+                                      Shadow(
+                                        color: Colors.black87,
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isVideo)
+                            IconButton(
+                              icon: const Icon(Icons.cameraswitch,
+                                  color: Colors.white, size: 24),
+                              onPressed: _switchCamera,
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
 
-            // ── Bottom Action Controls Bar ────────────────────────────────────
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 250),
-              bottom: _controlsVisible ? 36 : -120,
-              left: 20,
-              right: 20,
-              child: SafeArea(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1F2C34).withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.4),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Speaker Toggle
-                      _buildCallActionBtn(
-                        icon: _isSpeakerOn
-                            ? Icons.volume_up
-                            : Icons.volume_down_rounded,
-                        color: _isSpeakerOn
-                            ? const Color(0xFF00A884)
-                            : Colors.white,
-                        bgColor: _isSpeakerOn
-                            ? Colors.white.withValues(alpha: 0.15)
-                            : const Color(0xFF2A3942),
-                        tooltip: 'Speaker',
-                        onTap: _toggleSpeaker,
-                      ),
-
-                      // Mute Audio Toggle
-                      _buildCallActionBtn(
-                        icon: _isAudioMuted ? Icons.mic_off : Icons.mic,
-                        color:
-                            _isAudioMuted ? Colors.redAccent : Colors.white,
-                        bgColor: _isAudioMuted
-                            ? Colors.white.withValues(alpha: 0.15)
-                            : const Color(0xFF2A3942),
-                        tooltip: _isAudioMuted ? 'Unmute' : 'Mute',
-                        onTap: _toggleAudio,
-                      ),
-
-                      // Video Toggle (only for video calls)
-                      if (isVideo)
-                        _buildCallActionBtn(
-                          icon: _isVideoOff
-                              ? Icons.videocam_off
-                              : Icons.videocam,
-                          color:
-                              _isVideoOff ? Colors.redAccent : Colors.white,
-                          bgColor: _isVideoOff
-                              ? Colors.white.withValues(alpha: 0.15)
-                              : const Color(0xFF2A3942),
-                          tooltip: _isVideoOff ? 'Turn Video On' : 'Turn Video Off',
-                          onTap: _toggleVideo,
+                // ── Local Video PIP (Picture-In-Picture for Video Calls) ─────────
+                if (isVideo && !_isVideoOff)
+                  Positioned(
+                    right: _pipOffset.dx,
+                    top: _pipOffset.dy,
+                    child: GestureDetector(
+                      onPanUpdate: (details) {
+                        setState(() {
+                          _pipOffset = Offset(
+                            (_pipOffset.dx - details.delta.dx).clamp(
+                                10, MediaQuery.of(context).size.width - 120),
+                            (_pipOffset.dy + details.delta.dy).clamp(
+                                60, MediaQuery.of(context).size.height - 200),
+                          );
+                        });
+                      },
+                      child: Container(
+                        width: 100,
+                        height: 145,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1F2C34),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                const Color(0xFF00A884).withValues(alpha: 0.5),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-
-                      // End Call Button (Red Circle)
-                      _buildCallActionBtn(
-                        icon: Icons.call_end,
-                        color: Colors.white,
-                        bgColor: Colors.redAccent,
-                        isEndCall: true,
-                        tooltip: 'End Call',
-                        onTap: _endCall,
+                        clipBehavior: Clip.hardEdge,
+                        child: RTCVideoView(
+                          _localRenderer,
+                          mirror: true,
+                          objectFit:
+                              RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        ),
                       ),
-                    ],
+                    ),
+                  ),
+
+                // ── Bottom Action Controls Bar ────────────────────────────────────
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 250),
+                  bottom: _controlsVisible ? 36 : -120,
+                  left: 20,
+                  right: 20,
+                  child: SafeArea(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1F2C34).withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(32),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          // Speaker Toggle
+                          _buildCallActionBtn(
+                            icon: _isSpeakerOn
+                                ? Icons.volume_up
+                                : Icons.volume_down_rounded,
+                            color: _isSpeakerOn
+                                ? const Color(0xFF00A884)
+                                : Colors.white,
+                            bgColor: _isSpeakerOn
+                                ? Colors.white.withValues(alpha: 0.15)
+                                : const Color(0xFF2A3942),
+                            tooltip: 'Speaker',
+                            onTap: _toggleSpeaker,
+                          ),
+
+                          // Mute Audio Toggle
+                          _buildCallActionBtn(
+                            icon: _isAudioMuted ? Icons.mic_off : Icons.mic,
+                            color:
+                                _isAudioMuted ? Colors.redAccent : Colors.white,
+                            bgColor: _isAudioMuted
+                                ? Colors.white.withValues(alpha: 0.15)
+                                : const Color(0xFF2A3942),
+                            tooltip: _isAudioMuted ? 'Unmute' : 'Mute',
+                            onTap: _toggleAudio,
+                          ),
+
+                          // Video Toggle (only for video calls)
+                          if (isVideo)
+                            _buildCallActionBtn(
+                              icon: _isVideoOff
+                                  ? Icons.videocam_off
+                                  : Icons.videocam,
+                              color:
+                                  _isVideoOff ? Colors.redAccent : Colors.white,
+                              bgColor: _isVideoOff
+                                  ? Colors.white.withValues(alpha: 0.15)
+                                  : const Color(0xFF2A3942),
+                              tooltip: _isVideoOff
+                                  ? 'Turn Video On'
+                                  : 'Turn Video Off',
+                              onTap: _toggleVideo,
+                            ),
+
+                          // End Call Button (Red Circle)
+                          _buildCallActionBtn(
+                            icon: Icons.call_end,
+                            color: Colors.white,
+                            bgColor: Colors.redAccent,
+                            isEndCall: true,
+                            tooltip: 'End Call',
+                            onTap: _endCall,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
-    ));
+          ),
+        ));
   }
 
   Widget _buildAudioOrPlaceholderBackground() {

@@ -81,7 +81,8 @@ class InstafeedExploreGrid extends StatelessWidget {
                     ),
                   ),
                 )
-              else if (post.videoUrl != null && isRemoteMediaUrl(post.videoUrl!))
+              else if (post.videoUrl != null &&
+                  isRemoteMediaUrl(post.videoUrl!))
                 ReelThumbnailPreview(videoUrl: post.videoUrl!)
               else
                 Container(

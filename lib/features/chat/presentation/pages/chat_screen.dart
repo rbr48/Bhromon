@@ -365,7 +365,8 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.toLowerCase().startsWith('/split ')) {
       final parts = text.substring(7).trim().split(' ');
       final amount = double.tryParse(parts.first) ?? 0.0;
-      final splitTitle = parts.length > 1 ? parts.sublist(1).join(' ') : 'Shared Expense';
+      final splitTitle =
+          parts.length > 1 ? parts.sublist(1).join(' ') : 'Shared Expense';
       if (amount > 0) {
         _messageController.clear();
         _sendExpenseMessage(amount, splitTitle, currentUid, currentName);
@@ -517,7 +518,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
     File? fileToUpload =
         file ?? (!kIsWeb && xFile.path.isNotEmpty ? File(xFile.path) : null);
-    final pending = _PendingUpload(id: uploadId, file: fileToUpload, type: type);
+    final pending =
+        _PendingUpload(id: uploadId, file: fileToUpload, type: type);
     setState(() => _pendingUploads.add(pending));
 
     Trace? uploadTrace;
@@ -621,7 +623,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
       final lastMsg = type == 'image'
           ? (caption != null && caption.isNotEmpty ? '📷 $caption' : '📷 Photo')
-          : (caption != null && caption.isNotEmpty ? '🎬 $caption' : '🎬 Video');
+          : (caption != null && caption.isNotEmpty
+              ? '🎬 $caption'
+              : '🎬 Video');
       final chatRef =
           FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
       final Map<String, dynamic> chatMeta = {
@@ -665,10 +669,13 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       debugPrint('Media upload error: $e');
       String msg = 'Failed to send media.';
-      if (e is FirebaseException && e.message != null && e.message!.isNotEmpty) {
+      if (e is FirebaseException &&
+          e.message != null &&
+          e.message!.isNotEmpty) {
         msg = 'Failed to send media: ${e.message}';
       } else {
-        msg = 'Failed to send media: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}';
+        msg =
+            'Failed to send media: ${e.toString().replaceAll(RegExp(r'\[.*?\]'), '').trim()}';
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1038,7 +1045,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _openCameraDirect(String currentUid, String currentName) async {
     try {
       final picker = ImagePicker();
-      final photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+      final photo =
+          await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
       if (photo != null) {
         _openMediaCaptionFlow(photo, false, currentUid, currentName);
       }
@@ -1116,12 +1124,12 @@ class _ChatScreenState extends State<ChatScreen> {
               final t = titleController.text.trim();
               if (amt > 0) {
                 Navigator.pop(dialogCtx);
-                _sendExpenseMessage(amt,
-                    t.isNotEmpty ? t : 'Travel Expense', currentUid, currentName);
+                _sendExpenseMessage(amt, t.isNotEmpty ? t : 'Travel Expense',
+                    currentUid, currentName);
               }
             },
-            child:
-                const Text('SPLIT 50/50', style: TextStyle(color: Colors.white)),
+            child: const Text('SPLIT 50/50',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1301,8 +1309,7 @@ class _ChatScreenState extends State<ChatScreen> {
       try {
         final doc = _allMessages.firstWhere((d) => d.id == docId);
         final data = doc.data() as Map<String, dynamic>?;
-        final starredBy =
-            (data?['starredBy'] as Map<String, dynamic>?) ?? {};
+        final starredBy = (data?['starredBy'] as Map<String, dynamic>?) ?? {};
         final isStarred = starredBy[currentUid] == true;
 
         await FirebaseFirestore.instance
@@ -1393,8 +1400,8 @@ class _ChatScreenState extends State<ChatScreen> {
         forwardText: text,
         forwardType: type,
         forwardMediaUrl: mediaUrl,
-        onForward: (targetChatId) => _forwardMessage(
-            targetChatId, text, type, mediaUrl, currentUid),
+        onForward: (targetChatId) =>
+            _forwardMessage(targetChatId, text, type, mediaUrl, currentUid),
       ),
     );
   }
@@ -1481,9 +1488,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (next) {
         _searchMatchIndex = (_searchMatchIndex + 1) % _matchingIndices.length;
       } else {
-        _searchMatchIndex =
-            (_searchMatchIndex - 1 + _matchingIndices.length) %
-                _matchingIndices.length;
+        _searchMatchIndex = (_searchMatchIndex - 1 + _matchingIndices.length) %
+            _matchingIndices.length;
       }
     });
     _scrollToSearchMatch();
@@ -1589,7 +1595,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (_disappearingTimerSeconds > 0) {
         final ts = (data['timestamp'] as Timestamp?)?.toDate();
         if (ts != null &&
-            DateTime.now().difference(ts).inSeconds > _disappearingTimerSeconds) {
+            DateTime.now().difference(ts).inSeconds >
+                _disappearingTimerSeconds) {
           return false;
         }
       }
@@ -1749,7 +1756,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         final isText = data['type'] == 'text';
                         final ts = data['timestamp'] as Timestamp?;
                         final isWithin15Min = ts != null &&
-                            DateTime.now().difference(ts.toDate()).inMinutes <= 15;
+                            DateTime.now().difference(ts.toDate()).inMinutes <=
+                                15;
                         if (isMe && isText && isWithin15Min) {
                           return IconButton(
                             icon: const Icon(Icons.edit, color: Colors.white),
@@ -1772,8 +1780,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       onPressed: () => _toggleStarSelectedMessages(currentUid),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline,
-                          color: Colors.white),
+                      icon:
+                          const Icon(Icons.delete_outline, color: Colors.white),
                       tooltip: 'Delete',
                       onPressed: () => _deleteSelectedMessages(currentUid),
                     ),
@@ -1803,7 +1811,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       title: TextField(
                         controller: _searchController,
                         autofocus: true,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 14),
                         decoration: const InputDecoration(
                           hintText: 'Search in conversation...',
                           hintStyle:
@@ -2001,7 +2010,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     final pinned =
                         data?['pinnedMessage'] as Map<String, dynamic>?;
                     final disappearingSeconds =
-                        (data?['disappearingTimerSeconds'] as num?)?.toInt() ?? 0;
+                        (data?['disappearingTimerSeconds'] as num?)?.toInt() ??
+                            0;
 
                     String? disappearingLabel;
                     if (disappearingSeconds >= 7776000) {
@@ -2017,7 +2027,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       children: [
                         if (pinned != null) ...[
                           InkWell(
-                            onTap: () => _scrollToMessage((pinned['id'] as String?) ?? ''),
+                            onTap: () => _scrollToMessage(
+                                (pinned['id'] as String?) ?? ''),
                             child: Container(
                               color: const Color(0xFF1F2C34),
                               padding: const EdgeInsets.symmetric(
@@ -2057,7 +2068,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         ],
                         if (disappearingLabel != null) ...[
                           InkWell(
-                            onTap: () => _showDisappearingMessagesSheet(context),
+                            onTap: () =>
+                                _showDisappearingMessagesSheet(context),
                             child: Container(
                               margin: const EdgeInsets.symmetric(
                                   horizontal: 24, vertical: 6),
@@ -2101,8 +2113,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       onSelectEmoji: (emoji) => _toggleReaction(
                           _reactionTargetDoc!, emoji, currentUid),
                       onMore: () {
-                        _toggleReaction(
-                            _reactionTargetDoc!, '❤️', currentUid);
+                        _toggleReaction(_reactionTargetDoc!, '❤️', currentUid);
                       },
                     ),
                   ),
@@ -2188,8 +2199,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           // ── Real Firestore messages ─────────────────────
                           final realIndex = index - _pendingUploads.length;
                           final doc = docs[realIndex];
-                          final data =
-                              doc.data() as Map<String, dynamic>;
+                          final data = doc.data() as Map<String, dynamic>;
                           final String msgType =
                               (data['type'] as String?) ?? 'text';
                           final String text = (data['text'] as String?) ?? '';
@@ -2199,7 +2209,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           final isMe = senderId == currentUid;
                           final bool seen = data['seen'] as bool? ?? false;
                           // Delivery status: 'pending' (clock) | 'sent' (single check) | 'delivered' (double grey) | 'read' (double blue)
-                          final bool hasPendingWrites = doc.metadata.hasPendingWrites;
+                          final bool hasPendingWrites =
+                              doc.metadata.hasPendingWrites;
                           final String status = hasPendingWrites
                               ? 'pending'
                               : ((data['status'] as String?) ??
@@ -2222,7 +2233,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           Widget deliveryIcon() {
                             if (status == 'pending') {
                               return const Icon(Icons.access_time,
-                                  size: 11, color: Colors.white54); // pending / clock
+                                  size: 11,
+                                  color: Colors.white54); // pending / clock
                             } else if (status == 'read' || seen) {
                               return const Icon(Icons.done_all,
                                   size: 13, color: Color(0xFF53BDEB)); // blue
@@ -2234,19 +2246,21 @@ class _ChatScreenState extends State<ChatScreen> {
                                   size: 13, color: Colors.white54); // single
                             }
                           }
+
                           final isSelected =
                               _selectedMessageIds.contains(doc.id);
-                          final isHighlighted =
-                              _highlightedMessageId == doc.id;
+                          final isHighlighted = _highlightedMessageId == doc.id;
                           final replyData =
                               data['replyTo'] as Map<String, dynamic>?;
                           final replyModel = replyData != null
                               ? ReplyMessageInfo.fromMap(replyData)
                               : null;
                           final reactions =
-                              (data['reactions'] as Map<String, dynamic>?) ?? {};
+                              (data['reactions'] as Map<String, dynamic>?) ??
+                                  {};
                           final starredBy =
-                              (data['starredBy'] as Map<String, dynamic>?) ?? {};
+                              (data['starredBy'] as Map<String, dynamic>?) ??
+                                  {};
                           final isStarred = starredBy[currentUid] == true;
                           final isEdited = data['isEdited'] == true;
                           final isForwarded = data['isForwarded'] == true;
@@ -2258,8 +2272,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 if (isEdited) ...[
                                   const Text(' (edited)',
                                       style: TextStyle(
-                                          color: Colors.white38,
-                                          fontSize: 9)),
+                                          color: Colors.white38, fontSize: 9)),
                                   const SizedBox(width: 3),
                                 ],
                                 Text(
@@ -2283,7 +2296,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           Widget bubbleBody;
 
                           // ── Deleted Message Tombstone (WhatsApp Style) ──
-                          if (msgType == 'deleted' || data['isDeleted'] == true) {
+                          if (msgType == 'deleted' ||
+                              data['isDeleted'] == true) {
                             bubbleBody = Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 8),
@@ -2343,8 +2357,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ChatDocumentBubble(
                                   documentUrl:
                                       (data['documentUrl'] as String?) ?? '',
-                                  fileName:
-                                      (data['fileName'] as String?) ?? 'Document',
+                                  fileName: (data['fileName'] as String?) ??
+                                      'Document',
                                   fileSizeBytes: (data['fileSizeBytes'] as num?)
                                           ?.toInt() ??
                                       0,
@@ -2370,16 +2384,15 @@ class _ChatScreenState extends State<ChatScreen> {
                                         _scrollToMessage(replyModel.messageId),
                                   ),
                                 ChatLocationBubble(
-                                  latitude: (data['latitude'] as num?)
-                                          ?.toDouble() ??
-                                      0.0,
-                                  longitude: (data['longitude'] as num?)
-                                          ?.toDouble() ??
-                                      0.0,
+                                  latitude:
+                                      (data['latitude'] as num?)?.toDouble() ??
+                                          0.0,
+                                  longitude:
+                                      (data['longitude'] as num?)?.toDouble() ??
+                                          0.0,
                                   title: (data['title'] as String?) ??
                                       'Shared Location',
-                                  address:
-                                      (data['address'] as String?) ?? '',
+                                  address: (data['address'] as String?) ?? '',
                                   isMe: isMe,
                                   timeStr: timeStr,
                                   deliveryIcon: isMe ? deliveryIcon() : null,
@@ -2404,14 +2417,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ChatExpenseBubble(
                                   title: (data['expenseTitle'] as String?) ??
                                       'Travel Split',
-                                  amount: (data['amount'] as num?)
-                                          ?.toDouble() ??
-                                      0.0,
-                                  paidByName:
-                                      (data['paidByName'] as String?) ??
-                                          'Traveler',
-                                  isPaidByMe:
-                                      data['paidById'] == currentUid,
+                                  amount:
+                                      (data['amount'] as num?)?.toDouble() ??
+                                          0.0,
+                                  paidByName: (data['paidByName'] as String?) ??
+                                      'Traveler',
+                                  isPaidByMe: data['paidById'] == currentUid,
                                   isSettled: data['isSettled'] == true,
                                   timeStr: timeStr,
                                   deliveryIcon: isMe ? deliveryIcon() : null,
@@ -2468,14 +2479,16 @@ class _ChatScreenState extends State<ChatScreen> {
                                 bubbleBody = InkWell(
                                   onTap: () {
                                     if (isMe) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
                                         const SnackBar(
                                             content: Text(
                                                 'You sent a view-once media')),
                                       );
                                       return;
                                     }
-                                    Navigator.of(context).push(
+                                    Navigator.of(context)
+                                        .push(
                                       MaterialPageRoute<void>(
                                         builder: (ctx) => Scaffold(
                                           backgroundColor: Colors.black,
@@ -2501,7 +2514,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                           ),
                                         ),
                                       ),
-                                    ).then((_) {
+                                    )
+                                        .then((_) {
                                       doc.reference.update({
                                         'isOpened': true,
                                         'openedAt':
@@ -2584,7 +2598,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Icon(Icons.forward,
-                                                size: 11, color: Colors.white54),
+                                                size: 11,
+                                                color: Colors.white54),
                                             SizedBox(width: 3),
                                             Text('Forwarded',
                                                 style: TextStyle(
@@ -2618,8 +2633,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                         ),
                                       ),
                                     Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          6, 2, 6, 4),
+                                      padding:
+                                          const EdgeInsets.fromLTRB(6, 2, 6, 4),
                                       child: metaRow(),
                                     ),
                                   ],
@@ -2652,8 +2667,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                 children: [
                                   if (replyModel != null)
                                     Padding(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          8, 8, 8, 0),
+                                      padding:
+                                          const EdgeInsets.fromLTRB(8, 8, 8, 0),
                                       child: ChatQuotedBubble(
                                         reply: replyModel,
                                         isMe: isMe,
@@ -2669,8 +2684,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                     isMe: isMe,
                                   ),
                                   Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        10, 0, 10, 6),
+                                    padding:
+                                        const EdgeInsets.fromLTRB(10, 0, 10, 6),
                                     child: metaRow(),
                                   ),
                                 ],
@@ -2723,8 +2738,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     Text(
                                       text,
                                       style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13.5),
+                                          color: Colors.white, fontSize: 13.5),
                                     ),
                                     const SizedBox(height: 2),
                                     metaRow(),
@@ -2791,8 +2805,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                         left: isMe ? null : 8,
                                         child: ChatReactionBadge(
                                           reactions: reactions,
-                                          onTap: () =>
-                                              showReactionDetailsSheet(
+                                          onTap: () => showReactionDetailsSheet(
                                             context,
                                             reactions: reactions,
                                             currentUid: currentUid,
@@ -2881,200 +2894,211 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ),
                               )
                             : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (_replyingMessage != null)
-                                ChatReplyInputBanner(
-                                  reply: _replyingMessage!,
-                                  onCancel: () =>
-                                      setState(() => _replyingMessage = null),
-                                ),
-                              if (_editingMessage != null)
-                                Container(
-                                  margin:
-                                      const EdgeInsets.fromLTRB(10, 0, 10, 4),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF1F2C34),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: const Border(
-                                      left: BorderSide(
-                                          color: Color(0xFF00A884), width: 4),
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_replyingMessage != null)
+                                    ChatReplyInputBanner(
+                                      reply: _replyingMessage!,
+                                      onCancel: () => setState(
+                                          () => _replyingMessage = null),
                                     ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.edit,
-                                          color: Color(0xFF00A884), size: 16),
-                                      const SizedBox(width: 8),
-                                      const Expanded(
-                                        child: Text(
-                                          'Editing message',
-                                          style: TextStyle(
-                                            color: Color(0xFF00A884),
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
+                                  if (_editingMessage != null)
+                                    Container(
+                                      margin: const EdgeInsets.fromLTRB(
+                                          10, 0, 10, 4),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1F2C34),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: const Border(
+                                          left: BorderSide(
+                                              color: Color(0xFF00A884),
+                                              width: 4),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.edit,
+                                              color: Color(0xFF00A884),
+                                              size: 16),
+                                          const SizedBox(width: 8),
+                                          const Expanded(
+                                            child: Text(
+                                              'Editing message',
+                                              style: TextStyle(
+                                                color: Color(0xFF00A884),
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.close,
+                                                color: Colors.white60,
+                                                size: 18),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            onPressed: () {
+                                              setState(
+                                                  () => _editingMessage = null);
+                                              _messageController.clear();
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  Container(
+                                    padding: EdgeInsets.fromLTRB(
+                                        8,
+                                        6,
+                                        8,
+                                        8 +
+                                            MediaQuery.of(context)
+                                                .padding
+                                                .bottom),
+                                    color: Colors.transparent, // Floating look
+                                    child: Row(
+                                      children: [
+                                        // WhatsApp left rounded input container
+                                        Expanded(
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF202C33),
+                                              borderRadius:
+                                                  BorderRadius.circular(24),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8),
+                                            child: Row(
+                                              children: [
+                                                Semantics(
+                                                  label: 'Open emoji picker',
+                                                  button: true,
+                                                  child: SizedBox(
+                                                    width: 48,
+                                                    height: 48,
+                                                    child: IconButton(
+                                                      icon: const Icon(
+                                                          Icons
+                                                              .sentiment_satisfied_alt_outlined,
+                                                          color: Color(
+                                                              0xFF8696A0)),
+                                                      onPressed: () {},
+                                                    ),
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: TextField(
+                                                    controller:
+                                                        _messageController,
+                                                    style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 14),
+                                                    decoration: InputDecoration(
+                                                      hintText: context.l10n
+                                                          .translate(
+                                                              'chat_message_placeholder'),
+                                                      hintStyle:
+                                                          const TextStyle(
+                                                              color: Color(
+                                                                  0xFF8696A0),
+                                                              fontSize: 14),
+                                                      border: InputBorder.none,
+                                                      contentPadding:
+                                                          const EdgeInsets
+                                                              .symmetric(
+                                                              vertical: 10),
+                                                    ),
+                                                    onSubmitted: (_) =>
+                                                        _sendMessage(currentUid,
+                                                            currentName),
+                                                  ),
+                                                ),
+                                                Semantics(
+                                                  label:
+                                                      'Attach document, photo, video, or location',
+                                                  button: true,
+                                                  child: SizedBox(
+                                                    width: 48,
+                                                    height: 48,
+                                                    child: IconButton(
+                                                      icon: const Icon(
+                                                          Icons.attach_file,
+                                                          color: Color(
+                                                              0xFF8696A0)),
+                                                      onPressed: () =>
+                                                          _openAttachmentSheet(
+                                                              currentUid,
+                                                              currentName),
+                                                    ),
+                                                  ),
+                                                ),
+                                                Semantics(
+                                                  label: 'Open camera',
+                                                  button: true,
+                                                  child: SizedBox(
+                                                    width: 48,
+                                                    height: 48,
+                                                    child: IconButton(
+                                                      icon: const Icon(
+                                                          Icons
+                                                              .camera_alt_outlined,
+                                                          color: Color(
+                                                              0xFF8696A0)),
+                                                      onPressed: () =>
+                                                          _openCameraDirect(
+                                                              currentUid,
+                                                              currentName),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.close,
-                                            color: Colors.white60, size: 18),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                        onPressed: () {
-                                          setState(() => _editingMessage = null);
-                                          _messageController.clear();
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              Container(
-                                padding: EdgeInsets.fromLTRB(
-                                    8,
-                                    6,
-                                    8,
-                                    8 +
-                                        MediaQuery.of(context)
-                                            .padding
-                                            .bottom),
-                                color: Colors.transparent, // Floating look
-                                child: Row(
-                                  children: [
-                                    // WhatsApp left rounded input container
-                                    Expanded(
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF202C33),
-                                          borderRadius:
-                                              BorderRadius.circular(24),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8),
-                                        child: Row(
-                                          children: [
-                                            Semantics(
-                                              label: 'Open emoji picker',
-                                              button: true,
-                                              child: SizedBox(
-                                                width: 48,
-                                                height: 48,
-                                                child: IconButton(
-                                                  icon: const Icon(
-                                                      Icons
-                                                          .sentiment_satisfied_alt_outlined,
-                                                      color: Color(0xFF8696A0)),
-                                                  onPressed: () {},
+                                        const SizedBox(width: 6),
+                                        // WhatsApp right circular action button
+                                        ValueListenableBuilder<
+                                            TextEditingValue>(
+                                          valueListenable: _messageController,
+                                          builder: (context, val, child) {
+                                            final hasText =
+                                                val.text.trim().isNotEmpty;
+                                            final isEditing =
+                                                _editingMessage != null;
+                                            return GestureDetector(
+                                              onTap: () {
+                                                if (hasText || isEditing) {
+                                                  _sendMessage(
+                                                      currentUid, currentName);
+                                                } else {
+                                                  setState(() =>
+                                                      _isRecordingVoice = true);
+                                                }
+                                              },
+                                              child: CircleAvatar(
+                                                radius: 22,
+                                                backgroundColor:
+                                                    const Color(0xFF00A884),
+                                                child: Icon(
+                                                  isEditing
+                                                      ? Icons.check
+                                                      : (hasText
+                                                          ? Icons.send
+                                                          : Icons.mic),
+                                                  color: Colors.white,
+                                                  size: 19,
                                                 ),
                                               ),
-                                            ),
-                                            Expanded(
-                                              child: TextField(
-                                                controller: _messageController,
-                                                style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 14),
-                                                decoration: InputDecoration(
-                                                  hintText:
-                                                      context.l10n.translate(
-                                                          'chat_message_placeholder'),
-                                                  hintStyle: const TextStyle(
-                                                      color: Color(0xFF8696A0),
-                                                      fontSize: 14),
-                                                  border: InputBorder.none,
-                                                  contentPadding:
-                                                      const EdgeInsets
-                                                          .symmetric(
-                                                          vertical: 10),
-                                                ),
-                                                onSubmitted: (_) =>
-                                                    _sendMessage(currentUid,
-                                                        currentName),
-                                              ),
-                                            ),
-                                            Semantics(
-                                              label:
-                                                  'Attach document, photo, video, or location',
-                                              button: true,
-                                              child: SizedBox(
-                                                width: 48,
-                                                height: 48,
-                                                child: IconButton(
-                                                  icon: const Icon(
-                                                      Icons.attach_file,
-                                                      color: Color(0xFF8696A0)),
-                                                  onPressed: () =>
-                                                      _openAttachmentSheet(
-                                                          currentUid,
-                                                          currentName),
-                                                ),
-                                              ),
-                                            ),
-                                            Semantics(
-                                              label: 'Open camera',
-                                              button: true,
-                                              child: SizedBox(
-                                                width: 48,
-                                                height: 48,
-                                                child: IconButton(
-                                                  icon: const Icon(
-                                                      Icons
-                                                          .camera_alt_outlined,
-                                                      color: Color(0xFF8696A0)),
-                                                  onPressed: () =>
-                                                      _openCameraDirect(
-                                                          currentUid,
-                                                          currentName),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    // WhatsApp right circular action button
-                                    ValueListenableBuilder<TextEditingValue>(
-                                      valueListenable: _messageController,
-                                      builder: (context, val, child) {
-                                        final hasText =
-                                            val.text.trim().isNotEmpty;
-                                        final isEditing =
-                                            _editingMessage != null;
-                                        return GestureDetector(
-                                          onTap: () {
-                                            if (hasText || isEditing) {
-                                              _sendMessage(
-                                                  currentUid, currentName);
-                                            } else {
-                                              setState(() =>
-                                                  _isRecordingVoice = true);
-                                            }
+                                            );
                                           },
-                                          child: CircleAvatar(
-                                            radius: 22,
-                                            backgroundColor:
-                                                const Color(0xFF00A884),
-                                            child: Icon(
-                                              isEditing
-                                                  ? Icons.check
-                                                  : (hasText
-                                                      ? Icons.send
-                                                      : Icons.mic),
-                                              color: Colors.white,
-                                              size: 19,
-                                            ),
-                                          ),
-                                        );
-                                      },
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
               ],
             ),
           ),

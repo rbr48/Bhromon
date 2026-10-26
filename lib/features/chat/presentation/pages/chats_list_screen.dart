@@ -63,7 +63,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     if (otherUid == 'bhromon_ai_advisor') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Voice and Video calls with the AI Guide are coming soon!'),
+          content:
+              Text('Voice and Video calls with the AI Guide are coming soon!'),
           backgroundColor: Color(0xFF1F2C34),
         ),
       );
@@ -160,7 +161,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               itemBuilder: (context) => [
                 const PopupMenuItem(
                   value: 'new_chat',
-                  child: Text('New chat', style: TextStyle(color: Colors.white)),
+                  child:
+                      Text('New chat', style: TextStyle(color: Colors.white)),
                 ),
                 const PopupMenuItem(
                   value: 'starred_messages',
@@ -174,11 +176,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 ),
                 const PopupMenuItem(
                   value: 'tour_groups',
-                  child: Text('Tour Groups', style: TextStyle(color: Colors.white)),
+                  child: Text('Tour Groups',
+                      style: TextStyle(color: Colors.white)),
                 ),
                 const PopupMenuItem(
                   value: 'settings',
-                  child: Text('Settings', style: TextStyle(color: Colors.white)),
+                  child:
+                      Text('Settings', style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
@@ -452,8 +456,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   Widget _buildOfflineConversationsList(
       Set<String> blockedUids, String currentUid) {
     final filtered = _offlineConversations.where((data) {
-      final participants = List<String>.from(
-          data['participants'] as Iterable? ?? <dynamic>[]);
+      final participants =
+          List<String>.from(data['participants'] as Iterable? ?? <dynamic>[]);
       final otherUser =
           participants.firstWhere((p) => p != currentUid, orElse: () => '');
       if (blockedUids.contains(otherUser)) return false;
@@ -481,10 +485,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       itemBuilder: (context, index) {
         final data = filtered[index];
         final chatId = data['id'] as String? ?? '';
-        final participants = List<String>.from(
-            data['participants'] as Iterable? ?? <dynamic>[]);
-        final otherUserUid =
-            participants.firstWhere((p) => p != currentUid, orElse: () => 'Guest');
+        final participants =
+            List<String>.from(data['participants'] as Iterable? ?? <dynamic>[]);
+        final otherUserUid = participants.firstWhere((p) => p != currentUid,
+            orElse: () => 'Guest');
         final String lastMsgMeta = (data['lastMessage'] as String?) ?? '';
         final String lastMsgType =
             (data['lastMessageType'] as String?) ?? 'text';
@@ -509,8 +513,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           unreadCount: unreadCount,
           cachedOtherProfile: cachedProfile,
           activeTabFilter: _activeTab,
-          onTap: () => context
-              .push('/chat/$chatId', extra: {'otherUid': otherUserUid}),
+          onTap: () =>
+              context.push('/chat/$chatId', extra: {'otherUid': otherUserUid}),
           onLongPress: () =>
               _showChatTileOptions(context, chatId, otherUserUid),
         );
@@ -595,8 +599,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     .doc(otherUid),
               ),
               builder: (context, profSnap) {
-                final profData =
-                    profSnap.data?.data() as Map<String, dynamic>?;
+                final profData = profSnap.data?.data() as Map<String, dynamic>?;
                 final otherName =
                     (profData?['displayName'] as String?) ?? 'Traveler';
                 final avatarUrl = profData?['avatarUrl'] as String?;
@@ -1247,8 +1250,7 @@ class ChatTile extends StatelessWidget {
       final name =
           (cachedOtherProfile!['displayName'] as String?) ?? 'Traveler';
       final avatar = cachedOtherProfile!['avatarUrl'] as String?;
-      final inits =
-          name.length > 2 ? name.substring(0, 2).toUpperCase() : 'TR';
+      final inits = name.length > 2 ? name.substring(0, 2).toUpperCase() : 'TR';
       return _buildTile(context,
           displayName: name, avatarUrl: avatar, initials: inits);
     }
@@ -1340,11 +1342,9 @@ class ChatTile extends StatelessWidget {
           Text(
             timeStr,
             style: TextStyle(
-              color:
-                  unreadCount > 0 ? const Color(0xFF00A884) : Colors.white30,
+              color: unreadCount > 0 ? const Color(0xFF00A884) : Colors.white30,
               fontSize: 10,
-              fontWeight:
-                  unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+              fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
             ),
           ),
           if (unreadCount > 0) ...[

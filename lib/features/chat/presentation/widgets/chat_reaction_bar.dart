@@ -203,15 +203,20 @@ void showReactionDetailsSheet(
                     final isSelf = uid == currentUid;
                     return ListTile(
                       dense: true,
-                      leading: Text(emoji, style: const TextStyle(fontSize: 24)),
+                      leading:
+                          Text(emoji, style: const TextStyle(fontSize: 24)),
                       title: Text(
-                        isSelf ? 'You' : 'Traveler ${uid.substring(0, uid.length > 5 ? 5 : uid.length)}',
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        isSelf
+                            ? 'You'
+                            : 'Traveler ${uid.substring(0, uid.length > 5 ? 5 : uid.length)}',
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 13),
                       ),
                       trailing: isSelf
                           ? const Text(
                               'Tap to remove',
-                              style: TextStyle(color: Colors.white38, fontSize: 11),
+                              style: TextStyle(
+                                  color: Colors.white38, fontSize: 11),
                             )
                           : null,
                     );

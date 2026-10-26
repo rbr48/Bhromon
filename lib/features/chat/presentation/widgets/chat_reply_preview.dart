@@ -7,7 +7,8 @@ class ReplyMessageInfo {
   final String senderId;
   final String senderName;
   final String text;
-  final String type; // 'text' | 'image' | 'video' | 'audio' | 'document' | 'location'
+  final String
+      type; // 'text' | 'image' | 'video' | 'audio' | 'document' | 'location'
   final String? mediaUrl;
 
   const ReplyMessageInfo({
@@ -89,7 +90,9 @@ class ChatReplyInputBanner extends StatelessWidget {
               ],
             ),
           ),
-          if (reply.mediaUrl != null && reply.mediaUrl!.isNotEmpty && reply.type == 'image')
+          if (reply.mediaUrl != null &&
+              reply.mediaUrl!.isNotEmpty &&
+              reply.type == 'image')
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: CachedNetworkImage(
@@ -98,7 +101,8 @@ class ChatReplyInputBanner extends StatelessWidget {
                 height: 40,
                 fit: BoxFit.cover,
                 placeholder: (context, _) => Container(color: Colors.white10),
-                errorWidget: (context, _, __) => const Icon(Icons.broken_image, size: 18),
+                errorWidget: (context, _, __) =>
+                    const Icon(Icons.broken_image, size: 18),
               ),
             ),
           IconButton(
@@ -181,8 +185,10 @@ class ChatQuotedBubble extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
         decoration: BoxDecoration(
           color: isMe
-              ? const Color(0xFF024638) // slightly darker shade of sender bubble
-              : const Color(0xFF182229), // slightly darker shade of receiver bubble
+              ? const Color(
+                  0xFF024638) // slightly darker shade of sender bubble
+              : const Color(
+                  0xFF182229), // slightly darker shade of receiver bubble
           borderRadius: BorderRadius.circular(8),
           border: const Border(
             left: BorderSide(

@@ -52,8 +52,7 @@ class TravelAiService {
       'systemInstruction': {
         'parts': [
           {
-            'text':
-                'You are the Bhromon AI Travel Guide — an expert on Bangladesh tourism. '
+            'text': 'You are the Bhromon AI Travel Guide — an expert on Bangladesh tourism. '
                 'Give concise, warm, practical travel advice with hotel/resort tips, '
                 'best seasons to visit, route directions from Dhaka/Chittagong, and local food recommendations. '
                 'Support both English and Bengali naturally. Keep answers within 2-4 conversational paragraphs.'
@@ -102,21 +101,28 @@ class TravelAiService {
           '• **Food**: Try authentic bamboo chicken and papaya juice!';
     }
 
-    if (query.contains('cox') || query.contains('beach') || query.contains('সমুদ্র')) {
+    if (query.contains('cox') ||
+        query.contains('beach') ||
+        query.contains('সমুদ্র')) {
       return '🌊 **Cox\'s Bazar (World\'s Longest Sea Beach - 120km)**\n\n'
           '• **Highlights**: Laboni Beach (night market), Sugandha (street food), Kolatoli, and tranquil Inani coral beach.\n'
           '• **Must-Do**: Scenic drive down Marine Drive Road, visit Himchari national park & waterfalls.\n'
           '• **Seafood**: Fresh Rupchanda fry, Loitta fry, and dried fish (shukti) near fish market.';
     }
 
-    if (query.contains('st. martin') || query.contains('martin') || query.contains('সেন্ট মার্টিন')) {
+    if (query.contains('st. martin') ||
+        query.contains('martin') ||
+        query.contains('সেন্ট মার্টিন')) {
       return '🏝️ **St. Martin\'s Island (Narikel Jinjira)**\n\n'
           '• **Getting There**: Ferry or ship from Teknaf / Nuniar Chhara jetty.\n'
           '• **Chera Dwip**: Uninhabited coral islet south of St. Martin, reachable by boat or low-tide walk.\n'
           '• **Sustainability**: Avoid plastic waste, do not step on live corals, and enjoy fresh green coconuts.';
     }
 
-    if (query.contains('sylhet') || query.contains('jaflong') || query.contains('ratargul') || query.contains('সিলেট')) {
+    if (query.contains('sylhet') ||
+        query.contains('jaflong') ||
+        query.contains('ratargul') ||
+        query.contains('সিলেট')) {
       return '🌿 **Sylhet & Greater Surma Valley**\n\n'
           '• **Ratargul**: Bangladesh\'s only freshwater swamp forest. Best explored on quiet non-motorized wooden dinghies.\n'
           '• **Jaflong & Lalakhal**: Clear turquoise waters flowing from the Khasi hills.\n'
@@ -131,7 +137,9 @@ class TravelAiService {
           '• **Key Points**: Kotka beach, Hiron Point, and Karamjal wildlife breeding center.';
     }
 
-    if (query.contains('budget') || query.contains('খরচ') || query.contains('cost')) {
+    if (query.contains('budget') ||
+        query.contains('খরচ') ||
+        query.contains('cost')) {
       return '💰 **Estimated Bangladesh Travel Budgets (Per Person)**\n\n'
           '• **Backpacker / Student**: 1,200 - 1,800 BDT/day (Local buses, non-AC guesthouses, local meals).\n'
           '• **Comfort / Family**: 3,500 - 6,000 BDT/day (AC coach/train, standard 3-star hotel, private transport).\n'
@@ -139,7 +147,9 @@ class TravelAiService {
           '💡 *Tip: You can use the `/split` command right here in Bhromon to manage shared trip expenses!*';
     }
 
-    if (query.contains('packing') || query.contains('checklist') || query.contains('ব্যাগ')) {
+    if (query.contains('packing') ||
+        query.contains('checklist') ||
+        query.contains('ব্যাগ')) {
       return '🎒 **Essential Bangladesh Travel Checklist**\n\n'
           '1. **Documents**: National ID card (mandatory for Army checkposts in CHT) & hotel booking vouchers.\n'
           '2. **Health**: Odomos mosquito repellent, ORS oral saline, power bank (essential during power cuts).\n'

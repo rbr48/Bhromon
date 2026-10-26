@@ -117,8 +117,8 @@ class _SosHubDialogState extends State<SosHubDialog> {
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                    color: cs.outlineVariant.withValues(alpha: 0.4)),
+                border:
+                    Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [
