@@ -267,6 +267,13 @@ class TourTranslationKeys {
       'chat_poll_question_long': 'Keep the question under 200 characters.',
       'chat_poll_too_many': 'A poll can have up to 6 options.',
       'chat_poll_option_long': 'Keep each option under 60 characters.',
+
+      // ── Trip shell (bottom tabs) ───────────────────────────────────────────
+      'shell_feed': 'Feed',
+      'shell_chat': 'Chat',
+      'shell_plan': 'Plan',
+      'shell_money': 'Money',
+      'shell_safety': 'Safety',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -533,6 +540,13 @@ class TourTranslationKeys {
       'chat_poll_question_long': 'প্রশ্ন ২০০ অক্ষরের মধ্যে রাখুন।',
       'chat_poll_too_many': 'একটি ভোটে সর্বোচ্চ ৬টি বিকল্প থাকতে পারে।',
       'chat_poll_option_long': 'প্রতিটি বিকল্প ৬০ অক্ষরের মধ্যে রাখুন।',
+
+      // ── Trip shell (bottom tabs) ───────────────────────────────────────────
+      'shell_feed': 'ফিড',
+      'shell_chat': 'চ্যাট',
+      'shell_plan': 'পরিকল্পনা',
+      'shell_money': 'খরচ',
+      'shell_safety': 'নিরাপত্তা',
     },
   };
 }
