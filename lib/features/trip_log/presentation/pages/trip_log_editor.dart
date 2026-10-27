@@ -1462,8 +1462,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
             ),
             const Divider(color: Colors.white10),
             ListTile(
-              leading:
-                  const Icon(Icons.link_rounded, color: Colors.white60),
+              leading: const Icon(Icons.link_rounded, color: Colors.white60),
               title: const Text('Paste External Video Link',
                   style: TextStyle(color: Colors.white70, fontSize: 14)),
               subtitle: const Text('Optional YouTube video link',

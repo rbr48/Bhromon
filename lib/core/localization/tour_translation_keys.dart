@@ -1905,7 +1905,8 @@ class TourTranslationKeys {
       'hub_nav_games': 'গেম জোন',
       'hub_nav_vault': 'ভল্ট',
       'hub_nav_profile': 'প্রোফাইল',
-      'hub_no_active_tour_hint': 'প্রথমে একটি ট্যুর গ্রুপ তৈরি করুন বা যোগ দিন।',
+      'hub_no_active_tour_hint':
+          'প্রথমে একটি ট্যুর গ্রুপ তৈরি করুন বা যোগ দিন।',
 
       // ── Packing checklist ──────────────────────────────────────────────────
       'check_title': 'ট্যুর চেকলিস্ট',

@@ -8,16 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeTourGroupRepository extends TourGroupRepository {
-  _FakeTourGroupRepository({
-    required this.groupsStream,
-    this.testEmail = 'tester@bhromon.fun',
-  });
+  _FakeTourGroupRepository({required this.groupsStream});
 
   final Stream<List<TourGroup>> groupsStream;
-  final String testEmail;
 
   @override
-  String get currentEmail => testEmail;
+  String get currentEmail => 'tester@bhromon.fun';
 
   @override
   Stream<List<TourGroup>> watchMyGroups() => groupsStream;
@@ -27,7 +23,7 @@ class _FakeTourGroupRepository extends TourGroupRepository {
       Stream.value(<TourMember>[
         TourMember(
           tourId: tourId,
-          email: testEmail,
+          email: currentEmail,
           displayName: 'Lead Organizer',
           role: TourRole.owner,
           status: TourMemberStatus.active,
