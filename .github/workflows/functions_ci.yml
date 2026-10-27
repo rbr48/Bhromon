@@ -5,11 +5,17 @@ on:
     branches: [ master, main, develop ]
     paths:
       - 'functions/**'
+      - 'firestore.rules'
+      - 'storage.rules'
+      - 'firebase.json'
       - '.github/workflows/functions_ci.yml'
   pull_request:
     branches: [ master, main, develop ]
     paths:
       - 'functions/**'
+      - 'firestore.rules'
+      - 'storage.rules'
+      - 'firebase.json'
       - '.github/workflows/functions_ci.yml'
 
 jobs:
