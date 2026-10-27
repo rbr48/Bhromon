@@ -488,7 +488,8 @@ service cloud.firestore {
     }
     function isOwnerOfTour(tId) {
       return isAuth() && exists(/databases/$(database)/documents/tours/$(tId)) &&
-             get(/databases/$(database)/documents/tours/$(tId)).data.ownerEmail == tourUserEmail();
+             (get(/databases/$(database)/documents/tours/$(tId)).data.ownerUid == request.auth.uid ||
+              get(/databases/$(database)/documents/tours/$(tId)).data.ownerEmail == tourUserEmail());
     }
     function isBanned(tId) {
       return exists(/databases/$(database)/documents/tours/$(tId)/bans/$(tourUserEmail()));
@@ -519,7 +520,7 @@ service cloud.firestore {
     // ---- Tours (members only) ----
     match /tours/{tourId} {
       allow get: if isAuth() &&
-                    (resource.data.ownerEmail == tourUserEmail() || isActiveMember(tourId));
+                    (resource.data.ownerUid == request.auth.uid || resource.data.ownerEmail == tourUserEmail() || isActiveMember(tourId));
       allow list: if false;
       allow create: if isAuth()
                     && request.resource.data.ownerEmail == tourUserEmail()
@@ -952,9 +953,9 @@ service cloud.firestore {
     // Each person can read their own rows; members see the roster of their tour.
     match /memberships/{membershipId} {
       allow get: if isAuth() &&
-                    (resource == null || resource.data.email == tourUserEmail() || isActiveMember(resource.data.tourId));
+                    (resource == null || resource.data.uid == request.auth.uid || resource.data.email == tourUserEmail() || isActiveMember(resource.data.tourId));
       allow list: if isAuth() &&
-                     (resource.data.email == tourUserEmail() || isActiveMember(resource.data.tourId));
+                     (resource.data.uid == request.auth.uid || resource.data.email == tourUserEmail() || isActiveMember(resource.data.tourId));
       // Owners are created with the tour; members join with a valid invite code,
       // or are added directly by an owner or admin.
       allow create: if isAuth() &&
