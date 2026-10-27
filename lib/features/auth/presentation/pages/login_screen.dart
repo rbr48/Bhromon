@@ -47,7 +47,10 @@ class _LoginScreenState extends State<LoginScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic));
     _anim.forward();
-    context.read<AuthCubit>().checkAuthStatus();
+    final currentAuthState = context.read<AuthCubit>().state;
+    if (currentAuthState is! Unauthenticated) {
+      context.read<AuthCubit>().checkAuthStatus();
+    }
   }
 
   Future<void> _loadAppVersion() async {

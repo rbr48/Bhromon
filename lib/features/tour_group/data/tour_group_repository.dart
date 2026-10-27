@@ -370,6 +370,7 @@ class TourGroupRepository {
     var heardFromServer = false;
     // Role each membership row says we have, by tour id.
     final rolesByTour = <String, String>{};
+    String? boundUserId;
 
     void emit() {
       if (controller.isClosed) return;
@@ -390,6 +391,23 @@ class TourGroupRepository {
     }
 
     void startTour(String tourId, String email) {
+      // Eager one-off fetch for fast Web and desktop startup
+      _tour(tourId).get().then((doc) {
+        try {
+          final data = doc.data();
+          if (doc.exists && data != null && !controller.isClosed) {
+            final group = TourGroup.fromMap(doc.id, data);
+            tours[tourId] = group;
+            _cacheLocalGroup(group);
+            emit();
+          }
+        } catch (e, st) {
+          debugPrint('[TourGroupRepository] eager get tour $tourId failed: $e\n$st');
+        }
+      }).catchError((Object e) {
+        debugPrint('[TourGroupRepository] eager get tour $tourId error: $e');
+      });
+
       tourSubs[tourId] = _tour(tourId).snapshots().listen(
         (doc) {
           try {
@@ -441,14 +459,22 @@ class TourGroupRepository {
       rolesByTour.clear();
       heardFromServer = false;
       _cachedActiveTourId = null;
+      boundUserId = null;
     }
 
     void bindUser(User? user) {
-      clearUserTours();
       if (user == null) {
+        clearUserTours();
         emit();
         return;
       }
+      if (boundUserId == user.uid) {
+        // Already bound to this user, do not clear tours.
+        return;
+      }
+      clearUserTours();
+      boundUserId = user.uid;
+
       final rawEmail = user.email;
       final email = (rawEmail != null && rawEmail.trim().isNotEmpty)
           ? normalizeEmail(rawEmail)
@@ -486,7 +512,12 @@ class TourGroupRepository {
             startTour(id, email);
           }
           listedIds = ids;
-          emit();
+          // If there are no tours for this user, emit empty list.
+          // If there are tour IDs, wait for startTour / eager fetch to populate
+          // tours before emitting, or emit if tours already populated.
+          if (ids.isEmpty || tours.isNotEmpty) {
+            emit();
+          }
         },
         onError: (Object e) {
           debugPrint('[TourGroupRepository] memberships error: $e');

@@ -187,11 +187,12 @@ class AuthRepositoryImpl implements IAuthRepository {
   @override
   Future<Either<Failure, Unit>> signOut() async {
     try {
+      _cachedProfile = null;
       // Clear local Hive cache immediately for instant logout
       await _clearLocalCache();
 
-      // Perform remote Firebase and Google sign-out in the background
-      _signOutRemotely();
+      // Perform remote Firebase and Google sign-out and wait for it
+      await _signOutRemotely();
 
       return const Right(unit);
     } catch (e) {
@@ -222,7 +223,10 @@ class AuthRepositoryImpl implements IAuthRepository {
   }
 
   Future<void> _signOutRemotely() async {
-    await _removeThisDeviceToken();
+    try {
+      await _removeThisDeviceToken().timeout(const Duration(seconds: 2));
+    } catch (_) {}
+
     try {
       await _auth.signOut();
     } catch (e, stack) {
@@ -230,9 +234,7 @@ class AuthRepositoryImpl implements IAuthRepository {
           'AuthRepository: failed to sign out from Firebase Auth', e, stack);
     }
     try {
-      if (!kIsWeb) {
-        await _googleSignIn.signOut();
-      }
+      await _googleSignIn.signOut();
     } catch (e, stack) {
       logWarning(
           'AuthRepository: failed to sign out from GoogleSignIn', e, stack);

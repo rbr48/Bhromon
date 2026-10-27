@@ -362,10 +362,7 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
                     child: Container(
                       margin: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEDC99B),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: const Color(0xFF5D4037), width: 14),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.7),
@@ -426,9 +423,79 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
   }
 
   Widget _scoreBar(CarromTable table, String turnLabel, bool myTurn) {
+    Widget playerCard(int seat, String coinName, Color coinColor, Color borderColor) {
+      final isCurrent = table.currentPlayer == seat && !table.isGameOver;
+      final name = _nameOf(seat);
+      final score = table.pocketedBy(seat);
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: isCurrent
+                ? AppColors.midGreen.withValues(alpha: 0.25)
+                : const Color(0xFF0A140E),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isCurrent ? AppColors.mintGreen : Colors.white12,
+              width: isCurrent ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: coinColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: borderColor, width: 1.5),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black45,
+                      blurRadius: 2,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isCurrent ? Colors.white : Colors.white70,
+                        fontWeight:
+                            isCurrent ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 11,
+                      ),
+                    ),
+                    Text(
+                      '$score/${CarromGame.coinsPerPlayer} $coinName',
+                      style: TextStyle(
+                        color: isCurrent ? AppColors.mintGreen : Colors.white54,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: const Color(0xFF14241B),
         borderRadius: BorderRadius.circular(16),
@@ -438,36 +505,34 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            '${_nameOf(0)} (White): ${table.pocketedBy(0)}/${CarromGame.coinsPerPlayer}',
-            style: TextStyle(
-              color: table.currentPlayer == 0
-                  ? AppColors.mintGreen
-                  : Colors.white70,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+          playerCard(0, 'White', const Color(0xFFF5F0E6), const Color(0xFF8D734B)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: myTurn
+                    ? AppColors.mintGreen.withValues(alpha: 0.2)
+                    : Colors.white10,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: myTurn ? AppColors.mintGreen : Colors.white24,
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                turnLabel,
+                style: TextStyle(
+                  color: myTurn ? AppColors.mintGreen : Colors.white70,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ),
           ),
-          Text(
-            turnLabel,
-            style: TextStyle(
-              color: myTurn ? AppColors.mintGreen : Colors.white60,
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            '${_nameOf(1)} (Black): ${table.pocketedBy(1)}/${CarromGame.coinsPerPlayer}',
-            style: TextStyle(
-              color: table.currentPlayer == 1
-                  ? AppColors.mintGreen
-                  : Colors.white70,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          playerCard(1, 'Black', const Color(0xFF222222), const Color(0xFF757575)),
         ],
       ),
     );
@@ -491,27 +556,146 @@ class _CarromBoardPainter extends CustomPainter {
   final Offset? dragStart;
   final Offset? dragNow;
 
+  static const double _frameFraction = 0.07;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final pocketPaint = Paint()..color = const Color(0xFF1E1E1E);
-    final pr = size.width * CarromBoard.pocketRadius;
-    for (final centre in [
-      Offset(pr, pr),
-      Offset(size.width - pr, pr),
-      Offset(pr, size.height - pr),
-      Offset(size.width - pr, size.height - pr),
-    ]) {
-      canvas.drawCircle(centre, pr, pocketPaint);
+    final s = size.width;
+    final frame = s * _frameFraction;
+    final play = s - 2 * frame;
+    Offset p(double x, double y) => Offset(frame + x * play, frame + y * play);
+
+    // 1. Rich wooden mahogany frame
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(s * 0.03)),
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFF6D3B16), Color(0xFF43230C), Color(0xFF2A1507)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ).createShader(Offset.zero & size),
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(
+          frame * 0.55, frame * 0.55, s - frame * 1.1, s - frame * 1.1),
+      Paint()..color = const Color(0xFF2C1607),
+    );
+
+    // 2. Mitred 45-degree frame corner joint lines
+    final joint = Paint()
+      ..color = const Color(0x44000000)
+      ..strokeWidth = 1.2;
+    canvas.drawLine(Offset.zero, Offset(frame, frame), joint);
+    canvas.drawLine(Offset(s, 0), Offset(s - frame, frame), joint);
+    canvas.drawLine(Offset(0, s), Offset(frame, s - frame), joint);
+    canvas.drawLine(Offset(s, s), Offset(s - frame, s - frame), joint);
+
+    // 3. Lacquered English Birch plywood playing surface
+    final surface = Rect.fromLTWH(frame, frame, play, play);
+    canvas.drawRect(
+      surface,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment.center,
+          radius: 0.95,
+          colors: [Color(0xFFFFF9EC), Color(0xFFF7E7C8), Color(0xFFE8C895)],
+        ).createShader(surface),
+    );
+
+    final line = Paint()
+      ..color = const Color(0xFF5B3A1E)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(1.0, play * 0.0025);
+    final red = Paint()..color = const Color(0xFFC62828);
+
+    // 4. Baselines with end circles on all four sides
+    for (int side = 0; side < 4; side++) {
+      canvas.save();
+      canvas.translate(s / 2, s / 2);
+      canvas.rotate(side * pi / 2);
+      canvas.translate(-s / 2, -s / 2);
+      const y = 1 - CarromBoard.baselineInset;
+      const half = CarromBoard.coinRadius;
+      final isActive = (side == 0 && aimingPlayer == 0) ||
+          (side == 2 && aimingPlayer == 1);
+      if (isActive) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromPoints(p(CarromBoard.baselineMin - 0.02, y - half * 1.6),
+                p(CarromBoard.baselineMax + 0.02, y + half * 1.6)),
+            const Radius.circular(8),
+          ),
+          Paint()..color = const Color(0x35FFC107),
+        );
+      }
+      canvas.drawLine(p(CarromBoard.baselineMin, y - half),
+          p(CarromBoard.baselineMax, y - half), line);
+      canvas.drawLine(p(CarromBoard.baselineMin, y + half),
+          p(CarromBoard.baselineMax, y + half), line);
+      for (final x in const [
+        CarromBoard.baselineMin,
+        CarromBoard.baselineMax
+      ]) {
+        canvas.drawCircle(p(x, y), half * play, red);
+        canvas.drawCircle(p(x, y), half * play * 0.45,
+            Paint()..color = const Color(0xFFFFF8E7));
+        canvas.drawCircle(p(x, y), half * play, line);
+      }
+      // Corner arrow pointing from pocket toward centre
+      canvas.drawLine(p(0.1, 0.9), p(0.27, 0.73), line);
+      canvas.drawCircle(p(0.27, 0.73), 0.03 * play, line);
+      canvas.restore();
     }
 
+    // 5. Central tournament mandala with 16 rays
+    final centerP = p(0.5, 0.5);
+    final mandalaR = 0.09 * play;
+    canvas.drawCircle(centerP, mandalaR, line);
+    canvas.drawCircle(centerP, 0.075 * play, line);
+    final rayPaint = Paint()
+      ..color = const Color(0x665B3A1E)
+      ..strokeWidth = 0.8;
+    for (int i = 0; i < 16; i++) {
+      final angle = i * pi / 8;
+      final r1 = centerP +
+          Offset(cos(angle) * 0.075 * play, sin(angle) * 0.075 * play);
+      final r2 = centerP + Offset(cos(angle) * mandalaR, sin(angle) * mandalaR);
+      canvas.drawLine(r1, r2, rayPaint);
+    }
+    canvas.drawCircle(centerP, 0.018 * play, red);
+    canvas.drawCircle(
+        centerP, 0.007 * play, Paint()..color = const Color(0xFFFFF8E7));
+
+    // 6. Corner pockets with brass bracket rim and woven string net
+    for (final pocket in CarromBoard.pockets) {
+      final c = p(pocket.$1, pocket.$2);
+      // Brass pocket bracket
+      canvas.drawCircle(c, CarromBoard.pocketRadius * play * 1.14,
+          Paint()..color = const Color(0xFF8D6E44));
+      canvas.drawCircle(c, CarromBoard.pocketRadius * play * 1.06,
+          Paint()..color = const Color(0xFF381F0E));
+      // Deep pocket drop hole
+      canvas.drawCircle(c, CarromBoard.pocketRadius * play,
+          Paint()..color = const Color(0xFF090604));
+      // Woven netting pattern
+      final netPaint = Paint()
+        ..color = const Color(0x338D6E63)
+        ..strokeWidth = 0.8;
+      final pr = CarromBoard.pocketRadius * play * 0.7;
+      canvas.drawLine(c - Offset(pr, 0), c + Offset(pr, 0), netPaint);
+      canvas.drawLine(c - Offset(0, pr), c + Offset(0, pr), netPaint);
+    }
+
+    // 7. Coins and striker on board
     for (final piece in pieces) {
       if (piece.pocketed) continue;
       if (piece.type == CarromPieceType.striker && aimingPlayer != null) {
         continue;
       }
-      _drawPiece(canvas, size, piece);
+      _drawPiece(canvas, piece, p(piece.x, piece.y), piece.radius * play);
     }
 
+    // 8. Aiming striker and slingshot pull arrow
     if (aimingPlayer != null) {
       final striker = CarromPiece(
         id: 99,
@@ -519,42 +703,152 @@ class _CarromBoardPainter extends CustomPainter {
         x: strikerX,
         y: CarromBoard.baselineY(aimingPlayer!),
       );
-      _drawPiece(canvas, size, striker);
+      final startPos = p(striker.x, striker.y);
+      _drawPiece(canvas, striker, startPos, striker.radius * play);
+
       final start = dragStart;
       final now = dragNow;
       if (start != null && now != null) {
-        final pull = start - now;
-        final end =
-            Offset(striker.x * size.width, striker.y * size.height) + pull;
-        canvas.drawLine(
-          Offset(striker.x * size.width, striker.y * size.height),
-          end,
-          Paint()
-            ..color = AppColors.mintGreen
-            ..strokeWidth = 3,
-        );
+        final diff = start - now;
+        if (diff.distance > 8) {
+          final dir = diff / diff.distance;
+          final maxPull = size.width * 0.35;
+          final power = (diff.distance / maxPull).clamp(0.15, 1.0);
+
+          // Faint guide line
+          canvas.drawLine(
+            startPos,
+            startPos + dir * play * 1.2,
+            Paint()
+              ..color = const Color(0x44FFFFFF)
+              ..strokeWidth = 1.2,
+          );
+
+          // Arrow tip
+          final tip = startPos + dir * play * (0.08 + power * 0.32);
+          final arrowColor = Color.lerp(
+            Colors.limeAccent.shade400,
+            Colors.deepOrangeAccent,
+            power,
+          )!;
+          final arrow = Paint()
+            ..color = arrowColor
+            ..strokeWidth = 4.5
+            ..strokeCap = StrokeCap.round;
+          canvas.drawLine(startPos, tip, arrow);
+
+          final side = Offset(-dir.dy, dir.dx);
+          final head = play * 0.028;
+          canvas.drawPath(
+            Path()
+              ..moveTo(tip.dx + dir.dx * head, tip.dy + dir.dy * head)
+              ..lineTo(
+                  tip.dx + side.dx * head * 0.75, tip.dy + side.dy * head * 0.75)
+              ..lineTo(
+                  tip.dx - side.dx * head * 0.75, tip.dy - side.dy * head * 0.75)
+              ..close(),
+            Paint()..color = arrowColor,
+          );
+        }
       }
     }
   }
 
-  void _drawPiece(Canvas canvas, Size size, CarromPiece piece) {
-    final centre = Offset(piece.x * size.width, piece.y * size.height);
-    final radius = piece.radius * size.width;
-    final color = switch (piece.type) {
-      CarromPieceType.white => const Color(0xFFF5F0E6),
-      CarromPieceType.black => const Color(0xFF222222),
-      CarromPieceType.queen => const Color(0xFFC62828),
-      CarromPieceType.striker => const Color(0xFFD7CCC8),
-    };
-    canvas.drawCircle(centre, radius, Paint()..color = color);
+  void _drawPiece(Canvas canvas, CarromPiece piece, Offset c, double r) {
+    // 3D Drop shadow
     canvas.drawCircle(
-      centre,
-      radius,
-      Paint()
-        ..color = Colors.black54
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
+      c + Offset(r * 0.12, r * 0.18),
+      r,
+      Paint()..color = const Color(0x55000000),
     );
+
+    final pieceRect = Rect.fromCircle(center: c, radius: r);
+    final Paint fillPaint = Paint();
+    Color ringColor;
+
+    switch (piece.type) {
+      case CarromPieceType.white:
+        fillPaint.shader = const RadialGradient(
+          center: Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: [Color(0xFFFFFFFF), Color(0xFFF3ECE0), Color(0xFFC7B18A)],
+        ).createShader(pieceRect);
+        ringColor = const Color(0xFF8D734B);
+        break;
+      case CarromPieceType.black:
+        fillPaint.shader = const RadialGradient(
+          center: Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: [Color(0xFF505050), Color(0xFF282828), Color(0xFF141414)],
+        ).createShader(pieceRect);
+        ringColor = const Color(0xFF757575);
+        break;
+      case CarromPieceType.queen:
+        fillPaint.shader = const RadialGradient(
+          center: Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: [Color(0xFFFF5252), Color(0xFFD32F2F), Color(0xFF7F0000)],
+        ).createShader(pieceRect);
+        ringColor = const Color(0xFFFFD54F);
+        break;
+      case CarromPieceType.striker:
+        fillPaint.shader = const RadialGradient(
+          center: Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: [Color(0xFFFFFFFF), Color(0xFFE8EAF6), Color(0xFF9FA8DA)],
+        ).createShader(pieceRect);
+        ringColor = const Color(0xFF283593);
+        break;
+    }
+
+    // Main piece body
+    canvas.drawCircle(c, r, fillPaint);
+
+    // Bevel outer ring
+    canvas.drawCircle(
+      c,
+      r * 0.92,
+      Paint()
+        ..color = ringColor.withValues(alpha: 0.85)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.9, r * 0.08),
+    );
+
+    // Inner concentric accent
+    canvas.drawCircle(
+      c,
+      r * 0.45,
+      Paint()
+        ..color = ringColor.withValues(alpha: 0.4)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(0.6, r * 0.05),
+    );
+    canvas.drawCircle(
+      c,
+      r * 0.12,
+      Paint()..color = ringColor.withValues(alpha: 0.6),
+    );
+
+    // Extra detail for striker
+    if (piece.type == CarromPieceType.striker) {
+      final ridge = Paint()
+        ..color = const Color(0x331A237E)
+        ..strokeWidth = 0.7;
+      for (int i = 0; i < 8; i++) {
+        final a = i * pi / 4;
+        canvas.drawLine(
+          c + Offset(cos(a) * r * 0.55, sin(a) * r * 0.55),
+          c + Offset(cos(a) * r * 0.85, sin(a) * r * 0.85),
+          ridge,
+        );
+      }
+      // Top specular highlight
+      canvas.drawCircle(
+        c + Offset(-r * 0.28, -r * 0.28),
+        r * 0.22,
+        Paint()..color = const Color(0x55FFFFFF),
+      );
+    }
   }
 
   @override

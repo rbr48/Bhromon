@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
@@ -318,257 +319,530 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
     final legal = hand == null
         ? const <Card29>[]
         : table.legalCards(seat: me, hand: cards, knownTrump: knownTrump);
-    final event = _lastEventText(table, me);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+    final northSeat = (me + 2) % 4;
+    final westSeat = (me + 3) % 4;
+    final eastSeat = (me + 1) % 4;
+
+    return Column(
       children: [
-        _scoreStrip(table),
-        const SizedBox(height: 8),
-        _statusCard(table, me, hand),
-        if (event != null) ...[
-          const SizedBox(height: 4),
-          Text(event,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white60, fontSize: 12)),
-        ],
-        const SizedBox(height: 10),
-        _trickMat(table, me),
-        const SizedBox(height: 10),
-        _seatRow(table, me),
-        const SizedBox(height: 10),
-        _controls(table, me, cards, knownTrump),
-        const SizedBox(height: 10),
+        _scoreHeader(table, me, hand),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned(
+                    top: 6,
+                    child: _buildSeatBadge(table, northSeat, me, 'North · Partner'),
+                  ),
+                  Positioned(
+                    left: 6,
+                    child: _buildSeatBadge(table, westSeat, me, 'West'),
+                  ),
+                  Positioned(
+                    right: 6,
+                    child: _buildSeatBadge(table, eastSeat, me, 'East'),
+                  ),
+                  _buildCenterTable(table, me, hand, constraints),
+                  if (table.phase == Card29Phase.bidding && table.actingSeat == me)
+                    Positioned(
+                      bottom: 6,
+                      left: 12,
+                      right: 12,
+                      child: Center(child: _biddingControls(table, me)),
+                    ),
+                  if (table.phase == Card29Phase.trumpSelection &&
+                      table.highestBidder == me)
+                    Positioned(
+                      bottom: 6,
+                      left: 12,
+                      right: 12,
+                      child: Center(child: _trumpSelector(table)),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        _actionBannerAndControls(table, me, cards, knownTrump),
         if (hand == null)
-          const Center(
+          const Padding(
+            padding: EdgeInsets.all(16),
             child: Text('Dealing your cards...',
                 style: TextStyle(color: Colors.white54, fontSize: 12)),
           )
         else
-          _handTray(cards, legal),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
+            child: _handTray(cards, legal),
+          ),
       ],
     );
   }
 
-  Widget _scoreStrip(Card29Table table) {
-    return Row(
-      children: [
-        Expanded(
-            child: _scoreChip(
-                'You & North', table.matchPips[0], table.teamPoints[0])),
-        const SizedBox(width: 8),
-        Expanded(
-            child: _scoreChip(
-                'East & West', table.matchPips[1], table.teamPoints[1])),
-      ],
-    );
-  }
+  Widget _scoreHeader(Card29Table table, int me, Card29PrivateHand? hand) {
+    final event = _lastEventText(table, me);
+    final myTeamPoints = table.teamPoints[0];
+    final myTeamPips = table.matchPips[0];
+    final oppTeamPoints = table.teamPoints[1];
+    final oppTeamPips = table.matchPips[1];
 
-  Widget _scoreChip(String label, int pips, int points) {
+    final bidText = table.highestBidder < 0
+        ? 'Bidding in progress...'
+        : 'Bid ${table.highestBid} by ${_name(table.highestBidder, me)}'
+            '${table.phase == Card29Phase.playing || table.phase == Card29Phase.trickComplete ? ' · target ${table.bidTarget}' : ''}';
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF14241B),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF092614),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white12),
       ),
       child: Column(
         children: [
-          Text(label,
-              style: const TextStyle(color: Colors.white70, fontSize: 11)),
-          Text('$pips pips  ·  $points pts',
-              style: const TextStyle(
-                  color: Colors.amber,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _statusCard(Card29Table table, int me, Card29PrivateHand? hand) {
-    final myTurn = table.actingSeat == me &&
-        (table.phase == Card29Phase.bidding ||
-            table.phase == Card29Phase.trumpSelection ||
-            table.phase == Card29Phase.playing);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF14241B),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: myTurn ? AppColors.mintGreen : Colors.white12,
-          width: 1.5,
-        ),
-      ),
-      child: Column(
-        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('🛡 Your Team',
+                        style: TextStyle(
+                            color: Colors.amber,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11)),
+                    Text('$myTeamPoints pts · pips $myTeamPips/${Card29Game.pipsToWin}',
+                        style: const TextStyle(color: Colors.white, fontSize: 11)),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  bidText,
+                  style: const TextStyle(
+                      color: AppColors.mintGreen,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('Opponents 🔥',
+                        style: TextStyle(
+                            color: Colors.redAccent.shade100,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11)),
+                    Text('$oppTeamPoints pts · pips $oppTeamPips/${Card29Game.pipsToWin}',
+                        style: const TextStyle(color: Colors.white, fontSize: 11)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
           Text(
             _statusText(table, me, hand),
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: myTurn ? AppColors.mintGreen : Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                color: Color(0xFFE0E0E0),
+                fontSize: 11,
+                fontStyle: FontStyle.italic),
+          ),
+          if (event != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              event,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 10),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            table.highestBidder < 0
-                ? 'No bids yet'
-                : 'Bid ${table.highestBid} by ${_name(table.highestBidder, me)}'
-                    '${table.phase == Card29Phase.playing || table.phase == Card29Phase.trickComplete ? '  ·  target ${table.bidTarget}' : ''}',
-            style: const TextStyle(color: Colors.amber, fontSize: 11),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _trickMat(Card29Table table, int me) {
-    final showing = table.currentTrick;
-    final trumpLabel = table.trumpRevealed && table.trumpSuit != null
-        ? 'Trump: ${table.trumpSuit!.symbol} ${table.trumpSuit!.name}'
-        : 'Trump hidden';
+  Widget _buildSeatBadge(Card29Table table, int seat, int me, String fallbackLabel) {
+    final isTurn = table.currentTurn == seat &&
+        (table.phase == Card29Phase.bidding ||
+            table.phase == Card29Phase.playing);
+    final count = table.handCounts.length > seat ? table.handCounts[seat] : 0;
+    final isBidder = table.highestBidder == seat;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: isTurn ? Colors.amber : const Color(0x990A1A10),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isTurn ? Colors.white : Colors.white24,
+              width: isTurn ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.person_rounded,
+                size: 13,
+                color: isTurn ? Colors.black87 : Colors.white,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                seat == (me + 2) % 4
+                    ? 'North · Partner'
+                    : _name(seat, me),
+                style: TextStyle(
+                  color: isTurn ? Colors.black87 : Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+              if (isBidder) ...[
+                const SizedBox(width: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: isTurn ? Colors.black87 : Colors.amber,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'BID',
+                    style: TextStyle(
+                      color: isTurn ? Colors.amber : Colors.black87,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 3),
+        SizedBox(
+          width: 40,
+          child: Wrap(
+            spacing: 2,
+            runSpacing: 2,
+            alignment: WrapAlignment.center,
+            children: List.generate(
+              count.clamp(0, 8),
+              (_) => const PlayingCardView(
+                rank: '',
+                suitSymbol: '',
+                isRed: false,
+                isFaceUp: false,
+                width: 8,
+                height: 12,
+                backColor: Color(0xFF8B0000),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCenterTable(
+      Card29Table table, int me, Card29PrivateHand? hand, BoxConstraints constraints) {
+    final tableSize = (min(constraints.maxWidth * 0.56, constraints.maxHeight - 110))
+        .clamp(160.0, 260.0);
+    final cardW = tableSize * 0.22;
+    final cardH = cardW * 1.45;
+    final offset = tableSize * 0.16;
+
+    final trump = table.trumpSuit;
+    final trumpRevealed = table.trumpRevealed;
+    final canReveal = table.canRevealTrump(seat: me, hand: hand?.cards ?? const []);
+    final canAsk = table.canAskTrump(seat: me, hand: hand?.cards ?? const []);
+
+    // Placed cards mapped by relative direction
+    final trick = table.currentTrick;
+    PlayedCard? cardForRelative(int rel) {
+      final targetSeat = (me + rel) % 4;
+      final found = trick.where((p) => p.playerIndex == targetSeat);
+      return found.isNotEmpty ? found.first : null;
+    }
+
+    final southCard = cardForRelative(0);
+    final eastCard = cardForRelative(1);
+    final northCard = cardForRelative(2);
+    final westCard = cardForRelative(3);
+
     return Container(
-      height: 190,
+      width: tableSize,
+      height: tableSize,
       decoration: BoxDecoration(
-        color: const Color(0xFF1B4332),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF2D6A4F), width: 4),
+        shape: BoxShape.circle,
+        gradient: const RadialGradient(
+          center: Alignment.center,
+          radius: 0.95,
+          colors: [Color(0xFF1B6638), Color(0xFF134526), Color(0xFF092B15)],
+        ),
+        border: Border.all(color: const Color(0xFFD4AF37), width: 2.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black87,
+            blurRadius: 14,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // Trump badge at top
           Positioned(
-            top: 8,
-            right: 10,
-            child: Text(trumpLabel,
-                style: const TextStyle(
-                    color: Colors.amber,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold)),
-          ),
-          if (showing.isEmpty)
-            Text(
-              table.phase == Card29Phase.bidding ? 'BIDDING' : '29 FELT MAT',
-              style: const TextStyle(
-                  color: Colors.white24,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 2),
-            )
-          else
-            Wrap(
-              spacing: 10,
-              runSpacing: 6,
-              alignment: WrapAlignment.center,
-              children: [
-                for (final play in showing)
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      PlayingCardView(
-                        rank: play.card.rank.code,
-                        suitSymbol: play.card.suit.symbol,
-                        isRed: play.card.suit == CardSuit.hearts ||
-                            play.card.suit == CardSuit.diamonds,
-                        width: 50,
-                        height: 72,
-                      ),
-                      Text(_name(play.playerIndex, me),
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 10)),
-                    ],
+            top: tableSize * 0.06,
+            child: GestureDetector(
+              onTap: () {
+                if (canReveal) {
+                  _act({'type': 'reveal'});
+                } else if (canAsk) {
+                  _act({'type': 'ask'});
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: (canReveal || canAsk)
+                      ? Colors.amber.withValues(alpha: 0.3)
+                      : const Color(0x88000000),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: (canReveal || canAsk) ? Colors.amber : Colors.amber.withValues(alpha: 0.5),
+                    width: 1.5,
                   ),
-              ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Trump: ',
+                        style: TextStyle(color: Colors.white70, fontSize: 10)),
+                    if (trumpRevealed && trump != null)
+                      Text(
+                        '${trump.symbol} ${trump.name}',
+                        style: TextStyle(
+                          color: (trump == CardSuit.hearts || trump == CardSuit.diamonds)
+                              ? Colors.redAccent
+                              : Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      )
+                    else if (canReveal)
+                      const Text(
+                        'Tap to Reveal',
+                        style: TextStyle(
+                            color: Colors.amber,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10),
+                      )
+                    else if (canAsk)
+                      const Text(
+                        'Ask for Trump',
+                        style: TextStyle(
+                            color: Colors.amber,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10),
+                      )
+                    else
+                      const Text(
+                        'Hidden',
+                        style: TextStyle(color: Colors.white54, fontSize: 10),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Watermark when trick is empty
+          if (trick.isEmpty)
+            Text(
+              table.phase == Card29Phase.bidding ? 'BIDDING' : '29 TABLE',
+              style: const TextStyle(
+                color: Color(0x22FFFFFF),
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                letterSpacing: 2,
+              ),
+            ),
+
+          // North played card
+          if (northCard != null)
+            Positioned(
+              top: offset,
+              child: _playedCardWidget(northCard, cardW, cardH),
+            ),
+          // South played card
+          if (southCard != null)
+            Positioned(
+              bottom: offset,
+              child: _playedCardWidget(southCard, cardW, cardH),
+            ),
+          // West played card
+          if (westCard != null)
+            Positioned(
+              left: offset * 0.75,
+              child: _playedCardWidget(westCard, cardW, cardH),
+            ),
+          // East played card
+          if (eastCard != null)
+            Positioned(
+              right: offset * 0.75,
+              child: _playedCardWidget(eastCard, cardW, cardH),
             ),
         ],
       ),
     );
   }
 
-  Widget _seatRow(Card29Table table, int me) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 8,
-      runSpacing: 6,
-      children: [
-        for (var seat = 0; seat < 4; seat++)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: table.currentTurn == seat
-                  ? AppColors.mintGreen.withValues(alpha: 0.2)
-                  : Colors.white10,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '${_name(seat, me)}'
-              '${seat == table.highestBidder ? ' (bidder)' : ''}'
-              '  ·  ${table.handCounts.length > seat ? table.handCounts[seat] : 0} cards',
-              style: TextStyle(
-                color: seat == me ? AppColors.mintGreen : Colors.white70,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-      ],
+  Widget _playedCardWidget(PlayedCard play, double width, double height) {
+    return PlayingCardView(
+      rank: play.card.rank.code,
+      suitSymbol: play.card.suit.symbol,
+      isRed: play.card.suit == CardSuit.hearts ||
+          play.card.suit == CardSuit.diamonds,
+      width: width,
+      height: height,
     );
   }
 
-  Widget _controls(
+  Widget _biddingControls(Card29Table table, int me) {
+    final minBid = table.minimumBid();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xEE092614),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.amber, width: 1.5),
+        boxShadow: const [
+          BoxShadow(color: Colors.black87, blurRadius: 10, offset: Offset(0, 4))
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ElevatedButton(
+            onPressed: _busy ? null : () => _act({'type': 'pass'}),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white12,
+              foregroundColor: Colors.white,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: const Text('Pass', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 8),
+          for (var bid = minBid; bid <= Card29Engine.maxBid && bid < minBid + 3; bid++)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: ElevatedButton(
+                onPressed: _busy ? null : () => _act({'type': 'bid', 'bid': bid}),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.mintGreen,
+                  foregroundColor: Colors.black87,
+                  visualDensity: VisualDensity.compact,
+                ),
+                child: Text('Bid $bid', style: const TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _trumpSelector(Card29Table table) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xEE092614),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.amber, width: 2),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Choose Trump Suit',
+              style: TextStyle(
+                  color: Colors.amber,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12)),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final suit in CardSuit.values)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: ElevatedButton(
+                    onPressed: _busy
+                        ? null
+                        : () => _act(
+                            {'type': 'selectTrump', 'suit': suitKey(suit)}),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: (suit == CardSuit.hearts ||
+                              suit == CardSuit.diamonds)
+                          ? Colors.red.shade900
+                          : Colors.grey.shade900,
+                      foregroundColor: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: Text('${suit.symbol} ${suit.name}',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionBannerAndControls(
       Card29Table table, int me, List<Card29> cards, CardSuit? knownTrump) {
     final buttons = <Widget>[];
 
     if (table.phase == Card29Phase.roundOver) {
-      buttons.add(_button('Next deal', () => _act({'type': 'nextDeal'})));
+      buttons.add(_button('Next Deal', () => _act({'type': 'nextDeal'})));
     }
     if (table.phase == Card29Phase.matchOver) {
-      buttons.add(_button('New match', () => _act({'type': 'newMatch'})));
+      buttons.add(_button('New Match', () => _act({'type': 'newMatch'})));
+    }
+    if (table.canClaimPair(hand: cards, knownTrump: knownTrump)) {
+      buttons.add(_button('Claim Pair (Royalty)', () => _act({'type': 'claimRoyalty'})));
     }
 
-    if (table.phase == Card29Phase.bidding && table.actingSeat == me) {
-      buttons.add(_button('Pass', () => _act({'type': 'pass'}), muted: true));
-      final first = table.minimumBid();
-      for (var bid = first;
-          bid <= Card29Engine.maxBid && bid < first + 4;
-          bid++) {
-        buttons
-            .add(_button('Bid $bid', () => _act({'type': 'bid', 'bid': bid})));
-      }
-    }
-
-    if (table.phase == Card29Phase.trumpSelection &&
-        table.highestBidder == me) {
-      for (final suit in CardSuit.values) {
-        buttons.add(_button(
-          '${suit.symbol} ${suit.name}',
-          () => _act({'type': 'selectTrump', 'suit': suitKey(suit)}),
-        ));
-      }
-    }
-
-    final hand = cards;
-    if (table.canAskTrump(seat: me, hand: hand)) {
-      buttons.add(_button('Ask for trump', () => _act({'type': 'ask'})));
-    }
-    if (table.canRevealTrump(seat: me, hand: hand)) {
-      buttons.add(_button('Reveal trump', () => _act({'type': 'reveal'})));
-    }
-    if (table.canClaimPair(hand: hand, knownTrump: knownTrump)) {
-      buttons
-          .add(_button('Show the pair', () => _act({'type': 'claimRoyalty'})));
-    }
-
-    if (buttons.isEmpty) return const SizedBox(height: 4);
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 8,
-      runSpacing: 8,
-      children: buttons,
+    if (buttons.isEmpty) return const SizedBox(height: 2);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: buttons,
+      ),
     );
   }
+
 
   Widget _button(String label, VoidCallback onPressed, {bool muted = false}) {
     return ElevatedButton(
