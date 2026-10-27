@@ -905,12 +905,13 @@ service cloud.firestore {
       }
 
       // Online Game Zone tables for tour group members. Other games keep their
-      // rules. The 29 and Teen Patti tables are run by the server (card29Start,
-      // card29Act, ..., teenPattiStart, teenPattiAct, ...), so members may only
-      // create a waiting table, join or leave one before it starts, and delete
-      // one that is not in play.
+      // rules. The 29, Teen Patti and carrom tables are run by the server
+      // (card29Start, card29Act, ..., teenPattiStart, teenPattiAct, ...,
+      // carromStart, carromShoot, ...), so members may only create a waiting
+      // table, join or leave one before it starts, and delete one that is not
+      // in play.
       function serverRunTable(data) {
-        return data.get('gameType', '') in ['card29', 'teen_patti'];
+        return data.get('gameType', '') in ['card29', 'teen_patti', 'carrom'];
       }
 
       match /games/{gameId} {

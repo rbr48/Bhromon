@@ -25,6 +25,9 @@ export { card29Start, card29Act, card29Advance, card29Leave } from './card29/cal
 // ── Online Teen Patti table (server-run game) ─────────────────────────────────
 export { teenPattiStart, teenPattiAct, teenPattiAdvance, teenPattiLeave } from './teenPatti/callables';
 
+// ── Online carrom board (server-run game) ─────────────────────────────────────
+export { carromStart, carromShoot, carromAdvance, carromLeave } from './carrom/callables';
+
 // ── Admin & Compliance ────────────────────────────────────────────────────────
 export { promoteToRegionExpert } from './promoteToRegionExpert';
 export { gdprDeleteUser } from './gdprDeleteUser';

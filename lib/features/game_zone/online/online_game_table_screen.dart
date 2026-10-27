@@ -198,6 +198,13 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
       );
       return;
     }
+    if (session.gameType == OnlineGameType.carrom) {
+      await _repository.startCarromTable(
+        tourId: session.tourId,
+        gameId: session.id,
+      );
+      return;
+    }
 
     Map<String, dynamic> initialState = {};
 
@@ -220,10 +227,7 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
         };
         break;
       case OnlineGameType.carrom:
-        initialState = {
-          'currentPlayer': 0,
-          'winner': null,
-        };
+        // Laid out by the server (see the early return above).
         break;
       case OnlineGameType.card29:
         // Dealt by the server (see the early return above).
