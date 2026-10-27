@@ -228,54 +228,15 @@ class Card29Game {
   /// Cards [player] may play right now (empty if it is not their turn).
   List<Card29> legalCards(int player) {
     if (phase != Card29Phase.playing || currentTurn != player) return const [];
-    final hand = hands[player];
-    if (leadSuit == null) {
-      if (!isTrumpRevealed && player == highestBidder) {
-        final nonTrump = hand.where((c) => c.suit != trumpSuit).toList();
-        if (nonTrump.isNotEmpty) return nonTrump;
-      }
-      return List.of(hand);
-    }
-    // If trump is revealed and the player is void in the led suit, they must
-    // play trump to win the trick from an opponent. However:
-    // 1. If their partner is already winning the current trick, the player
-    //    is not forced to trump (Partnership Immunity).
-    // 2. If an opponent is winning with a trump that is higher than any trump
-    //    held by the player, the player is not forced to under-trump.
-    bool mustTrump = true;
-    int? minTrumpPowerToBeat;
-    if (isTrumpRevealed && currentTrick.isNotEmpty) {
-      final currentWinner = Card29Engine.determineTrickWinner(
-        trickCards: currentTrick,
-        trumpSuit: trumpSuit,
-        isTrumpRevealed: isTrumpRevealed,
-      );
-      if (teamOf(currentWinner.playerIndex) == teamOf(player)) {
-        mustTrump = false;
-      } else {
-        // Opponent is winning the trick.
-        // Check if the opponent's winning card counts as trump.
-        final winningCard = currentWinner.card;
-        final bool winningCardIsTrump = trumpSuit != null &&
-            winningCard.suit == trumpSuit &&
-            (currentWinner.trumpEligible || winningCard.suit == leadSuit);
-        if (winningCardIsTrump) {
-          minTrumpPowerToBeat = winningCard.power;
-        }
-      }
-    }
-
-    return hand
-        .where((c) => Card29Engine.isCardLegal(
-              card: c,
-              hand: hand,
-              leadSuit: leadSuit,
-              isTrumpRevealed: isTrumpRevealed,
-              trumpSuit: trumpSuit,
-              mustPlayTrumpIfHeld: mustTrump,
-              minTrumpPowerToBeat: minTrumpPowerToBeat,
-            ))
-        .toList();
+    return Card29Engine.legalPlays(
+      hand: hands[player],
+      player: player,
+      highestBidder: highestBidder,
+      leadSuit: leadSuit,
+      trick: currentTrick,
+      trumpSuit: trumpSuit,
+      isTrumpRevealed: isTrumpRevealed,
+    );
   }
 
   /// Players who can't follow suit may ask for trump (the bidder already knows it).
