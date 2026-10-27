@@ -108,11 +108,25 @@ void main() {
 
     // Verify Active Tour Banner
     expect(find.text("Sajek Cloud Trek '26"), findsOneWidget);
-    expect(find.text('Create New Game Table'), findsOneWidget);
+    expect(find.text('Create Table'), findsOneWidget);
+    expect(find.text('Join with Code'), findsOneWidget);
 
     // Verify Active Table Card
     expect(find.text('Evening Highway Ludo'), findsOneWidget);
     expect(find.text('Ludo Express • 1/4 Seated'), findsOneWidget);
     expect(find.text('Enter'), findsOneWidget);
+
+    // Tap Join with Code and verify dialog opens
+    await tester.tap(find.text('Join with Code'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+        find.text(
+            'Enter the Table Code or paste the invite shared by your host:'),
+        findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
   });
 }

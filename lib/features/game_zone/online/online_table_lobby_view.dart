@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/theme/colors.dart';
 import '../common/in_game_voice_bar.dart';
@@ -113,6 +115,89 @@ class OnlineTableLobbyView extends StatelessWidget {
                       letterSpacing: 0.5,
                     ),
                   ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Invite & Share Table Card
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'TABLE CODE',
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      SelectableText(
+                        session.id,
+                        style: const TextStyle(
+                          color: AppColors.mintGreen,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Copy Code',
+                  icon: const Icon(Icons.copy_rounded,
+                      color: Colors.white70, size: 20),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: session.id));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Table code copied to clipboard!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    final message =
+                        'Join my ${session.gameType.label} table "${session.tableName}" on Bhromon!\n'
+                        'Table Code: ${session.id}\n'
+                        'Open Bhromon > Game Zone > Active Tour Tables > Join with Code.';
+                    // ignore: deprecated_member_use
+                    Share.share(message,
+                        subject: 'Bhromon Game Invite: ${session.tableName}');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.mintGreen.withValues(alpha: 0.2),
+                    foregroundColor: AppColors.mintGreen,
+                    elevation: 0,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                          color: AppColors.mintGreen.withValues(alpha: 0.4)),
+                    ),
+                  ),
+                  icon: const Icon(Icons.share_rounded, size: 16),
+                  label: const Text('Invite',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),

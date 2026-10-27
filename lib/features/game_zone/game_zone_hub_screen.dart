@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/colors.dart';
@@ -507,29 +508,57 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      OnlineGameCreateDialog.show(
-                        context,
-                        tourId: activeTour.id,
-                        repository: _gameRepo,
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.mintGreen,
-                      foregroundColor: const Color(0xFF0F1E14),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            OnlineGameCreateDialog.show(
+                              context,
+                              tourId: activeTour.id,
+                              repository: _gameRepo,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.mintGreen,
+                            foregroundColor: const Color(0xFF0F1E14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          icon: const Icon(Icons.add_circle_outline_rounded,
+                              size: 18),
+                          label: const Text(
+                            'Create Table',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
                       ),
-                    ),
-                    icon:
-                        const Icon(Icons.add_circle_outline_rounded, size: 20),
-                    label: const Text(
-                      'Create New Game Table',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () =>
+                              _showJoinByCodeDialog(context, activeTour.id),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white24),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          icon: const Icon(Icons.pin_rounded,
+                              size: 18, color: AppColors.mintGreen),
+                          label: const Text(
+                            'Join with Code',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -738,6 +767,108 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showJoinByCodeDialog(BuildContext context, String tourId) {
+    final controller = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: const Color(0xFF14241B),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Colors.white12),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.pin_rounded, color: AppColors.mintGreen),
+            SizedBox(width: 8),
+            Text(
+              'Join with Code',
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the Table Code or paste the invite shared by your host:',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              style:
+                  const TextStyle(color: Colors.white, fontFamily: 'monospace'),
+              decoration: InputDecoration(
+                hintText: 'e.g. 7kX9qLm...',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.black26,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.white24),
+                ),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.paste_rounded,
+                      color: AppColors.mintGreen, size: 20),
+                  onPressed: () async {
+                    final data = await Clipboard.getData(Clipboard.kTextPlain);
+                    if (data?.text != null && data!.text!.trim().isNotEmpty) {
+                      final text = data.text!.trim();
+                      final match =
+                          RegExp(r'[a-zA-Z0-9_-]{10,}').firstMatch(text);
+                      controller.text = match != null ? match.group(0)! : text;
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child:
+                const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.mintGreen,
+              foregroundColor: const Color(0xFF0F1E14),
+            ),
+            onPressed: () async {
+              final code = controller.text.trim();
+              if (code.isEmpty) return;
+              Navigator.of(dialogCtx).pop();
+
+              try {
+                await _gameRepo.joinGameSession(
+                  tourId: tourId,
+                  gameId: code,
+                );
+                if (context.mounted) {
+                  context.push('/game-zone/table/$tourId/$code');
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Could not join table: $e'),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Join Table',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
