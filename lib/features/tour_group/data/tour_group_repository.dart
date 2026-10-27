@@ -56,20 +56,34 @@ class TourGroupRepository {
   // Identity
   // ---------------------------------------------------------------------------
 
-  bool get isSignedIn => _auth.currentUser != null;
+  bool get isSignedIn {
+    try {
+      return _auth.currentUser != null;
+    } catch (_) {
+      return currentEmail.isNotEmpty;
+    }
+  }
 
   /// Empty when signed out. There is no shared guest identity any more.
-  String get currentUid => _auth.currentUser?.uid ?? '';
+  String get currentUid {
+    try {
+      return _auth.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
 
   String get currentEmail {
-    final email = _auth.currentUser?.email;
-    if (email != null && email.trim().isNotEmpty) {
-      return normalizeEmail(email);
-    }
-    final uid = _auth.currentUser?.uid;
-    if (uid != null && uid.isNotEmpty) {
-      return '$uid@bhromon.app';
-    }
+    try {
+      final email = _auth.currentUser?.email;
+      if (email != null && email.trim().isNotEmpty) {
+        return normalizeEmail(email);
+      }
+      final uid = _auth.currentUser?.uid;
+      if (uid != null && uid.isNotEmpty) {
+        return '$uid@bhromon.app';
+      }
+    } catch (_) {}
     return '';
   }
 
@@ -277,10 +291,8 @@ class TourGroupRepository {
   /// membership answer arrives, so tours the user left or was removed from
   /// stop appearing.
   Stream<List<TourGroup>> watchMyGroups() {
-    if (!isSignedIn) return Stream.value(const []);
-    final email = currentEmail;
-
     late StreamController<List<TourGroup>> controller;
+    StreamSubscription<User?>? authSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? membershipSub;
     final tourSubs =
         <String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>{};
@@ -302,7 +314,7 @@ class TourGroupRepository {
       tours.remove(tourId);
     }
 
-    void startTour(String tourId) {
+    void startTour(String tourId, String email) {
       tourSubs[tourId] = _tour(tourId).snapshots().listen(
         (doc) {
           final data = doc.data();
@@ -337,51 +349,91 @@ class TourGroupRepository {
       );
     }
 
+    void clearUserTours() {
+      membershipSub?.cancel();
+      membershipSub = null;
+      for (final sub in tourSubs.values) {
+        sub.cancel();
+      }
+      tourSubs.clear();
+      tours.clear();
+      listedIds.clear();
+      rolesByTour.clear();
+      heardFromServer = false;
+    }
+
+    void bindUser(User? user) {
+      clearUserTours();
+      if (user == null) {
+        emit();
+        return;
+      }
+      final rawEmail = user.email;
+      final email = (rawEmail != null && rawEmail.trim().isNotEmpty)
+          ? normalizeEmail(rawEmail)
+          : (user.uid.isNotEmpty ? '${user.uid}@bhromon.app' : '');
+      if (email.isEmpty) {
+        emit();
+        return;
+      }
+
+      getLocalGroups().then((local) {
+        if (!heardFromServer && !controller.isClosed) {
+          controller.add(local);
+        }
+      });
+
+      membershipSub = _memberships
+          .where('email', isEqualTo: email)
+          .where('status', isEqualTo: 'active')
+          .snapshots()
+          .listen(
+        (snapshot) {
+          heardFromServer = true;
+          rolesByTour.clear();
+          for (final d in snapshot.docs) {
+            final id = d.data()['tourId'] as String? ?? '';
+            if (id.isNotEmpty) {
+              rolesByTour[id] = d.data()['role'] as String? ?? 'member';
+            }
+          }
+          final ids = rolesByTour.keys.toSet();
+          for (final id in listedIds.difference(ids)) {
+            stopTour(id);
+            _removeLocalGroup(id);
+          }
+          for (final id in ids.difference(listedIds)) {
+            startTour(id, email);
+          }
+          listedIds = ids;
+          emit();
+        },
+        onError: (Object e) {
+          debugPrint('[TourGroupRepository] memberships error: $e');
+          if (!controller.isClosed) controller.addError(e);
+        },
+      );
+    }
+
     controller = StreamController<List<TourGroup>>(
       onListen: () {
-        getLocalGroups().then((local) {
-          if (!heardFromServer && !controller.isClosed) {
-            controller.add(local);
+        try {
+          if (_auth.currentUser != null) {
+            bindUser(_auth.currentUser);
           }
-        });
-
-        membershipSub = _memberships
-            .where('email', isEqualTo: email)
-            .where('status', isEqualTo: 'active')
-            .snapshots()
-            .listen(
-          (snapshot) {
-            heardFromServer = true;
-            rolesByTour.clear();
-            for (final d in snapshot.docs) {
-              final id = d.data()['tourId'] as String? ?? '';
-              if (id.isNotEmpty) {
-                rolesByTour[id] = d.data()['role'] as String? ?? 'member';
-              }
-            }
-            final ids = rolesByTour.keys.toSet();
-            for (final id in listedIds.difference(ids)) {
-              stopTour(id);
-              _removeLocalGroup(id);
-            }
-            for (final id in ids.difference(listedIds)) {
-              startTour(id);
-            }
-            listedIds = ids;
+          authSub = _auth.authStateChanges().listen((user) {
+            bindUser(user);
+          });
+        } catch (_) {
+          // If Firebase is uninitialized (e.g. In unit tests)
+          if (currentEmail.isNotEmpty) {
             emit();
-          },
-          onError: (Object e) {
-            debugPrint('[TourGroupRepository] memberships error: $e');
-            if (!controller.isClosed) controller.addError(e);
-          },
-        );
+          }
+        }
       },
       onCancel: () async {
-        await membershipSub?.cancel();
-        for (final sub in tourSubs.values) {
-          await sub.cancel();
-        }
-        tourSubs.clear();
+        await authSub?.cancel();
+        clearUserTours();
       },
     );
 

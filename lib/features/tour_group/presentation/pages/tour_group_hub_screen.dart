@@ -24,8 +24,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   TourGroup? _activeGroup;
   // The group shown on screen, so the backup button works without a selection.
   TourGroup? _displayedGroup;
-  late final Stream<List<TourGroup>> _groupsStream =
-      _repository.watchMyGroups();
+  late Stream<List<TourGroup>> _groupsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _groupsStream = _repository.watchMyGroups();
+  }
   final Map<String, Stream<List<TourMember>>> _memberStreams = {};
 
   Stream<List<TourMember>> _membersOf(String tourId) => _memberStreams
@@ -346,13 +351,23 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.mintGreen.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF1B4332),
               ),
-              child: const Icon(Icons.terrain_rounded,
-                  color: AppColors.mintGreen, size: 20),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/logo.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.explore,
+                    color: AppColors.mintGreen,
+                    size: 20,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(width: 10),
             Column(
@@ -447,7 +462,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.midGreen),
-                          onPressed: () => setState(() {}),
+                          onPressed: () => setState(() {
+                            _groupsStream = _repository.watchMyGroups();
+                          }),
                           child: Text(context.l10n.translate('hub_try_again')),
                         ),
                       ],
@@ -551,8 +568,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             label: context.l10n.translate('hub_nav_games'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.person_outline_rounded),
-            selectedIcon: const Icon(Icons.person_rounded),
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
             label: context.l10n.translate('hub_nav_profile'),
           ),
         ],
@@ -623,7 +640,26 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ),
                 ),
               ],
-            )
+            ),
+            const SizedBox(height: 18),
+            if (!_repository.isSignedIn)
+              TextButton.icon(
+                onPressed: () => context.push('/login'),
+                icon: const Icon(Icons.login, color: AppColors.mintGreen, size: 18),
+                label: const Text(
+                  'লগইন বা সাইন-আপ করুন',
+                  style: TextStyle(
+                    color: AppColors.mintGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              )
+            else
+              Text(
+                'বর্তমান অ্যাকাউন্ট: ${_repository.currentEmail}',
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
           ],
         ),
       ),
