@@ -60,9 +60,11 @@ class BhromonBottomNav extends StatelessWidget {
   }) {
     if (currentIndex != null && index == currentIndex) return;
 
-    final effectiveTourId = (tourId != null && tourId.isNotEmpty)
-        ? tourId
-        : TourGroupRepository.lastActiveTourId;
+    final effectiveTourId = (currentIndex == 0)
+        ? (TourGroupRepository.lastActiveTourId ?? tourId)
+        : (tourId != null && tourId.isNotEmpty)
+            ? tourId
+            : TourGroupRepository.lastActiveTourId;
 
     switch (index) {
       case 0:

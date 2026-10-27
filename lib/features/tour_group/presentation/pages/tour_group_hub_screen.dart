@@ -491,6 +491,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       : groups.first;
 
               _displayedGroup = current;
+              _activeGroup = current;
               TourGroupRepository.lastActiveTourId = current.id;
 
               return ListView(
@@ -525,7 +526,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       ),
       bottomNavigationBar: BhromonBottomNav(
         selectedIndex: 0,
-        tourId: _displayedGroup?.id,
+        tourId: _activeGroup?.id ??
+            _displayedGroup?.id ??
+            TourGroupRepository.lastActiveTourId,
       ),
     );
   }
@@ -766,8 +769,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         if (id != null) {
                           TourGroupRepository.lastActiveTourId = id;
                           setState(() {
-                            _activeGroup =
+                            final picked =
                                 allGroups.firstWhere((g) => g.id == id);
+                            _activeGroup = picked;
+                            _displayedGroup = picked;
                           });
                         }
                       },

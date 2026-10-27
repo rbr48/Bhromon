@@ -162,6 +162,7 @@ void main() {
     }
 
     await hiveInit;
+    await Hive.openBox<dynamic>('tour_groups_box');
     await LocaleController.instance.load();
     await ThemeController.instance.load();
     final bool firebaseAvailable = await firebaseInit;

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../data/tour_group_repository.dart';
 import 'bhromon_bottom_nav.dart';
 
 /// The bar a family uses across all tour screens. Every tour screen sits under
@@ -34,6 +35,7 @@ class TripShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    TourGroupRepository.lastActiveTourId = tourId;
     final index = tripTabFor(location);
 
     void select(int i) {
