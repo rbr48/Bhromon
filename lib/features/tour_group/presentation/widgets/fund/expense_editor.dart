@@ -629,6 +629,9 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                         height: 120,
                         width: double.infinity,
                         fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                            Icons.broken_image,
+                            color: Colors.white24),
                       ),
                     )
                   else if (_receiptUrl != null && _receiptUrl!.isNotEmpty)

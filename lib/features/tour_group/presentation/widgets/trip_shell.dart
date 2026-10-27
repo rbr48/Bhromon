@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
 import 'bhromon_bottom_nav.dart';
+import 'command_palette_dialog.dart';
+import 'desktop_tour_sidebar.dart';
 
 /// The bar a family uses across all tour screens. Every tour screen sits under
 /// the unified 5 app navigation destinations (Tours, Moments, Channels, Games, Profile).
@@ -63,6 +63,10 @@ class TripShell extends StatelessWidget {
       const SingleActivator(LogicalKeyboardKey.digit3, alt: true): () => select(2),
       const SingleActivator(LogicalKeyboardKey.digit4, alt: true): () => select(3),
       const SingleActivator(LogicalKeyboardKey.digit5, alt: true): () => select(4),
+      const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
+          CommandPaletteDialog.show(context, tourId),
+      const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
+          CommandPaletteDialog.show(context, tourId),
     };
 
     final Widget scaffold = MediaQuery.sizeOf(context).width < railBreakpoint
@@ -76,53 +80,11 @@ class TripShell extends StatelessWidget {
         : Scaffold(
             body: Row(
               children: [
-                NavigationRail(
-                  selectedIndex: index,
-                  labelType: NavigationRailLabelType.all,
-                  onDestinationSelected: select,
-                  leading: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      tooltip: context.l10n.translate('hub_title'),
-                      onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go('/group-hub');
-                        }
-                      },
-                    ),
-                  ),
-                  destinations: [
-                    NavigationRailDestination(
-                      icon: const Icon(Icons.hub_outlined, color: AppColors.mintGreen),
-                      selectedIcon: const Icon(Icons.hub, color: AppColors.mintGreen),
-                      label: Text(context.l10n.translate('hub_nav_tours')),
-                    ),
-                    NavigationRailDestination(
-                      icon: const Icon(Icons.photo_library_outlined),
-                      selectedIcon: const Icon(Icons.photo_library),
-                      label: Text(context.l10n.translate('hub_nav_moments')),
-                    ),
-                    NavigationRailDestination(
-                      icon: const Icon(Icons.forum_outlined),
-                      selectedIcon: const Icon(Icons.forum),
-                      label: Text(context.l10n.translate('hub_nav_channels')),
-                    ),
-                    NavigationRailDestination(
-                      icon: const Icon(Icons.sports_esports_outlined),
-                      selectedIcon: const Icon(Icons.sports_esports),
-                      label: Text(context.l10n.translate('hub_nav_games')),
-                    ),
-                    NavigationRailDestination(
-                      icon: const Icon(Icons.person_outline),
-                      selectedIcon: const Icon(Icons.person),
-                      label: Text(context.l10n.translate('hub_nav_profile')),
-                    ),
-                  ],
+                DesktopTourSidebar(
+                  tourId: tourId,
+                  currentLocation: location,
+                  repository: TourGroupRepository(),
                 ),
-                const VerticalDivider(width: 1),
                 Expanded(
                   child: Center(
                     child: ConstrainedBox(

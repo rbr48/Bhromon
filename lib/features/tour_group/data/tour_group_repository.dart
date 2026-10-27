@@ -191,10 +191,22 @@ class TourGroupRepository {
   // ---------------------------------------------------------------------------
 
   Future<Box<dynamic>> _openBox() async {
-    if (Hive.isBoxOpen('tour_groups_box')) {
-      return Hive.box<dynamic>('tour_groups_box');
+    try {
+      if (Hive.isBoxOpen('tour_groups_box')) {
+        return Hive.box<dynamic>('tour_groups_box');
+      }
+      return await Hive.openBox<dynamic>('tour_groups_box');
+    } catch (e) {
+      debugPrint(
+          '[TourGroupRepository] Corrupt Hive box: $e. Purging and recovering...');
+      try {
+        await Hive.deleteBoxFromDisk('tour_groups_box');
+        return await Hive.openBox<dynamic>('tour_groups_box');
+      } catch (inner) {
+        debugPrint('[TourGroupRepository] Hive recovery failed: $inner');
+        rethrow;
+      }
     }
-    return await Hive.openBox<dynamic>('tour_groups_box');
   }
 
   Future<void> _cacheLocalGroup(TourGroup group) async {

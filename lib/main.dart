@@ -82,61 +82,132 @@ void main() {
       return true; // Mark as handled to prevent native crash
     };
 
+    // Component-level error isolation & graceful full-page crash recovery
     ErrorWidget.builder = (FlutterErrorDetails details) {
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(
-          backgroundColor: const Color(0xFF121212),
-          body: SafeArea(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline_rounded,
-                        color: Colors.redAccent, size: 64),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Application Error',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
+      logError('[UI Error Boundary] Exception during widget build',
+          details.exception, details.stack);
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // If the crash happened in a subcomponent/card, isolate it so the whole page doesn't break
+          final isSubComponent =
+              constraints.maxWidth < 320 || constraints.maxHeight < 240;
+          if (isSubComponent) {
+            return Container(
+              margin: const EdgeInsets.all(4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E1E),
+                borderRadius: BorderRadius.circular(8),
+                border:
+                    Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      color: Colors.orangeAccent, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      kDebugMode
+                          ? details.exceptionAsString()
+                          : 'এই অংশটি লোড করা সম্ভব হয়নি',
+                      style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                          decoration: TextDecoration.none),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'An unexpected error occurred in the layout interface. Please restart the application if the issue persists.',
-                      style: TextStyle(
-                          color: Colors.white60, fontSize: 14, height: 1.4),
-                      textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Full page layout error: render graceful recovery screen with redirect options
+          return Material(
+            color: const Color(0xFF0F172A),
+            child: SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.shield_outlined,
+                              color: Colors.redAccent, size: 48),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'সাময়িক ত্রুটি ঘটেছে (Temporary Issue)',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'অ্যাপটি নিরাপদে সচল রাখতে পেজটি রিকভার করা হয়েছে। আপনি ড্যাশবোর্ডে ফিরে যেতে পারেন।',
+                          style: TextStyle(
+                              color: Colors.white70, fontSize: 13, height: 1.5),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        FilledButton.icon(
+                          onPressed: () {
+                            try {
+                              AppRouter.router.go('/group-hub');
+                            } catch (_) {}
+                          },
+                          icon: const Icon(Icons.home_rounded, size: 18),
+                          label: const Text('হোমে ফিরে যান'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF00BFA5),
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                          ),
+                        ),
+                        if (kDebugMode) ...[
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.black45,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.white10),
+                            ),
+                            child: Text(
+                              details.exceptionAsString(),
+                              style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontFamily: 'monospace',
+                                fontSize: 11,
+                              ),
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        details.exceptionAsString(),
-                        style: const TextStyle(
-                            color: Colors.redAccent,
-                            fontFamily: 'monospace',
-                            fontSize: 11),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       );
     };
 
@@ -162,7 +233,17 @@ void main() {
     }
 
     await hiveInit;
-    await Hive.openBox<dynamic>('tour_groups_box');
+    try {
+      await Hive.openBox<dynamic>('tour_groups_box');
+    } catch (e, st) {
+      logError('Hive openBox failed at startup, self-healing', e, st);
+      try {
+        await Hive.deleteBoxFromDisk('tour_groups_box');
+        await Hive.openBox<dynamic>('tour_groups_box');
+      } catch (inner) {
+        logError('Hive self-healing failed', inner);
+      }
+    }
     await LocaleController.instance.load();
     await ThemeController.instance.load();
     final bool firebaseAvailable = await firebaseInit;

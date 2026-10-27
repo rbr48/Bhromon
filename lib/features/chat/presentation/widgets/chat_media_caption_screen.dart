@@ -74,10 +74,18 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                       ? Image.network(
                           widget.file.path,
                           fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(Icons.broken_image_rounded,
+                                size: 64, color: Colors.white54),
+                          ),
                         )
                       : Image.file(
                           File(widget.file.path),
                           fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(Icons.broken_image_rounded,
+                                size: 64, color: Colors.white54),
+                          ),
                         ),
                 ),
               ),

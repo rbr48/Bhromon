@@ -1988,15 +1988,26 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                               ? Image.network(
                                                   dialogCoverFile!.path,
                                                   fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) =>
+                                                      const ColoredBox(
+                                                          color:
+                                                              Colors.black26),
                                                 )
                                               : Image.file(
                                                   File(dialogCoverFile!.path),
                                                   fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) =>
+                                                      const ColoredBox(
+                                                          color:
+                                                              Colors.black26),
                                                 ))
                                         else if (profile.coverUrl != null)
                                           CachedNetworkImage(
                                             imageUrl: profile.coverUrl!,
                                             fit: BoxFit.cover,
+                                            errorWidget: (_, __, ___) =>
+                                                const ColoredBox(
+                                                    color: Colors.black26),
                                           ),
                                         Container(
                                           color: Colors.black
@@ -2053,16 +2064,30 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                 ? (kIsWeb
                                                     ? Image.network(
                                                         dialogAvatarFile!.path,
-                                                        fit: BoxFit.cover)
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder:
+                                                            (_, __, ___) =>
+                                                                const Icon(Icons
+                                                                    .person),
+                                                      )
                                                     : Image.file(
                                                         File(dialogAvatarFile!
                                                             .path),
-                                                        fit: BoxFit.cover))
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder:
+                                                            (_, __, ___) =>
+                                                                const Icon(Icons
+                                                                    .person),
+                                                      ))
                                                 : (profile.avatarUrl != null
                                                     ? CachedNetworkImage(
                                                         imageUrl:
                                                             profile.avatarUrl!,
                                                         fit: BoxFit.cover,
+                                                        errorWidget:
+                                                            (_, __, ___) =>
+                                                                const Icon(Icons
+                                                                    .person),
                                                       )
                                                     : Container(
                                                         color: const Color(

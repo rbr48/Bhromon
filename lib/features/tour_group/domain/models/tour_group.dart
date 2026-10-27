@@ -588,10 +588,9 @@ class TourGroup {
       startDate: startDate,
       endDate: endDate,
       modules: TourModules.fromMap(map['modules']),
-      customSpots: (map['customSpots'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          const [],
+      customSpots: (map['customSpots'] is Iterable)
+          ? (map['customSpots'] as Iterable).map((e) => e.toString()).toList()
+          : const [],
       meetingPointTitle: map['meetingPointTitle']?.toString() ??
           legacyMeeting?['title']?.toString(),
       meetingPointNote: map['meetingPointNote']?.toString() ??

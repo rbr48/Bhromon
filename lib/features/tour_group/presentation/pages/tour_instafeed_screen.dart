@@ -14,6 +14,7 @@ import '../../domain/models/tour_post_models.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/instafeed/instafeed_create_studio.dart';
 import '../widgets/instafeed/instafeed_comments_sheet.dart';
+import '../widgets/instafeed/instafeed_day_filter_bar.dart';
 import '../widgets/instafeed/instafeed_explore_grid.dart';
 import '../widgets/instafeed/instafeed_filter_sheet.dart';
 import '../widgets/instafeed/instafeed_image_viewer_modal.dart';
@@ -1165,15 +1166,25 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                 ),
                               ),
 
-                            // 5. Filter pill: media and day filters live in one sheet
+                            // 5. Day filter circles and sub-header toolbar
                             SliverToBoxAdapter(
                               child: Center(
                                 child: ConstrainedBox(
                                   constraints:
                                       const BoxConstraints(maxWidth: 580),
-                                  child: InstafeedFilterBar(
-                                    summary: _filterSummary(),
-                                    onTap: () => unawaited(_showFilterSheet()),
+                                  child: InstafeedDayFilterBar(
+                                    days: _tourDays,
+                                    selectedDay: _selectedDayFilter,
+                                    onDaySelected: (dayId) => setState(
+                                        () => _selectedDayFilter = dayId),
+                                    allPosts: _latestPosts,
+                                    filteredCount: filteredPosts.length,
+                                    isGridView: _isGridView,
+                                    onViewModeChanged: (grid) =>
+                                        setState(() => _isGridView = grid),
+                                    onOpenFilterSheet: () =>
+                                        unawaited(_showFilterSheet()),
+                                    activeFilterSummary: _filterSummary(),
                                   ),
                                 ),
                               ),
