@@ -9,6 +9,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
+import '../widgets/bhromon_bottom_nav.dart';
 
 class TourGroupHubScreen extends StatefulWidget {
   final TourGroupRepository? repository;
@@ -515,64 +516,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: BhromonBottomNav(
         selectedIndex: 0,
-        maintainBottomViewPadding: true,
-        onDestinationSelected: (index) {
-          if (index == 0) return;
-          final active = _displayedGroup;
-          switch (index) {
-            case 1:
-              if (active != null) {
-                context.push('/group/${active.id}/feed');
-              } else {
-                _snack(context.l10n.translate('hub_no_active_tour_hint'));
-              }
-              break;
-            case 2:
-              if (active != null) {
-                context.push('/group/${active.id}/channels');
-              } else {
-                context.push('/chats');
-              }
-              break;
-            case 3:
-              context.push('/game-zone');
-              break;
-            case 4:
-              final uid = _repository.currentUid;
-              final targetUid = uid.isNotEmpty ? uid : 'explorer_user';
-              context.push('/profile/$targetUid');
-              break;
-          }
-        },
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.hub_outlined, color: AppColors.mintGreen),
-            selectedIcon: const Icon(Icons.hub, color: AppColors.mintGreen),
-            label: context.l10n.translate('hub_nav_tours'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.photo_library_outlined),
-            selectedIcon: const Icon(Icons.photo_library),
-            label: context.l10n.translate('hub_nav_moments'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.forum_outlined),
-            selectedIcon: const Icon(Icons.forum),
-            label: context.l10n.translate('hub_nav_channels'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.sports_esports_outlined),
-            selectedIcon: const Icon(Icons.sports_esports),
-            label: context.l10n.translate('hub_nav_games'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: context.l10n.translate('hub_nav_profile'),
-          ),
-        ],
+        tourId: _displayedGroup?.id,
       ),
     );
   }

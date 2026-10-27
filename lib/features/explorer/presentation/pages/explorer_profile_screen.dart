@@ -23,6 +23,7 @@ import '../../../../core/entities/trip_log.dart';
 import 'package:bhromon/features/feed/presentation/widgets/trip_log_detail_sheet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../core/utils/doc_future_cache.dart';
+import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/services/media_upload_service.dart';
@@ -1337,6 +1338,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             ),
           ),
         ),
+        bottomNavigationBar: const BhromonBottomNav(selectedIndex: 4),
       ),
     );
   }

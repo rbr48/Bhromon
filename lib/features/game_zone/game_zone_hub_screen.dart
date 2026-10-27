@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/colors.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
+import 'package:bhromon/features/tour_group/presentation/widgets/bhromon_bottom_nav.dart';
 import 'data/online_game_repository.dart';
 import 'domain/models/online_game_session.dart';
 import 'online/online_game_create_dialog.dart';
@@ -80,6 +81,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
           _buildOnlineTablesTab(context),
         ],
       ),
+      bottomNavigationBar: const BhromonBottomNav(selectedIndex: 3),
     );
   }
 

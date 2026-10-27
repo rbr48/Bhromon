@@ -3,15 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import 'bhromon_bottom_nav.dart';
 
-/// The bar a family uses during a trip. Every tour screen sits under one of its
-/// five tabs. The bar is set on each route's own page rather than in a
-/// ShellRoute, because a ShellRoute leaves the first screen it shows without a
-/// back button. Tabs use pushReplacement, so the group hub stays underneath.
+/// The bar a family uses across all tour screens. Every tour screen sits under
+/// the unified 5 app navigation destinations (Tours, Moments, Channels, Games, Profile).
 ///
-/// Below [railBreakpoint] the tabs sit in a bottom bar. From it they move to a
-/// side rail, and the tour content is capped at [contentMaxWidth] so a wide
-/// web or tablet window does not stretch a page across the screen.
+/// Below [railBreakpoint] the tabs sit in a persistent bottom bar. From it they move to a
+/// side rail on wide screens, and the tour content is capped at [contentMaxWidth].
 class TripShell extends StatelessWidget {
   const TripShell({
     super.key,
@@ -35,12 +33,15 @@ class TripShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tabs = _tabs(context.l10n);
     final index = tripTabFor(location);
 
     void select(int i) {
-      if (i == index) return;
-      context.pushReplacement(tripTabPaths(tourId)[i]);
+      BhromonBottomNav.handleSelect(
+        context,
+        i,
+        tourId: tourId,
+        currentIndex: index,
+      );
     }
 
     final wrappedChild = PopScope(
@@ -56,18 +57,9 @@ class TripShell extends StatelessWidget {
     if (MediaQuery.sizeOf(context).width < railBreakpoint) {
       return Scaffold(
         body: wrappedChild,
-        bottomNavigationBar: NavigationBar(
+        bottomNavigationBar: BhromonBottomNav(
           selectedIndex: index,
-          onDestinationSelected: select,
-          maintainBottomViewPadding: true,
-          destinations: [
-            for (final tab in tabs)
-              NavigationDestination(
-                icon: Icon(tab.icon, color: tab.color),
-                selectedIcon: Icon(tab.selectedIcon, color: tab.color),
-                label: tab.label,
-              ),
-          ],
+          tourId: tourId,
         ),
       );
     }
@@ -94,12 +86,31 @@ class TripShell extends StatelessWidget {
               ),
             ),
             destinations: [
-              for (final tab in tabs)
-                NavigationRailDestination(
-                  icon: Icon(tab.icon, color: tab.color),
-                  selectedIcon: Icon(tab.selectedIcon, color: tab.color),
-                  label: Text(tab.label),
-                ),
+              NavigationRailDestination(
+                icon: const Icon(Icons.hub_outlined, color: AppColors.mintGreen),
+                selectedIcon: const Icon(Icons.hub, color: AppColors.mintGreen),
+                label: Text(context.l10n.translate('hub_nav_tours')),
+              ),
+              NavigationRailDestination(
+                icon: const Icon(Icons.photo_library_outlined),
+                selectedIcon: const Icon(Icons.photo_library),
+                label: Text(context.l10n.translate('hub_nav_moments')),
+              ),
+              NavigationRailDestination(
+                icon: const Icon(Icons.forum_outlined),
+                selectedIcon: const Icon(Icons.forum),
+                label: Text(context.l10n.translate('hub_nav_channels')),
+              ),
+              NavigationRailDestination(
+                icon: const Icon(Icons.sports_esports_outlined),
+                selectedIcon: const Icon(Icons.sports_esports),
+                label: Text(context.l10n.translate('hub_nav_games')),
+              ),
+              NavigationRailDestination(
+                icon: const Icon(Icons.person_outline),
+                selectedIcon: const Icon(Icons.person),
+                label: Text(context.l10n.translate('hub_nav_profile')),
+              ),
             ],
           ),
           const VerticalDivider(width: 1),
@@ -115,72 +126,27 @@ class TripShell extends StatelessWidget {
       ),
     );
   }
-
-  /// The five tabs in [tripTabFor] order. Both the bar and the rail read them.
-  static List<_TripTab> _tabs(AppLocalizations l10n) => [
-        _TripTab(
-          l10n.translate('shell_feed'),
-          Icons.photo_library_outlined,
-          Icons.photo_library,
-        ),
-        _TripTab(
-          l10n.translate('shell_chat'),
-          Icons.forum_outlined,
-          Icons.forum,
-        ),
-        _TripTab(
-          l10n.translate('shell_plan'),
-          Icons.event_note_outlined,
-          Icons.event_note,
-        ),
-        _TripTab(
-          l10n.translate('shell_money'),
-          Icons.account_balance_wallet_outlined,
-          Icons.account_balance_wallet,
-        ),
-        _TripTab(
-          l10n.translate('shell_safety'),
-          Icons.shield_outlined,
-          Icons.shield,
-          color: AppColors.amber,
-        ),
-      ];
-}
-
-/// One tab's label and icons.
-class _TripTab {
-  const _TripTab(
-    this.label,
-    this.icon,
-    this.selectedIcon, {
-    this.color,
-  });
-
-  final String label;
-  final IconData icon;
-  final IconData selectedIcon;
-  final Color? color;
 }
 
 /// The index of the tab a tour route belongs to:
-/// 0 Feed (feed, scrapbook, quiz), 1 Chat (channels), 2 Plan (journey,
-/// checklist, notices, logistics, tide), 3 Money (ledger), 4 Safety (safety).
+/// 0 Tours (hub, journey, checklist, notices, logistics, tide, ledger, safety, etc.)
+/// 1 Moments (feed / instafeed)
+/// 2 Channels (chat channels)
+/// 3 Games (game zone)
+/// 4 Profile (profile)
 int tripTabFor(String location) {
-  final screen = location.split('/').last;
-  return switch (screen) {
-    'channels' => 1,
-    'journey' || 'checklist' || 'notices' || 'logistics' || 'tide' => 2,
-    'ledger' => 3,
-    'safety' => 4,
-    _ => 0,
-  };
+  if (location.contains('/feed')) return 1;
+  if (location.contains('/channels')) return 2;
+  if (location.contains('/game-zone')) return 3;
+  if (location.contains('/profile')) return 4;
+  return 0;
 }
 
-/// The route each tab opens, in the same order as [tripTabFor].
+/// The routes corresponding to the five tabs, in the same order as [tripTabFor].
 List<String> tripTabPaths(String tourId) => [
+      '/group-hub',
       '/group/$tourId/feed',
       '/group/$tourId/channels',
-      '/group/$tourId/journey',
-      '/group/$tourId/ledger',
-      '/group/$tourId/safety',
+      '/game-zone',
+      '/profile/me',
     ];

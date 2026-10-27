@@ -317,26 +317,30 @@ class TourGroupRepository {
     void startTour(String tourId, String email) {
       tourSubs[tourId] = _tour(tourId).snapshots().listen(
         (doc) {
-          final data = doc.data();
-          if (doc.exists && data != null) {
-            final group = TourGroup.fromMap(doc.id, data);
-            tours[tourId] = group;
-            _cacheLocalGroup(group);
-            // Owner rows written before role 'owner' was saved as 'admin'.
-            // The owner's own app repairs them here.
-            if (group.ownerEmail == email &&
-                rolesByTour[tourId] != TourRole.owner.toValue()) {
-              _memberships.doc(_membershipId(tourId, email)).update({
-                'role': TourRole.owner.toValue()
-              }).catchError((Object e) => debugPrint(
-                  '[TourGroupRepository] owner role repair failed: $e'));
-              rolesByTour[tourId] = TourRole.owner.toValue();
+          try {
+            final data = doc.data();
+            if (doc.exists && data != null) {
+              final group = TourGroup.fromMap(doc.id, data);
+              tours[tourId] = group;
+              _cacheLocalGroup(group);
+              // Owner rows written before role 'owner' was saved as 'admin'.
+              // The owner's own app repairs them here.
+              if (group.ownerEmail == email &&
+                  rolesByTour[tourId] != TourRole.owner.toValue()) {
+                _memberships.doc(_membershipId(tourId, email)).update({
+                  'role': TourRole.owner.toValue()
+                }).catchError((Object e) => debugPrint(
+                    '[TourGroupRepository] owner role repair failed: $e'));
+                rolesByTour[tourId] = TourRole.owner.toValue();
+              }
+            } else {
+              tours.remove(tourId);
+              _removeLocalGroup(tourId);
             }
-          } else {
-            tours.remove(tourId);
-            _removeLocalGroup(tourId);
+            emit();
+          } catch (e, st) {
+            debugPrint('[TourGroupRepository] parse tour $tourId failed: $e\n$st');
           }
-          emit();
         },
         onError: (Object e) {
           // Losing access to a tour means the user is no longer a member.
@@ -385,7 +389,6 @@ class TourGroupRepository {
 
       membershipSub = _memberships
           .where('email', isEqualTo: email)
-          .where('status', isEqualTo: 'active')
           .snapshots()
           .listen(
         (snapshot) {
@@ -393,7 +396,9 @@ class TourGroupRepository {
           rolesByTour.clear();
           for (final d in snapshot.docs) {
             final id = d.data()['tourId'] as String? ?? '';
-            if (id.isNotEmpty) {
+            final rawStatus = (d.data()['status'] as String?)?.toLowerCase();
+            final isActive = rawStatus == null || rawStatus == 'active';
+            if (isActive && id.isNotEmpty) {
               rolesByTour[id] = d.data()['role'] as String? ?? 'member';
             }
           }
@@ -460,7 +465,8 @@ class TourGroupRepository {
         return group;
       }
       return null;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[TourGroupRepository] getGroup($tourId) error: $e\n$st');
       final local = await getLocalGroups();
       return local.where((g) => g.id == tourId).firstOrNull;
     }
@@ -572,9 +578,27 @@ class TourGroupRepository {
           'সঠিক আমন্ত্রণ কোড দিন (৮ অক্ষরের কোড, যেমন: 7KQ2M9XB)।');
     }
 
-    final invite = await _invites.doc(code).get();
-    final tourId = invite.data()?['tourId'] as String?;
-    if (!invite.exists || tourId == null) {
+    String? tourId;
+    try {
+      final invite = await _invites.doc(code).get();
+      if (invite.exists) {
+        tourId = invite.data()?['tourId'] as String?;
+      }
+    } catch (e) {
+      debugPrint('[TourGroupRepository] invite lookup error: $e');
+    }
+
+    // Fallback: check if the input code itself is directly a tourId
+    if (tourId == null || tourId.isEmpty) {
+      try {
+        final directDoc = await _tour(code).get();
+        if (directDoc.exists) {
+          tourId = code;
+        }
+      } catch (_) {}
+    }
+
+    if (tourId == null || tourId.isEmpty) {
       throw const FormatException(
           'এই আমন্ত্রণ কোডে কোনো ট্যুর গ্রুপ পাওয়া যায়নি।');
     }
@@ -600,13 +624,31 @@ class TourGroupRepository {
           throw const TourAccessException(
               'ইন্টারনেট সংযোগ নেই। সংযোগ ফিরে এলে আবার চেষ্টা করুন।');
         }
-      } on FirebaseException {
+      } on FirebaseException catch (e) {
+        debugPrint('[TourGroupRepository] join membership set failed: $e');
         throw const TourAccessException(
             'এই ট্যুরে যোগ দেওয়ার অনুমতি নেই। কোড ঠিক আছে কি না দেখুন, অথবা অ্যাডমিনের সাথে যোগাযোগ করুন।');
       }
+    } else {
+      // If already a member but inactive, reactivate membership so security rules permit reading
+      final status = existing.data()?['status'] as String?;
+      if (status != 'active') {
+        try {
+          await membershipRef.update({'status': 'active'});
+        } catch (e) {
+          debugPrint('[TourGroupRepository] membership reactivation failed: $e');
+        }
+      }
     }
 
-    final group = await getGroup(tourId);
+    // Try reading the group with retries in case Firestore rules propagation has a slight delay
+    TourGroup? group;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      group = await getGroup(tourId);
+      if (group != null) break;
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+    }
+
     if (group == null) {
       throw const TourAccessException('ট্যুরটি এখন আর পাওয়া যাচ্ছে না।');
     }

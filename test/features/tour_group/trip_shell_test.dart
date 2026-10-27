@@ -6,21 +6,23 @@ import 'package:bhromon/features/tour_group/presentation/widgets/trip_shell.dart
 
 void main() {
   test('each tour screen sits under the tab it belongs to', () {
-    expect(tripTabFor('/group/t1/feed'), 0);
-    expect(tripTabFor('/group/t1/scrapbook'), 0);
-    expect(tripTabFor('/group/t1/quiz'), 0);
-    expect(tripTabFor('/group/t1/channels'), 1);
+    expect(tripTabFor('/group/t1/feed'), 1);
+    expect(tripTabFor('/group/t1/channels'), 2);
+    expect(tripTabFor('/game-zone'), 3);
+    expect(tripTabFor('/profile/u1'), 4);
     for (final screen in [
       'journey',
       'checklist',
       'notices',
       'logistics',
-      'tide'
+      'tide',
+      'ledger',
+      'safety',
+      'quiz',
+      'scrapbook',
     ]) {
-      expect(tripTabFor('/group/t1/$screen'), 2, reason: screen);
+      expect(tripTabFor('/group/t1/$screen'), 0, reason: screen);
     }
-    expect(tripTabFor('/group/t1/ledger'), 3);
-    expect(tripTabFor('/group/t1/safety'), 4);
   });
 
   test('each tab opens its own route, in the same order as the mapping', () {
@@ -76,9 +78,9 @@ void main() {
       await tester.tap(find.text('open journey'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Money'));
+      await tester.tap(find.byIcon(Icons.photo_library_outlined));
       await tester.pumpAndSettle();
-      expect(find.text('body of ledger'), findsOneWidget);
+      expect(find.text('body of feed'), findsOneWidget);
       expect(find.byType(BackButton), findsOneWidget);
 
       await tester.tap(find.byType(BackButton));
@@ -99,9 +101,9 @@ void main() {
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
 
-      await tester.tap(find.text('Money'));
+      await tester.tap(find.byIcon(Icons.photo_library_outlined));
       await tester.pumpAndSettle();
-      expect(find.text('body of ledger'), findsOneWidget);
+      expect(find.text('body of feed'), findsOneWidget);
     });
 
     testWidgets('on a wide window the content stops at the width cap',
