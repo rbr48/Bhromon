@@ -59,7 +59,20 @@ class VoiceRoomService {
   factory VoiceRoomService() => _instance;
   VoiceRoomService._internal();
 
-  static const Map<String, dynamic> _iceConfig = {
+  static const String _turnUsername = String.fromEnvironment(
+    'BHROMON_TURN_USERNAME',
+    defaultValue: 'bhromon_user',
+  );
+  static const String _turnCredential = String.fromEnvironment(
+    'BHROMON_TURN_CREDENTIAL',
+    defaultValue: '',
+  );
+  static const String _turnHost = String.fromEnvironment(
+    'BHROMON_TURN_HOST',
+    defaultValue: '148.135.137.245:3478',
+  );
+
+  static final Map<String, dynamic> _iceConfig = {
     'iceServers': [
       {
         'urls': [
@@ -67,14 +80,15 @@ class VoiceRoomService {
           'stun:stun1.l.google.com:19302',
         ],
       },
-      {
-        'urls': [
-          'turn:148.135.137.245:3478?transport=udp',
-          'turn:148.135.137.245:3478?transport=tcp',
-        ],
-        'username': 'bhromon_user',
-        'credential': 'bhromon_turn_secret_2026',
-      },
+      if (_turnCredential.isNotEmpty)
+        {
+          'urls': [
+            'turn:$_turnHost?transport=udp',
+            'turn:$_turnHost?transport=tcp',
+          ],
+          'username': _turnUsername,
+          'credential': _turnCredential,
+        },
     ],
     'sdpSemantics': 'unified-plan',
   };

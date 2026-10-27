@@ -36,10 +36,6 @@
   <title>Bhromon | Travel Discovery & Trust</title>
   <link rel="manifest" href="manifest.json">
 
-  <script>
-    // The value below is injected by flutter build, do not touch.
-    const serviceWorkerVersion = null;
-  </script>
   <style>
     /* Prevent browser autofill from styling inputs with white backgrounds and white text */
     input:-webkit-autofill,
@@ -72,7 +68,7 @@
       }
 
       // Download main.dart.js without service worker with cache-busting timestamp
-      _flutter.loader.loadEntrypoint({
+      _flutter.loader.load({
         entrypointUrl: 'main.dart.js?v=' + new Date().getTime(),
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {

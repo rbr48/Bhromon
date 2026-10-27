@@ -79,5 +79,12 @@ test_hive/
 firestore-debug.log
 coverage/
 
-# Facebook session cookies: never commit (they grant account access)
-travel_data_crawler/cookies/facebook_cookies.json
+# Data crawlers and scraped datasets
+travel_data_crawler/
+*.db
+*.sqlite
+
+# Large design & presentation media binaries
+Project Plan/Notebook/
+*.pptx
+*.mp4

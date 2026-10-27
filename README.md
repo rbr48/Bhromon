@@ -16,17 +16,17 @@ Bhromon is licensed under the [Apache License, Version 2.0](LICENSE). See [CONTR
 
 ## Architecture Overview
 
-Bhromon is structured around **Clean Architecture** principles to separate business concerns from external dependencies:
+Bhromon is structured around modular, layered architecture principles separating domain rules from external platform dependencies:
 
 ```
   ┌─────────────────────────────────────────────────────────┐
   │                   Presentation Layer                    │
-  │        (Widgets, Pages, BLoC/Cubit Controllers)         │
+  │     (Widgets, Pages, BLoC/Cubit & Direct Stream States) │
   └────────────────────────────┬────────────────────────────┘
                                │ (calls)
   ┌────────────────────────────▼────────────────────────────┐
   │                      Domain Layer                       │
-  │        (Pure Dart: Entities, Use Cases, Interfaces)      │
+  │        (Pure Dart: Entities, Use Cases, Rule Engines)   │
   └────────────────────────────▲────────────────────────────┘
                                │ (implements)
   ┌────────────────────────────┴────────────────────────────┐
@@ -34,6 +34,9 @@ Bhromon is structured around **Clean Architecture** principles to separate busin
   │    (Models, Repositories, Drift & Hive Data Sources)    │
   └─────────────────────────────────────────────────────────┘
 ```
+
+- **State Management**: Scoped by feature. Foundation and explorer features utilize BLoC / Cubit. The `tour_group` operating system utilizes reactive `StatefulWidget`s listening directly to repository streams for high-velocity real-time Firestore collaboration.
+- **Pure-Dart Domain Engines**: Core rules (Game Zone engines: Card 29, Chess, Ludo, Teen Patti, Carrom; Tour OS: Trip Ledger Paisa Engine, Seat Layout Engine, Scrapbook Engine) are 100% pure Dart, decoupled from Flutter UI and independently unit-tested.
 
 For more architectural decisions, see the [ADRs](docs/adr/):
 - [ADR 001: Choice of BLoC](docs/adr/001_choice_of_bloc.md)
