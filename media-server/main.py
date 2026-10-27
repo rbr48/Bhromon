@@ -12,8 +12,9 @@ It is unset by default and should be removed once those builds are gone.
 
 import hashlib
 import os
-import re
 import json
+import logging
+import re
 import secrets
 import uuid
 from contextlib import asynccontextmanager
@@ -27,6 +28,8 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 
 from notifications import FirestoreNotificationWatcher, NotificationEngine
+
+logger = logging.getLogger("media-server")
 
 MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", "/data/media"))
 META_ROOT = Path(os.getenv("MEDIA_META_ROOT", "/data/media-meta"))
@@ -64,8 +67,33 @@ notification_engine = NotificationEngine()
 notification_watcher = FirestoreNotificationWatcher(notification_engine)
 
 
+def init_firebase_admin() -> None:
+    """Initialize Firebase Admin SDK once with credentials or default."""
+    import firebase_admin
+    from firebase_admin import credentials
+
+    if not firebase_admin._apps:
+        cred_path = (
+            FIREBASE_CREDENTIALS
+            if (FIREBASE_CREDENTIALS and os.path.exists(FIREBASE_CREDENTIALS))
+            else ("/run/secrets/firebase-admin.json" if os.path.exists("/run/secrets/firebase-admin.json") else "")
+        )
+        cred = (
+            credentials.Certificate(cred_path)
+            if cred_path
+            else credentials.ApplicationDefault()
+        )
+        firebase_admin.initialize_app(cred)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize Firebase Admin SDK first
+    try:
+        init_firebase_admin()
+    except Exception as e:
+        logger.error("Failed to initialize Firebase Admin SDK: %s", e)
+
     # Start watcher on startup if Firebase credentials exist
     if FIREBASE_CREDENTIALS or os.path.exists("/run/secrets/firebase-admin.json"):
         notification_watcher.start()
@@ -103,26 +131,29 @@ class FirebaseBackend:
     def __init__(self) -> None:
         self._db = None
 
+    def _ensure_app(self) -> None:
+        init_firebase_admin()
+
     def _client(self):
         if self._db is None:
-            import firebase_admin
-            from firebase_admin import credentials, firestore
+            from firebase_admin import firestore
 
-            if not firebase_admin._apps:
-                cred = (
-                    credentials.Certificate(FIREBASE_CREDENTIALS)
-                    if FIREBASE_CREDENTIALS
-                    else credentials.ApplicationDefault()
-                )
-                firebase_admin.initialize_app(cred)
+            self._ensure_app()
             self._db = firestore.client()
         return self._db
 
     def email_for_token(self, token: str) -> str:
+        self._ensure_app()
         from firebase_admin import auth
 
-        decoded = auth.verify_id_token(token)
+        decoded = auth.verify_id_token(token, clock_skew_seconds=10)
         email = (decoded.get("email") or "").strip().lower()
+        if not email and "uid" in decoded:
+            try:
+                user = auth.get_user(decoded["uid"])
+                email = (user.email or "").strip().lower()
+            except Exception as e:
+                logger.warning("Could not fetch user by uid %s: %s", decoded.get("uid"), e)
         if not email:
             raise ValueError("The token has no email address.")
         return email
@@ -152,7 +183,8 @@ def authenticate(authorization: Optional[str], legacy_key: Optional[str]) -> Cal
         token = authorization[7:].strip()
         try:
             return Caller(email=backend.email_for_token(token))
-        except Exception:
+        except Exception as e:
+            logger.warning("Bearer token authentication failed: %s: %s", type(e).__name__, e)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Sign in again to upload or delete media.",

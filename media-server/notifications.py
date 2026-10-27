@@ -69,20 +69,31 @@ class NotificationEngine:
             import firebase_admin
             from firebase_admin import firestore
 
+            if not firebase_admin._apps:
+                import main
+                main.init_firebase_admin()
             self._db = firestore.client()
         return self._db
 
     def _get_auth(self):
         if self._auth is None:
+            import firebase_admin
             from firebase_admin import auth
 
+            if not firebase_admin._apps:
+                import main
+                main.init_firebase_admin()
             self._auth = auth
         return self._auth
 
     def _get_messaging(self):
         if self._messaging is None:
+            import firebase_admin
             from firebase_admin import messaging
 
+            if not firebase_admin._apps:
+                import main
+                main.init_firebase_admin()
             self._messaging = messaging
         return self._messaging
 

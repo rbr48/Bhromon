@@ -94,10 +94,23 @@ app.post('/:name', async (req: Request, res: Response) => {
     return;
   }
 
+  let email = (decoded.email || '').trim().toLowerCase();
+  if (!email && decoded.uid) {
+    try {
+      const userRecord = await admin.auth().getUser(decoded.uid);
+      email = (userRecord.email || '').trim().toLowerCase();
+    } catch (e) {
+      console.warn('Could not fetch user record for uid:', decoded.uid, e);
+    }
+  }
+
   const context = {
     auth: {
       uid: decoded.uid,
-      token: decoded,
+      token: {
+        ...decoded,
+        email: email || decoded.email,
+      },
     },
   };
 
@@ -107,9 +120,11 @@ app.post('/:name', async (req: Request, res: Response) => {
     const result = await fn.run(payload, context);
     res.json({ result: result ?? null });
   } catch (err: any) {
-    const code = err.code || 'internal';
+    const rawCode = err.code ?? err.status ?? 'internal';
+    const code = typeof rawCode === 'string' ? rawCode : String(rawCode);
     const message = err.message || 'An internal error occurred.';
-    const httpStatus = errorStatusMap[code] || 500;
+    const httpStatus = errorStatusMap[code] || (typeof rawCode === 'number' && rawCode >= 400 && rawCode < 600 ? rawCode : 500);
+    console.error(`Callable ${name} failed:`, err);
     res.status(httpStatus).json({
       error: {
         message,
