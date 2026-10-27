@@ -59,125 +59,128 @@ class _InstafeedCarouselState extends State<InstafeedCarousel> {
 
     final isMulti = widget.imageUrls.length > 1;
 
-    return AspectRatio(
-      aspectRatio: widget.aspectRatio,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Media PageView
-          PageView.builder(
-            controller: _pageCtrl,
-            physics: isMulti
-                ? const PageScrollPhysics()
-                : const NeverScrollableScrollPhysics(),
-            itemCount: widget.imageUrls.length,
-            onPageChanged: (idx) {
-              setState(() => _currentIndex = idx);
-            },
-            itemBuilder: (context, index) {
-              final url = widget.imageUrls[index];
-              final imageWidget = TourSafeNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.cover,
-                colorFilter: widget.colorFilter,
-              );
+    return ClipRect(
+      child: AspectRatio(
+        aspectRatio: widget.aspectRatio,
+        child: Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.hardEdge,
+          children: [
+            // Media PageView
+            PageView.builder(
+              controller: _pageCtrl,
+              physics: isMulti
+                  ? const PageScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              itemCount: widget.imageUrls.length,
+              onPageChanged: (idx) {
+                setState(() => _currentIndex = idx);
+              },
+              itemBuilder: (context, index) {
+                final url = widget.imageUrls[index];
+                final imageWidget = TourSafeNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.cover,
+                  colorFilter: widget.colorFilter,
+                );
 
-              return InstafeedZoomableMedia(
-                onTap: () => widget.onImageTap?.call(index),
-                onDoubleTap: widget.onDoubleTap,
-                child: imageWidget,
-              );
-            },
-          ),
-
-          // Upper-right index badge (e.g., 2/5)
-          if (isMulti)
-            Positioned(
-              top: 12,
-              right: 12,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.65),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white12, width: 0.5),
-                ),
-                child: Text(
-                  '${_currentIndex + 1}/${widget.imageUrls.length}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
+                return InstafeedZoomableMedia(
+                  onTap: () => widget.onImageTap?.call(index),
+                  onDoubleTap: widget.onDoubleTap,
+                  child: imageWidget,
+                );
+              },
             ),
 
-          // Bottom smooth expanding dot indicator
-          if (isMulti)
-            Positioned(
-              bottom: 12,
-              left: 0,
-              right: 0,
-              child: Center(
+            // Upper-right index badge (e.g., 2/5)
+            if (isMulti)
+              Positioned(
+                top: 12,
+                right: 12,
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.black.withValues(alpha: 0.65),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white12, width: 0.5),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(widget.imageUrls.length, (index) {
-                      final isActive = index == _currentIndex;
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        curve: Curves.easeOutCubic,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        width: isActive ? 16 : 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: isActive
-                              ? AppColors.mintGreen
-                              : Colors.white.withValues(alpha: 0.45),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      );
-                    }),
+                  child: Text(
+                    '${_currentIndex + 1}/${widget.imageUrls.length}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-          // Fullscreen view icon button on bottom-right
-          Positioned(
-            bottom: 12,
-            right: 12,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => widget.onImageTap?.call(_currentIndex),
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white24, width: 0.5),
+            // Bottom smooth expanding dot indicator
+            if (isMulti)
+              Positioned(
+                bottom: 12,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(widget.imageUrls.length, (index) {
+                        final isActive = index == _currentIndex;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOutCubic,
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          width: isActive ? 16 : 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? AppColors.mintGreen
+                                : Colors.white.withValues(alpha: 0.45),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        );
+                      }),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.fullscreen,
-                    size: 18,
-                    color: Colors.white,
+                ),
+              ),
+
+            // Fullscreen view icon button on bottom-right
+            Positioned(
+              bottom: 12,
+              right: 12,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => widget.onImageTap?.call(_currentIndex),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white24, width: 0.5),
+                    ),
+                    child: const Icon(
+                      Icons.fullscreen,
+                      size: 18,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -53,9 +53,23 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
     );
     _pageCtrl = PageController(initialPage: _currentIndex);
     _initController(_currentIndex);
+    _recordReelView(_currentIndex);
     // Pre-cache next reel
     if (_currentIndex + 1 < widget.reels.length) {
       _initController(_currentIndex + 1);
+    }
+  }
+
+  void _recordReelView(int idx) {
+    if (idx >= 0 && idx < widget.reels.length) {
+      final post = widget.reels[idx];
+      final myEmail = widget.repository.currentEmail;
+      if (myEmail.isNotEmpty && !post.isViewedBy(myEmail)) {
+        widget.repository.recordPostView(
+          tourId: widget.tourId,
+          postId: post.id,
+        );
+      }
     }
   }
 
@@ -122,6 +136,8 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
     setState(() {
       _currentIndex = newIndex;
     });
+
+    _recordReelView(newIndex);
 
     // Play current
     final currentCtrl = _initController(_currentIndex);
@@ -302,10 +318,21 @@ class _ReelPageItemState extends State<_ReelPageItem>
           child: Container(
             color: Colors.black,
             child: isReady
-                ? Center(
-                    child: AspectRatio(
-                      aspectRatio: ctrl.value.aspectRatio,
-                      child: VideoPlayer(ctrl),
+                ? ClipRect(
+                    child: SizedBox.expand(
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        clipBehavior: Clip.hardEdge,
+                        child: SizedBox(
+                          width: ctrl.value.size.width > 0
+                              ? ctrl.value.size.width
+                              : 360,
+                          height: ctrl.value.size.height > 0
+                              ? ctrl.value.size.height
+                              : 640,
+                          child: VideoPlayer(ctrl),
+                        ),
+                      ),
                     ),
                   )
                 : Stack(

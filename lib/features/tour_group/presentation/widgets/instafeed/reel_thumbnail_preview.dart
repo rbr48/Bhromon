@@ -55,6 +55,8 @@ class _ReelThumbnailPreviewState extends State<ReelThumbnailPreview> {
       _controller = ctrl;
       await ctrl.initialize();
       await ctrl.setVolume(0.0);
+      await ctrl.pause();
+      await ctrl.seekTo(Duration.zero);
       if (mounted) {
         setState(() => _initialized = true);
       }
@@ -77,14 +79,16 @@ class _ReelThumbnailPreviewState extends State<ReelThumbnailPreview> {
         _controller != null &&
         _controller!.value.isInitialized) {
       final size = _controller!.value.size;
-      return SizedBox.expand(
-        child: FittedBox(
-          fit: widget.fit,
-          clipBehavior: Clip.hardEdge,
-          child: SizedBox(
-            width: size.width > 0 ? size.width : 360,
-            height: size.height > 0 ? size.height : 640,
-            child: VideoPlayer(_controller!),
+      return ClipRect(
+        child: SizedBox.expand(
+          child: FittedBox(
+            fit: widget.fit,
+            clipBehavior: Clip.hardEdge,
+            child: SizedBox(
+              width: size.width > 0 ? size.width : 360,
+              height: size.height > 0 ? size.height : 640,
+              child: VideoPlayer(_controller!),
+            ),
           ),
         ),
       );

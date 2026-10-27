@@ -287,6 +287,14 @@ describe('Tour Group Firestore rules', () => {
       await assertSucceeds(updateDoc(doc(db('admin'), ...postPath), { likes: [] }));
     });
 
+    test('a member records their own view on a post', async () => {
+      await assertFails(updateDoc(doc(db('outsider'), ...postPath), { viewers: ['eve@x.com'], viewCount: 1 }));
+      await assertFails(updateDoc(doc(db('admin'), ...postPath), { viewers: ['oth@x.com'], viewCount: 1 }));
+      await assertSucceeds(updateDoc(doc(db('admin'), ...postPath), { viewers: ['adm@x.com'], viewCount: 1 }));
+      await assertFails(updateDoc(doc(db('other'), ...postPath), { viewers: ['adm@x.com', 'oth@x.com'], viewCount: 10 }));
+      await assertSucceeds(updateDoc(doc(db('other'), ...postPath), { viewers: ['adm@x.com', 'oth@x.com'], viewCount: 2 }));
+    });
+
     test('a new post is stamped by the server and starts with no likes or comments', async () => {
       await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'posts', 'p2'), { ...post(people.member.email), createdAt: new Date() }));
       await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'posts', 'p2'), { ...post(people.member.email), likes: ['adm@x.com'] }));
