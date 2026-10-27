@@ -1,9 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/models/tour_group.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -25,7 +22,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   late final TourGroupRepository _repository =
       widget.repository ?? TourGroupRepository();
   TourGroup? _activeGroup;
-  // The group shown on screen, so the backup button works without a selection.
+  // The group currently shown on screen.
   TourGroup? _displayedGroup;
   late Stream<List<TourGroup>> _groupsStream;
 
@@ -402,16 +399,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.backup_rounded, color: AppColors.gold),
-            tooltip: context.l10n.translate('hub_backup_download'),
-            onPressed: () {
-              final active = _displayedGroup;
-              if (active != null) {
-                _exportTourJsonBackup(context, active);
-              }
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.group_add_outlined,
                 color: AppColors.mintGreen),
@@ -2379,35 +2366,6 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         );
       },
     ).whenComplete(codeCtrl.dispose);
-  }
-
-  Future<void> _exportTourJsonBackup(
-      BuildContext context, TourGroup group) async {
-    try {
-      final snapshot = await _repository.fetchFullTourSnapshot(group.id);
-      final jsonStr = const JsonEncoder.withIndent('  ').convert(snapshot);
-      final fileName =
-          '${group.name.replaceAll(' ', '_')}_Backup_${DateFormat('yyyyMMdd').format(DateTime.now())}.json';
-      // ignore: deprecated_member_use
-      await Share.shareXFiles(
-        [
-          XFile.fromData(
-            Uint8List.fromList(utf8.encode(jsonStr)),
-            mimeType: 'application/json',
-            name: fileName,
-          ),
-        ],
-        subject: fileName,
-      );
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(context.l10n
-                  .translate('hub_backup_failed', args: {'error': e}))),
-        );
-      }
-    }
   }
 
   void _showManageMemberSheet(
