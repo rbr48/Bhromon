@@ -9,6 +9,7 @@ void main() {
     final tempDir =
         await Directory.systemTemp.createTemp('bhromon_analytics_test_');
     Hive.init(tempDir.path);
+    GameAnalyticsService.hasStorage = true;
   });
   group('GameStatItem', () {
     test('computes winRate and rankBadge correctly', () {

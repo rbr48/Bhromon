@@ -16,6 +16,9 @@ class GameAnalyticsService {
   static const String boxName = 'game_analytics_box';
   static const String statsKey = 'player_stats';
 
+  /// Whether local Hive storage is initialized and enabled.
+  static bool hasStorage = false;
+
   final StreamController<PlayerGameAnalytics> _streamCtrl =
       StreamController<PlayerGameAnalytics>.broadcast();
 
@@ -28,15 +31,21 @@ class GameAnalyticsService {
   Future<void> init() async {
     if (_initialized) return;
     try {
-      if (!Hive.isBoxOpen(boxName)) {
-        await Hive.openBox<dynamic>(boxName);
-      }
-      final box = Hive.box<dynamic>(boxName);
-      final raw = box.get(statsKey);
-      if (raw is Map) {
-        _current = PlayerGameAnalytics.fromMap(Map<String, dynamic>.from(raw));
-      } else {
-        _current = PlayerGameAnalytics.empty();
+      if (Hive.isBoxOpen(boxName)) {
+        hasStorage = true;
+        final box = Hive.box<dynamic>(boxName);
+        final raw = box.get(statsKey);
+        if (raw is Map) {
+          _current =
+              PlayerGameAnalytics.fromMap(Map<String, dynamic>.from(raw));
+        }
+      } else if (hasStorage) {
+        final box = await Hive.openBox<dynamic>(boxName);
+        final raw = box.get(statsKey);
+        if (raw is Map) {
+          _current =
+              PlayerGameAnalytics.fromMap(Map<String, dynamic>.from(raw));
+        }
       }
     } catch (e) {
       debugPrint('[GameAnalyticsService] Hive load error: $e');
@@ -61,14 +70,19 @@ class GameAnalyticsService {
     );
     _streamCtrl.add(_current);
 
-    // 1. Save locally to Hive
-    try {
-      if (Hive.isBoxOpen(boxName)) {
-        final box = Hive.box<dynamic>(boxName);
-        await box.put(statsKey, _current.toMap());
+    // 1. Save locally to Hive if enabled
+    if (hasStorage) {
+      try {
+        if (Hive.isBoxOpen(boxName)) {
+          final box = Hive.box<dynamic>(boxName);
+          await box.put(statsKey, _current.toMap());
+        } else {
+          final box = await Hive.openBox<dynamic>(boxName);
+          await box.put(statsKey, _current.toMap());
+        }
+      } catch (e) {
+        debugPrint('[GameAnalyticsService] Hive save error: $e');
       }
-    } catch (e) {
-      debugPrint('[GameAnalyticsService] Hive save error: $e');
     }
 
     // 2. Best-effort Firestore sync if signed in
