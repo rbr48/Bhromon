@@ -33,9 +33,11 @@ Future<ChannelActionChoice?> showChannelMessageActions(
 }) {
   return showModalBottomSheet<ChannelActionChoice>(
     context: context,
+    isScrollControlled: true,
     backgroundColor: _sheetColor,
     shape: _sheetShape(),
     builder: (_) => SafeArea(
+        child: SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -97,7 +99,7 @@ Future<ChannelActionChoice?> showChannelMessageActions(
             ),
         ],
       ),
-    ),
+    )),
   );
 }
 
