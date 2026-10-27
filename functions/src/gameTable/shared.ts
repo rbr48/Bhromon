@@ -94,18 +94,18 @@ export function ownerOf(players: readonly PlayerRow[], seat: number): string {
   return players.find((p) => p.seatIndex === seat)?.email ?? botEmail(seat);
 }
 
-/** Seats 0 to 3, with a bot in every seat nobody has taken. */
-export function completeSeats(players: PlayerRow[]): PlayerRow[] {
+/** Every seat of a table, with a bot in every seat nobody has taken. */
+export function completeSeats(players: PlayerRow[], seatCount: number = SEATS): PlayerRow[] {
   const taken = new Set<number>();
   for (const p of players) {
-    if (!Number.isInteger(p.seatIndex) || p.seatIndex < 0 || p.seatIndex >= SEATS || taken.has(p.seatIndex)) {
+    if (!Number.isInteger(p.seatIndex) || p.seatIndex < 0 || p.seatIndex >= seatCount || taken.has(p.seatIndex)) {
       throw new HttpsError('failed-precondition', 'This table has a seat that cannot be used.');
     }
     taken.add(p.seatIndex);
   }
   const full = [...players];
   let bots = 0;
-  for (let seat = 0; seat < SEATS; seat++) {
+  for (let seat = 0; seat < seatCount; seat++) {
     if (taken.has(seat)) continue;
     full.push({
       email: botEmail(seat),

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -10,13 +11,27 @@ import '../carrom/carrom_engine.dart';
 import '../carrom/carrom_game.dart';
 import '../common/in_game_voice_bar.dart';
 import '../data/online_game_repository.dart';
+import '../domain/models/carrom_table.dart';
 import '../domain/models/online_game_session.dart';
 
-class OnlineCarromView extends StatefulWidget {
-  final OnlineGameSession session;
-  final OnlineGameRepository repository;
-  final String myEmail;
+/// Pauses before the board plays a bot's shot, so people can follow it.
+/// The host's phone paces the bots, so they are not played twice as fast.
+const Duration _botPaceHost = Duration(milliseconds: 900);
+const Duration _botPaceOther = Duration(milliseconds: 1800);
 
+/// Extra time after a person's deadline, to allow for clock differences.
+const Duration _deadlineGrace = Duration(seconds: 2);
+const Duration _retryAfter = Duration(seconds: 3);
+
+/// Failed advances in a row before this phone stops asking for the same step.
+/// Reopening the table starts again, and another member's phone can still move it.
+const int _maxAdvanceFailures = 5;
+
+/// The online carrom board. The server plays every shot and stores the board.
+/// The phone shows the stored board, plays each shot's motion from the shot the
+/// server recorded, then snaps to the stored result. It sends the striker's
+/// position and the shot, and nothing it computes is kept as the result.
+class OnlineCarromView extends StatefulWidget {
   const OnlineCarromView({
     super.key,
     required this.session,
@@ -24,74 +39,118 @@ class OnlineCarromView extends StatefulWidget {
     required this.myEmail,
   });
 
+  final OnlineGameSession session;
+  final OnlineGameRepository repository;
+  final String myEmail;
+
   @override
   State<OnlineCarromView> createState() => _OnlineCarromViewState();
 }
 
 class _OnlineCarromViewState extends State<OnlineCarromView>
     with SingleTickerProviderStateMixin {
-  late final CarromGame _game;
   late final Ticker _ticker;
   Duration _lastTick = Duration.zero;
-  int _lastSyncedVersion = -1;
 
+  /// The board as the server last stored it, before the shot now on screen.
+  List<CarromPiece>? _board;
+
+  /// The board while the last shot is being played on this phone.
+  List<CarromPiece>? _animPieces;
+  CarromTable? _animTarget;
+  double _animSeconds = 0;
+
+  CarromTable? _table;
+  int _lastStep = -1;
+  int _scheduledStep = -1;
+  int _advanceFailures = 0;
+  Timer? _advanceTimer;
+  bool _busy = false;
+
+  /// Where this person has slid the striker before shooting.
+  double _strikerX = 0.5;
   Offset? _dragStart;
   Offset? _dragNow;
 
-  int get _mySeatIndex =>
-      widget.session.playerByEmail(widget.myEmail)?.seatIndex ?? -1;
+  OnlineGameSession get _session => widget.session;
 
-  bool get _isMyTurn => widget.session.currentTurn == _mySeatIndex;
+  int get _mySeat => _session.playerByEmail(widget.myEmail)?.seatIndex ?? -1;
+
+  bool get _isHost => _session.hostEmail == widget.myEmail;
+
+  bool get _canShoot {
+    final table = _table;
+    return table != null &&
+        !table.isGameOver &&
+        table.currentPlayer == _mySeat &&
+        _animPieces == null &&
+        !_busy &&
+        _session.status == GameSessionStatus.inProgress;
+  }
 
   @override
   void initState() {
     super.initState();
-    _game = CarromGame();
-    _game.vsBot = false;
     _ticker = createTicker(_onTick);
-    _syncFromSession(widget.session);
+    _syncFromSession();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _scheduleAdvance();
+    });
   }
 
   @override
   void didUpdateWidget(covariant OnlineCarromView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.session.version != _lastSyncedVersion) {
-      _syncFromSession(widget.session);
-    }
+    _syncFromSession();
   }
 
   @override
   void dispose() {
     _ticker.dispose();
+    _advanceTimer?.cancel();
     super.dispose();
   }
 
-  void _syncFromSession(OnlineGameSession session) {
-    _lastSyncedVersion = session.version;
-    final lastAction = session.lastAction;
+  // --- The stored board and the shot on screen -------------------------------
 
-    if (lastAction != null && lastAction['type'] == 'shot') {
-      final shotData = lastAction['shot'] as Map<String, dynamic>;
-      final x = (shotData['x'] as num).toDouble();
-      final angle = (shotData['angle'] as num).toDouble();
-      final power = (shotData['power'] as num).toDouble();
-      final shooter = (lastAction['shooter'] as num).toInt();
+  void _syncFromSession() {
+    final table = CarromTable.fromState(_session.state);
+    if (table.step == _lastStep) return;
+    final previous = _board;
+    _lastStep = table.step;
+    _advanceFailures = 0;
+    _table = table;
+    _strikerX = table.strikerX;
 
-      if (shooter != _mySeatIndex && _game.phase == CarromPhase.aiming) {
-        _game.currentPlayer = shooter;
-        _game.placeStriker(x);
-        if (_game.shoot(angle, power)) {
-          _startTicker();
-        }
-      }
+    final shot = table.lastShot;
+    if (shot != null && previous != null && previous.isNotEmpty) {
+      _animTarget = table;
+      _animPieces = _piecesForShot(previous, shot);
+      _animSeconds = 0;
+      _lastTick = Duration.zero;
+      if (!_ticker.isActive) _ticker.start();
+    } else {
+      _board = table.pieces;
+      _animPieces = null;
+      _animTarget = null;
     }
 
-    if (mounted) setState(() {});
+    _scheduleAdvance();
   }
 
-  void _startTicker() {
-    _lastTick = Duration.zero;
-    if (!_ticker.isActive) _ticker.start();
+  /// The board just before [shot], with the striker fired as the shooter fired it.
+  List<CarromPiece> _piecesForShot(
+      List<CarromPiece> from, CarromShotRecord shot) {
+    final pieces = [for (final p in from) p.copy()];
+    final striker = pieces.firstWhere((p) => p.type == CarromPieceType.striker);
+    final speed = CarromBoard.shotSpeed(shot.power);
+    striker
+      ..pocketed = false
+      ..x = shot.x
+      ..y = CarromBoard.baselineY(shot.shooter)
+      ..vx = cos(shot.angle) * speed
+      ..vy = sin(shot.angle) * speed;
+    return pieces;
   }
 
   void _onTick(Duration elapsed) {
@@ -102,195 +161,191 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
     final dt = (elapsed - _lastTick).inMicroseconds / 1e6;
     _lastTick = elapsed;
 
-    final settled = _game.advance(dt.clamp(0.0, 0.05));
-    setState(() {});
-
-    if (settled) {
+    final pieces = _animPieces;
+    if (pieces == null) {
       _ticker.stop();
-      _afterShot();
+      return;
+    }
+    final frame = min(max(dt, 0.0), 0.05);
+    final steps = max(1, (frame / CarromBoard.stepSeconds).round());
+    var settled = false;
+    for (var i = 0; i < steps; i++) {
+      CarromBoard.step(pieces);
+      _animSeconds += CarromBoard.stepSeconds;
+      if (CarromBoard.isSettled(pieces) || _animSeconds > 20) {
+        settled = true;
+        break;
+      }
+    }
+    if (settled) _finishAnimation();
+    if (mounted) setState(() {});
+  }
+
+  /// Snaps to the board the server stored, and lets the next step be scheduled.
+  void _finishAnimation() {
+    _ticker.stop();
+    final target = _animTarget;
+    _animPieces = null;
+    _animTarget = null;
+    if (target != null) _board = target.pieces;
+    _scheduleAdvance();
+  }
+
+  // --- Keeping the board moving ----------------------------------------------
+
+  /// Arranges the next step when a bot is to shoot, or a person's time has run
+  /// out. Waits until the shot on screen has finished.
+  void _scheduleAdvance() {
+    final table = _table;
+    if (table == null || _session.status != GameSessionStatus.inProgress) {
+      return;
+    }
+    if (_animPieces != null) return;
+    if (table.step == _scheduledStep) return;
+    final delay = _delayFor(table);
+    if (delay == null) return;
+    _scheduledStep = table.step;
+    _advanceTimer?.cancel();
+    final step = table.step;
+    _advanceTimer = Timer(delay, () => _advance(step));
+  }
+
+  Duration? _delayFor(CarromTable table) {
+    if (table.isGameOver) return null;
+    if (_session.playerAt(table.currentPlayer)?.isBot ?? false) {
+      return _isHost ? _botPaceHost : _botPaceOther;
+    }
+    final deadline = table.turnDeadline;
+    if (deadline == null) return null;
+    final wait = deadline.difference(DateTime.now()) + _deadlineGrace;
+    return wait.isNegative ? _deadlineGrace : wait;
+  }
+
+  Future<void> _advance(int step) async {
+    if (!mounted) return;
+    final table = _table;
+    if (table == null || table.step != step) {
+      return; // a newer step is already scheduled
+    }
+
+    try {
+      final status = await widget.repository.carrom.advance(
+        tourId: _session.tourId,
+        gameId: _session.id,
+        expectedStep: step,
+      );
+      _advanceFailures = 0;
+      // The server refuses a turn that has not run out, so ask again once this
+      // phone's clock says it has.
+      if (status == 'noop' && _awaitingPastDeadline(table)) {
+        _retry(step);
+      }
+    } catch (_) {
+      _advanceFailures++;
+      if (_advanceFailures < _maxAdvanceFailures) _retry(step);
     }
   }
 
-  void _afterShot() {
-    if (_isMyTurn) {
-      _commitTurnEnd();
-    }
+  bool _awaitingPastDeadline(CarromTable table) {
+    final deadline = table.turnDeadline;
+    return deadline != null && DateTime.now().isAfter(deadline);
   }
 
-  Future<void> _commitTurnEnd() async {
-    final nextSeat = _game.currentPlayer;
-    final winner = _game.winner;
-    final isFinished = winner != null;
-
-    final newState = {
-      'currentPlayer': _game.currentPlayer,
-      'winner': winner,
-      'pocketedWhite': _game.pocketed[0].length,
-      'pocketedBlack': _game.pocketed[1].length,
-    };
-
-    final action = {
-      'type': 'settle',
-      'player': widget.myEmail,
-    };
-
-    await widget.repository.commitAction(
-      tourId: widget.session.tourId,
-      gameId: widget.session.id,
-      action: action,
-      newState: newState,
-      nextTurn: nextSeat,
-      winnerSeat: winner,
-      isFinished: isFinished,
-    );
+  void _retry(int step) {
+    if (!mounted) return;
+    _advanceTimer?.cancel();
+    _advanceTimer = Timer(_retryAfter, () => _advance(step));
   }
 
-  // --- AIM & SHOOT INPUT ---
+  // --- Aiming and shooting ---------------------------------------------------
 
-  void _onPanStart(DragStartDetails details, Size boardSize) {
-    if (!_isMyTurn || _game.phase != CarromPhase.aiming) return;
+  void _onPanStart(DragStartDetails details) {
+    if (!_canShoot) return;
     setState(() {
       _dragStart = details.localPosition;
       _dragNow = details.localPosition;
     });
   }
 
-  void _onPanUpdate(DragUpdateDetails details, Size boardSize) {
-    if (!_isMyTurn || _dragStart == null) return;
+  void _onPanUpdate(DragUpdateDetails details) {
+    if (_dragStart == null) return;
     setState(() => _dragNow = details.localPosition);
   }
 
   void _onPanEnd(Size boardSize) {
-    if (!_isMyTurn || _dragStart == null || _dragNow == null) {
-      setState(() {
-        _dragStart = null;
-        _dragNow = null;
-      });
-      return;
-    }
-
-    final diff = _dragStart! - _dragNow!;
+    final start = _dragStart;
+    final now = _dragNow;
     setState(() {
       _dragStart = null;
       _dragNow = null;
     });
+    if (!_canShoot || start == null || now == null) return;
 
-    final pullDist = diff.distance;
-    if (pullDist < 12) return;
-
+    final diff = start - now;
+    if (diff.distance < 12) return;
     final angle = atan2(diff.dy, diff.dx);
     final maxPull = boardSize.width * 0.35;
-    final power = (pullDist / maxPull).clamp(0.15, 1.0);
-
-    _fireShot(_game.strikerX, angle, power);
+    final power = (diff.distance / maxPull).clamp(0.15, 1.0).toDouble();
+    _shoot(angle, power);
   }
 
-  Future<void> _fireShot(double x, double angle, double power) async {
-    _game.placeStriker(x);
-    if (!_game.shoot(angle, power)) return;
-
+  Future<void> _shoot(double angle, double power) async {
+    final table = _table;
+    if (table == null || _busy) return;
+    setState(() => _busy = true);
     HapticFeedback.mediumImpact();
-    _startTicker();
-
-    final action = {
-      'type': 'shot',
-      'shooter': _mySeatIndex,
-      'shot': {
-        'x': x,
-        'angle': angle,
-        'power': power,
-      },
-    };
-
-    final newState = {
-      'phase': 'moving',
-    };
-
-    await widget.repository.commitAction(
-      tourId: widget.session.tourId,
-      gameId: widget.session.id,
-      action: action,
-      newState: newState,
-    );
+    try {
+      await widget.repository.carrom.shoot(
+        tourId: _session.tourId,
+        gameId: _session.id,
+        x: _strikerX,
+        angle: angle,
+        power: power,
+        expectedStep: table.step,
+      );
+    } on FirebaseFunctionsException catch (e) {
+      _snack(e.message ?? 'That shot did not go through.');
+    } catch (_) {
+      _snack('Could not reach the board. Check your connection and try again.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  // --- Words for the board ---------------------------------------------------
+
+  String _nameOf(int seat) =>
+      _session.playerAt(seat)?.displayName ?? 'Player ${seat + 1}';
 
   @override
   Widget build(BuildContext context) {
-    final activePlayer = widget.session.playerAt(widget.session.currentTurn);
-    final player1 = widget.session.playerAt(0);
-    final player2 = widget.session.playerAt(1);
+    final table = _table ?? CarromTable.fromState(const {});
+    final shooting = _canShoot;
+    final turnLabel = table.isGameOver
+        ? 'Board finished'
+        : _animPieces != null
+            ? 'Shot in play…'
+            : shooting
+                ? 'YOUR SHOT'
+                : "${_nameOf(table.currentPlayer)}'s shot";
 
     return Column(
       children: [
-        // Voice Bar
         InGameVoiceBar(
-          tourId: widget.session.tourId,
-          gameId: widget.session.id,
+          tourId: _session.tourId,
+          gameId: _session.id,
           myEmail: widget.myEmail,
           myDisplayName: widget.repository.currentDisplayName,
           myPhotoUrl: widget.repository.currentPhotoUrl,
           myUid: widget.repository.currentUid,
         ),
-
-        // Scoreboard & Turn Bar
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFF14241B),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: _isMyTurn ? AppColors.mintGreen : Colors.white12,
-              width: 1.5,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${player1?.displayName ?? 'Player 1'} (White): ${_game.pocketed[0].length}/9',
-                style: TextStyle(
-                  color: widget.session.currentTurn == 0
-                      ? AppColors.mintGreen
-                      : Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _isMyTurn
-                      ? AppColors.mintGreen.withValues(alpha: 0.2)
-                      : Colors.white10,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  _isMyTurn
-                      ? 'YOUR SHOT'
-                      : "${activePlayer?.displayName ?? 'Opponent'}'s turn",
-                  style: TextStyle(
-                    color: _isMyTurn ? AppColors.mintGreen : Colors.white60,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Text(
-                '${player2?.displayName ?? 'Player 2'} (Black): ${_game.pocketed[1].length}/9',
-                style: TextStyle(
-                  color: widget.session.currentTurn == 1
-                      ? AppColors.mintGreen
-                      : Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Carrom Board Surface
+        _scoreBar(table, turnLabel, shooting),
         Expanded(
           child: Center(
             child: AspectRatio(
@@ -299,20 +354,18 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
                 builder: (context, constraints) {
                   final size =
                       Size(constraints.maxWidth, constraints.maxHeight);
-
+                  final pieces = _animPieces ?? _board ?? const <CarromPiece>[];
                   return GestureDetector(
-                    onPanStart: (d) => _onPanStart(d, size),
-                    onPanUpdate: (d) => _onPanUpdate(d, size),
+                    onPanStart: _onPanStart,
+                    onPanUpdate: _onPanUpdate,
                     onPanEnd: (_) => _onPanEnd(size),
                     child: Container(
                       margin: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEDC99B), // Birch Wood surface
+                        color: const Color(0xFFEDC99B),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: const Color(0xFF5D4037), // Mahogany frame
-                          width: 14,
-                        ),
+                            color: const Color(0xFF5D4037), width: 14),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.7),
@@ -323,7 +376,9 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
                       ),
                       child: CustomPaint(
                         painter: _CarromBoardPainter(
-                          game: _game,
+                          pieces: pieces,
+                          aimingPlayer: shooting ? _mySeat : null,
+                          strikerX: _strikerX,
                           dragStart: _dragStart,
                           dragNow: _dragNow,
                         ),
@@ -335,9 +390,7 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
             ),
           ),
         ),
-
-        // Striker Placement Slider
-        if (_isMyTurn && _game.phase == CarromPhase.aiming)
+        if (shooting)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Row(
@@ -346,14 +399,12 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
                     color: Colors.white70, size: 16),
                 Expanded(
                   child: Slider(
-                    value: _game.strikerX,
+                    value: _strikerX,
                     min: CarromBoard.baselineMin,
                     max: CarromBoard.baselineMax,
                     activeColor: AppColors.mintGreen,
                     inactiveColor: Colors.white24,
-                    onChanged: (val) {
-                      setState(() => _game.placeStriker(val));
-                    },
+                    onChanged: (value) => setState(() => _strikerX = value),
                   ),
                 ),
                 const Icon(Icons.arrow_forward_rounded,
@@ -361,91 +412,149 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
               ],
             ),
           ),
+        if (table.status.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+            child: Text(
+              table.status,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ),
       ],
+    );
+  }
+
+  Widget _scoreBar(CarromTable table, String turnLabel, bool myTurn) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF14241B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: myTurn ? AppColors.mintGreen : Colors.white12,
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            '${_nameOf(0)} (White): ${table.pocketedBy(0)}/${CarromGame.coinsPerPlayer}',
+            style: TextStyle(
+              color: table.currentPlayer == 0
+                  ? AppColors.mintGreen
+                  : Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            turnLabel,
+            style: TextStyle(
+              color: myTurn ? AppColors.mintGreen : Colors.white60,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            '${_nameOf(1)} (Black): ${table.pocketedBy(1)}/${CarromGame.coinsPerPlayer}',
+            style: TextStyle(
+              color: table.currentPlayer == 1
+                  ? AppColors.mintGreen
+                  : Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _CarromBoardPainter extends CustomPainter {
-  final CarromGame game;
-  final Offset? dragStart;
-  final Offset? dragNow;
-
   _CarromBoardPainter({
-    required this.game,
+    required this.pieces,
+    required this.aimingPlayer,
+    required this.strikerX,
     this.dragStart,
     this.dragNow,
   });
 
+  final List<CarromPiece> pieces;
+
+  /// The seat whose striker is being slid, or null when nobody is aiming here.
+  final int? aimingPlayer;
+  final double strikerX;
+  final Offset? dragStart;
+  final Offset? dragNow;
+
   @override
   void paint(Canvas canvas, Size size) {
-    // 4 Corner Pockets
     final pocketPaint = Paint()..color = const Color(0xFF1E1E1E);
     final pr = size.width * CarromBoard.pocketRadius;
-    canvas.drawCircle(Offset(pr, pr), pr, pocketPaint);
-    canvas.drawCircle(Offset(size.width - pr, pr), pr, pocketPaint);
-    canvas.drawCircle(Offset(pr, size.height - pr), pr, pocketPaint);
-    canvas.drawCircle(
-        Offset(size.width - pr, size.height - pr), pr, pocketPaint);
+    for (final centre in [
+      Offset(pr, pr),
+      Offset(size.width - pr, pr),
+      Offset(pr, size.height - pr),
+      Offset(size.width - pr, size.height - pr),
+    ]) {
+      canvas.drawCircle(centre, pr, pocketPaint);
+    }
 
-    // Center Red Circle
-    final centerPaint = Paint()
-      ..color = Colors.red.withValues(alpha: 0.25)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-    canvas.drawCircle(Offset(size.width / 2, size.height / 2),
-        size.width * 0.12, centerPaint);
-
-    // Draw Coins
-    for (final coin in game.coins) {
-      if (coin.pocketed) continue;
-      final cp = Offset(coin.x * size.width, coin.y * size.height);
-      final r = coin.radius * size.width;
-
-      final paint = Paint();
-      if (coin.type == CarromPieceType.queen) {
-        paint.color = Colors.redAccent;
-      } else if (coin.type == CarromPieceType.white) {
-        paint.color = const Color(0xFFFFFDD0);
-      } else {
-        paint.color = const Color(0xFF263238);
+    for (final piece in pieces) {
+      if (piece.pocketed) continue;
+      if (piece.type == CarromPieceType.striker && aimingPlayer != null) {
+        continue;
       }
+      _drawPiece(canvas, size, piece);
+    }
 
-      canvas.drawCircle(cp, r, paint);
-      canvas.drawCircle(
-          cp,
-          r,
+    if (aimingPlayer != null) {
+      final striker = CarromPiece(
+        id: 99,
+        type: CarromPieceType.striker,
+        x: strikerX,
+        y: CarromBoard.baselineY(aimingPlayer!),
+      );
+      _drawPiece(canvas, size, striker);
+      final start = dragStart;
+      final now = dragNow;
+      if (start != null && now != null) {
+        final pull = start - now;
+        final end =
+            Offset(striker.x * size.width, striker.y * size.height) + pull;
+        canvas.drawLine(
+          Offset(striker.x * size.width, striker.y * size.height),
+          end,
           Paint()
-            ..color = Colors.black38
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.0);
+            ..color = AppColors.mintGreen
+            ..strokeWidth = 3,
+        );
+      }
     }
+  }
 
-    // Draw Striker
-    final striker = game.striker;
-    final sp = Offset(striker.x * size.width, striker.y * size.height);
-    final sr = striker.radius * size.width;
-
-    final strikerPaint = Paint()..color = Colors.amber.shade400;
-    canvas.drawCircle(sp, sr, strikerPaint);
+  void _drawPiece(Canvas canvas, Size size, CarromPiece piece) {
+    final centre = Offset(piece.x * size.width, piece.y * size.height);
+    final radius = piece.radius * size.width;
+    final color = switch (piece.type) {
+      CarromPieceType.white => const Color(0xFFF5F0E6),
+      CarromPieceType.black => const Color(0xFF222222),
+      CarromPieceType.queen => const Color(0xFFC62828),
+      CarromPieceType.striker => const Color(0xFFD7CCC8),
+    };
+    canvas.drawCircle(centre, radius, Paint()..color = color);
     canvas.drawCircle(
-        sp,
-        sr,
-        Paint()
-          ..color = Colors.black54
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5);
-
-    // Draw Aim Line
-    if (dragStart != null && dragNow != null) {
-      final diff = dragStart! - dragNow!;
-      final aimEnd = sp + diff * 1.5;
-      final aimPaint = Paint()
-        ..color = AppColors.mintGreen
-        ..strokeWidth = 2.5
-        ..strokeCap = StrokeCap.round;
-      canvas.drawLine(sp, aimEnd, aimPaint);
-    }
+      centre,
+      radius,
+      Paint()
+        ..color = Colors.black54
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
   }
 
   @override

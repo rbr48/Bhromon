@@ -2,6 +2,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bhromon/features/game_zone/data/card29_api.dart';
+import 'package:bhromon/features/game_zone/data/carrom_api.dart';
 import 'package:bhromon/features/game_zone/data/teen_patti_api.dart';
 
 void main() {
@@ -239,6 +240,127 @@ void main() {
         fail('Should have thrown FirebaseFunctionsException');
       } on FirebaseFunctionsException catch (e) {
         expect(e.message, 'Insufficient chips to chaal.');
+        expect(e.code, 'failed-precondition');
+      }
+    });
+  });
+
+  group('CarromApi VPS calls', () {
+    late Dio dio;
+    late List<RequestOptions> capturedRequests;
+
+    setUp(() {
+      capturedRequests = [];
+      dio = Dio(BaseOptions(baseUrl: 'https://bhromon.fun/api/games'));
+      dio.interceptors.add(InterceptorsWrapper(
+        onRequest: (options, handler) {
+          capturedRequests.add(options);
+          final path = options.path;
+
+          if (path.endsWith('/carromStart')) {
+            handler.resolve(Response(
+              requestOptions: options,
+              statusCode: 200,
+              data: {
+                'result': {'status': 'started'}
+              },
+            ));
+          } else if (path.endsWith('/carromShoot')) {
+            if (options.data is Map && options.data['expectedStep'] == 999) {
+              handler.reject(DioException(
+                requestOptions: options,
+                response: Response(
+                  requestOptions: options,
+                  statusCode: 400,
+                  data: {
+                    'error': {
+                      'message': 'Shot made on old board view.',
+                      'status': 'FAILED_PRECONDITION',
+                    },
+                  },
+                ),
+                type: DioExceptionType.badResponse,
+              ));
+            } else {
+              handler.resolve(Response(
+                requestOptions: options,
+                statusCode: 200,
+                data: {
+                  'result': {'status': 'shot'}
+                },
+              ));
+            }
+          } else if (path.endsWith('/carromAdvance')) {
+            handler.resolve(Response(
+              requestOptions: options,
+              statusCode: 200,
+              data: {
+                'result': {'status': 'bot'}
+              },
+            ));
+          } else if (path.endsWith('/carromLeave')) {
+            handler.resolve(Response(
+              requestOptions: options,
+              statusCode: 200,
+              data: {
+                'result': {'status': 'left'}
+              },
+            ));
+          } else {
+            handler.next(options);
+          }
+        },
+      ));
+    });
+
+    test('start, shoot, advance, leave execute through VPS endpoints',
+        () async {
+      final api = CarromApi(
+        dio: dio,
+        baseUrl: 'https://bhromon.fun/api/games',
+      );
+
+      await api.start(tourId: 't3', gameId: 'g3');
+      expect(capturedRequests.last.path, contains('/carromStart'));
+
+      await api.shoot(
+        tourId: 't3',
+        gameId: 'g3',
+        x: 0.0,
+        angle: 1.57,
+        power: 0.8,
+        expectedStep: 0,
+      );
+      expect(capturedRequests.last.path, contains('/carromShoot'));
+
+      final status =
+          await api.advance(tourId: 't3', gameId: 'g3', expectedStep: 1);
+      expect(status, 'bot');
+      expect(capturedRequests.last.path, contains('/carromAdvance'));
+
+      await api.leave(tourId: 't3', gameId: 'g3');
+      expect(capturedRequests.last.path, contains('/carromLeave'));
+    });
+
+    test('maps rejected server response into FirebaseFunctionsException',
+        () async {
+      final api = CarromApi(
+        dio: dio,
+        baseUrl: 'https://bhromon.fun/api/games',
+      );
+
+      try {
+        await api.shoot(
+          tourId: 't3',
+          gameId: 'g3',
+          x: 0.0,
+          angle: 1.57,
+          power: 0.8,
+          expectedStep: 999,
+        );
+        fail('Should have thrown FirebaseFunctionsException');
+      } on FirebaseFunctionsException catch (e) {
+        expect(e.message, 'Shot made on old board view.');
         expect(e.code, 'failed-precondition');
       }
     });

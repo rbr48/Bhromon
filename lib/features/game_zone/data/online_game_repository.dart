@@ -7,6 +7,7 @@ import '../domain/models/card29_table.dart';
 import '../domain/models/online_game_session.dart';
 import '../domain/models/teen_patti_table.dart';
 import 'card29_api.dart';
+import 'carrom_api.dart';
 import 'teen_patti_api.dart';
 
 class OnlineGameRepository {
@@ -15,15 +16,18 @@ class OnlineGameRepository {
     FirebaseAuth? auth,
     Card29Api? card29,
     TeenPattiApi? teenPatti,
+    CarromApi? carrom,
   })  : _firestoreInstance = firestore,
         _authInstance = auth,
         _card29 = card29 ?? Card29Api(),
-        _teenPatti = teenPatti ?? TeenPattiApi();
+        _teenPatti = teenPatti ?? TeenPattiApi(),
+        _carrom = carrom ?? CarromApi();
 
   final FirebaseFirestore? _firestoreInstance;
   final FirebaseAuth? _authInstance;
   final Card29Api _card29;
   final TeenPattiApi _teenPatti;
+  final CarromApi _carrom;
 
   FirebaseFirestore get _firestore =>
       _firestoreInstance ?? FirebaseFirestore.instance;
@@ -252,6 +256,10 @@ class OnlineGameRepository {
       await _teenPatti.leave(tourId: tourId, gameId: gameId);
       return;
     }
+    if (current.data()?['gameType'] == OnlineGameType.carrom.codeName) {
+      await _carrom.leave(tourId: tourId, gameId: gameId);
+      return;
+    }
 
     final me = currentEmail;
     await _firestore.runTransaction((tx) async {
@@ -322,6 +330,17 @@ class OnlineGameRepository {
 
   /// The Teen Patti table's action service, for the table screen.
   TeenPattiApi get teenPatti => _teenPatti;
+
+  /// Lays out a waiting carrom board. The server fills an empty seat with a bot.
+  Future<void> startCarromTable({
+    required String tourId,
+    required String gameId,
+  }) {
+    return _carrom.start(tourId: tourId, gameId: gameId);
+  }
+
+  /// The carrom board's action service, for the board screen.
+  CarromApi get carrom => _carrom;
 
   /// Commits a player move or game event action.
   Future<void> commitAction({

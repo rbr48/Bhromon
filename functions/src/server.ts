@@ -1,7 +1,7 @@
 /**
  * Bhromon Online Games Microservice.
  *
- * Runs the 8 server-side Card 29 and Teen Patti callables on the Hostinger VPS,
+ * Runs the 12 server-side Card 29, Teen Patti, and Carrom callables on the Hostinger VPS,
  * bypassing Firebase Cloud Functions and enabling 100% free operation on the
  * Firebase Spark plan.
  */
@@ -12,6 +12,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { card29Start, card29Act, card29Advance, card29Leave } from './card29/callables';
 import { teenPattiStart, teenPattiAct, teenPattiAdvance, teenPattiLeave } from './teenPatti/callables';
+import { carromStart, carromShoot, carromAdvance, carromLeave } from './carrom/callables';
 
 // Initialize Firebase Admin SDK if not already initialized
 if (!admin.apps.length) {
@@ -38,6 +39,10 @@ const callables: Record<string, any> = {
   teenPattiAct,
   teenPattiAdvance,
   teenPattiLeave,
+  carromStart,
+  carromShoot,
+  carromAdvance,
+  carromLeave,
 };
 
 const errorStatusMap: Record<string, number> = {
