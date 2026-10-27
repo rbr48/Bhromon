@@ -2008,18 +2008,15 @@ class TourGroupRepository {
   }) async {
     try {
       final email = currentEmail;
+      if (email.isEmpty) return;
       final postRef = _sub(tourId, 'posts').doc(postId);
-      if (email.isNotEmpty) {
-        await postRef.update({
-          'viewers': FieldValue.arrayUnion([email]),
-          'viewCount': FieldValue.increment(1),
-        });
-      } else {
-        await postRef.update({
-          'viewCount': FieldValue.increment(1),
-        });
-      }
-    } catch (_) {}
+      await postRef.update({
+        'viewers': FieldValue.arrayUnion([email]),
+        'viewCount': FieldValue.increment(1),
+      });
+    } catch (e) {
+      debugPrint('[recordPostView] Failed to record view on $postId: $e');
+    }
   }
 
   Future<void> setPostPinned(String tourId, String postId,

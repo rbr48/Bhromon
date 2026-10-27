@@ -91,6 +91,13 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
     final maxIdx = _images.isNotEmpty ? _images.length - 1 : 0;
     _currentIndex = widget.initialIndex.clamp(0, maxIdx);
     _pageCtrl = PageController(initialPage: _currentIndex);
+    final email = widget.repository.currentEmail;
+    if (email.isNotEmpty && !widget.post.isViewedBy(email)) {
+      widget.repository.recordPostView(
+        tourId: widget.tourId,
+        postId: widget.post.id,
+      );
+    }
   }
 
   @override

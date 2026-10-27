@@ -164,6 +164,13 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   @override
   void didUpdateWidget(InstafeedPostCard oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.id != widget.post.id) {
+      final email = widget.repository.currentEmail;
+      if (email.isNotEmpty && !widget.post.isViewedBy(email)) {
+        widget.repository
+            .recordPostView(tourId: widget.tourId, postId: widget.post.id);
+      }
+    }
     if (oldWidget.post.id != widget.post.id ||
         oldWidget.post.likes.length != widget.post.likes.length) {
       _optimisticLiked = null;
@@ -743,231 +750,244 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             : 16 / 9);
     final aspect = rawAspect.clamp(0.65, 1.8);
 
-    return AspectRatio(
-      aspectRatio: aspect,
-      child: Stack(
-        alignment: Alignment.center,
-        fit: StackFit.expand,
-        children: [
-          // 1. Poster background / Cover / Placeholder
-          if (widget.post.coverUrl != null &&
-              isRemoteMediaUrl(widget.post.coverUrl!))
-            TourSafeNetworkImage(
-              imageUrl: widget.post.coverUrl!,
-              fit: BoxFit.cover,
-              placeholder: Container(color: const Color(0xFF1B1B1B)),
-              errorWidget: Container(
-                color: const Color(0xFF1B1B1B),
+    return ClipRRect(
+      clipBehavior: Clip.hardEdge,
+      child: AspectRatio(
+        aspectRatio: aspect,
+        child: Stack(
+          alignment: Alignment.center,
+          fit: StackFit.expand,
+          clipBehavior: Clip.hardEdge,
+          children: [
+            // 1. Poster background / Cover / Placeholder
+            if (widget.post.coverUrl != null &&
+                isRemoteMediaUrl(widget.post.coverUrl!))
+              TourSafeNetworkImage(
+                imageUrl: widget.post.coverUrl!,
+                fit: BoxFit.cover,
+                placeholder: Container(color: const Color(0xFF1B1B1B)),
+                errorWidget: Container(
+                  color: const Color(0xFF1B1B1B),
+                  child: const Center(
+                    child: Icon(Icons.slow_motion_video,
+                        size: 40, color: Colors.white54),
+                  ),
+                ),
+              )
+            else if (widget.post.videoUrl != null &&
+                isRemoteMediaUrl(widget.post.videoUrl!))
+              ReelThumbnailPreview(videoUrl: widget.post.videoUrl!)
+            else
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF262626), Color(0xFF121212)],
+                  ),
+                ),
                 child: const Center(
                   child: Icon(Icons.slow_motion_video,
                       size: 40, color: Colors.white54),
                 ),
               ),
-            )
-          else if (widget.post.videoUrl != null &&
-              isRemoteMediaUrl(widget.post.videoUrl!))
-            ReelThumbnailPreview(videoUrl: widget.post.videoUrl!)
-          else
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF262626), Color(0xFF121212)],
-                ),
-              ),
-              child: const Center(
-                child: Icon(Icons.slow_motion_video,
-                    size: 40, color: Colors.white54),
-              ),
-            ),
 
-          // 2. Video Player when initialized
-          if (_isVideoInitialized && _videoCtrl != null)
-            GestureDetector(
-              onTap: _toggleVideoPlayback,
-              onDoubleTap: _onDoubleTap,
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: _videoCtrl!.value.aspectRatio,
-                  child: VideoPlayer(_videoCtrl!),
+            // 2. Video Player when initialized
+            if (_isVideoInitialized && _videoCtrl != null)
+              GestureDetector(
+                onTap: _toggleVideoPlayback,
+                onDoubleTap: _onDoubleTap,
+                child: SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    clipBehavior: Clip.hardEdge,
+                    child: SizedBox(
+                      width: _videoCtrl!.value.size.width > 0
+                          ? _videoCtrl!.value.size.width
+                          : 360,
+                      height: _videoCtrl!.value.size.height > 0
+                          ? _videoCtrl!.value.size.height
+                          : 640,
+                      child: VideoPlayer(_videoCtrl!),
+                    ),
+                  ),
+                ),
+              )
+            else if (widget.videoPlaying)
+              const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
+                ),
+              )
+            else if (widget.onVideoTap != null)
+              GestureDetector(
+                onTap: widget.onVideoTap,
+                child: Container(
+                  color: Colors.black26,
+                  child: const Center(
+                    child: Icon(Icons.play_arrow_rounded,
+                        size: 48, color: Colors.white),
+                  ),
                 ),
               ),
-            )
-          else if (widget.videoPlaying)
-            const Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
-              ),
-            )
-          else if (widget.onVideoTap != null)
-            GestureDetector(
-              onTap: widget.onVideoTap,
-              child: Container(
-                color: Colors.black26,
-                child: const Center(
-                  child: Icon(Icons.play_arrow_rounded,
-                      size: 48, color: Colors.white),
-                ),
-              ),
-            ),
 
-          // 3. Play Icon Overlay when paused
-          if (!_isVideoPlaying && _isVideoInitialized)
-            GestureDetector(
-              onTap: _toggleVideoPlayback,
-              child: Container(
-                color: Colors.black26,
-                child: Center(
+            // 3. Play Icon Overlay when paused
+            if (!_isVideoPlaying && _isVideoInitialized)
+              GestureDetector(
+                onTap: _toggleVideoPlayback,
+                child: Container(
+                  color: Colors.black26,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.play_arrow_rounded,
+                        size: 40,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // 4. "রিল দেখুন" (Watch Reel) Button on Top-Right
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => widget.onReelTap?.call(widget.post),
+                  borderRadius: BorderRadius.circular(20),
                   child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: const BoxDecoration(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFE1306C), Color(0xFF833AB4)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.slow_motion_video,
+                            size: 14, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          context.l10n.translate('ig_watch_reel'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // 5. Mute / Unmute Button on Bottom-Right
+            if (_isVideoInitialized && _videoCtrl != null)
+              Positioned(
+                bottom: 12,
+                right: 12,
+                child: GestureDetector(
+                  onTap: _toggleVideoMute,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
                       color: Colors.black54,
                       shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white30),
                     ),
-                    child: const Icon(
-                      Icons.play_arrow_rounded,
-                      size: 40,
+                    child: Icon(
+                      _isVideoMuted ? Icons.volume_off : Icons.volume_up,
+                      size: 16,
                       color: Colors.white,
                     ),
                   ),
                 ),
               ),
+
+            // 6. Double-tap Heart Burst Animation
+            Positioned.fill(
+              child: InstafeedHeartBurst(
+                show: _showHeartBurst,
+                onComplete: () => setState(() => _showHeartBurst = false),
+              ),
             ),
 
-          // 4. "রিল দেখুন" (Watch Reel) Button on Top-Right
-          Positioned(
-            top: 12,
-            right: 12,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => widget.onReelTap?.call(widget.post),
-                borderRadius: BorderRadius.circular(20),
+            // 7. Tagged Members Icon on bottom left (if tags present)
+            if (widget.post.tags.isNotEmpty)
+              Positioned(
+                bottom: 12,
+                left: 12,
+                child: GestureDetector(
+                  onTap: () => setState(() => _showTags = !_showTags),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white30),
+                    ),
+                    child: Icon(
+                      _showTags ? Icons.person : Icons.person_outline,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+
+            // Tagged members popup overlay
+            if (_showTags && widget.post.tags.isNotEmpty)
+              Positioned(
+                bottom: 44,
+                left: 12,
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFE1306C), Color(0xFF833AB4)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.4),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.slow_motion_video,
-                          size: 14, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(
-                        context.l10n.translate('ig_watch_reel'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: widget.post.tags.map((tagEmail) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '@$tagEmail',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
+                      );
+                    }).toList(),
                   ),
                 ),
               ),
-            ),
-          ),
-
-          // 5. Mute / Unmute Button on Bottom-Right
-          if (_isVideoInitialized && _videoCtrl != null)
-            Positioned(
-              bottom: 12,
-              right: 12,
-              child: GestureDetector(
-                onTap: _toggleVideoMute,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white30),
-                  ),
-                  child: Icon(
-                    _isVideoMuted ? Icons.volume_off : Icons.volume_up,
-                    size: 16,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-
-          // 6. Double-tap Heart Burst Animation
-          Positioned.fill(
-            child: InstafeedHeartBurst(
-              show: _showHeartBurst,
-              onComplete: () => setState(() => _showHeartBurst = false),
-            ),
-          ),
-
-          // 7. Tagged Members Icon on bottom left (if tags present)
-          if (widget.post.tags.isNotEmpty)
-            Positioned(
-              bottom: 12,
-              left: 12,
-              child: GestureDetector(
-                onTap: () => setState(() => _showTags = !_showTags),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white30),
-                  ),
-                  child: Icon(
-                    _showTags ? Icons.person : Icons.person_outline,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-
-          // Tagged members popup overlay
-          if (_showTags && widget.post.tags.isNotEmpty)
-            Positioned(
-              bottom: 44,
-              left: 12,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: widget.post.tags.map((tagEmail) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Text(
-                        '@$tagEmail',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1073,7 +1093,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
         borderRadius: isWide ? BorderRadius.circular(16) : BorderRadius.zero,
         border: isWide ? Border.all(color: Colors.white12, width: 0.8) : null,
       ),
-      clipBehavior: isWide ? Clip.antiAlias : Clip.none,
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1259,6 +1279,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             _buildVideoViewport(context)
           else
             Stack(
+              clipBehavior: Clip.hardEdge,
               children: [
                 InstafeedCarousel(
                   imageUrls: mediaList,
@@ -1490,13 +1511,11 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   timeStr,
                   style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
-                if (widget.post.effectiveViewCount > 0) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    '•  👁️ ${context.l10n.number(widget.post.effectiveViewCount)} ভিউ',
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
-                  ),
-                ],
+                const SizedBox(width: 8),
+                Text(
+                  '•  👁️ ${context.l10n.number(widget.post.effectiveViewCount)} ভিউ',
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
                 if (widget.post.isEdited) ...[
                   const SizedBox(width: 6),
                   Text(

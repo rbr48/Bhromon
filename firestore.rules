@@ -107,7 +107,10 @@ service cloud.firestore {
                         || request.resource.data.visibility in ['private', 'friends', 'community']))
                     || (isAuth()
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportCount'])
-                        && request.resource.data.reportCount == (('reportCount' in resource.data ? resource.data.reportCount : 0) + 1));
+                        && request.resource.data.reportCount == (('reportCount' in resource.data ? resource.data.reportCount : 0) + 1))
+                    || (isAuth()
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
+                        && request.resource.data.views == (('views' in resource.data ? resource.data.views : 0) + 1));
       allow delete: if isOwner(resource.data.authorId) || isRegionExpertOrAbove();
 
       match /comments/{commentId} {
@@ -619,6 +622,13 @@ service cloud.firestore {
                            .hasOnly(['likes', 'commentCount']) &&
                          ownEntryOnly(resource.data.get('likes', []), request.resource.data.get('likes', [])) &&
                          movesByOneAtMost(resource.data.get('commentCount', 0), request.resource.data.get('commentCount', 0));
+
+        // Any member records their own view (their own email added to viewers, viewCount moved by at most one).
+        allow update: if isActiveMember(tourId) &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['viewers', 'viewCount']) &&
+                         ownEntryOnly(resource.data.get('viewers', []), request.resource.data.get('viewers', [])) &&
+                         movesByOneAtMost(resource.data.get('viewCount', 0), request.resource.data.get('viewCount', 0));
 
         // The author or an admin edits the post's text, tags and settings.
         allow update: if isActiveMember(tourId) &&

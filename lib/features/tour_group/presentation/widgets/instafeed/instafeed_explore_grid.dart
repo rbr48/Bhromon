@@ -62,15 +62,37 @@ class InstafeedExploreGrid extends StatelessWidget {
 
         return GestureDetector(
           onTap: () => onPostTap(post),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (thumbnail != null)
-                TourSafeNetworkImage(
-                  imageUrl: thumbnail,
-                  fit: BoxFit.cover,
-                  placeholder: Container(color: Colors.grey.shade900),
-                  errorWidget: Container(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            clipBehavior: Clip.hardEdge,
+            child: Stack(
+              fit: StackFit.expand,
+              clipBehavior: Clip.hardEdge,
+              children: [
+                if (thumbnail != null)
+                  TourSafeNetworkImage(
+                    imageUrl: thumbnail,
+                    fit: BoxFit.cover,
+                    placeholder: Container(color: Colors.grey.shade900),
+                    errorWidget: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF2A2A2A), Color(0xFF141414)],
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.slow_motion_video,
+                            color: AppColors.mintGreen, size: 28),
+                      ),
+                    ),
+                  )
+                else if (post.videoUrl != null &&
+                    isRemoteMediaUrl(post.videoUrl!))
+                  ReelThumbnailPreview(videoUrl: post.videoUrl!)
+                else
+                  Container(
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -78,149 +100,133 @@ class InstafeedExploreGrid extends StatelessWidget {
                         colors: [Color(0xFF2A2A2A), Color(0xFF141414)],
                       ),
                     ),
-                    child: const Center(
-                      child: Icon(Icons.slow_motion_video,
-                          color: AppColors.mintGreen, size: 28),
+                    child: Center(
+                      child: Icon(
+                        post.isReel ? Icons.slow_motion_video : Icons.image,
+                        color:
+                            post.isReel ? AppColors.mintGreen : Colors.white24,
+                        size: 28,
+                      ),
                     ),
                   ),
-                )
-              else if (post.videoUrl != null &&
-                  isRemoteMediaUrl(post.videoUrl!))
-                ReelThumbnailPreview(videoUrl: post.videoUrl!)
-              else
-                Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF2A2A2A), Color(0xFF141414)],
-                    ),
-                  ),
-                  child: Center(
+
+                // Reel / Video Indicator
+                if (post.isReel)
+                  const Positioned(
+                    top: 6,
+                    right: 6,
                     child: Icon(
-                      post.isReel ? Icons.slow_motion_video : Icons.image,
-                      color: post.isReel ? AppColors.mintGreen : Colors.white24,
-                      size: 28,
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 20,
+                      shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
+                    ),
+                  )
+                else if (post.images.length > 1)
+                  const Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Icon(
+                      Icons.collections,
+                      color: Colors.white,
+                      size: 16,
+                      shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
                     ),
                   ),
-                ),
 
-              // Reel / Video Indicator
-              if (post.isReel)
-                const Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 20,
-                    shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
-                  ),
-                )
-              else if (post.images.length > 1)
-                const Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Icon(
-                    Icons.collections,
-                    color: Colors.white,
-                    size: 16,
-                    shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
-                  ),
-                ),
-
-              // View count badge at bottom left
-              if (post.effectiveViewCount > 0)
-                Positioned(
-                  bottom: 6,
-                  left: 6,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.play_arrow_rounded,
-                            size: 11, color: Colors.white),
-                        const SizedBox(width: 2),
-                        Text(
-                          context.l10n.number(post.effectiveViewCount),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                // View count badge at bottom left
+                if (post.effectiveViewCount > 0)
+                  Positioned(
+                    bottom: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.play_arrow_rounded,
+                              size: 11, color: Colors.white),
+                          const SizedBox(width: 2),
+                          Text(
+                            context.l10n.number(post.effectiveViewCount),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-              // Pinned badge
-              if (post.isPinned)
-                const Positioned(
-                  bottom: 6,
-                  left: 6,
-                  child: Icon(
-                    Icons.push_pin,
-                    color: Colors.amber,
-                    size: 14,
-                    shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
-                  ),
-                ),
-
-              // Archived badge
-              if (post.isArchived)
-                Positioned(
-                  top: 6,
-                  left: 6,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: Colors.purple.withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(4),
+                // Pinned badge
+                if (post.isPinned)
+                  const Positioned(
+                    bottom: 6,
+                    left: 6,
+                    child: Icon(
+                      Icons.push_pin,
+                      color: Colors.amber,
+                      size: 14,
+                      shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
                     ),
-                    child: const Icon(Icons.archive_outlined,
-                        color: Colors.white, size: 12),
                   ),
-                ),
 
-              // Like counter on bottom right
-              if (post.likes.isNotEmpty)
-                Positioned(
-                  bottom: 6,
-                  right: 6,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(6),
+                // Archived badge
+                if (post.isArchived)
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(Icons.archive_outlined,
+                          color: Colors.white, size: 12),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.favorite,
-                            color: Colors.redAccent, size: 10),
-                        const SizedBox(width: 3),
-                        Text(
-                          '${post.likes.length}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                  ),
+
+                // Like counter on bottom right
+                if (post.likes.isNotEmpty)
+                  Positioned(
+                    bottom: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.favorite,
+                              color: Colors.redAccent, size: 10),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${post.likes.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         );
       },
