@@ -11,6 +11,7 @@ import '../../../../core/security/hive_encryption_service.dart';
 import '../../../../core/entities/explorer_profile.dart';
 import '../../../../core/value_objects/explorer_score.dart';
 import '../../../../core/value_objects/trust_tier.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../domain/repositories/i_auth_repository.dart';
 
 @LazySingleton(as: IAuthRepository)
@@ -37,7 +38,9 @@ class AuthRepositoryImpl implements IAuthRepository {
         _cachedProfile = ExplorerProfile.fromJson(
             Map<String, dynamic>.from(profileJson as Map));
       }
-    } catch (_) {}
+    } catch (e, stack) {
+      logWarning('AuthRepository: failed to init local cache', e, stack);
+    }
   }
 
   Future<void> _updateLocalCache(ExplorerProfile profile) async {
@@ -46,7 +49,9 @@ class AuthRepositoryImpl implements IAuthRepository {
       final box =
           await _encryptionService.openEncryptedBox<dynamic>(_localBoxName);
       await box.put('profile', profile.toJson());
-    } catch (_) {}
+    } catch (e, stack) {
+      logWarning('AuthRepository: failed to update local cache', e, stack);
+    }
   }
 
   Future<void> _clearLocalCache() async {
@@ -55,7 +60,9 @@ class AuthRepositoryImpl implements IAuthRepository {
       final box =
           await _encryptionService.openEncryptedBox<dynamic>(_localBoxName);
       await box.delete('profile');
-    } catch (_) {}
+    } catch (e, stack) {
+      logWarning('AuthRepository: failed to clear local cache', e, stack);
+    }
   }
 
   Future<T> _withRetry<T>(
@@ -193,12 +200,18 @@ class AuthRepositoryImpl implements IAuthRepository {
   Future<void> _signOutRemotely() async {
     try {
       await _auth.signOut();
-    } catch (_) {}
+    } catch (e, stack) {
+      logWarning(
+          'AuthRepository: failed to sign out from Firebase Auth', e, stack);
+    }
     try {
       if (!kIsWeb) {
         await _googleSignIn.signOut();
       }
-    } catch (_) {}
+    } catch (e, stack) {
+      logWarning(
+          'AuthRepository: failed to sign out from GoogleSignIn', e, stack);
+    }
   }
 
   @override
@@ -228,10 +241,18 @@ class AuthRepositoryImpl implements IAuthRepository {
                 .doc(user.uid)
                 .set(fallback.toJson()),
           );
-        } catch (_) {}
+        } catch (e, stack) {
+          logWarning(
+              'AuthRepository: failed to persist fallback profile', e, stack);
+        }
         return Right(fallback);
       }
-    } catch (_) {}
+    } catch (e, stack) {
+      logWarning(
+          'AuthRepository: error loading profile from remote, falling back',
+          e,
+          stack);
+    }
 
     final fallback = _buildFallbackProfile(user);
     await _updateLocalCache(fallback);
@@ -242,7 +263,10 @@ class AuthRepositoryImpl implements IAuthRepository {
             .doc(user.uid)
             .set(fallback.toJson()),
       );
-    } catch (_) {}
+    } catch (e, stack) {
+      logWarning(
+          'AuthRepository: failed to save fallback profile on error', e, stack);
+    }
     return Right(fallback);
   }
 
@@ -261,7 +285,10 @@ class AuthRepositoryImpl implements IAuthRepository {
             .doc(user.uid)
             .set(profile.toJson(), SetOptions(merge: true)),
       );
-    } catch (_) {}
+    } catch (e, stack) {
+      logWarning(
+          'AuthRepository: failed to sync profile update to remote', e, stack);
+    }
     return Right(profile);
   }
 
@@ -287,7 +314,11 @@ class AuthRepositoryImpl implements IAuthRepository {
 
       await _updateLocalCache(profile);
       return Right(profile);
-    } catch (e) {
+    } catch (e, stack) {
+      logWarning(
+          'AuthRepository: _syncUserWithFirestore failed, building fallback',
+          e,
+          stack);
       final profile = _buildFallbackProfile(user);
       await _updateLocalCache(profile);
       try {
@@ -295,7 +326,12 @@ class AuthRepositoryImpl implements IAuthRepository {
             .collection('explorer_profiles')
             .doc(user.uid)
             .set(profile.toJson()));
-      } catch (_) {}
+      } catch (innerE, innerStack) {
+        logWarning(
+            'AuthRepository: failed to set fallback in _syncUserWithFirestore',
+            innerE,
+            innerStack);
+      }
       return Right(profile);
     }
   }

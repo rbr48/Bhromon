@@ -71,9 +71,9 @@ export const verifyOtp = functions
     }
 
     // Verify OTP
-    // Hardcoded fallback for testing: "777777" for "tester@bhromon.fun" (only allowed in emulator)
+    // Test account for Google Play store review and local emulator testing:
     const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
-    const isTester = isEmulator && normalizedEmail === 'tester@bhromon.fun' && otp === '777777';
+    const isTester = (isEmulator || normalizedEmail === 'tester@bhromon.fun') && otp === '777777';
     if (!isTester && serverOtp !== otp) {
       await otpDocRef.update({
         attempts: attempts + 1,

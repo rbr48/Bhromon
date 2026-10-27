@@ -149,7 +149,7 @@ service cloud.firestore {
     }
 
     match /explorer_profiles/{uid} {
-      allow read: if true;
+      allow read: if isAuth();
       allow create: if isOwner(uid)
                     && (!('tier' in request.resource.data) || request.resource.data.tier == 'unverified')
                     && (!('isPioneer' in request.resource.data) || request.resource.data.isPioneer == false)
@@ -160,7 +160,9 @@ service cloud.firestore {
       allow update: if (isOwner(uid)
                     && !request.resource.data.diff(resource.data)
                        .affectedKeys().hasAny(['tier','badges','isPioneer','isRegionExpert','explorerScore','promotedBy']))
-                    || isRegionExpertOrAbove();
+                    || (isRegionExpertOrAbove()
+                       && request.resource.data.diff(resource.data)
+                          .affectedKeys().hasOnly(['tier','badges','isPioneer','isRegionExpert','explorerScore','promotedBy','updatedAt']));
       allow delete: if isOwner(uid);
 
       match /blocked_users/{blockedUid} {
@@ -176,7 +178,7 @@ service cloud.firestore {
 
       // ---- Bucket List ----
       match /bucket_list/{itemId} {
-        allow read: if true;
+        allow read: if isAuth();
         allow write: if isAuth() && isOwner(uid);
       }
     }
@@ -272,7 +274,7 @@ service cloud.firestore {
 
     // ---- Pin Visits ----
     match /pin_visits/{id} {
-      allow read: if true;
+      allow read: if isAuth();
       allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if false;
     }

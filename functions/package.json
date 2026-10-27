@@ -14,11 +14,17 @@
   },
   "main": "lib/index.js",
   "dependencies": {
-    "firebase-admin": "^12.0.0",
-    "firebase-functions": "^5.0.0",
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^5.1.1",
     "googleapis": "^126.0.0",
-    "sharp": "^0.33.4",
-    "@google-cloud/storage": "^7.0.0"
+    "sharp": "^0.35.5",
+    "@google-cloud/storage": "^7.14.0"
+  },
+  "overrides": {
+    "protobufjs": "^7.4.0",
+    "@grpc/grpc-js": "^1.13.6",
+    "uuid": "^11.1.1",
+    "body-parser": "^1.20.3"
   },
   "devDependencies": {
     "typescript": "^4.9.0",

@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in Bhromon, please report it **privately**:
 
-- **Email**: security@bhromon.com
+- **Email**: security@bhromon.fun
 - **Subject**: `[SECURITY] <brief description>`
 - Do NOT open a public GitHub Issue for security vulnerabilities.
 
