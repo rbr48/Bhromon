@@ -74,8 +74,8 @@ void main() {
     expect(find.text('Bhromon'), findsOneWidget);
     expect(find.text('Family & tour groups'), findsOneWidget);
 
-    // Verify Action Bar buttons (Backup, Join with code, Create tour)
-    expect(find.byIcon(Icons.backup_rounded), findsOneWidget);
+    // Verify Action Bar buttons (Join with code, Create tour)
+    expect(find.byIcon(Icons.backup_rounded), findsNothing);
     expect(find.byIcon(Icons.group_add_outlined), findsOneWidget);
     expect(find.byIcon(Icons.add_circle_outline), findsOneWidget);
 
