@@ -115,6 +115,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   void initState() {
     super.initState();
     _checkAndInitVideo();
+    widget.repository
+        .recordPostView(tourId: widget.tourId, postId: widget.post.id);
   }
 
   void _checkAndInitVideo() {
@@ -1405,18 +1407,44 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             ),
           ),
 
-          // Like counter (unless hidden)
-          if (!widget.post.hideLikeCount && effectiveLikeCount > 0)
+          // Like counter and View counter
+          if ((!widget.post.hideLikeCount && effectiveLikeCount > 0) ||
+              widget.post.effectiveViewCount > 0)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Text(
-                context.l10n.translate('ig_liked_by_count',
-                    args: {'count': effectiveLikeCount}),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
+              child: Row(
+                children: [
+                  if (!widget.post.hideLikeCount && effectiveLikeCount > 0)
+                    Text(
+                      context.l10n.translate('ig_liked_by_count',
+                          args: {'count': effectiveLikeCount}),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  if (!widget.post.hideLikeCount &&
+                      effectiveLikeCount > 0 &&
+                      widget.post.effectiveViewCount > 0)
+                    const Text(' • ',
+                        style: TextStyle(color: Colors.white38, fontSize: 13)),
+                  if (widget.post.effectiveViewCount > 0)
+                    Text(
+                      '${context.l10n.number(widget.post.effectiveViewCount)} বার দেখা হয়েছে',
+                      style: TextStyle(
+                        color: (!widget.post.hideLikeCount &&
+                                effectiveLikeCount > 0)
+                            ? Colors.white70
+                            : Colors.white,
+                        fontWeight: (!widget.post.hideLikeCount &&
+                                effectiveLikeCount > 0)
+                            ? FontWeight.normal
+                            : FontWeight.bold,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                ],
               ),
             ),
 
@@ -1461,6 +1489,13 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   timeStr,
                   style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
+                if (widget.post.effectiveViewCount > 0) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '•  👁️ ${context.l10n.number(widget.post.effectiveViewCount)} ভিউ',
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                ],
                 if (widget.post.isEdited) ...[
                   const SizedBox(width: 6),
                   Text(
@@ -1524,26 +1559,36 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Container(
-                      height: 34,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: Colors.white12),
-                      ),
+                    child: SizedBox(
+                      height: 36,
                       child: TextField(
                         controller: _inlineCommentCtrl,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 12),
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 12.5),
                         decoration: InputDecoration(
                           hintText: 'একটি মন্তব্য লিখুন...',
                           hintStyle: const TextStyle(
                               color: Colors.white38, fontSize: 11.5),
-                          border: InputBorder.none,
+                          filled: true,
+                          fillColor: Colors.white.withValues(alpha: 0.06),
                           isDense: true,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide:
+                                const BorderSide(color: Colors.white12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide:
+                                const BorderSide(color: Colors.white12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: const BorderSide(
+                                color: AppColors.mintGreen, width: 1.2),
+                          ),
                           suffixIcon: ValueListenableBuilder<TextEditingValue>(
                             valueListenable: _inlineCommentCtrl,
                             builder: (context, value, _) {

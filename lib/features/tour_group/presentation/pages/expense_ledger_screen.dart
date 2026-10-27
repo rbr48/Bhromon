@@ -15,6 +15,7 @@ import '../../domain/models/itinerary_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/fund_analytics.dart';
 import '../../domain/services/trip_ledger_engine.dart';
+import '../../domain/services/debt_simplifier.dart';
 import '../widgets/fund/expense_editor.dart';
 import '../widgets/fund/fund_sheets.dart';
 import '../../../../core/localization/localized_date.dart';
@@ -52,6 +53,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   final _search = TextEditingController();
   String? _catFilter;
   String? _stopFilter;
+  bool _simplifyDebts = false;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
   String get _me => _repository.currentEmail;
@@ -1105,6 +1107,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       s.toId?.toLowerCase() == _me;
 
   Widget _settleTab(AppLocalizations l10n, LedgerSummary summary) {
+    final activeSettlements = _simplifyDebts
+        ? DebtSimplifier.simplifyFromSummary(
+            summary,
+            fundLabel: l10n.translate('fund_the_fund'),
+          )
+        : summary.settlements;
+    final savedCount = summary.settlements.length - activeSettlements.length;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 96),
       children: [
@@ -1114,16 +1124,83 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             children: [
               _heading(
                 l10n.translate('fund_settle_plan'),
-                trailing: summary.settlements.isEmpty
+                trailing: activeSettlements.isEmpty
                     ? null
                     : IconButton(
                         tooltip: l10n.translate('fund_share_plan'),
                         icon: const Icon(Icons.share_rounded,
                             color: AppColors.mintGreen),
-                        onPressed: () => _sharePlan(summary),
+                        onPressed: () =>
+                            _sharePlan(summary, activeSettlements),
                       ),
               ),
-              if (summary.settlements.isEmpty)
+              if (summary.settlements.isNotEmpty) ...[
+                InkWell(
+                  onTap: () =>
+                      setState(() => _simplifyDebts = !_simplifyDebts),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _simplifyDebts
+                          ? AppColors.mintGreen.withValues(alpha: 0.15)
+                          : Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _simplifyDebts
+                            ? AppColors.mintGreen
+                            : Colors.white12,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.bolt_rounded,
+                          size: 16,
+                          color: _simplifyDebts
+                              ? AppColors.mintGreen
+                              : Colors.white60,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          l10n.translate('fund_simplify_debts'),
+                          style: TextStyle(
+                            color: _simplifyDebts
+                                ? AppColors.mintGreen
+                                : Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (_simplifyDebts && savedCount > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.mintGreen,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              l10n.translate('fund_simplify_debts_badge',
+                                  args: {'count': l10n.number(savedCount)}),
+                              style: const TextStyle(
+                                color: AppColors.darkGreen,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+              if (activeSettlements.isEmpty)
                 Row(children: [
                   const Icon(Icons.verified_rounded,
                       color: AppColors.mintGreen),
@@ -1135,13 +1212,17 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 ])
               else ...[
                 Text(
-                  l10n.translate('fund_settle_help', args: {
-                    'count': l10n.number(summary.settlements.length),
-                  }),
+                  _simplifyDebts
+                      ? '${l10n.translate('fund_settle_help', args: {
+                          'count': l10n.number(activeSettlements.length),
+                        })} (${l10n.translate('fund_simplify_debts_active')})'
+                      : l10n.translate('fund_settle_help', args: {
+                          'count': l10n.number(activeSettlements.length),
+                        }),
                   style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
-                for (final s in summary.settlements) _settlementTile(l10n, s),
+                for (final s in activeSettlements) _settlementTile(l10n, s),
               ],
             ],
           ),
@@ -1695,13 +1776,15 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   // Sharing and export
   // ---------------------------------------------------------------------------
 
-  void _sharePlan(LedgerSummary summary) {
+  void _sharePlan(LedgerSummary summary,
+      [List<SettlementTransaction>? activeSettlements]) {
     final l10n = context.l10n;
+    final settlements = activeSettlements ?? summary.settlements;
     final lines = [
       l10n.translate('fund_share_plan_title',
           args: {'tour': _group?.name ?? ''}),
       '',
-      for (final s in summary.settlements)
+      for (final s in settlements)
         '• ${_party(l10n, s.from, s.fromFund)} → '
             '${_party(l10n, s.to, s.toFund)}: ${_money(s.amountPaisa)}',
       '',

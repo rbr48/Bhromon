@@ -247,3 +247,99 @@ class HotelRoom {
     return room._with(emails: emails, names: room._alignedNames());
   }
 }
+
+/// A piece of luggage or cargo tracked for the tour group.
+class LuggageItem {
+  final String id;
+  final String tourId;
+  final String title;
+  final String tagColor;
+  final String ownerEmail;
+  final String ownerName;
+  final String? custodianEmail;
+  final String? custodianName;
+  final String? locationNotes;
+  final bool isLoaded;
+  final DateTime? updatedAt;
+
+  const LuggageItem({
+    required this.id,
+    required this.tourId,
+    required this.title,
+    this.tagColor = '0xFF00BFA5',
+    required this.ownerEmail,
+    required this.ownerName,
+    this.custodianEmail,
+    this.custodianName,
+    this.locationNotes,
+    this.isLoaded = false,
+    this.updatedAt,
+  });
+
+  LuggageItem copyWith({
+    String? title,
+    String? tagColor,
+    String? ownerEmail,
+    String? ownerName,
+    Object? custodianEmail = _keep,
+    Object? custodianName = _keep,
+    Object? locationNotes = _keep,
+    bool? isLoaded,
+    DateTime? updatedAt,
+  }) {
+    return LuggageItem(
+      id: id,
+      tourId: tourId,
+      title: title ?? this.title,
+      tagColor: tagColor ?? this.tagColor,
+      ownerEmail: ownerEmail ?? this.ownerEmail,
+      ownerName: ownerName ?? this.ownerName,
+      custodianEmail: custodianEmail == _keep
+          ? this.custodianEmail
+          : custodianEmail as String?,
+      custodianName: custodianName == _keep
+          ? this.custodianName
+          : custodianName as String?,
+      locationNotes: locationNotes == _keep
+          ? this.locationNotes
+          : locationNotes as String?,
+      isLoaded: isLoaded ?? this.isLoaded,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'tourId': tourId,
+      'title': title,
+      'tagColor': tagColor,
+      'ownerEmail': normalizeEmail(ownerEmail),
+      'ownerName': ownerName,
+      if (custodianEmail != null)
+        'custodianEmail': normalizeEmail(custodianEmail!),
+      if (custodianName != null) 'custodianName': custodianName,
+      if (locationNotes != null) 'locationNotes': locationNotes,
+      'isLoaded': isLoaded,
+      'updatedAt': writeDate(updatedAt ?? DateTime.now()),
+    };
+  }
+
+  factory LuggageItem.fromMap(String id, Map<String, dynamic> map) {
+    return LuggageItem(
+      id: id,
+      tourId: map['tourId'] as String? ?? '',
+      title: map['title'] as String? ?? 'লাগেজ',
+      tagColor: map['tagColor'] as String? ?? '0xFF00BFA5',
+      ownerEmail: normalizeEmail(map['ownerEmail'] as String? ?? ''),
+      ownerName: map['ownerName'] as String? ?? 'সদস্য',
+      custodianEmail: map['custodianEmail'] != null
+          ? normalizeEmail(map['custodianEmail'] as String)
+          : null,
+      custodianName: map['custodianName'] as String?,
+      locationNotes: map['locationNotes'] as String?,
+      isLoaded: map['isLoaded'] as bool? ?? false,
+      updatedAt: readDate(map['updatedAt']),
+    );
+  }
+}

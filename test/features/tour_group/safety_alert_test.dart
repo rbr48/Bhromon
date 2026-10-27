@@ -63,4 +63,63 @@ void main() {
       expect(raisedAt(null).isOpenAt(now), isTrue);
     });
   });
+
+  group('BatteryTelemetry', () {
+    test('parses telemetry and flags low and critical battery accurately', () {
+      final healthy = BatteryTelemetry.fromMap({
+        'email': 'Alice@Example.com',
+        'name': 'Alice',
+        'batteryLevel': 65,
+        'isCharging': true,
+        'latitude': 23.81,
+        'longitude': 90.41,
+      });
+
+      expect(healthy.email, equals('alice@example.com'));
+      expect(healthy.name, equals('Alice'));
+      expect(healthy.batteryLevel, equals(65));
+      expect(healthy.isCharging, isTrue);
+      expect(healthy.isLowBattery, isFalse);
+      expect(healthy.isCriticalBattery, isFalse);
+
+      final low = BatteryTelemetry.fromMap({
+        'email': 'bob@example.com',
+        'name': 'Bob',
+        'batteryLevel': 18,
+        'isCharging': false,
+      });
+      expect(low.isLowBattery, isTrue);
+      expect(low.isCriticalBattery, isFalse);
+
+      final critical = BatteryTelemetry.fromMap({
+        'email': 'charlie@example.com',
+        'name': 'Charlie',
+        'batteryLevel': 8,
+        'isCharging': false,
+      });
+      expect(critical.isLowBattery, isTrue);
+      expect(critical.isCriticalBattery, isTrue);
+    });
+
+    test('serializes to Map correctly', () {
+      final t = BatteryTelemetry(
+        email: 'User@Test.com',
+        name: 'Tester',
+        batteryLevel: 45,
+        isCharging: true,
+        latitude: 21.42,
+        longitude: 39.82,
+        updatedAt: DateTime(2026, 10, 27, 10),
+      );
+
+      final map = t.toMap();
+      expect(map['email'], equals('user@test.com'));
+      expect(map['name'], equals('Tester'));
+      expect(map['batteryLevel'], equals(45));
+      expect(map['isCharging'], isTrue);
+      expect(map['latitude'], equals(21.42));
+      expect(map['longitude'], equals(39.82));
+      expect(map['updatedAt'], isA<Timestamp>());
+    });
+  });
 }

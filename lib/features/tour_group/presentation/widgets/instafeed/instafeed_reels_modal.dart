@@ -443,6 +443,20 @@ class _ReelPageItemState extends State<_ReelPageItem>
                     ),
                     const SizedBox(height: 16),
 
+                    // View counter
+                    const Icon(Icons.visibility_outlined,
+                        color: Colors.white, size: 26),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${widget.post.effectiveViewCount}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
                     // Unique Travel Superpower: Add to Trip Ledger
                     IconButton(
                       icon: const Icon(Icons.receipt_long_rounded,

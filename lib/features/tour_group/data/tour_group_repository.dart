@@ -1455,6 +1455,32 @@ class TourGroupRepository {
             s.docs.map((d) => SafetyAlert.fromMap(d.id, d.data())).toList());
   }
 
+  /// Publishes this member's battery status and coordinates.
+  Future<bool> updateBatteryTelemetry({
+    required String tourId,
+    required int batteryLevel,
+    bool isCharging = false,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final email = _requireEmail();
+    return _awaitServer(_sub(tourId, 'telemetry').doc(email).set({
+      'email': email,
+      'name': currentDisplayName,
+      'batteryLevel': batteryLevel,
+      'isCharging': isCharging,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true)));
+  }
+
+  /// Live stream of members' battery and location telemetry.
+  Stream<List<BatteryTelemetry>> watchBatteryTelemetry(String tourId) {
+    return _sub(tourId, 'telemetry').snapshots().map((s) =>
+        s.docs.map((d) => BatteryTelemetry.fromMap(d.data())).toList());
+  }
+
   // ---------------------------------------------------------------------------
   // Bus seats
   // ---------------------------------------------------------------------------
@@ -1759,6 +1785,34 @@ class TourGroupRepository {
   }
 
   // ---------------------------------------------------------------------------
+  // Luggage & Cargo Tracking
+  // ---------------------------------------------------------------------------
+
+  /// Streams the list of all tracked luggage and cargo items for the tour.
+  Stream<List<LuggageItem>> watchLuggage(String tourId) {
+    return _sub(tourId, 'luggage').snapshots().map((s) {
+      final list =
+          s.docs.map((d) => LuggageItem.fromMap(d.id, d.data())).toList();
+      list.sort((a, b) => a.title.compareTo(b.title));
+      return list;
+    });
+  }
+
+  /// Adds or updates a luggage item.
+  Future<void> saveLuggage(String tourId, LuggageItem item) async {
+    _requireEmail();
+    await _sub(tourId, 'luggage')
+        .doc(item.id)
+        .set(item.toMap(), SetOptions(merge: true));
+  }
+
+  /// Deletes a luggage item.
+  Future<void> deleteLuggage(String tourId, String luggageId) async {
+    _requireEmail();
+    await _sub(tourId, 'luggage').doc(luggageId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
   // Posts & InstaFeed
   // ---------------------------------------------------------------------------
 
@@ -1944,6 +1998,27 @@ class TourGroupRepository {
           ? FieldValue.arrayUnion([email])
           : FieldValue.arrayRemove([email]),
     });
+  }
+
+  /// Records a view on a post once per member.
+  Future<void> recordPostView({
+    required String tourId,
+    required String postId,
+  }) async {
+    try {
+      final email = currentEmail;
+      final postRef = _sub(tourId, 'posts').doc(postId);
+      if (email.isNotEmpty) {
+        await postRef.update({
+          'viewers': FieldValue.arrayUnion([email]),
+          'viewCount': FieldValue.increment(1),
+        });
+      } else {
+        await postRef.update({
+          'viewCount': FieldValue.increment(1),
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> setPostPinned(String tourId, String postId,

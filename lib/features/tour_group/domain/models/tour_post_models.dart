@@ -256,6 +256,8 @@ class TourPostItem {
   final bool isEdited;
   final DateTime? editedAt;
   final bool isArchived;
+  final List<String> viewers;
+  final int viewCount;
 
   const TourPostItem({
     required this.id,
@@ -286,7 +288,12 @@ class TourPostItem {
     this.isEdited = false,
     this.editedAt,
     this.isArchived = false,
+    this.viewers = const [],
+    this.viewCount = 0,
   });
+
+  int get effectiveViewCount => viewers.isNotEmpty ? viewers.length : viewCount;
+  bool isViewedBy(String email) => viewers.contains(normalizeEmail(email));
 
   bool isLikedBy(String email) => likes.contains(normalizeEmail(email));
 
@@ -387,10 +394,20 @@ class TourPostItem {
       if (isEdited) 'isEdited': true,
       if (editedAt != null) 'editedAt': writeDate(editedAt!),
       if (isArchived) 'isArchived': true,
+      'viewCount': effectiveViewCount,
+      if (viewers.isNotEmpty) 'viewers': viewers,
     };
   }
 
   factory TourPostItem.fromMap(String id, Map<String, dynamic> map) {
+    final viewersList = (map['viewers'] is Iterable)
+        ? (map['viewers'] as Iterable).map((e) => e.toString()).toList()
+        : const <String>[];
+    final rawViews = map['viewCount'] is num
+        ? (map['viewCount'] as num).toInt()
+        : (int.tryParse(map['viewCount']?.toString() ?? '') ?? 0);
+    final count = viewersList.isNotEmpty ? viewersList.length : rawViews;
+
     return TourPostItem(
       id: id,
       tourId: map['tourId']?.toString() ?? '',
@@ -432,6 +449,8 @@ class TourPostItem {
       isEdited: map['isEdited'] as bool? ?? false,
       editedAt: readDate(map['editedAt']),
       isArchived: map['isArchived'] as bool? ?? false,
+      viewers: viewersList,
+      viewCount: count,
     );
   }
 }
