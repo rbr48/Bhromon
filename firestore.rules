@@ -832,6 +832,22 @@ service cloud.firestore {
       // Safety alerts (SOS). A member raises one for themselves, stamped with the
       // server time. The sender or an admin resolves it, and resolving may change
       // only the resolution fields.
+      // ---- Presence: who is in the group right now ----
+      // One document per member, keyed by their own email, refreshed while they
+      // have the channels open. Members see each other; only the member writes
+      // their own entry.
+      match /presence/{email} {
+        allow read: if isActiveMember(tourId);
+        allow create, update: if isActiveMember(tourId)
+                              && email == tourUserEmail()
+                              && request.resource.data.keys().hasOnly(['email', 'displayName', 'lastSeen'])
+                              && request.resource.data.email == tourUserEmail()
+                              && request.resource.data.displayName is string
+                              && request.resource.data.displayName.size() <= 80
+                              && request.resource.data.lastSeen == request.time;
+        allow delete: if isActiveMember(tourId) && email == tourUserEmail();
+      }
+
       match /sos/{alertId} {
         allow read: if isActiveMember(tourId);
         allow create: if isActiveMember(tourId) &&
