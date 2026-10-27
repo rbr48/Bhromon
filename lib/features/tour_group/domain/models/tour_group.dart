@@ -120,6 +120,9 @@ class TourMember {
   /// People this member's family counts as when expenses are shared (1-20).
   final int familyCount;
 
+  /// Firebase Auth UID for direct WebRTC calling and notifications.
+  final String? uid;
+
   const TourMember({
     required this.tourId,
     this.tourName = '',
@@ -130,6 +133,7 @@ class TourMember {
     required this.status,
     required this.joinedAt,
     this.familyCount = 1,
+    this.uid,
   });
 
   bool get isOwner => role == TourRole.owner;
@@ -145,6 +149,7 @@ class TourMember {
       'status': status.toValue(),
       'joinedAt': writeDate(joinedAt),
       'familyCount': familyCount.clamp(1, 20),
+      if (uid != null && uid!.isNotEmpty) 'uid': uid,
     };
   }
 
@@ -159,6 +164,7 @@ class TourMember {
       status: TourMemberStatus.fromString(map['status'] as String?),
       joinedAt: readDate(map['joinedAt']) ?? DateTime.now(),
       familyCount: ((map['familyCount'] as num?)?.toInt() ?? 1).clamp(1, 20),
+      uid: map['uid'] as String?,
     );
   }
 }

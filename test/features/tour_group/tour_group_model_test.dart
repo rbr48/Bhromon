@@ -103,6 +103,7 @@ void main() {
         role: TourRole.owner,
         status: TourMemberStatus.active,
         joinedAt: now,
+        uid: 'firebase_uid_123',
       );
 
       final map = member.toMap();
@@ -111,6 +112,7 @@ void main() {
       expect(map['email'], 'owner@example.com');
       expect(map['role'], 'owner');
       expect(map['status'], 'active');
+      expect(map['uid'], 'firebase_uid_123');
 
       final deserialized = TourMember.fromMap(map);
       expect(deserialized.tourId, 'tour_123');
@@ -118,6 +120,7 @@ void main() {
       expect(deserialized.email, 'owner@example.com');
       expect(deserialized.role, TourRole.owner);
       expect(deserialized.status, TourMemberStatus.active);
+      expect(deserialized.uid, 'firebase_uid_123');
     });
 
     test('TourModules parses correctly from map', () {

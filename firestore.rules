@@ -396,8 +396,18 @@ service cloud.firestore {
     match /calls/{callId} {
       function isCallParticipant() {
         return isAuth() && (
-          (resource != null && (request.auth.uid == resource.data.callerId || request.auth.uid == resource.data.calleeId)) ||
-          (resource == null && (request.auth.uid == request.resource.data.callerId || request.auth.uid == request.resource.data.calleeId))
+          (resource != null && (
+            request.auth.uid == resource.data.callerId ||
+            request.auth.uid == resource.data.calleeId ||
+            tourUserEmail() == resource.data.callerId ||
+            tourUserEmail() == resource.data.calleeId
+          )) ||
+          (resource == null && (
+            request.auth.uid == request.resource.data.callerId ||
+            request.auth.uid == request.resource.data.calleeId ||
+            tourUserEmail() == request.resource.data.callerId ||
+            tourUserEmail() == request.resource.data.calleeId
+          ))
         );
       }
 
@@ -684,6 +694,19 @@ service cloud.firestore {
           allow write: if isActiveMember(tourId) && typingEmail == tourUserEmail();
         }
 
+        // Voice room participants & signaling
+        match /voice_participants/{participantEmail} {
+          allow read: if isActiveMember(tourId);
+          allow write: if isActiveMember(tourId) && participantEmail == tourUserEmail();
+        }
+
+        match /voice_signals/{signalId} {
+          allow read, write: if isActiveMember(tourId);
+          match /candidates/{candId} {
+            allow read, write: if isActiveMember(tourId);
+          }
+        }
+
         match /messages/{messageId} {
           allow read: if isActiveMember(tourId);
 
@@ -866,7 +889,7 @@ service cloud.firestore {
                           request.resource.data.role == resource.data.role &&
                           request.resource.data.status == resource.data.status &&
                           request.resource.data.diff(resource.data).affectedKeys()
-                            .hasOnly(['displayName', 'photoUrl', 'tourName', 'familyCount']))
+                            .hasOnly(['displayName', 'photoUrl', 'tourName', 'familyCount', 'uid']))
                        );
       // The owner row can't be removed; ownership moves first. Members can leave.
       allow delete: if isAuth() && (

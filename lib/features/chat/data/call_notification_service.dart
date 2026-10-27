@@ -24,6 +24,7 @@ class CallNotificationService {
 
   StreamSubscription<User?>? _authSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _callsSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _emailCallsSub;
   StreamSubscription<CallEvent?>? _callkitSub;
 
   String? _currentListeningUid;
@@ -95,42 +96,59 @@ class CallNotificationService {
     if (_currentListeningUid == uid) return;
     _currentListeningUid = uid;
     _callsSub?.cancel();
+    _emailCallsSub?.cancel();
 
     _callsSub = FirebaseFirestore.instance
         .collection('calls')
         .where('calleeId', isEqualTo: uid)
         .where('status', isEqualTo: 'calling')
         .snapshots()
-        .listen((snap) async {
-      if (snap.docs.isEmpty) {
-        _dismissIncomingUI();
+        .listen(_handleIncomingCallSnap);
+
+    final email =
+        FirebaseAuth.instance.currentUser?.email?.toLowerCase().trim();
+    if (email != null && email.isNotEmpty && email != uid) {
+      _emailCallsSub = FirebaseFirestore.instance
+          .collection('calls')
+          .where('calleeId', isEqualTo: email)
+          .where('status', isEqualTo: 'calling')
+          .snapshots()
+          .listen(_handleIncomingCallSnap);
+    }
+  }
+
+  Future<void> _handleIncomingCallSnap(
+      QuerySnapshot<Map<String, dynamic>> snap) async {
+    if (snap.docs.isEmpty) {
+      _dismissIncomingUI();
+      return;
+    }
+
+    final callDoc = snap.docs.first;
+    final callId = callDoc.id;
+    if (_activeIncomingCallId == callId) return;
+
+    final data = callDoc.data();
+    final createdAt = data['createdAt'] as Timestamp?;
+    if (createdAt != null) {
+      final age = DateTime.now().difference(createdAt.toDate());
+      if (age.inSeconds > 60) {
+        // Stale call; ignore or auto-decline
+        _declineCall(callId);
         return;
       }
+    }
 
-      final callDoc = snap.docs.first;
-      final callId = callDoc.id;
-      if (_activeIncomingCallId == callId) return;
+    _activeIncomingCallId = callId;
+    final callerId = data['callerId'] as String? ?? '';
+    final offerMap = data['offer'] as Map<String, dynamic>?;
+    final sdp = offerMap?['sdp'] as String? ?? '';
+    final bool isVideo = sdp.contains('m=video');
 
-      final data = callDoc.data();
-      final createdAt = data['createdAt'] as Timestamp?;
-      if (createdAt != null) {
-        final age = DateTime.now().difference(createdAt.toDate());
-        if (age.inSeconds > 60) {
-          // Stale call; ignore or auto-decline
-          _declineCall(callId);
-          return;
-        }
-      }
-
-      _activeIncomingCallId = callId;
-      final callerId = data['callerId'] as String? ?? '';
-      final offerMap = data['offer'] as Map<String, dynamic>?;
-      final sdp = offerMap?['sdp'] as String? ?? '';
-      final bool isVideo = sdp.contains('m=video');
-
-      // Fetch caller details
-      String callerName = 'Traveler';
-      String? callerAvatar;
+    // Fetch caller details (prefer direct fields if present)
+    String callerName = (data['callerName'] as String?)?.trim() ?? '';
+    String? callerAvatar = data['callerAvatar'] as String?;
+    if (callerName.isEmpty || callerName == 'Traveler') {
       try {
         final profileSnap = await FirebaseFirestore.instance
             .collection('explorer_profiles')
@@ -139,62 +157,65 @@ class CallNotificationService {
         if (profileSnap.exists) {
           final pData = profileSnap.data();
           callerName = (pData?['displayName'] as String?) ?? 'Traveler';
-          callerAvatar = pData?['avatarUrl'] as String?;
+          callerAvatar ??= pData?['avatarUrl'] as String?;
         }
       } catch (e) {
         debugPrint('Error fetching caller profile: $e');
       }
+    }
+    if (callerName.isEmpty) {
+      callerName = 'Traveler';
+    }
 
-      // 1. Show CallKit if mobile native
-      if (!kIsWeb) {
-        final callKitParams = CallKitParams(
-          id: callId,
-          nameCaller: callerName,
-          appName: 'Bhromon',
-          avatar: callerAvatar,
-          handle: isVideo ? 'Bhromon Video Call' : 'Bhromon Voice Call',
-          type: isVideo ? 1 : 0,
-          duration: 30000,
-          extra: <String, dynamic>{
-            'callId': callId,
-            'callerId': callerId,
-            'callerName': callerName,
-            'avatarUrl': callerAvatar,
-            'isVideo': isVideo,
-          },
-          android: const AndroidParams(
-            isCustomNotification: true,
-            isShowLogo: false,
-            ringtonePath: 'system_ringtone_default',
-            backgroundColor: '#075E54',
-            actionColor: '#00A884',
-            textColor: '#FFFFFF',
-          ),
-          ios: const IOSParams(
-            iconName: 'AppIcon',
-            handleType: 'generic',
-            supportsVideo: true,
-            maximumCallGroups: 1,
-            maximumCallsPerCallGroup: 1,
-            audioSessionMode: 'videoChat',
-          ),
-        );
-        await FlutterCallkitIncoming.showCallkitIncoming(callKitParams);
-      }
+    // 1. Show CallKit if mobile native
+    if (!kIsWeb) {
+      final callKitParams = CallKitParams(
+        id: callId,
+        nameCaller: callerName,
+        appName: 'Bhromon',
+        avatar: callerAvatar,
+        handle: isVideo ? 'Bhromon Video Call' : 'Bhromon Voice Call',
+        type: isVideo ? 1 : 0,
+        duration: 30000,
+        extra: <String, dynamic>{
+          'callId': callId,
+          'callerId': callerId,
+          'callerName': callerName,
+          'avatarUrl': callerAvatar,
+          'isVideo': isVideo,
+        },
+        android: const AndroidParams(
+          isCustomNotification: true,
+          isShowLogo: false,
+          ringtonePath: 'system_ringtone_default',
+          backgroundColor: '#075E54',
+          actionColor: '#00A884',
+          textColor: '#FFFFFF',
+        ),
+        ios: const IOSParams(
+          iconName: 'AppIcon',
+          handleType: 'generic',
+          supportsVideo: true,
+          maximumCallGroups: 1,
+          maximumCallsPerCallGroup: 1,
+          audioSessionMode: 'videoChat',
+        ),
+      );
+      await FlutterCallkitIncoming.showCallkitIncoming(callKitParams);
+    }
 
-      // 2. Show in-app overlay dialog if context is available
-      final context = AppRouter.navigatorKey.currentContext;
-      if (context != null && context.mounted && !_isCallDialogShowing) {
-        _showInAppCallDialog(
-          context: context,
-          callId: callId,
-          callerId: callerId,
-          callerName: callerName,
-          avatarUrl: callerAvatar,
-          isVideo: isVideo,
-        );
-      }
-    });
+    // 2. Show in-app overlay dialog if context is available
+    final context = AppRouter.navigatorKey.currentContext;
+    if (context != null && context.mounted && !_isCallDialogShowing) {
+      _showInAppCallDialog(
+        context: context,
+        callId: callId,
+        callerId: callerId,
+        callerName: callerName,
+        avatarUrl: callerAvatar,
+        isVideo: isVideo,
+      );
+    }
   }
 
   void _showInAppCallDialog({
@@ -404,12 +425,14 @@ class CallNotificationService {
   void _stopListening() {
     _currentListeningUid = null;
     _callsSub?.cancel();
+    _emailCallsSub?.cancel();
     _dismissIncomingUI();
   }
 
   void dispose() {
     _authSub?.cancel();
     _callsSub?.cancel();
+    _emailCallsSub?.cancel();
     _callkitSub?.cancel();
   }
 }

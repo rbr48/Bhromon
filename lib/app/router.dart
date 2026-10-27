@@ -203,6 +203,8 @@ class AppRouter {
               remoteAvatarUrl: extra['remoteAvatarUrl'] as String?,
               isCaller: extra['isCaller'] as bool? ?? false,
               isVideoCall: extra['isVideoCall'] as bool? ?? true,
+              localUserName: extra['localUserName'] as String?,
+              localAvatarUrl: extra['localAvatarUrl'] as String?,
             ),
           );
         },

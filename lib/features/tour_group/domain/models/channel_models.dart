@@ -4,12 +4,22 @@
 import 'date_codec.dart';
 
 /// Channels every tour starts with. Their titles come from the translation table.
-const List<String> kBuiltInChannelIds = [
+const List<String> kBuiltInTextChannelIds = [
   'general',
   'food',
   'sightseeing',
   'emergency',
 ];
+
+const String kBuiltInVoiceChannelId = 'voice_lounge';
+
+const List<String> kBuiltInChannelIds = [
+  ...kBuiltInTextChannelIds,
+  kBuiltInVoiceChannelId,
+];
+
+/// The kind of channel: text messaging or voice lounge.
+enum ChannelKind { text, voice }
 
 /// Longest text a message may carry.
 const int kChannelMessageMaxLength = 1000;
@@ -37,6 +47,7 @@ class TourChannel {
   final String topic;
   final bool adminOnly;
   final String createdByEmail;
+  final ChannelKind kind;
 
   const TourChannel({
     required this.id,
@@ -44,17 +55,22 @@ class TourChannel {
     this.topic = '',
     this.adminOnly = false,
     this.createdByEmail = '',
+    this.kind = ChannelKind.text,
   });
 
   bool get isBuiltIn => kBuiltInChannelIds.contains(id);
+  bool get isVoice => kind == ChannelKind.voice || id == kBuiltInVoiceChannelId;
 
   factory TourChannel.fromMap(String id, Map<String, dynamic> map) {
+    final rawKind = map['kind'] as String?;
+    final isVoice = rawKind == 'voice' || id == kBuiltInVoiceChannelId;
     return TourChannel(
       id: id,
       name: (map['name'] as String?)?.trim() ?? '',
       topic: (map['topic'] as String?)?.trim() ?? '',
       adminOnly: map['adminOnly'] == true,
       createdByEmail: normalizeEmail(map['createdByEmail'] as String? ?? ''),
+      kind: isVoice ? ChannelKind.voice : ChannelKind.text,
     );
   }
 
@@ -64,6 +80,7 @@ class TourChannel {
       'topic': topic,
       'adminOnly': adminOnly,
       'createdByEmail': createdByEmail,
+      'kind': kind == ChannelKind.voice ? 'voice' : 'text',
     };
   }
 }
