@@ -169,6 +169,10 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (m.isPending) ...[
+          const Icon(Icons.schedule, size: 11, color: Colors.white54),
+          const SizedBox(width: 4),
+        ],
         if (m.isPinned) ...[
           const Icon(Icons.push_pin, size: 11, color: AppColors.gold),
           const SizedBox(width: 4),

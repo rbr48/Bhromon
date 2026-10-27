@@ -1524,7 +1524,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         attachments.add(ChannelAttachment(url: url, isVideo: p.isVideo));
         _update(() => _uploadDone++);
       }
-      await _repo.sendMessage(
+      final send = _repo.sendMessage(
         widget.tourId,
         channel.id,
         text: text,
@@ -1532,6 +1532,19 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         replyTo: _replyTo,
         mentions: resolveMentions(text, _members),
       );
+      if (attachments.isEmpty) {
+        // A text message is written to the local cache at once, so the composer
+        // is not held while the server acknowledges it. If the server rejects
+        // the write, it is rolled back and the text goes back into the draft.
+        unawaited(send.catchError((Object e) {
+          if (!mounted) return;
+          if (draft.text.trim().isEmpty) draft.text = text;
+          _snack(l10n.translate('tour_message_send_failed', args: {'error': e}),
+              error: true);
+        }));
+      } else {
+        await send;
+      }
       if (draft.text.trim() == text) draft.clear();
       _update(() {
         _pending.clear();

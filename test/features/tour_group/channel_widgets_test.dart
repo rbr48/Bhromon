@@ -33,8 +33,10 @@ ChannelMessage _message({
   Map<String, int> votes = const {},
   int expenseAmountPaisa = 0,
   Map<String, String> reactions = const {},
+  bool isPending = false,
 }) {
   return ChannelMessage(
+    isPending: isPending,
     id: 'm1',
     senderEmail: 'rahim@x.com',
     senderName: 'Rahim',
@@ -77,6 +79,17 @@ void main() {
       expect(find.text('Rahim'), findsOneWidget);
       expect(find.text('Seat B2'), findsOneWidget);
       expect(find.textContaining('Gate 2'), findsOneWidget);
+    });
+
+    testWidgets('a message still waiting for the server shows a clock',
+        (tester) async {
+      await _pump(tester, _bubble(_message(isPending: true)));
+      expect(find.byIcon(Icons.schedule), findsOneWidget);
+    });
+
+    testWidgets('a sent message shows no clock', (tester) async {
+      await _pump(tester, _bubble(_message()));
+      expect(find.byIcon(Icons.schedule), findsNothing);
     });
 
     testWidgets('a long press opens the message actions', (tester) async {

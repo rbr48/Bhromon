@@ -207,6 +207,7 @@ class ChannelMessage {
     this.locationLatitude,
     this.locationLongitude,
     this.locationTitle,
+    this.isPending = false,
   });
 
   bool get hasLocation => locationLatitude != null && locationLongitude != null;
@@ -214,6 +215,10 @@ class ChannelMessage {
   final double? locationLatitude;
   final double? locationLongitude;
   final String? locationTitle;
+
+  /// True while this device's write is still waiting for the server. Set from
+  /// the Firestore cache, so a message sent offline shows as pending.
+  final bool isPending;
 
   bool isSentBy(String email) => senderEmail == normalizeEmail(email);
 
@@ -240,7 +245,11 @@ class ChannelMessage {
     ];
   }
 
-  factory ChannelMessage.fromMap(String id, Map<String, dynamic> map) {
+  factory ChannelMessage.fromMap(
+    String id,
+    Map<String, dynamic> map, {
+    bool isPending = false,
+  }) {
     final rawAttachments = map['attachments'];
     return ChannelMessage(
       id: id,
@@ -271,6 +280,7 @@ class ChannelMessage {
       votes: readIntMap(map['votes']),
       isPinned: map['isPinned'] == true,
       editedAt: readDate(map['editedAt']),
+      isPending: isPending,
       expenseId: map['expenseId'] as String?,
       expenseTitle: map['expenseTitle'] as String? ?? '',
       expenseAmountPaisa: (map['expenseAmountPaisa'] as num?)?.toInt() ?? 0,

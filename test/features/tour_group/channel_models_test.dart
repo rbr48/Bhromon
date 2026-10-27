@@ -5,6 +5,17 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ChannelMessage', () {
+    test('is not pending unless the local cache still holds the write', () {
+      final base = {
+        'text': 'Hi',
+        'senderEmail': 'own@x.com',
+        'timestamp': DateTime(2026, 1, 2),
+      };
+      expect(ChannelMessage.fromMap('m1', base).isPending, isFalse);
+      expect(ChannelMessage.fromMap('m1', base, isPending: true).isPending,
+          isTrue);
+    });
+
     test('reads a poll with its options and votes', () {
       final m = ChannelMessage.fromMap('p1', {
         'kind': 'poll',

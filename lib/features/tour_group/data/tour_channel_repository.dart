@@ -173,7 +173,13 @@ class TourChannelRepository {
   }
 
   List<ChannelMessage> _toMessages(QuerySnapshot<Map<String, dynamic>> s) {
-    return s.docs.map((d) => ChannelMessage.fromMap(d.id, d.data())).toList();
+    return s.docs
+        .map((d) => ChannelMessage.fromMap(
+              d.id,
+              d.data(),
+              isPending: d.metadata.hasPendingWrites,
+            ))
+        .toList();
   }
 
   /// Posts a text message, optionally with photos or a video, a reply and
