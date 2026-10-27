@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../../../../core/entities/explorer_profile.dart';
 import '../../../../core/value_objects/explorer_score.dart';
@@ -37,7 +38,9 @@ class AuthRepositoryImpl implements IAuthRepository {
         _cachedProfile = ExplorerProfile.fromJson(
             Map<String, dynamic>.from(profileJson as Map));
       }
-    } catch (_) {}
+    } catch (error, stack) {
+      logError('auth: reading the cached profile failed', error, stack);
+    }
   }
 
   Future<void> _updateLocalCache(ExplorerProfile profile) async {
@@ -46,7 +49,9 @@ class AuthRepositoryImpl implements IAuthRepository {
       final box =
           await _encryptionService.openEncryptedBox<dynamic>(_localBoxName);
       await box.put('profile', profile.toJson());
-    } catch (_) {}
+    } catch (error, stack) {
+      logError('auth: writing the cached profile failed', error, stack);
+    }
   }
 
   Future<void> _clearLocalCache() async {
@@ -55,7 +60,9 @@ class AuthRepositoryImpl implements IAuthRepository {
       final box =
           await _encryptionService.openEncryptedBox<dynamic>(_localBoxName);
       await box.delete('profile');
-    } catch (_) {}
+    } catch (error, stack) {
+      logError('auth: clearing the cached profile failed', error, stack);
+    }
   }
 
   Future<T> _withRetry<T>(
@@ -193,12 +200,16 @@ class AuthRepositoryImpl implements IAuthRepository {
   Future<void> _signOutRemotely() async {
     try {
       await _auth.signOut();
-    } catch (_) {}
+    } catch (error, stack) {
+      logError('auth: remote sign-out failed', error, stack);
+    }
     try {
       if (!kIsWeb) {
         await _googleSignIn.signOut();
       }
-    } catch (_) {}
+    } catch (error, stack) {
+      logError('auth: Google sign-out failed', error, stack);
+    }
   }
 
   @override
@@ -228,10 +239,14 @@ class AuthRepositoryImpl implements IAuthRepository {
                 .doc(user.uid)
                 .set(fallback.toJson()),
           );
-        } catch (_) {}
+        } catch (error, stack) {
+          logError('auth: creating the fallback profile failed', error, stack);
+        }
         return Right(fallback);
       }
-    } catch (_) {}
+    } catch (error, stack) {
+      logError('auth: retrying the profile write failed', error, stack);
+    }
 
     final fallback = _buildFallbackProfile(user);
     await _updateLocalCache(fallback);
@@ -242,7 +257,9 @@ class AuthRepositoryImpl implements IAuthRepository {
             .doc(user.uid)
             .set(fallback.toJson()),
       );
-    } catch (_) {}
+    } catch (error, stack) {
+      logError('auth: saving the fallback profile failed', error, stack);
+    }
     return Right(fallback);
   }
 
@@ -261,7 +278,9 @@ class AuthRepositoryImpl implements IAuthRepository {
             .doc(user.uid)
             .set(profile.toJson(), SetOptions(merge: true)),
       );
-    } catch (_) {}
+    } catch (error, stack) {
+      logError('auth: merging the profile failed', error, stack);
+    }
     return Right(profile);
   }
 
@@ -295,7 +314,9 @@ class AuthRepositoryImpl implements IAuthRepository {
             .collection('explorer_profiles')
             .doc(user.uid)
             .set(profile.toJson()));
-      } catch (_) {}
+      } catch (error, stack) {
+        logError('auth: updating the profile failed', error, stack);
+      }
       return Right(profile);
     }
   }

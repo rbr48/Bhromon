@@ -1,6 +1,6 @@
 # Bhromon — Travel Platform (Flutter & Firebase)
 
-Bhromon is an offline-first travel application designed with Clean Architecture, BLoC state management, and a dual-database storage engine. It provides high-performance mapping, location pinning, media-rich travel logging, and a community trust engine.
+Bhromon is an offline-first travel application organised as feature modules. Most features follow Clean Architecture with BLoC/Cubit state management; the tour-group features use stateful widgets that call their repositories directly (see [AGENTS.md](AGENTS.md)). Local storage combines Drift (SQLite) with encrypted Hive boxes. It provides high-performance mapping, location pinning, media-rich travel logging, and a community trust engine.
 
 ---
 
