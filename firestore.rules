@@ -853,6 +853,14 @@ service cloud.firestore {
         allow create, delete: if isTourAdmin(tourId);
         allow update: if isActiveMember(tourId);
       }
+
+      // Online Game Zone tables for tour group members
+      match /games/{gameId} {
+        allow read, list: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId);
+        allow update: if isActiveMember(tourId);
+        allow delete: if isActiveMember(tourId);
+      }
     }
 
     // ---- Invite codes: looked up by exact code only (no listing) ----

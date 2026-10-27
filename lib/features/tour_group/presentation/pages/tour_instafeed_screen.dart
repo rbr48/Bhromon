@@ -14,6 +14,7 @@ import '../../domain/models/tour_post_models.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/instafeed/instafeed_create_studio.dart';
 import '../widgets/instafeed/instafeed_comments_sheet.dart';
+import '../widgets/instafeed/instafeed_day_filter_bar.dart';
 import '../widgets/instafeed/instafeed_explore_grid.dart';
 import '../widgets/instafeed/instafeed_filter_sheet.dart';
 import '../widgets/instafeed/instafeed_image_viewer_modal.dart';
@@ -661,7 +662,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
   List<TourDayInfo> get _tourDays => _tourGroup?.daysList ?? const [];
 
-  void _showCreatePostModal(BuildContext context) {
+  void _showCreatePostModal(BuildContext context, {bool isStory = false}) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -671,6 +672,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         tourId: widget.tourId,
         group: _tourGroup,
         picker: _picker,
+        isStory: isStory,
         onPostCreated: () => setState(() {}),
       ),
     );
@@ -1164,15 +1166,25 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                 ),
                               ),
 
-                            // 5. Filter pill: media and day filters live in one sheet
+                            // 5. Day filter circles and sub-header toolbar
                             SliverToBoxAdapter(
                               child: Center(
                                 child: ConstrainedBox(
                                   constraints:
                                       const BoxConstraints(maxWidth: 580),
-                                  child: InstafeedFilterBar(
-                                    summary: _filterSummary(),
-                                    onTap: () => unawaited(_showFilterSheet()),
+                                  child: InstafeedDayFilterBar(
+                                    days: _tourDays,
+                                    selectedDay: _selectedDayFilter,
+                                    onDaySelected: (dayId) => setState(
+                                        () => _selectedDayFilter = dayId),
+                                    allPosts: _latestPosts,
+                                    filteredCount: filteredPosts.length,
+                                    isGridView: _isGridView,
+                                    onViewModeChanged: (grid) =>
+                                        setState(() => _isGridView = grid),
+                                    onOpenFilterSheet: () =>
+                                        unawaited(_showFilterSheet()),
+                                    activeFilterSummary: _filterSummary(),
                                   ),
                                 ),
                               ),
@@ -1547,7 +1559,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   top: 8,
                   right: 8,
                   child: GestureDetector(
-                    onTap: () => _showCreatePostModal(context),
+                    onTap: () => _showCreatePostModal(context, isStory: true),
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
@@ -1594,7 +1606,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       margin: const EdgeInsets.only(right: 8),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => _showCreatePostModal(context),
+        onTap: () => _showCreatePostModal(context, isStory: true),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Container(

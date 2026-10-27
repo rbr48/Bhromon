@@ -256,6 +256,8 @@ class TourPostItem {
   final bool isEdited;
   final DateTime? editedAt;
   final bool isArchived;
+  final List<String> viewers;
+  final int viewCount;
 
   const TourPostItem({
     required this.id,
@@ -286,7 +288,12 @@ class TourPostItem {
     this.isEdited = false,
     this.editedAt,
     this.isArchived = false,
+    this.viewers = const [],
+    this.viewCount = 0,
   });
+
+  int get effectiveViewCount => viewers.isNotEmpty ? viewers.length : viewCount;
+  bool isViewedBy(String email) => viewers.contains(normalizeEmail(email));
 
   bool isLikedBy(String email) => likes.contains(normalizeEmail(email));
 
@@ -387,46 +394,63 @@ class TourPostItem {
       if (isEdited) 'isEdited': true,
       if (editedAt != null) 'editedAt': writeDate(editedAt!),
       if (isArchived) 'isArchived': true,
+      'viewCount': effectiveViewCount,
+      if (viewers.isNotEmpty) 'viewers': viewers,
     };
   }
 
   factory TourPostItem.fromMap(String id, Map<String, dynamic> map) {
+    final viewersList = (map['viewers'] is Iterable)
+        ? (map['viewers'] as Iterable).map((e) => e.toString()).toList()
+        : const <String>[];
+    final rawViews = map['viewCount'] is num
+        ? (map['viewCount'] as num).toInt()
+        : (int.tryParse(map['viewCount']?.toString() ?? '') ?? 0);
+    final count = viewersList.isNotEmpty ? viewersList.length : rawViews;
+
     return TourPostItem(
       id: id,
-      tourId: map['tourId'] as String? ?? '',
-      authorEmail: normalizeEmail(map['authorEmail'] as String? ?? ''),
-      authorName: map['authorName'] as String? ?? 'Family Member',
-      authorPhoto: map['authorPhoto'] as String?,
-      caption: map['caption'] as String? ?? '',
-      images: (map['images'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          const [],
-      videoUrl: map['videoUrl'] as String?,
+      tourId: map['tourId']?.toString() ?? '',
+      authorEmail: normalizeEmail(map['authorEmail']?.toString() ?? ''),
+      authorName: map['authorName']?.toString() ?? 'Family Member',
+      authorPhoto: map['authorPhoto']?.toString(),
+      caption: map['caption']?.toString() ?? '',
+      images: (map['images'] is Iterable)
+          ? (map['images'] as Iterable).map((e) => e.toString()).toList()
+          : const [],
+      videoUrl: map['videoUrl']?.toString(),
       isReel: map['isReel'] as bool? ?? false,
-      location: map['location'] as String? ?? '',
-      tourDay: map['tourDay'] as String? ?? 'day1',
-      filterId: map['filterId'] as String? ?? 'normal',
-      likes:
-          (map['likes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-              const [],
-      commentCount: (map['commentCount'] as num?)?.toInt() ?? 0,
+      location: map['location']?.toString() ?? '',
+      tourDay: map['tourDay']?.toString() ?? 'day1',
+      filterId: map['filterId']?.toString() ?? 'normal',
+      likes: (map['likes'] is Iterable)
+          ? (map['likes'] as Iterable).map((e) => e.toString()).toList()
+          : const [],
+      commentCount: map['commentCount'] is num
+          ? (map['commentCount'] as num).toInt()
+          : (int.tryParse(map['commentCount']?.toString() ?? '') ?? 0),
       createdAt: readDate(map['createdAt']) ?? DateTime.now(),
-      tags:
-          (map['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-              const [],
+      tags: (map['tags'] is Iterable)
+          ? (map['tags'] as Iterable).map((e) => e.toString()).toList()
+          : const [],
       isPinned: map['isPinned'] as bool? ?? false,
       hideLikeCount: map['hideLikeCount'] as bool? ?? false,
       disableComments: map['disableComments'] as bool? ?? false,
-      audioTitle: map['audioTitle'] as String?,
-      audioUrl: map['audioUrl'] as String?,
-      aspectRatio: (map['aspectRatio'] as num?)?.toDouble(),
-      expenseAmount: (map['expenseAmount'] as num?)?.toDouble(),
-      expenseCategory: map['expenseCategory'] as String?,
-      coverUrl: map['coverUrl'] as String?,
+      audioTitle: map['audioTitle']?.toString(),
+      audioUrl: map['audioUrl']?.toString(),
+      aspectRatio: map['aspectRatio'] is num
+          ? (map['aspectRatio'] as num).toDouble()
+          : (double.tryParse(map['aspectRatio']?.toString() ?? '')),
+      expenseAmount: map['expenseAmount'] is num
+          ? (map['expenseAmount'] as num).toDouble()
+          : (double.tryParse(map['expenseAmount']?.toString() ?? '')),
+      expenseCategory: map['expenseCategory']?.toString(),
+      coverUrl: map['coverUrl']?.toString(),
       isEdited: map['isEdited'] as bool? ?? false,
       editedAt: readDate(map['editedAt']),
       isArchived: map['isArchived'] as bool? ?? false,
+      viewers: viewersList,
+      viewCount: count,
     );
   }
 }
@@ -511,16 +535,16 @@ class TourCommentItem {
   factory TourCommentItem.fromMap(String id, Map<String, dynamic> map) {
     return TourCommentItem(
       id: id,
-      authorEmail: normalizeEmail(map['authorEmail'] as String? ?? ''),
-      authorName: map['authorName'] as String? ?? 'Member',
-      authorPhoto: map['authorPhoto'] as String?,
-      text: map['text'] as String? ?? '',
-      reaction: map['reaction'] as String?,
+      authorEmail: normalizeEmail(map['authorEmail']?.toString() ?? ''),
+      authorName: map['authorName']?.toString() ?? 'Member',
+      authorPhoto: map['authorPhoto']?.toString(),
+      text: map['text']?.toString() ?? '',
+      reaction: map['reaction']?.toString(),
       createdAt: readDate(map['createdAt']) ?? DateTime.now(),
-      parentId: map['parentId'] as String?,
-      likes:
-          (map['likes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
-              const [],
+      parentId: map['parentId']?.toString(),
+      likes: (map['likes'] is Iterable)
+          ? (map['likes'] as Iterable).map((e) => e.toString()).toList()
+          : const [],
       isPinned: map['isPinned'] as bool? ?? false,
       isAuthorLiked: map['isAuthorLiked'] as bool? ?? false,
     );

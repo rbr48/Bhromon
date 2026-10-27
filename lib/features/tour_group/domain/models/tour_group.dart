@@ -191,8 +191,9 @@ class TourModules {
     };
   }
 
-  factory TourModules.fromMap(Map<String, dynamic>? map) {
-    if (map == null) return const TourModules();
+  factory TourModules.fromMap(Object? mapOrObj) {
+    if (mapOrObj is! Map) return const TourModules();
+    final map = mapOrObj;
     return TourModules(
       seatsRooms: map['seatsRooms'] as bool? ?? true,
       tideSafety: map['tideSafety'] as bool? ?? true,
@@ -567,35 +568,35 @@ class TourGroup {
     };
   }
 
-  factory TourGroup.fromMap(String id, Map<String, dynamic> map) {
+  factory TourGroup.fromMap(String id, Map<dynamic, dynamic> map) {
     final createdAt = readDate(map['createdAt']) ?? DateTime.now();
     final startDate = readDate(map['startDate']) ?? createdAt;
     final endDate = readDate(map['endDate']) ?? startDate;
     // Older notice-board writes stored the meeting point as a nested map.
-    final legacyMeeting = map['meetingPoint'] as Map<String, dynamic>?;
+    final legacyMeeting =
+        map['meetingPoint'] is Map ? (map['meetingPoint'] as Map) : null;
     return TourGroup(
       id: id,
-      name: map['name'] as String? ?? 'Family Tour',
-      description: map['description'] as String? ?? '',
-      destination: map['destination'] as String? ?? 'Custom Destination',
-      originCity: map['originCity'] as String? ?? 'ঢাকা',
-      tourType: TourType.fromString(map['tourType'] as String?),
-      ownerEmail: normalizeEmail(map['ownerEmail'] as String? ?? ''),
-      ownerUid: map['ownerUid'] as String? ?? '',
-      inviteCode: map['inviteCode'] as String? ?? '',
+      name: map['name']?.toString() ?? 'Family Tour',
+      description: map['description']?.toString() ?? '',
+      destination: map['destination']?.toString() ?? 'Custom Destination',
+      originCity: map['originCity']?.toString() ?? 'ঢাকা',
+      tourType: TourType.fromString(map['tourType']?.toString()),
+      ownerEmail: normalizeEmail(map['ownerEmail']?.toString() ?? ''),
+      ownerUid: map['ownerUid']?.toString() ?? '',
+      inviteCode: map['inviteCode']?.toString() ?? '',
       startDate: startDate,
       endDate: endDate,
-      modules: TourModules.fromMap(map['modules'] as Map<String, dynamic>?),
-      customSpots: (map['customSpots'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          const [],
-      meetingPointTitle: map['meetingPointTitle'] as String? ??
-          legacyMeeting?['title'] as String?,
-      meetingPointNote: map['meetingPointNote'] as String? ??
-          legacyMeeting?['note'] as String?,
-      meetingPointMapUrl: map['meetingPointMapUrl'] as String? ??
-          legacyMeeting?['mapUrl'] as String?,
+      modules: TourModules.fromMap(map['modules']),
+      customSpots: (map['customSpots'] is Iterable)
+          ? (map['customSpots'] as Iterable).map((e) => e.toString()).toList()
+          : const [],
+      meetingPointTitle: map['meetingPointTitle']?.toString() ??
+          legacyMeeting?['title']?.toString(),
+      meetingPointNote: map['meetingPointNote']?.toString() ??
+          legacyMeeting?['note']?.toString(),
+      meetingPointMapUrl: map['meetingPointMapUrl']?.toString() ??
+          legacyMeeting?['mapUrl']?.toString(),
       createdAt: createdAt,
       stops: readStops(map['stops']),
       legPlans: readLegPlans(map['legPlans']),

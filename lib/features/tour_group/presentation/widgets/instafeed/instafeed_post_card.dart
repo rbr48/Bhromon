@@ -7,10 +7,10 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_carousel.dart';
 import 'instafeed_image_viewer_modal.dart';
-import 'instafeed_travel_banners.dart';
 import 'instafeed_zoomable_media.dart';
 import 'reel_thumbnail_preview.dart';
 import 'tour_safe_network_image.dart';
+import '../member_profile/tour_member_profile_modal.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../../../core/localization/app_localizations.dart';
@@ -81,10 +81,42 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   bool _isVideoMuted = true;
   bool _isVideoPlaying = false;
 
+  final TextEditingController _inlineCommentCtrl = TextEditingController();
+  bool _isSendingComment = false;
+
+  Future<void> _submitInlineComment() async {
+    final text = _inlineCommentCtrl.text.trim();
+    if (text.isEmpty || _isSendingComment) return;
+    setState(() => _isSendingComment = true);
+    try {
+      await widget.repository.addComment(
+        tourId: widget.tourId,
+        postId: widget.post.id,
+        text: text,
+      );
+      _inlineCommentCtrl.clear();
+      widget.onPostChanged?.call();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('মন্তব্য পাঠানো সম্ভব হয়নি: $e'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSendingComment = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _checkAndInitVideo();
+    widget.repository
+        .recordPostView(tourId: widget.tourId, postId: widget.post.id);
   }
 
   void _checkAndInitVideo() {
@@ -152,6 +184,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   @override
   void dispose() {
     _disposeVideo();
+    _inlineCommentCtrl.dispose();
     super.dispose();
   }
 
@@ -666,11 +699,12 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   }
 
   void _showAuthorLogistics() {
-    InstafeedMemberLogisticsDialog.show(
+    TourMemberProfileModal.show(
       context,
-      authorName: widget.post.authorName,
-      authorEmail: widget.post.authorEmail,
-      authorPhoto: widget.post.authorPhoto,
+      tourId: widget.tourId.isNotEmpty ? widget.tourId : widget.post.tourId,
+      memberEmail: widget.post.authorEmail,
+      memberName: widget.post.authorName,
+      memberPhoto: widget.post.authorPhoto,
       seatNumber: widget.seatNumber,
       roomNumber: widget.roomNumber,
     );
@@ -938,6 +972,79 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     );
   }
 
+  List<Widget> _buildPostHeaderBadges() {
+    final widgets = <Widget>[];
+    final dayBadge = _formatDayBadge(widget.post.tourDay);
+    if (dayBadge.isNotEmpty) {
+      widgets.add(const SizedBox(width: 6));
+      widgets.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+          decoration: BoxDecoration(
+            color: Colors.amber.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+                color: Colors.amber.withValues(alpha: 0.35), width: 0.6),
+          ),
+          child: Text(
+            dayBadge,
+            style: const TextStyle(
+              color: Colors.amberAccent,
+              fontSize: 9.5,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (widget.post.isReel) {
+      widgets.add(const SizedBox(width: 5));
+      widgets.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+          decoration: BoxDecoration(
+            color: Colors.pinkAccent.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+                color: Colors.pinkAccent.withValues(alpha: 0.4), width: 0.6),
+          ),
+          child: const Text(
+            '🎬 রিলস',
+            style: TextStyle(
+              color: Colors.pinkAccent,
+              fontSize: 9.5,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  String _formatDayBadge(String tourDay) {
+    final numStr = tourDay.replaceAll(RegExp(r'[^0-9]'), '');
+    final n = int.tryParse(numStr);
+    if (n == null) return '';
+    switch (n) {
+      case 1:
+        return '১ম দিন';
+      case 2:
+        return '২য় দিন';
+      case 3:
+        return '৩য় দিন';
+      case 4:
+        return '৪র্থ দিন';
+      case 5:
+        return '৫ম দিন';
+      case 6:
+        return '৬ষ্ঠ দিন';
+      default:
+        return '$nম দিন';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLiked = _optimisticLiked ??
@@ -1058,6 +1165,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                               ),
                             ),
                           ],
+                          ..._buildPostHeaderBadges(),
                         ],
                       ),
                       if (widget.post.location.isNotEmpty)
@@ -1066,6 +1174,29 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                           style: const TextStyle(
                             color: Colors.white54,
                             fontSize: 11,
+                          ),
+                        ),
+                      if (widget.post.tags.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.people_alt_rounded,
+                                  size: 11, color: AppColors.mintGreen),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'সাথে: ${widget.post.tags.join(', ')}',
+                                  style: const TextStyle(
+                                    color: AppColors.mintGreen,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                     ],
@@ -1277,18 +1408,44 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             ),
           ),
 
-          // Like counter (unless hidden)
-          if (!widget.post.hideLikeCount && effectiveLikeCount > 0)
+          // Like counter and View counter
+          if ((!widget.post.hideLikeCount && effectiveLikeCount > 0) ||
+              widget.post.effectiveViewCount > 0)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Text(
-                context.l10n.translate('ig_liked_by_count',
-                    args: {'count': effectiveLikeCount}),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
+              child: Row(
+                children: [
+                  if (!widget.post.hideLikeCount && effectiveLikeCount > 0)
+                    Text(
+                      context.l10n.translate('ig_liked_by_count',
+                          args: {'count': effectiveLikeCount}),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  if (!widget.post.hideLikeCount &&
+                      effectiveLikeCount > 0 &&
+                      widget.post.effectiveViewCount > 0)
+                    const Text(' • ',
+                        style: TextStyle(color: Colors.white38, fontSize: 13)),
+                  if (widget.post.effectiveViewCount > 0)
+                    Text(
+                      '${context.l10n.number(widget.post.effectiveViewCount)} বার দেখা হয়েছে',
+                      style: TextStyle(
+                        color: (!widget.post.hideLikeCount &&
+                                effectiveLikeCount > 0)
+                            ? Colors.white70
+                            : Colors.white,
+                        fontWeight: (!widget.post.hideLikeCount &&
+                                effectiveLikeCount > 0)
+                            ? FontWeight.normal
+                            : FontWeight.bold,
+                        fontSize: 12.5,
+                      ),
+                    ),
+                ],
               ),
             ),
 
@@ -1333,6 +1490,13 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   timeStr,
                   style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
+                if (widget.post.effectiveViewCount > 0) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '•  👁️ ${context.l10n.number(widget.post.effectiveViewCount)} ভিউ',
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                ],
                 if (widget.post.isEdited) ...[
                   const SizedBox(width: 6),
                   Text(
@@ -1366,6 +1530,99 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               ],
             ),
           ),
+
+          // Quick inline comment input
+          if (!widget.post.disableComments)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 12,
+                    backgroundColor: AppColors.midGreen,
+                    backgroundImage: widget.repository.currentPhotoUrl != null
+                        ? NetworkImage(widget.repository.currentPhotoUrl!)
+                        : null,
+                    child: widget.repository.currentPhotoUrl == null
+                        ? Text(
+                            widget.repository.currentDisplayName.isNotEmpty
+                                ? widget.repository.currentDisplayName[0]
+                                    .toUpperCase()
+                                : 'M',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: SizedBox(
+                      height: 36,
+                      child: TextField(
+                        controller: _inlineCommentCtrl,
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 12.5),
+                        decoration: InputDecoration(
+                          hintText: 'একটি মন্তব্য লিখুন...',
+                          hintStyle: const TextStyle(
+                              color: Colors.white38, fontSize: 11.5),
+                          filled: true,
+                          fillColor: Colors.white.withValues(alpha: 0.06),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: const BorderSide(color: Colors.white12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: const BorderSide(color: Colors.white12),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: const BorderSide(
+                                color: AppColors.mintGreen, width: 1.2),
+                          ),
+                          suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _inlineCommentCtrl,
+                            builder: (context, value, _) {
+                              if (value.text.trim().isEmpty) {
+                                return const SizedBox.shrink();
+                              }
+                              return IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: _isSendingComment
+                                    ? const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.mintGreen,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.send_rounded,
+                                        size: 16,
+                                        color: AppColors.mintGreen,
+                                      ),
+                                onPressed: _isSendingComment
+                                    ? null
+                                    : _submitInlineComment,
+                              );
+                            },
+                          ),
+                        ),
+                        onSubmitted: (_) => _submitInlineComment(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

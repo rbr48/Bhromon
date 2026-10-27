@@ -56,20 +56,34 @@ class TourGroupRepository {
   // Identity
   // ---------------------------------------------------------------------------
 
-  bool get isSignedIn => _auth.currentUser != null;
+  bool get isSignedIn {
+    try {
+      return _auth.currentUser != null;
+    } catch (_) {
+      return currentEmail.isNotEmpty;
+    }
+  }
 
   /// Empty when signed out. There is no shared guest identity any more.
-  String get currentUid => _auth.currentUser?.uid ?? '';
+  String get currentUid {
+    try {
+      return _auth.currentUser?.uid ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
 
   String get currentEmail {
-    final email = _auth.currentUser?.email;
-    if (email != null && email.trim().isNotEmpty) {
-      return normalizeEmail(email);
-    }
-    final uid = _auth.currentUser?.uid;
-    if (uid != null && uid.isNotEmpty) {
-      return '$uid@bhromon.app';
-    }
+    try {
+      final email = _auth.currentUser?.email;
+      if (email != null && email.trim().isNotEmpty) {
+        return normalizeEmail(email);
+      }
+      final uid = _auth.currentUser?.uid;
+      if (uid != null && uid.isNotEmpty) {
+        return '$uid@bhromon.app';
+      }
+    } catch (_) {}
     return '';
   }
 
@@ -80,6 +94,62 @@ class TourGroupRepository {
   }
 
   String? get currentPhotoUrl => _auth.currentUser?.photoURL;
+
+  static String? _cachedActiveTourId;
+
+  /// The most recent or currently active tour ID across the application.
+  static String? get lastActiveTourId {
+    if (_cachedActiveTourId != null && _cachedActiveTourId!.isNotEmpty) {
+      return _cachedActiveTourId;
+    }
+    try {
+      if (Hive.isBoxOpen('tour_groups_box')) {
+        final saved =
+            Hive.box<dynamic>('tour_groups_box').get('last_active_tour_id');
+        if (saved is String && saved.isNotEmpty) {
+          _cachedActiveTourId = saved;
+          return saved;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static set lastActiveTourId(String? id) {
+    if (id == null || id.isEmpty) return;
+    _cachedActiveTourId = id;
+    try {
+      if (Hive.isBoxOpen('tour_groups_box')) {
+        Hive.box<dynamic>('tour_groups_box').put('last_active_tour_id', id);
+      } else {
+        // Best effort: a failed open must not surface as an uncaught error.
+        Hive.openBox<dynamic>('tour_groups_box').then((box) {
+          box.put('last_active_tour_id', id);
+        }).catchError((_) {});
+      }
+    } catch (_) {}
+  }
+
+  /// Asynchronously retrieves the last active tour ID from memory, Hive, or cached groups.
+  Future<String?> getActiveTourId() async {
+    if (_cachedActiveTourId != null && _cachedActiveTourId!.isNotEmpty) {
+      return _cachedActiveTourId;
+    }
+    try {
+      final box = await _openBox();
+      final saved = box.get('last_active_tour_id');
+      if (saved is String && saved.isNotEmpty) {
+        _cachedActiveTourId = saved;
+        return saved;
+      }
+      final local = await getLocalGroups();
+      if (local.isNotEmpty) {
+        _cachedActiveTourId = local.first.id;
+        return _cachedActiveTourId;
+      }
+    } catch (_) {}
+    return null;
+  }
 
   String _requireEmail() {
     if (!isSignedIn || currentEmail.isEmpty) {
@@ -122,10 +192,22 @@ class TourGroupRepository {
   // ---------------------------------------------------------------------------
 
   Future<Box<dynamic>> _openBox() async {
-    if (Hive.isBoxOpen('tour_groups_box')) {
-      return Hive.box<dynamic>('tour_groups_box');
+    try {
+      if (Hive.isBoxOpen('tour_groups_box')) {
+        return Hive.box<dynamic>('tour_groups_box');
+      }
+      return await Hive.openBox<dynamic>('tour_groups_box');
+    } catch (e) {
+      debugPrint(
+          '[TourGroupRepository] Corrupt Hive box: $e. Purging and recovering...');
+      try {
+        await Hive.deleteBoxFromDisk('tour_groups_box');
+        return await Hive.openBox<dynamic>('tour_groups_box');
+      } catch (inner) {
+        debugPrint('[TourGroupRepository] Hive recovery failed: $inner');
+        rethrow;
+      }
     }
-    return await Hive.openBox<dynamic>('tour_groups_box');
   }
 
   Future<void> _cacheLocalGroup(TourGroup group) async {
@@ -277,10 +359,8 @@ class TourGroupRepository {
   /// membership answer arrives, so tours the user left or was removed from
   /// stop appearing.
   Stream<List<TourGroup>> watchMyGroups() {
-    if (!isSignedIn) return Stream.value(const []);
-    final email = currentEmail;
-
     late StreamController<List<TourGroup>> controller;
+    StreamSubscription<User?>? authSub;
     StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? membershipSub;
     final tourSubs =
         <String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>{};
@@ -294,6 +374,12 @@ class TourGroupRepository {
       if (controller.isClosed) return;
       final groups = tours.values.toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (groups.isNotEmpty) {
+        final currentId = lastActiveTourId;
+        if (currentId == null || !groups.any((g) => g.id == currentId)) {
+          lastActiveTourId = groups.first.id;
+        }
+      }
       controller.add(groups);
     }
 
@@ -302,29 +388,34 @@ class TourGroupRepository {
       tours.remove(tourId);
     }
 
-    void startTour(String tourId) {
+    void startTour(String tourId, String email) {
       tourSubs[tourId] = _tour(tourId).snapshots().listen(
         (doc) {
-          final data = doc.data();
-          if (doc.exists && data != null) {
-            final group = TourGroup.fromMap(doc.id, data);
-            tours[tourId] = group;
-            _cacheLocalGroup(group);
-            // Owner rows written before role 'owner' was saved as 'admin'.
-            // The owner's own app repairs them here.
-            if (group.ownerEmail == email &&
-                rolesByTour[tourId] != TourRole.owner.toValue()) {
-              _memberships.doc(_membershipId(tourId, email)).update({
-                'role': TourRole.owner.toValue()
-              }).catchError((Object e) => debugPrint(
-                  '[TourGroupRepository] owner role repair failed: $e'));
-              rolesByTour[tourId] = TourRole.owner.toValue();
+          try {
+            final data = doc.data();
+            if (doc.exists && data != null) {
+              final group = TourGroup.fromMap(doc.id, data);
+              tours[tourId] = group;
+              _cacheLocalGroup(group);
+              // Owner rows written before role 'owner' was saved as 'admin'.
+              // The owner's own app repairs them here.
+              if (group.ownerEmail == email &&
+                  rolesByTour[tourId] != TourRole.owner.toValue()) {
+                _memberships.doc(_membershipId(tourId, email)).update({
+                  'role': TourRole.owner.toValue()
+                }).catchError((Object e) => debugPrint(
+                    '[TourGroupRepository] owner role repair failed: $e'));
+                rolesByTour[tourId] = TourRole.owner.toValue();
+              }
+            } else {
+              tours.remove(tourId);
+              _removeLocalGroup(tourId);
             }
-          } else {
-            tours.remove(tourId);
-            _removeLocalGroup(tourId);
+            emit();
+          } catch (e, st) {
+            debugPrint(
+                '[TourGroupRepository] parse tour $tourId failed: $e\n$st');
           }
-          emit();
         },
         onError: (Object e) {
           // Losing access to a tour means the user is no longer a member.
@@ -337,51 +428,91 @@ class TourGroupRepository {
       );
     }
 
+    void clearUserTours() {
+      membershipSub?.cancel();
+      membershipSub = null;
+      for (final sub in tourSubs.values) {
+        sub.cancel();
+      }
+      tourSubs.clear();
+      tours.clear();
+      listedIds.clear();
+      rolesByTour.clear();
+      heardFromServer = false;
+      _cachedActiveTourId = null;
+    }
+
+    void bindUser(User? user) {
+      clearUserTours();
+      if (user == null) {
+        emit();
+        return;
+      }
+      final rawEmail = user.email;
+      final email = (rawEmail != null && rawEmail.trim().isNotEmpty)
+          ? normalizeEmail(rawEmail)
+          : (user.uid.isNotEmpty ? '${user.uid}@bhromon.app' : '');
+      if (email.isEmpty) {
+        emit();
+        return;
+      }
+
+      getLocalGroups().then((local) {
+        if (!heardFromServer && !controller.isClosed) {
+          controller.add(local);
+        }
+      });
+
+      membershipSub =
+          _memberships.where('email', isEqualTo: email).snapshots().listen(
+        (snapshot) {
+          heardFromServer = true;
+          rolesByTour.clear();
+          for (final d in snapshot.docs) {
+            final id = d.data()['tourId'] as String? ?? '';
+            final rawStatus = (d.data()['status'] as String?)?.toLowerCase();
+            final isActive = rawStatus == null || rawStatus == 'active';
+            if (isActive && id.isNotEmpty) {
+              rolesByTour[id] = d.data()['role'] as String? ?? 'member';
+            }
+          }
+          final ids = rolesByTour.keys.toSet();
+          for (final id in listedIds.difference(ids)) {
+            stopTour(id);
+            _removeLocalGroup(id);
+          }
+          for (final id in ids.difference(listedIds)) {
+            startTour(id, email);
+          }
+          listedIds = ids;
+          emit();
+        },
+        onError: (Object e) {
+          debugPrint('[TourGroupRepository] memberships error: $e');
+          if (!controller.isClosed) controller.addError(e);
+        },
+      );
+    }
+
     controller = StreamController<List<TourGroup>>(
       onListen: () {
-        getLocalGroups().then((local) {
-          if (!heardFromServer && !controller.isClosed) {
-            controller.add(local);
+        try {
+          if (_auth.currentUser != null) {
+            bindUser(_auth.currentUser);
           }
-        });
-
-        membershipSub = _memberships
-            .where('email', isEqualTo: email)
-            .where('status', isEqualTo: 'active')
-            .snapshots()
-            .listen(
-          (snapshot) {
-            heardFromServer = true;
-            rolesByTour.clear();
-            for (final d in snapshot.docs) {
-              final id = d.data()['tourId'] as String? ?? '';
-              if (id.isNotEmpty) {
-                rolesByTour[id] = d.data()['role'] as String? ?? 'member';
-              }
-            }
-            final ids = rolesByTour.keys.toSet();
-            for (final id in listedIds.difference(ids)) {
-              stopTour(id);
-              _removeLocalGroup(id);
-            }
-            for (final id in ids.difference(listedIds)) {
-              startTour(id);
-            }
-            listedIds = ids;
+          authSub = _auth.authStateChanges().listen((user) {
+            bindUser(user);
+          });
+        } catch (_) {
+          // If Firebase is uninitialized (e.g. In unit tests)
+          if (currentEmail.isNotEmpty) {
             emit();
-          },
-          onError: (Object e) {
-            debugPrint('[TourGroupRepository] memberships error: $e');
-            if (!controller.isClosed) controller.addError(e);
-          },
-        );
+          }
+        }
       },
       onCancel: () async {
-        await membershipSub?.cancel();
-        for (final sub in tourSubs.values) {
-          await sub.cancel();
-        }
-        tourSubs.clear();
+        await authSub?.cancel();
+        clearUserTours();
       },
     );
 
@@ -408,7 +539,8 @@ class TourGroupRepository {
         return group;
       }
       return null;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[TourGroupRepository] getGroup($tourId) error: $e\n$st');
       final local = await getLocalGroups();
       return local.where((g) => g.id == tourId).firstOrNull;
     }
@@ -520,9 +652,27 @@ class TourGroupRepository {
           'সঠিক আমন্ত্রণ কোড দিন (৮ অক্ষরের কোড, যেমন: 7KQ2M9XB)।');
     }
 
-    final invite = await _invites.doc(code).get();
-    final tourId = invite.data()?['tourId'] as String?;
-    if (!invite.exists || tourId == null) {
+    String? tourId;
+    try {
+      final invite = await _invites.doc(code).get();
+      if (invite.exists) {
+        tourId = invite.data()?['tourId'] as String?;
+      }
+    } catch (e) {
+      debugPrint('[TourGroupRepository] invite lookup error: $e');
+    }
+
+    // Fallback: check if the input code itself is directly a tourId
+    if (tourId == null || tourId.isEmpty) {
+      try {
+        final directDoc = await _tour(code).get();
+        if (directDoc.exists) {
+          tourId = code;
+        }
+      } catch (_) {}
+    }
+
+    if (tourId == null || tourId.isEmpty) {
       throw const FormatException(
           'এই আমন্ত্রণ কোডে কোনো ট্যুর গ্রুপ পাওয়া যায়নি।');
     }
@@ -548,13 +698,32 @@ class TourGroupRepository {
           throw const TourAccessException(
               'ইন্টারনেট সংযোগ নেই। সংযোগ ফিরে এলে আবার চেষ্টা করুন।');
         }
-      } on FirebaseException {
+      } on FirebaseException catch (e) {
+        debugPrint('[TourGroupRepository] join membership set failed: $e');
         throw const TourAccessException(
             'এই ট্যুরে যোগ দেওয়ার অনুমতি নেই। কোড ঠিক আছে কি না দেখুন, অথবা অ্যাডমিনের সাথে যোগাযোগ করুন।');
       }
+    } else {
+      // If already a member but inactive, reactivate membership so security rules permit reading
+      final status = existing.data()?['status'] as String?;
+      if (status != 'active') {
+        try {
+          await membershipRef.update({'status': 'active'});
+        } catch (e) {
+          debugPrint(
+              '[TourGroupRepository] membership reactivation failed: $e');
+        }
+      }
     }
 
-    final group = await getGroup(tourId);
+    // Try reading the group with retries in case Firestore rules propagation has a slight delay
+    TourGroup? group;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      group = await getGroup(tourId);
+      if (group != null) break;
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+    }
+
     if (group == null) {
       throw const TourAccessException('ট্যুরটি এখন আর পাওয়া যাচ্ছে না।');
     }
@@ -937,6 +1106,7 @@ class TourGroupRepository {
     String? currency,
     int? originalMinor,
     double? fxRate,
+    String? receiptUrl,
   }) async {
     final email = _requireEmail();
     final expense = ExpenseItem(
@@ -957,6 +1127,7 @@ class TourGroupRepository {
       currency: currency,
       originalMinor: originalMinor,
       fxRate: fxRate,
+      receiptUrl: receiptUrl,
     );
     await _sub(tourId, 'expenses').doc(expense.id).set(expense.toMap());
     return expense.id;
@@ -1285,6 +1456,32 @@ class TourGroupRepository {
             s.docs.map((d) => SafetyAlert.fromMap(d.id, d.data())).toList());
   }
 
+  /// Publishes this member's battery status and coordinates.
+  Future<bool> updateBatteryTelemetry({
+    required String tourId,
+    required int batteryLevel,
+    bool isCharging = false,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final email = _requireEmail();
+    return _awaitServer(_sub(tourId, 'telemetry').doc(email).set({
+      'email': email,
+      'name': currentDisplayName,
+      'batteryLevel': batteryLevel,
+      'isCharging': isCharging,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true)));
+  }
+
+  /// Live stream of members' battery and location telemetry.
+  Stream<List<BatteryTelemetry>> watchBatteryTelemetry(String tourId) {
+    return _sub(tourId, 'telemetry').snapshots().map(
+        (s) => s.docs.map((d) => BatteryTelemetry.fromMap(d.data())).toList());
+  }
+
   // ---------------------------------------------------------------------------
   // Bus seats
   // ---------------------------------------------------------------------------
@@ -1589,6 +1786,34 @@ class TourGroupRepository {
   }
 
   // ---------------------------------------------------------------------------
+  // Luggage & Cargo Tracking
+  // ---------------------------------------------------------------------------
+
+  /// Streams the list of all tracked luggage and cargo items for the tour.
+  Stream<List<LuggageItem>> watchLuggage(String tourId) {
+    return _sub(tourId, 'luggage').snapshots().map((s) {
+      final list =
+          s.docs.map((d) => LuggageItem.fromMap(d.id, d.data())).toList();
+      list.sort((a, b) => a.title.compareTo(b.title));
+      return list;
+    });
+  }
+
+  /// Adds or updates a luggage item.
+  Future<void> saveLuggage(String tourId, LuggageItem item) async {
+    _requireEmail();
+    await _sub(tourId, 'luggage')
+        .doc(item.id)
+        .set(item.toMap(), SetOptions(merge: true));
+  }
+
+  /// Deletes a luggage item.
+  Future<void> deleteLuggage(String tourId, String luggageId) async {
+    _requireEmail();
+    await _sub(tourId, 'luggage').doc(luggageId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
   // Posts & InstaFeed
   // ---------------------------------------------------------------------------
 
@@ -1774,6 +1999,27 @@ class TourGroupRepository {
           ? FieldValue.arrayUnion([email])
           : FieldValue.arrayRemove([email]),
     });
+  }
+
+  /// Records a view on a post once per member.
+  Future<void> recordPostView({
+    required String tourId,
+    required String postId,
+  }) async {
+    try {
+      final email = currentEmail;
+      final postRef = _sub(tourId, 'posts').doc(postId);
+      if (email.isNotEmpty) {
+        await postRef.update({
+          'viewers': FieldValue.arrayUnion([email]),
+          'viewCount': FieldValue.increment(1),
+        });
+      } else {
+        await postRef.update({
+          'viewCount': FieldValue.increment(1),
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> setPostPinned(String tourId, String postId,

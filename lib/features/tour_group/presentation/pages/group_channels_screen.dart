@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
@@ -1407,7 +1408,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       onChanged: (value) => _onDraftChanged(channel, value),
       onPickMention: (choice) => _pickMention(channel, choice),
       onSend: () => unawaited(_send(channel)),
-      onAttach: () => unawaited(_attach()),
+      onAttach: () => unawaited(_attach(channel)),
       onCancelContext: () => _cancelContext(channel),
       onCancelUpload: () => unawaited(_currentUpload?.cancel()),
       onRemovePending: (i) => _update(() => _pending.removeAt(i)),
@@ -1628,10 +1629,20 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     }
   }
 
-  Future<void> _attach() async {
+  Future<void> _attach(TourChannel channel) async {
     final source = await showAttachSheet(context);
     if (source == null || !mounted) return;
     final l10n = context.l10n;
+    if (source == AttachSource.location) {
+      final locText = await _promptLocation(context);
+      if (locText != null && locText.isNotEmpty && mounted) {
+        final draft = _draftFor(channel.id);
+        _update(() {
+          draft.text = draft.text.isEmpty ? locText : '${draft.text}\n$locText';
+        });
+      }
+      return;
+    }
     final picker = ImagePicker();
     final hasVideo = _pending.any((p) => p.isVideo);
     try {
@@ -1680,6 +1691,127 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       _snack(l10n.translate('chan_action_failed', args: {'error': e}),
           error: true);
     }
+  }
+
+  Future<String?> _promptLocation(BuildContext context) async {
+    final l10n = context.l10n;
+    final nameCtrl = TextEditingController();
+    final urlCtrl = TextEditingController();
+
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1B3326),
+        title: Row(
+          children: [
+            const Icon(Icons.location_on_rounded, color: AppColors.mintGreen),
+            const SizedBox(width: 8),
+            Text(
+              l10n.translate('chan_attach_location'),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: l10n.translate('chan_location_name'),
+                labelStyle: const TextStyle(color: Colors.white70),
+                hintText: l10n.translate('chan_location_hint'),
+                hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                enabledBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white30)),
+                focusedBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.mintGreen)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: urlCtrl,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: l10n.translate('chan_location_maps_link'),
+                labelStyle: const TextStyle(color: Colors.white70),
+                hintText: 'https://maps.app.goo.gl/...',
+                hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                enabledBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white30)),
+                focusedBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.mintGreen)),
+              ),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.mintGreen,
+                side: BorderSide(
+                    color: AppColors.mintGreen.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                try {
+                  var perm = await Geolocator.checkPermission();
+                  if (perm == LocationPermission.denied) {
+                    perm = await Geolocator.requestPermission();
+                  }
+                  if (perm == LocationPermission.denied ||
+                      perm == LocationPermission.deniedForever) {
+                    return;
+                  }
+                  final pos = await Geolocator.getCurrentPosition();
+                  urlCtrl.text =
+                      'https://maps.google.com/?q=${pos.latitude},${pos.longitude}';
+                  if (nameCtrl.text.trim().isEmpty) {
+                    nameCtrl.text = l10n.translate('chan_my_location');
+                  }
+                } catch (_) {}
+              },
+              icon: const Icon(Icons.my_location_rounded, size: 16),
+              label: Text(
+                l10n.translate('chan_location_current_btn'),
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.translate('tour_cancel'),
+                style: const TextStyle(color: Colors.white54)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
+            onPressed: () {
+              final name = nameCtrl.text.trim();
+              final url = urlCtrl.text.trim();
+              if (name.isEmpty && url.isEmpty) {
+                Navigator.pop(ctx);
+                return;
+              }
+              final title = name.isNotEmpty
+                  ? name
+                  : l10n.translate('chan_location_title');
+              final mapsUrl = url.isNotEmpty
+                  ? url
+                  : 'https://maps.google.com/?q=${Uri.encodeComponent(title)}';
+              Navigator.pop(ctx, '📍 [$title]($mapsUrl)');
+            },
+            child: Text(
+              l10n.translate('tour_save'),
+              style: const TextStyle(
+                  color: AppColors.darkGreen, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

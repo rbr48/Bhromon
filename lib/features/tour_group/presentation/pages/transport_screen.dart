@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -276,9 +277,116 @@ class _TransportScreenState extends State<TransportScreen> {
           'names': unseated.join(', '),
         }));
     }
-    // ignore: deprecated_member_use
-    Share.share(lines.join('\n'),
-        subject: v?.name ?? l10n.translate('veh_coach'));
+    final manifestText = lines.join('\n');
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF14241B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.description_outlined,
+                    color: AppColors.mintGreen, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    v?.name ?? l10n.translate('veh_manifest'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon:
+                      const Icon(Icons.close, color: Colors.white54, size: 20),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 240),
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  manifestText,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white24),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: manifestText));
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text('ম্যানিফেস্ট ক্লিপবোর্ডে কপি করা হয়েছে!'),
+                          backgroundColor: AppColors.darkGreen,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_rounded, size: 16),
+                    label: const Text('কপি করুন'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.mintGreen,
+                      foregroundColor: AppColors.darkGreen,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      // ignore: deprecated_member_use
+                      Share.share(manifestText,
+                          subject: v?.name ?? l10n.translate('veh_coach'));
+                    },
+                    icon: const Icon(Icons.share_rounded, size: 16),
+                    label: const Text('শেয়ার করুন'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _openSeat(String seatId, VehicleLayout layout, List<BusSeat> seats) {

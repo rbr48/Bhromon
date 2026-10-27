@@ -129,6 +129,37 @@ class InstafeedExploreGrid extends StatelessWidget {
                   ),
                 ),
 
+              // View count badge at bottom left
+              if (post.effectiveViewCount > 0)
+                Positioned(
+                  bottom: 6,
+                  left: 6,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.play_arrow_rounded,
+                            size: 11, color: Colors.white),
+                        const SizedBox(width: 2),
+                        Text(
+                          context.l10n.number(post.effectiveViewCount),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
               // Pinned badge
               if (post.isPinned)
                 const Positioned(

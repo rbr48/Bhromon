@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/theme/colors.dart';
 
 class TourLandmark {
   final String id;
@@ -56,6 +57,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   String? _activeAlertId;
   late final Stream<List<SafetyAlert>> _alerts =
       _repository.watchSafetyAlerts(widget.tourId);
+  late final Stream<List<BatteryTelemetry>> _telemetry =
+      _repository.watchBatteryTelemetry(widget.tourId);
 
   List<TourLandmark> get _landmarks {
     final dest = _tourGroup?.destination.toLowerCase() ?? '';
@@ -289,7 +292,10 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
         final pos = await Geolocator.getCurrentPosition();
-        if (mounted) setState(() => _currentPosition = pos);
+        if (mounted) {
+          setState(() => _currentPosition = pos);
+          _publishTelemetry(pos);
+        }
 
         _positionStream = Geolocator.getPositionStream(
           locationSettings: const LocationSettings(
@@ -297,12 +303,25 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             distanceFilter: 10,
           ),
         ).listen((pos) {
-          if (mounted) setState(() => _currentPosition = pos);
+          if (mounted) {
+            setState(() => _currentPosition = pos);
+            _publishTelemetry(pos);
+          }
         });
       }
     } catch (_) {
       // Fallback gracefully if GPS permission denied or disabled
     }
+  }
+
+  void _publishTelemetry(Position? pos) {
+    unawaited(_repository.updateBatteryTelemetry(
+      tourId: widget.tourId,
+      batteryLevel: 85,
+      isCharging: false,
+      latitude: pos?.latitude,
+      longitude: pos?.longitude,
+    ));
   }
 
   Future<void> _callNumber(String number) async {
@@ -452,6 +471,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
 
             // Alerts raised by the group, until someone resolves them.
             _buildGroupAlerts(),
+
+            // Family Battery & Location Radar
+            _buildBatteryRadar(),
 
             // Emergency Contacts
             _buildEmergencyContactsSection(),
@@ -679,6 +701,195 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBatteryRadar() {
+    final l10n = context.l10n;
+    return StreamBuilder<List<BatteryTelemetry>>(
+      stream: _telemetry,
+      builder: (context, snapshot) {
+        final list = snapshot.data ?? const [];
+        if (list.isEmpty) return const SizedBox.shrink();
+
+        final hasLowBattery = list.any((t) => t.isLowBattery);
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF142428),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: hasLowBattery
+                  ? Colors.redAccent.withValues(alpha: 0.4)
+                  : Colors.white12,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.radar_rounded,
+                    color:
+                        hasLowBattery ? Colors.redAccent : AppColors.mintGreen,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.translate('fsh_battery_radar_title'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          l10n.translate('fsh_battery_radar_sub'),
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (hasLowBattery) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: Colors.redAccent.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          size: 16, color: Colors.redAccent),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          l10n.translate('fsh_battery_low_warning'),
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              for (final item in list) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: item.isLowBattery
+                        ? Colors.redAccent.withValues(alpha: 0.08)
+                        : Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: item.isLowBattery
+                          ? Colors.redAccent.withValues(alpha: 0.3)
+                          : Colors.white10,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        item.isCriticalBattery
+                            ? Icons.battery_alert_rounded
+                            : item.isLowBattery
+                                ? Icons.battery_2_bar_rounded
+                                : Icons.battery_full_rounded,
+                        color: item.isCriticalBattery
+                            ? Colors.redAccent
+                            : item.isLowBattery
+                                ? AppColors.gold
+                                : AppColors.mintGreen,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            if (item.updatedAt != null)
+                              Text(
+                                l10n.translate('fsh_battery_last_seen', args: {
+                                  'time': localizedDateFormat('h:mm a')
+                                      .format(item.updatedAt!),
+                                }),
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 10),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (item.isCharging) ...[
+                        const Icon(Icons.bolt_rounded,
+                            size: 16, color: AppColors.gold),
+                        const SizedBox(width: 4),
+                      ],
+                      Text(
+                        '${l10n.number(item.batteryLevel)}%',
+                        style: TextStyle(
+                          color: item.isCriticalBattery
+                              ? Colors.redAccent
+                              : item.isLowBattery
+                                  ? AppColors.gold
+                                  : AppColors.mintGreen,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      if (item.latitude != null && item.longitude != null) ...[
+                        const SizedBox(width: 8),
+                        IconButton(
+                          tooltip: l10n.translate('fsh_battery_map_view'),
+                          icon: const Icon(Icons.map_rounded,
+                              size: 18, color: AppColors.mintGreen),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () {
+                            final uri = Uri.parse(
+                                'https://maps.google.com/?q=${item.latitude},${item.longitude}');
+                            launchUrl(uri,
+                                mode: LaunchMode.externalApplication);
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 

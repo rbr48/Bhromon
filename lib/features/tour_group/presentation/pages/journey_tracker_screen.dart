@@ -14,6 +14,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/destination_catalog.dart';
 import '../../domain/services/route_engine.dart';
 import '../../domain/services/route_suggestions.dart';
+import '../../domain/services/prayer_calculator.dart';
 import '../widgets/itinerary/itinerary_editor.dart';
 import '../../../../core/localization/localized_date.dart';
 
@@ -396,6 +397,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 32),
       children: [
         _header(l10n, g, plan, live),
+        _prayerAndQiblaCard(l10n, g, pos),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,
@@ -484,6 +486,179 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           if (i < plan.legs.length) _legTile(l10n, g, plan.legs[i], live),
         ],
       ],
+    );
+  }
+
+  Widget _prayerAndQiblaCard(
+      AppLocalizations l10n, TourGroup g, Position? pos) {
+    final stopName = g.effectiveStops.isNotEmpty
+        ? g.effectiveStops.first.name
+        : g.destination;
+    final preset = presetForName(stopName) ?? presetForName(g.destination);
+    final lat = pos?.latitude ?? preset?.lat ?? 23.8103;
+    final lng = pos?.longitude ?? preset?.lng ?? 90.4125;
+
+    final schedule = PrayerCalculator.calculate(
+      latitude: lat,
+      longitude: lng,
+      date: DateTime.now(),
+    );
+    final next = schedule.nextPrayer();
+    final remainingMins = next.remaining.inMinutes;
+    final hours = remainingMins ~/ 60;
+    final mins = remainingMins % 60;
+    final timeStr = hours > 0
+        ? '${l10n.number(hours)}h ${l10n.number(mins)}m'
+        : '${l10n.number(mins)}m';
+
+    final prayerItems = [
+      (key: 'prayer_fajr', time: schedule.fajr),
+      (key: 'prayer_sunrise', time: schedule.sunrise),
+      (key: 'prayer_dhuhr', time: schedule.dhuhr),
+      (key: 'prayer_asr', time: schedule.asr),
+      (key: 'prayer_maghrib', time: schedule.maghrib),
+      (key: 'prayer_isha', time: schedule.isha),
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142428),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.mosque_rounded,
+                  size: 18, color: AppColors.mintGreen),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.translate('prayer_card_title'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.mintGreen.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: AppColors.mintGreen.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.explore_rounded,
+                        size: 14, color: AppColors.mintGreen),
+                    const SizedBox(width: 4),
+                    Text(
+                      l10n.translate('prayer_qibla_bearing', args: {
+                        'deg': l10n.number(schedule.qiblaBearing.round()),
+                      }),
+                      style: const TextStyle(
+                        color: AppColors.mintGreen,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.gold.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.alarm_rounded,
+                    size: 15, color: AppColors.gold),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    l10n.translate('prayer_next', args: {
+                      'prayer': l10n.translate(next.key),
+                      'time': timeStr,
+                    }),
+                    style: const TextStyle(
+                      color: AppColors.gold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final p in prayerItems) ...[
+                  Builder(builder: (context) {
+                    final isNext = p.key == next.key;
+                    final timeFmt =
+                        localizedDateFormat('h:mm a').format(p.time);
+                    return Container(
+                      margin: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isNext
+                            ? AppColors.mintGreen.withValues(alpha: 0.15)
+                            : Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isNext ? AppColors.mintGreen : Colors.white10,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.translate(p.key),
+                            style: TextStyle(
+                              color:
+                                  isNext ? AppColors.mintGreen : Colors.white70,
+                              fontSize: 11,
+                              fontWeight:
+                                  isNext ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            timeFmt,
+                            style: TextStyle(
+                              color: isNext ? Colors.white : Colors.white54,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

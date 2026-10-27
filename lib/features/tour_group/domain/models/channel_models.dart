@@ -204,7 +204,16 @@ class ChannelMessage {
     this.expenseId,
     this.expenseTitle = '',
     this.expenseAmountPaisa = 0,
+    this.locationLatitude,
+    this.locationLongitude,
+    this.locationTitle,
   });
+
+  bool get hasLocation => locationLatitude != null && locationLongitude != null;
+
+  final double? locationLatitude;
+  final double? locationLongitude;
+  final String? locationTitle;
 
   bool isSentBy(String email) => senderEmail == normalizeEmail(email);
 
@@ -265,6 +274,9 @@ class ChannelMessage {
       expenseId: map['expenseId'] as String?,
       expenseTitle: map['expenseTitle'] as String? ?? '',
       expenseAmountPaisa: (map['expenseAmountPaisa'] as num?)?.toInt() ?? 0,
+      locationLatitude: (map['locationLatitude'] as num?)?.toDouble(),
+      locationLongitude: (map['locationLongitude'] as num?)?.toDouble(),
+      locationTitle: map['locationTitle'] as String?,
     );
   }
 }

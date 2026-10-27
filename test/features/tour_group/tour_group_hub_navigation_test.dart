@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
@@ -6,6 +7,7 @@ import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/pages/tour_group_hub_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 
 class _FakeTourGroupRepository extends TourGroupRepository {
   _FakeTourGroupRepository({required this.groupsStream});
@@ -17,6 +19,9 @@ class _FakeTourGroupRepository extends TourGroupRepository {
 
   @override
   Stream<List<TourGroup>> watchMyGroups() => groupsStream;
+
+  @override
+  Stream<TourGroup?> watchGroup(String tourId) => Stream.value(null);
 
   @override
   Stream<List<TourMember>> watchMembers(String tourId) =>
@@ -34,6 +39,11 @@ class _FakeTourGroupRepository extends TourGroupRepository {
 }
 
 void main() {
+  setUpAll(() {
+    // The hub remembers the last tour in a Hive box, so give Hive a directory.
+    Hive.init(Directory.systemTemp.createTempSync('bhromon_hub').path);
+  });
+
   testWidgets('TourGroupHubScreen renders Tour OS branding and navigation bar',
       (tester) async {
     final repo = _FakeTourGroupRepository(

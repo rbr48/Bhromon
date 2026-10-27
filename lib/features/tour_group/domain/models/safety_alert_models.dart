@@ -48,3 +48,49 @@ class SafetyAlert {
     return now.difference(raised) < kSafetyAlertWindow;
   }
 }
+
+/// Telemetry record of a member's battery status and location.
+class BatteryTelemetry {
+  final String email;
+  final String name;
+  final int batteryLevel; // 0 to 100
+  final bool isCharging;
+  final double? latitude;
+  final double? longitude;
+  final DateTime? updatedAt;
+
+  const BatteryTelemetry({
+    required this.email,
+    required this.name,
+    required this.batteryLevel,
+    this.isCharging = false,
+    this.latitude,
+    this.longitude,
+    this.updatedAt,
+  });
+
+  bool get isLowBattery => batteryLevel <= 20;
+  bool get isCriticalBattery => batteryLevel <= 10;
+
+  Map<String, dynamic> toMap() => {
+        'email': normalizeEmail(email),
+        'name': name,
+        'batteryLevel': batteryLevel,
+        'isCharging': isCharging,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        'updatedAt': writeDate(updatedAt ?? DateTime.now()),
+      };
+
+  factory BatteryTelemetry.fromMap(Map<String, dynamic> map) {
+    return BatteryTelemetry(
+      email: normalizeEmail(map['email'] as String? ?? ''),
+      name: map['name'] as String? ?? 'সদস্য',
+      batteryLevel: (map['batteryLevel'] as num?)?.toInt() ?? 100,
+      isCharging: map['isCharging'] as bool? ?? false,
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
+      updatedAt: readDate(map['updatedAt']),
+    );
+  }
+}

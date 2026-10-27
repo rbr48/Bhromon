@@ -4,6 +4,7 @@ import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
+import 'instafeed_share_sheet.dart';
 import 'tour_safe_network_image.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
@@ -555,6 +556,25 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     }
   }
 
+  void _showShareModal() {
+    final story = _currentStory;
+    if (story == null) return;
+    _pause();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => InstafeedStoryShareSheet(
+        repository: widget.repository,
+        tourId: widget.tourId,
+        story: story,
+      ),
+    ).then((_) {
+      if (mounted) {
+        _resume();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final story = _currentStory;
@@ -750,6 +770,15 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                           onPressed: _saveToHighlight,
                         ),
 
+                        // Share story button
+                        IconButton(
+                          tooltip:
+                              context.l10n.translate('ig_share_story_title'),
+                          icon: const Icon(Icons.send_rounded,
+                              color: Colors.white, size: 20),
+                          onPressed: _showShareModal,
+                        ),
+
                         // Close button
                         IconButton(
                           tooltip: context.l10n.translate('ig_close'),
@@ -802,6 +831,14 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      // Author share button
+                      IconButton(
+                        tooltip: context.l10n.translate('ig_share_story_title'),
+                        icon: const Icon(Icons.send_rounded,
+                            color: Colors.white, size: 20),
+                        onPressed: _showShareModal,
+                      ),
                     ] else ...[
                       // Inline reply box for viewers
                       Expanded(
@@ -829,9 +866,17 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
+                      // Share icon for viewers
+                      IconButton(
+                        tooltip: context.l10n.translate('ig_share_story_title'),
+                        icon: const Icon(Icons.send_rounded,
+                            color: Colors.white70, size: 20),
+                        onPressed: _showShareModal,
+                      ),
+                      const SizedBox(width: 4),
                       // Facebook quick emoji reactions
-                      ...['👍', '❤️', '😂', '😮', '😢', '🔥'].map((emoji) {
+                      ...['👍', '❤️', '😂', '🔥'].map((emoji) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 2),
                           child: InkWell(

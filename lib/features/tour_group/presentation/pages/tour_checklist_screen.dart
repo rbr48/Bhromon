@@ -19,6 +19,8 @@ class TourChecklistScreen extends StatefulWidget {
 
 class _TourChecklistScreenState extends State<TourChecklistScreen> {
   static const String _beachCategory = 'check_cat_beach';
+  static const String _hillCategory = 'check_cat_hill';
+  static const String _natureCategory = 'check_cat_nature';
   static const String _customCategory = 'check_cat_custom';
 
   /// The category saved with each custom item. It is stored data, so it stays
@@ -53,14 +55,27 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     super.dispose();
   }
 
-  /// Default items for this tour. Beach items are left out of hill and city
-  /// tours. Titles and categories are translation keys.
+  /// Default items tailored for this tour style. Beach items show on beach
+  /// tours; hill items on hill/trekking tours; nature items on nature/forest
+  /// tours. General items (docs, medicines, clothes, tech) show on all tours.
   List<({String id, String title, String category})> get _visibleDefaults {
-    final isBeach = _group == null || _group!.tourType == TourType.beach;
+    final tourType = _group?.tourType;
+    final isBeach = tourType == null ||
+        tourType == TourType.beach ||
+        tourType == TourType.custom;
+    final isHill = tourType == null ||
+        tourType == TourType.hill ||
+        tourType == TourType.custom;
+    final isNature = tourType == null ||
+        tourType == TourType.nature ||
+        tourType == TourType.custom;
+
     final items = <({String id, String title, String category})>[];
     for (var i = 0; i < _defaultItems.length; i++) {
       final item = _defaultItems[i];
       if (!isBeach && item.category == _beachCategory) continue;
+      if (!isHill && item.category == _hillCategory) continue;
+      if (!isNature && item.category == _natureCategory) continue;
       items
           .add((id: _defaultId(i), title: item.title, category: item.category));
     }
@@ -394,4 +409,12 @@ const List<({String title, String category})> checklistDefaultItems = [
   (title: 'check_item_swimwear', category: 'check_cat_clothing'),
   (title: 'check_item_sunscreen', category: 'check_cat_beach'),
   (title: 'check_item_sandals', category: 'check_cat_beach'),
+  (title: 'check_item_trekking_shoes', category: 'check_cat_hill'),
+  (title: 'check_item_raincoat', category: 'check_cat_hill'),
+  (title: 'check_item_torch', category: 'check_cat_hill'),
+  (title: 'check_item_mosquito_spray', category: 'check_cat_nature'),
+  (title: 'check_item_dry_bag', category: 'check_cat_nature'),
+  (title: 'check_item_walking_shoes', category: 'check_cat_clothing'),
+  (title: 'check_item_power_bank', category: 'check_cat_electronics'),
+  (title: 'check_item_umbrella_hat', category: 'check_cat_clothing'),
 ];

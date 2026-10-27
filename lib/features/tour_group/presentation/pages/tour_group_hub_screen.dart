@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,8 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
+import '../widgets/bhromon_bottom_nav.dart';
+import '../widgets/member_profile/tour_member_profile_modal.dart';
 
 class TourGroupHubScreen extends StatefulWidget {
   final TourGroupRepository? repository;
@@ -24,8 +27,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   TourGroup? _activeGroup;
   // The group shown on screen, so the backup button works without a selection.
   TourGroup? _displayedGroup;
-  late final Stream<List<TourGroup>> _groupsStream =
-      _repository.watchMyGroups();
+  late Stream<List<TourGroup>> _groupsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _groupsStream = _repository.watchMyGroups();
+  }
+
   final Map<String, Stream<List<TourMember>>> _memberStreams = {};
 
   Stream<List<TourMember>> _membersOf(String tourId) => _memberStreams
@@ -317,6 +326,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         if (!ok) return;
         try {
           await _repository.leaveTour(group.id);
+          TourGroupRepository.lastActiveTourId = null;
           if (mounted) setState(() => _activeGroup = null);
         } catch (e) {
           _reportFailure(e);
@@ -327,6 +337,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         if (!ok) return;
         try {
           await _repository.deleteTour(group.id, inviteCode: group.inviteCode);
+          TourGroupRepository.lastActiveTourId = null;
           if (mounted) setState(() => _activeGroup = null);
         } catch (e) {
           _reportFailure(e);
@@ -346,13 +357,23 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppColors.mintGreen.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF1B4332),
               ),
-              child: const Icon(Icons.terrain_rounded,
-                  color: AppColors.mintGreen, size: 20),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/logo.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.explore,
+                    color: AppColors.mintGreen,
+                    size: 20,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(width: 10),
             Column(
@@ -447,7 +468,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.midGreen),
-                          onPressed: () => setState(() {}),
+                          onPressed: () => setState(() {
+                            _groupsStream = _repository.watchMyGroups();
+                          }),
                           child: Text(context.l10n.translate('hub_try_again')),
                         ),
                       ],
@@ -461,12 +484,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 return _buildEmptyState(context);
               }
 
-              final current = _activeGroup != null &&
-                      groups.any((g) => g.id == _activeGroup!.id)
+              final savedId = TourGroupRepository.lastActiveTourId;
+              final current = (_activeGroup != null &&
+                      groups.any((g) => g.id == _activeGroup!.id))
                   ? groups.firstWhere((g) => g.id == _activeGroup!.id)
-                  : groups.first;
+                  : (savedId != null && groups.any((g) => g.id == savedId))
+                      ? groups.firstWhere((g) => g.id == savedId)
+                      : groups.first;
 
               _displayedGroup = current;
+              _activeGroup = current;
+              TourGroupRepository.lastActiveTourId = current.id;
 
               return ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
@@ -498,64 +526,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: BhromonBottomNav(
         selectedIndex: 0,
-        maintainBottomViewPadding: true,
-        onDestinationSelected: (index) {
-          if (index == 0) return;
-          final active = _displayedGroup;
-          switch (index) {
-            case 1:
-              if (active != null) {
-                context.push('/group/${active.id}/feed');
-              } else {
-                _snack(context.l10n.translate('hub_no_active_tour_hint'));
-              }
-              break;
-            case 2:
-              if (active != null) {
-                context.push('/group/${active.id}/channels');
-              } else {
-                context.push('/chats');
-              }
-              break;
-            case 3:
-              context.push('/game-zone');
-              break;
-            case 4:
-              final uid = _repository.currentUid;
-              final targetUid = uid.isNotEmpty ? uid : 'explorer_user';
-              context.push('/profile/$targetUid');
-              break;
-          }
-        },
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.hub_outlined, color: AppColors.mintGreen),
-            selectedIcon: const Icon(Icons.hub, color: AppColors.mintGreen),
-            label: context.l10n.translate('hub_nav_tours'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.photo_library_outlined),
-            selectedIcon: const Icon(Icons.photo_library),
-            label: context.l10n.translate('hub_nav_moments'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.forum_outlined),
-            selectedIcon: const Icon(Icons.forum),
-            label: context.l10n.translate('hub_nav_channels'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.sports_esports_outlined),
-            selectedIcon: const Icon(Icons.sports_esports),
-            label: context.l10n.translate('hub_nav_games'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline_rounded),
-            selectedIcon: const Icon(Icons.person_rounded),
-            label: context.l10n.translate('hub_nav_profile'),
-          ),
-        ],
+        tourId: _activeGroup?.id ??
+            _displayedGroup?.id ??
+            TourGroupRepository.lastActiveTourId,
       ),
     );
   }
@@ -623,7 +598,27 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ),
                 ),
               ],
-            )
+            ),
+            const SizedBox(height: 18),
+            if (!_repository.isSignedIn)
+              TextButton.icon(
+                onPressed: () => context.push('/login'),
+                icon: const Icon(Icons.login,
+                    color: AppColors.mintGreen, size: 18),
+                label: const Text(
+                  'লগইন বা সাইন-আপ করুন',
+                  style: TextStyle(
+                    color: AppColors.mintGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              )
+            else
+              Text(
+                'বর্তমান অ্যাকাউন্ট: ${_repository.currentEmail}',
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
           ],
         ),
       ),
@@ -775,9 +770,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       }).toList(),
                       onChanged: (id) {
                         if (id != null) {
+                          TourGroupRepository.lastActiveTourId = id;
                           setState(() {
-                            _activeGroup =
+                            final picked =
                                 allGroups.firstWhere((g) => g.id == id);
+                            _activeGroup = picked;
+                            _displayedGroup = picked;
                           });
                         }
                       },
@@ -824,6 +822,260 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),
           ],
+          () {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final startDay = DateTime(group.startDate.year,
+                group.startDate.month, group.startDate.day);
+            final endDay = DateTime(
+                group.endDate.year, group.endDate.month, group.endDate.day);
+            final isOngoing =
+                !today.isBefore(startDay) && !today.isAfter(endDay);
+            final isUpcoming = today.isBefore(startDay);
+            final isPast = today.isAfter(endDay);
+
+            if (isOngoing) {
+              final currentDay = today.difference(startDay).inDays + 1;
+              final totalDays = endDay.difference(startDay).inDays + 1;
+              final currentStop = group.stopOn(today);
+              final currentStopName = currentStop?.name ?? group.destination;
+              final progress = (currentDay / (totalDays > 0 ? totalDays : 1))
+                  .clamp(0.05, 1.0);
+
+              return Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppColors.mintGreen.withValues(alpha: 0.35)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            context.l10n
+                                .translate('hub_live_tour_ongoing', args: {
+                              'day': context.l10n.number(currentDay),
+                              'total': context.l10n.number(totalDays),
+                            }),
+                            style: const TextStyle(
+                              color: AppColors.mintGreen,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          context.l10n.translate('hub_live_current_stop',
+                              args: {'stop': currentStopName}),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 5,
+                        backgroundColor: Colors.white12,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.mintGreen),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Colors.white24),
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 4),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () =>
+                                context.push('/group/${group.id}/journey'),
+                            icon: const Icon(Icons.alt_route_rounded,
+                                size: 14, color: AppColors.mintGreen),
+                            label: Text(
+                              context.l10n.translate('hub_live_route_btn'),
+                              style: const TextStyle(fontSize: 11),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Colors.white24),
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 4),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () =>
+                                context.push('/group/${group.id}/notices'),
+                            icon: const Icon(
+                                Icons.notifications_active_outlined,
+                                size: 14,
+                                color: AppColors.gold),
+                            label: Text(
+                              context.l10n.translate('hub_live_notices_btn'),
+                              style: const TextStyle(fontSize: 11),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Colors.white24),
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 4),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () =>
+                                context.push('/group/${group.id}/ledger'),
+                            icon: const Icon(
+                                Icons.account_balance_wallet_outlined,
+                                size: 14,
+                                color: Color(0xFF52B788)),
+                            label: Text(
+                              context.l10n.translate('hub_live_ledger_btn'),
+                              style: const TextStyle(fontSize: 11),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            } else if (isUpcoming) {
+              final daysLeft = startDay.difference(today).inDays;
+              return Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.hourglass_top_rounded,
+                        size: 14, color: AppColors.gold),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        daysLeft == 0
+                            ? context.l10n.translate('hub_upcoming_today')
+                            : context.l10n.translate('hub_upcoming_badge',
+                                args: {'days': context.l10n.number(daysLeft)}),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      onPressed: () =>
+                          context.push('/group/${group.id}/checklist'),
+                      icon: const Icon(Icons.checklist_rounded,
+                          size: 14, color: AppColors.mintGreen),
+                      label: Text(
+                        context.l10n.translate('hub_upcoming_checklist'),
+                        style: const TextStyle(
+                            color: AppColors.mintGreen, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            } else if (isPast) {
+              final totalDays = endDay.difference(startDay).inDays + 1;
+              return Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.verified_rounded,
+                        size: 14, color: AppColors.mintGreen),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        context.l10n.translate('hub_completed_badge',
+                            args: {'days': context.l10n.number(totalDays)}),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      onPressed: () =>
+                          context.push('/group/${group.id}/scrapbook'),
+                      icon: const Icon(Icons.auto_stories_rounded,
+                          size: 14, color: AppColors.mintGreen),
+                      label: Text(
+                        context.l10n.translate('hub_completed_scrapbook'),
+                        style: const TextStyle(
+                            color: AppColors.mintGreen, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }(),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -1610,6 +1862,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               ),
                             );
                             if (mounted) {
+                              TourGroupRepository.lastActiveTourId =
+                                  newGroup.id;
                               setState(() {
                                 _activeGroup = newGroup;
                               });
@@ -2079,6 +2333,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             final joinedGroup =
                                 await _repository.joinGroupWithCode(code);
                             if (mounted) {
+                              TourGroupRepository.lastActiveTourId =
+                                  joinedGroup.id;
                               setState(() {
                                 _activeGroup = joinedGroup;
                               });
@@ -2256,7 +2512,41 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.mintGreen.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.account_circle_outlined,
+                      color: AppColors.mintGreen, size: 22),
+                ),
+                title: Text(
+                  context.l10n.translate('prof_tab_info'),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  context.l10n.translate('prof_posts'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                trailing:
+                    const Icon(Icons.chevron_right, color: Colors.white38),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  TourMemberProfileModal.show(
+                    context,
+                    tourId: tourId,
+                    memberEmail: member.email,
+                    memberName: member.displayName,
+                    memberPhoto: member.photoUrl,
+                    familyCount: member.familyCount,
+                  );
+                },
+              ),
               const Divider(color: Colors.white10),
               if (!isMe && member.role != TourRole.owner && viewerIsAdmin) ...[
                 // Promote / Demote

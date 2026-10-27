@@ -59,6 +59,9 @@ class ExpenseItem {
   final int? originalMinor;
   final double? fxRate;
 
+  /// Attached photo receipt / memo URL on the media server or storage.
+  final String? receiptUrl;
+
   bool get isForeign => currency != null && currency != 'BDT';
 
   const ExpenseItem({
@@ -79,9 +82,52 @@ class ExpenseItem {
     this.currency,
     this.originalMinor,
     this.fxRate,
+    this.receiptUrl,
   });
 
   double get amountTaka => amountPaisa / 100.0;
+
+  ExpenseItem copyWith({
+    String? id,
+    String? tourId,
+    String? title,
+    int? amountPaisa,
+    String? paidById,
+    String? paidByName,
+    String? category,
+    DateTime? date,
+    String? notes,
+    String? addedByEmail,
+    List<String>? participantIds,
+    SplitMode? splitMode,
+    Map<String, int>? splitShares,
+    String? stopId,
+    String? currency,
+    int? originalMinor,
+    double? fxRate,
+    String? receiptUrl,
+  }) {
+    return ExpenseItem(
+      id: id ?? this.id,
+      tourId: tourId ?? this.tourId,
+      title: title ?? this.title,
+      amountPaisa: amountPaisa ?? this.amountPaisa,
+      paidById: paidById ?? this.paidById,
+      paidByName: paidByName ?? this.paidByName,
+      category: category ?? this.category,
+      date: date ?? this.date,
+      notes: notes ?? this.notes,
+      addedByEmail: addedByEmail ?? this.addedByEmail,
+      participantIds: participantIds ?? this.participantIds,
+      splitMode: splitMode ?? this.splitMode,
+      splitShares: splitShares ?? this.splitShares,
+      stopId: stopId ?? this.stopId,
+      currency: currency ?? this.currency,
+      originalMinor: originalMinor ?? this.originalMinor,
+      fxRate: fxRate ?? this.fxRate,
+      receiptUrl: receiptUrl ?? this.receiptUrl,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -97,6 +143,7 @@ class ExpenseItem {
       if (currency != null) 'currency': currency,
       if (originalMinor != null) 'originalMinor': originalMinor,
       if (fxRate != null) 'fxRate': fxRate,
+      if (receiptUrl != null) 'receiptUrl': receiptUrl,
       'amountPaisa': amountPaisa,
       'paidById': paidById == null ? null : normalizeEmail(paidById!),
       'paidByName': paidByName,
@@ -112,35 +159,62 @@ class ExpenseItem {
   factory ExpenseItem.fromMap(String id, Map<String, dynamic> map) {
     int parsedPaisa = 0;
     if (map['amountPaisa'] != null) {
-      parsedPaisa = (map['amountPaisa'] as num).toInt();
+      final val = map['amountPaisa'];
+      if (val is num) {
+        parsedPaisa = val.toInt();
+      } else {
+        parsedPaisa = int.tryParse(val.toString()) ?? 0;
+      }
     } else if (map['amount'] != null) {
-      parsedPaisa = ((map['amount'] as num).toDouble() * 100).round();
+      final val = map['amount'];
+      if (val is num) {
+        parsedPaisa = (val.toDouble() * 100).round();
+      } else {
+        parsedPaisa = ((double.tryParse(val.toString()) ?? 0) * 100).round();
+      }
     }
 
-    final payer = map['paidById'] as String?;
-    final participants = (map['participantIds'] as List<dynamic>?)
-        ?.map((e) => normalizeEmail(e.toString()))
-        .toList();
+    final payer = map['paidById']?.toString();
+    final participants = (map['participantIds'] is Iterable)
+        ? (map['participantIds'] as Iterable)
+            .map((e) => normalizeEmail(e.toString()))
+            .toList()
+        : null;
+
+    Map<String, int>? shares;
+    if (map['splitShares'] is Map) {
+      shares = {};
+      (map['splitShares'] as Map).forEach((k, v) {
+        final key = normalizeEmail(k.toString());
+        final numVal =
+            v is num ? v.toInt() : (int.tryParse(v?.toString() ?? '') ?? 0);
+        shares![key] = numVal;
+      });
+    }
 
     return ExpenseItem(
       id: id,
-      tourId: map['tourId'] as String? ?? '',
-      title: map['title'] as String? ?? 'Expense',
+      tourId: map['tourId']?.toString() ?? '',
+      title: map['title']?.toString() ?? 'Expense',
       amountPaisa: parsedPaisa,
       paidById: payer == null || payer.isEmpty ? null : normalizeEmail(payer),
-      paidByName: map['paidByName'] as String? ?? map['paidBy'] as String?,
-      category: map['category'] as String? ?? 'Others',
+      paidByName: map['paidByName']?.toString() ?? map['paidBy']?.toString(),
+      category: map['category']?.toString() ?? 'Others',
       date: readDate(map['date']) ?? DateTime.now(),
-      notes: map['notes'] as String?,
-      addedByEmail: normalizeEmail(map['addedByEmail'] as String? ?? ''),
+      notes: map['notes']?.toString(),
+      addedByEmail: normalizeEmail(map['addedByEmail']?.toString() ?? ''),
       participantIds: participants,
-      splitMode: SplitMode.fromString(map['splitMode'] as String?),
-      splitShares: (map['splitShares'] as Map?)?.map((k, v) =>
-          MapEntry(normalizeEmail(k.toString()), (v as num?)?.toInt() ?? 0)),
-      stopId: map['stopId'] as String?,
-      currency: map['currency'] as String?,
-      originalMinor: (map['originalMinor'] as num?)?.toInt(),
-      fxRate: (map['fxRate'] as num?)?.toDouble(),
+      splitMode: SplitMode.fromString(map['splitMode']?.toString()),
+      splitShares: shares,
+      stopId: map['stopId']?.toString(),
+      currency: map['currency']?.toString(),
+      originalMinor: map['originalMinor'] is num
+          ? (map['originalMinor'] as num).toInt()
+          : (int.tryParse(map['originalMinor']?.toString() ?? '')),
+      fxRate: map['fxRate'] is num
+          ? (map['fxRate'] as num).toDouble()
+          : (double.tryParse(map['fxRate']?.toString() ?? '')),
+      receiptUrl: map['receiptUrl']?.toString(),
     );
   }
 }
@@ -184,20 +258,30 @@ class DepositItem {
   factory DepositItem.fromMap(String id, Map<String, dynamic> map) {
     int parsedPaisa = 0;
     if (map['amountPaisa'] != null) {
-      parsedPaisa = (map['amountPaisa'] as num).toInt();
+      final val = map['amountPaisa'];
+      if (val is num) {
+        parsedPaisa = val.toInt();
+      } else {
+        parsedPaisa = int.tryParse(val.toString()) ?? 0;
+      }
     } else if (map['amount'] != null) {
-      parsedPaisa = ((map['amount'] as num).toDouble() * 100).round();
+      final val = map['amount'];
+      if (val is num) {
+        parsedPaisa = (val.toDouble() * 100).round();
+      } else {
+        parsedPaisa = ((double.tryParse(val.toString()) ?? 0) * 100).round();
+      }
     }
 
     return DepositItem(
       id: id,
-      tourId: map['tourId'] as String? ?? '',
-      memberId: normalizeEmail(map['memberId'] as String? ?? ''),
-      memberName: map['memberName'] as String? ?? 'Member',
+      tourId: map['tourId']?.toString() ?? '',
+      memberId: normalizeEmail(map['memberId']?.toString() ?? ''),
+      memberName: map['memberName']?.toString() ?? 'Member',
       amountPaisa: parsedPaisa,
       date: readDate(map['date']) ?? DateTime.now(),
-      notes: map['notes'] as String?,
-      addedByEmail: normalizeEmail(map['addedByEmail'] as String? ?? ''),
+      notes: map['notes']?.toString(),
+      addedByEmail: normalizeEmail(map['addedByEmail']?.toString() ?? ''),
     );
   }
 }
@@ -247,21 +331,26 @@ class TransferItem {
 
   factory TransferItem.fromMap(String id, Map<String, dynamic> map) {
     String? who(Object? v) {
-      final s = v as String?;
+      final s = v?.toString();
       return s == null || s.isEmpty ? null : normalizeEmail(s);
     }
 
+    final amtVal = map['amountPaisa'];
+    final parsedAmt = amtVal is num
+        ? amtVal.toInt()
+        : (int.tryParse(amtVal?.toString() ?? '') ?? 0);
+
     return TransferItem(
       id: id,
-      tourId: map['tourId'] as String? ?? '',
+      tourId: map['tourId']?.toString() ?? '',
       fromId: who(map['fromId']),
-      fromName: map['fromName'] as String? ?? '',
+      fromName: map['fromName']?.toString() ?? '',
       toId: who(map['toId']),
-      toName: map['toName'] as String? ?? '',
-      amountPaisa: (map['amountPaisa'] as num?)?.toInt() ?? 0,
+      toName: map['toName']?.toString() ?? '',
+      amountPaisa: parsedAmt,
       date: readDate(map['date']) ?? DateTime.now(),
-      notes: map['notes'] as String?,
-      addedByEmail: normalizeEmail(map['addedByEmail'] as String? ?? ''),
+      notes: map['notes']?.toString(),
+      addedByEmail: normalizeEmail(map['addedByEmail']?.toString() ?? ''),
     );
   }
 }

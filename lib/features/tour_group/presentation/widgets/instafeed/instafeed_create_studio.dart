@@ -24,6 +24,7 @@ class InstafeedCreateStudio extends StatefulWidget {
   final TourGroup? group;
   final ImagePicker picker;
   final VoidCallback? onPostCreated;
+  final bool isStory;
 
   const InstafeedCreateStudio({
     super.key,
@@ -32,6 +33,7 @@ class InstafeedCreateStudio extends StatefulWidget {
     this.group,
     required this.picker,
     this.onPostCreated,
+    this.isStory = false,
   });
 
   @override
@@ -43,6 +45,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   final TextEditingController _captionCtrl = TextEditingController();
   final TextEditingController _customSpotCtrl = TextEditingController();
   final TextEditingController _audioTitleCtrl = TextEditingController();
+
+  late bool _shareToStory;
+  late bool _shareToFeed;
 
   // Poll sticker controllers
   bool _includePoll = false;
@@ -112,6 +117,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   @override
   void initState() {
     super.initState();
+    _shareToStory = widget.isStory;
+    _shareToFeed = !widget.isStory;
     _tabCtrl = TabController(length: 2, vsync: this);
     _checkDraft();
   }
@@ -422,6 +429,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     final uploads = <TourMediaUpload>[];
     final uploadedUrls = <String>[];
     var postSaved = false;
+    String? coverUrl;
     try {
       if (_isReel && _selectedVideo != null) {
         setState(() =>
@@ -447,7 +455,6 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         await sub.cancel();
         uploadedUrls.add(url);
 
-        String? coverUrl;
         if (_coverImage == null && _selectedVideo != null && !kIsWeb) {
           try {
             final thumbFile = await VideoCompress.getFileThumbnail(
@@ -488,24 +495,26 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           uploadedUrls.add(coverUrl);
         }
 
-        await widget.repository.addPost(
-          tourId: widget.tourId,
-          caption: _captionCtrl.text.trim(),
-          images: const [],
-          videoUrl: url,
-          coverUrl: coverUrl,
-          aspectRatio: _videoCtrl?.value.aspectRatio,
-          isReel: true,
-          location: _spotToSave,
-          tourDay: _selectedDay,
-          filterId: _selectedFilterId,
-          tags: _taggedMembers,
-          hideLikeCount: _hideLikeCount,
-          disableComments: _disableComments,
-          audioTitle: _audioTitleCtrl.text.trim().isNotEmpty
-              ? _audioTitleCtrl.text.trim()
-              : null,
-        );
+        if (_shareToFeed) {
+          await widget.repository.addPost(
+            tourId: widget.tourId,
+            caption: _captionCtrl.text.trim(),
+            images: const [],
+            videoUrl: url,
+            coverUrl: coverUrl,
+            aspectRatio: _videoCtrl?.value.aspectRatio,
+            isReel: true,
+            location: _spotToSave,
+            tourDay: _selectedDay,
+            filterId: _selectedFilterId,
+            tags: _taggedMembers,
+            hideLikeCount: _hideLikeCount,
+            disableComments: _disableComments,
+            audioTitle: _audioTitleCtrl.text.trim().isNotEmpty
+                ? _audioTitleCtrl.text.trim()
+                : null,
+          );
+        }
       } else {
         // Upload photos sequentially
         for (int i = 0; i < _photos.length; i++) {
@@ -537,60 +546,62 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
           uploadedUrls.add(url);
         }
 
-        await widget.repository.addPost(
+        if (_shareToFeed) {
+          await widget.repository.addPost(
+            tourId: widget.tourId,
+            caption: _captionCtrl.text.trim(),
+            images: uploadedUrls,
+            isReel: false,
+            location: _spotToSave,
+            tourDay: _selectedDay,
+            filterId: _selectedFilterId,
+            tags: _taggedMembers,
+            hideLikeCount: _hideLikeCount,
+            disableComments: _disableComments,
+            audioTitle: _audioTitleCtrl.text.trim().isNotEmpty
+                ? _audioTitleCtrl.text.trim()
+                : null,
+            aspectRatio: _selectedAspectRatio,
+          );
+        }
+      }
+
+      // If share to story is enabled, create the story!
+      if (_shareToStory && uploadedUrls.isNotEmpty) {
+        final mediaUrl =
+            _isReel ? (coverUrl ?? uploadedUrls.first) : uploadedUrls.first;
+        final poll = (_includePoll && _pollQuestionCtrl.text.trim().isNotEmpty)
+            ? TourStoryPoll(
+                question: _pollQuestionCtrl.text.trim(),
+                options: [
+                  _pollOpt1Ctrl.text.trim().isNotEmpty
+                      ? _pollOpt1Ctrl.text.trim()
+                      : l10n.translate('ig_yes'),
+                  _pollOpt2Ctrl.text.trim().isNotEmpty
+                      ? _pollOpt2Ctrl.text.trim()
+                      : l10n.translate('ig_no'),
+                ],
+              )
+            : null;
+
+        await widget.repository.addStory(
           tourId: widget.tourId,
-          caption: _captionCtrl.text.trim(),
-          images: uploadedUrls,
-          isReel: false,
-          location: _spotToSave,
-          tourDay: _selectedDay,
-          filterId: _selectedFilterId,
-          tags: _taggedMembers,
-          hideLikeCount: _hideLikeCount,
-          disableComments: _disableComments,
-          audioTitle: _audioTitleCtrl.text.trim().isNotEmpty
-              ? _audioTitleCtrl.text.trim()
-              : null,
-          aspectRatio: _selectedAspectRatio,
+          mediaUrl: mediaUrl,
+          caption: _captionCtrl.text.trim().isNotEmpty
+              ? _captionCtrl.text.trim()
+              : (_includePoll && _pollQuestionCtrl.text.trim().isNotEmpty
+                  ? _pollQuestionCtrl.text.trim()
+                  : null),
+          isVideo: _isReel,
+          videoUrl: _isReel ? uploadedUrls.first : null,
+          poll: poll,
         );
       }
 
-      // The post is saved, so its files are no longer orphans.
+      // The post/story is saved, so its files are no longer orphans.
       postSaved = true;
       for (final upload in uploads) {
         await upload.commit();
-      }
-
-      // If poll sticker is enabled, also create a story with the poll!
-      if (_includePoll &&
-          _pollQuestionCtrl.text.trim().isNotEmpty &&
-          uploadedUrls.isNotEmpty) {
-        try {
-          await widget.repository.addStory(
-            tourId: widget.tourId,
-            mediaUrl: uploadedUrls.first,
-            caption: _pollQuestionCtrl.text.trim(),
-            poll: TourStoryPoll(
-              question: _pollQuestionCtrl.text.trim(),
-              options: [
-                _pollOpt1Ctrl.text.trim().isNotEmpty
-                    ? _pollOpt1Ctrl.text.trim()
-                    : l10n.translate('ig_yes'),
-                _pollOpt2Ctrl.text.trim().isNotEmpty
-                    ? _pollOpt2Ctrl.text.trim()
-                    : l10n.translate('ig_no'),
-              ],
-            ),
-          );
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text(context.l10n
-                      .translate('ig_poll_add_failed', args: {'error': e}))),
-            );
-          }
-        }
       }
 
       // Clear draft upon success
@@ -603,9 +614,12 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       if (mounted) {
         Navigator.pop(context);
         widget.onPostCreated?.call();
+        final successMsg = _shareToStory && !_shareToFeed
+            ? context.l10n.translate('ig_shared_to_story')
+            : context.l10n.translate('ig_post_published');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(context.l10n.translate('ig_post_published')),
+            content: Text(successMsg),
             backgroundColor: AppColors.mintGreen,
           ),
         );
@@ -699,7 +713,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   Text(
                     _isReel
                         ? context.l10n.translate('ig_new_reel')
-                        : context.l10n.translate('ig_new_post_title'),
+                        : (_shareToStory && !_shareToFeed
+                            ? context.l10n.translate('ig_create_story')
+                            : context.l10n.translate('ig_new_post_title')),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -725,14 +741,120 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                                   AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : Text(context.l10n.translate('ig_publish'),
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
+                        : Text(
+                            _shareToStory && !_shareToFeed
+                                ? context.l10n
+                                    .translate('ig_share_to_story_btn')
+                                : context.l10n.translate('ig_publish'),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.darkGreen)),
                   ),
                 ],
               ),
             ),
             const Divider(height: 1, color: Colors.white10),
+
+            // Share Destination Selector (Feed Post vs Story)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E1E),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _shareToFeed = true;
+                          _shareToStory = false;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _shareToFeed && !_shareToStory
+                              ? AppColors.mintGreen
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.grid_on_rounded,
+                              size: 16,
+                              color: _shareToFeed && !_shareToStory
+                                  ? AppColors.darkGreen
+                                  : Colors.white70,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              context.l10n.translate('ig_destination_feed'),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: _shareToFeed && !_shareToStory
+                                    ? AppColors.darkGreen
+                                    : Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _shareToStory = true;
+                          _shareToFeed = false;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _shareToStory && !_shareToFeed
+                              ? AppColors.mintGreen
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.auto_stories_rounded,
+                              size: 16,
+                              color: _shareToStory && !_shareToFeed
+                                  ? AppColors.darkGreen
+                                  : Colors.white70,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              context.l10n.translate('ig_destination_story'),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: _shareToStory && !_shareToFeed
+                                    ? AppColors.darkGreen
+                                    : Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
             // Unsaved Draft Recovery Prompt
             if (_hasDraftBanner)

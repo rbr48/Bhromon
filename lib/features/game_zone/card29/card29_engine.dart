@@ -159,6 +159,7 @@ class Card29Engine {
     required bool isTrumpRevealed,
     CardSuit? trumpSuit,
     bool mustPlayTrumpIfHeld = false,
+    int? minTrumpPowerToBeat,
   }) {
     if (!hand.contains(card)) return false;
     if (leadSuit == null) return true; // First card in trick can be any card
@@ -171,9 +172,22 @@ class Card29Engine {
 
     // If player cannot follow suit and trump is revealed:
     if (isTrumpRevealed && trumpSuit != null && mustPlayTrumpIfHeld) {
-      final hasTrump = hand.any((c) => c.suit == trumpSuit);
-      if (hasTrump) {
-        return card.suit == trumpSuit;
+      if (minTrumpPowerToBeat != null) {
+        // Opponent is winning with a trump. Player is only forced to trump
+        // if they hold a HIGHER trump that can beat the opponent (over-trump).
+        // If they only hold lower trumps, forced under-trumping is NOT required:
+        // they may discard any card in hand.
+        final canOverTrump = hand
+            .any((c) => c.suit == trumpSuit && c.power > minTrumpPowerToBeat);
+        if (canOverTrump) {
+          return card.suit == trumpSuit && card.power > minTrumpPowerToBeat;
+        }
+      } else {
+        // Opponent is winning with a non-trump card. Any trump beats it.
+        final hasTrump = hand.any((c) => c.suit == trumpSuit);
+        if (hasTrump) {
+          return card.suit == trumpSuit;
+        }
       }
     }
 

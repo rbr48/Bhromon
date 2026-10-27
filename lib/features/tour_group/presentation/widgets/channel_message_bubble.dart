@@ -61,6 +61,7 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
     final l10n = context.l10n;
     final own = widget.isMine;
     final isExpense = m.kind == ChannelMessageKind.expense;
+    final loc = _findLocation(m, l10n);
 
     return Align(
       alignment: own ? Alignment.centerRight : Alignment.centerLeft,
@@ -104,6 +105,10 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
                   revealed: _revealed,
                   onSpoiler: _toggleSpoiler,
                 ),
+              if (loc != null) ...[
+                const SizedBox(height: 6),
+                _LocationCard(location: loc),
+              ],
               if (m.kind == ChannelMessageKind.poll) ...[
                 const SizedBox(height: 8),
                 _PollBlock(
@@ -586,5 +591,131 @@ class _ChannelRichTextState extends State<ChannelRichText> {
     final uri = Uri.tryParse(url);
     if (uri == null) return;
     unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
+  }
+}
+
+class _LocationInfo {
+  final String title;
+  final String url;
+  const _LocationInfo({required this.title, required this.url});
+}
+
+_LocationInfo? _findLocation(ChannelMessage m, [AppLocalizations? l10n]) {
+  if (m.hasLocation) {
+    final title = (m.locationTitle != null && m.locationTitle!.isNotEmpty)
+        ? m.locationTitle!
+        : (l10n?.translate('chan_location_title') ??
+            'Shared location / Meetup point');
+    final url =
+        'https://maps.google.com/?q=${m.locationLatitude},${m.locationLongitude}';
+    return _LocationInfo(title: title, url: url);
+  }
+  return _findLocationFromText(m.text, l10n);
+}
+
+_LocationInfo? _findLocationFromText(String text, [AppLocalizations? l10n]) {
+  // Check for markdown [Title](https://...maps...)
+  final mdMatch = RegExp(
+          r'\[([^\]]+)\]\((https?://(?:maps\.google\.|goo\.gl/maps|maps\.app\.goo\.gl)[^\)]+)\)',
+          caseSensitive: false)
+      .firstMatch(text);
+  if (mdMatch != null) {
+    return _LocationInfo(title: mdMatch.group(1)!, url: mdMatch.group(2)!);
+  }
+  // Check for plain maps URL
+  final urlMatch = RegExp(
+          r'(https?://(?:maps\.google\.|goo\.gl/maps|maps\.app\.goo\.gl)[^\s\)]+)',
+          caseSensitive: false)
+      .firstMatch(text);
+  if (urlMatch != null) {
+    final url = urlMatch.group(1)!;
+    final prefix = text.substring(0, urlMatch.start).trim();
+    String title = '';
+    if (prefix.isNotEmpty) {
+      final clean = prefix.replaceAll(RegExp(r'[📍:,\-\n]'), '').trim();
+      if (clean.isNotEmpty && clean.length < 50) {
+        title = clean;
+      }
+    }
+    final defaultTitle = l10n?.translate('chan_location_title') ??
+        'Shared location / Meetup point';
+    return _LocationInfo(
+        title: title.isNotEmpty ? title : defaultTitle, url: url);
+  }
+  return null;
+}
+
+class _LocationCard extends StatelessWidget {
+  final _LocationInfo location;
+
+  const _LocationCard({required this.location});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
+      margin: const EdgeInsets.only(top: 4, bottom: 2),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.black26,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColors.mintGreen.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.location_on_rounded,
+                color: AppColors.mintGreen, size: 20),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  location.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12),
+                ),
+                Text(
+                  l10n.translate('chan_location_open_maps'),
+                  style: const TextStyle(
+                      color: AppColors.mintGreen,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          IconButton(
+            tooltip: l10n.translate('chan_location_open_maps'),
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.mintGreen,
+              foregroundColor: AppColors.darkGreen,
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.all(6),
+            ),
+            icon: const Icon(Icons.map_rounded, size: 16),
+            onPressed: () {
+              final uri = Uri.tryParse(location.url);
+              if (uri != null) {
+                unawaited(launchUrl(uri, mode: LaunchMode.externalApplication));
+              }
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
