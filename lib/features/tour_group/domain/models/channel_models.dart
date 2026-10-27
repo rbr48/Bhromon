@@ -13,6 +13,34 @@ const List<String> kBuiltInTextChannelIds = [
 
 const String kBuiltInVoiceChannelId = 'voice_lounge';
 
+/// Most people one voice room holds. Everyone connects to everyone else, so a
+/// person's upload grows with the room's size.
+const int kVoiceRoomMaxParticipants = 8;
+
+/// A seat older than this counts as empty. A phone that crashes never removes
+/// its own seat, so without this a room could stay full for good.
+const Duration kVoiceSeatStaleAfter = Duration(hours: 12);
+
+/// How many people hold a seat in a voice room, leaving out [exceptEmail] and
+/// seats older than [kVoiceSeatStaleAfter]. [seats] maps each seat's email to
+/// its stored data. A seat with no join time still counts.
+int countSeatedVoiceParticipants(
+  Map<String, Map<String, dynamic>> seats, {
+  required String exceptEmail,
+  required DateTime now,
+}) {
+  var count = 0;
+  for (final entry in seats.entries) {
+    if (entry.key == exceptEmail) continue;
+    final joined = readDate(entry.value['joinedAt']);
+    if (joined != null && now.difference(joined) > kVoiceSeatStaleAfter) {
+      continue;
+    }
+    count++;
+  }
+  return count;
+}
+
 const List<String> kBuiltInChannelIds = [
   ...kBuiltInTextChannelIds,
   kBuiltInVoiceChannelId,

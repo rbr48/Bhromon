@@ -723,6 +723,13 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         photoUrl: myPhoto,
         myUid: myUid,
       );
+    } on VoiceRoomFullException catch (e) {
+      if (!mounted) return;
+      _snack(
+        context.l10n.translate('chan_voice_full',
+            args: {'count': context.l10n.number(e.capacity)}),
+        error: true,
+      );
     } catch (e) {
       if (!mounted) return;
       _snack(
