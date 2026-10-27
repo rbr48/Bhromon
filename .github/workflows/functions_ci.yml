@@ -39,8 +39,8 @@ jobs:
       - name: TypeScript strict type check
         run: npx tsc --noEmit --strict
 
-      - name: Check for npm audit issues (high+ severity)
-        run: npm audit --audit-level=high || echo "npm audit found issues — review before release"
+      - name: Audit production dependencies (high+ severity blocks)
+        run: npm audit --omit=dev --audit-level=high
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Job 2: Build Cloud Functions TypeScript

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/network/turn_config.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -59,25 +60,10 @@ class VoiceRoomService {
   factory VoiceRoomService() => _instance;
   VoiceRoomService._internal();
 
-  static const Map<String, dynamic> _iceConfig = {
-    'iceServers': [
-      {
-        'urls': [
-          'stun:stun.l.google.com:19302',
-          'stun:stun1.l.google.com:19302',
-        ],
-      },
-      {
-        'urls': [
-          'turn:148.135.137.245:3478?transport=udp',
-          'turn:148.135.137.245:3478?transport=tcp',
-        ],
-        'username': 'bhromon_user',
-        'credential': 'bhromon_turn_secret_2026',
-      },
-    ],
-    'sdpSemantics': 'unified-plan',
-  };
+  static Map<String, dynamic> get _iceConfig => {
+        'iceServers': TurnConfig.iceServers,
+        'sdpSemantics': 'unified-plan',
+      };
 
   FirebaseFirestore get _db => FirebaseFirestore.instance;
 

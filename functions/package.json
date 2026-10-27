@@ -14,19 +14,19 @@
   },
   "main": "lib/index.js",
   "dependencies": {
+    "@google-cloud/storage": "^7.0.0",
     "firebase-admin": "^12.0.0",
     "firebase-functions": "^5.0.0",
     "googleapis": "^126.0.0",
-    "sharp": "^0.33.4",
-    "@google-cloud/storage": "^7.0.0"
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
-    "typescript": "^4.9.0",
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@types/jest": "^29.5.12",
     "firebase-functions-test": "^3.1.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.1.1",
-    "@types/jest": "^29.5.12",
-    "@firebase/rules-unit-testing": "^2.0.7"
+    "typescript": "^4.9.0"
   },
   "jest": {
     "preset": "ts-jest",

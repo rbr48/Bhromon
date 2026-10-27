@@ -108,7 +108,6 @@ class TourMediaUploader {
   static const String baseUrl = 'https://bhromon.fun';
   static const String uploadUrl = '$baseUrl/api/media/upload';
   static const String deleteBaseUrl = '$baseUrl/api/media/media';
-  static const String uploadKey = 'bhromon_vps_media_2026_sec';
 
   static final Dio _dio = Dio(
     BaseOptions(
@@ -118,15 +117,12 @@ class TourMediaUploader {
     ),
   );
 
-  /// Authentication options for media server requests.
-  /// Sends both Firebase ID token and X-Upload-Key for complete compatibility
-  /// across VPS server versions.
+  /// Authentication options for media server requests. The server accepts only
+  /// the signed-in member's Firebase ID token; there is no shared key.
   static Future<Options> _authorized() async {
     final user = FirebaseAuth.instance.currentUser;
     final token = await user?.getIdToken();
-    final headers = <String, String>{
-      'X-Upload-Key': uploadKey,
-    };
+    final headers = <String, String>{};
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }

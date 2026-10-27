@@ -272,7 +272,9 @@ service cloud.firestore {
 
     // ---- Pin Visits ----
     match /pin_visits/{id} {
-      allow read: if true;
+      // Signed-in users only: the "recent visitors" list stays, but visit
+      // history is no longer readable by anonymous clients.
+      allow read: if isAuth();
       allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if false;
     }

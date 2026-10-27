@@ -181,4 +181,29 @@ describe('Firestore Security Rules', () => {
       await assertFails(client.collection('admin_audit_logs').doc('log_123').set({ action: 'hack' }));
     });
   });
+
+  describe('Pin Visits', () => {
+    test('anonymous clients cannot read visit history', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await ctx.firestore().collection('pin_visits').doc('v1').set({
+          pinId: 'p1', userId: 'user_123', visitedAt: new Date(),
+        });
+      });
+      const anon = testEnv.unauthenticatedContext().firestore();
+      await assertFails(anon.collection('pin_visits').doc('v1').get());
+    });
+
+    test('signed-in users can read visits, and only write their own', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await ctx.firestore().collection('pin_visits').doc('v1').set({
+          pinId: 'p1', userId: 'user_123', visitedAt: new Date(),
+        });
+      });
+      const other = getAuthenticatedContext('user_999').firestore();
+      await assertSucceeds(other.collection('pin_visits').doc('v1').get());
+      await assertFails(other.collection('pin_visits').add({
+        pinId: 'p1', userId: 'user_123', visitedAt: new Date(),
+      }));
+    });
+  });
 });
