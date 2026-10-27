@@ -11,6 +11,7 @@ import '../../data/tour_group_repository.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../widgets/bhromon_bottom_nav.dart';
+import '../widgets/member_profile/tour_member_profile_modal.dart';
 
 class TourGroupHubScreen extends StatefulWidget {
   final TourGroupRepository? repository;
@@ -2503,7 +2504,40 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.mintGreen.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.account_circle_outlined,
+                      color: AppColors.mintGreen, size: 22),
+                ),
+                title: Text(
+                  context.l10n.translate('prof_tab_info'),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  context.l10n.translate('prof_posts'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  TourMemberProfileModal.show(
+                    context,
+                    tourId: tourId,
+                    memberEmail: member.email,
+                    memberName: member.displayName,
+                    memberPhoto: member.photoUrl,
+                    familyCount: member.familyCount,
+                  );
+                },
+              ),
               const Divider(color: Colors.white10),
               if (!isMe && member.role != TourRole.owner && viewerIsAdmin) ...[
                 // Promote / Demote

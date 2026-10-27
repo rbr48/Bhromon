@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../core/entities/explorer_profile.dart';
@@ -44,6 +45,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   bool _isLoading = false;
   String? _error;
   DocumentSnapshot? _rawProfileDoc;
+  String? _bloodGroup;
+  String? _statusNote;
+  String _activeCategory = 'all';
 
   // Active tab: 'tours' | 'vault' | 'settings'
   String _activeTab = 'tours';
@@ -103,9 +107,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           .get();
 
       if (mounted) {
+        final data = rawDoc.data();
         setState(() {
           _profile = profile;
           _rawProfileDoc = rawDoc;
+          _bloodGroup = data?['bloodGroup'] as String?;
+          _statusNote =
+              data?['statusNote'] as String? ?? data?['note'] as String?;
           _isLoading = false;
         });
       }
@@ -129,6 +137,180 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       if (en != null && en.trim().isNotEmpty) return en.trim();
     }
     return profile.bio?.trim() ?? '';
+  }
+
+  Future<void> _editStatusNote(BuildContext context, bool isOwnProfile) async {
+    if (!isOwnProfile) return;
+    final ctrl = TextEditingController(text: _statusNote ?? '');
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1B3326),
+        title: Row(
+          children: [
+            const Icon(Icons.edit_note_rounded, color: AppColors.mintGreen),
+            const SizedBox(width: 8),
+            Text(
+              _isBn ? 'স্ট্যাটাস নোট' : 'Status Note',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ],
+        ),
+        content: TextField(
+          controller: ctrl,
+          maxLength: 80,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: _isBn
+                ? 'আজকের অনুভূতি বা নোট লিখুন...'
+                : 'Write your travel note or mood...',
+            hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+            enabledBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.white24)),
+            focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: AppColors.mintGreen)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              _isBn ? 'বাতিল' : 'Cancel',
+              style: const TextStyle(color: Colors.white54),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: Text(
+              _isBn ? 'সংরক্ষণ' : 'Save',
+              style: const TextStyle(
+                  color: AppColors.darkGreen, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() => _statusNote = result.isEmpty ? null : result);
+      final uid = _profile?.uid;
+      if (uid != null && uid.isNotEmpty) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('explorer_profiles')
+              .doc(uid)
+              .set({'statusNote': result}, SetOptions(merge: true));
+        } catch (_) {}
+      }
+    }
+  }
+
+  Future<void> _editBloodGroup(BuildContext context, bool isOwnProfile) async {
+    if (!isOwnProfile) return;
+    const groups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    String chosen = _bloodGroup ?? 'O+';
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialog) => AlertDialog(
+          backgroundColor: const Color(0xFF1B3326),
+          title: Row(
+            children: [
+              const Icon(Icons.bloodtype_rounded, color: Colors.redAccent),
+              const SizedBox(width: 8),
+              Text(
+                _isBn ? 'রক্তের গ্রুপ' : 'Blood Group',
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ],
+          ),
+          content: DropdownButtonFormField<String>(
+            initialValue: groups.contains(chosen) ? chosen : 'O+',
+            dropdownColor: const Color(0xFF14241B),
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white24)),
+              focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.mintGreen)),
+            ),
+            items: [
+              for (final g in groups)
+                DropdownMenuItem(value: g, child: Text(g)),
+            ],
+            onChanged: (v) {
+              if (v != null) setDialog(() => chosen = v);
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                _isBn ? 'বাতিল' : 'Cancel',
+                style: const TextStyle(color: Colors.white54),
+              ),
+            ),
+            FilledButton(
+              style:
+                  FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
+              onPressed: () => Navigator.pop(ctx, chosen),
+              child: Text(
+                _isBn ? 'সংরক্ষণ' : 'Save',
+                style: const TextStyle(
+                    color: AppColors.darkGreen, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() => _bloodGroup = result);
+      final uid = _profile?.uid;
+      if (uid != null && uid.isNotEmpty) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('explorer_profiles')
+              .doc(uid)
+              .set({'bloodGroup': result}, SetOptions(merge: true));
+        } catch (_) {}
+      }
+    }
+  }
+
+  Widget _buildDetailChip({
+    required IconData icon,
+    required String text,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -276,13 +458,21 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               _buildTourMetricsBar(groups),
               const SizedBox(height: 18),
 
-              // 4. Tour Action Buttons (Create Tour, Join Tour, Edit Profile)
+              // 4. Tour Action Buttons (Create Tour, Join Tour, Share, Settings)
               if (isOwnProfile) ...[
                 _buildTourActionButtons(profile),
                 const SizedBox(height: 20),
               ],
 
-              // 5. Segmented Navigation Tabs
+              // 5. Story Category Circles (হাইজলাইটস / ক্যাটাগরি)
+              _buildCategoryCircles(),
+              const SizedBox(height: 20),
+
+              // 6. Achievements Showcase (অর্জনের শোকেস)
+              _buildAchievementsShowcase(groups),
+              const SizedBox(height: 20),
+
+              // 7. Segmented Navigation Tabs
               _buildSegmentedTabs(),
               const SizedBox(height: 16),
 
@@ -406,12 +596,24 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Container(
+                    padding: const EdgeInsets.all(3.5),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.mintGreen, width: 3),
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFFF58529),
+                          Color(0xFFFEDA77),
+                          Color(0xFFDD2A7B),
+                          Color(0xFF8134AF),
+                          Color(0xFF515BD4),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.mintGreen.withValues(alpha: 0.3),
+                          color:
+                              const Color(0xFFDD2A7B).withValues(alpha: 0.35),
                           blurRadius: 16,
                           spreadRadius: 2,
                         ),
@@ -476,6 +678,41 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
+          // Status Note bubble above name
+          GestureDetector(
+            onTap: () => _editStatusNote(context, isOwnProfile),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: AppColors.mintGreen.withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isOwnProfile &&
+                      (_statusNote == null || _statusNote!.isEmpty))
+                    const Icon(Icons.add, size: 12, color: AppColors.mintGreen),
+                  Text(
+                    (_statusNote != null && _statusNote!.isNotEmpty)
+                        ? _statusNote!
+                        : (isOwnProfile
+                            ? (_isBn ? '+ নোট যুক্ত করুন' : '+ Add Note')
+                            : (_isBn ? 'ভ্রমণকারী নোট' : 'Traveler Note')),
+                    style: const TextStyle(
+                      color: AppColors.mintGreen,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // Display Name
           Text(
             profile.displayName.isNotEmpty ? profile.displayName : 'Traveler',
@@ -517,7 +754,41 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
+
+          // Logistics & Blood Group detail chips
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _buildDetailChip(
+                icon: Icons.hotel_rounded,
+                text: _isBn ? 'রিসোর্ট অতিথি' : 'Resort Guest',
+                color: Colors.amberAccent,
+              ),
+              _buildDetailChip(
+                icon: Icons.directions_bus_rounded,
+                text: _isBn ? 'এক্সপ্রেস সিট' : 'Express Seat',
+                color: Colors.cyanAccent,
+              ),
+              GestureDetector(
+                onTap: isOwnProfile
+                    ? () => _editBloodGroup(context, isOwnProfile)
+                    : null,
+                child: _buildDetailChip(
+                  icon: Icons.bloodtype_rounded,
+                  text: _bloodGroup != null && _bloodGroup!.isNotEmpty
+                      ? '🩸 $_bloodGroup'
+                      : (isOwnProfile
+                          ? (_isBn ? '🩸 + রক্তের গ্রুপ' : '🩸 + Blood Group')
+                          : '🩸 O+'),
+                  color: Colors.redAccent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
 
           // Bio
           if (bio.isNotEmpty) ...[
@@ -557,7 +828,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Tour Metrics Summary Bar
+  // Tour Metrics Summary Bar (4-metric Stats)
   // ---------------------------------------------------------------------------
 
   Widget _buildTourMetricsBar(List<TourGroup> groups) {
@@ -570,7 +841,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
         color: const Color(0xFF14241B),
         borderRadius: BorderRadius.circular(16),
@@ -604,6 +875,16 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             _isBn ? 'ভ্রমণ দিন' : 'Tour Days',
             Icons.calendar_month_rounded,
           ),
+          Container(
+            height: 32,
+            width: 1,
+            color: Colors.white.withValues(alpha: 0.1),
+          ),
+          _buildMetricItem(
+            _isBn ? 'সক্রিয়' : 'Active',
+            _isBn ? 'লেজার' : 'Ledger',
+            Icons.account_balance_wallet_rounded,
+          ),
         ],
       ),
     );
@@ -616,13 +897,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: AppColors.mintGreen),
-            const SizedBox(width: 5),
+            Icon(icon, size: 15, color: AppColors.mintGreen),
+            const SizedBox(width: 4),
             Text(
               value,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -631,7 +912,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         const SizedBox(height: 3),
         Text(
           label,
-          style: const TextStyle(color: Colors.white54, fontSize: 11),
+          style: const TextStyle(color: Colors.white54, fontSize: 10),
         ),
       ],
     );
@@ -648,7 +929,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         children: [
           // Create Tour Button (Primary Mint)
           Expanded(
-            flex: 5,
+            flex: 4,
             child: ElevatedButton.icon(
               onPressed: () => _showCreateGroupDialog(context),
               style: ElevatedButton.styleFrom(
@@ -663,7 +944,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               icon: const Icon(Icons.add_circle, size: 18),
               label: Text(
                 _isBn ? 'নতুন ট্যুর' : 'Create Tour',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ),
           ),
@@ -671,7 +953,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
           // Join Tour with Code Button
           Expanded(
-            flex: 5,
+            flex: 4,
             child: OutlinedButton.icon(
               onPressed: () => _showJoinGroupDialog(context),
               style: OutlinedButton.styleFrom(
@@ -684,9 +966,30 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               ),
               icon: const Icon(Icons.key_rounded, size: 18),
               label: Text(
-                _isBn ? 'কোডে যোগ দিন' : 'Join Tour',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                _isBn ? 'কোডে যোগ' : 'Join Tour',
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Share Button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: IconButton(
+              onPressed: () {
+                final text =
+                    '${profile.displayName} — Bhromon Traveler\nhttps://app.bhromon.fun';
+                SharePlus.instance.share(ShareParams(text: text));
+              },
+              tooltip: _isBn ? 'শেয়ার' : 'Share',
+              icon: const Icon(Icons.share_outlined,
+                  color: Colors.white70, size: 20),
             ),
           ),
           const SizedBox(width: 8),
@@ -702,6 +1005,221 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               onPressed: () => context.push('/settings'),
               tooltip: _isBn ? 'সেটিংস' : 'Settings',
               icon: const Icon(Icons.settings, color: Colors.white70, size: 20),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Story Category Circles (হাইজলাইটস / ক্যাটাগরি)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildCategoryCircles() {
+    final categories = [
+      (
+        id: 'all',
+        label: _isBn ? 'সব ট্যুর' : 'All Tours',
+        icon: Icons.wb_sunny_rounded,
+        color: AppColors.gold,
+      ),
+      (
+        id: 'beach',
+        label: _isBn ? 'সি-বিচ' : 'Sea Beach',
+        icon: Icons.beach_access_rounded,
+        color: Colors.lightBlueAccent,
+      ),
+      (
+        id: 'hills',
+        label: _isBn ? 'পাহাড় ও ঝর্ণা' : 'Hills & Treks',
+        icon: Icons.terrain_rounded,
+        color: AppColors.mintGreen,
+      ),
+      (
+        id: 'food',
+        label: _isBn ? 'সি-ফুড' : 'Sea Food',
+        icon: Icons.restaurant_rounded,
+        color: Colors.orangeAccent,
+      ),
+      (
+        id: 'journey',
+        label: _isBn ? 'বাস জার্নি' : 'Bus Journey',
+        icon: Icons.directions_bus_rounded,
+        color: Colors.cyanAccent,
+      ),
+      (
+        id: 'sunset',
+        label: _isBn ? 'সানসেট' : 'Sunset',
+        icon: Icons.wb_twilight_rounded,
+        color: Colors.deepOrangeAccent,
+      ),
+      (
+        id: 'hotel',
+        label: _isBn ? 'হোটেল' : 'Hotel',
+        icon: Icons.hotel_rounded,
+        color: Colors.pinkAccent,
+      ),
+      (
+        id: 'hangout',
+        label: _isBn ? 'আড্ডা' : 'Hangout',
+        icon: Icons.celebration_rounded,
+        color: Colors.purpleAccent,
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SizedBox(
+        height: 78,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: categories.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 14),
+          itemBuilder: (context, i) {
+            final cat = categories[i];
+            final isSelected = _activeCategory == cat.id;
+
+            return GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _activeCategory = cat.id);
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? cat.color : Colors.white24,
+                        width: isSelected ? 2.2 : 1.0,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: isSelected
+                          ? cat.color.withValues(alpha: 0.25)
+                          : const Color(0xFF182630),
+                      child: Icon(cat.icon,
+                          size: 20,
+                          color: isSelected ? cat.color : Colors.white70),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    cat.label,
+                    style: TextStyle(
+                      color: isSelected ? cat.color : Colors.white60,
+                      fontSize: 10,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Achievements Showcase (অর্জনের শোকেস)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildAchievementsShowcase(List<TourGroup> groups) {
+    final achievements = <({String title, IconData icon, Color color})>[
+      (
+        title: _isBn ? 'ফটোগ্রাফার' : 'Photographer',
+        icon: Icons.camera_alt_rounded,
+        color: Colors.blueAccent,
+      ),
+      (
+        title: _isBn ? 'রিলস ডিরেক্টর' : 'Reels Director',
+        icon: Icons.movie_creation_rounded,
+        color: Colors.purpleAccent,
+      ),
+      (
+        title: _isBn ? 'স্টার ট্রাভেলার' : 'Star Traveler',
+        icon: Icons.star_rounded,
+        color: AppColors.gold,
+      ),
+      if (_bloodGroup != null && _bloodGroup!.isNotEmpty)
+        (
+          title: _isBn ? 'লাইফ সেভার' : 'Life Saver',
+          icon: Icons.favorite_rounded,
+          color: Colors.redAccent,
+        ),
+      (
+        title: _isBn ? 'স্পট এক্সপ্লোরার' : 'Spot Explorer',
+        icon: Icons.hotel_rounded,
+        color: AppColors.mintGreen,
+      ),
+      if (groups.isNotEmpty)
+        (
+          title: _isBn ? 'টপ কন্ট্রিবিউটর' : 'Top Contributor',
+          icon: Icons.account_balance_wallet_rounded,
+          color: Colors.amber,
+        ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.emoji_events_rounded,
+                  size: 16, color: AppColors.gold),
+              const SizedBox(width: 6),
+              Text(
+                '${_isBn ? 'অর্জনের শোকেস' : 'Achievements'} (${achievements.length})',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 38,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: achievements.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                final a = achievements[i];
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF14241B),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: a.color.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(a.icon, size: 14, color: a.color),
+                      const SizedBox(width: 6),
+                      Text(
+                        a.title,
+                        style: TextStyle(
+                          color: a.color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -871,6 +1389,30 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     }
 
     final email = _tourRepo.currentEmail;
+    final filteredGroups = switch (_activeCategory) {
+      'beach' => groups
+          .where((g) =>
+              g.name.toLowerCase().contains('cox') ||
+              g.name.toLowerCase().contains('beach') ||
+              g.name.toLowerCase().contains('kuakata') ||
+              g.name.toLowerCase().contains('martin') ||
+              g.destination.toLowerCase().contains('cox') ||
+              g.destination.toLowerCase().contains('beach') ||
+              g.destination.toLowerCase().contains('kuakata'))
+          .toList(),
+      'hills' => groups
+          .where((g) =>
+              g.name.toLowerCase().contains('sajek') ||
+              g.name.toLowerCase().contains('bandarban') ||
+              g.name.toLowerCase().contains('hill') ||
+              g.name.toLowerCase().contains('sylhet') ||
+              g.destination.toLowerCase().contains('sajek') ||
+              g.destination.toLowerCase().contains('bandarban') ||
+              g.destination.toLowerCase().contains('hill'))
+          .toList(),
+      _ => groups,
+    };
+    final displayGroups = filteredGroups.isEmpty ? groups : filteredGroups;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -880,8 +1422,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           children: [
             Text(
               _isBn
-                  ? 'সক্রিয় ও পূর্বের ট্যুর (${groups.length})'
-                  : 'Active & Past Tours (${groups.length})',
+                  ? 'সক্রিয় ও পূর্বের ট্যুর (${displayGroups.length})'
+                  : 'Active & Past Tours (${displayGroups.length})',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 15,
@@ -905,10 +1447,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: groups.length,
+          itemCount: displayGroups.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final group = groups[index];
+            final group = displayGroups[index];
             final isOwner = group.ownerEmail == email;
 
             return Container(
@@ -1858,6 +2400,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       'Mymensingh'
     ];
 
+    final statusNoteController = TextEditingController(
+        text: _statusNote ?? rawData?['statusNote'] as String? ?? '');
+    String selectedBloodGroup =
+        _bloodGroup ?? rawData?['bloodGroup'] as String? ?? 'O+';
+    const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
     XFile? dialogAvatarFile;
     XFile? dialogCoverFile;
     bool isSaving = false;
@@ -2240,6 +2788,75 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                     }
                                   },
                           ),
+                          const SizedBox(height: 16),
+
+                          // Blood Group
+                          Text(_isBn ? 'রক্তের গ্রুপ' : 'BLOOD GROUP',
+                              style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0)),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String>(
+                            initialValue: bloodGroups.contains(selectedBloodGroup)
+                                ? selectedBloodGroup
+                                : 'O+',
+                            dropdownColor: context.surfacePanel,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              fillColor: Colors.white.withValues(alpha: 0.04),
+                              filled: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            items: bloodGroups
+                                .map((bg) => DropdownMenuItem(
+                                      value: bg,
+                                      child: Text(bg),
+                                    ))
+                                .toList(),
+                            onChanged: isSaving
+                                ? null
+                                : (val) {
+                                    if (val != null) {
+                                      setDialogState(() {
+                                        selectedBloodGroup = val;
+                                      });
+                                    }
+                                  },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Status Note
+                          Text(_isBn ? 'স্ট্যাটাস নোট' : 'STATUS NOTE',
+                              style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0)),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: statusNoteController,
+                            enabled: !isSaving,
+                            maxLength: 80,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              fillColor: Colors.white.withValues(alpha: 0.04),
+                              filled: true,
+                              hintText: _isBn
+                                  ? 'আজকের ভ্রমণ নোট বা অনুভূতি...'
+                                  : 'Today\'s travel note...',
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
                           const SizedBox(height: 24),
 
                           // Buttons
@@ -2368,9 +2985,22 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                               'bioEnglish':
                                                   bioEnglishController.text
                                                       .trim(),
+                                              'bloodGroup': selectedBloodGroup,
+                                              'statusNote':
+                                                  statusNoteController.text
+                                                      .trim(),
                                             }, SetOptions(merge: true));
 
-                                            if (mounted) _loadProfile();
+                                            if (mounted) {
+                                              setState(() {
+                                                _bloodGroup =
+                                                    selectedBloodGroup;
+                                                _statusNote =
+                                                    statusNoteController.text
+                                                        .trim();
+                                              });
+                                              _loadProfile();
+                                            }
                                             if (bottomSheetContext.mounted) {
                                               Navigator.pop(
                                                   bottomSheetContext);

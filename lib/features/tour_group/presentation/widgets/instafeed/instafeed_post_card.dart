@@ -7,10 +7,10 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_carousel.dart';
 import 'instafeed_image_viewer_modal.dart';
-import 'instafeed_travel_banners.dart';
 import 'instafeed_zoomable_media.dart';
 import 'reel_thumbnail_preview.dart';
 import 'tour_safe_network_image.dart';
+import '../member_profile/tour_member_profile_modal.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../../../core/localization/app_localizations.dart';
@@ -699,11 +699,12 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   }
 
   void _showAuthorLogistics() {
-    InstafeedMemberLogisticsDialog.show(
+    TourMemberProfileModal.show(
       context,
-      authorName: widget.post.authorName,
-      authorEmail: widget.post.authorEmail,
-      authorPhoto: widget.post.authorPhoto,
+      tourId: widget.tourId.isNotEmpty ? widget.tourId : widget.post.tourId,
+      memberEmail: widget.post.authorEmail,
+      memberName: widget.post.authorName,
+      memberPhoto: widget.post.authorPhoto,
       seatNumber: widget.seatNumber,
       roomNumber: widget.roomNumber,
     );
