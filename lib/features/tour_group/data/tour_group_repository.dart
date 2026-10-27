@@ -98,13 +98,33 @@ class TourGroupRepository {
   static String? _cachedActiveTourId;
 
   /// The most recent or currently active tour ID across the application.
-  static String? get lastActiveTourId => _cachedActiveTourId;
+  static String? get lastActiveTourId {
+    if (_cachedActiveTourId != null && _cachedActiveTourId!.isNotEmpty) {
+      return _cachedActiveTourId;
+    }
+    try {
+      if (Hive.isBoxOpen('tour_groups_box')) {
+        final saved =
+            Hive.box<dynamic>('tour_groups_box').get('last_active_tour_id');
+        if (saved is String && saved.isNotEmpty) {
+          _cachedActiveTourId = saved;
+          return saved;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static set lastActiveTourId(String? id) {
     if (id == null || id.isEmpty) return;
     _cachedActiveTourId = id;
     try {
-      if (Hive.isBoxOpen('tour_groups')) {
-        Hive.box<dynamic>('tour_groups').put('last_active_tour_id', id);
+      if (Hive.isBoxOpen('tour_groups_box')) {
+        Hive.box<dynamic>('tour_groups_box').put('last_active_tour_id', id);
+      } else {
+        Hive.openBox<dynamic>('tour_groups_box').then((box) {
+          box.put('last_active_tour_id', id);
+        });
       }
     } catch (_) {}
   }
@@ -342,7 +362,10 @@ class TourGroupRepository {
       final groups = tours.values.toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       if (groups.isNotEmpty) {
-        lastActiveTourId = groups.first.id;
+        final currentId = lastActiveTourId;
+        if (currentId == null || !groups.any((g) => g.id == currentId)) {
+          lastActiveTourId = groups.first.id;
+        }
       }
       controller.add(groups);
     }
@@ -402,6 +425,7 @@ class TourGroupRepository {
       listedIds.clear();
       rolesByTour.clear();
       heardFromServer = false;
+      _cachedActiveTourId = null;
     }
 
     void bindUser(User? user) {
@@ -1069,6 +1093,7 @@ class TourGroupRepository {
     String? currency,
     int? originalMinor,
     double? fxRate,
+    String? receiptUrl,
   }) async {
     final email = _requireEmail();
     final expense = ExpenseItem(
@@ -1089,6 +1114,7 @@ class TourGroupRepository {
       currency: currency,
       originalMinor: originalMinor,
       fxRate: fxRate,
+      receiptUrl: receiptUrl,
     );
     await _sub(tourId, 'expenses').doc(expense.id).set(expense.toMap());
     return expense.id;

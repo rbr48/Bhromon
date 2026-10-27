@@ -59,6 +59,9 @@ class ExpenseItem {
   final int? originalMinor;
   final double? fxRate;
 
+  /// Attached photo receipt / memo URL on the media server or storage.
+  final String? receiptUrl;
+
   bool get isForeign => currency != null && currency != 'BDT';
 
   const ExpenseItem({
@@ -79,9 +82,52 @@ class ExpenseItem {
     this.currency,
     this.originalMinor,
     this.fxRate,
+    this.receiptUrl,
   });
 
   double get amountTaka => amountPaisa / 100.0;
+
+  ExpenseItem copyWith({
+    String? id,
+    String? tourId,
+    String? title,
+    int? amountPaisa,
+    String? paidById,
+    String? paidByName,
+    String? category,
+    DateTime? date,
+    String? notes,
+    String? addedByEmail,
+    List<String>? participantIds,
+    SplitMode? splitMode,
+    Map<String, int>? splitShares,
+    String? stopId,
+    String? currency,
+    int? originalMinor,
+    double? fxRate,
+    String? receiptUrl,
+  }) {
+    return ExpenseItem(
+      id: id ?? this.id,
+      tourId: tourId ?? this.tourId,
+      title: title ?? this.title,
+      amountPaisa: amountPaisa ?? this.amountPaisa,
+      paidById: paidById ?? this.paidById,
+      paidByName: paidByName ?? this.paidByName,
+      category: category ?? this.category,
+      date: date ?? this.date,
+      notes: notes ?? this.notes,
+      addedByEmail: addedByEmail ?? this.addedByEmail,
+      participantIds: participantIds ?? this.participantIds,
+      splitMode: splitMode ?? this.splitMode,
+      splitShares: splitShares ?? this.splitShares,
+      stopId: stopId ?? this.stopId,
+      currency: currency ?? this.currency,
+      originalMinor: originalMinor ?? this.originalMinor,
+      fxRate: fxRate ?? this.fxRate,
+      receiptUrl: receiptUrl ?? this.receiptUrl,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -97,6 +143,7 @@ class ExpenseItem {
       if (currency != null) 'currency': currency,
       if (originalMinor != null) 'originalMinor': originalMinor,
       if (fxRate != null) 'fxRate': fxRate,
+      if (receiptUrl != null) 'receiptUrl': receiptUrl,
       'amountPaisa': amountPaisa,
       'paidById': paidById == null ? null : normalizeEmail(paidById!),
       'paidByName': paidByName,
@@ -141,6 +188,7 @@ class ExpenseItem {
       currency: map['currency'] as String?,
       originalMinor: (map['originalMinor'] as num?)?.toInt(),
       fxRate: (map['fxRate'] as num?)?.toDouble(),
+      receiptUrl: map['receiptUrl'] as String?,
     );
   }
 }

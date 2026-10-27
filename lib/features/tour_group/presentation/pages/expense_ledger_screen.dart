@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/tour_media_uploader.dart';
 import '../../domain/models/expense_models.dart';
 import '../../domain/models/itinerary_models.dart';
 import '../../domain/models/tour_group.dart';
@@ -882,10 +883,46 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           child: Icon(fundCategoryIcon(e.category),
               color: fromFund ? _fundBlue : AppColors.gold, size: 20),
         ),
-        title: Text(e.title,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600)),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(e.title,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
+            if (e.receiptUrl != null && e.receiptUrl!.isNotEmpty) ...[
+              const SizedBox(width: 4),
+              InkWell(
+                onTap: () => _viewReceipt(e.receiptUrl!, e.title),
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.mintGreen.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                        color: AppColors.mintGreen.withValues(alpha: 0.3)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.receipt_long_rounded,
+                          size: 11, color: AppColors.mintGreen),
+                      SizedBox(width: 3),
+                      Text('রশিদ',
+                          style: TextStyle(
+                              color: AppColors.mintGreen,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
         subtitle: Text(
           [
             fromFund
@@ -956,6 +993,57 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   child: Text(e.notes!,
                       style: const TextStyle(color: Colors.white70)),
                 ),
+              if (e.receiptUrl != null && e.receiptUrl!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () => _viewReceipt(e.receiptUrl!, e.title),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: AppColors.mintGreen.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.network(
+                            e.receiptUrl!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                                Icons.receipt_long_rounded,
+                                color: AppColors.mintGreen),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(l10n.translate('fund_receipt'),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13)),
+                              Text(l10n.translate('fund_receipt_view'),
+                                  style: const TextStyle(
+                                      color: AppColors.mintGreen,
+                                      fontSize: 11)),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.open_in_full_rounded,
+                            size: 16, color: AppColors.mintGreen),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Text(_splitLabel(l10n, e),
                   style: const TextStyle(
@@ -1147,15 +1235,30 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     color: AppColors.gold,
                     fontWeight: FontWeight.bold,
                     fontSize: 15)),
-            if (_mayRecord(s))
-              TextButton(
-                style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.symmetric(horizontal: 8)),
-                onPressed: () => _transfer(suggestion: s),
-                child: Text(l10n.translate('fund_mark_paid'),
-                    style: const TextStyle(color: AppColors.mintGreen)),
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: l10n.translate('fund_bkash_nagad_assist'),
+                  icon: const Icon(Icons.account_balance_wallet_rounded,
+                      color: Color(0xFFE2136E), size: 18),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => _showBkashNagadAssist(l10n, s),
+                ),
+                if (_mayRecord(s)) ...[
+                  const SizedBox(width: 6),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    onPressed: () => _transfer(suggestion: s),
+                    child: Text(l10n.translate('fund_mark_paid'),
+                        style: const TextStyle(color: AppColors.mintGreen)),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
       ]),
@@ -1383,6 +1486,19 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     );
     if (draft == null || !mounted) return;
     await _run(() async {
+      String? finalReceiptUrl = draft.receiptUrl;
+      if (draft.newReceiptFile != null) {
+        final upload = await TourMediaUploader.start(
+          tourId: widget.tourId,
+          folder: 'expenses',
+          file: draft.newReceiptFile!,
+          contentType: 'image/jpeg',
+          extension: 'jpg',
+          maxBytes: 10 * 1024 * 1024,
+        );
+        finalReceiptUrl = await upload.finish();
+      }
+
       if (existing == null || duplicate) {
         await _repository.addExpense(
           tourId: widget.tourId,
@@ -1400,6 +1516,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           currency: draft.currency,
           originalMinor: draft.originalMinor,
           fxRate: draft.fxRate,
+          receiptUrl: finalReceiptUrl,
         );
       } else {
         await _repository.updateExpense(ExpenseItem(
@@ -1420,6 +1537,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           currency: draft.currency,
           originalMinor: draft.originalMinor,
           fxRate: draft.fxRate,
+          receiptUrl: finalReceiptUrl,
         ));
       }
     }, 'fund_err_save');
@@ -1741,6 +1859,269 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     await Share.shareXFiles(
       [XFile.fromData(bytes, mimeType: 'text/csv', name: name)],
       subject: name,
+    );
+  }
+
+  void _viewReceipt(String url, String title) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      height: 300,
+                      color: const Color(0xFF1B4332),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                            color: AppColors.mintGreen),
+                      ),
+                    );
+                  },
+                  errorBuilder: (_, __, ___) => Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1B4332),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.broken_image_rounded,
+                            size: 48, color: Colors.white54),
+                        const SizedBox(height: 12),
+                        Text(
+                          title,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('রসিদের ছবি লোড করা যায়নি',
+                            style:
+                                TextStyle(color: Colors.white54, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.black54,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.close_rounded,
+                      color: Colors.white, size: 20),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showBkashNagadAssist(AppLocalizations l10n, SettlementTransaction s) {
+    final amountTaka = TripLedgerEngine.plainTakaInput(s.amountPaisa);
+    final recipientName = _party(l10n, s.to, s.toFund);
+    final senderName = _party(l10n, s.from, s.fromFund);
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: _card,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE2136E).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text('৳',
+                        style: TextStyle(
+                            color: Color(0xFFE2136E),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.translate('fund_bkash_nagad_assist'),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16),
+                        ),
+                        Text(
+                          '$senderName → $recipientName',
+                          style: const TextStyle(
+                              color: Colors.white60, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.translate('fund_bkash_nagad_help'),
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(l10n.translate('fund_balance_owed'),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13)),
+                        Text('৳ $amountTaka',
+                            style: const TextStyle(
+                                color: AppColors.gold,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18)),
+                      ],
+                    ),
+                    const Divider(color: Colors.white12, height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(recipientName,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14)),
+                        if (s.toId != null && s.toId!.isNotEmpty)
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact),
+                            icon: const Icon(Icons.copy_rounded,
+                                size: 14, color: AppColors.mintGreen),
+                            label: Text(l10n.translate('fund_copy_payee'),
+                                style: const TextStyle(
+                                    color: AppColors.mintGreen, fontSize: 12)),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: s.toId!));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      l10n.translate('fund_payee_copied')),
+                                  backgroundColor: AppColors.midGreen,
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFE2136E),
+                        side: const BorderSide(color: Color(0xFFE2136E)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: Text(l10n.translate('fund_copy_amount',
+                          args: {'amount': amountTaka})),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: amountTaka));
+                        Navigator.of(ctx).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.translate('fund_amount_copied',
+                                args: {'amount': amountTaka})),
+                            backgroundColor: AppColors.midGreen,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  if (_mayRecord(s)) ...[
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.mintGreen,
+                          foregroundColor: AppColors.darkGreen,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.check_circle_outline_rounded,
+                            size: 16),
+                        label: Text(l10n.translate('fund_mark_paid')),
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          _transfer(suggestion: s);
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -54,75 +55,90 @@ class TripShell extends StatelessWidget {
       child: child,
     );
 
-    if (MediaQuery.sizeOf(context).width < railBreakpoint) {
-      return Scaffold(
-        body: wrappedChild,
-        bottomNavigationBar: BhromonBottomNav(
-          selectedIndex: index,
-          tourId: tourId,
-        ),
-      );
-    }
+    final shortcuts = <ShortcutActivator, VoidCallback>{
+      const SingleActivator(LogicalKeyboardKey.digit1, alt: true): () => select(0),
+      const SingleActivator(LogicalKeyboardKey.digit2, alt: true): () => select(1),
+      const SingleActivator(LogicalKeyboardKey.digit3, alt: true): () => select(2),
+      const SingleActivator(LogicalKeyboardKey.digit4, alt: true): () => select(3),
+      const SingleActivator(LogicalKeyboardKey.digit5, alt: true): () => select(4),
+    };
 
-    return Scaffold(
-      body: Row(
-        children: [
-          NavigationRail(
-            selectedIndex: index,
-            labelType: NavigationRailLabelType.all,
-            onDestinationSelected: select,
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded),
-                tooltip: context.l10n.translate('hub_title'),
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/group-hub');
-                  }
-                },
-              ),
+    final Widget scaffold = MediaQuery.sizeOf(context).width < railBreakpoint
+        ? Scaffold(
+            body: wrappedChild,
+            bottomNavigationBar: BhromonBottomNav(
+              selectedIndex: index,
+              tourId: tourId,
             ),
-            destinations: [
-              NavigationRailDestination(
-                icon: const Icon(Icons.hub_outlined, color: AppColors.mintGreen),
-                selectedIcon: const Icon(Icons.hub, color: AppColors.mintGreen),
-                label: Text(context.l10n.translate('hub_nav_tours')),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.photo_library_outlined),
-                selectedIcon: const Icon(Icons.photo_library),
-                label: Text(context.l10n.translate('hub_nav_moments')),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.forum_outlined),
-                selectedIcon: const Icon(Icons.forum),
-                label: Text(context.l10n.translate('hub_nav_channels')),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.sports_esports_outlined),
-                selectedIcon: const Icon(Icons.sports_esports),
-                label: Text(context.l10n.translate('hub_nav_games')),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.person_outline),
-                selectedIcon: const Icon(Icons.person),
-                label: Text(context.l10n.translate('hub_nav_profile')),
-              ),
-            ],
-          ),
-          const VerticalDivider(width: 1),
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: contentMaxWidth),
-                child: wrappedChild,
-              ),
+          )
+        : Scaffold(
+            body: Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: index,
+                  labelType: NavigationRailLabelType.all,
+                  onDestinationSelected: select,
+                  leading: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      tooltip: context.l10n.translate('hub_title'),
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/group-hub');
+                        }
+                      },
+                    ),
+                  ),
+                  destinations: [
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.hub_outlined, color: AppColors.mintGreen),
+                      selectedIcon: const Icon(Icons.hub, color: AppColors.mintGreen),
+                      label: Text(context.l10n.translate('hub_nav_tours')),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.photo_library_outlined),
+                      selectedIcon: const Icon(Icons.photo_library),
+                      label: Text(context.l10n.translate('hub_nav_moments')),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.forum_outlined),
+                      selectedIcon: const Icon(Icons.forum),
+                      label: Text(context.l10n.translate('hub_nav_channels')),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.sports_esports_outlined),
+                      selectedIcon: const Icon(Icons.sports_esports),
+                      label: Text(context.l10n.translate('hub_nav_games')),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.person_outline),
+                      selectedIcon: const Icon(Icons.person),
+                      label: Text(context.l10n.translate('hub_nav_profile')),
+                    ),
+                  ],
+                ),
+                const VerticalDivider(width: 1),
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(maxWidth: contentMaxWidth),
+                      child: wrappedChild,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+          );
+
+    return CallbackShortcuts(
+      bindings: shortcuts,
+      child: Focus(
+        autofocus: true,
+        child: scaffold,
       ),
     );
   }

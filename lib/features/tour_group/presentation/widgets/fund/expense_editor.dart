@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
@@ -45,6 +48,8 @@ class ExpenseDraft {
     required this.originalMinor,
     required this.fxRate,
     required this.notes,
+    this.receiptUrl,
+    this.newReceiptFile,
   });
 
   final String title;
@@ -61,6 +66,8 @@ class ExpenseDraft {
   final int? originalMinor;
   final double? fxRate;
   final String? notes;
+  final String? receiptUrl;
+  final XFile? newReceiptFile;
 }
 
 Future<ExpenseDraft?> showExpenseEditor(
@@ -108,6 +115,9 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
               e!.isForeign ? (e!.originalMinor ?? 0) : e!.amountPaisa));
   late final _rate = TextEditingController(text: e?.fxRate?.toString() ?? '');
   late final _notes = TextEditingController(text: e?.notes ?? '');
+  late String? _receiptUrl = e?.receiptUrl;
+  XFile? _pickedReceipt;
+  Uint8List? _pickedReceiptBytes;
   late String _currency = e?.isForeign == true ? e!.currency! : 'BDT';
   late String _category = e?.category ?? 'Food';
   late DateTime _date = e?.date ?? DateTime.now();
@@ -266,8 +276,26 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
         originalMinor: _currency == 'BDT' ? null : _enteredMinor,
         fxRate: _currency == 'BDT' ? null : _rateValue,
         notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+        receiptUrl: _receiptUrl,
+        newReceiptFile: _pickedReceipt,
       ),
     );
+  }
+
+  Future<void> _pickReceipt(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final file = await picker.pickImage(
+          source: source, maxWidth: 1600, imageQuality: 85);
+      if (file == null || !mounted) return;
+      final bytes = await file.readAsBytes();
+      setState(() {
+        _pickedReceipt = file;
+        _pickedReceiptBytes = bytes;
+      });
+    } catch (err) {
+      debugPrint('Receipt pick error: $err');
+    }
   }
 
   @override
@@ -550,6 +578,112 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
               decoration:
                   InputDecoration(labelText: l10n.translate('fund_notes')),
             ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.receipt_long_rounded,
+                          size: 16, color: AppColors.mintGreen),
+                      const SizedBox(width: 8),
+                      Text(
+                        l10n.translate('fund_receipt'),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      if (_pickedReceiptBytes != null ||
+                          (_receiptUrl != null && _receiptUrl!.isNotEmpty))
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            foregroundColor: Colors.redAccent,
+                          ),
+                          onPressed: () => setState(() {
+                            _pickedReceipt = null;
+                            _pickedReceiptBytes = null;
+                            _receiptUrl = null;
+                          }),
+                          icon: const Icon(Icons.delete_outline, size: 14),
+                          label: const Text('মুছুন',
+                              style: TextStyle(fontSize: 11)),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (_pickedReceiptBytes != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        _pickedReceiptBytes!,
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  else if (_receiptUrl != null && _receiptUrl!.isNotEmpty)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        _receiptUrl!,
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                            Icons.broken_image,
+                            color: Colors.white24),
+                      ),
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white70,
+                              side: const BorderSide(color: Colors.white24),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () => _pickReceipt(ImageSource.camera),
+                            icon:
+                                const Icon(Icons.camera_alt_outlined, size: 15),
+                            label: const Text('ক্যামেরা',
+                                style: TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white70,
+                              side: const BorderSide(color: Colors.white24),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () => _pickReceipt(ImageSource.gallery),
+                            icon: const Icon(Icons.photo_library_outlined,
+                                size: 15),
+                            label: const Text('গ্যালারি',
+                                style: TextStyle(fontSize: 12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),

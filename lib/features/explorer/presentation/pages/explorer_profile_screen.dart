@@ -2507,8 +2507,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       ),
     );
     if (confirmed == true && context.mounted) {
-      context.read<AuthCubit>().signOut();
-      context.go('/group-hub');
+      await context.read<AuthCubit>().signOut();
+      if (context.mounted) {
+        context.go('/login');
+      }
     }
   }
 }
