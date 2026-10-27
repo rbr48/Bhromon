@@ -201,14 +201,16 @@ class AuthRepositoryImpl implements IAuthRepository {
     try {
       await _auth.signOut();
     } catch (e, stack) {
-      logWarning('AuthRepository: failed to sign out from Firebase Auth', e, stack);
+      logWarning(
+          'AuthRepository: failed to sign out from Firebase Auth', e, stack);
     }
     try {
       if (!kIsWeb) {
         await _googleSignIn.signOut();
       }
     } catch (e, stack) {
-      logWarning('AuthRepository: failed to sign out from GoogleSignIn', e, stack);
+      logWarning(
+          'AuthRepository: failed to sign out from GoogleSignIn', e, stack);
     }
   }
 
@@ -240,12 +242,16 @@ class AuthRepositoryImpl implements IAuthRepository {
                 .set(fallback.toJson()),
           );
         } catch (e, stack) {
-          logWarning('AuthRepository: failed to persist fallback profile', e, stack);
+          logWarning(
+              'AuthRepository: failed to persist fallback profile', e, stack);
         }
         return Right(fallback);
       }
     } catch (e, stack) {
-      logWarning('AuthRepository: error loading profile from remote, falling back', e, stack);
+      logWarning(
+          'AuthRepository: error loading profile from remote, falling back',
+          e,
+          stack);
     }
 
     final fallback = _buildFallbackProfile(user);
@@ -258,7 +264,8 @@ class AuthRepositoryImpl implements IAuthRepository {
             .set(fallback.toJson()),
       );
     } catch (e, stack) {
-      logWarning('AuthRepository: failed to save fallback profile on error', e, stack);
+      logWarning(
+          'AuthRepository: failed to save fallback profile on error', e, stack);
     }
     return Right(fallback);
   }
@@ -279,7 +286,8 @@ class AuthRepositoryImpl implements IAuthRepository {
             .set(profile.toJson(), SetOptions(merge: true)),
       );
     } catch (e, stack) {
-      logWarning('AuthRepository: failed to sync profile update to remote', e, stack);
+      logWarning(
+          'AuthRepository: failed to sync profile update to remote', e, stack);
     }
     return Right(profile);
   }
@@ -307,7 +315,10 @@ class AuthRepositoryImpl implements IAuthRepository {
       await _updateLocalCache(profile);
       return Right(profile);
     } catch (e, stack) {
-      logWarning('AuthRepository: _syncUserWithFirestore failed, building fallback', e, stack);
+      logWarning(
+          'AuthRepository: _syncUserWithFirestore failed, building fallback',
+          e,
+          stack);
       final profile = _buildFallbackProfile(user);
       await _updateLocalCache(profile);
       try {
@@ -316,7 +327,10 @@ class AuthRepositoryImpl implements IAuthRepository {
             .doc(user.uid)
             .set(profile.toJson()));
       } catch (innerE, innerStack) {
-        logWarning('AuthRepository: failed to set fallback in _syncUserWithFirestore', innerE, innerStack);
+        logWarning(
+            'AuthRepository: failed to set fallback in _syncUserWithFirestore',
+            innerE,
+            innerStack);
       }
       return Right(profile);
     }
