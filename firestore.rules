@@ -280,14 +280,31 @@ service cloud.firestore {
     }
 
     // ---- Safety Reports ----
+    // Signed-in reporters only. The reporter is the caller, the report starts
+    // pending, and the timestamp is the server's clock.
     match /safety_reports/{id} {
-      allow create: if true;
+      allow create: if isAuth()
+                    && request.resource.data.keys().hasOnly(['pinId', 'pinName', 'reason', 'detail', 'reportedBy', 'status', 'timestamp'])
+                    && request.resource.data.reportedBy == request.auth.uid
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.timestamp == request.time
+                    && request.resource.data.pinId is string && request.resource.data.pinId.size() <= 200
+                    && request.resource.data.pinName is string && request.resource.data.pinName.size() <= 200
+                    && request.resource.data.reason is string && request.resource.data.reason.size() <= 100
+                    && request.resource.data.detail is string && request.resource.data.detail.size() <= 1000;
       allow read, update, delete: if isRegionExpertOrAbove();
     }
 
     // ---- Geo Fence Triggers ----
+    // Written by the device when a signed-in user enters a pin's area. Only the
+    // fields the function reads are accepted, with the server's clock.
     match /geo_fence_triggers/{id} {
-      allow create: if true;
+      allow create: if isAuth()
+                    && request.resource.data.keys().hasOnly(['pinId', 'pinName', 'distanceM', 'triggeredAt'])
+                    && request.resource.data.triggeredAt == request.time
+                    && request.resource.data.pinId is string && request.resource.data.pinId.size() <= 200
+                    && request.resource.data.pinName is string && request.resource.data.pinName.size() <= 200
+                    && request.resource.data.distanceM is int && request.resource.data.distanceM >= 0;
       allow read, update, delete: if isRegionExpertOrAbove();
     }
 
