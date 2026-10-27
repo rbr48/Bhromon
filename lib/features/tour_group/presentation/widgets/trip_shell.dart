@@ -43,9 +43,19 @@ class TripShell extends StatelessWidget {
       context.pushReplacement(tripTabPaths(tourId)[i]);
     }
 
+    final wrappedChild = PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && !context.canPop()) {
+          context.go('/group-hub');
+        }
+      },
+      child: child,
+    );
+
     if (MediaQuery.sizeOf(context).width < railBreakpoint) {
       return Scaffold(
-        body: child,
+        body: wrappedChild,
         bottomNavigationBar: NavigationBar(
           selectedIndex: index,
           onDestinationSelected: select,
@@ -69,6 +79,20 @@ class TripShell extends StatelessWidget {
             selectedIndex: index,
             labelType: NavigationRailLabelType.all,
             onDestinationSelected: select,
+            leading: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                tooltip: context.l10n.translate('hub_title'),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/group-hub');
+                  }
+                },
+              ),
+            ),
             destinations: [
               for (final tab in tabs)
                 NavigationRailDestination(
@@ -83,7 +107,7 @@ class TripShell extends StatelessWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: contentMaxWidth),
-                child: child,
+                child: wrappedChild,
               ),
             ),
           ),

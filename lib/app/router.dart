@@ -58,7 +58,7 @@ class AppRouter {
 
   static final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/feed',
+    initialLocation: '/group-hub',
     redirect: (context, state) {
       final authState = context.read<AuthCubit>().state;
       final bool loggingIn = state.matchedLocation == '/login';
@@ -68,13 +68,17 @@ class AppRouter {
       }
 
       if (authState is Authenticated && loggingIn) {
-        return '/feed';
+        return '/group-hub';
       }
 
       return null;
     },
     refreshListenable: GoRouterRefreshStream(getIt<AuthCubit>().stream),
     routes: [
+      GoRoute(
+        path: '/',
+        redirect: (context, state) => '/group-hub',
+      ),
       GoRoute(
         path: '/login',
         pageBuilder: (context, state) =>

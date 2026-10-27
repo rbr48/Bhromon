@@ -11,14 +11,16 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
 
 class TourGroupHubScreen extends StatefulWidget {
-  const TourGroupHubScreen({super.key});
+  final TourGroupRepository? repository;
+  const TourGroupHubScreen({super.key, this.repository});
 
   @override
   State<TourGroupHubScreen> createState() => _TourGroupHubScreenState();
 }
 
 class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
-  final TourGroupRepository _repository = TourGroupRepository();
+  late final TourGroupRepository _repository =
+      widget.repository ?? TourGroupRepository();
   TourGroup? _activeGroup;
   // The group shown on screen, so the backup button works without a selection.
   TourGroup? _displayedGroup;
@@ -339,13 +341,44 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0D1A12),
         elevation: 0,
-        title: Text(
-          context.l10n.translate('hub_title'),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+        automaticallyImplyLeading: false,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.mintGreen.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.terrain_rounded,
+                  color: AppColors.mintGreen, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Bhromon',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  context.l10n.translate('hub_title'),
+                  style: const TextStyle(
+                    color: AppColors.mintGreen,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -464,6 +497,65 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             },
           ),
         ),
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 0,
+        maintainBottomViewPadding: true,
+        onDestinationSelected: (index) {
+          if (index == 0) return;
+          final active = _displayedGroup;
+          switch (index) {
+            case 1:
+              if (active != null) {
+                context.push('/group/${active.id}/feed');
+              } else {
+                _snack(context.l10n.translate('hub_no_active_tour_hint'));
+              }
+              break;
+            case 2:
+              if (active != null) {
+                context.push('/group/${active.id}/channels');
+              } else {
+                context.push('/chats');
+              }
+              break;
+            case 3:
+              context.push('/game-zone');
+              break;
+            case 4:
+              final uid = _repository.currentUid;
+              final targetUid = uid.isNotEmpty ? uid : 'explorer_user';
+              context.push('/profile/$targetUid');
+              break;
+          }
+        },
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.hub_outlined, color: AppColors.mintGreen),
+            selectedIcon: const Icon(Icons.hub, color: AppColors.mintGreen),
+            label: context.l10n.translate('hub_nav_tours'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.photo_library_outlined),
+            selectedIcon: const Icon(Icons.photo_library),
+            label: context.l10n.translate('hub_nav_moments'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.forum_outlined),
+            selectedIcon: const Icon(Icons.forum),
+            label: context.l10n.translate('hub_nav_channels'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.sports_esports_outlined),
+            selectedIcon: const Icon(Icons.sports_esports),
+            label: context.l10n.translate('hub_nav_games'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.person_outline_rounded),
+            selectedIcon: const Icon(Icons.person_rounded),
+            label: context.l10n.translate('hub_nav_profile'),
+          ),
+        ],
       ),
     );
   }
@@ -735,41 +827,64 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Tooltip(
-                message: 'ট্যাপ করে ইনভাইট কোড কপি করুন',
-                child: InkWell(
-                  onTap: () => _copyInviteCode(group.inviteCode),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.vpn_key_rounded,
-                            size: 14, color: AppColors.gold),
-                        const SizedBox(width: 6),
-                        Text(
-                          context.l10n.translate('hub_invite_line',
-                              args: {'code': group.inviteCode}),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            letterSpacing: 1.2,
+              Expanded(
+                child: Tooltip(
+                  message: 'ট্যাপ করে ইনভাইট কোড কপি করুন',
+                  child: InkWell(
+                    onTap: () => _copyInviteCode(group.inviteCode),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.vpn_key_rounded,
+                              size: 14, color: AppColors.gold),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              context.l10n.translate('hub_invite_line',
+                                  args: {'code': group.inviteCode}),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                letterSpacing: 1.1,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.copy_rounded,
-                            size: 14, color: AppColors.mintGreen),
-                      ],
+                          const SizedBox(width: 6),
+                          const Icon(Icons.copy_rounded,
+                              size: 14, color: AppColors.mintGreen),
+                        ],
+                      ),
                     ),
                   ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              FilledButton.icon(
+                onPressed: () => context.push('/group/${group.id}/feed'),
+                icon: const Icon(Icons.arrow_forward_rounded, size: 15),
+                label: Text(
+                  context.l10n.translate('hub_open_tour'),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.mintGreen,
+                  foregroundColor: AppColors.darkGreen,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
               ),
             ],
@@ -881,75 +996,93 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         ),
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: modules.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 2.35,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-      ),
-      itemBuilder: (context, index) {
-        final m = modules[index];
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: m.onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF14241B),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: m.color.withValues(alpha: 0.18)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: m.color.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(m.icon, color: m.color, size: 20),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          m.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12.5,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          m.subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 10.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final int crossAxisCount;
+        final double childAspectRatio;
+        if (constraints.maxWidth >= 760) {
+          crossAxisCount = 4;
+          childAspectRatio = 2.15;
+        } else if (constraints.maxWidth >= 500) {
+          crossAxisCount = 3;
+          childAspectRatio = 2.1;
+        } else {
+          crossAxisCount = 2;
+          childAspectRatio = 2.35;
+        }
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: modules.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: childAspectRatio,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
           ),
+          itemBuilder: (context, index) {
+            final m = modules[index];
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: m.onTap,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF14241B),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: m.color.withValues(alpha: 0.18)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: m.color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(m.icon, color: m.color, size: 20),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              m.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              m.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 10.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -1004,73 +1137,78 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   : Text(context.l10n.translate('hub_no_members'),
                       style: const TextStyle(color: Colors.white54))
             else
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF14241B),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white10),
-                ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: members.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(color: Colors.white10, height: 1),
-                  itemBuilder: (context, i) {
-                    final m = members[i];
-                    return ListTile(
-                      onTap: () => _showManageMemberSheet(
-                        context,
-                        tourId,
-                        m,
-                        viewerIsOwner: _viewerIsOwner(members),
-                        viewerIsAdmin: _viewerIsAdmin(members),
-                      ),
-                      leading: CircleAvatar(
-                        backgroundColor: AppColors.midGreen,
-                        backgroundImage: m.photoUrl != null
-                            ? NetworkImage(m.photoUrl!)
-                            : null,
-                        child: m.photoUrl == null
-                            ? Text(m.displayName.isNotEmpty
-                                ? m.displayName[0].toUpperCase()
-                                : 'E')
-                            : null,
-                      ),
-                      title: Text(m.displayName,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                          _viewerIsAdmin(members)
-                              ? m.email
-                              : (m.role.isAdminOrOwner
-                                  ? context.l10n.translate('hub_role_admin')
-                                  : context.l10n.translate('hub_role_member')),
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 12)),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: m.role.isAdminOrOwner
-                              ? AppColors.gold.withValues(alpha: 0.2)
-                              : Colors.white10,
-                          borderRadius: BorderRadius.circular(6),
+              Material(
+                color: const Color(0xFF14241B),
+                borderRadius: BorderRadius.circular(16),
+                clipBehavior: Clip.antiAlias,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: members.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(color: Colors.white10, height: 1),
+                    itemBuilder: (context, i) {
+                      final m = members[i];
+                      return ListTile(
+                        onTap: () => _showManageMemberSheet(
+                          context,
+                          tourId,
+                          m,
+                          viewerIsOwner: _viewerIsOwner(members),
+                          viewerIsAdmin: _viewerIsAdmin(members),
                         ),
-                        child: Text(
-                          m.role.toValue().toUpperCase(),
-                          style: TextStyle(
+                        leading: CircleAvatar(
+                          backgroundColor: AppColors.midGreen,
+                          backgroundImage: m.photoUrl != null
+                              ? NetworkImage(m.photoUrl!)
+                              : null,
+                          child: m.photoUrl == null
+                              ? Text(m.displayName.isNotEmpty
+                                  ? m.displayName[0].toUpperCase()
+                                  : 'E')
+                              : null,
+                        ),
+                        title: Text(m.displayName,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                            _viewerIsAdmin(members)
+                                ? m.email
+                                : (m.role.isAdminOrOwner
+                                    ? context.l10n.translate('hub_role_admin')
+                                    : context.l10n
+                                        .translate('hub_role_member')),
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 12)),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
                             color: m.role.isAdminOrOwner
-                                ? AppColors.gold
-                                : Colors.white70,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                                ? AppColors.gold.withValues(alpha: 0.2)
+                                : Colors.white10,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            m.role.toValue().toUpperCase(),
+                            style: TextStyle(
+                              color: m.role.isAdminOrOwner
+                                  ? AppColors.gold
+                                  : Colors.white70,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
           ],

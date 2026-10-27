@@ -125,7 +125,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        context.go('/feed');
+        context.go('/group-hub');
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF0B141A), // WhatsApp dark background
@@ -134,7 +134,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           elevation: 1,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => context.go('/feed'),
+            onPressed: () => context.go('/group-hub'),
           ),
           title: Text(
             _bottomNavIndex == 0 ? 'Bhromon Chat' : 'Calls',

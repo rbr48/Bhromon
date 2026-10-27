@@ -38,15 +38,19 @@ const Duration _serverAckTimeout = Duration(seconds: 8);
 const int _batchLimit = 400;
 
 class TourGroupRepository {
-  final FirebaseFirestore _firestore;
-  final FirebaseAuth _auth;
+  final FirebaseFirestore? _firestoreInstance;
+  final FirebaseAuth? _authInstance;
   final Uuid _uuid = const Uuid();
 
   TourGroupRepository({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+  })  : _firestoreInstance = firestore,
+        _authInstance = auth;
+
+  FirebaseFirestore get _firestore =>
+      _firestoreInstance ?? FirebaseFirestore.instance;
+  FirebaseAuth get _auth => _authInstance ?? FirebaseAuth.instance;
 
   // ---------------------------------------------------------------------------
   // Identity

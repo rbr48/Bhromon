@@ -31,7 +31,7 @@ class _NotificationSettingsScreenState
         if (context.canPop()) {
           context.pop();
         } else {
-          context.go('/feed');
+          context.go('/group-hub');
         }
       },
       child: Scaffold(

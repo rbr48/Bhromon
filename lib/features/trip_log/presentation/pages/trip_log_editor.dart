@@ -1446,28 +1446,30 @@ class _TripLogEditorState extends State<TripLogEditor> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading:
-                  const Icon(Icons.link_rounded, color: AppColors.mintGreen),
-              title: const Text('Paste YouTube Link',
-                  style: TextStyle(color: Colors.white, fontSize: 14)),
-              subtitle: const Text('Embed a video from YouTube',
-                  style: TextStyle(color: Colors.white54, fontSize: 11)),
-              onTap: () {
-                Navigator.pop(context);
-                _showYouTubeLinkDialog();
-              },
-            ),
-            const Divider(color: Colors.white10),
-            ListTile(
               leading: const Icon(Icons.video_library_rounded,
                   color: AppColors.mintGreen),
               title: const Text('Upload Local Video',
-                  style: TextStyle(color: Colors.white, fontSize: 14)),
-              subtitle: const Text('Select a video file from gallery',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold)),
+              subtitle: const Text('Select an authentic video from gallery',
                   style: TextStyle(color: Colors.white54, fontSize: 11)),
               onTap: () {
                 Navigator.pop(context);
                 _pickAndAddVideo();
+              },
+            ),
+            const Divider(color: Colors.white10),
+            ListTile(
+              leading: const Icon(Icons.link_rounded, color: Colors.white60),
+              title: const Text('Paste External Video Link',
+                  style: TextStyle(color: Colors.white70, fontSize: 14)),
+              subtitle: const Text('Optional YouTube video link',
+                  style: TextStyle(color: Colors.white38, fontSize: 11)),
+              onTap: () {
+                Navigator.pop(context);
+                _showYouTubeLinkDialog();
               },
             ),
           ],

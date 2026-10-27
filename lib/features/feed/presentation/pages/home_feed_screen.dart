@@ -4382,10 +4382,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
 
             // 2. Tour Group Icon
             _buildBottomNavItem(
-              icon: Icons.groups_outlined,
-              label: 'Groups',
+              icon: Icons.hub_outlined,
+              label: 'Tours',
               isActive: false,
-              onTap: () => context.push('/group-hub'),
+              onTap: () => context.go('/group-hub'),
             ),
 
             // 3. Post Icon (unified with other nav items)

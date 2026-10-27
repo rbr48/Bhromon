@@ -73,14 +73,14 @@ class _LoginScreenState extends State<LoginScreen>
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        context.go('/feed');
+        context.go('/group-hub');
       },
       child: Scaffold(
         backgroundColor: _kBg,
         body: BlocConsumer<AuthCubit, AuthState>(
           listener: (ctx, state) {
             if (state is Authenticated) {
-              ctx.go('/feed');
+              ctx.go('/group-hub');
             }
             if (state is AuthError) {
               ScaffoldMessenger.of(ctx).showSnackBar(
