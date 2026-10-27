@@ -133,6 +133,49 @@ void main() {
       expect(stat.highestScore, equals(150));
       expect(stat.winRate, closeTo(66.66, 0.1));
     });
+
+    test('records recent matches and caps history at 20 entries', () {
+      var analytics = PlayerGameAnalytics.empty();
+      for (int i = 0; i < 25; i++) {
+        analytics = analytics.withResult(
+          gameType: OnlineGameType.card29,
+          won: i.isEven,
+          score: 16 + i,
+          mode: 'Online Table',
+          details: 'Round $i',
+        );
+      }
+
+      expect(analytics.recentMatches.length, equals(20));
+      expect(analytics.recentMatches.first.details, equals('Round 24'));
+      expect(analytics.recentMatches.first.won, isTrue);
+
+      final map = analytics.toMap();
+      final restored = PlayerGameAnalytics.fromMap(map);
+      expect(restored.recentMatches.length, equals(20));
+      expect(restored.recentMatches.first.details, equals('Round 24'));
+    });
+  });
+
+  group('TourLeaderboardEntry', () {
+    test('computes totals and rank badges accurately from raw stats map', () {
+      final entry = TourLeaderboardEntry.fromMap('user_champion', {
+        'displayName': 'Sajek Ace',
+        'photoUrl': 'https://example.com/avatar.jpg',
+        'gameStats': {
+          'card29': {'matchesPlayed': 30, 'matchesWon': 25},
+          'teen_patti': {'matchesPlayed': 10, 'matchesWon': 5},
+        },
+      });
+
+      expect(entry.uid, equals('user_champion'));
+      expect(entry.displayName, equals('Sajek Ace'));
+      expect(entry.totalWins, equals(30));
+      expect(entry.totalMatches, equals(40));
+      expect(entry.winRate, equals(75.0));
+      expect(entry.rankBadge, equals('Grandmaster'));
+      expect(entry.favoriteGame, equals(OnlineGameType.card29));
+    });
   });
 
   group('GameAnalyticsService', () {
