@@ -79,7 +79,7 @@ void main() {
     expect(find.text('Moments'), findsOneWidget);
     expect(find.text('Channels'), findsOneWidget);
     expect(find.text('Game Zone'), findsOneWidget);
-    expect(find.text('Vault'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
 
     // Empty state should be visible since 0 groups were emitted
     expect(find.text('No active tour groups'), findsOneWidget);

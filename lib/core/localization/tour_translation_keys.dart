@@ -300,6 +300,7 @@ class TourTranslationKeys {
       'hub_nav_channels': 'Channels',
       'hub_nav_games': 'Game Zone',
       'hub_nav_vault': 'Vault',
+      'hub_nav_profile': 'Profile',
       'hub_no_active_tour_hint': 'Please create or join a tour group first.',
 
       // ── Packing checklist ──────────────────────────────────────────────────
@@ -1747,6 +1748,7 @@ class TourTranslationKeys {
       'hub_nav_channels': 'চ্যানেলস',
       'hub_nav_games': 'গেম জোন',
       'hub_nav_vault': 'ভল্ট',
+      'hub_nav_profile': 'প্রোফাইল',
       'hub_no_active_tour_hint': 'প্রথমে একটি ট্যুর গ্রুপ তৈরি করুন বা যোগ দিন।',
 
       // ── Packing checklist ──────────────────────────────────────────────────

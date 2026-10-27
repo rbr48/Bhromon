@@ -523,7 +523,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               context.push('/game-zone');
               break;
             case 4:
-              context.push('/vault');
+              final uid = _repository.currentUid;
+              final targetUid = uid.isNotEmpty ? uid : 'explorer_user';
+              context.push('/profile/$targetUid');
               break;
           }
         },
@@ -549,9 +551,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             label: context.l10n.translate('hub_nav_games'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.lock_outline_rounded),
-            selectedIcon: const Icon(Icons.lock_rounded),
-            label: context.l10n.translate('hub_nav_vault'),
+            icon: const Icon(Icons.person_outline_rounded),
+            selectedIcon: const Icon(Icons.person_rounded),
+            label: context.l10n.translate('hub_nav_profile'),
           ),
         ],
       ),
