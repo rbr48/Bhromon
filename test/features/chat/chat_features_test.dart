@@ -348,7 +348,7 @@ void main() {
         () {
       // 1. Timestamp
       final ts = Timestamp.fromDate(DateTime(2026, 10, 26, 12, 30));
-      final parsedFromTs = (ts is Timestamp) ? ts.toDate() : null;
+      final parsedFromTs = ts.toDate();
       expect(parsedFromTs, DateTime(2026, 10, 26, 12, 30));
 
       // 2. ISO String
