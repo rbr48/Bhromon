@@ -21,76 +21,30 @@ import {
   shuffledDeck,
 } from './game';
 import { isCard, isSuit } from './cards';
+import {
+  DocData,
+  DocRef,
+  HttpsError,
+  PlayerRow,
+  SEATS,
+  Transaction,
+  assertMember,
+  botEmail,
+  botName,
+  callerEmail,
+  completeSeats,
+  db,
+  expectedStepOf,
+  gameRef,
+  nowIso,
+  ownerOf,
+  requireIds,
+  seatOfEmail,
+  seatRef,
+  stepOf,
+} from '../gameTable/shared';
 
 const GAME_TYPE = 'card29';
-const SEATS = 4;
-const BOT_NAMES = ['Tour Guide Bot', 'Highway Ace Bot', 'Dhaka Champ Bot'];
-
-interface PlayerRow {
-  email: string;
-  displayName: string;
-  photoUrl?: string;
-  seatIndex: number;
-  isReady: boolean;
-  isHost: boolean;
-  isBot: boolean;
-}
-
-type DocData = FirebaseFirestore.DocumentData;
-type Transaction = FirebaseFirestore.Transaction;
-type DocRef = FirebaseFirestore.DocumentReference;
-
-const db = (): FirebaseFirestore.Firestore => admin.firestore();
-
-const HttpsError = functions.https.HttpsError;
-
-function botEmail(seat: number): string {
-  return `bot_seat_${seat}@bhromon.fun`;
-}
-
-function nowIso(ms: number): string {
-  return new Date(ms).toISOString();
-}
-
-function gameRef(tourId: string, gameId: string): DocRef {
-  return db().collection('tours').doc(tourId).collection('games').doc(gameId);
-}
-
-function seatRef(table: DocRef, seat: number): DocRef {
-  return table.collection('private').doc(`seat${seat}`);
-}
-
-function callerEmail(context: functions.https.CallableContext): string {
-  const email = String(context.auth?.token?.email ?? '').trim().toLowerCase();
-  if (!context.auth || email === '') {
-    throw new HttpsError('unauthenticated', 'Sign in to play at the table.');
-  }
-  return email;
-}
-
-function requireIds(data: unknown): { tourId: string; gameId: string } {
-  const body = (data ?? {}) as Record<string, unknown>;
-  const tourId = typeof body.tourId === 'string' ? body.tourId : '';
-  const gameId = typeof body.gameId === 'string' ? body.gameId : '';
-  if (tourId === '' || gameId === '') {
-    throw new HttpsError('invalid-argument', 'tourId and gameId are required.');
-  }
-  return { tourId, gameId };
-}
-
-function expectedStepOf(data: unknown): number | null {
-  const step = (data as Record<string, unknown> | null)?.expectedStep;
-  return typeof step === 'number' ? step : null;
-}
-
-/** Members and the tour owner may use the table, as the security rules allow. */
-async function assertMember(tourId: string, email: string): Promise<void> {
-  const tour = await db().collection('tours').doc(tourId).get();
-  if (tour.exists && String(tour.get('ownerEmail') ?? '').toLowerCase() === email) return;
-  const membership = await db().collection('memberships').doc(`${tourId}__${email}`).get();
-  if (membership.exists && membership.get('status') === 'active') return;
-  throw new HttpsError('permission-denied', 'You are not an active member of this tour.');
-}
 
 function parseAction(raw: unknown): HumanAction {
   const invalid = (): never => {
@@ -118,40 +72,6 @@ function parseAction(raw: unknown): HumanAction {
     default:
       return invalid();
   }
-}
-
-function stepOf(state: Record<string, unknown>): number {
-  return typeof state.step === 'number' ? state.step : 0;
-}
-
-/** Seats 0 to 3, with a bot in every seat nobody has taken. */
-function completeSeats(players: PlayerRow[]): PlayerRow[] {
-  const taken = new Set<number>();
-  for (const p of players) {
-    if (!Number.isInteger(p.seatIndex) || p.seatIndex < 0 || p.seatIndex >= SEATS || taken.has(p.seatIndex)) {
-      throw new HttpsError('failed-precondition', 'This table has a seat that cannot be used.');
-    }
-    taken.add(p.seatIndex);
-  }
-  const full = [...players];
-  let bots = 0;
-  for (let seat = 0; seat < SEATS; seat++) {
-    if (taken.has(seat)) continue;
-    full.push({
-      email: botEmail(seat),
-      displayName: BOT_NAMES[bots % BOT_NAMES.length],
-      seatIndex: seat,
-      isReady: true,
-      isHost: false,
-      isBot: true,
-    });
-    bots++;
-  }
-  return full.sort((a, b) => a.seatIndex - b.seatIndex);
-}
-
-function ownerOf(players: readonly PlayerRow[], seat: number): string {
-  return players.find((p) => p.seatIndex === seat)?.email ?? botEmail(seat);
 }
 
 interface RunningTable {
@@ -270,7 +190,7 @@ export const card29Act = functions
       if (expectedStep !== null && expectedStep !== current) {
         throw new HttpsError('aborted', 'The table has changed. Refresh and try again.');
       }
-      const seat = table.players.find((p) => !p.isBot && p.email === email)?.seatIndex;
+      const seat = seatOfEmail(table.players, email);
       if (seat === undefined) throw new HttpsError('permission-denied', 'Only seated players can act here.');
 
       const game = restoreGame(table.state, table.seats, table.isBot);
@@ -354,7 +274,7 @@ export const card29Leave = functions
       const seat = me.seatIndex;
       const replacement: PlayerRow = {
         email: botEmail(seat),
-        displayName: BOT_NAMES[seat % BOT_NAMES.length],
+        displayName: botName(seat),
         seatIndex: seat,
         isReady: true,
         isHost: false,

@@ -5,20 +5,25 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../domain/models/card29_table.dart';
 import '../domain/models/online_game_session.dart';
+import '../domain/models/teen_patti_table.dart';
 import 'card29_api.dart';
+import 'teen_patti_api.dart';
 
 class OnlineGameRepository {
   OnlineGameRepository({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
     Card29Api? card29,
+    TeenPattiApi? teenPatti,
   })  : _firestoreInstance = firestore,
         _authInstance = auth,
-        _card29 = card29 ?? Card29Api();
+        _card29 = card29 ?? Card29Api(),
+        _teenPatti = teenPatti ?? TeenPattiApi();
 
   final FirebaseFirestore? _firestoreInstance;
   final FirebaseAuth? _authInstance;
   final Card29Api _card29;
+  final TeenPattiApi _teenPatti;
 
   FirebaseFirestore get _firestore =>
       _firestoreInstance ?? FirebaseFirestore.instance;
@@ -72,6 +77,24 @@ class OnlineGameRepository {
         .map((doc) {
       if (!doc.exists || doc.data() == null) return null;
       return Card29PrivateHand.fromMap(doc.data()!);
+    });
+  }
+
+  /// Streams the cards dealt to [seat] in a Teen Patti table. Only that seat's
+  /// owner can read them, as with [watchCard29Seat].
+  Stream<TeenPattiPrivateHand?> watchTeenPattiSeat(
+    String tourId,
+    String gameId,
+    int seat,
+  ) {
+    return _gamesRef(tourId)
+        .doc(gameId)
+        .collection('private')
+        .doc('seat$seat')
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return TeenPattiPrivateHand.fromMap(doc.data()!);
     });
   }
 
@@ -225,6 +248,10 @@ class OnlineGameRepository {
       await _card29.leave(tourId: tourId, gameId: gameId);
       return;
     }
+    if (current.data()?['gameType'] == OnlineGameType.teenPatti.codeName) {
+      await _teenPatti.leave(tourId: tourId, gameId: gameId);
+      return;
+    }
 
     final me = currentEmail;
     await _firestore.runTransaction((tx) async {
@@ -282,8 +309,19 @@ class OnlineGameRepository {
     return _card29.start(tourId: tourId, gameId: gameId);
   }
 
+  /// Deals a waiting Teen Patti table. The server fills empty seats with bots.
+  Future<void> startTeenPattiTable({
+    required String tourId,
+    required String gameId,
+  }) {
+    return _teenPatti.start(tourId: tourId, gameId: gameId);
+  }
+
   /// The 29 table's action service, for the table screen.
   Card29Api get card29 => _card29;
+
+  /// The Teen Patti table's action service, for the table screen.
+  TeenPattiApi get teenPatti => _teenPatti;
 
   /// Commits a player move or game event action.
   Future<void> commitAction({
