@@ -24,6 +24,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/chat_commands.dart';
 import '../../domain/services/chat_mentions.dart';
 import '../../domain/services/media_rules.dart';
+import '../../domain/services/presence_rules.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/channel_composer.dart';
 import '../widgets/channel_media_viewer.dart';
@@ -49,6 +50,11 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   final VoiceRoomService _voiceService = VoiceRoomService();
 
   final List<StreamSubscription<dynamic>> _subs = [];
+
+  /// Last-seen time of each member, keyed by email. Drives the online count.
+  Map<String, DateTime?> _presence = const {};
+  Timer? _presenceBeat;
+  Timer? _presenceRefresh;
   List<TourChannel> _channelDocs = const [];
   List<TourMember> _members = const [];
   List<BusSeat> _seats = const [];
@@ -126,15 +132,41 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           .watchLiveStop(widget.tourId)
           .listen((id) => _update(() => _liveStopId = id), onError: (_) {}),
       _voiceService.changes.listen((_) => _update(() {})),
+      _repo
+          .watchPresence(widget.tourId)
+          .listen((p) => _update(() => _presence = p), onError: (_) {}),
     ]);
     for (final id in kBuiltInChannelIds) {
       unawaited(_ensurePrefs(id));
     }
+    unawaited(_markHere());
+    _presenceBeat = Timer.periodic(kPresenceHeartbeat, (_) => _markHere());
+    // Recounts the online members, so someone who has gone quiet drops out
+    // even though nothing was written.
+    _presenceRefresh = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _markHere() async {
+    try {
+      await _repo.markPresent(widget.tourId);
+    } catch (e) {
+      debugPrint('[GroupChannels] presence not recorded: $e');
+    }
+  }
+
+  int _onlineCount() {
+    final now = DateTime.now();
+    return _presence.values.where((seen) => isOnlineAt(seen, now)).length;
   }
 
   @override
   void dispose() {
     _stopTyping();
+    _presenceBeat?.cancel();
+    _presenceRefresh?.cancel();
+    unawaited(_repo.markAway(widget.tourId));
     for (final s in _subs) {
       unawaited(s.cancel());
     }
@@ -322,12 +354,23 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 ),
                 onChanged: (v) => _update(() => _searchText = v),
               )
-            : Text(
-                l10n.translate('tour_channels_title'),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16),
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.translate('tour_channels_title'),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16),
+                  ),
+                  Text(
+                    l10n.translate('chan_online_count',
+                        args: {'count': l10n.number(_onlineCount())}),
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                ],
               ),
         actions: [
           IconButton(
@@ -722,6 +765,13 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         myName: myName,
         photoUrl: myPhoto,
         myUid: myUid,
+      );
+    } on VoiceRoomFullException catch (e) {
+      if (!mounted) return;
+      _snack(
+        context.l10n.translate('chan_voice_full',
+            args: {'count': context.l10n.number(e.capacity)}),
+        error: true,
       );
     } catch (e) {
       if (!mounted) return;
@@ -1524,7 +1574,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         attachments.add(ChannelAttachment(url: url, isVideo: p.isVideo));
         _update(() => _uploadDone++);
       }
-      await _repo.sendMessage(
+      final send = _repo.sendMessage(
         widget.tourId,
         channel.id,
         text: text,
@@ -1532,6 +1582,19 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         replyTo: _replyTo,
         mentions: resolveMentions(text, _members),
       );
+      if (attachments.isEmpty) {
+        // A text message is written to the local cache at once, so the composer
+        // is not held while the server acknowledges it. If the server rejects
+        // the write, it is rolled back and the text goes back into the draft.
+        unawaited(send.catchError((Object e) {
+          if (!mounted) return;
+          if (draft.text.trim().isEmpty) draft.text = text;
+          _snack(l10n.translate('tour_message_send_failed', args: {'error': e}),
+              error: true);
+        }));
+      } else {
+        await send;
+      }
       if (draft.text.trim() == text) draft.clear();
       _update(() {
         _pending.clear();

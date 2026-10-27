@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../../app/router.dart';
+import '../../../core/services/push_device.dart';
 
 /// Channel used for all general Bhromon notifications.
 const _kChannelId = 'bhromon_general';
@@ -94,13 +95,19 @@ class FcmService {
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
+  /// Saves this device's token for [uid]. Each device keeps its own document
+  /// under `devices`, so a member with two phones gets pushes on both. The
+  /// single document is also kept for the functions that read one token.
   Future<void> _saveToken(String uid, String token) async {
-    await _firestore.collection('fcm_tokens').doc(uid).set({
+    final Map<String, dynamic> data = {
       'token': token,
       // Correctly record platform instead of hardcoding 'android'
       'platform': kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios'),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+    };
+    final user = _firestore.collection('fcm_tokens').doc(uid);
+    await user.set(data);
+    await user.collection('devices').doc(pushDeviceId(token)).set(data);
   }
 
   /// Show a rich local notification when the app is in the foreground.
@@ -167,6 +174,7 @@ class FcmService {
       context,
       uid: message.data['uid'] as String?,
       itemId: message.data['itemId'] as String?,
+      tourId: message.data['tourId'] as String?,
     );
   }
 
@@ -175,6 +183,7 @@ class FcmService {
     BuildContext context, {
     String? uid,
     String? itemId,
+    String? tourId,
   }) {
     if (action == null || action.isEmpty) return;
     switch (action) {
@@ -197,6 +206,12 @@ class FcmService {
         if (itemId != null) {
           GoRouter.of(context).go('/chat/$itemId', extra: {'otherUid': uid});
         }
+        break;
+      case 'sos':
+        if (tourId != null) GoRouter.of(context).go('/group/$tourId/safety');
+        break;
+      case 'channel':
+        if (tourId != null) GoRouter.of(context).go('/group/$tourId/channels');
         break;
       // Broadcast notifications simply bring the app to focus — no deep link.
       case 'broadcast':

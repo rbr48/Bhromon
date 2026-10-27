@@ -17,6 +17,7 @@ export { generateChatThumbnail } from './generateChatThumbnail';
 export { sendGeneralNotification } from './sendGeneralNotification';
 export { sendBroadcastNotification } from './sendBroadcastNotification';
 export { sendSosAlert } from './sendSosAlert';
+export { sendChannelNotification } from './sendChannelNotification';
 
 // ── Admin & Compliance ────────────────────────────────────────────────────────
 export { promoteToRegionExpert } from './promoteToRegionExpert';

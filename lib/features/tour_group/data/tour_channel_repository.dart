@@ -30,6 +30,39 @@ class TourChannelRepository {
 
   String get currentDisplayName => _groups.currentDisplayName;
 
+  CollectionReference<Map<String, dynamic>> _presence(String tourId) =>
+      _firestore.collection('tours').doc(tourId).collection('presence');
+
+  /// Records that the signed-in member is here now. The channels screen calls
+  /// this on a timer while it is open.
+  Future<void> markPresent(String tourId) {
+    final email = _groups.requireEmail();
+    return _presence(tourId).doc(email).set({
+      'email': email,
+      'displayName': currentDisplayName,
+      'lastSeen': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Removes the signed-in member's presence when they leave the screen. A
+  /// failure is ignored: the presence goes stale on its own anyway.
+  Future<void> markAway(String tourId) async {
+    final email = currentEmail;
+    if (email.isEmpty) return;
+    try {
+      await _presence(tourId).doc(email).delete();
+    } catch (e) {
+      debugPrint('[TourChannelRepository] could not clear presence: $e');
+    }
+  }
+
+  /// Last-seen time of every member who has been here, keyed by email.
+  Stream<Map<String, DateTime?>> watchPresence(String tourId) {
+    return _presence(tourId).snapshots().map((s) => {
+          for (final d in s.docs) d.id: readDate(d.data()['lastSeen']),
+        });
+  }
+
   CollectionReference<Map<String, dynamic>> _channels(String tourId) =>
       _firestore.collection('tours').doc(tourId).collection('channels');
 
@@ -173,7 +206,13 @@ class TourChannelRepository {
   }
 
   List<ChannelMessage> _toMessages(QuerySnapshot<Map<String, dynamic>> s) {
-    return s.docs.map((d) => ChannelMessage.fromMap(d.id, d.data())).toList();
+    return s.docs
+        .map((d) => ChannelMessage.fromMap(
+              d.id,
+              d.data(),
+              isPending: d.metadata.hasPendingWrites,
+            ))
+        .toList();
   }
 
   /// Posts a text message, optionally with photos or a video, a reply and

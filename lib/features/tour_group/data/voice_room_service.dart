@@ -5,7 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../domain/models/channel_models.dart';
 import '../domain/models/date_codec.dart';
+
+/// Thrown when a voice room already holds [capacity] people.
+class VoiceRoomFullException implements Exception {
+  final int capacity;
+  const VoiceRoomFullException(this.capacity);
+}
 
 /// Represents a member currently connected to a voice channel.
 class VoiceParticipant {
@@ -163,6 +170,25 @@ class VoiceRoomService {
         return; // already connected to this channel
       }
       await leaveVoiceRoom();
+    }
+
+    // A full room is refused before anything changes: no microphone prompt and
+    // no state set. Two people joining at the same moment can still overshoot
+    // by one; the room is small enough that this is acceptable.
+    final seated = await _db
+        .collection('tours')
+        .doc(tourId)
+        .collection('channels')
+        .doc(channelId)
+        .collection('voice_participants')
+        .get();
+    final taken = countSeatedVoiceParticipants(
+      {for (final doc in seated.docs) doc.id: doc.data()},
+      exceptEmail: normalizeEmail(myEmail),
+      now: DateTime.now(),
+    );
+    if (taken >= kVoiceRoomMaxParticipants) {
+      throw const VoiceRoomFullException(kVoiceRoomMaxParticipants);
     }
 
     _activeTourId = tourId;

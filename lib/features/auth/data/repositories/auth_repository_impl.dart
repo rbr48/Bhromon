@@ -3,11 +3,13 @@ import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:injectable/injectable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/security/hive_encryption_service.dart';
+import '../../../../core/services/push_device.dart';
 import '../../../../core/entities/explorer_profile.dart';
 import '../../../../core/value_objects/explorer_score.dart';
 import '../../../../core/value_objects/trust_tier.dart';
@@ -197,7 +199,30 @@ class AuthRepositoryImpl implements IAuthRepository {
     }
   }
 
+  /// Removes this device from the account's push targets. It runs before the
+  /// Firebase sign-out, because the rules need the user to still be signed in.
+  /// Otherwise the next person to use the phone would get this account's pushes.
+  Future<void> _removeThisDeviceToken() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final token = await messaging.getToken();
+      if (token != null) {
+        final user = _firestore.collection('fcm_tokens').doc(uid);
+        await user.collection('devices').doc(pushDeviceId(token)).delete();
+        final legacy = await user.get();
+        if (legacy.data()?['token'] == token) await user.delete();
+        await messaging.deleteToken();
+      }
+    } catch (e, stack) {
+      logWarning(
+          'AuthRepository: failed to remove this device push token', e, stack);
+    }
+  }
+
   Future<void> _signOutRemotely() async {
+    await _removeThisDeviceToken();
     try {
       await _auth.signOut();
     } catch (e, stack) {

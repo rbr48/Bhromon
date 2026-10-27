@@ -10,7 +10,10 @@ type Membership = { tourId: string; email: string; status: string };
 
 let memberships: Membership[] = [];
 let accounts: Record<string, string> = {}; // email -> Firebase user ID
-let tokens: Record<string, string> = {}; // user ID -> push token
+let tokens: Record<string, string> = {}; // user ID -> legacy single push token
+let devices: Record<string, string[]> = {}; // user ID -> tokens of each signed-in device
+let deadTokens: string[] = []; // tokens FCM reports as no longer registered
+let deleted: string[] = []; // document paths the function removed
 let multicasts: any[] = [];
 
 /** A chainable query over the memberships list. */
@@ -27,16 +30,35 @@ function membershipQuery(filters: Record<string, string> = {}): any {
   };
 }
 
+/** A document reference that records its own deletion. */
+function ref(path: string): any {
+  return { path, delete: async () => void deleted.push(path) };
+}
+
+/** fcm_tokens/{uid}: the legacy token, plus one document per device. */
+function fcmUser(uid: string): any {
+  return {
+    ...ref(`fcm_tokens/${uid}`),
+    get: async () => ({
+      exists: uid in tokens,
+      data: () => (uid in tokens ? { token: tokens[uid] } : undefined),
+    }),
+    collection: (name: string) => ({
+      get: async () => ({
+        docs: (devices[uid] ?? []).map((token, i) => ({
+          data: () => ({ token }),
+          ref: ref(`fcm_tokens/${uid}/${name}/${i}`),
+        })),
+      }),
+    }),
+  };
+}
+
 const mockDb = {
   collection: (name: string) => {
     if (name === 'memberships') return membershipQuery();
-    return { doc: (id: string) => ({ id, path: `${name}/${id}` }) };
+    return { doc: (id: string) => (name === 'fcm_tokens' ? fcmUser(id) : ref(`${name}/${id}`)) };
   },
-  getAll: async (...refs: Array<{ id: string }>) =>
-    refs.map((ref) => ({
-      exists: ref.id in tokens,
-      data: () => (ref.id in tokens ? { token: tokens[ref.id] } : undefined),
-    })),
 };
 
 const mockAuth = {
@@ -49,7 +71,16 @@ const mockAuth = {
 const mockMessaging = {
   sendEachForMulticast: jest.fn(async (msg: any) => {
     multicasts.push(msg);
-    return { successCount: msg.tokens.length, failureCount: 0 };
+    const responses = msg.tokens.map((t: string) =>
+      deadTokens.includes(t)
+        ? { success: false, error: { code: 'messaging/registration-token-not-registered' } }
+        : { success: true },
+    );
+    return {
+      responses,
+      successCount: responses.filter((r: any) => r.success).length,
+      failureCount: responses.filter((r: any) => !r.success).length,
+    };
   }),
 };
 
@@ -80,6 +111,9 @@ describe('sendSosAlert', () => {
       'other@x.com': 'u_other',
     };
     tokens = { u_sender: 't_sender', u_asha: 't_asha', u_babu: 't_babu', u_other: 't_other' };
+    devices = {};
+    deadTokens = [];
+    deleted = [];
     multicasts = [];
     mockAuth.getUsers.mockClear();
     mockMessaging.sendEachForMulticast.mockClear();
@@ -94,7 +128,29 @@ describe('sendSosAlert', () => {
     expect(multicasts).toHaveLength(1);
     expect([...multicasts[0].tokens].sort()).toEqual(['t_asha', 't_babu']);
     expect(multicasts[0].notification.title).toBe('SOS from Rina');
-    expect(multicasts[0].data).toEqual({ type: 'sos', tourId: 'tour_1', alertId: 'alert_1' });
+    expect(multicasts[0].data).toEqual({
+      action: 'sos',
+      type: 'sos',
+      tourId: 'tour_1',
+      alertId: 'alert_1',
+    });
+  });
+
+  it('reaches every device a member has signed in on, sending each token once', async () => {
+    devices = { u_asha: ['t_asha', 't_asha_tablet'] };
+
+    await sendSosAlert.run(alert({ senderEmail: 'sender@x.com', senderName: 'Rina' }), context());
+
+    expect([...multicasts[0].tokens].sort()).toEqual(['t_asha', 't_asha_tablet', 't_babu']);
+  });
+
+  it('removes a token FCM reports as dead, and keeps the others', async () => {
+    devices = { u_asha: ['t_asha_old'] };
+    deadTokens = ['t_asha_old'];
+
+    await sendSosAlert.run(alert({ senderEmail: 'sender@x.com', senderName: 'Rina' }), context());
+
+    expect(deleted).toEqual(['fcm_tokens/u_asha/devices/0']);
   });
 
   it('skips members with no account or no device token', async () => {

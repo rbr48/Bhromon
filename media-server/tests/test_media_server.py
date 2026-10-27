@@ -42,9 +42,34 @@ def test_upload_returns_the_url_for_the_client_chosen_id(client):
     assert body["filename"] == f"{OBJECT}.jpg"
 
 
-def test_a_second_upload_with_the_same_id_is_refused(client):
+def test_a_second_upload_with_the_same_id_and_other_bytes_is_refused(client):
     assert upload(client).status_code == 200
-    assert upload(client).status_code == 409
+    other = client.post(
+        "/upload",
+        files={"file": ("photo.jpg", b"different", "image/jpeg")},
+        data={"tourId": "t1", "folder": "posts", "objectId": OBJECT},
+        headers=bearer("tok-alice"),
+    )
+    assert other.status_code == 409
+
+
+def test_a_retry_of_the_same_bytes_returns_the_same_url(client):
+    first = upload(client).json()
+    again = upload(client)
+    assert again.status_code == 200
+    assert again.json()["url"] == first["url"]
+    assert len(list((main.MEDIA_ROOT / "t1" / "posts").glob(f"{OBJECT}.*"))) == 1
+
+
+def test_another_member_resending_the_same_bytes_is_refused(client):
+    upload(client, token="tok-alice")
+    assert upload(client, token="tok-admin").status_code == 409
+
+
+def test_a_retry_leaves_no_temporary_files_behind(client):
+    upload(client)
+    upload(client)
+    assert not list((main.MEDIA_ROOT / "t1" / "posts").glob("*.part"))
 
 
 def test_the_first_file_survives_a_refused_duplicate(client):
@@ -105,6 +130,13 @@ def test_an_oversized_file_is_refused_and_removed(client, monkeypatch):
     response = upload(client)
     assert response.status_code == 413
     assert not (main.MEDIA_ROOT / "t1" / "posts" / f"{OBJECT}.jpg").exists()
+    assert not list((main.MEDIA_ROOT / "t1" / "posts").glob("*.part"))
+
+
+def test_size_limits_match_the_app():
+    # lib/features/tour_group/domain/services/media_rules.dart
+    assert main.MAX_IMAGE_BYTES == 10 * 1024 * 1024
+    assert main.MAX_VIDEO_BYTES == 100 * 1024 * 1024
 
 
 def test_the_uploader_can_delete_their_own_file(client):
