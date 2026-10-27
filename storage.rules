@@ -87,14 +87,13 @@ service firebase.storage {
       allow delete: if isAuth() && isOwner(userId);
     }
 
-    // ── Chat media ───────────────────────────────────────────────────────────
-    // Read: authenticated users only; write: authenticated users up to 100MB
+    // ── Chat media (legacy) ──────────────────────────────────────────────────
+    // Chat attachments are uploaded to the VPS media server now, so nothing
+    // writes here any more. Old files stay readable by signed-in users; the app
+    // can no longer delete them and they are removed from the console if needed.
     match /chat_media/{allPaths=**} {
       allow read: if isAuth();
-      allow write: if isAuth()
-                   && (isImage() || isVideo() || isAudio() || request.resource.contentType == null)
-                   && request.resource.size < 100 * 1024 * 1024;
-      allow delete: if isAuth();
+      allow write, delete: if false;
     }
 
     // ── Chat media thumbnails (written by Cloud Functions service account) ──
