@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -485,6 +486,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   : groups.first;
 
               _displayedGroup = current;
+              TourGroupRepository.lastActiveTourId = current.id;
 
               return ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),

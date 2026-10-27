@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../data/tour_group_repository.dart';
 
 /// The persistent 5 navigation destinations used across the entire application:
 /// 0: Tours (Hub)
@@ -58,22 +59,73 @@ class BhromonBottomNav extends StatelessWidget {
     int? currentIndex,
   }) {
     if (currentIndex != null && index == currentIndex) return;
+
+    final effectiveTourId = (tourId != null && tourId.isNotEmpty)
+        ? tourId
+        : TourGroupRepository.lastActiveTourId;
+
     switch (index) {
       case 0:
         context.go('/group-hub');
         break;
       case 1:
-        if (tourId != null && tourId.isNotEmpty) {
-          context.pushReplacement('/group/$tourId/feed');
+        if (effectiveTourId != null && effectiveTourId.isNotEmpty) {
+          if (context.canPop()) {
+            context.pushReplacement('/group/$effectiveTourId/feed');
+          } else {
+            context.push('/group/$effectiveTourId/feed');
+          }
         } else {
-          context.go('/group-hub');
+          TourGroupRepository().getActiveTourId().then((id) {
+            if (!context.mounted) return;
+            if (id != null && id.isNotEmpty) {
+              if (context.canPop()) {
+                context.pushReplacement('/group/$id/feed');
+              } else {
+                context.push('/group/$id/feed');
+              }
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                      'মোমেন্টস দেখতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।'),
+                  backgroundColor: AppColors.midGreen,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              context.go('/group-hub');
+            }
+          });
         }
         break;
       case 2:
-        if (tourId != null && tourId.isNotEmpty) {
-          context.pushReplacement('/group/$tourId/channels');
+        if (effectiveTourId != null && effectiveTourId.isNotEmpty) {
+          if (context.canPop()) {
+            context.pushReplacement('/group/$effectiveTourId/channels');
+          } else {
+            context.push('/group/$effectiveTourId/channels');
+          }
         } else {
-          context.push('/chats');
+          TourGroupRepository().getActiveTourId().then((id) {
+            if (!context.mounted) return;
+            if (id != null && id.isNotEmpty) {
+              if (context.canPop()) {
+                context.pushReplacement('/group/$id/channels');
+              } else {
+                context.push('/group/$id/channels');
+              }
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                      'চ্যানেল খুলতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।'),
+                  backgroundColor: AppColors.midGreen,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              context.go('/group-hub');
+            }
+          });
         }
         break;
       case 3:
@@ -90,7 +142,7 @@ class BhromonBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NavigationBar(
+    final navBar = NavigationBar(
       selectedIndex: selectedIndex.clamp(0, 4),
       maintainBottomViewPadding: true,
       onDestinationSelected: (index) => handleSelect(
@@ -100,6 +152,25 @@ class BhromonBottomNav extends StatelessWidget {
         currentIndex: selectedIndex,
       ),
       destinations: destinations(context),
+    );
+
+    final width = MediaQuery.sizeOf(context).width;
+    if (width <= 800) {
+      return navBar;
+    }
+
+    return SizedBox(
+      height: 80,
+      child: ColoredBox(
+        color: Theme.of(context).navigationBarTheme.backgroundColor ??
+            const Color(0xFF0D1A12),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: navBar,
+          ),
+        ),
+      ),
     );
   }
 }

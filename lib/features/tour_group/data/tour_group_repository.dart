@@ -95,6 +95,41 @@ class TourGroupRepository {
 
   String? get currentPhotoUrl => _auth.currentUser?.photoURL;
 
+  static String? _cachedActiveTourId;
+
+  /// The most recent or currently active tour ID across the application.
+  static String? get lastActiveTourId => _cachedActiveTourId;
+  static set lastActiveTourId(String? id) {
+    if (id == null || id.isEmpty) return;
+    _cachedActiveTourId = id;
+    try {
+      if (Hive.isBoxOpen('tour_groups')) {
+        Hive.box<dynamic>('tour_groups').put('last_active_tour_id', id);
+      }
+    } catch (_) {}
+  }
+
+  /// Asynchronously retrieves the last active tour ID from memory, Hive, or cached groups.
+  Future<String?> getActiveTourId() async {
+    if (_cachedActiveTourId != null && _cachedActiveTourId!.isNotEmpty) {
+      return _cachedActiveTourId;
+    }
+    try {
+      final box = await _openBox();
+      final saved = box.get('last_active_tour_id');
+      if (saved is String && saved.isNotEmpty) {
+        _cachedActiveTourId = saved;
+        return saved;
+      }
+      final local = await getLocalGroups();
+      if (local.isNotEmpty) {
+        _cachedActiveTourId = local.first.id;
+        return _cachedActiveTourId;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   String _requireEmail() {
     if (!isSignedIn || currentEmail.isEmpty) {
       throw const TourAccessException(
@@ -306,6 +341,9 @@ class TourGroupRepository {
       if (controller.isClosed) return;
       final groups = tours.values.toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (groups.isNotEmpty) {
+        lastActiveTourId = groups.first.id;
+      }
       controller.add(groups);
     }
 

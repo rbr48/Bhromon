@@ -53,33 +53,47 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
           'Travel GameZone',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
+        centerTitle: true,
         backgroundColor: const Color(0xFF14241B),
         foregroundColor: Colors.white,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.mintGreen,
-          labelColor: AppColors.mintGreen,
-          unselectedLabelColor: Colors.white60,
-          indicatorWeight: 3,
-          tabs: const [
-            Tab(
-              icon: Icon(Icons.offline_bolt_rounded, size: 20),
-              text: 'Offline Arcade',
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: AppColors.mintGreen,
+                labelColor: AppColors.mintGreen,
+                unselectedLabelColor: Colors.white60,
+                indicatorWeight: 3,
+                tabs: const [
+                  Tab(
+                    icon: Icon(Icons.offline_bolt_rounded, size: 20),
+                    text: 'Offline Arcade',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.groups_rounded, size: 20),
+                    text: 'Tour Online Tables',
+                  ),
+                ],
+              ),
             ),
-            Tab(
-              icon: Icon(Icons.groups_rounded, size: 20),
-              text: 'Tour Online Tables',
-            ),
-          ],
+          ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildOfflineArcade(context),
-          _buildOnlineTablesTab(context),
-        ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildOfflineArcade(context),
+              _buildOnlineTablesTab(context),
+            ],
+          ),
+        ),
       ),
       bottomNavigationBar: const BhromonBottomNav(selectedIndex: 3),
     );
