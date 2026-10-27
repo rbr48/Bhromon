@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
+import 'tour_safe_network_image.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
@@ -601,20 +601,9 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                         aspectRatio: _videoCtrl!.value.aspectRatio,
                         child: VideoPlayer(_videoCtrl!),
                       )
-                    : CachedNetworkImage(
+                    : TourSafeNetworkImage(
                         imageUrl: story.mediaUrl,
                         fit: BoxFit.contain,
-                        placeholder: (context, _) => const Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white38),
-                          ),
-                        ),
-                        errorWidget: (context, _, __) => const Center(
-                          child: Icon(Icons.broken_image,
-                              color: Colors.white54, size: 48),
-                        ),
                       ),
               ),
 
