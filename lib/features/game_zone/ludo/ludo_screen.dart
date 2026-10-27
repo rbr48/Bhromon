@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../common/game_zone_portrait_lock.dart';
+import '../data/game_analytics_service.dart';
+import '../domain/models/game_analytics_models.dart';
 import 'ludo_engine.dart';
 
 /// Keeps the race in progress while the player visits other screens.
@@ -251,6 +253,11 @@ class _LudoScreenState extends State<LudoScreen>
   }
 
   void _showWinnerDialog(LudoColor winner) {
+    final isHuman = _engine.humanPlayers.contains(winner);
+    GameAnalyticsService().recordMatch(
+      gameType: OnlineGameType.ludo,
+      won: isHuman,
+    );
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(

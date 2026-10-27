@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../common/in_game_voice_bar.dart';
 import '../data/online_game_repository.dart';
 import '../domain/models/online_game_session.dart';
+import '../ludo/ludo_board_painters.dart';
 import '../ludo/ludo_engine.dart';
 
 class OnlineLudoView extends StatefulWidget {
@@ -357,38 +359,39 @@ class _OnlineLudoViewState extends State<OnlineLudoView> {
               GestureDetector(
                 onTap: _isMyTurn && !_engine.hasRolled ? _rollDice : null,
                 child: Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: _engine.hasRolled
-                        ? Colors.white
-                        : (_isMyTurn ? currentTurnColor.color : Colors.white12),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _isMyTurn && !_engine.hasRolled
+                          ? Colors.amberAccent
+                          : Colors.black26,
+                      width: _isMyTurn && !_engine.hasRolled ? 2.5 : 1.0,
+                    ),
                     boxShadow: [
-                      if (_isMyTurn && !_engine.hasRolled)
-                        BoxShadow(
-                          color: currentTurnColor.color.withValues(alpha: 0.5),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
+                      BoxShadow(
+                        color: _isMyTurn && !_engine.hasRolled
+                            ? Colors.amberAccent.withValues(alpha: 0.6)
+                            : Colors.black.withValues(alpha: 0.2),
+                        blurRadius: _isMyTurn && !_engine.hasRolled ? 10 : 4,
+                        offset: const Offset(0, 2),
+                      ),
                     ],
                   ),
                   alignment: Alignment.center,
                   child: _engine.currentDice != null
-                      ? Text(
-                          '${_engine.currentDice}',
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      ? CustomPaint(
+                          size: const Size(44, 44),
+                          painter: LudoDiceFacePainter(_engine.currentDice!),
                         )
                       : Icon(
                           Icons.casino_rounded,
                           color: _isMyTurn
-                              ? currentTurnColor.onColor
-                              : Colors.white38,
-                          size: 26,
+                              ? currentTurnColor.color
+                              : Colors.black38,
+                          size: 30,
                         ),
                 ),
               ),
@@ -404,17 +407,77 @@ class _OnlineLudoViewState extends State<OnlineLudoView> {
               child: Container(
                 margin: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
+                  color: const Color(0xFFFBFBFB),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.6),
-                      blurRadius: 16,
+                      blurRadius: 18,
                       offset: const Offset(0, 8),
                     ),
                   ],
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: _buildLudoGrid(),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final size = constraints.biggest.shortestSide;
+                    final cellSize = size / 15.0;
+
+                    return Stack(
+                      children: [
+                        // Background: yards (6x6), track arms (3x6 / 6x3) and center home (3x3).
+                        Column(
+                          children: [
+                            Expanded(
+                              flex: 6,
+                              child: Row(
+                                children: [
+                                  _buildYard(LudoColor.red),
+                                  _buildPathwaySection(flex: 3),
+                                  _buildYard(LudoColor.green),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              flex: 3,
+                              child: Row(
+                                children: [
+                                  _buildPathwaySection(flex: 6),
+                                  _buildCenterHome(),
+                                  _buildPathwaySection(flex: 6),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              flex: 6,
+                              child: Row(
+                                children: [
+                                  _buildYard(LudoColor.blue),
+                                  _buildPathwaySection(flex: 3),
+                                  _buildYard(LudoColor.yellow),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Pathway grid overlay
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: CustomPaint(
+                              painter: LudoPathwayGridPainter(
+                                cellSize: cellSize,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Tokens on track, home stretch, and center home
+                        ..._buildTokenOverlays(cellSize),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -423,185 +486,302 @@ class _OnlineLudoViewState extends State<OnlineLudoView> {
     );
   }
 
-  Widget _buildLudoGrid() {
-    return Container(
-      color: const Color(0xFFFBFBFB),
-      child: Column(
-        children: [
-          // Top Row: Red Home (6x6), Green/Red Track (3x6), Green Home (6x6)
-          Expanded(
-            flex: 6,
-            child: Row(
-              children: [
-                _buildHomeYard(LudoColor.red),
-                _buildTrackColumn(isTop: true),
-                _buildHomeYard(LudoColor.green),
-              ],
-            ),
-          ),
-
-          // Middle Row: Blue/Red Home Stretch (6x3), Center Home (3x3), Yellow/Green Home Stretch (6x3)
-          Expanded(
-            flex: 3,
-            child: Row(
-              children: [
-                _buildTrackRow(isLeft: true),
-                _buildCenterHomeTriangle(),
-                _buildTrackRow(isLeft: false),
-              ],
-            ),
-          ),
-
-          // Bottom Row: Blue Home (6x6), Blue/Yellow Track (3x6), Yellow Home (6x6)
-          Expanded(
-            flex: 6,
-            child: Row(
-              children: [
-                _buildHomeYard(LudoColor.blue),
-                _buildTrackColumn(isTop: false),
-                _buildHomeYard(LudoColor.yellow),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHomeYard(LudoColor color) {
-    final tokens = _engine.tokens[color] ?? [];
-    final movable = _engine.getMovableTokens();
+  Widget _buildYard(LudoColor color) {
+    final seatIdx = switch (color) {
+      LudoColor.red => 0,
+      LudoColor.green => 1,
+      LudoColor.yellow => 2,
+      LudoColor.blue => 3,
+    };
+    final player = widget.session.playerAt(seatIdx);
+    final playerName = player != null
+        ? (player.email == widget.myEmail ? 'YOU' : player.displayName)
+        : 'WAITING';
+    final yardTokens = (_engine.tokens[color] ?? [])
+        .where((t) => t.state == TokenState.inYard)
+        .toList();
+    final isCurrentTurn = _colorForSeat(widget.session.currentTurn) == color;
 
     return Expanded(
       flex: 6,
       child: Container(
-        margin: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: color.color,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        padding: const EdgeInsets.all(10),
+        color: color.color.withValues(alpha: 0.15),
+        padding: const EdgeInsets.all(6),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
+            color: color.color,
+            borderRadius: BorderRadius.circular(12),
+            border: isCurrentTurn
+                ? Border.all(color: Colors.white, width: 2.5)
+                : null,
+            boxShadow: [
+              if (isCurrentTurn)
+                BoxShadow(
+                  color: color.color.withValues(alpha: 0.6),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+            ],
           ),
-          child: Center(
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: tokens.map((token) {
-                final isInYard = token.state == TokenState.inYard;
-                final isMovable = _isMyTurn && movable.contains(token);
-
-                return GestureDetector(
-                  onTap: isMovable ? () => _onTokenTapped(token) : null,
-                  child: Container(
-                    width: 24,
-                    height: 24,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final boxSize =
+                  (constraints.biggest.shortestSide * 0.64).clamp(40.0, 96.0);
+              final tokenSize = (boxSize - 18) / 2;
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: boxSize,
+                    height: boxSize,
+                    padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
-                      color: isInYard ? color.color : Colors.grey.shade300,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isMovable ? Colors.amber : Colors.black26,
-                        width: isMovable ? 3.0 : 1.2,
-                      ),
-                      boxShadow: [
-                        if (isMovable)
-                          const BoxShadow(
-                            color: Colors.amber,
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          ),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
                       ],
                     ),
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      runAlignment: WrapAlignment.center,
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: yardTokens
+                          .map((t) => _buildTokenWidget(t, tokenSize))
+                          .toList(),
+                    ),
                   ),
-                );
-              }).toList(),
-            ),
+                  const SizedBox(height: 3),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          '${color.name.toUpperCase()} · $playerName',
+                          style: TextStyle(
+                            color: color.onColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            shadows: const [
+                              Shadow(color: Colors.black38, blurRadius: 2),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCenterHomeTriangle() {
+  Widget _buildPathwaySection({required int flex}) {
+    return Expanded(
+      flex: flex,
+      child: Container(color: const Color(0xFFFAF9F6)),
+    );
+  }
+
+  Widget _buildCenterHome() {
     return Expanded(
       flex: 3,
       child: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF2C3E50),
-        ),
-        child: const Center(
-          child: Icon(Icons.star_rounded, color: Colors.amber, size: 28),
+        color: const Color(0xFFEDEDED),
+        child: const CustomPaint(painter: LudoCenterHomePainter()),
+      ),
+    );
+  }
+
+  bool _isMovable(LudoToken t) =>
+      _isMyTurn &&
+      _engine.hasRolled &&
+      _colorForSeat(widget.session.currentTurn) == t.color &&
+      _engine.canMoveToken(t, _engine.currentDice ?? 0);
+
+  Widget _buildTokenWidget(LudoToken t, double size) {
+    final color = t.color;
+    final movable = _isMovable(t);
+
+    return Semantics(
+      button: movable,
+      label: '${color.name} token ${t.id + 1}${movable ? ', can move' : ''}',
+      child: GestureDetector(
+        onTap: movable ? () => _onTokenTapped(t) : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          transform: Matrix4.translationValues(0, movable ? -2.0 : 0.0, 0),
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              center: const Alignment(-0.35, -0.35),
+              radius: 0.85,
+              colors: [
+                Color.lerp(color.color, Colors.white, 0.45)!,
+                color.color,
+                Color.lerp(color.color, Colors.black, 0.35)!,
+              ],
+            ),
+            border: Border.all(
+              color: movable
+                  ? Colors.amberAccent
+                  : Colors.white.withValues(alpha: 0.9),
+              width: movable ? max(2.2, size * 0.14) : 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: movable
+                    ? Colors.amberAccent.withValues(alpha: 0.75)
+                    : Colors.black.withValues(alpha: 0.45),
+                blurRadius: movable ? 7 : 3,
+                spreadRadius: movable ? 2.0 : 0.5,
+                offset: Offset(0, movable ? 2.5 : 1.5),
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Specular shine dot
+              Positioned(
+                top: size * 0.12,
+                left: size * 0.16,
+                child: Container(
+                  width: size * 0.22,
+                  height: size * 0.15,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+              Center(
+                child: ExcludeSemantics(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Padding(
+                      padding: const EdgeInsets.all(1),
+                      child: Text(
+                        t.state == TokenState.home ? '★' : '${t.id + 1}',
+                        style: TextStyle(
+                          color: color.onColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          shadows: const [
+                            Shadow(
+                              color: Colors.black45,
+                              blurRadius: 2,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTrackColumn({required bool isTop}) {
-    return Expanded(
-      flex: 3,
-      child: Container(
-        color: Colors.white,
-        child: Column(
-          children: List.generate(6, (r) {
-            return Expanded(
-              child: Row(
-                children: List.generate(3, (c) {
-                  final isHomeStretch = c == 1;
-                  final stretchColor =
-                      isTop ? LudoColor.green.color : LudoColor.blue.color;
+  List<Widget> _buildTokenOverlays(double cellSize) {
+    final widgets = <Widget>[];
 
-                  return Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black12, width: 0.5),
-                        color: isHomeStretch
-                            ? stretchColor.withValues(alpha: 0.35)
-                            : Colors.white,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
-  }
+    // Group tokens that share a square so they can be laid out side by side.
+    final Map<String, List<LudoToken>> positionBuckets = {};
+    for (final color in LudoColor.values) {
+      for (final t in _engine.tokens[color] ?? <LudoToken>[]) {
+        if (t.state == TokenState.inYard) continue;
+        final key = switch (t.state) {
+          TokenState.home => 'home_${color.name}',
+          TokenState.inHomeStretch => 'stretch_${color.name}_${t.stepCount}',
+          _ => 'track_${t.boardIndex}',
+        };
+        positionBuckets.putIfAbsent(key, () => []).add(t);
+      }
+    }
 
-  Widget _buildTrackRow({required bool isLeft}) {
-    return Expanded(
-      flex: 6,
-      child: Container(
-        color: Colors.white,
-        child: Row(
-          children: List.generate(6, (c) {
-            return Expanded(
-              child: Column(
-                children: List.generate(3, (r) {
-                  final isHomeStretch = r == 1;
-                  final stretchColor =
-                      isLeft ? LudoColor.red.color : LudoColor.yellow.color;
+    positionBuckets.forEach((key, group) {
+      for (int i = 0; i < group.length; i++) {
+        final t = group[i];
+        final color = t.color;
 
-                  return Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black12, width: 0.5),
-                        color: isHomeStretch
-                            ? stretchColor.withValues(alpha: 0.35)
-                            : Colors.white,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
+        // Top-left corner of the (col,row) cell the group occupies.
+        double col;
+        double row;
+        if (t.state == TokenState.home) {
+          // A one-cell spot inside each colour's triangle of the 3x3 centre (cols/rows 6..8).
+          const spots = {
+            LudoColor.red: [6.15, 7.0],
+            LudoColor.green: [7.0, 6.15],
+            LudoColor.yellow: [7.85, 7.0],
+            LudoColor.blue: [7.0, 7.85],
+          };
+          col = spots[color]![0];
+          row = spots[color]![1];
+        } else if (t.state == TokenState.inHomeStretch) {
+          final stretchIdx = t.stepCount - 51; // 0 to 4
+          switch (color) {
+            case LudoColor.red:
+              col = 1.0 + stretchIdx;
+              row = 7;
+              break;
+            case LudoColor.green:
+              col = 7;
+              row = 1.0 + stretchIdx;
+              break;
+            case LudoColor.yellow:
+              col = 13.0 - stretchIdx;
+              row = 7;
+              break;
+            case LudoColor.blue:
+              col = 7;
+              row = 13.0 - stretchIdx;
+              break;
+          }
+        } else {
+          final coords = kLudoTrackCoordinates[t.boardIndex];
+          col = coords[0].toDouble();
+          row = coords[1].toDouble();
+        }
+
+        double size;
+        double left;
+        double top;
+        if (group.length == 1) {
+          size = cellSize - 4;
+          left = col * cellSize + 2;
+          top = row * cellSize + 2;
+        } else {
+          // Share the cell as a 2x2 grid so every token stays visible.
+          size = cellSize * 0.5;
+          final quadrant = i % 4;
+          left = col * cellSize + (quadrant % 2) * cellSize * 0.5;
+          top = row * cellSize + (quadrant ~/ 2) * cellSize * 0.5;
+        }
+
+        widgets.add(Positioned(
+          left: left,
+          top: top,
+          child: _buildTokenWidget(t, size),
+        ));
+      }
+    });
+
+    return widgets;
   }
 }

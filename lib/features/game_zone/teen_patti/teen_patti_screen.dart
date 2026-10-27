@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import '../common/game_zone_portrait_lock.dart';
 import '../common/playing_card_view.dart';
 import '../common/poker_chip_view.dart';
+import '../data/game_analytics_service.dart';
+import '../domain/models/game_analytics_models.dart';
 import 'teen_patti_engine.dart';
 import 'teen_patti_game.dart';
 
@@ -72,6 +74,12 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
             !identical(result, _TeenPattiSession.lastShownResult)) {
           _TeenPattiSession.lastShownResult = result;
           HapticFeedback.heavyImpact();
+          final userWon = result.winnerIds.contains(0);
+          GameAnalyticsService().recordMatch(
+            gameType: OnlineGameType.teenPatti,
+            won: userWon,
+            score: userWon ? result.potWon : 0,
+          );
           _showResultDialog(result);
         }
         break;
