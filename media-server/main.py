@@ -10,6 +10,7 @@ LEGACY_UPLOAD_KEY is a transition aid for app builds that predate token auth.
 It is unset by default and should be removed once those builds are gone.
 """
 
+import hashlib
 import os
 import re
 import json
@@ -46,8 +47,9 @@ ALLOWED_EXTENSIONS = frozenset({
 })
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".m4v", ".webm", ".3gp", ".mkv"})
 
-MAX_IMAGE_BYTES = 15 * 1024 * 1024  # 15 MB
-MAX_VIDEO_BYTES = 120 * 1024 * 1024  # 120 MB
+# These match the app's limits (lib/features/tour_group/domain/services/media_rules.dart).
+MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
+MAX_VIDEO_BYTES = 100 * 1024 * 1024  # 100 MB
 
 TOUR_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,64}")
 OBJECT_ID_PATTERN = re.compile(r"[0-9a-f]{32}")
@@ -228,6 +230,51 @@ async def health():
     return {"status": "ok", "service": "bhromon-media-server"}
 
 
+async def store_stream(file: UploadFile, dest: Path, max_allowed: int) -> int:
+    """Writes the upload to [dest] and returns its size. Stops at [max_allowed]."""
+    total = 0
+    async with aiofiles.open(dest, "xb") as out_file:
+        while chunk := await file.read(1024 * 1024):
+            total += len(chunk)
+            if total > max_allowed:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"File exceeds maximum allowed size ({max_allowed // (1024 * 1024)} MB)",
+                )
+            await out_file.write(chunk)
+    return total
+
+
+def sha256_of(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def is_retry_of(
+    tourId: str,
+    folder: str,
+    filename: str,
+    caller: Caller,
+    part: Path,
+    target: Path,
+) -> bool:
+    """True when the stored file is this same member's earlier send of identical bytes.
+
+    A phone that loses its connection after the server has stored a file cannot
+    tell whether it got through, so it sends again. The repeat gets the existing
+    URL back instead of a conflict. Anything else with the same name is refused.
+    """
+    if caller.legacy:
+        return False
+    meta = read_meta(tourId, folder, filename)
+    if meta is None or meta.get("uploaderEmail") != caller.email:
+        return False
+    return sha256_of(target) == sha256_of(part)
+
+
 @app.post("/upload")
 async def upload_media(
     file: UploadFile = File(...),
@@ -249,25 +296,27 @@ async def upload_media(
     target_dir = MEDIA_ROOT / tourId / folder
     target_dir.mkdir(parents=True, exist_ok=True)
     target = target_dir / filename
+    # The bytes land under a temporary name and are linked into place only when
+    # complete, so a file never appears half written and nothing is left behind.
+    part = target_dir / f".{filename}.{uuid.uuid4().hex}.part"
 
-    total_bytes = 0
     try:
-        # "xb" refuses to overwrite a file that already exists.
-        async with aiofiles.open(target, "xb") as out_file:
-            while chunk := await file.read(1024 * 1024):
-                total_bytes += len(chunk)
-                if total_bytes > max_allowed:
-                    raise HTTPException(
-                        status_code=413,
-                        detail=f"File exceeds maximum allowed size ({max_allowed // (1024 * 1024)} MB)",
-                    )
-                await out_file.write(chunk)
-        write_meta(tourId, folder, filename, caller)
-    except FileExistsError:
-        raise HTTPException(status_code=409, detail="That file already exists.")
-    except Exception:
-        target.unlink(missing_ok=True)
-        raise
+        total_bytes = await store_stream(file, part, max_allowed)
+        try:
+            # A hard link fails when the target exists, which keeps uploads from
+            # overwriting a file.
+            os.link(part, target)
+        except FileExistsError:
+            if not await run_in_threadpool(is_retry_of, tourId, folder, filename, caller, part, target):
+                raise HTTPException(status_code=409, detail="That file already exists.")
+        else:
+            try:
+                await run_in_threadpool(write_meta, tourId, folder, filename, caller)
+            except Exception:
+                target.unlink(missing_ok=True)
+                raise
+    finally:
+        part.unlink(missing_ok=True)
 
     return {
         "status": "success",

@@ -10,6 +10,27 @@ import 'package:uuid/uuid.dart';
 import '../domain/services/media_rules.dart';
 import 'tour_media_journal.dart';
 
+/// Most times one upload is sent. The server accepts a repeat of the same
+/// bytes under the same id, so a send that lost its connection can be repeated.
+const int kUploadAttempts = 3;
+
+/// Whether a failed send is worth repeating: the connection dropped, timed out,
+/// or a gateway was briefly unavailable. Client errors and cancellations are not.
+bool isRetryableUploadError(DioException e) {
+  switch (e.type) {
+    case DioExceptionType.connectionError:
+    case DioExceptionType.connectionTimeout:
+    case DioExceptionType.sendTimeout:
+    case DioExceptionType.receiveTimeout:
+      return true;
+    case DioExceptionType.badResponse:
+      final code = e.response?.statusCode ?? 0;
+      return code == 502 || code == 503 || code == 504;
+    default:
+      return false;
+  }
+}
+
 /// A user-facing upload failure. The message is shown as-is.
 class TourUploadException implements Exception {
   final String message;
@@ -184,41 +205,63 @@ class TourMediaUploader {
       },
     );
 
+    // A multipart stream can be read only once, so each attempt builds its own.
+    Future<FormData> buildForm() async {
+      final MultipartFile multipartFile;
+      if (kIsWeb) {
+        final bytes = await file.readAsBytes();
+        multipartFile = MultipartFile.fromBytes(bytes, filename: ref.filename);
+      } else {
+        multipartFile =
+            await MultipartFile.fromFile(file.path, filename: ref.filename);
+      }
+
+      final user = FirebaseAuth.instance.currentUser;
+      return FormData.fromMap({
+        'file': multipartFile,
+        'tourId': tourId,
+        'folder': folder,
+        'objectId': objectId,
+        if (user?.email != null) 'uploaderEmail': user!.email,
+      });
+    }
+
+    // Repeats a send that failed on the network. The object id stays the same,
+    // so the server recognises the repeat and does not store the file twice.
+    Future<Response<Map<String, dynamic>>> sendWithRetries() async {
+      for (var attempt = 1;; attempt++) {
+        try {
+          return await _dio.post<Map<String, dynamic>>(
+            uploadUrl,
+            data: await buildForm(),
+            cancelToken: cancelToken,
+            options: options,
+            onSendProgress: (sent, total) {
+              if (total > 0) {
+                currentProgress = sent / total;
+                if (!progressController!.isClosed) {
+                  progressController.add(currentProgress);
+                }
+              }
+            },
+          );
+        } on DioException catch (e) {
+          if (CancelToken.isCancel(e) ||
+              !isRetryableUploadError(e) ||
+              attempt >= kUploadAttempts) {
+            rethrow;
+          }
+          debugPrint(
+              'TourMediaUploader: attempt $attempt of $kUploadAttempts failed, retrying: ${e.type}');
+          await Future<void>.delayed(Duration(seconds: 2 * attempt));
+          if (cancelToken.isCancelled) throw const TourUploadCancelled();
+        }
+      }
+    }
+
     Future<String> executeUpload() async {
       try {
-        final MultipartFile multipartFile;
-        if (kIsWeb) {
-          final bytes = await file.readAsBytes();
-          multipartFile =
-              MultipartFile.fromBytes(bytes, filename: ref.filename);
-        } else {
-          multipartFile =
-              await MultipartFile.fromFile(file.path, filename: ref.filename);
-        }
-
-        final user = FirebaseAuth.instance.currentUser;
-        final formData = FormData.fromMap({
-          'file': multipartFile,
-          'tourId': tourId,
-          'folder': folder,
-          'objectId': objectId,
-          if (user?.email != null) 'uploaderEmail': user!.email,
-        });
-
-        final response = await _dio.post<Map<String, dynamic>>(
-          uploadUrl,
-          data: formData,
-          cancelToken: cancelToken,
-          options: options,
-          onSendProgress: (sent, total) {
-            if (total > 0) {
-              currentProgress = sent / total;
-              if (!progressController!.isClosed) {
-                progressController.add(currentProgress);
-              }
-            }
-          },
-        );
+        final response = await sendWithRetries();
 
         if (response.statusCode != 200 || response.data == null) {
           throw TourUploadException(
