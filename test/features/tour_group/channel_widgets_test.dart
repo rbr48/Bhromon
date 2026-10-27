@@ -34,9 +34,14 @@ ChannelMessage _message({
   int expenseAmountPaisa = 0,
   Map<String, String> reactions = const {},
   bool isPending = false,
+  bool isPinned = false,
+  double? locationLatitude,
+  double? locationLongitude,
+  String? locationTitle,
 }) {
   return ChannelMessage(
     isPending: isPending,
+    isPinned: isPinned,
     id: 'm1',
     senderEmail: 'rahim@x.com',
     senderName: 'Rahim',
@@ -48,6 +53,9 @@ ChannelMessage _message({
     expenseAmountPaisa: expenseAmountPaisa,
     expenseTitle: 'Dinner',
     reactions: reactions,
+    locationLatitude: locationLatitude,
+    locationLongitude: locationLongitude,
+    locationTitle: locationTitle,
   );
 }
 
@@ -141,6 +149,26 @@ void main() {
             reactions: const {'a@x.com': '👍', 'b@x.com': '👍'},
           )));
       expect(find.text('👍 2'), findsOneWidget);
+    });
+
+    testWidgets('shows location card when message has location metadata',
+        (tester) async {
+      await _pump(
+          tester,
+          _bubble(_message(
+            text: 'Meet here for dinner',
+            locationLatitude: 21.4272,
+            locationLongitude: 92.0058,
+            locationTitle: "Kolatoli Beach Point",
+          )));
+      expect(find.text('Kolatoli Beach Point'), findsOneWidget);
+      expect(find.byIcon(Icons.location_on_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.map_rounded), findsOneWidget);
+    });
+
+    testWidgets('shows pin icon when message is pinned', (tester) async {
+      await _pump(tester, _bubble(_message(isPinned: true)));
+      expect(find.byIcon(Icons.push_pin), findsOneWidget);
     });
   });
 
@@ -297,6 +325,156 @@ void main() {
 
       expect(calledMember?.email, 'alice@x.com');
       expect(calledIsVideo, isFalse);
+    });
+  });
+
+  group('showChannelMessageActions', () {
+    testWidgets('allows reacting with emoji', (tester) async {
+      ChannelActionChoice? picked;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: const [Locale('en'), Locale('bn')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            DefaultMaterialLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate,
+          ],
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () async {
+                  picked = await showChannelMessageActions(
+                    ctx,
+                    message: _message(text: 'Hello test'),
+                    isMine: false,
+                    isAdmin: false,
+                    myReaction: null,
+                  );
+                },
+                child: const Text('OpenActions'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('OpenActions'));
+      await tester.pumpAndSettle();
+
+      // Tap on first emoji 👍
+      await tester.tap(find.text('👍'));
+      await tester.pumpAndSettle();
+
+      expect(picked?.emoji, '👍');
+      expect(picked?.action, isNull);
+    });
+
+    testWidgets('shows pin action for admin and replies for all',
+        (tester) async {
+      ChannelActionChoice? picked;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: const [Locale('en'), Locale('bn')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            DefaultMaterialLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate,
+          ],
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () async {
+                  picked = await showChannelMessageActions(
+                    ctx,
+                    message:
+                        _message(text: 'Important update', isPinned: false),
+                    isMine: true,
+                    isAdmin: true,
+                    myReaction: null,
+                  );
+                },
+                child: const Text('OpenActions'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('OpenActions'));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.push_pin_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.reply), findsOneWidget);
+      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.push_pin_outlined));
+      await tester.pumpAndSettle();
+
+      expect(picked?.action, ChannelAction.pin);
+    });
+  });
+
+  group('showChannelEditor', () {
+    testWidgets('allows configuring a new channel with title and kind',
+        (tester) async {
+      ChannelDraft? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: const [Locale('en'), Locale('bn')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            DefaultMaterialLocalizations.delegate,
+            DefaultWidgetsLocalizations.delegate,
+          ],
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => ElevatedButton(
+                onPressed: () async {
+                  result = await showChannelEditor(
+                    ctx,
+                    title: 'New Channel',
+                    nameEditable: true,
+                  );
+                },
+                child: const Text('CreateChannel'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('CreateChannel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New Channel'), findsOneWidget);
+
+      // Enter channel name
+      await tester.enterText(find.byType(TextField).first, 'camp-fire');
+      await tester.pump();
+
+      // Enter topic
+      await tester.enterText(
+          find.byType(TextField).last, 'Evening campfire talks');
+      await tester.pump();
+
+      // Switch to Voice segment
+      await tester.tap(find.byIcon(Icons.volume_up));
+      await tester.pump();
+
+      // Save
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(result?.name, 'camp-fire');
+      expect(result?.topic, 'Evening campfire talks');
+      expect(result?.kind, ChannelKind.voice);
     });
   });
 }

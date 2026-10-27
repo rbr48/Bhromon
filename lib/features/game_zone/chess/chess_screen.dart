@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../common/game_zone_portrait_lock.dart';
+import '../data/game_analytics_service.dart';
+import '../domain/models/game_analytics_models.dart';
 import 'chess_engine.dart';
 import 'chess_piece_painter.dart';
 
@@ -246,6 +248,11 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
   void _finishGame(String title, String message, String status) {
     _ChessSession.gameOverTitle = title;
     _ChessSession.gameOverMessage = status;
+    final won = title.contains('🏆') || title.contains('You win');
+    GameAnalyticsService().recordMatch(
+      gameType: OnlineGameType.chess,
+      won: won,
+    );
     setState(() {
       _isAiThinking = false;
       _statusText = status;

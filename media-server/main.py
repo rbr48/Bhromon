@@ -16,14 +16,17 @@ import re
 import json
 import secrets
 import uuid
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import aiofiles
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
+
+from notifications import FirestoreNotificationWatcher, NotificationEngine
 
 MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", "/data/media"))
 META_ROOT = Path(os.getenv("MEDIA_META_ROOT", "/data/media-meta"))
@@ -57,7 +60,25 @@ FILENAME_PATTERN = re.compile(
     r"([0-9a-f]{32})\.(jpg|jpeg|png|webp|gif|heic|heif|mp4|mov|m4v|webm|3gp|mkv)"
 )
 
-app = FastAPI(title="Bhromon Media Server", version="2.0.0")
+notification_engine = NotificationEngine()
+notification_watcher = FirestoreNotificationWatcher(notification_engine)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Start watcher on startup if Firebase credentials exist
+    if FIREBASE_CREDENTIALS or os.path.exists("/run/secrets/firebase-admin.json"):
+        notification_watcher.start()
+    yield
+    # Stop watcher on shutdown
+    notification_watcher.stop()
+
+
+app = FastAPI(
+    title="Bhromon Media & Notification Server",
+    version="2.1.0",
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -227,7 +248,14 @@ def may_delete(caller: Caller, role: str, meta: Optional[dict]) -> bool:
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "bhromon-media-server"}
+    return {
+        "status": "ok",
+        "service": "bhromon-media-server",
+        "notifications": {
+            "watcher_running": notification_watcher._is_running,
+            "stats": notification_engine.stats,
+        },
+    }
 
 
 async def store_stream(file: UploadFile, dest: Path, max_allowed: int) -> int:
@@ -356,3 +384,100 @@ async def delete_media(
     target.unlink()
     meta_path_for(tourId, folder, filename).unlink(missing_ok=True)
     return {"status": "deleted", "path": f"{tourId}/{folder}/{filename}"}
+
+
+@app.get("/notify/status")
+def notification_status():
+    return {
+        "watcher_running": notification_watcher._is_running,
+        "listeners": len(notification_watcher.active_listeners),
+        "stats": notification_engine.stats,
+    }
+
+
+@app.post("/notify/sos")
+async def trigger_sos_notification(
+    payload: Dict[str, Any],
+    authorization: Optional[str] = Header(None),
+    x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
+):
+    caller = await run_in_threadpool(authenticate, authorization, x_upload_key)
+    tour_id = payload.get("tourId", "")
+    alert_id = payload.get("alertId", "")
+    sender_name = payload.get("senderName", "A member")
+    check_tour_id(tour_id)
+    await run_in_threadpool(require_member, tour_id, caller)
+
+    res = await run_in_threadpool(
+        notification_engine.send_sos_alert,
+        tour_id=tour_id,
+        alert_id=alert_id,
+        sender_email=caller.email,
+        sender_name=sender_name,
+    )
+    return res
+
+
+@app.post("/notify/channel")
+async def trigger_channel_notification(
+    payload: Dict[str, Any],
+    authorization: Optional[str] = Header(None),
+    x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
+):
+    caller = await run_in_threadpool(authenticate, authorization, x_upload_key)
+    tour_id = payload.get("tourId", "")
+    channel_id = payload.get("channelId", "")
+    message_id = payload.get("messageId", "")
+    sender_name = payload.get("senderName", "A member")
+    text = payload.get("text", "")
+    mentions = payload.get("mentions", [])
+    attachments = payload.get("attachments", [])
+    kind = payload.get("kind", "text")
+    check_tour_id(tour_id)
+    await run_in_threadpool(require_member, tour_id, caller)
+
+    res = await run_in_threadpool(
+        notification_engine.send_channel_message_notification,
+        tour_id=tour_id,
+        channel_id=channel_id,
+        message_id=message_id,
+        sender_email=caller.email,
+        sender_name=sender_name,
+        text=text,
+        mentions=mentions,
+        attachments=attachments,
+        kind=kind,
+    )
+    return res
+
+
+@app.post("/notify/chat")
+async def trigger_chat_notification(
+    payload: Dict[str, Any],
+    authorization: Optional[str] = Header(None),
+    x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
+):
+    caller = await run_in_threadpool(authenticate, authorization, x_upload_key)
+    chat_id = payload.get("chatId", "")
+    sender_id = payload.get("senderId", "")
+    text = payload.get("text", "")
+    message_type = payload.get("type", "text")
+
+    res = await run_in_threadpool(
+        notification_engine.send_chat_notification,
+        chat_id=chat_id,
+        sender_id=sender_id,
+        text=text,
+        message_type=message_type,
+    )
+    return res
+
+
+@app.post("/admin/maintenance")
+async def trigger_maintenance(
+    authorization: Optional[str] = Header(None),
+    x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
+):
+    await run_in_threadpool(authenticate, authorization, x_upload_key)
+    res = await run_in_threadpool(notification_engine.run_retention_sweep)
+    return res

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +11,7 @@ import '../domain/services/media_rules.dart';
 import 'tour_group_repository.dart';
 import 'tour_media_journal.dart';
 import 'tour_media_uploader.dart';
+import 'vps_notification_service.dart';
 
 /// Firestore batches hold at most 500 writes; stay well under that.
 const int _batchLimit = 400;
@@ -250,6 +253,18 @@ class TourChannelRepository {
       if (locationTitle != null && locationTitle.isNotEmpty)
         'locationTitle': locationTitle,
     });
+    if (channelId == 'emergency' || mentions.isNotEmpty) {
+      unawaited(VpsNotificationService().notifyChannelMessage(
+        tourId: tourId,
+        channelId: channelId,
+        messageId: id,
+        senderName: currentDisplayName,
+        text: trimmed,
+        mentions: mentions.map(normalizeEmail).toList(),
+        attachments: [for (final a in attachments) a.toMap()],
+        kind: ChannelMessageKind.text.name,
+      ));
+    }
   }
 
   /// Changes the text of your own message, and the mentions it now holds.

@@ -20,3 +20,17 @@ services:
       # are still in use. Leave empty once they are gone.
       - LEGACY_UPLOAD_KEY=${LEGACY_UPLOAD_KEY:-}
       - BASE_URL=https://bhromon.fun/media
+
+  bhromon-games:
+    build:
+      context: ../functions
+      dockerfile: Dockerfile
+    container_name: bhromon-games-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8220:8000"
+    volumes:
+      - /etc/bhromon/firebase-admin.json:/run/secrets/firebase-admin.json:ro
+    environment:
+      - PORT=8000
+      - FIREBASE_CREDENTIALS=/run/secrets/firebase-admin.json

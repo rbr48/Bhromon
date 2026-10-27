@@ -2,12 +2,12 @@ name: Functions CI
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ master, main, develop ]
     paths:
       - 'functions/**'
       - '.github/workflows/functions_ci.yml'
   pull_request:
-    branches: [ master, develop ]
+    branches: [ master, main, develop ]
     paths:
       - 'functions/**'
       - '.github/workflows/functions_ci.yml'

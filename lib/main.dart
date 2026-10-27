@@ -36,6 +36,7 @@ import 'features/ota/presentation/widgets/ota_update_dialog.dart';
 import 'core/security/device_integrity_service.dart';
 import 'core/database/app_database.dart';
 import 'features/chat/data/call_notification_service.dart';
+import 'features/game_zone/data/game_analytics_service.dart';
 import 'features/notifications/geo_fence_service.dart'
     show registerGeoFenceWork;
 
@@ -246,6 +247,8 @@ void main() {
     }
     await LocaleController.instance.load();
     await ThemeController.instance.load();
+    GameAnalyticsService.hasStorage = true;
+    await GameAnalyticsService().init();
     final bool firebaseAvailable = await firebaseInit;
 
     if (!firebaseAvailable) {
