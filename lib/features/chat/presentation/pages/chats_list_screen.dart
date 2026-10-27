@@ -60,6 +60,16 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     required String otherName,
     required String? avatarUrl,
   }) {
+    if (otherUid.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot start call: user information is missing.'),
+          backgroundColor: Color(0xFF1F2C34),
+        ),
+      );
+      return;
+    }
+
     if (otherUid == 'bhromon_ai_advisor') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -100,7 +110,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     _callsStream = FirebaseFirestore.instance
         .collection('calls')
         .where('participants', arrayContains: uid)
-        .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots();
   }
@@ -541,6 +550,90 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     );
   }
 
+  static DateTime? _parseCallDate(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is String) return DateTime.tryParse(raw);
+    if (raw is num) return DateTime.fromMillisecondsSinceEpoch(raw.toInt());
+    return null;
+  }
+
+  Widget _buildCallTile(
+    BuildContext context, {
+    required String displayName,
+    required String? avatarUrl,
+    required bool isCaller,
+    required bool isMissed,
+    required bool isVideo,
+    required String timeStr,
+    required int? durationSeconds,
+    required VoidCallback? onTap,
+  }) {
+    final initials = displayName.trim().isNotEmpty
+        ? displayName
+            .trim()
+            .substring(0, math.min(2, displayName.trim().length))
+            .toUpperCase()
+        : 'TR';
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: CircleAvatar(
+        radius: 24,
+        backgroundColor: const Color(0xFF005C4B),
+        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+            ? sizedImage(NetworkImage(avatarUrl), context.decodeWidth(48))
+            : null,
+        child: (avatarUrl == null || avatarUrl.isEmpty)
+            ? Text(
+                initials,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              )
+            : null,
+      ),
+      title: Text(
+        displayName,
+        style: TextStyle(
+          color: isMissed ? Colors.redAccent : Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+      ),
+      subtitle: Row(
+        children: [
+          Icon(
+            isMissed
+                ? Icons.call_missed
+                : (isCaller ? Icons.call_made : Icons.call_received),
+            size: 15,
+            color: isMissed ? Colors.redAccent : const Color(0xFF00A884),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            timeStr +
+                (durationSeconds != null && durationSeconds > 0
+                    ? ' (${durationSeconds ~/ 60}m ${durationSeconds % 60}s)'
+                    : ''),
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+        ],
+      ),
+      trailing: IconButton(
+        icon: Icon(
+          isVideo ? Icons.videocam : Icons.call,
+          color: onTap != null ? const Color(0xFF00A884) : Colors.white24,
+          size: 22,
+        ),
+        onPressed: onTap,
+      ),
+      onTap: onTap,
+    );
+  }
+
   Widget _buildCallsView(String currentUid) {
     return StreamBuilder<QuerySnapshot>(
       stream: _callsStream,
@@ -550,7 +643,39 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             child: CircularProgressIndicator(color: Color(0xFF00A884)),
           );
         }
-        final docs = snapshot.data?.docs ?? [];
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline,
+                      size: 48, color: Colors.white.withValues(alpha: 0.15)),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Unable to load call log.',
+                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Sort client-side by createdAt descending to avoid requiring composite Firestore index
+        final docs = (snapshot.data?.docs ?? []).toList()
+          ..sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>?;
+            final bData = b.data() as Map<String, dynamic>?;
+            final aDate = _parseCallDate(aData?['createdAt']);
+            final bDate = _parseCallDate(bData?['createdAt']);
+            if (aDate == null && bDate == null) return 0;
+            if (aDate == null) return 1;
+            if (bDate == null) return -1;
+            return bDate.compareTo(aDate);
+          });
+
         if (docs.isEmpty) {
           return Center(
             child: Column(
@@ -584,32 +709,52 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           ),
           itemBuilder: (context, index) {
             final doc = docs[index];
-            final data = doc.data() as Map<String, dynamic>;
+            final data = (doc.data() as Map<String, dynamic>?) ?? {};
             final callerId = data['callerId'] as String? ?? '';
             final calleeId = data['calleeId'] as String? ?? '';
             final isCaller = callerId == currentUid;
             final otherUid = isCaller ? calleeId : callerId;
             final isVideo = data['isVideo'] == true;
             final status = data['status'] as String? ?? 'ended';
-            final createdAt = data['createdAt'] as Timestamp?;
+            final callDate = _parseCallDate(data['createdAt']);
             final durationSeconds = (data['durationSeconds'] as num?)?.toInt();
 
             String timeStr = 'Recent';
-            if (createdAt != null) {
-              final dt = createdAt.toDate();
+            if (callDate != null) {
               final now = DateTime.now();
-              final isToday = dt.year == now.year &&
-                  dt.month == now.month &&
-                  dt.day == now.day;
-              final hour = dt.hour.toString().padLeft(2, '0');
-              final minute = dt.minute.toString().padLeft(2, '0');
+              final isToday = callDate.year == now.year &&
+                  callDate.month == now.month &&
+                  callDate.day == now.day;
+              final hour = callDate.hour.toString().padLeft(2, '0');
+              final minute = callDate.minute.toString().padLeft(2, '0');
               timeStr = isToday
                   ? 'Today, $hour:$minute'
-                  : '${dt.day}/${dt.month}, $hour:$minute';
+                  : '${callDate.day}/${callDate.month}, $hour:$minute';
             }
 
             final isMissed =
                 !isCaller && (status == 'declined' || status == 'calling');
+
+            final callerNameInDoc = data['callerName'] as String?;
+            final callerAvatarInDoc = data['callerAvatar'] as String?;
+
+            // If otherUid is empty, display metadata from document without querying explorer_profiles
+            if (otherUid.trim().isEmpty) {
+              final fallbackName = callerNameInDoc?.trim().isNotEmpty == true
+                  ? callerNameInDoc!
+                  : 'Traveler';
+              return _buildCallTile(
+                context,
+                displayName: fallbackName,
+                avatarUrl: callerAvatarInDoc,
+                isCaller: isCaller,
+                isMissed: isMissed,
+                isVideo: isVideo,
+                timeStr: timeStr,
+                durationSeconds: durationSeconds,
+                onTap: null,
+              );
+            }
 
             return FutureBuilder<DocumentSnapshot>(
               future: DocFutureCache.instance.get(
@@ -619,76 +764,28 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               ),
               builder: (context, profSnap) {
                 final profData = profSnap.data?.data() as Map<String, dynamic>?;
-                final otherName =
-                    (profData?['displayName'] as String?) ?? 'Traveler';
-                final avatarUrl = profData?['avatarUrl'] as String?;
-                final initials =
-                    otherName.isNotEmpty ? otherName[0].toUpperCase() : 'T';
+                final otherName = (profData?['displayName'] as String?)
+                            ?.trim()
+                            .isNotEmpty ==
+                        true
+                    ? (profData!['displayName'] as String)
+                    : (callerNameInDoc?.trim().isNotEmpty == true
+                        ? callerNameInDoc!
+                        : (otherUid.contains('@')
+                            ? otherUid
+                            : 'Traveler ${otherUid.substring(0, math.min(otherUid.length, 6))}'));
+                final avatarUrl =
+                    profData?['avatarUrl'] as String? ?? callerAvatarInDoc;
 
-                return ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: CircleAvatar(
-                    radius: 24,
-                    backgroundColor: const Color(0xFF005C4B),
-                    backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-                        ? sizedImage(
-                            NetworkImage(avatarUrl), context.decodeWidth(48))
-                        : null,
-                    child: (avatarUrl == null || avatarUrl.isEmpty)
-                        ? Text(initials,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13))
-                        : null,
-                  ),
-                  title: Text(
-                    otherName,
-                    style: TextStyle(
-                      color: isMissed ? Colors.redAccent : Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  subtitle: Row(
-                    children: [
-                      Icon(
-                        isMissed
-                            ? Icons.call_missed
-                            : (isCaller
-                                ? Icons.call_made
-                                : Icons.call_received),
-                        size: 15,
-                        color: isMissed
-                            ? Colors.redAccent
-                            : const Color(0xFF00A884),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        timeStr +
-                            (durationSeconds != null && durationSeconds > 0
-                                ? ' (${durationSeconds ~/ 60}m ${durationSeconds % 60}s)'
-                                : ''),
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: Icon(
-                      isVideo ? Icons.videocam : Icons.call,
-                      color: const Color(0xFF00A884),
-                      size: 22,
-                    ),
-                    onPressed: () => _initiateCall(
-                      isVideo: isVideo,
-                      currentUid: currentUid,
-                      otherUid: otherUid,
-                      otherName: otherName,
-                      avatarUrl: avatarUrl,
-                    ),
-                  ),
+                return _buildCallTile(
+                  context,
+                  displayName: otherName,
+                  avatarUrl: avatarUrl,
+                  isCaller: isCaller,
+                  isMissed: isMissed,
+                  isVideo: isVideo,
+                  timeStr: timeStr,
+                  durationSeconds: durationSeconds,
                   onTap: () => _initiateCall(
                     isVideo: isVideo,
                     currentUid: currentUid,
