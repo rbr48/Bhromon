@@ -1511,11 +1511,6 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                   timeStr,
                   style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '•  👁️ ${context.l10n.number(widget.post.effectiveViewCount)} ভিউ',
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
-                ),
                 if (widget.post.isEdited) ...[
                   const SizedBox(width: 6),
                   Text(
