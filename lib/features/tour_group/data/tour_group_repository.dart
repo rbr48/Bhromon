@@ -122,9 +122,10 @@ class TourGroupRepository {
       if (Hive.isBoxOpen('tour_groups_box')) {
         Hive.box<dynamic>('tour_groups_box').put('last_active_tour_id', id);
       } else {
+        // Best effort: a failed open must not surface as an uncaught error.
         Hive.openBox<dynamic>('tour_groups_box').then((box) {
           box.put('last_active_tour_id', id);
-        });
+        }).catchError((_) {});
       }
     } catch (_) {}
   }
@@ -412,7 +413,8 @@ class TourGroupRepository {
             }
             emit();
           } catch (e, st) {
-            debugPrint('[TourGroupRepository] parse tour $tourId failed: $e\n$st');
+            debugPrint(
+                '[TourGroupRepository] parse tour $tourId failed: $e\n$st');
           }
         },
         onError: (Object e) {
@@ -461,10 +463,8 @@ class TourGroupRepository {
         }
       });
 
-      membershipSub = _memberships
-          .where('email', isEqualTo: email)
-          .snapshots()
-          .listen(
+      membershipSub =
+          _memberships.where('email', isEqualTo: email).snapshots().listen(
         (snapshot) {
           heardFromServer = true;
           rolesByTour.clear();
@@ -710,7 +710,8 @@ class TourGroupRepository {
         try {
           await membershipRef.update({'status': 'active'});
         } catch (e) {
-          debugPrint('[TourGroupRepository] membership reactivation failed: $e');
+          debugPrint(
+              '[TourGroupRepository] membership reactivation failed: $e');
         }
       }
     }
@@ -1477,8 +1478,8 @@ class TourGroupRepository {
 
   /// Live stream of members' battery and location telemetry.
   Stream<List<BatteryTelemetry>> watchBatteryTelemetry(String tourId) {
-    return _sub(tourId, 'telemetry').snapshots().map((s) =>
-        s.docs.map((d) => BatteryTelemetry.fromMap(d.data())).toList());
+    return _sub(tourId, 'telemetry').snapshots().map(
+        (s) => s.docs.map((d) => BatteryTelemetry.fromMap(d.data())).toList());
   }
 
   // ---------------------------------------------------------------------------

@@ -18,6 +18,7 @@ class TripShell extends StatelessWidget {
     required this.tourId,
     required this.location,
     required this.child,
+    this.repository,
   });
 
   /// The width from which the tabs move to a side rail.
@@ -32,6 +33,10 @@ class TripShell extends StatelessWidget {
   final String location;
 
   final Widget child;
+
+  /// Lets tests supply a repository that does not touch Firebase. The app
+  /// leaves this null and gets a default [TourGroupRepository].
+  final TourGroupRepository? repository;
 
   @override
   Widget build(BuildContext context) {
@@ -58,11 +63,16 @@ class TripShell extends StatelessWidget {
     );
 
     final shortcuts = <ShortcutActivator, VoidCallback>{
-      const SingleActivator(LogicalKeyboardKey.digit1, alt: true): () => select(0),
-      const SingleActivator(LogicalKeyboardKey.digit2, alt: true): () => select(1),
-      const SingleActivator(LogicalKeyboardKey.digit3, alt: true): () => select(2),
-      const SingleActivator(LogicalKeyboardKey.digit4, alt: true): () => select(3),
-      const SingleActivator(LogicalKeyboardKey.digit5, alt: true): () => select(4),
+      const SingleActivator(LogicalKeyboardKey.digit1, alt: true): () =>
+          select(0),
+      const SingleActivator(LogicalKeyboardKey.digit2, alt: true): () =>
+          select(1),
+      const SingleActivator(LogicalKeyboardKey.digit3, alt: true): () =>
+          select(2),
+      const SingleActivator(LogicalKeyboardKey.digit4, alt: true): () =>
+          select(3),
+      const SingleActivator(LogicalKeyboardKey.digit5, alt: true): () =>
+          select(4),
       const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
           CommandPaletteDialog.show(context, tourId),
       const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
@@ -83,7 +93,7 @@ class TripShell extends StatelessWidget {
                 DesktopTourSidebar(
                   tourId: tourId,
                   currentLocation: location,
-                  repository: TourGroupRepository(),
+                  repository: repository ?? TourGroupRepository(),
                 ),
                 Expanded(
                   child: Center(

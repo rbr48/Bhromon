@@ -174,8 +174,8 @@ class InstafeedDayFilterBar extends StatelessWidget {
                         child: Text(
                           selectedDay == 'all'
                               ? 'সব দিন'
-                              : _dayLabelBn(int.tryParse(selectedDay
-                                      .replaceAll('day', '')) ??
+                              : _dayLabelBn(int.tryParse(
+                                      selectedDay.replaceAll('day', '')) ??
                                   1),
                           style: const TextStyle(
                             color: AppColors.mintGreen,
@@ -284,8 +284,8 @@ class InstafeedDayFilterBar extends StatelessWidget {
                   onTap: onOpenFilterSheet,
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E1E1E),
                       borderRadius: BorderRadius.circular(8),
@@ -364,7 +364,8 @@ class InstafeedDayFilterBar extends StatelessWidget {
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: AppColors.mintGreen.withValues(alpha: 0.25),
+                              color:
+                                  AppColors.mintGreen.withValues(alpha: 0.25),
                               blurRadius: 8,
                               spreadRadius: 1,
                             ),

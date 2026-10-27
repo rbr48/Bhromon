@@ -489,7 +489,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     );
   }
 
-  Widget _prayerAndQiblaCard(AppLocalizations l10n, TourGroup g, Position? pos) {
+  Widget _prayerAndQiblaCard(
+      AppLocalizations l10n, TourGroup g, Position? pos) {
     final stopName = g.effectiveStops.isNotEmpty
         ? g.effectiveStops.first.name
         : g.destination;
@@ -632,9 +633,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                           Text(
                             l10n.translate(p.key),
                             style: TextStyle(
-                              color: isNext
-                                  ? AppColors.mintGreen
-                                  : Colors.white70,
+                              color:
+                                  isNext ? AppColors.mintGreen : Colors.white70,
                               fontSize: 11,
                               fontWeight:
                                   isNext ? FontWeight.bold : FontWeight.normal,

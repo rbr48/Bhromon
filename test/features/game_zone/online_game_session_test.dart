@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('OnlinePlayer', () {
     test('serialization and deserialization', () {
-      final player = OnlinePlayer(
+      const player = OnlinePlayer(
         email: 'traveler@bhromon.fun',
         displayName: 'Mountain Hiker',
         photoUrl: 'https://bhromon.fun/avatar.png',
@@ -49,14 +49,14 @@ void main() {
   group('OnlineGameSession', () {
     test('session serialization and turn checking', () {
       final now = DateTime(2026, 10, 27, 10, 0);
-      final p1 = OnlinePlayer(
+      const p1 = OnlinePlayer(
         email: 'lead@bhromon.fun',
         displayName: 'Lead',
         seatIndex: 0,
         isHost: true,
         isReady: true,
       );
-      final p2 = OnlinePlayer(
+      const p2 = OnlinePlayer(
         email: 'companion@bhromon.fun',
         displayName: 'Companion',
         seatIndex: 1,

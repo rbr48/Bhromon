@@ -8,7 +8,8 @@ import 'package:bhromon/features/tour_group/presentation/widgets/member_profile/
 
 void main() {
   group('Tour Member Profile - Unit & Logic Tests', () {
-    test('Translation keys for member profile exist in TourTranslationKeys', () {
+    test('Translation keys for member profile exist in TourTranslationKeys',
+        () {
       final en = TourTranslationKeys.localizedValues['en']!;
       final bn = TourTranslationKeys.localizedValues['bn']!;
 

@@ -1638,9 +1638,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       if (locText != null && locText.isNotEmpty && mounted) {
         final draft = _draftFor(channel.id);
         _update(() {
-          draft.text = draft.text.isEmpty
-              ? locText
-              : '${draft.text}\n$locText';
+          draft.text = draft.text.isEmpty ? locText : '${draft.text}\n$locText';
         });
       }
       return;
@@ -1789,8 +1787,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 style: const TextStyle(color: Colors.white54)),
           ),
           FilledButton(
-            style:
-                FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
             onPressed: () {
               final name = nameCtrl.text.trim();
               final url = urlCtrl.text.trim();

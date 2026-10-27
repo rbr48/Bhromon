@@ -469,8 +469,8 @@ class InstafeedStoryShareSheet extends StatelessWidget {
                   onTap: () => _copyLink(context),
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Column(
                       children: [
                         const CircleAvatar(
@@ -492,8 +492,8 @@ class InstafeedStoryShareSheet extends StatelessWidget {
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Column(
                       children: [
                         const CircleAvatar(

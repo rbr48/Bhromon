@@ -101,7 +101,8 @@ class OnlineTableLobbyView extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.amber.shade400, width: 0.8),
+                    border:
+                        Border.all(color: Colors.amber.shade400, width: 0.8),
                   ),
                   child: const Text(
                     'LOBBY',
@@ -122,7 +123,8 @@ class OnlineTableLobbyView extends StatelessWidget {
           // Seating Map Title
           const Row(
             children: [
-              Icon(Icons.event_seat_rounded, color: AppColors.mintGreen, size: 18),
+              Icon(Icons.event_seat_rounded,
+                  color: AppColors.mintGreen, size: 18),
               SizedBox(width: 8),
               Text(
                 'TABLE SEATS',
@@ -162,9 +164,7 @@ class OnlineTableLobbyView extends StatelessWidget {
                   border: Border.all(
                     color: isMe
                         ? AppColors.mintGreen
-                        : (player != null
-                            ? Colors.white24
-                            : Colors.white10),
+                        : (player != null ? Colors.white24 : Colors.white10),
                     width: isMe ? 1.8 : 1.0,
                   ),
                 ),
@@ -218,8 +218,9 @@ class OnlineTableLobbyView extends StatelessWidget {
                       style: TextStyle(
                         color: player != null ? Colors.white : Colors.white38,
                         fontSize: 13,
-                        fontWeight:
-                            player != null ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: player != null
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -234,9 +235,7 @@ class OnlineTableLobbyView extends StatelessWidget {
                                   : 'Seat ${index + 1}'))
                           : 'Seat ${index + 1}',
                       style: TextStyle(
-                        color: isMe
-                            ? AppColors.mintGreen
-                            : Colors.white54,
+                        color: isMe ? AppColors.mintGreen : Colors.white54,
                         fontSize: 11,
                       ),
                     ),

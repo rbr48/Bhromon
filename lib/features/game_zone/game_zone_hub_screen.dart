@@ -517,7 +517,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                    icon:
+                        const Icon(Icons.add_circle_outline_rounded, size: 20),
                     label: const Text(
                       'Create New Game Table',
                       style:
@@ -590,7 +591,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                 }
 
                 return Column(
-                  children: sessions.map((s) => _buildTableCard(context, s)).toList(),
+                  children:
+                      sessions.map((s) => _buildTableCard(context, s)).toList(),
                 );
               },
             ),
@@ -676,9 +678,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                             child: Text(
                               isPlaying ? 'IN MATCH' : 'OPEN LOBBY',
                               style: TextStyle(
-                                color: isPlaying
-                                    ? Colors.redAccent
-                                    : Colors.amber,
+                                color:
+                                    isPlaying ? Colors.redAccent : Colors.amber,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -713,9 +714,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                     backgroundColor: isSeated
                         ? AppColors.mintGreen
                         : const Color(0xFF233F2E),
-                    foregroundColor: isSeated
-                        ? const Color(0xFF0F1E14)
-                        : Colors.white,
+                    foregroundColor:
+                        isSeated ? const Color(0xFF0F1E14) : Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),

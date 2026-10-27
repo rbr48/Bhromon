@@ -1,7 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive/hive.dart';
 
+import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
+import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
+import 'package:bhromon/features/tour_group/presentation/widgets/desktop_tour_sidebar.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/trip_shell.dart';
 
 void main() {
@@ -36,6 +42,12 @@ void main() {
   group('navigation from the group hub', () {
     late GoRouter router;
 
+    setUpAll(() {
+      // The shell remembers the last tour in a Hive box, so give Hive a
+      // directory to write to, as the app does at startup.
+      Hive.init(Directory.systemTemp.createTempSync('bhromon_nav').path);
+    });
+
     setUp(() {
       // The same shape as the app: the hub is a root route, and each trip
       // screen is its own route wrapped in TripShell.
@@ -57,6 +69,7 @@ void main() {
               builder: (context, state) => TripShell(
                 tourId: state.pathParameters['tourId']!,
                 location: state.uri.path,
+                repository: _NoFirebaseRepository(),
                 child: _Screen(screen),
               ),
             ),
@@ -88,7 +101,7 @@ void main() {
       expect(find.text('open journey'), findsOneWidget);
     });
 
-    testWidgets('a wide window shows the tabs in a side rail', (tester) async {
+    testWidgets('a wide window shows the tabs in the side bar', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -98,7 +111,7 @@ void main() {
       await tester.tap(find.text('open journey'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(DesktopTourSidebar), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
 
       await tester.tap(find.byIcon(Icons.photo_library_outlined));
@@ -123,6 +136,13 @@ void main() {
       );
     });
   });
+}
+
+/// A repository that never reaches Firebase. The side rail shows no group,
+/// which is all these navigation tests need.
+class _NoFirebaseRepository extends TourGroupRepository {
+  @override
+  Stream<TourGroup?> watchGroup(String tourId) => Stream.value(null);
 }
 
 class _Screen extends StatelessWidget {

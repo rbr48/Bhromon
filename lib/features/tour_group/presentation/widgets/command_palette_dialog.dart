@@ -205,13 +205,13 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                       child: TextField(
                         controller: _searchCtrl,
                         autofocus: true,
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 15),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 15),
                         decoration: const InputDecoration(
                           hintText:
                               'কমান্ড খুঁজুন (যেমন: হিসাব, ইন্সটাফিড, সিট প্ল্যান...)',
-                          hintStyle: TextStyle(
-                              color: Colors.white38, fontSize: 13.5),
+                          hintStyle:
+                              TextStyle(color: Colors.white38, fontSize: 13.5),
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
@@ -293,8 +293,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                                     child: Icon(
                                       item.icon,
                                       size: 18,
-                                      color:
-                                          item.color ?? AppColors.mintGreen,
+                                      color: item.color ?? AppColors.mintGreen,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -325,7 +324,8 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.06),
+                                      color:
+                                          Colors.white.withValues(alpha: 0.06),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(

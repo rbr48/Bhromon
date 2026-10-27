@@ -342,142 +342,147 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             child: widget.members != null
                 ? _buildDirectModalBody(l10n, widget.members!)
                 : StreamBuilder<List<TourMember>>(
-              stream: _repo.watchMembers(widget.tourId),
-              builder: (context, membersSnap) {
-                final members = membersSnap.data ?? [];
-                final member = members.firstWhere(
-                  (m) =>
-                      normalizeEmail(m.email) ==
-                      normalizeEmail(widget.memberEmail),
-                  orElse: () => TourMember(
-                    tourId: widget.tourId,
-                    email: widget.memberEmail,
-                    displayName: widget.memberName ?? 'Traveler',
-                    photoUrl: widget.memberPhoto,
-                    role: TourRole.member,
-                    status: TourMemberStatus.active,
-                    joinedAt: DateTime.now(),
-                    familyCount: widget.familyCount ?? 1,
-                  ),
-                );
+                    stream: _repo.watchMembers(widget.tourId),
+                    builder: (context, membersSnap) {
+                      final members = membersSnap.data ?? [];
+                      final member = members.firstWhere(
+                        (m) =>
+                            normalizeEmail(m.email) ==
+                            normalizeEmail(widget.memberEmail),
+                        orElse: () => TourMember(
+                          tourId: widget.tourId,
+                          email: widget.memberEmail,
+                          displayName: widget.memberName ?? 'Traveler',
+                          photoUrl: widget.memberPhoto,
+                          role: TourRole.member,
+                          status: TourMemberStatus.active,
+                          joinedAt: DateTime.now(),
+                          familyCount: widget.familyCount ?? 1,
+                        ),
+                      );
 
-                return StreamBuilder<List<TourPostItem>>(
-                  stream: _repo.watchPosts(widget.tourId),
-                  builder: (context, postsSnap) {
-                    final allPosts = postsSnap.data ?? [];
-                    final normTarget = normalizeEmail(widget.memberEmail);
+                      return StreamBuilder<List<TourPostItem>>(
+                        stream: _repo.watchPosts(widget.tourId),
+                        builder: (context, postsSnap) {
+                          final allPosts = postsSnap.data ?? [];
+                          final normTarget = normalizeEmail(widget.memberEmail);
 
-                    // User posts & reels
-                    final authorPosts = allPosts
-                        .where((p) =>
-                            normalizeEmail(p.authorEmail) == normTarget)
-                        .toList();
-                    final authorReels = authorPosts
-                        .where((p) =>
-                            p.videoUrl != null && p.videoUrl!.isNotEmpty)
-                        .toList();
-                    final taggedPosts = allPosts
-                        .where((p) => p.tags
-                            .map(normalizeEmail)
-                            .contains(normTarget))
-                        .toList();
-
-                    final totalLikes = authorPosts.fold<int>(
-                        0, (sumLikes, p) => sumLikes + p.likes.length);
-
-                    return StreamBuilder<List<BusSeat>>(
-                      stream: _repo.watchBusSeats(widget.tourId),
-                      builder: (context, seatsSnap) {
-                        final seatList = seatsSnap.data ?? [];
-                        final matchingSeat = seatList.firstWhere(
-                          (s) =>
-                              normalizeEmail(s.assignedMemberEmail ?? '') ==
-                              normTarget,
-                          orElse: () => const BusSeat(seatNumber: ''),
-                        );
-                        final seat = widget.seatNumber ??
-                            (matchingSeat.seatNumber.isNotEmpty
-                                ? matchingSeat.seatNumber
-                                : '');
-
-                        return StreamBuilder<List<HotelRoom>>(
-                          stream: _repo.watchHotelRooms(widget.tourId),
-                          builder: (context, roomsSnap) {
-                            final roomList = roomsSnap.data ?? [];
-                            final matchingRoom = roomList.firstWhere(
-                              (r) => r.assignedMemberEmails
+                          // User posts & reels
+                          final authorPosts = allPosts
+                              .where((p) =>
+                                  normalizeEmail(p.authorEmail) == normTarget)
+                              .toList();
+                          final authorReels = authorPosts
+                              .where((p) =>
+                                  p.videoUrl != null && p.videoUrl!.isNotEmpty)
+                              .toList();
+                          final taggedPosts = allPosts
+                              .where((p) => p.tags
                                   .map(normalizeEmail)
-                                  .contains(normTarget),
-                              orElse: () => const HotelRoom(
-                                id: '',
-                                roomNumber: '',
-                                title: '',
-                              ),
-                            );
-                            final room = widget.roomNumber ??
-                                (matchingRoom.roomNumber.isNotEmpty
-                                    ? matchingRoom.roomNumber
-                                    : '');
+                                  .contains(normTarget))
+                              .toList();
 
-                            return StreamBuilder<List<ExpenseItem>>(
-                              stream: _repo.watchExpenses(widget.tourId),
-                              builder: (context, expSnap) {
-                                final expenses = expSnap.data ?? [];
-                                return StreamBuilder<List<TransferItem>>(
-                                  stream: _repo.watchTransfers(widget.tourId),
-                                  builder: (context, xferSnap) {
-                                    final transfers = xferSnap.data ?? [];
-                                    final ledger =
-                                        TripLedgerEngine.computeLedger(
-                                      members: members
-                                          .map((m) => LedgerMemberInput(
-                                                id: normalizeEmail(m.email),
-                                                name: m.displayName,
-                                                familyCount: m.familyCount,
-                                              ))
-                                          .toList(),
-                                      expenses: expenses,
-                                      transfers: transfers,
-                                    );
-                                    final memberRow =
-                                        ledger.rows.firstWhere(
-                                      (r) =>
-                                          normalizeEmail(r.id) == normTarget,
-                                      orElse: () => const LedgerMemberRow(
-                                        id: '',
-                                        name: '',
-                                        familyCount: 1,
-                                        depositPaisa: 0,
-                                        directPaidPaisa: 0,
-                                        contributedPaisa: 0,
-                                        sharePaisa: 0,
-                                        netPaisa: 0,
-                                      ),
-                                    );
+                          final totalLikes = authorPosts.fold<int>(
+                              0, (sumLikes, p) => sumLikes + p.likes.length);
 
-                                    return _buildModalBody(
-                                      l10n: l10n,
-                                      member: member,
-                                      seat: seat,
-                                      room: room,
-                                      balancePaisa: memberRow.netPaisa,
-                                      posts: authorPosts,
-                                      reels: authorReels,
-                                      tagged: taggedPosts,
-                                      likesCount: totalLikes,
-                                    );
-                                  },
-                                );
-                              },
-                            );
-                          },
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
+                          return StreamBuilder<List<BusSeat>>(
+                            stream: _repo.watchBusSeats(widget.tourId),
+                            builder: (context, seatsSnap) {
+                              final seatList = seatsSnap.data ?? [];
+                              final matchingSeat = seatList.firstWhere(
+                                (s) =>
+                                    normalizeEmail(
+                                        s.assignedMemberEmail ?? '') ==
+                                    normTarget,
+                                orElse: () => const BusSeat(seatNumber: ''),
+                              );
+                              final seat = widget.seatNumber ??
+                                  (matchingSeat.seatNumber.isNotEmpty
+                                      ? matchingSeat.seatNumber
+                                      : '');
+
+                              return StreamBuilder<List<HotelRoom>>(
+                                stream: _repo.watchHotelRooms(widget.tourId),
+                                builder: (context, roomsSnap) {
+                                  final roomList = roomsSnap.data ?? [];
+                                  final matchingRoom = roomList.firstWhere(
+                                    (r) => r.assignedMemberEmails
+                                        .map(normalizeEmail)
+                                        .contains(normTarget),
+                                    orElse: () => const HotelRoom(
+                                      id: '',
+                                      roomNumber: '',
+                                      title: '',
+                                    ),
+                                  );
+                                  final room = widget.roomNumber ??
+                                      (matchingRoom.roomNumber.isNotEmpty
+                                          ? matchingRoom.roomNumber
+                                          : '');
+
+                                  return StreamBuilder<List<ExpenseItem>>(
+                                    stream: _repo.watchExpenses(widget.tourId),
+                                    builder: (context, expSnap) {
+                                      final expenses = expSnap.data ?? [];
+                                      return StreamBuilder<List<TransferItem>>(
+                                        stream:
+                                            _repo.watchTransfers(widget.tourId),
+                                        builder: (context, xferSnap) {
+                                          final transfers = xferSnap.data ?? [];
+                                          final ledger =
+                                              TripLedgerEngine.computeLedger(
+                                            members: members
+                                                .map((m) => LedgerMemberInput(
+                                                      id: normalizeEmail(
+                                                          m.email),
+                                                      name: m.displayName,
+                                                      familyCount:
+                                                          m.familyCount,
+                                                    ))
+                                                .toList(),
+                                            expenses: expenses,
+                                            transfers: transfers,
+                                          );
+                                          final memberRow =
+                                              ledger.rows.firstWhere(
+                                            (r) =>
+                                                normalizeEmail(r.id) ==
+                                                normTarget,
+                                            orElse: () => const LedgerMemberRow(
+                                              id: '',
+                                              name: '',
+                                              familyCount: 1,
+                                              depositPaisa: 0,
+                                              directPaidPaisa: 0,
+                                              contributedPaisa: 0,
+                                              sharePaisa: 0,
+                                              netPaisa: 0,
+                                            ),
+                                          );
+
+                                          return _buildModalBody(
+                                            l10n: l10n,
+                                            member: member,
+                                            seat: seat,
+                                            room: room,
+                                            balancePaisa: memberRow.netPaisa,
+                                            posts: authorPosts,
+                                            reels: authorReels,
+                                            tagged: taggedPosts,
+                                            likesCount: totalLikes,
+                                          );
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
         ),
       ),
@@ -510,8 +515,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
     final taggedPosts = allPosts
         .where((p) => p.tags.map(normalizeEmail).contains(normTarget))
         .toList();
-    final totalLikes = authorPosts.fold<int>(
-        0, (sumLikes, p) => sumLikes + p.likes.length);
+    final totalLikes =
+        authorPosts.fold<int>(0, (sumLikes, p) => sumLikes + p.likes.length);
 
     final seatList = widget.seats ?? [];
     final matchingSeat = seatList.firstWhere(
@@ -865,8 +870,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                   l10n.translate('prof_likes'), const Color(0xFFFF5252)),
               _buildStatColumn(l10n.number(taggedCount),
                   l10n.translate('prof_tagged'), Colors.white70),
-              _buildStatColumn(balanceText, l10n.translate('prof_balance'),
-                  balanceColor),
+              _buildStatColumn(
+                  balanceText, l10n.translate('prof_balance'), balanceColor),
             ],
           ),
         ),
@@ -988,7 +993,9 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                 icon: Icons.bloodtype_rounded,
                 text: _bloodGroup != null && _bloodGroup!.isNotEmpty
                     ? _bloodGroup!
-                    : (_isMe ? '+ ${l10n.translate('prof_blood_group')}' : 'O+'),
+                    : (_isMe
+                        ? '+ ${l10n.translate('prof_blood_group')}'
+                        : 'O+'),
                 color: Colors.redAccent,
               ),
             ),
@@ -1078,8 +1085,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             ),
-            onPressed: () =>
-                _shareProfile(l10n, member.displayName, handle),
+            onPressed: () => _shareProfile(l10n, member.displayName, handle),
             icon: const Icon(Icons.share_outlined, size: 14),
             label: Text(
               l10n.translate('prof_share'),
@@ -1183,7 +1189,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                   style: TextStyle(
                     color: isSelected ? cat.color : Colors.white60,
                     fontSize: 10,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ],
@@ -1229,12 +1236,12 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             itemBuilder: (context, i) {
               final a = list[i];
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: const Color(0xFF14241B),
                   borderRadius: BorderRadius.circular(10),
-                  border:
-                      Border.all(color: a.color.withValues(alpha: 0.3)),
+                  border: Border.all(color: a.color.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1271,17 +1278,20 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
     final tabs = [
       (
         id: 'posts',
-        label: '${l10n.translate('prof_tab_posts')} (${l10n.number(postsCount)})',
+        label:
+            '${l10n.translate('prof_tab_posts')} (${l10n.number(postsCount)})',
         icon: Icons.grid_on_rounded,
       ),
       (
         id: 'reels',
-        label: '${l10n.translate('prof_tab_reels')} (${l10n.number(reelsCount)})',
+        label:
+            '${l10n.translate('prof_tab_reels')} (${l10n.number(reelsCount)})',
         icon: Icons.video_collection_rounded,
       ),
       (
         id: 'tagged',
-        label: '${l10n.translate('prof_tab_tagged')} (${l10n.number(taggedCount)})',
+        label:
+            '${l10n.translate('prof_tab_tagged')} (${l10n.number(taggedCount)})',
         icon: Icons.sell_rounded,
       ),
       (
@@ -1389,12 +1399,25 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
             : posts.where((p) {
                 final text = '${p.caption} ${p.location}'.toLowerCase();
                 return switch (_activeCategory) {
-                  'beach' => text.contains('beach') || text.contains('বিচ') || text.contains('সৈকত'),
-                  'food' => text.contains('food') || text.contains('খাবার') || text.contains('মাছ'),
-                  'journey' => text.contains('bus') || text.contains('বাস') || text.contains('জার্নি') || text.contains('যাত্রা'),
-                  'sunset' => text.contains('sunset') || text.contains('সানসেট') || text.contains('সূর্যাস্ত'),
-                  'hotel' => text.contains('hotel') || text.contains('হোটেল') || text.contains('রুম'),
-                  'hangout' => text.contains('fun') || text.contains('আড্ডা') || text.contains('গান'),
+                  'beach' => text.contains('beach') ||
+                      text.contains('বিচ') ||
+                      text.contains('সৈকত'),
+                  'food' => text.contains('food') ||
+                      text.contains('খাবার') ||
+                      text.contains('মাছ'),
+                  'journey' => text.contains('bus') ||
+                      text.contains('বাস') ||
+                      text.contains('জার্নি') ||
+                      text.contains('যাত্রা'),
+                  'sunset' => text.contains('sunset') ||
+                      text.contains('সানসেট') ||
+                      text.contains('সূর্যাস্ত'),
+                  'hotel' => text.contains('hotel') ||
+                      text.contains('হোটেল') ||
+                      text.contains('রুম'),
+                  'hangout' => text.contains('fun') ||
+                      text.contains('আড্ডা') ||
+                      text.contains('গান'),
                   _ => true,
                 };
               }).toList();
@@ -1492,7 +1515,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.favorite, size: 10, color: Colors.redAccent),
+                      const Icon(Icons.favorite,
+                          size: 10, color: Colors.redAccent),
                       const SizedBox(width: 2),
                       Text(
                         '${post.likes.length}',
@@ -1582,7 +1606,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
       children: [
         Icon(icon, size: 18, color: Colors.white54),
         const SizedBox(width: 10),
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        Text(label,
+            style: const TextStyle(color: Colors.white54, fontSize: 12)),
         const Spacer(),
         Text(
           value,

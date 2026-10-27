@@ -4,7 +4,8 @@ import 'package:bhromon/features/tour_group/domain/services/trip_ledger_engine.d
 
 void main() {
   group('DebtSimplifier', () {
-    test('returns empty transactions when parties are empty or all balanced', () {
+    test('returns empty transactions when parties are empty or all balanced',
+        () {
       expect(DebtSimplifier.simplifyDebts([]), isEmpty);
       expect(
         DebtSimplifier.simplifyDebts([
@@ -54,11 +55,18 @@ void main() {
       expect(totalPaid, equals(50000));
     });
 
-    test('Phase 3 / Complex: settles multi-party debt network with zero net remainder', () {
+    test(
+        'Phase 3 / Complex: settles multi-party debt network with zero net remainder',
+        () {
       final parties = [
         (name: 'Arif', netPaisa: -120000, fund: false, id: 'arif@test.com'),
         (name: 'Bipul', netPaisa: -80000, fund: false, id: 'bipul@test.com'),
-        (name: 'Chandan', netPaisa: -40000, fund: false, id: 'chandan@test.com'),
+        (
+          name: 'Chandan',
+          netPaisa: -40000,
+          fund: false,
+          id: 'chandan@test.com'
+        ),
         (name: 'Fund', netPaisa: 100000, fund: true, id: null),
         (name: 'Dipto', netPaisa: 140000, fund: false, id: 'dipto@test.com'),
       ];
@@ -89,14 +97,14 @@ void main() {
     });
 
     test('simplifyFromSummary correctly extracts member and fund balances', () {
-      final summary = LedgerSummary(
+      const summary = LedgerSummary(
         headcount: 2,
         totalDepositsPaisa: 100000,
         totalExpensePaisa: 80000,
         fundPaidPaisa: 80000,
         fundBalancePaisa: 20000,
         perHeadCostPaisa: 40000,
-        rows: const [
+        rows: [
           LedgerMemberRow(
             id: 'm1',
             name: 'Member 1',
@@ -118,11 +126,12 @@ void main() {
             netPaisa: -40000,
           ),
         ],
-        settlements: const [],
-        categoryTotals: const [],
+        settlements: [],
+        categoryTotals: [],
       );
 
-      final txs = DebtSimplifier.simplifyFromSummary(summary, fundLabel: 'Tour Fund');
+      final txs =
+          DebtSimplifier.simplifyFromSummary(summary, fundLabel: 'Tour Fund');
       expect(txs.isNotEmpty, isTrue);
 
       final total = txs.fold<int>(0, (sum, t) => sum + t.amountPaisa);

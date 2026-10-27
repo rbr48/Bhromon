@@ -34,6 +34,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     super.initState();
     _groupsStream = _repository.watchMyGroups();
   }
+
   final Map<String, Stream<List<TourMember>>> _memberStreams = {};
 
   Stream<List<TourMember>> _membersOf(String tourId) => _memberStreams
@@ -602,7 +603,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             if (!_repository.isSignedIn)
               TextButton.icon(
                 onPressed: () => context.push('/login'),
-                icon: const Icon(Icons.login, color: AppColors.mintGreen, size: 18),
+                icon: const Icon(Icons.login,
+                    color: AppColors.mintGreen, size: 18),
                 label: const Text(
                   'লগইন বা সাইন-আপ করুন',
                   style: TextStyle(
@@ -823,8 +825,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           () {
             final now = DateTime.now();
             final today = DateTime(now.year, now.month, now.day);
-            final startDay = DateTime(
-                group.startDate.year, group.startDate.month, group.startDate.day);
+            final startDay = DateTime(group.startDate.year,
+                group.startDate.month, group.startDate.day);
             final endDay = DateTime(
                 group.endDate.year, group.endDate.month, group.endDate.day);
             final isOngoing =
@@ -837,8 +839,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               final totalDays = endDay.difference(startDay).inDays + 1;
               final currentStop = group.stopOn(today);
               final currentStopName = currentStop?.name ?? group.destination;
-              final progress =
-                  (currentDay / (totalDays > 0 ? totalDays : 1)).clamp(0.05, 1.0);
+              final progress = (currentDay / (totalDays > 0 ? totalDays : 1))
+                  .clamp(0.05, 1.0);
 
               return Container(
                 margin: const EdgeInsets.only(top: 12),
@@ -865,7 +867,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            context.l10n.translate('hub_live_tour_ongoing', args: {
+                            context.l10n
+                                .translate('hub_live_tour_ongoing', args: {
                               'day': context.l10n.number(currentDay),
                               'total': context.l10n.number(totalDays),
                             }),
@@ -937,8 +940,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             ),
                             onPressed: () =>
                                 context.push('/group/${group.id}/notices'),
-                            icon: const Icon(Icons.notifications_active_outlined,
-                                size: 14, color: AppColors.gold),
+                            icon: const Icon(
+                                Icons.notifications_active_outlined,
+                                size: 14,
+                                color: AppColors.gold),
                             label: Text(
                               context.l10n.translate('hub_live_notices_btn'),
                               style: const TextStyle(fontSize: 11),
@@ -1857,7 +1862,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               ),
                             );
                             if (mounted) {
-                              TourGroupRepository.lastActiveTourId = newGroup.id;
+                              TourGroupRepository.lastActiveTourId =
+                                  newGroup.id;
                               setState(() {
                                 _activeGroup = newGroup;
                               });
@@ -2327,7 +2333,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             final joinedGroup =
                                 await _repository.joinGroupWithCode(code);
                             if (mounted) {
-                              TourGroupRepository.lastActiveTourId = joinedGroup.id;
+                              TourGroupRepository.lastActiveTourId =
+                                  joinedGroup.id;
                               setState(() {
                                 _activeGroup = joinedGroup;
                               });
@@ -2526,7 +2533,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   context.l10n.translate('prof_posts'),
                   style: const TextStyle(color: Colors.white54, fontSize: 12),
                 ),
-                trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+                trailing:
+                    const Icon(Icons.chevron_right, color: Colors.white38),
                 onTap: () {
                   Navigator.pop(ctx);
                   TourMemberProfileModal.show(

@@ -132,7 +132,9 @@ class _InGameVoiceBarState extends State<InGameVoiceBar> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isConnected ? Icons.volume_up_rounded : Icons.mic_off_outlined,
+                  isConnected
+                      ? Icons.volume_up_rounded
+                      : Icons.mic_off_outlined,
                   color: isConnected ? AppColors.mintGreen : Colors.white60,
                   size: 16,
                 ),
@@ -142,9 +144,7 @@ class _InGameVoiceBarState extends State<InGameVoiceBar> {
               // Title / Status
               Expanded(
                 child: Text(
-                  isConnected
-                      ? 'Game Voice Lounge'
-                      : 'Voice chat with group',
+                  isConnected ? 'Game Voice Lounge' : 'Voice chat with group',
                   style: TextStyle(
                     color: isConnected ? Colors.white : Colors.white70,
                     fontSize: 12,
@@ -158,7 +158,8 @@ class _InGameVoiceBarState extends State<InGameVoiceBar> {
                 TextButton.icon(
                   onPressed: _joinGameVoice,
                   style: TextButton.styleFrom(
-                    backgroundColor: AppColors.mintGreen.withValues(alpha: 0.18),
+                    backgroundColor:
+                        AppColors.mintGreen.withValues(alpha: 0.18),
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     minimumSize: Size.zero,

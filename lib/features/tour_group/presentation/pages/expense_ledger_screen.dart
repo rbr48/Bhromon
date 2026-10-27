@@ -1130,14 +1130,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         tooltip: l10n.translate('fund_share_plan'),
                         icon: const Icon(Icons.share_rounded,
                             color: AppColors.mintGreen),
-                        onPressed: () =>
-                            _sharePlan(summary, activeSettlements),
+                        onPressed: () => _sharePlan(summary, activeSettlements),
                       ),
               ),
               if (summary.settlements.isNotEmpty) ...[
                 InkWell(
-                  onTap: () =>
-                      setState(() => _simplifyDebts = !_simplifyDebts),
+                  onTap: () => setState(() => _simplifyDebts = !_simplifyDebts),
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
                     padding:
@@ -1214,8 +1212,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 Text(
                   _simplifyDebts
                       ? '${l10n.translate('fund_settle_help', args: {
-                          'count': l10n.number(activeSettlements.length),
-                        })} (${l10n.translate('fund_simplify_debts_active')})'
+                              'count': l10n.number(activeSettlements.length),
+                            })} (${l10n.translate('fund_simplify_debts_active')})'
                       : l10n.translate('fund_settle_help', args: {
                           'count': l10n.number(activeSettlements.length),
                         }),
@@ -1988,8 +1986,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         Text(
                           title,
                           style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold),
+                              color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
                         const Text('রসিদের ছবি লোড করা যায়নি',
@@ -2138,8 +2135,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                               Clipboard.setData(ClipboardData(text: s.toId!));
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(
-                                      l10n.translate('fund_payee_copied')),
+                                  content:
+                                      Text(l10n.translate('fund_payee_copied')),
                                   backgroundColor: AppColors.midGreen,
                                 ),
                               );

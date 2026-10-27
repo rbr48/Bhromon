@@ -33,7 +33,8 @@ class _FakeOnlineGameRepository extends OnlineGameRepository {
 }
 
 void main() {
-  testWidgets('GameZoneHubScreen renders both tabs and switches to online tables',
+  testWidgets(
+      'GameZoneHubScreen renders both tabs and switches to online tables',
       (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -62,7 +63,7 @@ void main() {
       status: GameSessionStatus.waiting,
       hostEmail: 'lead@bhromon.fun',
       players: [
-        OnlinePlayer(
+        const OnlinePlayer(
           email: 'lead@bhromon.fun',
           displayName: 'Lead Explorer',
           seatIndex: 0,

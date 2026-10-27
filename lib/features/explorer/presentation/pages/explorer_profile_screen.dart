@@ -655,8 +655,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.mintGreen,
                         shape: BoxShape.circle,
-                        border:
-                            Border.all(color: const Color(0xFF0D1A12), width: 2),
+                        border: Border.all(
+                            color: const Color(0xFF0D1A12), width: 2),
                       ),
                       child: const Icon(Icons.camera_alt,
                           color: Colors.black, size: 14),
@@ -732,8 +732,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             decoration: BoxDecoration(
               color: AppColors.mintGreen.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
-              border:
-                  Border.all(color: AppColors.mintGreen.withValues(alpha: 0.25)),
+              border: Border.all(
+                  color: AppColors.mintGreen.withValues(alpha: 0.25)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1542,8 +1542,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       const SizedBox(width: 5),
                       Text(
                         '${DateFormat('d MMM yyyy').format(group.startDate)} – ${DateFormat('d MMM yyyy').format(group.endDate)}',
-                        style:
-                            const TextStyle(color: Colors.white70, fontSize: 12),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
                       ),
                       const Spacer(),
                       Text(
@@ -1653,7 +1653,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _isBn ? 'ট্যুর স্মৃতি ও অফলাইন ভল্ট' : 'Trip Keepsakes & Offline Vault',
+          _isBn
+              ? 'ট্যুর স্মৃতি ও অফলাইন ভল্ট'
+              : 'Trip Keepsakes & Offline Vault',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 15,
@@ -1664,7 +1666,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
         // 1. Digital Scrapbooks Card
         _buildKeepsakeCard(
-          title: _isBn ? 'ট্যুর ম্যাগাজিন ও স্ক্র্যাপবুক' : 'Trip Scrapbook Magazines',
+          title: _isBn
+              ? 'ট্যুর ম্যাগাজিন ও স্ক্র্যাপবুক'
+              : 'Trip Scrapbook Magazines',
           subtitle: _isBn
               ? 'আপনার প্রতিটি ট্যুরের স্বয়ংক্রিয় ফটো অ্যালবাম, খরচ পরিসংখ্যান ও মেমোরি বই।'
               : 'Auto-curated photo stories, awards, and numbers from your travels.',
@@ -1704,7 +1708,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
         // 3. Family Safety & Emergency Card
         _buildKeepsakeCard(
-          title: _isBn ? 'ফ্যামিলি সেফটি হাব ও এসওএস' : 'Family Safety Hub & SOS',
+          title:
+              _isBn ? 'ফ্যামিলি সেফটি হাব ও এসওএস' : 'Family Safety Hub & SOS',
           subtitle: _isBn
               ? 'জরুরি সাইরেন, কোস্টাল জোয়ার-ভাটার সতর্কতা ও ট্যুর সদস্যদের লোকেশন নোটিশ।'
               : 'Emergency siren alerts, coastal tide advisories, and member safety.',
@@ -2008,7 +2013,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           builder: (dialogCtx, setDialogState) {
             final days = endDate.difference(startDate).inDays + 1;
             final nights = days > 1 ? days - 1 : 0;
-            final durationText = nights == 0 ? '$days দিন' : '$days দিন $nights রাত';
+            final durationText =
+                nights == 0 ? '$days দিন' : '$days দিন $nights রাত';
 
             return AlertDialog(
               backgroundColor: const Color(0xFF14241B),
@@ -2083,9 +2089,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               child: Text(
                                 p.label,
                                 style: TextStyle(
-                                  color: isSelected
-                                      ? Colors.black
-                                      : Colors.white,
+                                  color:
+                                      isSelected ? Colors.black : Colors.white,
                                   fontSize: 11,
                                   fontWeight: isSelected
                                       ? FontWeight.bold
@@ -2139,8 +2144,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             color: Colors.black38,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                                color: AppColors.mintGreen
-                                    .withValues(alpha: 0.4)),
+                                color:
+                                    AppColors.mintGreen.withValues(alpha: 0.4)),
                           ),
                           child: Row(
                             children: [
@@ -2187,9 +2192,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             final newGroup = await _tourRepo.createGroup(
                               name: name,
                               description: '',
-                              destination: dest.isNotEmpty
-                                  ? dest
-                                  : 'Custom Destination',
+                              destination:
+                                  dest.isNotEmpty ? dest : 'Custom Destination',
                               originCity: originCtrl.text.trim().isNotEmpty
                                   ? originCtrl.text.trim()
                                   : 'ঢাকা',
@@ -2459,7 +2463,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _isBn ? 'প্রোফাইল তথ্য পরিবর্তন' : 'EDIT TRAVELER PROFILE',
+                          _isBn
+                              ? 'প্রোফাইল তথ্য পরিবর্তন'
+                              : 'EDIT TRAVELER PROFILE',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
@@ -2613,29 +2619,29 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                     ? Image.network(
                                                         dialogAvatarFile!.path,
                                                         fit: BoxFit.cover,
-                                                        errorBuilder:
-                                                            (_, __, ___) =>
-                                                                const Icon(Icons
-                                                                    .person),
+                                                        errorBuilder: (_, __,
+                                                                ___) =>
+                                                            const Icon(
+                                                                Icons.person),
                                                       )
                                                     : Image.file(
                                                         File(dialogAvatarFile!
                                                             .path),
                                                         fit: BoxFit.cover,
-                                                        errorBuilder:
-                                                            (_, __, ___) =>
-                                                                const Icon(Icons
-                                                                    .person),
+                                                        errorBuilder: (_, __,
+                                                                ___) =>
+                                                            const Icon(
+                                                                Icons.person),
                                                       ))
                                                 : (profile.avatarUrl != null
                                                     ? CachedNetworkImage(
                                                         imageUrl:
                                                             profile.avatarUrl!,
                                                         fit: BoxFit.cover,
-                                                        errorWidget:
-                                                            (_, __, ___) =>
-                                                                const Icon(Icons
-                                                                    .person),
+                                                        errorWidget: (_, __,
+                                                                ___) =>
+                                                            const Icon(
+                                                                Icons.person),
                                                       )
                                                     : Container(
                                                         color: const Color(
@@ -2799,9 +2805,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   letterSpacing: 1.0)),
                           const SizedBox(height: 6),
                           DropdownButtonFormField<String>(
-                            initialValue: bloodGroups.contains(selectedBloodGroup)
-                                ? selectedBloodGroup
-                                : 'O+',
+                            initialValue:
+                                bloodGroups.contains(selectedBloodGroup)
+                                    ? selectedBloodGroup
+                                    : 'O+',
                             dropdownColor: context.surfacePanel,
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
@@ -2866,8 +2873,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 child: OutlinedButton(
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: Colors.white70,
-                                    side: const BorderSide(
-                                        color: Colors.white10),
+                                    side:
+                                        const BorderSide(color: Colors.white10),
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 14),
                                     shape: RoundedRectangleBorder(
@@ -2982,13 +2989,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                               'bioBangla': bioBanglaController
                                                   .text
                                                   .trim(),
-                                              'bioEnglish':
-                                                  bioEnglishController.text
-                                                      .trim(),
+                                              'bioEnglish': bioEnglishController
+                                                  .text
+                                                  .trim(),
                                               'bloodGroup': selectedBloodGroup,
-                                              'statusNote':
-                                                  statusNoteController.text
-                                                      .trim(),
+                                              'statusNote': statusNoteController
+                                                  .text
+                                                  .trim(),
                                             }, SetOptions(merge: true));
 
                                             if (mounted) {
@@ -3002,8 +3009,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                               _loadProfile();
                                             }
                                             if (bottomSheetContext.mounted) {
-                                              Navigator.pop(
-                                                  bottomSheetContext);
+                                              Navigator.pop(bottomSheetContext);
                                             }
                                           } catch (e) {
                                             setDialogState(
@@ -3028,7 +3034,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                               strokeWidth: 2,
                                               color: Colors.black),
                                         )
-                                      : Text(_isBn ? 'সংরক্ষণ করুন' : 'Save Changes',
+                                      : Text(
+                                          _isBn
+                                              ? 'সংরক্ষণ করুন'
+                                              : 'Save Changes',
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold)),
                                 ),

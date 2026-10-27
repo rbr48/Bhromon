@@ -266,7 +266,9 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  _isMyTurn ? 'YOUR SHOT' : "${activePlayer?.displayName ?? 'Opponent'}'s turn",
+                  _isMyTurn
+                      ? 'YOUR SHOT'
+                      : "${activePlayer?.displayName ?? 'Opponent'}'s turn",
                   style: TextStyle(
                     color: _isMyTurn ? AppColors.mintGreen : Colors.white60,
                     fontSize: 11,
@@ -295,7 +297,8 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
               aspectRatio: 1.0,
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final size = Size(constraints.maxWidth, constraints.maxHeight);
+                  final size =
+                      Size(constraints.maxWidth, constraints.maxHeight);
 
                   return GestureDetector(
                     onPanStart: (d) => _onPanStart(d, size),
@@ -382,15 +385,16 @@ class _CarromBoardPainter extends CustomPainter {
     canvas.drawCircle(Offset(pr, pr), pr, pocketPaint);
     canvas.drawCircle(Offset(size.width - pr, pr), pr, pocketPaint);
     canvas.drawCircle(Offset(pr, size.height - pr), pr, pocketPaint);
-    canvas.drawCircle(Offset(size.width - pr, size.height - pr), pr, pocketPaint);
+    canvas.drawCircle(
+        Offset(size.width - pr, size.height - pr), pr, pocketPaint);
 
     // Center Red Circle
     final centerPaint = Paint()
       ..color = Colors.red.withValues(alpha: 0.25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
-    canvas.drawCircle(
-        Offset(size.width / 2, size.height / 2), size.width * 0.12, centerPaint);
+    canvas.drawCircle(Offset(size.width / 2, size.height / 2),
+        size.width * 0.12, centerPaint);
 
     // Draw Coins
     for (final coin in game.coins) {

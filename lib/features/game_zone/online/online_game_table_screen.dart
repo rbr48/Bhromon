@@ -121,7 +121,8 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.exit_to_app_rounded, color: Colors.white70),
+                icon: const Icon(Icons.exit_to_app_rounded,
+                    color: Colors.white70),
                 tooltip: 'Leave Table',
                 onPressed: () => _confirmLeaveTable(session),
               ),
@@ -239,7 +240,8 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: const Color(0xFF14241B),
-          title: const Text('Leave Table?', style: TextStyle(color: Colors.white)),
+          title:
+              const Text('Leave Table?', style: TextStyle(color: Colors.white)),
           content: const Text(
             'The match is currently in progress. If you leave now, you forfeit your seat.',
             style: TextStyle(color: Colors.white70),

@@ -306,7 +306,8 @@ class _TransportScreenState extends State<TransportScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white54, size: 20),
+                  icon:
+                      const Icon(Icons.close, color: Colors.white54, size: 20),
                   onPressed: () => Navigator.pop(ctx),
                 ),
               ],
@@ -350,7 +351,8 @@ class _TransportScreenState extends State<TransportScreen> {
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('ম্যানিফেস্ট ক্লিপবোর্ডে কপি করা হয়েছে!'),
+                          content:
+                              Text('ম্যানিফেস্ট ক্লিপবোর্ডে কপি করা হয়েছে!'),
                           backgroundColor: AppColors.darkGreen,
                         ),
                       );

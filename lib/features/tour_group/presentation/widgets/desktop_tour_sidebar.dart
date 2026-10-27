@@ -66,7 +66,8 @@ class DesktopTourSidebar extends StatelessWidget {
                             ),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                                color: AppColors.mintGreen.withValues(alpha: 0.5)),
+                                color:
+                                    AppColors.mintGreen.withValues(alpha: 0.5)),
                           ),
                           child: const Center(
                             child: Icon(Icons.explore_rounded,
@@ -139,8 +140,8 @@ class DesktopTourSidebar extends StatelessWidget {
                   onTap: () => CommandPaletteDialog.show(context, tourId),
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
@@ -445,8 +446,18 @@ class DesktopTourSidebar extends StatelessWidget {
     );
   }
 
+  /// Reads the signed-in user, or null when Firebase is not initialised (as in
+  /// widget tests), so the footer shows its placeholder instead of throwing.
+  User? _currentUser() {
+    try {
+      return FirebaseAuth.instance.currentUser;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Widget _buildFooter(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = _currentUser();
     final displayName = user?.displayName ?? 'এক্সপ্লোরার';
     final email = user?.email ?? '';
     final photoUrl = user?.photoURL;
@@ -495,8 +506,8 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     Text(
                       email,
-                      style: const TextStyle(
-                          color: Colors.white38, fontSize: 10),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 10),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -527,9 +538,12 @@ class DesktopTourSidebar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              const Text(
-                'ফায়ারবেস লাইভ সিঙ্ক সক্রিয়',
-                style: TextStyle(color: Colors.white54, fontSize: 9.5),
+              const Expanded(
+                child: Text(
+                  'ফায়ারবেস লাইভ সিঙ্ক সক্রিয়',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Colors.white54, fontSize: 9.5),
+                ),
               ),
             ],
           ),

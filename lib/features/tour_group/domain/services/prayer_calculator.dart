@@ -29,13 +29,17 @@ class PrayerCalculator {
   /// Calculates daily prayer times and Qibla direction for a given [date] and coordinates.
   ///
   /// [hanafiAsr]: If true, uses Hanafi school (shadow length 2x). Defaults to true (standard in BD).
+  ///
+  /// [utcOffsetHours]: Offset of the wall-clock times from UTC. Defaults to the
+  /// device's offset for [date]; pass 6 to get Bangladesh times on any device.
   static PrayerSchedule calculate({
     required double latitude,
     required double longitude,
     required DateTime date,
     bool hanafiAsr = true,
+    double? utcOffsetHours,
   }) {
-    final tzOffset = date.timeZoneOffset.inMinutes / 60.0;
+    final tzOffset = utcOffsetHours ?? date.timeZoneOffset.inMinutes / 60.0;
     final julianDay = _julianDay(date.year, date.month, date.day);
     final d = julianDay - 2451545.0;
 
@@ -60,8 +64,8 @@ class PrayerCalculator {
     double? hourAngle(double altitude) {
       final latRad = _degToRad(latitude);
       final altRad = _degToRad(altitude);
-      final cosOmega = (sin(altRad) - sin(latRad) * sin(delta)) /
-          (cos(latRad) * cos(delta));
+      final cosOmega =
+          (sin(altRad) - sin(latRad) * sin(delta)) / (cos(latRad) * cos(delta));
       if (cosOmega < -1.0 || cosOmega > 1.0) return null;
       return _radToDeg(acos(cosOmega));
     }
@@ -146,8 +150,8 @@ class PrayerSchedule {
   });
 
   /// Returns the next upcoming prayer or Fajr tomorrow if all have passed.
-  ({String key, String defaultName, DateTime time, Duration remaining}) nextPrayer(
-      [DateTime? now]) {
+  ({String key, String defaultName, DateTime time, Duration remaining})
+      nextPrayer([DateTime? now]) {
     final current = now ?? DateTime.now();
 
     final prayers = [

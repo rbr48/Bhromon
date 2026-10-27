@@ -54,7 +54,7 @@ void main() {
     });
 
     test('copyWith updates specified fields and preserves others', () {
-      final item = LuggageItem(
+      const item = LuggageItem(
         id: 'luggage_3',
         tourId: 'tour_xyz',
         title: 'Camera Bag',

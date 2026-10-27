@@ -570,8 +570,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       if (_shareToStory && uploadedUrls.isNotEmpty) {
         final mediaUrl =
             _isReel ? (coverUrl ?? uploadedUrls.first) : uploadedUrls.first;
-        final poll = (_includePoll &&
-                _pollQuestionCtrl.text.trim().isNotEmpty)
+        final poll = (_includePoll && _pollQuestionCtrl.text.trim().isNotEmpty)
             ? TourStoryPoll(
                 question: _pollQuestionCtrl.text.trim(),
                 options: [
@@ -744,7 +743,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                           )
                         : Text(
                             _shareToStory && !_shareToFeed
-                                ? context.l10n.translate('ig_share_to_story_btn')
+                                ? context.l10n
+                                    .translate('ig_share_to_story_btn')
                                 : context.l10n.translate('ig_publish'),
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold,

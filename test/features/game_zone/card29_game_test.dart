@@ -106,7 +106,12 @@ void main() {
       // South is free to play any card (no forced under-trumping).
       final g = _playing(
         hands: [
-          ['8D', '9S', 'AS', '10C'], // South: holds lower trump 8D and off-suits
+          [
+            '8D',
+            '9S',
+            'AS',
+            '10C'
+          ], // South: holds lower trump 8D and off-suits
           ['7H', '8H'], // East
           ['JH', '9H'], // North
           ['KD', '8S'], // West

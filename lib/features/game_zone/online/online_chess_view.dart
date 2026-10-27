@@ -40,8 +40,7 @@ class _OnlineChessViewState extends State<OnlineChessView> {
   bool get _amWhite =>
       widget.session.playerByEmail(widget.myEmail)?.seatIndex == 0;
 
-  PieceColor get _myColor =>
-      _amWhite ? PieceColor.white : PieceColor.black;
+  PieceColor get _myColor => _amWhite ? PieceColor.white : PieceColor.black;
 
   @override
   void initState() {
@@ -133,7 +132,8 @@ class _OnlineChessViewState extends State<OnlineChessView> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E2832),
-        title: const Text('Promote Pawn', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Promote Pawn', style: TextStyle(color: Colors.white)),
         content: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -187,7 +187,8 @@ class _OnlineChessViewState extends State<OnlineChessView> {
       _currentLegalMoves = [];
     });
 
-    final currentMoves = (widget.session.state['moves'] as List<dynamic>?) ?? [];
+    final currentMoves =
+        (widget.session.state['moves'] as List<dynamic>?) ?? [];
     final updatedMoves = [
       ...currentMoves,
       {
@@ -278,7 +279,8 @@ class _OnlineChessViewState extends State<OnlineChessView> {
         ),
 
         // My Player Banner
-        _buildPlayerBanner(_amWhite ? _whitePlayer : _blackPlayer, isTop: false),
+        _buildPlayerBanner(_amWhite ? _whitePlayer : _blackPlayer,
+            isTop: false),
       ],
     );
   }
@@ -375,8 +377,7 @@ class _OnlineChessViewState extends State<OnlineChessView> {
                 final piece = _engine.pieceAt(row, col);
 
                 final isSelected = _selectedPosition == pos;
-                final isLegalDest =
-                    _currentLegalMoves.any((m) => m.to == pos);
+                final isLegalDest = _currentLegalMoves.any((m) => m.to == pos);
 
                 return GestureDetector(
                   onTap: () => _onSquareTapped(row, col),
@@ -413,7 +414,8 @@ class _OnlineChessViewState extends State<OnlineChessView> {
                               shape: BoxShape.circle,
                               border: piece != null
                                   ? Border.all(
-                                      color: Colors.redAccent.withValues(alpha: 0.7),
+                                      color: Colors.redAccent
+                                          .withValues(alpha: 0.7),
                                       width: 3.5,
                                     )
                                   : null,

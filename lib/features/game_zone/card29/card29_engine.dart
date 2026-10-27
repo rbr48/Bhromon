@@ -177,8 +177,8 @@ class Card29Engine {
         // if they hold a HIGHER trump that can beat the opponent (over-trump).
         // If they only hold lower trumps, forced under-trumping is NOT required:
         // they may discard any card in hand.
-        final canOverTrump = hand.any(
-            (c) => c.suit == trumpSuit && c.power > minTrumpPowerToBeat);
+        final canOverTrump = hand
+            .any((c) => c.suit == trumpSuit && c.power > minTrumpPowerToBeat);
         if (canOverTrump) {
           return card.suit == trumpSuit && card.power > minTrumpPowerToBeat;
         }

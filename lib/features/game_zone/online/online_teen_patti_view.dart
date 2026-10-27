@@ -58,7 +58,8 @@ class _OnlineTeenPattiViewState extends State<OnlineTeenPattiView> {
     final state = session.state;
 
     _game.pot = (state['pot'] as num?)?.toInt() ?? 0;
-    _game.baseBet = (state['baseBet'] as num?)?.toInt() ?? TeenPattiGame.startingBase;
+    _game.baseBet =
+        (state['baseBet'] as num?)?.toInt() ?? TeenPattiGame.startingBase;
     _game.currentTurn = (state['currentTurn'] as num?)?.toInt() ?? 0;
 
     final phaseName = state['phase'] as String?;
@@ -324,9 +325,8 @@ class _OnlineTeenPattiViewState extends State<OnlineTeenPattiView> {
                   });
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _seeCardsLocally
-                      ? Colors.amber
-                      : const Color(0xFF233F2E),
+                  backgroundColor:
+                      _seeCardsLocally ? Colors.amber : const Color(0xFF233F2E),
                   foregroundColor:
                       _seeCardsLocally ? Colors.black87 : Colors.white,
                 ),
@@ -342,7 +342,8 @@ class _OnlineTeenPattiViewState extends State<OnlineTeenPattiView> {
               if (_isMyTurn) ...[
                 TextButton(
                   onPressed: _actionPack,
-                  style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                  style:
+                      TextButton.styleFrom(foregroundColor: Colors.redAccent),
                   child: const Text('Pack'),
                 ),
                 if (_game.canRaise(_mySeatIndex))

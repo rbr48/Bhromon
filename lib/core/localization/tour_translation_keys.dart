@@ -1121,7 +1121,8 @@ class TourTranslationKeys {
       'fsh_battery_discharging': 'On Battery',
       'fsh_battery_last_seen': 'Updated {time}',
       'fsh_battery_map_view': 'Map',
-      'fsh_battery_all_good': 'All active members have healthy battery charge (> 20%).',
+      'fsh_battery_all_good':
+          'All active members have healthy battery charge (> 20%).',
       'fsh_just_now': 'Just now',
       'fsh_sender_sent_alert': '{name} sent an alert',
       'fsh_hotlines_title': 'One-tap emergency calls (EMERGENCY HOTLINES)',
@@ -1945,7 +1946,8 @@ class TourTranslationKeys {
       'check_item_trekking_shoes': 'মজবুত গ্রিপযুক্ত ট্রেকিং জুতো',
       'check_item_raincoat': 'রেইনকোট, উইন্ডব্রেকার বা ওয়াটারপ্রুফ জ্যাকেট',
       'check_item_torch': 'টর্চলাইট বা হেডল্যাম্প ও ব্যাকআপ ব্যাটারি',
-      'check_item_mosquito_spray': 'মশা ও পোকা তাড়ানোর ক্রিম বা স্প্রে (Odomos)',
+      'check_item_mosquito_spray':
+          'মশা ও পোকা তাড়ানোর ক্রিম বা স্প্রে (Odomos)',
       'check_item_dry_bag': 'ওয়াটারপ্রুফ ড্রাই ব্যাগ',
       'check_item_walking_shoes': 'হাঁটার জন্য আরামদায়ক স্নিকার্স বা কেডস',
       'check_item_power_bank': 'হাই-ক্যাপাসিটি পাওয়ার ব্যাংক ও কেবল',
@@ -2703,7 +2705,8 @@ class TourTranslationKeys {
       'fsh_battery_discharging': 'ব্যাটারিতে চলছে',
       'fsh_battery_last_seen': 'আপডেট: {time}',
       'fsh_battery_map_view': 'ম্যাপ',
-      'fsh_battery_all_good': 'সবার ডিভাইসে পর্যাপ্ত ব্যাটারি চার্জ রয়েছে (> ২০%)।',
+      'fsh_battery_all_good':
+          'সবার ডিভাইসে পর্যাপ্ত ব্যাটারি চার্জ রয়েছে (> ২০%)।',
       'fsh_just_now': 'এইমাত্র',
       'fsh_sender_sent_alert': '{name} এলার্ট পাঠিয়েছেন',
       'fsh_hotlines_title': 'এক-ট্যাপে জরুরি কল (EMERGENCY HOTLINES)',

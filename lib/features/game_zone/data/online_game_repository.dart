@@ -76,7 +76,9 @@ class OnlineGameRepository {
       id: docRef.id,
       tourId: tourId,
       gameType: gameType,
-      tableName: tableName.trim().isEmpty ? '${gameType.label} Table' : tableName.trim(),
+      tableName: tableName.trim().isEmpty
+          ? '${gameType.label} Table'
+          : tableName.trim(),
       status: GameSessionStatus.waiting,
       hostEmail: currentEmail,
       players: [host],
@@ -192,7 +194,9 @@ class OnlineGameRepository {
 
     final remaining = session.players.where((p) => p.email != me).toList();
 
-    if (remaining.isEmpty || (session.hostEmail == me && session.status == GameSessionStatus.waiting)) {
+    if (remaining.isEmpty ||
+        (session.hostEmail == me &&
+            session.status == GameSessionStatus.waiting)) {
       await docRef.delete();
       return;
     }

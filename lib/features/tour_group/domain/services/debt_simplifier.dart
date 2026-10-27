@@ -114,12 +114,12 @@ class DebtSimplifier {
     }
 
     // Phase 3: Settle remaining balances using sorted greedy pairing
-    final remainingDebtors =
-        debtors.where((p) => p.amountPaisa > 0).toList()
-          ..sort((a, b) => b.amountPaisa.compareTo(a.amountPaisa));
-    final remainingCreditors =
-        creditors.where((p) => p.amountPaisa > 0).toList()
-          ..sort((a, b) => b.amountPaisa.compareTo(a.amountPaisa));
+    final remainingDebtors = debtors.where((p) => p.amountPaisa > 0).toList()
+      ..sort((a, b) => b.amountPaisa.compareTo(a.amountPaisa));
+    final remainingCreditors = creditors
+        .where((p) => p.amountPaisa > 0)
+        .toList()
+      ..sort((a, b) => b.amountPaisa.compareTo(a.amountPaisa));
 
     int dIdx = 0;
     int cIdx = 0;
@@ -131,8 +131,8 @@ class DebtSimplifier {
         cIdx < remainingCreditors.length &&
         iterations < maxIterations) {
       iterations++;
-      final amount = min(
-          remainingDebtors[dIdx].amountPaisa, remainingCreditors[cIdx].amountPaisa);
+      final amount = min(remainingDebtors[dIdx].amountPaisa,
+          remainingCreditors[cIdx].amountPaisa);
       if (amount <= 0) break;
 
       transactions.add(
@@ -162,8 +162,7 @@ class DebtSimplifier {
     LedgerSummary summary, {
     String fundLabel = 'Fund',
   }) {
-    final netSumPaisa =
-        summary.rows.fold<int>(0, (sum, r) => sum + r.netPaisa);
+    final netSumPaisa = summary.rows.fold<int>(0, (sum, r) => sum + r.netPaisa);
     final parties = [
       ...summary.rows.map(
         (r) => (name: r.name, netPaisa: r.netPaisa, fund: false, id: r.id),

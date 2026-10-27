@@ -3,7 +3,9 @@ import 'package:bhromon/features/tour_group/domain/services/prayer_calculator.da
 
 void main() {
   group('PrayerCalculator', () {
-    test('calculateQibla computes compass bearing towards Makkah accurately for Bangladesh', () {
+    test(
+        'calculateQibla computes compass bearing towards Makkah accurately for Bangladesh',
+        () {
       // Dhaka coordinates: 23.8103° N, 90.4125° E
       final qibla = PrayerCalculator.calculateQibla(23.8103, 90.4125);
       // Expected Qibla from Dhaka is ~277° (West-Northwest)
@@ -16,6 +18,7 @@ void main() {
       final schedule = PrayerCalculator.calculate(
         latitude: 23.8103,
         longitude: 90.4125,
+        utcOffsetHours: 6,
         date: date,
         hanafiAsr: true,
       );
@@ -32,12 +35,14 @@ void main() {
       final hanafi = PrayerCalculator.calculate(
         latitude: 23.8103,
         longitude: 90.4125,
+        utcOffsetHours: 6,
         date: date,
         hanafiAsr: true,
       );
       final shafi = PrayerCalculator.calculate(
         latitude: 23.8103,
         longitude: 90.4125,
+        utcOffsetHours: 6,
         date: date,
         hanafiAsr: false,
       );
@@ -45,11 +50,14 @@ void main() {
       expect(hanafi.asr.isAfter(shafi.asr), isTrue);
     });
 
-    test('nextPrayer identifies the correct upcoming prayer based on current time', () {
+    test(
+        'nextPrayer identifies the correct upcoming prayer based on current time',
+        () {
       final date = DateTime(2026, 10, 27);
       final schedule = PrayerCalculator.calculate(
         latitude: 23.8103,
         longitude: 90.4125,
+        utcOffsetHours: 6,
         date: date,
       );
 

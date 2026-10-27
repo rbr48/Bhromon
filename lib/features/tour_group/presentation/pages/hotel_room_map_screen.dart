@@ -519,7 +519,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white54, size: 20),
+                  icon:
+                      const Icon(Icons.close, color: Colors.white54, size: 20),
                   onPressed: () => Navigator.pop(ctx),
                 ),
               ],

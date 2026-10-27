@@ -44,7 +44,8 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: '${_selectedGame.label} Match');
+    _nameController =
+        TextEditingController(text: '${_selectedGame.label} Match');
   }
 
   @override
@@ -153,14 +154,13 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
                     selectedColor: AppColors.mintGreen,
                     backgroundColor: const Color(0xFF1E3526),
                     labelStyle: TextStyle(
-                      color: isSelected ? const Color(0xFF0F1E14) : Colors.white70,
+                      color:
+                          isSelected ? const Color(0xFF0F1E14) : Colors.white70,
                       fontWeight:
                           isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                     side: BorderSide(
-                      color: isSelected
-                          ? AppColors.mintGreen
-                          : Colors.white12,
+                      color: isSelected ? AppColors.mintGreen : Colors.white12,
                     ),
                     onSelected: (val) {
                       if (val) {

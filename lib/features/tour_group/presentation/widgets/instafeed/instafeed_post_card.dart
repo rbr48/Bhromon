@@ -1546,8 +1546,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     child: widget.repository.currentPhotoUrl == null
                         ? Text(
                             widget.repository.currentDisplayName.isNotEmpty
-                                ? widget
-                                    .repository.currentDisplayName[0]
+                                ? widget.repository.currentDisplayName[0]
                                     .toUpperCase()
                                 : 'M',
                             style: const TextStyle(
@@ -1577,13 +1576,11 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                               horizontal: 14, vertical: 8),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20),
-                            borderSide:
-                                const BorderSide(color: Colors.white12),
+                            borderSide: const BorderSide(color: Colors.white12),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20),
-                            borderSide:
-                                const BorderSide(color: Colors.white12),
+                            borderSide: const BorderSide(color: Colors.white12),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20),

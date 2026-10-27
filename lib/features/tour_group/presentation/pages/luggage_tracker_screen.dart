@@ -240,9 +240,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                           ),
                           // Loaded / Unloaded Quick Switch
                           InkWell(
-                            onTap: canManage
-                                ? () => _toggleLoaded(item)
-                                : null,
+                            onTap: canManage ? () => _toggleLoaded(item) : null,
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
@@ -482,8 +480,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                   children: [
                     for (final color in kLuggageTagColors)
                       InkWell(
-                        onTap: () =>
-                            setModalState(() => selectedColor = color),
+                        onTap: () => setModalState(() => selectedColor = color),
                         borderRadius: BorderRadius.circular(16),
                         child: Container(
                           width: 32,
@@ -542,8 +539,8 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                         final match = _members
                             .where((m) => m.email.toLowerCase() == email)
                             .firstOrNull;
-                        selectedOwnerName =
-                            match?.displayName ?? _repository.currentDisplayName;
+                        selectedOwnerName = match?.displayName ??
+                            _repository.currentDisplayName;
                       });
                     }
                   },
@@ -646,8 +643,8 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                       await _repository.saveLuggage(widget.tourId, newItem);
                       if (ctx.mounted) Navigator.pop(ctx);
                     },
-                    child: Text(l10n.translate(
-                        item == null ? 'luggage_add' : 'mag_close')),
+                    child: Text(l10n
+                        .translate(item == null ? 'luggage_add' : 'mag_close')),
                   ),
                 ),
               ],

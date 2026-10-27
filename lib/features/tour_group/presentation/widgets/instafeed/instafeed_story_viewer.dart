@@ -834,8 +834,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                       const SizedBox(width: 8),
                       // Author share button
                       IconButton(
-                        tooltip:
-                            context.l10n.translate('ig_share_story_title'),
+                        tooltip: context.l10n.translate('ig_share_story_title'),
                         icon: const Icon(Icons.send_rounded,
                             color: Colors.white, size: 20),
                         onPressed: _showShareModal,
@@ -870,8 +869,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                       const SizedBox(width: 6),
                       // Share icon for viewers
                       IconButton(
-                        tooltip:
-                            context.l10n.translate('ig_share_story_title'),
+                        tooltip: context.l10n.translate('ig_share_story_title'),
                         icon: const Icon(Icons.send_rounded,
                             color: Colors.white70, size: 20),
                         onPressed: _showShareModal,
