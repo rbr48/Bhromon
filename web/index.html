@@ -68,7 +68,7 @@
       }
 
       // Download main.dart.js without service worker with cache-busting timestamp
-      _flutter.loader.load({
+      _flutter.loader.loadEntrypoint({
         entrypointUrl: 'main.dart.js?v=' + new Date().getTime(),
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
