@@ -94,6 +94,39 @@ void main() {
       expect(gOpp.legalCards(1).map((c) => c.code), ['7H']);
     });
 
+    test(
+        'Player void in lead suit with lower trump than opponent winning trump is NOT forced to under-trump',
+        () {
+      // 0: South (User), 1: East, 2: North (Partner), 3: West
+      // Order: 1 (East) -> 2 (North) -> 3 (West) -> 0 (South)
+      // Lead suit: Hearts. Trump: Diamonds.
+      // East (1) leads 7H. North (2) plays JH. West (3) trumps with KD (power 4).
+      // South (0) has: 8D (Diamonds, power 2), 9S, AS, 10C.
+      // West (opponent 3) is winning with KD. South only has 8D which cannot beat KD.
+      // South is free to play any card (no forced under-trumping).
+      final g = _playing(
+        hands: [
+          ['8D', '9S', 'AS', '10C'], // South: holds lower trump 8D and off-suits
+          ['7H', '8H'], // East
+          ['JH', '9H'], // North
+          ['KD', '8S'], // West
+        ],
+        bidder: 3,
+        trump: CardSuit.diamonds,
+        leader: 1,
+      );
+      g.isTrumpRevealed = true;
+      expect(g.playCard(1, _c('7H')), isTrue);
+      expect(g.playCard(2, _c('JH')), isTrue);
+      expect(g.playCard(3, _c('KD')), isTrue);
+
+      // Now it is South's (0) turn
+      expect(g.currentTurn, equals(0));
+      final legal = g.legalCards(0).map((c) => c.code).toList();
+      // All cards should be legal because South cannot beat KD
+      expect(legal, containsAll(['8D', '9S', 'AS', '10C']));
+    });
+
     test('A hidden trump discarded before the reveal does not trump the trick',
         () {
       final g = _playing(

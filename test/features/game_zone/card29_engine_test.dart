@@ -71,5 +71,63 @@ void main() {
           ),
           isFalse);
     });
+
+    test(
+        'isCardLegal does not force under-trump if player cannot beat winning trump',
+        () {
+      final hand = [
+        Card29.fromCode('8D'), // Trump, power 2
+        Card29.fromCode('9S'), // Off-suit
+        Card29.fromCode('AC'), // Off-suit
+      ];
+
+      // Opponent winning with King of Diamonds (power 4). Hand only has 8D (power 2).
+      // Player is NOT forced to play 8D because they cannot beat KD.
+      expect(
+        Card29Engine.isCardLegal(
+          card: Card29.fromCode('9S'),
+          hand: hand,
+          leadSuit: CardSuit.hearts,
+          isTrumpRevealed: true,
+          trumpSuit: CardSuit.diamonds,
+          mustPlayTrumpIfHeld: true,
+          minTrumpPowerToBeat: 4, // KD power
+        ),
+        isTrue,
+      );
+
+      // If player has a higher trump (e.g. JD, power 8), they MUST over-trump
+      final handWithHigher = [
+        Card29.fromCode('JD'), // Trump, power 8
+        Card29.fromCode('8D'), // Trump, power 2
+        Card29.fromCode('9S'), // Off-suit
+      ];
+
+      expect(
+        Card29Engine.isCardLegal(
+          card: Card29.fromCode('9S'),
+          hand: handWithHigher,
+          leadSuit: CardSuit.hearts,
+          isTrumpRevealed: true,
+          trumpSuit: CardSuit.diamonds,
+          mustPlayTrumpIfHeld: true,
+          minTrumpPowerToBeat: 4,
+        ),
+        isFalse,
+      );
+
+      expect(
+        Card29Engine.isCardLegal(
+          card: Card29.fromCode('JD'),
+          hand: handWithHigher,
+          leadSuit: CardSuit.hearts,
+          isTrumpRevealed: true,
+          trumpSuit: CardSuit.diamonds,
+          mustPlayTrumpIfHeld: true,
+          minTrumpPowerToBeat: 4,
+        ),
+        isTrue,
+      );
+    });
   });
 }

@@ -675,12 +675,33 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
     final userHand = _game.hands[0];
     final isUserTurn = _isUserTurnToPlay;
     final legal = _game.legalCards(0);
-    final mustTrump = isUserTurn &&
-        _game.isTrumpRevealed &&
+
+    String turnPrompt = 'YOUR TURN - Play a card';
+    if (isUserTurn &&
         _game.leadSuit != null &&
-        !userHand.any((c) => c.suit == _game.leadSuit) &&
-        userHand.any((c) => c.suit == _game.trumpSuit) &&
-        !legal.any((c) => c.suit != _game.trumpSuit);
+        !userHand.any((c) => c.suit == _game.leadSuit)) {
+      final hasTrump = _game.trumpSuit != null &&
+          userHand.any((c) => c.suit == _game.trumpSuit);
+      if (_game.isTrumpRevealed && hasTrump) {
+        if (_game.currentTrick.isNotEmpty) {
+          final currentWinner = Card29Engine.determineTrickWinner(
+            trickCards: _game.currentTrick,
+            trumpSuit: _game.trumpSuit,
+            isTrumpRevealed: _game.isTrumpRevealed,
+          );
+          if (Card29Game.teamOf(currentWinner.playerIndex) ==
+              Card29Game.teamOf(0)) {
+            turnPrompt = 'Partner is winning - discard or feed points! 🛡️';
+          } else if (legal.any((c) => c.suit != _game.trumpSuit)) {
+            turnPrompt = "Opponent's Trump is higher - you may discard! 💡";
+          } else {
+            turnPrompt = "You can't follow suit - you must play Trump! 👆";
+          }
+        } else {
+          turnPrompt = "You can't follow suit - you must play Trump! 👆";
+        }
+      }
+    }
     return Container(
       height: 128,
       width: double.infinity,
@@ -696,11 +717,7 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
             children: [
               Flexible(
                 child: Text(
-                  isUserTurn
-                      ? (mustTrump
-                          ? "You can't follow suit - you must play Trump!"
-                          : 'YOUR TURN - Play a card')
-                      : 'Your Cards (South)',
+                  isUserTurn ? turnPrompt : 'Your Cards (South)',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

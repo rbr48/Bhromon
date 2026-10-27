@@ -661,7 +661,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
 
   List<TourDayInfo> get _tourDays => _tourGroup?.daysList ?? const [];
 
-  void _showCreatePostModal(BuildContext context) {
+  void _showCreatePostModal(BuildContext context, {bool isStory = false}) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -671,6 +671,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         tourId: widget.tourId,
         group: _tourGroup,
         picker: _picker,
+        isStory: isStory,
         onPostCreated: () => setState(() {}),
       ),
     );
@@ -1547,7 +1548,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   top: 8,
                   right: 8,
                   child: GestureDetector(
-                    onTap: () => _showCreatePostModal(context),
+                    onTap: () => _showCreatePostModal(context, isStory: true),
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
@@ -1594,7 +1595,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       margin: const EdgeInsets.only(right: 8),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => _showCreatePostModal(context),
+        onTap: () => _showCreatePostModal(context, isStory: true),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Container(

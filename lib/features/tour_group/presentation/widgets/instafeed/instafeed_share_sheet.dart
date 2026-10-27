@@ -97,8 +97,16 @@ class InstafeedShareSheet extends StatelessWidget {
   }
 
   Future<void> _shareToStory(BuildContext context) async {
-    final media = post.images.isNotEmpty ? post.images.first : post.videoUrl;
-    if (media == null) return;
+    final media = post.coverUrl ??
+        (post.images.isNotEmpty ? post.images.first : post.videoUrl);
+    if (media == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.translate('ig_story_share_no_media')),
+        ),
+      );
+      return;
+    }
 
     try {
       await repository.addStory(
@@ -106,7 +114,7 @@ class InstafeedShareSheet extends StatelessWidget {
         mediaUrl: media,
         caption: context.l10n
             .translate('ig_reshare_label', args: {'name': post.authorName}),
-        isVideo: post.isReel,
+        isVideo: post.isReel || post.videoUrl != null,
         videoUrl: post.videoUrl,
       );
 
@@ -276,6 +284,233 @@ class InstafeedShareSheet extends StatelessWidget {
             const SizedBox(height: 6),
             Text(label,
                 style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet allowing travelers to share an active Story into Tour Channels,
+/// copy its link, or share externally.
+class InstafeedStoryShareSheet extends StatelessWidget {
+  final TourGroupRepository repository;
+  final String tourId;
+  final TourStoryItem story;
+
+  const InstafeedStoryShareSheet({
+    super.key,
+    required this.repository,
+    required this.tourId,
+    required this.story,
+  });
+
+  static const List<Map<String, dynamic>> _channels = [
+    {
+      'id': 'general',
+      'name': '# general',
+      'icon': Icons.chat_bubble_outline,
+      'color': Colors.blueAccent,
+    },
+    {
+      'id': 'food',
+      'name': '# food',
+      'icon': Icons.restaurant_menu,
+      'color': Colors.orangeAccent,
+    },
+    {
+      'id': 'sightseeing',
+      'name': '# sightseeing',
+      'icon': Icons.photo_camera_outlined,
+      'color': Colors.greenAccent,
+    },
+    {
+      'id': 'emergency',
+      'name': '# emergency',
+      'icon': Icons.warning_amber_rounded,
+      'color': Colors.redAccent,
+    },
+  ];
+
+  static String _channelTitle(BuildContext context, String channelId) {
+    return switch (channelId) {
+      'general' => context.l10n.translate('ig_channel_general'),
+      'food' => context.l10n.translate('ig_channel_food'),
+      'sightseeing' => context.l10n.translate('ig_channel_sightseeing'),
+      _ => context.l10n.translate('ig_channel_emergency'),
+    };
+  }
+
+  Future<void> _sendToChannel(
+      BuildContext context, String channelId, String channelName) async {
+    try {
+      final msg =
+          '📖 [ট্যুর স্টোরি]\n${story.authorName}: ${story.caption ?? "একটি স্টোরি শেয়ার করেছেন"}\n${story.videoUrl ?? story.mediaUrl}';
+
+      final channelRepo = TourChannelRepository(groups: repository);
+      await channelRepo.sendMessage(
+        tourId,
+        channelId,
+        text: msg,
+      );
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.translate('ig_shared_story_to_channel',
+                args: {'name': channelName})),
+            backgroundColor: AppColors.mintGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                context.l10n.translate('ig_share_failed', args: {'error': e})),
+          ),
+        );
+      }
+    }
+  }
+
+  void _copyLink(BuildContext context) {
+    final link = 'https://app.bhromon.fun/tours/$tourId/stories/${story.id}';
+    Clipboard.setData(ClipboardData(text: link));
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.translate('ig_story_link_copied')),
+      ),
+    );
+  }
+
+  void _shareExternal() {
+    final link = 'https://app.bhromon.fun/tours/$tourId/stories/${story.id}';
+    final text =
+        'ভ্রমণ অ্যাপে ${story.authorName}-এর স্টোরি দেখুন:\n${story.caption ?? ""}\n$link';
+    SharePlus.instance.share(ShareParams(text: text));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              context.l10n.translate('ig_share_story_title'),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Send to Tour Channels
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Text(
+                context.l10n.translate('ig_send_to_channel'),
+                style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+            ..._channels.map((ch) {
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                leading: CircleAvatar(
+                  radius: 16,
+                  backgroundColor:
+                      (ch['color'] as Color).withValues(alpha: 0.2),
+                  child: Icon(ch['icon'] as IconData,
+                      size: 16, color: ch['color'] as Color),
+                ),
+                title: Text(_channelTitle(context, ch['id'] as String),
+                    style: const TextStyle(color: Colors.white, fontSize: 14)),
+                trailing: const Icon(Icons.send_rounded,
+                    size: 16, color: Colors.white54),
+                onTap: () => _sendToChannel(context, ch['id'] as String,
+                    _channelTitle(context, ch['id'] as String)),
+              );
+            }),
+
+            const Divider(color: Colors.white10),
+
+            // External Action Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                InkWell(
+                  onTap: () => _copyLink(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    child: Column(
+                      children: [
+                        const CircleAvatar(
+                          backgroundColor: Colors.white12,
+                          child: Icon(Icons.link, color: Colors.white),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(context.l10n.translate('ig_copy_link'),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                    _shareExternal();
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    child: Column(
+                      children: [
+                        const CircleAvatar(
+                          backgroundColor: Colors.white12,
+                          child: Icon(Icons.share, color: Colors.white),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(context.l10n.translate('ig_other_apps'),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
