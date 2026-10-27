@@ -904,12 +904,33 @@ service cloud.firestore {
         allow update: if isActiveMember(tourId);
       }
 
-      // Online Game Zone tables for tour group members
+      // Online Game Zone tables for tour group members. Other games keep their
+      // rules. Card 29 tables are run by the server (card29Start, card29Act,
+      // card29Advance, card29Leave), so members may only create a waiting table,
+      // join or leave one before it starts, and delete one that is not in play.
       match /games/{gameId} {
         allow read, list: if isActiveMember(tourId);
-        allow create: if isActiveMember(tourId);
-        allow update: if isActiveMember(tourId);
-        allow delete: if isActiveMember(tourId);
+        allow create: if isActiveMember(tourId) && (
+          request.resource.data.get('gameType', '') != 'card29' ||
+          (request.resource.data.status == 'waiting' &&
+           request.resource.data.hostEmail == tourUserEmail() &&
+           request.resource.data.get('state', {}).size() == 0));
+        allow update: if isActiveMember(tourId) && (
+          resource.data.get('gameType', '') != 'card29' ||
+          (resource.data.status == 'waiting' &&
+           request.resource.data.status == 'waiting' &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['players', 'hostEmail', 'updatedAt'])));
+        allow delete: if isActiveMember(tourId) && (
+          resource.data.get('gameType', '') != 'card29' ||
+          resource.data.status != 'inProgress' ||
+          resource.data.hostEmail == tourUserEmail());
+
+        // Each seat's private cards. Only the seat's owner may read them, and the
+        // server writes them.
+        match /private/{seatId} {
+          allow read: if isActiveMember(tourId) && resource.data.owner == tourUserEmail();
+          allow write: if false;
+        }
       }
     }
 

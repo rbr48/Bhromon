@@ -182,6 +182,15 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
   }
 
   Future<void> _startGame(OnlineGameSession session) async {
+    // The server deals and runs a 29 table, so the phone only asks it to start.
+    if (session.gameType == OnlineGameType.card29) {
+      await _repository.start29Table(
+        tourId: session.tourId,
+        gameId: session.id,
+      );
+      return;
+    }
+
     Map<String, dynamic> initialState = {};
 
     switch (session.gameType) {
@@ -209,13 +218,7 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
         };
         break;
       case OnlineGameType.card29:
-        initialState = {
-          'phase': 'bidding',
-          'highestBid': 15,
-          'highestBidder': -1,
-          'currentTurn': 0,
-          'isTrumpRevealed': false,
-        };
+        // Dealt by the server (see the early return above).
         break;
       case OnlineGameType.teenPatti:
         initialState = {

@@ -19,6 +19,9 @@ export { sendBroadcastNotification } from './sendBroadcastNotification';
 export { sendSosAlert } from './sendSosAlert';
 export { sendChannelNotification } from './sendChannelNotification';
 
+// ── Online 29 table (server-run game) ─────────────────────────────────────────
+export { card29Start, card29Act, card29Advance, card29Leave } from './card29/callables';
+
 // ── Admin & Compliance ────────────────────────────────────────────────────────
 export { promoteToRegionExpert } from './promoteToRegionExpert';
 export { gdprDeleteUser } from './gdprDeleteUser';

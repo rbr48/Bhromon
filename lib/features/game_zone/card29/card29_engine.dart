@@ -194,4 +194,66 @@ class Card29Engine {
     // If player does not have lead suit (and no trump restriction), any card can be played
     return true;
   }
+
+  /// Cards [player] may play from [hand] in the current position. The bidder
+  /// may not lead the hidden trump suit. Otherwise a player who cannot follow
+  /// suit must trump when an opponent is winning with trump or the trick is
+  /// winning on a plain card, unless their partner is winning or they cannot
+  /// beat the opponent's trump. The server and the table both use this rule.
+  static List<Card29> legalPlays({
+    required List<Card29> hand,
+    required int player,
+    required int highestBidder,
+    required CardSuit? leadSuit,
+    required List<PlayedCard> trick,
+    required CardSuit? trumpSuit,
+    required bool isTrumpRevealed,
+  }) {
+    if (leadSuit == null) {
+      if (!isTrumpRevealed && player == highestBidder) {
+        final nonTrump = hand.where((c) => c.suit != trumpSuit).toList();
+        if (nonTrump.isNotEmpty) return nonTrump;
+      }
+      return List.of(hand);
+    }
+    // If trump is revealed and the player is void in the led suit, they must
+    // play trump to win the trick from an opponent. However:
+    // 1. If their partner is already winning the current trick, the player
+    //    is not forced to trump (Partnership Immunity).
+    // 2. If an opponent is winning with a trump that is higher than any trump
+    //    held by the player, the player is not forced to under-trump.
+    bool mustTrump = true;
+    int? minTrumpPowerToBeat;
+    if (isTrumpRevealed && trick.isNotEmpty) {
+      final currentWinner = determineTrickWinner(
+        trickCards: trick,
+        trumpSuit: trumpSuit,
+        isTrumpRevealed: isTrumpRevealed,
+      );
+      if (currentWinner.playerIndex % 2 == player % 2) {
+        mustTrump = false;
+      } else {
+        // Opponent is winning the trick. Check if the winning card counts as trump.
+        final winningCard = currentWinner.card;
+        final bool winningCardIsTrump = trumpSuit != null &&
+            winningCard.suit == trumpSuit &&
+            (currentWinner.trumpEligible || winningCard.suit == leadSuit);
+        if (winningCardIsTrump) {
+          minTrumpPowerToBeat = winningCard.power;
+        }
+      }
+    }
+
+    return hand
+        .where((c) => isCardLegal(
+              card: c,
+              hand: hand,
+              leadSuit: leadSuit,
+              isTrumpRevealed: isTrumpRevealed,
+              trumpSuit: trumpSuit,
+              mustPlayTrumpIfHeld: mustTrump,
+              minTrumpPowerToBeat: minTrumpPowerToBeat,
+            ))
+        .toList();
+  }
 }

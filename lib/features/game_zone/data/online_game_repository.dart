@@ -3,17 +3,22 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../domain/models/card29_table.dart';
 import '../domain/models/online_game_session.dart';
+import 'card29_api.dart';
 
 class OnlineGameRepository {
   OnlineGameRepository({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
+    Card29Api? card29,
   })  : _firestoreInstance = firestore,
-        _authInstance = auth;
+        _authInstance = auth,
+        _card29 = card29 ?? Card29Api();
 
   final FirebaseFirestore? _firestoreInstance;
   final FirebaseAuth? _authInstance;
+  final Card29Api _card29;
 
   FirebaseFirestore get _firestore =>
       _firestoreInstance ?? FirebaseFirestore.instance;
@@ -48,6 +53,25 @@ class OnlineGameRepository {
     return _gamesRef(tourId).doc(gameId).snapshots().map((doc) {
       if (!doc.exists || doc.data() == null) return null;
       return OnlineGameSession.fromMap(doc.id, doc.data()!);
+    });
+  }
+
+  /// Streams the cards held by [seat] in a 29 table. Only that seat's owner
+  /// can read them; other members get a permission error, which the caller
+  /// shows as "no cards".
+  Stream<Card29PrivateHand?> watchCard29Seat(
+    String tourId,
+    String gameId,
+    int seat,
+  ) {
+    return _gamesRef(tourId)
+        .doc(gameId)
+        .collection('private')
+        .doc('seat$seat')
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists || doc.data() == null) return null;
+      return Card29PrivateHand.fromMap(doc.data()!);
     });
   }
 
@@ -94,52 +118,58 @@ class OnlineGameRepository {
     return docRef.id;
   }
 
-  /// Joins an existing game table.
+  /// Joins an existing game table. The read and the write happen in one
+  /// transaction, so two people joining at once cannot take the same seat.
   Future<void> joinGameSession({
     required String tourId,
     required String gameId,
   }) async {
     final docRef = _gamesRef(tourId).doc(gameId);
-    final snapshot = await docRef.get();
-    if (!snapshot.exists || snapshot.data() == null) {
-      throw StateError('Game table not found');
-    }
-
-    final session = OnlineGameSession.fromMap(snapshot.id, snapshot.data()!);
     final me = currentEmail;
+    final name = currentDisplayName;
+    final photo = currentPhotoUrl;
 
-    // Check if already joined
-    if (session.playerByEmail(me) != null) return;
-
-    if (session.isFull) {
-      throw StateError('This game table is already full');
-    }
-
-    // Pick lowest unoccupied seat
-    final occupiedSeats = session.players.map((p) => p.seatIndex).toSet();
-    int targetSeat = 0;
-    for (int i = 0; i < session.maxPlayers; i++) {
-      if (!occupiedSeats.contains(i)) {
-        targetSeat = i;
-        break;
+    await _firestore.runTransaction((tx) async {
+      final snapshot = await tx.get(docRef);
+      if (!snapshot.exists || snapshot.data() == null) {
+        throw StateError('Game table not found');
       }
-    }
 
-    final newPlayer = OnlinePlayer(
-      email: me,
-      displayName: currentDisplayName,
-      photoUrl: currentPhotoUrl,
-      seatIndex: targetSeat,
-      isReady: true,
-      isHost: false,
-      isBot: false,
-    );
+      final session = OnlineGameSession.fromMap(snapshot.id, snapshot.data()!);
 
-    final updatedPlayers = [...session.players, newPlayer];
+      // Already joined.
+      if (session.playerByEmail(me) != null) return;
 
-    await docRef.update({
-      'players': updatedPlayers.map((p) => p.toMap()).toList(),
-      'updatedAt': DateTime.now().toIso8601String(),
+      if (session.isFull) {
+        throw StateError('This game table is already full');
+      }
+
+      // Pick lowest unoccupied seat.
+      final occupiedSeats = session.players.map((p) => p.seatIndex).toSet();
+      int targetSeat = 0;
+      for (int i = 0; i < session.maxPlayers; i++) {
+        if (!occupiedSeats.contains(i)) {
+          targetSeat = i;
+          break;
+        }
+      }
+
+      final newPlayer = OnlinePlayer(
+        email: me,
+        displayName: name,
+        photoUrl: photo,
+        seatIndex: targetSeat,
+        isReady: true,
+        isHost: false,
+        isBot: false,
+      );
+
+      final updatedPlayers = [...session.players, newPlayer];
+
+      tx.update(docRef, {
+        'players': updatedPlayers.map((p) => p.toMap()).toList(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
     });
   }
 
@@ -149,73 +179,85 @@ class OnlineGameRepository {
     required String gameId,
   }) async {
     final docRef = _gamesRef(tourId).doc(gameId);
-    final snapshot = await docRef.get();
-    if (!snapshot.exists || snapshot.data() == null) return;
 
-    final session = OnlineGameSession.fromMap(snapshot.id, snapshot.data()!);
-    final occupied = session.players.map((p) => p.seatIndex).toSet();
-    final updated = [...session.players];
+    await _firestore.runTransaction((tx) async {
+      final snapshot = await tx.get(docRef);
+      if (!snapshot.exists || snapshot.data() == null) return;
 
-    final botNames = ['Tour Guide Bot', 'Highway Ace Bot', 'Dhaka Champ Bot'];
-    int botNameIdx = 0;
+      final session = OnlineGameSession.fromMap(snapshot.id, snapshot.data()!);
+      final occupied = session.players.map((p) => p.seatIndex).toSet();
+      final updated = [...session.players];
 
-    for (int i = 0; i < session.maxPlayers; i++) {
-      if (!occupied.contains(i)) {
-        final name = botNames[botNameIdx % botNames.length];
-        botNameIdx++;
-        updated.add(OnlinePlayer(
-          email: 'bot_seat_$i@bhromon.fun',
-          displayName: name,
-          seatIndex: i,
-          isReady: true,
-          isHost: false,
-          isBot: true,
-        ));
+      const botNames = ['Tour Guide Bot', 'Highway Ace Bot', 'Dhaka Champ Bot'];
+      int botNameIdx = 0;
+
+      for (int i = 0; i < session.maxPlayers; i++) {
+        if (!occupied.contains(i)) {
+          final name = botNames[botNameIdx % botNames.length];
+          botNameIdx++;
+          updated.add(OnlinePlayer(
+            email: 'bot_seat_$i@bhromon.fun',
+            displayName: name,
+            seatIndex: i,
+            isReady: true,
+            isHost: false,
+            isBot: true,
+          ));
+        }
       }
-    }
 
-    await docRef.update({
-      'players': updated.map((p) => p.toMap()).toList(),
-      'updatedAt': DateTime.now().toIso8601String(),
+      tx.update(docRef, {
+        'players': updated.map((p) => p.toMap()).toList(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
     });
   }
 
   /// Leaves a game session. If host leaves while in lobby, table is closed or host re-assigned.
+  /// A 29 table is left through the server, which hands a seat in play to a bot.
   Future<void> leaveGameSession({
     required String tourId,
     required String gameId,
   }) async {
     final docRef = _gamesRef(tourId).doc(gameId);
-    final snapshot = await docRef.get();
-    if (!snapshot.exists || snapshot.data() == null) return;
-
-    final session = OnlineGameSession.fromMap(snapshot.id, snapshot.data()!);
-    final me = currentEmail;
-
-    final remaining = session.players.where((p) => p.email != me).toList();
-
-    if (remaining.isEmpty ||
-        (session.hostEmail == me &&
-            session.status == GameSessionStatus.waiting)) {
-      await docRef.delete();
+    final current = await docRef.get();
+    if (current.data()?['gameType'] == OnlineGameType.card29.codeName) {
+      await _card29.leave(tourId: tourId, gameId: gameId);
       return;
     }
 
-    // Reassign host if needed
-    String newHost = session.hostEmail;
-    if (session.hostEmail == me) {
-      newHost = remaining.first.email;
-      remaining[0] = remaining[0].copyWith(isHost: true);
-    }
+    final me = currentEmail;
+    await _firestore.runTransaction((tx) async {
+      final snapshot = await tx.get(docRef);
+      if (!snapshot.exists || snapshot.data() == null) return;
 
-    await docRef.update({
-      'hostEmail': newHost,
-      'players': remaining.map((p) => p.toMap()).toList(),
-      'updatedAt': DateTime.now().toIso8601String(),
+      final session = OnlineGameSession.fromMap(snapshot.id, snapshot.data()!);
+      final remaining = session.players.where((p) => p.email != me).toList();
+
+      if (remaining.isEmpty ||
+          (session.hostEmail == me &&
+              session.status == GameSessionStatus.waiting)) {
+        tx.delete(docRef);
+        return;
+      }
+
+      // Reassign host if needed
+      String newHost = session.hostEmail;
+      if (session.hostEmail == me) {
+        newHost = remaining.first.email;
+        remaining[0] = remaining[0].copyWith(isHost: true);
+      }
+
+      tx.update(docRef, {
+        'hostEmail': newHost,
+        'players': remaining.map((p) => p.toMap()).toList(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
     });
   }
 
-  /// Starts the game with an initial state payload.
+  /// Starts the game with an initial state payload. 29 tables are dealt by the
+  /// server with [start29Table] instead.
   Future<void> startGameSession({
     required String tourId,
     required String gameId,
@@ -231,6 +273,17 @@ class OnlineGameRepository {
       'version': FieldValue.increment(1),
     });
   }
+
+  /// Deals a waiting 29 table. The server fills empty seats with bots.
+  Future<void> start29Table({
+    required String tourId,
+    required String gameId,
+  }) {
+    return _card29.start(tourId: tourId, gameId: gameId);
+  }
+
+  /// The 29 table's action service, for the table screen.
+  Card29Api get card29 => _card29;
 
   /// Commits a player move or game event action.
   Future<void> commitAction({
