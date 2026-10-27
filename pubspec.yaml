@@ -83,10 +83,6 @@ dependencies:
   fl_chart: ^0.68.0
   flutter_card_swiper: ^6.0.0
   sqflite: ^2.3.3+1
-  core:
-    path: ./packages/core
-  features:
-    path: ./packages/features
   package_info_plus: ^8.0.2
   crypto: ^3.0.3
   # Sprint 3 – Observability & Architecture
