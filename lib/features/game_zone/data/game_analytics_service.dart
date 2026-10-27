@@ -59,6 +59,8 @@ class GameAnalyticsService {
     required OnlineGameType gameType,
     required bool won,
     int score = 0,
+    String mode = 'Online Table',
+    String? details,
   }) async {
     if (!_initialized) {
       await init();
@@ -67,6 +69,8 @@ class GameAnalyticsService {
       gameType: gameType,
       won: won,
       score: score,
+      mode: mode,
+      details: details,
     );
     _streamCtrl.add(_current);
 
@@ -98,6 +102,8 @@ class GameAnalyticsService {
               .set(
             {
               ..._current.toMap(),
+              'displayName': user.displayName ?? 'Player',
+              'photoUrl': user.photoURL,
               'updatedAt': FieldValue.serverTimestamp(),
             },
             SetOptions(merge: true),
@@ -107,6 +113,58 @@ class GameAnalyticsService {
     } catch (e) {
       debugPrint('[GameAnalyticsService] Firestore sync error: $e');
     }
+  }
+
+  /// Fetches game statistics for a list of tour members and returns sorted
+  /// leaderboard entries.
+  Future<List<TourLeaderboardEntry>> fetchTourLeaderboard(
+    List<String> userUids,
+    Map<String, String> uidToName,
+    Map<String, String?> uidToPhoto,
+  ) async {
+    if (Firebase.apps.isEmpty || userUids.isEmpty) {
+      return [];
+    }
+
+    final entries = <TourLeaderboardEntry>[];
+    for (final uid in userUids) {
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('game_zone')
+            .doc('stats')
+            .get();
+
+        if (snap.exists && snap.data() != null) {
+          final data = snap.data()!;
+          final entry = TourLeaderboardEntry.fromMap(uid, data);
+          entries.add(entry);
+        } else {
+          // Member has no online game record yet
+          entries.add(TourLeaderboardEntry(
+            uid: uid,
+            displayName: uidToName[uid] ?? 'Traveler',
+            photoUrl: uidToPhoto[uid],
+            totalWins: 0,
+            totalMatches: 0,
+            winRate: 0.0,
+            rankBadge: 'Rookie',
+          ));
+        }
+      } catch (e) {
+        debugPrint('[GameAnalyticsService] Failed to load stats for $uid: $e');
+      }
+    }
+
+    // Sort by wins desc, then winRate desc
+    entries.sort((a, b) {
+      final winComp = b.totalWins.compareTo(a.totalWins);
+      if (winComp != 0) return winComp;
+      return b.winRate.compareTo(a.winRate);
+    });
+
+    return entries;
   }
 
   Future<void> resetStats() async {

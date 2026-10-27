@@ -62,4 +62,64 @@ void main() {
     expect(find.textContaining('72%'), findsOneWidget); // 18 / 25
     expect(find.textContaining('Master'), findsWidgets);
   });
+
+  testWidgets('GameAnalyticsView switches to Match History tab and displays records',
+      (tester) async {
+    final analytics = PlayerGameAnalytics(
+      gameStats: const {},
+      recentMatches: [
+        GameMatchRecord(
+          id: '1',
+          gameType: OnlineGameType.card29,
+          won: true,
+          score: 28,
+          timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
+          mode: 'Online Table',
+          details: 'High Bid 24 Made',
+        ),
+        GameMatchRecord(
+          id: '2',
+          gameType: OnlineGameType.carrom,
+          won: false,
+          score: 15,
+          timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+          mode: 'Pass & Play',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        GameAnalyticsView(analytics: analytics),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Switch to History tab
+    await tester.tap(find.textContaining('ম্যাচ হিস্টোরি'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('WON'), findsOneWidget);
+    expect(find.text('LOST'), findsOneWidget);
+    expect(find.text('High Bid 24 Made'), findsOneWidget);
+    expect(find.text('28 pts'), findsOneWidget);
+  });
+
+  testWidgets('GameAnalyticsView switches to Tour Leaderboard tab and handles empty tour state',
+      (tester) async {
+    const analytics = PlayerGameAnalytics(gameStats: {});
+
+    await tester.pumpWidget(
+      _wrap(
+        const GameAnalyticsView(analytics: analytics, activeTourId: null),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Switch to Tour Leaderboard tab
+    await tester.tap(find.textContaining('ট্যুর লিডারবোর্ড'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('ট্যুর লিডারবোর্ড সক্রিয় নয়'), findsOneWidget);
+  });
 }

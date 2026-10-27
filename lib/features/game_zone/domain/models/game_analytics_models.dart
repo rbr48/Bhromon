@@ -78,11 +78,59 @@ class GameStatItem {
   }
 }
 
+/// A single completed match record stored in the player's recent game history.
+class GameMatchRecord {
+  final String id;
+  final OnlineGameType gameType;
+  final bool won;
+  final int score;
+  final DateTime timestamp;
+  final String mode;
+  final String? details;
+
+  const GameMatchRecord({
+    required this.id,
+    required this.gameType,
+    required this.won,
+    this.score = 0,
+    required this.timestamp,
+    this.mode = 'Online Table',
+    this.details,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'gameType': gameType.codeName,
+        'won': won,
+        'score': score,
+        'timestamp': timestamp.toIso8601String(),
+        'mode': mode,
+        if (details != null) 'details': details,
+      };
+
+  factory GameMatchRecord.fromMap(Map<String, dynamic> map) {
+    return GameMatchRecord(
+      id: map['id'] as String? ?? '',
+      gameType: OnlineGameType.fromString(map['gameType'] as String?),
+      won: map['won'] == true,
+      score: (map['score'] as num?)?.toInt() ?? 0,
+      timestamp: DateTime.tryParse(map['timestamp'] as String? ?? '') ??
+          DateTime.now(),
+      mode: map['mode'] as String? ?? 'Online Table',
+      details: map['details'] as String?,
+    );
+  }
+}
+
 /// Consolidated player game analytics across all Game Zone games.
 class PlayerGameAnalytics {
   final Map<OnlineGameType, GameStatItem> gameStats;
+  final List<GameMatchRecord> recentMatches;
 
-  const PlayerGameAnalytics({required this.gameStats});
+  const PlayerGameAnalytics({
+    required this.gameStats,
+    this.recentMatches = const [],
+  });
 
   factory PlayerGameAnalytics.empty() {
     return PlayerGameAnalytics(
@@ -90,6 +138,7 @@ class PlayerGameAnalytics {
         for (final type in OnlineGameType.values)
           type: GameStatItem(gameType: type),
       },
+      recentMatches: const [],
     );
   }
 
@@ -130,12 +179,29 @@ class PlayerGameAnalytics {
     required OnlineGameType gameType,
     required bool won,
     int score = 0,
+    String mode = 'Online Table',
+    String? details,
   }) {
     final current = gameStats[gameType] ?? GameStatItem(gameType: gameType);
     final updated = current.recordOutcome(won: won, score: score);
     final newMap = Map<OnlineGameType, GameStatItem>.from(gameStats);
     newMap[gameType] = updated;
-    return PlayerGameAnalytics(gameStats: newMap);
+
+    final newRecord = GameMatchRecord(
+      id: '${DateTime.now().millisecondsSinceEpoch}',
+      gameType: gameType,
+      won: won,
+      score: score,
+      timestamp: DateTime.now(),
+      mode: mode,
+      details: details,
+    );
+    final updatedMatches = [newRecord, ...recentMatches].take(20).toList();
+
+    return PlayerGameAnalytics(
+      gameStats: newMap,
+      recentMatches: updatedMatches,
+    );
   }
 
   Map<String, dynamic> toMap() {
@@ -144,6 +210,7 @@ class PlayerGameAnalytics {
         for (final entry in gameStats.entries)
           entry.key.codeName: entry.value.toMap(),
       },
+      'recentMatches': recentMatches.map((m) => m.toMap()).toList(),
     };
   }
 
@@ -160,6 +227,83 @@ class PlayerGameAnalytics {
       }
     }
 
-    return PlayerGameAnalytics(gameStats: result);
+    final rawMatches = map['recentMatches'] as List<dynamic>? ?? [];
+    final matches = rawMatches
+        .whereType<Map<dynamic, dynamic>>()
+        .map((m) => GameMatchRecord.fromMap(Map<String, dynamic>.from(m)))
+        .toList();
+
+    return PlayerGameAnalytics(
+      gameStats: result,
+      recentMatches: matches,
+    );
+  }
+}
+
+/// An entry in the Tour Group Leaderboard ranking members by total wins.
+class TourLeaderboardEntry {
+  final String uid;
+  final String displayName;
+  final String? photoUrl;
+  final int totalWins;
+  final int totalMatches;
+  final double winRate;
+  final OnlineGameType? favoriteGame;
+  final String rankBadge;
+
+  const TourLeaderboardEntry({
+    required this.uid,
+    required this.displayName,
+    this.photoUrl,
+    required this.totalWins,
+    required this.totalMatches,
+    required this.winRate,
+    this.favoriteGame,
+    required this.rankBadge,
+  });
+
+  factory TourLeaderboardEntry.fromMap(String uid, Map<String, dynamic> map) {
+    final rawStats = map['gameStats'] as Map<String, dynamic>? ?? {};
+    int wins = 0;
+    int matches = 0;
+    int maxPlayed = -1;
+    OnlineGameType? favorite;
+
+    for (final type in OnlineGameType.values) {
+      final item = rawStats[type.codeName] as Map<String, dynamic>?;
+      if (item != null) {
+        final played = (item['matchesPlayed'] as num?)?.toInt() ?? 0;
+        final w = (item['matchesWon'] as num?)?.toInt() ?? 0;
+        wins += w;
+        matches += played;
+        if (played > maxPlayed) {
+          maxPlayed = played;
+          favorite = type;
+        }
+      }
+    }
+
+    final winRate = matches > 0 ? (wins / matches) * 100 : 0.0;
+    String badge = 'Rookie';
+    if (wins >= 50) {
+      badge = 'Legend';
+    } else if (wins >= 25) {
+      badge = 'Grandmaster';
+    } else if (wins >= 10) {
+      badge = 'Master';
+    } else if (wins >= 3) {
+      badge = 'Contender';
+    }
+
+    return TourLeaderboardEntry(
+      uid: uid,
+      displayName: map['displayName'] as String? ?? 'Traveler',
+      photoUrl: map['photoUrl'] as String?,
+      totalWins: wins,
+      totalMatches: matches,
+      winRate: winRate,
+      favoriteGame: favorite,
+      rankBadge: badge,
+    );
   }
 }
