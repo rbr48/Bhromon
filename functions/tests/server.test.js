@@ -34,6 +34,10 @@ describe('Bhromon Games Express Server', () => {
     expect(body.callables).toContain('teenPattiAct');
     expect(body.callables).toContain('teenPattiAdvance');
     expect(body.callables).toContain('teenPattiLeave');
+    expect(body.callables).toContain('carromStart');
+    expect(body.callables).toContain('carromShoot');
+    expect(body.callables).toContain('carromAdvance');
+    expect(body.callables).toContain('carromLeave');
   });
 
   test('POST /unknown returns 404', async () => {
