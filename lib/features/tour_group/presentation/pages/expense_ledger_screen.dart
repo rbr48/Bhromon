@@ -907,14 +907,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     border: Border.all(
                         color: AppColors.mintGreen.withValues(alpha: 0.3)),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.receipt_long_rounded,
+                      const Icon(Icons.receipt_long_rounded,
                           size: 11, color: AppColors.mintGreen),
-                      SizedBox(width: 3),
-                      Text('রশিদ',
-                          style: TextStyle(
+                      const SizedBox(width: 3),
+                      Text(l10n.translate('fund_receipt'),
+                          style: const TextStyle(
                               color: AppColors.mintGreen,
                               fontSize: 10,
                               fontWeight: FontWeight.bold)),

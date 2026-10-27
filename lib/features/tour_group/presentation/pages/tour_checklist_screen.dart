@@ -414,4 +414,7 @@ const List<({String title, String category})> checklistDefaultItems = [
   (title: 'check_item_torch', category: 'check_cat_hill'),
   (title: 'check_item_mosquito_spray', category: 'check_cat_nature'),
   (title: 'check_item_dry_bag', category: 'check_cat_nature'),
+  (title: 'check_item_walking_shoes', category: 'check_cat_clothing'),
+  (title: 'check_item_power_bank', category: 'check_cat_electronics'),
+  (title: 'check_item_umbrella_hat', category: 'check_cat_clothing'),
 ];

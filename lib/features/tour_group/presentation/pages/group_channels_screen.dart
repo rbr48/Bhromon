@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
@@ -1744,6 +1745,39 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                     borderSide: BorderSide(color: Colors.white30)),
                 focusedBorder: const UnderlineInputBorder(
                     borderSide: BorderSide(color: AppColors.mintGreen)),
+              ),
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.mintGreen,
+                side: BorderSide(
+                    color: AppColors.mintGreen.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () async {
+                try {
+                  var perm = await Geolocator.checkPermission();
+                  if (perm == LocationPermission.denied) {
+                    perm = await Geolocator.requestPermission();
+                  }
+                  if (perm == LocationPermission.denied ||
+                      perm == LocationPermission.deniedForever) {
+                    return;
+                  }
+                  final pos = await Geolocator.getCurrentPosition();
+                  urlCtrl.text =
+                      'https://maps.google.com/?q=${pos.latitude},${pos.longitude}';
+                  if (nameCtrl.text.trim().isEmpty) {
+                    nameCtrl.text = l10n.translate('chan_my_location');
+                  }
+                } catch (_) {}
+              },
+              icon: const Icon(Icons.my_location_rounded, size: 16),
+              label: Text(
+                l10n.translate('chan_location_current_btn'),
+                style: const TextStyle(fontSize: 12),
               ),
             ),
           ],

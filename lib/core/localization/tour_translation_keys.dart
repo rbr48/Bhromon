@@ -293,6 +293,8 @@ class TourTranslationKeys {
       'chan_location_name': 'Location name',
       'chan_location_hint': 'e.g. Sajek Valley Helipad / Inani Beach',
       'chan_location_maps_link': 'Google Maps URL (optional)',
+      'chan_location_current_btn': 'Use my current GPS location',
+      'chan_my_location': 'My current location',
       'chat_command_unknown': 'Unknown command. Try /split or /poll.',
       'chat_split_usage':
           'Write /split <amount> <what it was for>, for example /split 2400 Dinner',
@@ -358,6 +360,9 @@ class TourTranslationKeys {
       'check_item_torch': 'Flashlight or headlamp with extra batteries',
       'check_item_mosquito_spray': 'Mosquito & insect repellent (Odomos)',
       'check_item_dry_bag': 'Waterproof dry bag for valuables',
+      'check_item_walking_shoes': 'Comfortable walking / running shoes',
+      'check_item_power_bank': 'High-capacity power bank & charging cable',
+      'check_item_umbrella_hat': 'Folding umbrella, sun hat or cap',
 
       // ── Digital scrapbook ──────────────────────────────────────────────────
       'scrap_title': 'Digital scrapbook',
@@ -909,6 +914,9 @@ class TourTranslationKeys {
       'fund_receipt_view': 'View receipt',
       'fund_receipt_attach': 'Attach receipt',
       'fund_receipt_uploading': 'Uploading receipt photo...',
+      'fund_receipt_camera': 'Camera',
+      'fund_receipt_gallery': 'Gallery',
+      'fund_receipt_remove': 'Remove',
       'fund_bkash_nagad_assist': 'bKash / Nagad pay assist',
       'fund_bkash_nagad_help':
           'Copy details for quick payment via Mobile Banking:',
@@ -1824,6 +1832,8 @@ class TourTranslationKeys {
       'chan_location_name': 'স্থানের নাম',
       'chan_location_hint': 'যেমন: সাজেক হেলিপ্যাড / ইনানী বিচ',
       'chan_location_maps_link': 'গুগল ম্যাপ লিংক (ঐচ্ছিক)',
+      'chan_location_current_btn': 'আমার বর্তমান GPS অবস্থান নিন',
+      'chan_my_location': 'আমার বর্তমান অবস্থান',
       'chat_command_unknown': 'অজানা কমান্ড। /split বা /poll লিখে দেখুন।',
       'chat_split_usage':
           'লিখুন /split <টাকা> <কিসের জন্য>, যেমন /split 2400 রাতের খাবার',
@@ -1889,6 +1899,9 @@ class TourTranslationKeys {
       'check_item_torch': 'টর্চলাইট বা হেডল্যাম্প ও ব্যাকআপ ব্যাটারি',
       'check_item_mosquito_spray': 'মশা ও পোকা তাড়ানোর ক্রিম বা স্প্রে (Odomos)',
       'check_item_dry_bag': 'ওয়াটারপ্রুফ ড্রাই ব্যাগ',
+      'check_item_walking_shoes': 'হাঁটার জন্য আরামদায়ক স্নিকার্স বা কেডস',
+      'check_item_power_bank': 'হাই-ক্যাপাসিটি পাওয়ার ব্যাংক ও কেবল',
+      'check_item_umbrella_hat': 'ভাঁজযোগ্য ছাতা বা সান হ্যাট / ক্যাপ',
 
       // ── Digital scrapbook ──────────────────────────────────────────────────
       'scrap_title': 'ডিজিটাল স্ক্র্যাপবুক',
@@ -2436,6 +2449,9 @@ class TourTranslationKeys {
       'fund_receipt_view': 'মেমো দেখুন',
       'fund_receipt_attach': 'মেমোর ছবি যুক্ত করুন',
       'fund_receipt_uploading': 'মেমো আপলোড হচ্ছে...',
+      'fund_receipt_camera': 'ক্যামেরা',
+      'fund_receipt_gallery': 'গ্যালারি',
+      'fund_receipt_remove': 'মুছুন',
       'fund_bkash_nagad_assist': 'বিকাশ / নগদ পে অ্যাসিস্ট',
       'fund_bkash_nagad_help':
           'মোবাইল ব্যাংকিংয়ে সহজে পরিশোধ করতে তথ্য কপি করুন:',

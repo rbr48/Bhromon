@@ -19,10 +19,10 @@ void main() {
   });
 
   test('the default items keep their saved positions', () {
-    // Each item's index is its saved id (default_0 ... default_9), so ticks
+    // Each item's index is its saved id (default_0 ... default_17), so ticks
     // already saved depend on this order.
-    expect(checklistDefaultItems, hasLength(10));
+    expect(checklistDefaultItems, hasLength(18));
     expect(checklistDefaultItems.first.title, 'check_item_id_copy');
-    expect(checklistDefaultItems.last.title, 'check_item_sandals');
+    expect(checklistDefaultItems.last.title, 'check_item_umbrella_hat');
   });
 }

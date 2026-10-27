@@ -185,9 +185,14 @@ class TourChannelRepository {
     List<ChannelAttachment> attachments = const [],
     ChannelReply? replyTo,
     List<String> mentions = const [],
+    double? locationLatitude,
+    double? locationLongitude,
+    String? locationTitle,
   }) async {
     final email = _groups.requireEmail();
-    final trimmed = _checkedText(text, hasAttachments: attachments.isNotEmpty);
+    final hasLocation = locationLatitude != null && locationLongitude != null;
+    final trimmed = _checkedText(text,
+        hasAttachments: attachments.isNotEmpty || hasLocation);
     _checkedAttachments(attachments);
     final id = _uuid.v4();
     await _message(tourId, channelId, id).set({
@@ -201,6 +206,10 @@ class TourChannelRepository {
       'mentions': mentions.map(normalizeEmail).toList(),
       'isPinned': false,
       if (replyTo != null) 'replyTo': replyTo.toMap(),
+      if (locationLatitude != null) 'locationLatitude': locationLatitude,
+      if (locationLongitude != null) 'locationLongitude': locationLongitude,
+      if (locationTitle != null && locationTitle.isNotEmpty)
+        'locationTitle': locationTitle,
     });
   }
 

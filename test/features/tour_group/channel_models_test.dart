@@ -71,6 +71,28 @@ void main() {
       });
       expect(m.kind, ChannelMessageKind.text);
     });
+
+    test('reads location metadata correctly and reports hasLocation', () {
+      final m = ChannelMessage.fromMap('loc1', {
+        'text': 'Meet here!',
+        'senderEmail': 'guide@x.com',
+        'timestamp': DateTime(2026, 1, 2),
+        'locationLatitude': 21.4272,
+        'locationLongitude': 92.0058,
+        'locationTitle': "Cox's Bazar Beach",
+      });
+      expect(m.hasLocation, isTrue);
+      expect(m.locationLatitude, 21.4272);
+      expect(m.locationLongitude, 92.0058);
+      expect(m.locationTitle, "Cox's Bazar Beach");
+
+      final withoutLoc = ChannelMessage.fromMap('loc2', {
+        'text': 'Plain text',
+        'senderEmail': 'guide@x.com',
+        'timestamp': DateTime(2026, 1, 2),
+      });
+      expect(withoutLoc.hasLocation, isFalse);
+    });
   });
 
   group('countUnread', () {

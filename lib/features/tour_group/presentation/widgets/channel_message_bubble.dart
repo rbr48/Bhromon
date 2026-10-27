@@ -61,7 +61,7 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
     final l10n = context.l10n;
     final own = widget.isMine;
     final isExpense = m.kind == ChannelMessageKind.expense;
-    final loc = _findLocation(m.text);
+    final loc = _findLocation(m, l10n);
 
     return Align(
       alignment: own ? Alignment.centerRight : Alignment.centerLeft,
@@ -600,7 +600,20 @@ class _LocationInfo {
   const _LocationInfo({required this.title, required this.url});
 }
 
-_LocationInfo? _findLocation(String text) {
+_LocationInfo? _findLocation(ChannelMessage m, [AppLocalizations? l10n]) {
+  if (m.hasLocation) {
+    final title = (m.locationTitle != null && m.locationTitle!.isNotEmpty)
+        ? m.locationTitle!
+        : (l10n?.translate('chan_location_title') ??
+            'Shared location / Meetup point');
+    final url =
+        'https://maps.google.com/?q=${m.locationLatitude},${m.locationLongitude}';
+    return _LocationInfo(title: title, url: url);
+  }
+  return _findLocationFromText(m.text, l10n);
+}
+
+_LocationInfo? _findLocationFromText(String text, [AppLocalizations? l10n]) {
   // Check for markdown [Title](https://...maps...)
   final mdMatch = RegExp(
           r'\[([^\]]+)\]\((https?://(?:maps\.google\.|goo\.gl/maps|maps\.app\.goo\.gl)[^\)]+)\)',
@@ -624,9 +637,10 @@ _LocationInfo? _findLocation(String text) {
         title = clean;
       }
     }
+    final defaultTitle = l10n?.translate('chan_location_title') ??
+        'Shared location / Meetup point';
     return _LocationInfo(
-        title: title.isNotEmpty ? title : 'শেয়ারকৃত স্থান / মিটআপ পয়েন্ট',
-        url: url);
+        title: title.isNotEmpty ? title : defaultTitle, url: url);
   }
   return null;
 }
