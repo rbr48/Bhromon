@@ -20,6 +20,7 @@ import '../domain/services/seat_layout_engine.dart';
 import '../domain/services/seat_planner.dart';
 import 'tour_media_journal.dart';
 import 'tour_media_uploader.dart';
+import 'vps_notification_service.dart';
 
 /// Thrown when an action needs a signed-in member. The message is shown to users.
 class TourAccessException implements Exception {
@@ -1425,7 +1426,7 @@ class TourGroupRepository {
     double? longitude,
   }) async {
     final email = _requireEmail();
-    return _awaitServer(_sub(tourId, 'sos').doc(alertId).set({
+    final synced = await _awaitServer(_sub(tourId, 'sos').doc(alertId).set({
       'id': alertId,
       'senderEmail': email,
       'senderName': currentDisplayName,
@@ -1434,6 +1435,14 @@ class TourGroupRepository {
       if (longitude != null) 'longitude': longitude,
       'createdAt': FieldValue.serverTimestamp(),
     }));
+    if (synced) {
+      unawaited(VpsNotificationService().notifySos(
+        tourId: tourId,
+        alertId: alertId,
+        senderName: currentDisplayName,
+      ));
+    }
+    return synced;
   }
 
   /// Marks an alert resolved. Only the sender or an admin may do this.
