@@ -63,7 +63,8 @@ void main() {
     expect(find.textContaining('Master'), findsWidgets);
   });
 
-  testWidgets('GameAnalyticsView switches to Match History tab and displays records',
+  testWidgets(
+      'GameAnalyticsView switches to Match History tab and displays records',
       (tester) async {
     final analytics = PlayerGameAnalytics(
       gameStats: const {},
@@ -105,7 +106,8 @@ void main() {
     expect(find.text('28 pts'), findsOneWidget);
   });
 
-  testWidgets('GameAnalyticsView switches to Tour Leaderboard tab and handles empty tour state',
+  testWidgets(
+      'GameAnalyticsView switches to Tour Leaderboard tab and handles empty tour state',
       (tester) async {
     const analytics = PlayerGameAnalytics(gameStats: {});
 

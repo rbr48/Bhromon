@@ -47,8 +47,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
     setState(() => _isLoadingLeaderboard = true);
 
     try {
-      final members =
-          await _tourRepo.watchMembers(widget.activeTourId!).first;
+      final members = await _tourRepo.watchMembers(widget.activeTourId!).first;
       final uids = <String>[];
       final uidToName = <String, String>{};
       final uidToPhoto = <String, String?>{};
@@ -279,8 +278,8 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                       ),
                       Text(
                         analytics.favoriteGame != null
-                          ? 'পছন্দের খেলা: ${analytics.favoriteGame!.label}'
-                          : 'সকল খেলার সার্বিক ট্রফি',
+                            ? 'পছন্দের খেলা: ${analytics.favoriteGame!.label}'
+                            : 'সকল খেলার সার্বিক ট্রফি',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -385,7 +384,8 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
                   color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(stat.rankIcon, color: AppColors.mintGreen, size: 20),
+                child:
+                    Icon(stat.rankIcon, color: AppColors.mintGreen, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(

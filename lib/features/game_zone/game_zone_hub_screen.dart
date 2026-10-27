@@ -100,9 +100,10 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
               StreamBuilder<List<TourGroup>>(
                 stream: _tourRepo.watchMyGroups(),
                 builder: (context, snapshot) {
-                  final activeId = snapshot.data != null && snapshot.data!.isNotEmpty
-                      ? snapshot.data!.first.id
-                      : null;
+                  final activeId =
+                      snapshot.data != null && snapshot.data!.isNotEmpty
+                          ? snapshot.data!.first.id
+                          : null;
                   return GameAnalyticsView(
                     activeTourId: activeId,
                     tourRepository: _tourRepo,
