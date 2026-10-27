@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../common/game_zone_portrait_lock.dart';
 import '../common/playing_card_view.dart';
+import '../data/game_analytics_service.dart';
+import '../domain/models/game_analytics_models.dart';
 import 'card29_engine.dart';
 import 'card29_game.dart';
 
 /// Keeps the match in progress while the player visits other screens.
 class _Card29Session {
   static Card29Game? game;
+  static bool matchResultRecorded = false;
 }
 
 class Card29Screen extends StatefulWidget {
@@ -73,7 +76,17 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
         break;
       case Card29Phase.trumpSelection:
       case Card29Phase.roundOver:
+        break;
       case Card29Phase.matchOver:
+        if (!_Card29Session.matchResultRecorded) {
+          _Card29Session.matchResultRecorded = true;
+          final userWon = _game.matchPips[0] >= Card29Game.pipsToWin;
+          GameAnalyticsService().recordMatch(
+            gameType: OnlineGameType.card29,
+            won: userWon,
+            score: _game.matchPips[0],
+          );
+        }
         break;
     }
   }
@@ -105,6 +118,7 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
 
   void _startNewMatch() {
     _generation++;
+    _Card29Session.matchResultRecorded = false;
     _game.newMatch();
     _afterChange();
   }

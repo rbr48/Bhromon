@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/colors.dart';
 import '../common/game_zone_portrait_lock.dart';
+import '../data/game_analytics_service.dart';
 import '../data/online_game_repository.dart';
 import '../domain/models/online_game_session.dart';
 import 'online_card29_view.dart';
@@ -32,6 +33,7 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
     with GameZonePortraitLock {
   late final OnlineGameRepository _repository =
       widget.repository ?? OnlineGameRepository();
+  final Set<String> _recordedSessionIds = {};
 
   String get _myEmail => _repository.currentEmail;
 
@@ -41,6 +43,22 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
       stream: _repository.watchGame(widget.tourId, widget.gameId),
       builder: (context, snapshot) {
         final session = snapshot.data;
+
+        if (session != null &&
+            session.status == GameSessionStatus.finished &&
+            session.winnerSeat != null &&
+            !_recordedSessionIds.contains(session.id)) {
+          _recordedSessionIds.add(session.id);
+          final myPlayer =
+              session.players.where((p) => p.email == _myEmail).firstOrNull;
+          if (myPlayer != null) {
+            final won = myPlayer.seatIndex == session.winnerSeat;
+            GameAnalyticsService().recordMatch(
+              gameType: session.gameType,
+              won: won,
+            );
+          }
+        }
 
         if (snapshot.connectionState == ConnectionState.waiting &&
             session == null) {

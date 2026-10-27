@@ -8,6 +8,7 @@ import 'package:bhromon/features/tour_group/presentation/widgets/bhromon_bottom_
 import 'data/online_game_repository.dart';
 import 'domain/models/online_game_session.dart';
 import 'online/online_game_create_dialog.dart';
+import 'presentation/widgets/game_analytics_view.dart';
 
 class GameZoneHubScreen extends StatefulWidget {
   final OnlineGameRepository? gameRepository;
@@ -35,7 +36,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -77,6 +78,10 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                     icon: Icon(Icons.groups_rounded, size: 20),
                     text: 'Tour Online Tables',
                   ),
+                  Tab(
+                    icon: Icon(Icons.insights_rounded, size: 20),
+                    text: 'Stats & Trophies',
+                  ),
                 ],
               ),
             ),
@@ -91,6 +96,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
             children: [
               _buildOfflineArcade(context),
               _buildOnlineTablesTab(context),
+              const GameAnalyticsView(),
             ],
           ),
         ),

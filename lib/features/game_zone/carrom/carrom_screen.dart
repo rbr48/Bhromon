@@ -7,6 +7,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../common/game_zone_portrait_lock.dart';
+import '../data/game_analytics_service.dart';
+import '../domain/models/game_analytics_models.dart';
 import 'carrom_engine.dart';
 import 'carrom_game.dart';
 
@@ -93,6 +95,12 @@ class _CarromScreenState extends State<CarromScreen>
       if (!_CarromSession.resultShown) {
         _CarromSession.resultShown = true;
         HapticFeedback.heavyImpact();
+        final userWon = _game.winner == 0;
+        GameAnalyticsService().recordMatch(
+          gameType: OnlineGameType.carrom,
+          won: userWon,
+          score: userWon ? _game.winnerPoints : 0,
+        );
         _showResultDialog();
       }
       return;

@@ -24,6 +24,7 @@ import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/models/tour_group.dart';
 import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
 import '../../domain/usecases/get_explorer_profile_usecase.dart';
+import '../../../game_zone/presentation/widgets/game_analytics_view.dart';
 
 /// The modern, Tour Group-Centric Profile Screen for Bhromon Travelers.
 /// Replaces the legacy public social/YouTube architecture with live
@@ -324,6 +325,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final isOwnProfile =
         currentUid.isNotEmpty && (_profile?.uid ?? widget.uid) == currentUid;
 
+    final email = _tourRepo.currentEmail;
+    final rawHandle = email.isNotEmpty
+        ? email.split('@').first
+        : (_profile?.displayName.toLowerCase().replaceAll(' ', '_') ??
+            'explorer');
+    final handle = rawHandle.replaceAll(RegExp(r'[^a-zA-Z0-9_.]'), '');
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -334,11 +342,11 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         backgroundColor: const Color(0xFF0D1A12),
         appBar: AppBar(
           title: Text(
-            _isBn ? 'ভ্রমণকারী প্রোফাইল' : 'TRAVELER PROFILE',
+            '@$handle',
             style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.5,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
               color: Colors.white,
             ),
           ),
@@ -350,26 +358,40 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             tooltip: _isBn ? 'ফিরে যান' : 'Back',
             onPressed: () => context.go('/group-hub'),
           ),
-          actions: isOwnProfile
-              ? [
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined,
-                        color: AppColors.mintGreen, size: 20),
-                    tooltip: _isBn ? 'প্রোফাইল পরিবর্তন' : 'Edit Profile',
-                    onPressed: () {
-                      if (_profile != null) {
-                        _showEditProfileBottomSheet(_profile!);
-                      }
-                    },
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.share_outlined,
+                  color: Colors.white70, size: 20),
+              tooltip: _isBn ? 'শেয়ার করুন' : 'Share Profile',
+              onPressed: () {
+                final name = _profile?.displayName ?? 'Traveler';
+                SharePlus.instance.share(
+                  ShareParams(
+                    text:
+                        'Check out $name (@$handle) on Bhromon — Bangladesh Smart Tour Operating System!\nhttps://app.bhromon.fun',
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.logout,
-                        color: Colors.redAccent, size: 20),
-                    tooltip: _isBn ? 'লগআউট' : 'Log out',
-                    onPressed: () => _confirmLogout(context),
-                  ),
-                ]
-              : null,
+                );
+              },
+            ),
+            if (isOwnProfile) ...[
+              IconButton(
+                icon: const Icon(Icons.edit_outlined,
+                    color: AppColors.mintGreen, size: 20),
+                tooltip: _isBn ? 'প্রোফাইল পরিবর্তন' : 'Edit Profile',
+                onPressed: () {
+                  if (_profile != null) {
+                    _showEditProfileBottomSheet(_profile!);
+                  }
+                },
+              ),
+              IconButton(
+                icon:
+                    const Icon(Icons.logout, color: Colors.redAccent, size: 20),
+                tooltip: _isBn ? 'লগআউট' : 'Log out',
+                onPressed: () => _confirmLogout(context),
+              ),
+            ],
+          ],
         ),
         body: Center(
           child: ConstrainedBox(
@@ -1248,14 +1270,19 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             _isBn ? 'ট্যুরসমূহ' : 'My Tours',
           ),
           _buildTabItem(
+            'games',
+            Icons.emoji_events_rounded,
+            _isBn ? 'গেমিং' : 'Games',
+          ),
+          _buildTabItem(
             'vault',
             Icons.folder_shared_rounded,
-            _isBn ? 'ভল্ট ও স্মৃতি' : 'Keepsakes',
+            _isBn ? 'স্মৃতি' : 'Vault',
           ),
           _buildTabItem(
             'settings',
             Icons.tune_rounded,
-            _isBn ? 'পছন্দ ও সেটিংস' : 'Preferences',
+            _isBn ? 'সেটিংস' : 'Settings',
           ),
         ],
       ),
@@ -1309,6 +1336,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     switch (_activeTab) {
       case 'vault':
         return _buildKeepsakesTab(groups);
+      case 'games':
+        return const GameAnalyticsView();
       case 'settings':
         return _buildPreferencesTab(profile);
       case 'tours':
