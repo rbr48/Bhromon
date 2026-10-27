@@ -225,6 +225,11 @@ service cloud.firestore {
     // ---- FCM Tokens ----
     match /fcm_tokens/{uid} {
       allow read, write: if isOwner(uid);
+
+      // One document per signed-in device. Written by that user's app only.
+      match /devices/{deviceId} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
     // ---- App Config (read by app, write by admin web only via service account) ----
