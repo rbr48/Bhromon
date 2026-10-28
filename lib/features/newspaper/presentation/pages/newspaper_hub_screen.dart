@@ -6,6 +6,7 @@ import '../../data/news_tts_service.dart';
 import '../../data/newspaper_service.dart';
 import '../../domain/models/newspaper_models.dart';
 import 'adfree_article_reader_screen.dart';
+import 'adblock_browser_screen.dart';
 
 class NewspaperHubScreen extends StatefulWidget {
   final String? initialCategory;
@@ -177,6 +178,22 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
           initialTitle: headline.title,
           initialSourceName: headline.paperName,
           initialImageUrl: headline.imageUrl,
+        ),
+      ),
+    );
+  }
+
+  void _openAdBlockBrowser({required String url, required String title, Newspaper? paper}) {
+    if (paper != null) {
+      _service.recordPaperRead(paper.id);
+      _loadUserData();
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AdBlockBrowserScreen(
+          initialUrl: url,
+          initialTitle: title,
+          paper: paper,
         ),
       ),
     );
@@ -530,7 +547,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 padding: const EdgeInsets.all(40),
                 child: Column(
                   children: [
-                    const Icon(Icons.newspaper_rounded, size: 48, color: Colors.white24),
+                    const Icon(Icons.article_rounded, size: 48, color: Colors.white24),
                     const SizedBox(height: 12),
                     const Text(
                       'কোনো শিরোনাম পাওয়া যায়নি',
@@ -710,6 +727,21 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                       ),
                       onPressed: () => _toggleBookmark(item),
                     ),
+                    // Open in Ad-Blocker Web Browser
+                    IconButton(
+                      iconSize: 18,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      tooltip: 'Open in AdBlock Browser',
+                      icon: const Icon(
+                        Icons.public_rounded,
+                        color: Colors.white54,
+                      ),
+                      onPressed: () => _openAdBlockBrowser(
+                        url: item.articleUrl,
+                        title: item.title,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -841,8 +873,16 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   side: BorderSide(color: Colors.white.withOpacity(0.1)),
                 ),
                 onPressed: () {
-                  _onPaperFilterSelected(paper.id);
-                  _tabController.animateTo(0);
+                  if (paper.websiteUrl.isNotEmpty) {
+                    _openAdBlockBrowser(
+                      url: paper.websiteUrl,
+                      title: paper.name,
+                      paper: paper,
+                    );
+                  } else {
+                    _onPaperFilterSelected(paper.id);
+                    _tabController.animateTo(0);
+                  }
                 },
               );
             }).toList(),
@@ -933,51 +973,150 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF14181E),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Center(
-            child: Text(
-              paper.name.isNotEmpty ? paper.name[0].toUpperCase() : 'N',
-              style: const TextStyle(
-                color: AppColors.mintGreen,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () {
+            _openAdBlockBrowser(
+              url: paper.websiteUrl,
+              title: paper.name,
+              paper: paper,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.mintGreen.withOpacity(0.25),
+                      width: 1,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      paper.name.isNotEmpty ? paper.name[0].toUpperCase() : 'N',
+                      style: const TextStyle(
+                        color: AppColors.mintGreen,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              paper.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: AppColors.mintGreen.withOpacity(0.14),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.shield_rounded,
+                                    size: 10, color: AppColors.mintGreen),
+                                SizedBox(width: 3),
+                                Text(
+                                  'AD-FREE',
+                                  style: TextStyle(
+                                    color: AppColors.mintGreen,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        paper.nameBn.isNotEmpty
+                            ? '${paper.nameBn} • ${paper.domain}'
+                            : paper.domain,
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                // Action: Filter headlines
+                InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () {
+                    _onPaperFilterSelected(paper.id);
+                    _tabController.animateTo(0);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.feed_outlined,
+                            size: 13, color: Colors.white70),
+                        SizedBox(width: 4),
+                        Text(
+                          'খবর',
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                // Favorite toggle
+                IconButton(
+                  iconSize: 20,
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                  padding: EdgeInsets.zero,
+                  icon: Icon(
+                    isFav ? Icons.star_rounded : Icons.star_outline_rounded,
+                    color: isFav ? Colors.amber : Colors.white38,
+                  ),
+                  onPressed: () => _toggleFavorite(paper.id),
+                ),
+              ],
             ),
           ),
         ),
-        title: Text(
-          paper.name,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14.5,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Text(
-          paper.nameBn.isNotEmpty ? '${paper.nameBn} • ${paper.domain}' : paper.domain,
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
-        ),
-        trailing: IconButton(
-          icon: Icon(
-            isFav ? Icons.star_rounded : Icons.star_outline_rounded,
-            color: isFav ? Colors.amber : Colors.white38,
-          ),
-          onPressed: () => _toggleFavorite(paper.id),
-        ),
-        onTap: () {
-          _onPaperFilterSelected(paper.id);
-          _tabController.animateTo(0);
-        },
       ),
     );
   }

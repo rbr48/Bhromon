@@ -6,6 +6,7 @@ import '../../../../core/theme/colors.dart';
 import '../../data/news_tts_service.dart';
 import '../../data/newspaper_service.dart';
 import '../../domain/models/newspaper_models.dart';
+import 'adblock_browser_screen.dart';
 
 enum ReaderTheme { light, sepia, dark }
 
@@ -304,6 +305,21 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                 ),
               ),
             ],
+          ),
+          // AdBlock Browser switcher
+          IconButton(
+            tooltip: 'Open in AdBlock Browser',
+            icon: const Icon(Icons.public_rounded, color: AppColors.mintGreen),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AdBlockBrowserScreen(
+                    initialUrl: widget.articleUrl,
+                    initialTitle: title,
+                  ),
+                ),
+              );
+            },
           ),
           // Share
           IconButton(

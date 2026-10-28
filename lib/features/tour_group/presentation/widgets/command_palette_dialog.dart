@@ -87,7 +87,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
       const CommandPaletteItem(
         title: 'সংবাদ হাব (Newspaper Hub)',
         subtitle: 'বিজ্ঞাপনমুক্ত লাইভ সংবাদপত্র ও খবর',
-        icon: Icons.newspaper_rounded,
+        icon: Icons.article_rounded,
         route: '/newspaper-hub',
         category: 'সংবাদ ও তথ্য',
         color: Colors.lightBlueAccent,
