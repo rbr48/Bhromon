@@ -61,7 +61,7 @@ class VpsQuizService {
   factory VpsQuizService() => _instance;
   VpsQuizService._internal();
 
-  static const String baseUrl = 'https://bhromon.fun/api/quiz';
+  static const String baseUrl = 'https://bhromon.fun/api/quiz/';
   static const String _kQuizCacheBox = 'quiz_cache_box';
 
   final Dio _dio = Dio(BaseOptions(
@@ -95,7 +95,7 @@ class VpsQuizService {
     // 1. Try remote fetch from Bhromon VPS
     try {
       final res = await _dio.get<Map<String, dynamic>>(
-        '/questions',
+        'questions',
         queryParameters: {
           if (destination != null && destination.isNotEmpty)
             'destination': destination.toLowerCase().trim(),
@@ -153,7 +153,7 @@ class VpsQuizService {
   }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
-        '/submit',
+        'submit',
         data: {
           'user_uid': userUid,
           'user_name': userName ?? 'ভ্রমণকারী',
@@ -175,7 +175,7 @@ class VpsQuizService {
   Future<List<Map<String, dynamic>>> fetchLeaderboard({int limit = 20}) async {
     try {
       final res = await _dio.get<Map<String, dynamic>>(
-        '/leaderboard',
+        'leaderboard',
         queryParameters: {'limit': limit},
       );
       final raw = res.data?['leaderboard'] as List? ?? [];
