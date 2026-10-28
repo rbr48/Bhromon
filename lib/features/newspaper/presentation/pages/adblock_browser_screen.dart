@@ -35,8 +35,6 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
   String _pageTitle = '';
   double _progress = 0;
   bool _isLoading = true;
-  bool _canGoBack = false;
-  bool _canGoForward = false;
   bool _isAdBlockEnabled = true;
   bool _isDesktopMode = false;
   int _blockedAdsCount = 0;
@@ -50,8 +48,6 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
     }
     return _currentUrl;
   }
-
-  final TextEditingController _urlInputCtrl = TextEditingController();
 
   // Injected CSS Cosmetic Filtering to strip banners, overlays and interstitials
   static const String _adBlockCss = '''
@@ -129,7 +125,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
         ContentBlocker(
           trigger: ContentBlockerTrigger(
             urlFilter:
-                '.*(doubleclick|googleadservices|googlesyndication|adservice|taboola|outbrain|criteo|adnxs|pubmatic|rubiconproject|casalemedia|scorecardresearch|smartadserver|adroll|popads|adcash|exponential|inmobi|adcolony|chartbeat|mgid|revcontent).*',
+                '.*(doubleclick|googlesyndication|googleadservices|googletagservices|adservice\\.google|connect\\.facebook\\.net|analytics\\.tiktok|adnxs|criteo|pubmatic|rubiconproject|openx|casalemedia|smartadserver|adform|teads|indexww|sovrn|lijit|33across|sharethrough|bidswitch|media\\.net|amazon-adsystem|adroll|taboola|outbrain|revcontent|mgid|plista|zergnet|popads|popcash|propellerads|propellerclick|exoclick|juicyads|adsterra|hilltopads|adcash|clickadu|onclickalgo|onclasrv|scorecardresearch|quantserve|chartbeat|hotjar|mixpanel|crazyegg|clarity\\.ms|mouseflow|luckyorange|demdex|everesttech|crwdcntrl|rlcdn|agkn|adsrvr|tapad|bluekai|onesignal|pushwoosh|izooto|webpushr|pushengage).*',
           ),
           action: ContentBlockerAction(
             type: ContentBlockerActionType.BLOCK,
@@ -143,18 +139,12 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
     _currentUrl = widget.initialUrl;
     _historyStack.add(widget.initialUrl);
     _pageTitle = widget.initialTitle ?? widget.paper?.name ?? 'Web Browser';
-    _urlInputCtrl.text = _currentUrl;
   }
 
   void _pushHistory(String url) {
     if (url.isEmpty || url.startsWith('about:')) return;
     if (_historyStack.isEmpty || _historyStack.last != url) {
       _historyStack.add(url);
-    }
-    if (mounted) {
-      setState(() {
-        _canGoBack = _historyStack.length > 1;
-      });
     }
   }
 
@@ -174,7 +164,6 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
       final prev = _historyStack.last;
       setState(() {
         _currentUrl = prev;
-        _canGoBack = _historyStack.length > 1;
         _isLoading = true;
       });
       final targetToLoad = _effectiveUrl;
@@ -193,7 +182,6 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
   @override
   void dispose() {
     _adCleanupTimer?.cancel();
-    _urlInputCtrl.dispose();
     super.dispose();
   }
 
@@ -210,29 +198,6 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
     } catch (_) {
       return url;
     }
-  }
-
-  void _loadUrl(String input) {
-    var url = input.trim();
-    if (url.isEmpty) return;
-
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      if (url.contains('.') && !url.contains(' ')) {
-        url = 'https://$url';
-      } else {
-        url = 'https://www.google.com/search?q=${Uri.encodeComponent(url)}';
-      }
-    }
-
-    setState(() {
-      _currentUrl = url;
-      _pushHistory(url);
-      _blockedAdsCount = 0;
-      _hasLoadError = false;
-    });
-
-    final targetToLoad = _effectiveUrl;
-    _webViewController?.loadUrl(urlRequest: URLRequest(url: WebUri(targetToLoad)));
   }
 
   void _openInReaderMode() {
@@ -447,8 +412,6 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cleanHost = _cleanDisplayUrl(_currentUrl);
-
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -456,161 +419,128 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
         await _handleBackPress();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF0F1216),
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: AppBar(
-            backgroundColor: const Color(0xFF14181E),
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white, size: 18),
-              onPressed: _handleBackPress,
-            ),
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFF9FAFB),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF111827), size: 24),
+            onPressed: _handleBackPress,
+          ),
           titleSpacing: 0,
-          title: Container(
-            height: 38,
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0B0E12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: _isAdBlockEnabled
-                    ? AppColors.mintGreen.withValues(alpha: 0.35)
-                    : Colors.white12,
-              ),
+          title: Text(
+            widget.paper?.name ?? _pageTitle,
+            style: const TextStyle(
+              color: Color(0xFF111827),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.2,
             ),
-            child: Row(
-              children: [
-                const Icon(Icons.lock_rounded,
-                    color: AppColors.mintGreen, size: 14),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    cleanHost.isNotEmpty ? cleanHost : _currentUrl,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                // Shield Badge Button
-                GestureDetector(
-                  onTap: _showShieldInfoDialog,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: _isAdBlockEnabled
-                          ? AppColors.mintGreen.withValues(alpha: 0.18)
-                          : Colors.white10,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.shield_rounded,
-                          color: _isAdBlockEnabled
-                              ? AppColors.mintGreen
-                              : Colors.white38,
-                          size: 13,
-                        ),
-                        if (_blockedAdsCount > 0) ...[
-                          const SizedBox(width: 3),
-                          Text(
-                            '$_blockedAdsCount',
-                            style: const TextStyle(
-                              color: AppColors.mintGreen,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           actions: [
-            // Prominent Clean Reader Mode button
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.mintGreen,
-                  foregroundColor: const Color(0xFF0F1E14),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  elevation: 0,
-                  visualDensity: VisualDensity.compact,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+            // AssistChip-styled Shield Badge matching Smart Utilities
+            GestureDetector(
+              onTap: _showShieldInfoDialog,
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF111827),
+                    width: 1.2,
                   ),
                 ),
-                icon: const Icon(Icons.chrome_reader_mode_rounded, size: 14),
-                label: const Text(
-                  'Reader',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isAdBlockEnabled ? Icons.shield_rounded : Icons.shield_outlined,
+                      color: const Color(0xFF111827),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      '$_blockedAdsCount',
+                      style: const TextStyle(
+                        color: Color(0xFF111827),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
-                onPressed: _openInReaderMode,
               ),
             ),
-            const SizedBox(width: 2),
-            // Popup Menu with additional options
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded,
-                  color: Colors.white70, size: 20),
-              color: const Color(0xFF1B232D),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+            const SizedBox(width: 4),
+
+            // Reload / Stop Button
+            IconButton(
+              icon: Icon(
+                _isLoading ? Icons.close_rounded : Icons.refresh_rounded,
+                color: const Color(0xFF111827),
+                size: 24,
               ),
+              tooltip: _isLoading ? 'Stop' : 'Reload',
+              onPressed: () {
+                if (_isLoading) {
+                  _webViewController?.stopLoading();
+                } else {
+                  _webViewController?.reload();
+                }
+              },
+            ),
+
+            // 3-dots Overflow Menu
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF111827), size: 24),
+              color: Colors.white,
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               onSelected: (val) {
                 switch (val) {
-                  case 'adblock':
-                    _showShieldInfoDialog();
-                    break;
-                  case 'desktop':
-                    _toggleDesktopMode();
+                  case 'toggle_adblock':
+                    _toggleAdBlock();
                     break;
                   case 'reader':
                     _openInReaderMode();
                     break;
                   case 'share':
                     SharePlus.instance.share(
-                      ShareParams(
-                        text: _currentUrl,
-                        subject: _pageTitle,
-                      ),
+                      ShareParams(text: _currentUrl, subject: _pageTitle),
                     );
                     break;
-                  case 'external':
-                    launchUrl(Uri.parse(_currentUrl),
-                        mode: LaunchMode.externalApplication);
+                  case 'open_browser':
+                    launchUrl(Uri.parse(_currentUrl), mode: LaunchMode.externalApplication);
+                    break;
+                  case 'desktop':
+                    _toggleDesktopMode();
                     break;
                   case 'copy':
                     Clipboard.setData(ClipboardData(text: _currentUrl));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('URL copied to clipboard')),
+                      const SnackBar(content: Text('Link copied to clipboard')),
                     );
                     break;
                 }
               },
               itemBuilder: (context) => [
                 PopupMenuItem(
-                  value: 'adblock',
+                  value: 'toggle_adblock',
                   child: Row(
                     children: [
-                      const Icon(Icons.shield_outlined,
-                          color: AppColors.mintGreen, size: 18),
-                      const SizedBox(width: 10),
+                      Icon(
+                        _isAdBlockEnabled ? Icons.shield_moon_rounded : Icons.shield_rounded,
+                        color: const Color(0xFF111827),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
                       Text(
-                        _isAdBlockEnabled ? 'AdBlock Settings' : 'Enable AdBlock',
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        _isAdBlockEnabled ? 'Allow ads on this site' : 'Block ads on this site',
+                        style: const TextStyle(color: Color(0xFF111827), fontSize: 14),
                       ),
                     ],
                   ),
@@ -619,13 +549,29 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   value: 'reader',
                   child: Row(
                     children: [
-                      Icon(Icons.article_outlined,
-                          color: Colors.white70, size: 18),
-                      SizedBox(width: 10),
-                      Text(
-                        'Distraction-Free Reader',
-                        style: TextStyle(color: Colors.white, fontSize: 13),
-                      ),
+                      Icon(Icons.chrome_reader_mode_rounded, color: Color(0xFF111827), size: 20),
+                      SizedBox(width: 12),
+                      Text('Clean Reader Mode', style: TextStyle(color: Color(0xFF111827), fontSize: 14)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'share',
+                  child: Row(
+                    children: [
+                      Icon(Icons.share_rounded, color: Color(0xFF111827), size: 20),
+                      SizedBox(width: 12),
+                      Text('Share this page', style: TextStyle(color: Color(0xFF111827), fontSize: 14)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'open_browser',
+                  child: Row(
+                    children: [
+                      Icon(Icons.open_in_browser_rounded, color: Color(0xFF111827), size: 20),
+                      SizedBox(width: 12),
+                      Text('Open in browser', style: TextStyle(color: Color(0xFF111827), fontSize: 14)),
                     ],
                   ),
                 ),
@@ -634,29 +580,15 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        _isDesktopMode
-                            ? Icons.phone_android_rounded
-                            : Icons.desktop_windows_rounded,
-                        color: Colors.white70,
-                        size: 18,
+                        _isDesktopMode ? Icons.phone_android_rounded : Icons.desktop_windows_rounded,
+                        color: const Color(0xFF111827),
+                        size: 20,
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Text(
                         _isDesktopMode ? 'Mobile View' : 'Desktop View',
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style: const TextStyle(color: Color(0xFF111827), fontSize: 14),
                       ),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(height: 1),
-                const PopupMenuItem(
-                  value: 'share',
-                  child: Row(
-                    children: [
-                      Icon(Icons.share_outlined, color: Colors.white70, size: 18),
-                      SizedBox(width: 10),
-                      Text('Share Link',
-                          style: TextStyle(color: Colors.white, fontSize: 13)),
                     ],
                   ),
                 ),
@@ -664,239 +596,151 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   value: 'copy',
                   child: Row(
                     children: [
-                      Icon(Icons.copy_rounded, color: Colors.white70, size: 18),
-                      SizedBox(width: 10),
-                      Text('Copy URL',
-                          style: TextStyle(color: Colors.white, fontSize: 13)),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'external',
-                  child: Row(
-                    children: [
-                      Icon(Icons.open_in_browser_rounded,
-                          color: Colors.white70, size: 18),
-                      SizedBox(width: 10),
-                      Text('Open in System Browser',
-                          style: TextStyle(color: Colors.white, fontSize: 13)),
+                      Icon(Icons.copy_rounded, color: Color(0xFF111827), size: 20),
+                      SizedBox(width: 12),
+                      Text('Copy Link', style: TextStyle(color: Color(0xFF111827), fontSize: 14)),
                     ],
                   ),
                 ),
               ],
             ),
+            const SizedBox(width: 4),
           ],
-        ),
-      ),
-      body: Column(
-        children: [
-          // Loading Progress Bar
-          if (_isLoading)
-            LinearProgressIndicator(
-              value: _progress > 0 ? _progress : null,
-              backgroundColor: Colors.transparent,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
-              minHeight: 2.5,
-            ),
-
-          // Main Web Browser View
-          Expanded(
-            child: _hasLoadError
-                ? _buildWebFallback()
-                : Container(
-                    color: Colors.white,
-                    child: InAppWebView(
-                      initialUrlRequest: URLRequest(url: WebUri(_effectiveUrl)),
-                      initialSettings: InAppWebViewSettings(
-                        transparentBackground: false,
-                        javaScriptEnabled: true,
-                        domStorageEnabled: true,
-                        databaseEnabled: true,
-                        supportZoom: true,
-                        builtInZoomControls: true,
-                        displayZoomControls: false,
-                        useWideViewPort: true,
-                        loadWithOverviewMode: true,
-                        contentBlockers:
-                            (!kIsWeb && _isAdBlockEnabled) ? _contentBlockers : null,
-                        userAgent: _isDesktopMode
-                            ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                            : '',
-                      ),
-                      onWebViewCreated: (controller) {
-                        _webViewController = controller;
-                        // JS Handler for blocked ads reporting
-                        controller.addJavaScriptHandler(
-                          handlerName: 'onAdsBlocked',
-                          callback: (args) {
-                            if (args.isNotEmpty && args[0] is int) {
-                              if (mounted) {
-                                setState(() {
-                                  _blockedAdsCount += (args[0] as int);
-                                });
-                              }
-                            }
-                          },
-                        );
-                      },
-                      onLoadStart: (controller, url) {
-                        if (mounted) {
-                          final urlStr = url?.toString() ?? _currentUrl;
-                          String resolved = urlStr;
-                          if (urlStr.contains('/api/news/proxy?url=')) {
-                            final uri = Uri.parse(urlStr);
-                            final orig = uri.queryParameters['url'];
-                            if (orig != null && orig.isNotEmpty) {
-                              resolved = orig;
-                            }
-                          }
-                          setState(() {
-                            _isLoading = true;
-                            _hasLoadError = false;
-                            _currentUrl = resolved;
-                          });
-                          _pushHistory(resolved);
-                        }
-                        if (_isAdBlockEnabled) {
-                          controller.injectCSSCode(source: _adBlockCss);
-                        }
-                      },
-                      onProgressChanged: (controller, progress) {
-                        if (mounted) {
-                          setState(() {
-                            _progress = progress / 100;
-                          });
-                        }
-                        if (_isAdBlockEnabled && progress > 30) {
-                          _triggerAdCleanup();
-                        }
-                      },
-                      onLoadStop: (controller, url) async {
-                        if (mounted) {
-                          bool canBack = false;
-                          bool canFwd = false;
-                          if (!kIsWeb) {
-                            canBack = await controller.canGoBack();
-                            canFwd = await controller.canGoForward();
-                          }
-                          final title = await controller.getTitle();
-                          final urlStr = url?.toString() ?? _currentUrl;
-                          String resolved = urlStr;
-                          if (urlStr.contains('/api/news/proxy?url=')) {
-                            final uri = Uri.parse(urlStr);
-                            final orig = uri.queryParameters['url'];
-                            if (orig != null && orig.isNotEmpty) {
-                              resolved = orig;
-                            }
-                          }
-                          _pushHistory(resolved);
-                          setState(() {
-                            _isLoading = false;
-                            _canGoBack = canBack || _historyStack.length > 1;
-                            _canGoForward = canFwd;
-                            if (title != null && title.isNotEmpty) {
-                              _pageTitle = title;
-                            }
-                            _currentUrl = resolved;
-                          });
-                        }
-                        if (_isAdBlockEnabled) {
-                          _triggerAdCleanup();
-                        }
-                      },
-                      onReceivedError: (controller, request, error) {
-                        if (mounted) {
-                          setState(() {
-                            _isLoading = false;
-                            if (kIsWeb) {
-                              _hasLoadError = true;
-                            }
-                          });
-                        }
-                      },
-                      onReceivedHttpError: (controller, request, errorResponse) {
-                        if (mounted && (errorResponse.statusCode ?? 0) >= 400) {
-                          setState(() {
-                            _isLoading = false;
-                            if (kIsWeb) {
-                              _hasLoadError = true;
-                            }
-                          });
-                        }
-                      },
-                    ),
-                  ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(2),
+            child: _isLoading
+                ? LinearProgressIndicator(
+                    value: _progress > 0 ? _progress : null,
+                    backgroundColor: Colors.transparent,
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
+                    minHeight: 2,
+                  )
+                : const SizedBox(height: 2),
           ),
-
-          // Bottom Browser Navigation Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: const BoxDecoration(
-              color: Color(0xFF14181E),
-              border: Border(top: BorderSide(color: Colors.white10)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
-                  color: _canGoBack ? Colors.white : Colors.white24,
-                  onPressed: _canGoBack ? _handleBackPress : null,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-                  color: _canGoForward ? Colors.white : Colors.white24,
-                  onPressed: _canGoForward
-                      ? () => _webViewController?.goForward()
-                      : null,
-                ),
-                IconButton(
-                  icon: Icon(
-                    _isLoading ? Icons.close_rounded : Icons.refresh_rounded,
-                    color: Colors.white70,
-                    size: 20,
+        ),
+        body: _hasLoadError
+            ? _buildWebFallback()
+            : Container(
+                color: Colors.white,
+                child: InAppWebView(
+                  initialUrlRequest: URLRequest(url: WebUri(_effectiveUrl)),
+                  initialSettings: InAppWebViewSettings(
+                    transparentBackground: false,
+                    javaScriptEnabled: true,
+                    domStorageEnabled: true,
+                    databaseEnabled: true,
+                    supportZoom: true,
+                    builtInZoomControls: true,
+                    displayZoomControls: false,
+                    useWideViewPort: true,
+                    loadWithOverviewMode: true,
+                    mediaPlaybackRequiresUserGesture: true,
+                    supportMultipleWindows: false,
+                    javaScriptCanOpenWindowsAutomatically: false,
+                    contentBlockers:
+                        (!kIsWeb && _isAdBlockEnabled) ? _contentBlockers : null,
+                    userAgent: _isDesktopMode
+                        ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                        : '',
                   ),
-                  onPressed: () {
-                    if (_isLoading) {
-                      _webViewController?.stopLoading();
-                    } else {
-                      _webViewController?.reload();
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.home_outlined,
-                      color: Colors.white70, size: 20),
-                  tooltip: 'Newspaper Front Page',
-                  onPressed: () {
-                    if (widget.paper != null &&
-                        widget.paper!.websiteUrl.isNotEmpty) {
-                      _loadUrl(widget.paper!.websiteUrl);
-                    } else {
-                      _loadUrl(widget.initialUrl);
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.share_outlined,
-                      color: Colors.white70, size: 19),
-                  onPressed: () {
-                    SharePlus.instance.share(
-                      ShareParams(
-                        text: _currentUrl,
-                        subject: _pageTitle,
-                      ),
+                  onWebViewCreated: (controller) {
+                    _webViewController = controller;
+                    // JS Handler for blocked ads reporting
+                    controller.addJavaScriptHandler(
+                      handlerName: 'onAdsBlocked',
+                      callback: (args) {
+                        if (args.isNotEmpty && args[0] is int) {
+                          if (mounted) {
+                            setState(() {
+                              _blockedAdsCount += (args[0] as int);
+                            });
+                          }
+                        }
+                      },
                     );
                   },
+                  onLoadStart: (controller, url) {
+                    if (mounted) {
+                      final urlStr = url?.toString() ?? _currentUrl;
+                      String resolved = urlStr;
+                      if (urlStr.contains('/api/news/proxy?url=')) {
+                        final uri = Uri.parse(urlStr);
+                        final orig = uri.queryParameters['url'];
+                        if (orig != null && orig.isNotEmpty) {
+                          resolved = orig;
+                        }
+                      }
+                      setState(() {
+                        _isLoading = true;
+                        _hasLoadError = false;
+                        _currentUrl = resolved;
+                      });
+                      _pushHistory(resolved);
+                    }
+                    if (_isAdBlockEnabled) {
+                      controller.injectCSSCode(source: _adBlockCss);
+                    }
+                  },
+                  onProgressChanged: (controller, progress) {
+                    if (mounted) {
+                      setState(() {
+                        _progress = progress / 100;
+                      });
+                    }
+                    if (_isAdBlockEnabled && progress > 30) {
+                      _triggerAdCleanup();
+                    }
+                  },
+                  onLoadStop: (controller, url) async {
+                    if (mounted) {
+                      final title = await controller.getTitle();
+                      final urlStr = url?.toString() ?? _currentUrl;
+                      String resolved = urlStr;
+                      if (urlStr.contains('/api/news/proxy?url=')) {
+                        final uri = Uri.parse(urlStr);
+                        final orig = uri.queryParameters['url'];
+                        if (orig != null && orig.isNotEmpty) {
+                          resolved = orig;
+                        }
+                      }
+                      _pushHistory(resolved);
+                      setState(() {
+                        _isLoading = false;
+                        if (title != null && title.isNotEmpty) {
+                          _pageTitle = title;
+                        }
+                        _currentUrl = resolved;
+                      });
+                    }
+                    if (_isAdBlockEnabled) {
+                      _triggerAdCleanup();
+                    }
+                  },
+                  onReceivedError: (controller, request, error) {
+                    if (mounted) {
+                      setState(() {
+                        _isLoading = false;
+                        if (kIsWeb) {
+                          _hasLoadError = true;
+                        }
+                      });
+                    }
+                  },
+                  onReceivedHttpError: (controller, request, errorResponse) {
+                    if (mounted && (errorResponse.statusCode ?? 0) >= 400) {
+                      setState(() {
+                        _isLoading = false;
+                        if (kIsWeb) {
+                          _hasLoadError = true;
+                        }
+                      });
+                    }
+                  },
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildWebFallback() {
     return Center(
