@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms & Conditions | Bhromon — পথ যেখানে গল্প বলে</title>
+    <meta name="description" content="Terms of Service and Conditions for Bhromon. Read our rules regarding group tour ledgers, WebRTC voice lounges, safety features, and open source policies.">
+    <link rel="stylesheet" href="css/style.css?v=1.3.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <style>
+        :root {
+            --toc-width: 280px;
+        }
+
+        .policy-container {
+            display: flex;
+            gap: 2.5rem;
+            max-width: 1300px;
+            margin: 120px auto 5rem;
+            padding: 0 5%;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Sidebar / TOC styling */
+        .policy-sidebar {
+            width: var(--toc-width);
+            flex-shrink: 0;
+            position: sticky;
+            top: 100px;
+            height: fit-content;
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
+            padding: 1.5rem;
+            border-radius: 16px;
+        }
+
+        .policy-sidebar h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1.25rem;
+            color: var(--color-primary-light);
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 0.5rem;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .toc-item a {
+            font-size: 0.88rem;
+            color: var(--color-text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .toc-item a:hover, .toc-item.active a {
+            color: var(--color-text-primary);
+            background: rgba(16, 185, 129, 0.08);
+            padding-left: 12px;
+        }
+
+        .toc-item.active a {
+            border-left: 2px solid var(--color-primary);
+            font-weight: 600;
+        }
+
+        /* Main content area */
+        .policy-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            min-width: 0;
+        }
+
+        .policy-header-card {
+            padding: 2.5rem;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .policy-header-card h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .version-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--color-border);
+            border-radius: 50px;
+            font-size: 0.82rem;
+            color: var(--color-text-secondary);
+            margin-top: 1rem;
+        }
+
+        .policy-section-card {
+            padding: 2.5rem;
+            border-radius: 20px;
+            scroll-margin-top: 100px;
+        }
+
+        .policy-section-card h2 {
+            font-size: 1.6rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 0.75rem;
+        }
+
+        .policy-section-card h2 i {
+            color: var(--color-primary-light);
+            font-size: 1.3rem;
+        }
+
+        .policy-section-card h3 {
+            font-size: 1.15rem;
+            margin: 1.5rem 0 0.75rem;
+            color: var(--color-text-primary);
+        }
+
+        .policy-section-card p {
+            color: var(--color-text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        .policy-section-card ul, .policy-section-card ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--color-text-secondary);
+        }
+
+        .policy-section-card li {
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .policy-section-card strong {
+            color: var(--color-text-primary);
+        }
+
+        /* Alert/Callout box inside policy */
+        .policy-alert {
+            background: rgba(16, 185, 129, 0.04);
+            border-left: 4px solid var(--color-primary);
+            padding: 1.25rem;
+            border-radius: 0 12px 12px 0;
+            margin: 1.5rem 0;
+        }
+
+        .policy-alert-warning {
+            background: rgba(245, 158, 11, 0.04);
+            border-left: 4px solid var(--color-accent);
+        }
+
+        .policy-alert h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .policy-alert-warning h4 {
+            color: var(--color-accent-light);
+        }
+
+        .policy-alert p {
+            margin-bottom: 0;
+            font-size: 0.9rem;
+        }
+
+        /* Mobile adaptation */
+        @media (max-width: 992px) {
+            .policy-container {
+                flex-direction: column;
+                margin-top: 100px;
+            }
+
+            .policy-sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+                max-height: none;
+                margin-bottom: 1.5rem;
+            }
+
+            .toc-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Animated Background Auroras -->
+    <div class="aurora-container">
+        <div class="aurora-blob blob-1"></div>
+        <div class="aurora-blob blob-2"></div>
+        <div class="aurora-blob blob-3"></div>
+    </div>
+    <div class="bg-grid"></div>
+
+    <!-- Sticky Nav -->
+    <nav class="glass scrolled">
+        <a href="index.html" class="brand">
+            <div class="brand-row">
+                <img src="images/logo.png" alt="Bhromon Logo" class="brand-logo-img"> Bhromon
+            </div>
+            <div class="brand-tags">
+                <span class="brand-tag-pill">Community</span>
+                <span class="brand-tag-pill">Trust</span>
+                <span class="brand-tag-pill">FOSS</span>
+            </div>
+        </a>
+        <div class="nav-links">
+            <a href="index.html"><i class="fa-solid fa-arrow-left"></i> Home</a>
+            <a href="privacy-policy.html"><i class="fa-solid fa-shield-halved"></i> Privacy Policy</a>
+            <a href="https://app.bhromon.fun" target="_blank" rel="noopener noreferrer" style="color: var(--color-primary-mint); font-weight: 600;"><i class="fa-solid fa-rocket"></i> Web App</a>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <div class="policy-container">
+        
+        <!-- Table of Contents Sidebar -->
+        <aside class="policy-sidebar glass">
+            <h3>Table of Contents</h3>
+            <ul class="toc-list">
+                <li class="toc-item active"><a href="#acceptance"><i class="fa-solid fa-file-contract"></i> 1. Acceptance of Terms</a></li>
+                <li class="toc-item"><a href="#service-desc"><i class="fa-solid fa-compass"></i> 2. Platform Overview</a></li>
+                <li class="toc-item"><a href="#foss-status"><i class="fa-solid fa-hand-holding-heart"></i> 3. Free & Open Source</a></li>
+                <li class="toc-item"><a href="#governance"><i class="fa-solid fa-users-gear"></i> 4. Tour Governance & Roles</a></li>
+                <li class="toc-item"><a href="#ledger-disclaimer"><i class="fa-solid fa-calculator"></i> 5. Ledger & Financial Terms</a></li>
+                <li class="toc-item"><a href="#safety-disclaimer"><i class="fa-solid fa-shield-virus"></i> 6. Safety & SOS Disclaimer</a></li>
+                <li class="toc-item"><a href="#webrtc-conduct"><i class="fa-solid fa-microphone-lines"></i> 7. Calling & Media Conduct</a></li>
+                <li class="toc-item"><a href="#game-zone"><i class="fa-solid fa-dice"></i> 8. Family Game Zone</a></li>
+                <li class="toc-item"><a href="#intellectual-prop"><i class="fa-solid fa-code"></i> 9. Intellectual Property</a></li>
+                <li class="toc-item"><a href="#liability"><i class="fa-solid fa-scale-unbalanced"></i> 10. Limitation of Liability</a></li>
+                <li class="toc-item"><a href="#governing-law"><i class="fa-solid fa-landmark"></i> 11. Governing Law</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Text Column -->
+        <main class="policy-main">
+            
+            <!-- Document Header -->
+            <div class="policy-header-card glass">
+                <span class="badge-primary">Legal Terms of Use</span>
+                <h1>Terms & Conditions</h1>
+                <p>Welcome to Bhromon. Please read these terms carefully before exploring Bangladesh with our platform.</p>
+                <div class="version-badge">
+                    <i class="fa-solid fa-code-branch"></i> Version 3.0.0 | <i class="fa-solid fa-clock"></i> Last Updated: October 28, 2026
+                </div>
+            </div>
+
+            <!-- Section 1: Acceptance of Terms -->
+            <section id="acceptance" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-file-contract"></i> 1. Acceptance of Terms</h2>
+                <p>These Terms and Conditions ("Terms") constitute a legally binding agreement between you and <strong>Bhromon Technologies Ltd.</strong> ("we," "our," or "us").</p>
+                <p>By downloading our Android application, accessing our Progressive Web App (<a href="https://app.bhromon.fun" target="_blank" rel="noopener noreferrer">https://app.bhromon.fun</a>), or using our website (<a href="https://bhromon.fun">https://bhromon.fun</a>), you acknowledge that you have read, understood, and agree to be bound by these Terms. If you do not agree, you must cease using our platform immediately.</p>
+            </section>
+
+            <!-- Section 2: Platform Overview -->
+            <section id="service-desc" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-compass"></i> 2. Platform Overview</h2>
+                <p>Bhromon provides an all-in-one suite of non-commercial digital travel tools designed to organize journeys, connect friends and families, and safeguard travelers:</p>
+                <ul>
+                    <li><strong>Universal Tour Engine:</strong> Multi-stop itinerary planning across 40+ presets in Bangladesh, route roadmaps, detour factor estimations, and checkpoint progress tracking.</li>
+                    <li><strong>Group Ledger & Settle-Up:</strong> Multi-family expense allocation in integer paisa precision, budget tracking, and cash settlement calculation.</li>
+                    <li><strong>Calling & Voice Lounges:</strong> Real-time WebRTC mesh group voice lounges and 1-on-1 audio/video calls.</li>
+                    <li><strong>Family Safety Hub:</strong> Live SOS emergency sirens, location dispatch to tour members, and verified emergency contact directories.</li>
+                    <li><strong>Smart Newspaper Hub:</strong> Distraction-free reader mode with client-side ad blocking and local text-to-speech audio narration.</li>
+                    <li><strong>Family Game Zone:</strong> Pure-Dart deterministic board and card games (Card 29, Chess AI, Ludo Express, Teen Patti, Carrom).</li>
+                </ul>
+            </section>
+
+            <!-- Section 3: Free & Open Source -->
+            <section id="foss-status" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-hand-holding-heart"></i> 3. Free & Open Source Philosophy</h2>
+                <p>Bhromon is built for the public benefit and operates strictly as free and open-source software (FOSS):</p>
+                <ul>
+                    <li><strong>Zero Fees:</strong> There are no subscription fees, premium paywalls, paid feature gates, or in-app microtransactions.</li>
+                    <li><strong>No Commercialization:</strong> We do not sell user data to advertising networks or third-party behavioral trackers.</li>
+                    <li><strong>Community Stewardship:</strong> Source code is published transparently on GitHub (<a href="https://github.com/rbr48/Bhromon" target="_blank" rel="noopener noreferrer">github.com/rbr48/Bhromon</a>) for collaborative development and auditing.</li>
+                </ul>
+            </section>
+
+            <!-- Section 4: Tour Governance & Roles -->
+            <section id="governance" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-users-gear"></i> 4. Tour Governance & Roles</h2>
+                <p>Access to individual tour spaces is strictly membership-based:</p>
+                <ul>
+                    <li><strong>Role Hierarchy:</strong> Each tour group has an <code>owner</code>, one or more <code>admin</code> members, and regular <code>member</code> accounts.</li>
+                    <li><strong>Owner Rights:</strong> The group owner retains ultimate governance over the tour, including altering invite codes and transferring ownership.</li>
+                    <li><strong>Admin Moderation:</strong> Admins have permission to manage itinerary stops, configure bus and hotel layouts, delete or pin messages, and remove disruptive participants.</li>
+                    <li><strong>Invite Codes:</strong> Entering a tour requires a valid 8-character invite code. Tour organizers have full discretion over whom they invite into their private trip.</li>
+                </ul>
+            </section>
+
+            <!-- Section 5: Ledger & Financial Terms -->
+            <section id="ledger-disclaimer" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-calculator"></i> 5. Ledger & Financial Disclaimers</h2>
+                <div class="policy-alert">
+                    <h4><i class="fa-solid fa-circle-info"></i> Organizational Calculator Only</h4>
+                    <p>The Trip Ledger, Expense Tracker, and Settle-Up matrix are purely informational mathematical tools to help group members tally and understand shared costs.</p>
+                </div>
+                <p><strong>No Financial Processing:</strong> Bhromon is <strong>not</strong> a bank, digital wallet, payment gateway, or money transmitter. We do not hold user balances, collect deposits, process debit/credit cards, or manage escrow. All actual cash exchanges, bKash, Nagad, or bank transfers must occur directly between group members outside the platform. Bhromon accepts no liability for unpaid shares or disputes between tour participants.</p>
+            </section>
+
+            <!-- Section 6: Safety & SOS Disclaimer -->
+            <section id="safety-disclaimer" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-shield-virus"></i> 6. Safety & Emergency SOS Disclaimer</h2>
+                <div class="policy-alert policy-alert-warning">
+                    <h4><i class="fa-solid fa-triangle-exclamation"></i> Not a Replacement for Official Emergency Services</h4>
+                    <p>The Family Safety Hub and SOS siren feature are designed strictly for peer-to-peer alerting among your tour group members. In any life-threatening situation, accident, or crime, you must immediately contact official emergency services (such as Bangladesh Police / Fire Service via <strong>999</strong>).</p>
+                </div>
+                <p><strong>Navigation & Road Accuracy:</strong> Distance estimations, detour factors, route progress, and tide times are computer estimates. Actual conditions may change due to landslides, road construction, weather disruptions, or ferry queues. Always follow local law enforcement guidelines and practice defensive driving.</p>
+            </section>
+
+            <!-- Section 7: Calling & Media Conduct -->
+            <section id="webrtc-conduct" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-microphone-lines"></i> 7. Calling & Media Conduct</h2>
+                <p>When participating in voice lounges, video calls, or sharing reels and photos, you agree to respect your fellow travelers:</p>
+                <ul>
+                    <li><strong>Prohibited Content:</strong> You may not upload or transmit hate speech, nudity, violent content, harassment, copyright-infringing media, or malicious scripts.</li>
+                    <li><strong>Encryption & Privacy:</strong> WebRTC calls are encrypted with DTLS-SRTP and are never recorded on our servers. You may not secretly record other participants without their explicit prior knowledge and consent.</li>
+                    <li><strong>Storage Quotas:</strong> Uploads to our dedicated VPS media server are limited to 10 MB per image and 100 MB per video reel.</li>
+                </ul>
+            </section>
+
+            <!-- Section 8: Family Game Zone -->
+            <section id="game-zone" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-dice"></i> 8. Family Game Zone</h2>
+                <p>The games provided in Bhromon (Card 29, Travel Chess AI, Ludo Express, Teen Patti, Carrom) are programmed entirely in pure Dart for family entertainment during travel:</p>
+                <ul>
+                    <li><strong>Zero Real-Money Gambling:</strong> The games are strictly virtual board simulations without cash prizes, bets, or monetary payouts.</li>
+                    <li><strong>Anti-Gambling Invariant:</strong> Using Bhromon's game engines for real-money wagering or illicit betting is strictly prohibited and constitutes a breach of these Terms.</li>
+                </ul>
+            </section>
+
+            <!-- Section 9: Intellectual Property -->
+            <section id="intellectual-prop" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-code"></i> 9. Intellectual Property</h2>
+                <p>The Bhromon client application is open source and distributed under the terms of its GitHub repository license. The Bhromon name, logos, and custom UI design components remain the exclusive trademarks of <strong>Bhromon Technologies Ltd.</strong></p>
+                <p>You retain full copyright ownership of all personal photos, travel logs, and reviews you share on the platform.</p>
+            </section>
+
+            <!-- Section 10: Limitation of Liability -->
+            <section id="liability" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-scale-unbalanced"></i> 10. Limitation of Liability</h2>
+                <p>To the fullest extent permitted under applicable law, Bhromon Technologies Ltd. and its contributors provide the platform on an "AS IS" and "AS AVAILABLE" basis without warranties of any kind.</p>
+                <p>We shall not be liable for any personal injury, vehicular accidents, luggage loss, delays, or financial disagreements occurring during physical travel or expeditions organized using our tools.</p>
+            </section>
+
+            <!-- Section 11: Governing Law -->
+            <section id="governing-law" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-landmark"></i> 11. Governing Law & Jurisdiction</h2>
+                <p>These Terms shall be governed by, and construed in accordance with, the laws of the <strong>People's Republic of Bangladesh</strong>. Any disputes arising out of these Terms shall be resolved in the competent courts of Dhaka, Bangladesh.</p>
+                <p>For questions or formal legal notices, contact us at <a href="mailto:info@bhromon.fun">info@bhromon.fun</a> or <a href="mailto:mybhromon@gmail.com">mybhromon@gmail.com</a>.</p>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-col">
+                <h4><img src="images/logo.png" alt="Bhromon Logo"> Bhromon</h4>
+                <p style="color: var(--color-text-secondary); max-width: 300px; margin-bottom: 1rem; font-size: 0.9rem;">
+                    পথ যেখানে গল্প বলে — বাংলাদেশের সর্বাধুনিক অল-ইন-ওয়ান ট্রাভেল প্ল্যাটফর্ম।
+                </p>
+            </div>
+            <div class="footer-col">
+                <h4>Legal & Policies</h4>
+                <a href="privacy-policy.html">Privacy Policy</a>
+                <a href="terms-and-conditions.html" style="color: var(--color-primary-mint);">Terms & Conditions</a>
+                <a href="index.html#features">Features</a>
+                <a href="index.html#faq">FAQ</a>
+            </div>
+            <div class="footer-col">
+                <h4>Contact Us</h4>
+                <a href="mailto:info@bhromon.fun"><i class="fa-solid fa-envelope"></i> info@bhromon.fun</a>
+                <a href="mailto:mybhromon@gmail.com"><i class="fa-solid fa-circle-info"></i> mybhromon@gmail.com</a>
+                <a href="https://wa.me/8801762033445" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i> 01762033445</a>
+                <a href="https://github.com/rbr48/Bhromon" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github"></i> GitHub</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 Bhromon Technologies Ltd. All rights reserved. Free & Open Source Platform for Bangladesh.
+        </div>
+    </footer>
+
+    <!-- JavaScript to handle active class in Table of Contents -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('section[id]');
+            const tocItems = document.querySelectorAll('.toc-item');
+
+            window.addEventListener('scroll', () => {
+                let currentId = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (window.pageYOffset >= (sectionTop - 150)) {
+                        currentId = section.getAttribute('id');
+                    }
+                });
+
+                if (currentId) {
+                    tocItems.forEach(item => {
+                        item.classList.remove('active');
+                        const link = item.querySelector('a');
+                        if (link && link.getAttribute('href') === `#${currentId}`) {
+                            item.classList.add('active');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

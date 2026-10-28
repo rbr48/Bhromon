@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy | Bhromon — পথ যেখানে গল্প বলে</title>
-    <meta name="description" content="Privacy Policy for Bhromon App and website. Read about how we collect, use, and protect your location and personal data.">
-    <link rel="stylesheet" href="css/style.css?v=1.2.3">
+    <meta name="description" content="Privacy Policy for Bhromon App and website. Read about how we collect, use, and protect your location, media, communications, and personal data.">
+    <link rel="stylesheet" href="css/style.css?v=1.3.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" type="image/png" href="images/logo.png">
     <style>
@@ -60,6 +60,7 @@
             padding: 6px 8px;
             border-radius: 6px;
             transition: all 0.2s ease;
+            text-decoration: none;
         }
 
         .toc-item a:hover, .toc-item.active a {
@@ -79,7 +80,7 @@
             display: flex;
             flex-direction: column;
             gap: 2rem;
-            min-width: 0; /* Prevents overflow in flex items */
+            min-width: 0;
         }
 
         .policy-header-card {
@@ -97,12 +98,12 @@
         .version-badge {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
+            gap: 8px;
+            padding: 6px 14px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--color-border);
             border-radius: 50px;
-            font-size: 0.8rem;
+            font-size: 0.82rem;
             color: var(--color-text-secondary);
             margin-top: 1rem;
         }
@@ -150,6 +151,7 @@
         .policy-section-card li {
             margin-bottom: 0.5rem;
             font-size: 0.95rem;
+            line-height: 1.6;
         }
 
         .policy-section-card strong {
@@ -265,12 +267,14 @@
             </div>
             <div class="brand-tags">
                 <span class="brand-tag-pill">Community</span>
-                <span class="brand-tag-pill">Trust</span>
-                <span class="brand-tag-pill">Explore</span>
+                <span class="brand-tag-pill">Privacy-First</span>
+                <span class="brand-tag-pill">FOSS</span>
             </div>
         </a>
         <div class="nav-links">
-            <a href="index.html"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+            <a href="index.html"><i class="fa-solid fa-arrow-left"></i> Home</a>
+            <a href="terms-and-conditions.html"><i class="fa-solid fa-scale-balanced"></i> Terms & Conditions</a>
+            <a href="https://app.bhromon.fun" target="_blank" rel="noopener noreferrer" style="color: var(--color-primary-mint); font-weight: 600;"><i class="fa-solid fa-rocket"></i> Web App</a>
         </div>
     </nav>
 
@@ -283,15 +287,15 @@
             <ul class="toc-list">
                 <li class="toc-item active"><a href="#introduction"><i class="fa-solid fa-circle-info"></i> 1. Introduction</a></li>
                 <li class="toc-item"><a href="#info-collect"><i class="fa-solid fa-database"></i> 2. Information We Collect</a></li>
-                <li class="toc-item"><a href="#location-usage"><i class="fa-solid fa-location-crosshairs"></i> 3. Location Data Details</a></li>
-                <li class="toc-item"><a href="#info-use"><i class="fa-solid fa-gears"></i> 4. How We Use Information</a></li>
-                <li class="toc-item"><a href="#third-party"><i class="fa-solid fa-network-wired"></i> 5. Third-Party Services</a></li>
-                <li class="toc-item"><a href="#data-security"><i class="fa-solid fa-shield-halved"></i> 6. Data Security Measures</a></li>
-                <li class="toc-item"><a href="#retention-deletion"><i class="fa-solid fa-trash-can"></i> 7. Retention & Deletion</a></li>
-                <li class="toc-item"><a href="#children"><i class="fa-solid fa-child-reaching"></i> 8. Children's Privacy</a></li>
-                <li class="toc-item"><a href="#user-rights"><i class="fa-solid fa-user-shield"></i> 9. Your Rights</a></li>
-                <li class="toc-item"><a href="#cookies"><i class="fa-solid fa-cookie-bite"></i> 10. Cookies & Tracking</a></li>
-                <li class="toc-item"><a href="#contact"><i class="fa-solid fa-envelope"></i> 11. Contact Info</a></li>
+                <li class="toc-item"><a href="#location-safety"><i class="fa-solid fa-location-crosshairs"></i> 3. Location & Safety SOS</a></li>
+                <li class="toc-item"><a href="#photo-media"><i class="fa-solid fa-photo-film"></i> 4. Photos, Media & Storage</a></li>
+                <li class="toc-item"><a href="#calling-voice"><i class="fa-solid fa-headset"></i> 5. Real-Time Voice & Video</a></li>
+                <li class="toc-item"><a href="#newspaper-adblock"><i class="fa-solid fa-newspaper"></i> 6. News Hub & Zero-Tracking</a></li>
+                <li class="toc-item"><a href="#info-use"><i class="fa-solid fa-gears"></i> 7. How We Use Information</a></li>
+                <li class="toc-item"><a href="#third-party"><i class="fa-solid fa-server"></i> 8. Dedicated VPS & Cloud</a></li>
+                <li class="toc-item"><a href="#data-security"><i class="fa-solid fa-shield-halved"></i> 9. Data Security</a></li>
+                <li class="toc-item"><a href="#retention-deletion"><i class="fa-solid fa-trash-can"></i> 10. Deletion & Rights</a></li>
+                <li class="toc-item"><a href="#contact"><i class="fa-solid fa-envelope"></i> 11. Contact Details</a></li>
             </ul>
         </aside>
 
@@ -300,172 +304,180 @@
             
             <!-- Document Header -->
             <div class="policy-header-card glass">
-                <span class="badge-primary">Legal Document</span>
+                <span class="badge-primary">Legal & Privacy Statement</span>
                 <h1>Privacy Policy</h1>
-                <p>Learn how Bhromon processes, secures, and respects your personal and travel logs data.</p>
+                <p>Discover how Bhromon protects your privacy, secures your travel journals, and upholds zero-advertiser, zero-surveillance standards.</p>
                 <div class="version-badge">
-                    <i class="fa-solid fa-code-branch"></i> Version 2.0.1 | <i class="fa-solid fa-clock"></i> Last Updated: June 23, 2026
+                    <i class="fa-solid fa-code-branch"></i> Version 3.0.0 | <i class="fa-solid fa-clock"></i> Last Updated: October 28, 2026
                 </div>
             </div>
 
             <!-- Section 1: Introduction -->
             <section id="introduction" class="policy-section-card glass">
                 <h2><i class="fa-solid fa-circle-info"></i> 1. Introduction</h2>
-                <p>Welcome to <strong>Bhromon</strong> (the "App"), a community-based travel companion and logging journal. Bhromon is owned and operated by <strong>Izhaan Intellect</strong> ("we," "our," or "us").</p>
-                <p>We are dedicated to safeguarding the privacy and integrity of your personal information and travel journals. This Privacy Policy is designed to inform you about how we collect, store, secure, use, and share your data when you access our mobile application, visit our website (<strong>https://bhromon.fun</strong>), or utilize our web portal (<strong>https://app.bhromon.fun</strong>).</p>
-                <p>By installing, signing up for, or using Bhromon, you agree to the collection, storage, and processing of your details as described in this Policy. If you do not agree, please do not use our services.</p>
+                <p>Welcome to <strong>Bhromon</strong> (the "Platform" or "App"). Bhromon is an all-in-one universal tour companion, trip ledger, and community travel hub owned and operated by <strong>Bhromon Technologies Ltd.</strong> ("we," "our," or "us").</p>
+                <p>We believe travel tools should respect human autonomy and confidentiality. <strong>Bhromon is completely free and open source: we do not sell your data, we do not partner with data brokers, and we never embed behavioral ad-trackers in our applications.</strong></p>
+                <p>This Privacy Policy explains how we collect, use, and protect your information across our native Android application, Progressive Web Application (<a href="https://app.bhromon.fun" target="_blank" rel="noopener noreferrer">https://app.bhromon.fun</a>), and website (<a href="https://bhromon.fun">https://bhromon.fun</a>).</p>
             </section>
 
             <!-- Section 2: Information We Collect -->
             <section id="info-collect" class="policy-section-card glass">
                 <h2><i class="fa-solid fa-database"></i> 2. Information We Collect</h2>
-                <p>We collect data to provide, optimize, and secure our travel directory. This includes information you directly provide, data recorded automatically by the device, and permissions required for core offline features.</p>
+                <p>We collect only the minimum necessary data to provide our travel planning, ledger accounting, and safety tools:</p>
                 
-                <h3>A. Information You Provide</h3>
+                <h3>A. Account & Authentication Data</h3>
                 <ul>
-                    <li><strong>Account & Registration Profile:</strong> When you create an account, we collect your email address, display name, profile photo, and password credentials.</li>
-                    <li><strong>Social Authentication:</strong> If you register using Google Sign-In, we obtain your email, name, and profile photo from Google as permitted by your privacy configurations.</li>
-                    <li><strong>Contributions:</strong> Any travel logs, ratings, destination coordinates, safety reports, tips, and comments you publish to the community.</li>
+                    <li><strong>Account Credentials:</strong> When you sign up or log in via Firebase Auth (Email/Password or Google Sign-In), we store your email address, display name, and avatar URL.</li>
+                    <li><strong>Tour Memberships:</strong> Your membership roles (owner, admin, or member) and family slot settings are saved to organize vehicle seats, room allotments, and expense splits.</li>
                 </ul>
 
-                <h3>B. Device Permissions & Automatically Collected Data</h3>
-                <p>To enable the App's offline-first capabilities, we request specific hardware permissions. These are never accessed without your explicit consent:</p>
-                
+                <h3>B. Trip Ledger & Organization Data</h3>
+                <ul>
+                    <li><strong>Ledger & Expenses:</strong> Shared costs, split modes (family-weighted, equal, exact paisa, or shares), and settlement records entered by you or your group organizers.</li>
+                    <li><strong>Logistics Maps:</strong> Bus seat selections, cabin berths, and hotel room assignments chosen for your tour.</li>
+                </ul>
+
                 <div class="info-table-wrapper">
                     <table class="info-table">
                         <thead>
                             <tr>
-                                <th>Permission Type</th>
-                                <th>Why it is Required</th>
-                                <th>When it is Accessed</th>
+                                <th>Feature / Permission</th>
+                                <th>Purpose</th>
+                                <th>Storage / Processing</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td><strong>Location (GPS)</strong></td>
-                                <td>Show current location on map, fetch closest Location Pins, and calculate movement speed.</td>
-                                <td>Foreground when app is open; background only when a Live Trip is active.</td>
+                                <td><strong>GPS Location</strong></td>
+                                <td>Waypoint progress, ETA estimations, and Emergency SOS siren dispatch.</td>
+                                <td>Processed in foreground; transient broadcast only when SOS siren is activated.</td>
                             </tr>
                             <tr>
-                                <td><strong>Storage & Photos</strong></td>
-                                <td>Allow selection of images and videos to attach to travel logs and drafts.</td>
-                                <td>When editing logs or attaching media.</td>
+                                <td><strong>Photo Picker</strong></td>
+                                <td>Sharing trip memories, reels, and chat attachments.</td>
+                                <td>Zero broad storage permissions. Uses native system photo picker contract.</td>
                             </tr>
                             <tr>
-                                <td><strong>Microphone (Audio)</strong></td>
-                                <td>Create "Audio Note Blocks" (voice entries) inside the TripLog editor.</td>
-                                <td>When recording voice journals.</td>
+                                <td><strong>Microphone & Camera</strong></td>
+                                <td>WebRTC voice lounges and 1-on-1 audio/video calls with tour members.</td>
+                                <td>Active solely during active calls. Zero audio/video recording on servers.</td>
                             </tr>
                             <tr>
-                                <td><strong>Network State</strong></td>
-                                <td>Monitor active connection to trigger SyncManager to upload offline outbox.</td>
-                                <td>Continuously in the background.</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Device Integrity</strong></td>
-                                <td>Evaluate system safety parameters (jailbreak/root checks) to prevent exploit risks.</td>
-                                <td>During application startup.</td>
+                                <td><strong>Offline SQLite (Drift)</strong></td>
+                                <td>Local storage of itineraries, checklists, and expenses without internet.</td>
+                                <td>Encrypted local sandbox on device; syncs to Firestore upon reconnection.</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Section 3: Location Data Details -->
-            <section id="location-usage" class="policy-section-card glass">
-                <h2><i class="fa-solid fa-location-crosshairs"></i> 3. Location Data Details</h2>
-                <p>Because Bhromon is a navigation and travel logging application, location data is core to our system. We treat your location with strict privacy standards.</p>
+            <!-- Section 3: Location & Safety SOS -->
+            <section id="location-safety" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-location-crosshairs"></i> 3. Location Data & Safety SOS</h2>
+                <p>Because Bhromon is built for travel across Bangladesh's diverse highways, hill tracts, and river ways, location services are used carefully and transparently:</p>
                 
                 <div class="policy-alert">
-                    <h4><i class="fa-solid fa-circle-check"></i> Foreground Location Tracking</h4>
-                    <p>We access your fine (precise) and coarse (network) location to center the map, show your direction, locate nearby tourist attractions, and fetch community proximity pins.</p>
+                    <h4><i class="fa-solid fa-circle-check"></i> Foreground Navigation & Checkpoint Verification</h4>
+                    <p>While the app is open, your location coordinates may be used to verify arrival at road checkpoints (ferries, food stops, army checkposts) and calculate live distance to your next tour destination.</p>
                 </div>
 
                 <div class="policy-alert policy-alert-warning">
-                    <h4><i class="fa-solid fa-circle-exclamation"></i> Background Location Tracking (Speed Profiles)</h4>
-                    <p>To support the "Live Route Sharing" feature and adapt GPS tracking parameters to conserve battery, Bhromon accesses background location. This background stream translates coordinate intervals into travel speeds to adjust tracking granularity (e.g., lower frequency when resting, higher accuracy when moving rapidly). <strong>This tracking operates only when you explicitly start a Live Trip and terminates immediately when you tap "End Trip".</strong></p>
+                    <h4><i class="fa-solid fa-triangle-exclamation"></i> Family Safety Hub & Live SOS Siren</h4>
+                    <p>When an emergency SOS alert is sounded from the Family Safety Hub, your name and latest available GPS coordinates are dispatched to your tour group's active members and broadcast via high-priority Firebase push notifications. <strong>SOS alerts automatically resolve and expire after 6 hours.</strong></p>
                 </div>
 
-                <p><strong>Consent and Controls:</strong> You can grant or revoke location permissions at any time through your operating system settings. If revoked, mapping and navigation functionalities will be unavailable.</p>
+                <p><strong>Opt-In Control:</strong> Location access is entirely voluntary. You can revoke location permissions at any time in device settings.</p>
             </section>
 
-            <!-- Section 4: How We Use Your Information -->
+            <!-- Section 4: Photos, Media & Storage -->
+            <section id="photo-media" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-photo-film"></i> 4. Photos, Media & Dedicated VPS Storage</h2>
+                <p>We respect Google Play's modern photo and video permissions policy (Target SDK 36):</p>
+                <ul>
+                    <li><strong>No Broad Storage Permissions:</strong> We do <em>not</em> ask for or require <code>READ_MEDIA_IMAGES</code> or <code>READ_MEDIA_VIDEO</code>. Media selection is handled entirely through the privacy-preserving native Android Photo Picker.</li>
+                    <li><strong>Dedicated Self-Hosted VPS Media Server:</strong> To protect media from commercial third-party scanning, uploaded trip photos and vertical video reels are stored on our dedicated VPS container (<code>https://bhromon.fun/api/media/</code>) located in a high-security data center.</li>
+                    <li><strong>Token-Gated Authentication:</strong> Every media upload, stream, and deletion request is authenticated against your active Firebase ID token, guaranteeing only authorized tour members can access private trip reels.</li>
+                    <li><strong>Automated Orphan Purge:</strong> Uploaded media drafts that are discarded or unlinked after 30 minutes are automatically deleted from server disks to prevent digital clutter.</li>
+                </ul>
+            </section>
+
+            <!-- Section 5: Real-Time Voice & Video Calling -->
+            <section id="calling-voice" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-headset"></i> 5. Real-Time Voice & Video Calling</h2>
+                <p>Bhromon provides Discord-style drop-in voice lounges and 1-on-1 audio/video calls for tour groups:</p>
+                <ul>
+                    <li><strong>End-to-End Encryption (DTLS-SRTP):</strong> Real-time voice and video streams are transmitted directly peer-to-peer or relayed through our Coturn STUN/TURN server using industry-standard DTLS-SRTP encryption.</li>
+                    <li><strong>Zero Voice Recording:</strong> We do <strong>not</strong> record, analyze, tap, or store audio or video streams. Once a call or voice lounge session ends, the audio stream ceases completely.</li>
+                    <li><strong>Hardware Permissions:</strong> Microphone and camera hardware are accessed strictly with your explicit prompt and only while an active call or voice session is connected.</li>
+                </ul>
+            </section>
+
+            <!-- Section 6: News Hub & Zero-Tracking Browser -->
+            <section id="newspaper-adblock" class="policy-section-card glass">
+                <h2><i class="fa-solid fa-newspaper"></i> 6. News Hub & Zero-Tracking Browser</h2>
+                <p>Our in-app Smart Newspaper reader provides clean, distraction-free reading of leading Bangladesh newspapers:</p>
+                <ul>
+                    <li><strong>Client-Side AdBlock:</strong> The browser blocks invasive tracking scripts, popups, and advertisement domains directly on the device using comprehensive EasyList filters.</li>
+                    <li><strong>Zero Browsing History Collection:</strong> We never log, profile, sell, or transmit the articles you read, topics you search, or websites you visit.</li>
+                    <li><strong>Offline Text-to-Speech (TTS):</strong> Bengali and English speech synthesis for article listening executes on-device without sending article text to external speech harvesting APIs.</li>
+                </ul>
+            </section>
+
+            <!-- Section 7: How We Use Information -->
             <section id="info-use" class="policy-section-card glass">
-                <h2><i class="fa-solid fa-gears"></i> 4. How We Use Information</h2>
-                <p>We use the data we collect for the following operational purposes:</p>
+                <h2><i class="fa-solid fa-gears"></i> 7. How We Use Information</h2>
+                <p>We use information exclusively to maintain and power our application services:</p>
                 <ul>
-                    <li><strong>Offline Directory Maintenance:</strong> Local caches of your drafts, logs, and point-of-interest data are saved securely on your device in an SQLite database (powered by Drift) for offline access.</li>
-                    <li><strong>SyncManager Coordination:</strong> Synced outbox items are queued locally and automatically published to our server database when a connection is established.</li>
-                    <li><strong>Trust Index Calculation:</strong> Calculating gamified "Explorer Scores" based on community contributions, verified visits, and positive user interactions.</li>
-                    <li><strong>Communication & Alerts:</strong> Sending system update warnings, notifications about your contributions, or live chat alerts from other travelers.</li>
-                    <li><strong>Security Auditing:</strong> Verifying local device signatures to ensure database encryption safety.</li>
+                    <li><strong>Tour Coordination:</strong> Calculating itinerary milestones, dynamic routes, and highway checkpoints.</li>
+                    <li><strong>Group Ledger Accounting:</strong> Computing multi-family expenses down to integer paisa, maintaining budget balances, and generating settlement matrices.</li>
+                    <li><strong>Offline Relational Caches:</strong> Caching checklists, tour members, and seat mappings in Drift SQLite and encrypted Hive storage for offline hill tracts access.</li>
+                    <li><strong>Safety Notifications:</strong> Dispatching urgent SOS alerts and channel mentions through Firebase Cloud Messaging (FCM).</li>
                 </ul>
             </section>
 
-            <!-- Section 5: Third-Party Services -->
+            <!-- Section 8: Dedicated VPS & Cloud Infrastructure -->
             <section id="third-party" class="policy-section-card glass">
-                <h2><i class="fa-solid fa-network-wired"></i> 5. Third-Party Services</h2>
-                <p>We integrate several trusted third-party APIs and SDKs to support map rendering, cloud storage, routing, and media utilities:</p>
+                <h2><i class="fa-solid fa-server"></i> 8. Dedicated VPS & Cloud Infrastructure</h2>
+                <p>Our infrastructure is architected for maximum user sovereignty and performance:</p>
                 <ul>
-                    <li><strong>Google Firebase (Auth, Firestore, Cloud Messaging, Storage):</strong> Houses active cloud profiles, public posts, chat channels, and sync pipelines. Stored on secure Google Cloud servers (Asia-South1 region). Refer to Google's privacy policies.</li>
-                    <li><strong>OpenStreetMap (OSM) Tiles:</strong> Used to render map grids and topographic visuals. No personally identifying profiles are sent to OSM.</li>
-                    <li><strong>Open-Meteo & OSRM APIs:</strong> Provide real-time local weather forecasts and routing routes. Location data sent is transient and never logged by these services.</li>
-                    <li><strong>YouTube API:</strong> Used to render verified video guides linked to destinations.</li>
+                    <li><strong>Hostinger VPS (Self-Hosted Media & API):</strong> Hosts our Dockerized media microservice and Coturn WebRTC signaling on an isolated Linux VPS (<code>148.135.137.245</code>), protected by Cloudflare SSL.</li>
+                    <li><strong>Google Firebase & Firestore:</strong> Manages user authentication and real-time database synchronization under strict Firestore Security Rules.</li>
+                    <li><strong>OpenStreetMap (OSM):</strong> Supplies public geographic map tiles. No personal identity is ever shared with OSM.</li>
                 </ul>
             </section>
 
-            <!-- Section 6: Data Security Measures -->
+            <!-- Section 9: Data Security Measures -->
             <section id="data-security" class="policy-section-card glass">
-                <h2><i class="fa-solid fa-shield-halved"></i> 6. Data Security Measures</h2>
-                <p>Your security is our priority. We employ industry-standard protocols to safeguard your travel logs and profiles:</p>
+                <h2><i class="fa-solid fa-shield-halved"></i> 9. Data Security Measures</h2>
+                <p>Security is baked into the foundation of Bhromon:</p>
                 <ul>
-                    <li><strong>SSL Pinning:</strong> All network requests made by the mobile client go through secure HTTPS calls validated by SSL Pinning to prevent man-in-the-middle (MITM) interceptions.</li>
-                    <li><strong>Local Database Encryption:</strong> On-device SQLite databases containing confidential vault data are encrypted using secure storage hardware key wrappers.</li>
-                    <li><strong>Firestore Access Control:</strong> Strict backend rules prevent users from modifying or accessing private chats and journals belonging to other accounts.</li>
+                    <li><strong>Transport Layer Security:</strong> All web and API traffic is forced over HTTPS with modern TLS 1.3 encryption.</li>
+                    <li><strong>Database Access Control:</strong> Firestore security rules enforce that tour feeds, chats, and ledger expenses can be read or written exclusively by active members of that specific tour group.</li>
+                    <li><strong>Local Storage Sandboxing:</strong> On-device SQLite databases and Hive preference boxes are stored in the application's secure private sandbox.</li>
                 </ul>
             </section>
 
-            <!-- Section 7: Retention & Deletion -->
+            <!-- Section 10: Retention, Deletion & Your Rights -->
             <section id="retention-deletion" class="policy-section-card glass">
-                <h2><i class="fa-solid fa-trash-can"></i> 7. Retention & Deletion</h2>
-                <p>We retain your profile data as long as your account exists. You have complete control over your content lifecycle.</p>
-                <p><strong>Account Deletion:</strong> You can trigger a permanent account deletion request from the Settings section of the App. Upon deletion, your profile metadata, personal info, private chats, and drafts are permanently deleted from our servers.</p>
-                <p><strong>Community Contribution Preservation:</strong> To keep our travel directory intact, public travel logs, coordinates, and pins you voluntarily contributed are anonymized (owner field set to "Anonymous Explorer") rather than deleted, unless you explicitly contact us to remove them.</p>
-            </section>
-
-            <!-- Section 8: Children's Privacy -->
-            <section id="children" class="policy-section-card glass">
-                <h2><i class="fa-solid fa-child-reaching"></i> 8. Children's Privacy</h2>
-                <p>Bhromon is not intended for use by individuals under the age of <strong>13</strong>. We do not knowingly collect personal profiles or background location logs from children. If we discover that a user under 13 has registered, we will delete their profile immediately from our cloud directories.</p>
-            </section>
-
-            <!-- Section 9: Your Rights -->
-            <section id="user-rights" class="policy-section-card glass">
-                <h2><i class="fa-solid fa-user-shield"></i> 9. Your Rights</h2>
-                <p>Depending on your location, you may have specific data protection rights, including GDPR and CCPA benefits:</p>
+                <h2><i class="fa-solid fa-trash-can"></i> 10. Data Retention & Permanent Deletion</h2>
+                <p>You retain full sovereignty over your data at all times:</p>
                 <ul>
-                    <li><strong>Right of Access:</strong> Request a copy of all personal data we store about you.</li>
-                    <li><strong>Right of Correction:</strong> Update outdated profile names or incorrect information.</li>
-                    <li><strong>Right to Object/Restrict:</strong> Opt-out of non-essential tracking or background logs.</li>
-                    <li><strong>Right to Deletion:</strong> Erase your user profile and private files completely from our cloud database.</li>
+                    <li><strong>Permanent Account Deletion:</strong> You can delete your account and personal profile permanently at any time through the in-app settings or by contacting our team.</li>
+                    <li><strong>Media Deletion:</strong> Deleting a photo or video from a tour post or reel immediately purges the corresponding file from our VPS media storage.</li>
+                    <li><strong>Ledger Export (Data Portability):</strong> Tour admins and members can export the entire tour ledger to UTF-8 CSV at any point.</li>
                 </ul>
-                <p>To exercise any of these rights, please email us at <strong>mybhromon@gmail.com</strong>.</p>
             </section>
 
-            <!-- Section 10: Cookies & Tracking -->
-            <section id="cookies" class="policy-section-card glass">
-                <h2><i class="fa-solid fa-cookie-bite"></i> 10. Cookies & Tracking</h2>
-                <p>Our website (https://bhromon.fun) uses basic cookies and session identifiers to save your language selection (English/Bengali) and remember if you have dismissed our waitlist popups. We do not use advertising tracking cookies or sell your browsing history to advertisers.</p>
-            </section>
-
-            <!-- Section 11: Contact Info -->
+            <!-- Section 11: Contact Details -->
             <section id="contact" class="policy-section-card glass">
-                <h2><i class="fa-solid fa-envelope"></i> 11. Contact Info</h2>
-                <p>If you have any questions, concerns, or requests regarding this Privacy Policy, please reach out to us:</p>
-                <p><strong>Developer:</strong> Izhaan Intellect</p>
-                <p><strong>Support Email:</strong> <a href="mailto:mybhromon@gmail.com">mybhromon@gmail.com</a></p>
-                <p><strong>Website:</strong> <a href="https://bhromon.fun">https://bhromon.fun</a></p>
-                <p><strong>Web Portal:</strong> <a href="https://app.bhromon.fun">https://app.bhromon.fun</a></p>
+                <h2><i class="fa-solid fa-envelope"></i> 11. Contact Details</h2>
+                <p>If you have any questions or data requests regarding this Privacy Policy, our team is always ready to assist:</p>
+                <p><strong>Operating Entity:</strong> Bhromon Technologies Ltd.</p>
+                <p><strong>Official Email:</strong> <a href="mailto:info@bhromon.fun">info@bhromon.fun</a> / <a href="mailto:mybhromon@gmail.com">mybhromon@gmail.com</a></p>
+                <p><strong>WhatsApp Support:</strong> <a href="https://wa.me/8801762033445" target="_blank" rel="noopener noreferrer">+880 1762 033445</a></p>
+                <p><strong>Official Website:</strong> <a href="https://bhromon.fun">https://bhromon.fun</a></p>
+                <p><strong>Open Source Repository:</strong> <a href="https://github.com/rbr48/Bhromon" target="_blank" rel="noopener noreferrer">github.com/rbr48/Bhromon</a></p>
             </section>
 
         </main>
@@ -477,23 +489,26 @@
             <div class="footer-col">
                 <h4><img src="images/logo.png" alt="Bhromon Logo"> Bhromon</h4>
                 <p style="color: var(--color-text-secondary); max-width: 300px; margin-bottom: 1rem; font-size: 0.9rem;">
-                    পথ যেখানে গল্প বলে।
+                    পথ যেখানে গল্প বলে — বাংলাদেশের সর্বাধুনিক অল-ইন-ওয়ান ট্রাভেল প্ল্যাটফর্ম।
                 </p>
             </div>
             <div class="footer-col">
-                <h4>Explore</h4>
+                <h4>Legal & Policies</h4>
+                <a href="privacy-policy.html" style="color: var(--color-primary-mint);">Privacy Policy</a>
+                <a href="terms-and-conditions.html">Terms & Conditions</a>
                 <a href="index.html#features">Features</a>
-                <a href="index.html#interactive-demo">Live Map</a>
                 <a href="index.html#faq">FAQ</a>
             </div>
             <div class="footer-col">
                 <h4>Contact Us</h4>
-                <a href="mailto:mybhromon@gmail.com"><i class="fa-solid fa-envelope"></i> mybhromon@gmail.com</a>
+                <a href="mailto:info@bhromon.fun"><i class="fa-solid fa-envelope"></i> info@bhromon.fun</a>
+                <a href="mailto:mybhromon@gmail.com"><i class="fa-solid fa-circle-info"></i> mybhromon@gmail.com</a>
                 <a href="https://wa.me/8801762033445" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i> 01762033445</a>
+                <a href="https://github.com/rbr48/Bhromon" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github"></i> GitHub</a>
             </div>
         </div>
         <div class="footer-bottom">
-            &copy; 2026 Bhromon Technologies Ltd. All rights reserved. Built with pride for Bangladesh.
+            &copy; 2026 Bhromon Technologies Ltd. All rights reserved. Free & Open Source Platform for Bangladesh.
         </div>
     </footer>
 
@@ -507,8 +522,7 @@
                 let currentId = '';
                 sections.forEach(section => {
                     const sectionTop = section.offsetTop;
-                    const sectionHeight = section.clientHeight;
-                    if (pageYOffset >= (sectionTop - 150)) {
+                    if (window.pageYOffset >= (sectionTop - 150)) {
                         currentId = section.getAttribute('id');
                     }
                 });
