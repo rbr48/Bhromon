@@ -1453,7 +1453,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                         style: TextStyle(color: Colors.white38, fontSize: 13)),
                   if (widget.post.effectiveViewCount > 0)
                     Text(
-                      '${context.l10n.number(widget.post.effectiveViewCount)} বার দেখা হয়েছে',
+                      context.l10n.translate('ig_views_count',
+                          args: {'count': widget.post.effectiveViewCount}),
                       style: TextStyle(
                         color: (!widget.post.hideLikeCount &&
                                 effectiveLikeCount > 0)

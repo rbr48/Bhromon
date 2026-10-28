@@ -826,6 +826,15 @@ class TourGroupRepository {
     }
     await _cacheLocalGroup(group);
     lastActiveTourId = group.id;
+
+    // Eagerly prefetch and cache the group's members and key subcollections
+    // into Firestore cache so all tabs load with 0ms delay.
+    unawaited(Future.wait<Object?>([
+      _memberships.where('tourId', isEqualTo: group.id).get(),
+      _sub(group.id, 'vehicles').get(),
+      _sub(group.id, 'notices').get(),
+    ]).then<void>((_) {}).catchError((Object _) {}));
+
     return group;
   }
 
@@ -1164,6 +1173,10 @@ class TourGroupRepository {
           'মালিক হিসেবে আগে মালিকানা অন্য সদস্যকে হস্তান্তর করুন।');
     }
     await _memberships.doc(_membershipId(tourId, email)).delete();
+    await _removeLocalGroup(tourId);
+    if (lastActiveTourId == tourId) {
+      lastActiveTourId = null;
+    }
   }
 
   /// Owner deletes the tour. Other members' rows and the invite go first, the
@@ -1186,6 +1199,10 @@ class TourGroupRepository {
     await cleanup.commit();
     await _tour(tourId).delete();
     await _memberships.doc(_membershipId(tourId, actor)).delete();
+    await _removeLocalGroup(tourId);
+    if (lastActiveTourId == tourId) {
+      lastActiveTourId = null;
+    }
   }
 
   // ---------------------------------------------------------------------------

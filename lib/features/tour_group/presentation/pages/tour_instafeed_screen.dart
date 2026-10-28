@@ -1063,6 +1063,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                       return NotificationListener<ScrollNotification>(
                         onNotification: _onFeedScroll,
                         child: CustomScrollView(
+                          // ignore: deprecated_member_use
+                          cacheExtent: 1600.0,
                           physics: const AlwaysScrollableScrollPhysics(
                             parent: BouncingScrollPhysics(),
                           ),
