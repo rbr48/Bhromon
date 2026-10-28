@@ -54,17 +54,25 @@ ALLOWED_FOLDERS = frozenset({
 ALLOWED_EXTENSIONS = frozenset({
     ".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif",
     ".mp4", ".mov", ".m4v", ".webm", ".3gp", ".mkv",
+    # Audio extensions
+    ".m4a", ".mp3", ".aac", ".wav", ".ogg", ".opus",
+    # Document extensions
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".zip",
 })
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".m4v", ".webm", ".3gp", ".mkv"})
+AUDIO_EXTENSIONS = frozenset({".m4a", ".mp3", ".aac", ".wav", ".ogg", ".opus"})
+DOC_EXTENSIONS = frozenset({".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".zip"})
 
 # These match the app's limits (lib/features/tour_group/domain/services/media_rules.dart).
 MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
 MAX_VIDEO_BYTES = 100 * 1024 * 1024  # 100 MB
+MAX_AUDIO_BYTES = 25 * 1024 * 1024  # 25 MB
+MAX_DOC_BYTES = 50 * 1024 * 1024  # 50 MB
 
 TOUR_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,64}")
 OBJECT_ID_PATTERN = re.compile(r"[0-9a-f]{32}")
 FILENAME_PATTERN = re.compile(
-    r"([0-9a-f]{32})\.(jpg|jpeg|png|webp|gif|heic|heif|mp4|mov|m4v|webm|3gp|mkv)"
+    r"([0-9a-f]{32})\.(jpg|jpeg|png|webp|gif|heic|heif|mp4|mov|m4v|webm|3gp|mkv|m4a|mp3|aac|wav|ogg|opus|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip)"
 )
 
 notification_engine = NotificationEngine()
@@ -363,7 +371,14 @@ async def upload_media(
 
     ext = extension_of(file.filename)
     filename = f"{object_id_for(objectId)}{ext}"
-    max_allowed = MAX_VIDEO_BYTES if ext in VIDEO_EXTENSIONS else MAX_IMAGE_BYTES
+    if ext in VIDEO_EXTENSIONS:
+        max_allowed = MAX_VIDEO_BYTES
+    elif ext in AUDIO_EXTENSIONS:
+        max_allowed = MAX_AUDIO_BYTES
+    elif ext in DOC_EXTENSIONS:
+        max_allowed = MAX_DOC_BYTES
+    else:
+        max_allowed = MAX_IMAGE_BYTES
 
     target_dir = MEDIA_ROOT / tourId / folder
     target_dir.mkdir(parents=True, exist_ok=True)

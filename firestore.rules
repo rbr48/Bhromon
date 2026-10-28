@@ -10,6 +10,11 @@ service cloud.firestore {
     function isNotUnverified()       { return isAuth(); }
     function isVerifiedOrAbove()     { return isAuth() && profile().tier in ['verified','regionExpert','pioneer']; }
     function isRegionExpertOrAbove() { return isAuth() && profile().tier in ['regionExpert','pioneer']; }
+    function tourUserEmail() {
+      return (request.auth.token.email != null)
+        ? request.auth.token.email.lower()
+        : (request.auth.uid + '@bhromon.app');
+    }
 
     // ---- Field Validation Helpers ----
     // Ensures a timestamp field on the incoming document is not set in the future
@@ -348,27 +353,41 @@ service cloud.firestore {
     }
 
     // ── Chats & Messages ────────────────────────────────────────────────────
-    // Chat document ID format: "{uid1}_{uid2}" (UIDs sorted lexicographically).
-    // This allows a simple participant check without a cross-document read.
+    // Chat document ID format: "{uid1}_{uid2}" (or email identifiers).
+    // Participants can be matched by UID, email, or by the participants array.
     match /chats/{chatId} {
-      // A user is a participant if their uid is part of the chatId or in the participants list.
       function isParticipant() {
         return isAuth() && (
           chatId.matches('^' + request.auth.uid + '_.*') ||
           chatId.matches('.*_' + request.auth.uid + '$') ||
-          (resource != null && 'participants' in resource.data && request.auth.uid in resource.data.participants)
+          chatId.matches('^' + tourUserEmail() + '_.*') ||
+          chatId.matches('.*_' + tourUserEmail() + '$') ||
+          (request.auth.token.email != null && (
+            chatId.matches('^' + request.auth.token.email + '_.*') ||
+            chatId.matches('.*_' + request.auth.token.email + '$')
+          )) ||
+          (resource != null && 'participants' in resource.data && (
+            request.auth.uid in resource.data.participants ||
+            tourUserEmail() in resource.data.participants
+          ))
         );
       }
 
       // Chat metadata: only participants may read or update last-message fields.
       allow read:   if isParticipant();
-      allow create: if isParticipant() || (isAuth() && request.auth.uid in request.resource.data.participants);
+      allow create: if isParticipant() || (isAuth() && (
+        request.auth.uid in request.resource.data.participants ||
+        tourUserEmail() in request.resource.data.participants
+      ));
       allow update: if isParticipant()
-                    // Allow updating metadata fields (lastMessage, lastMessageTime, typing_*)
-                    // and allow preserving participants list
+                    // Allow updating metadata fields (lastMessage, lastMessageTime, typing_*, etc.)
+                    // and allow preserving or updating participants list
                     && (
                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['participants'])
-                      || request.resource.data.participants == resource.data.participants
+                      || (isAuth() && (
+                        request.auth.uid in request.resource.data.participants ||
+                        tourUserEmail() in request.resource.data.participants
+                      ))
                     );
       allow delete: if false;
 
@@ -377,16 +396,29 @@ service cloud.firestore {
         // type must be a known value, and text must not exceed 4 096 chars.
         function validMessage() {
           let d = request.resource.data;
-          return d.senderId == request.auth.uid
+          return (d.senderId == request.auth.uid || d.senderId == tourUserEmail())
               && d.type in ['text', 'image', 'video', 'audio', 'document', 'location', 'contact', 'deleted', 'call', 'expense']
               && (!('text' in d) || d.text == null || (d.text is string && d.text.size() <= 4096))
               && ('timestamp' in d && d.timestamp == request.time);
         }
 
-        allow read:   if isParticipant();
-        allow create: if isParticipant() && validMessage();
+        function isParentParticipant() {
+          return isAuth() && (
+            isParticipant() ||
+            (
+              exists(/databases/$(database)/documents/chats/$(chatId)) &&
+              (
+                request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants ||
+                tourUserEmail() in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+              )
+            )
+          );
+        }
+
+        allow read:   if isParentParticipant();
+        allow create: if isParentParticipant() && validMessage();
         // Allow updates for delivery receipts, reactions, edits, Delete for Me, and Delete for Everyone
-        allow update: if isParticipant()
+        allow update: if isParentParticipant()
                       && (
                         // Recipient marking seen or delivered
                         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seen', 'status', 'deliveredAt', 'readAt'])
@@ -464,12 +496,6 @@ service cloud.firestore {
     }
 
     // ── Tour Groups & Memberships (Family Bhromon Engine) ───────────────────
-    function tourUserEmail() {
-      return (request.auth.token.email != null)
-        ? request.auth.token.email.lower()
-        : (request.auth.uid + '@bhromon.app');
-    }
-
     // ---- Tour Group helpers ----
     // Membership docs are keyed `{tourId}__{email}`. get() and exists() bypass
     // read rules, so these helpers can inspect any tour's membership.
