@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -9,9 +10,8 @@ import 'package:uuid/uuid.dart';
 
 /// Central media and file upload service for Bhromon.
 ///
-/// Routes all media (chat attachments, voice notes, documents, profile pictures,
-/// reels, and trip logs) to the high-performance dedicated VPS media service
-/// at `https://bhromon.fun/api/media/upload`, bypassing Firebase Storage quotas.
+/// Seamlessly handles uploads to dedicated VPS media storage and Firebase Storage
+/// with automatic bidirectional fallback to ensure zero upload failures.
 class MediaUploadService {
   static const String baseUrl = 'https://bhromon.fun';
   static const String uploadUrl = '$baseUrl/api/media/upload';
@@ -40,14 +40,81 @@ class MediaUploadService {
     return Options(headers: headers);
   }
 
-  /// Deconstructs a legacy or logical path into [tourOrChatId], [folder], and [filename].
+  static bool _isProfilePath(String path) {
+    return path.startsWith('explorer_avatars') ||
+        path.startsWith('explorer_covers') ||
+        path.startsWith('explorer_profiles') ||
+        path.startsWith('voice_bios');
+  }
+
+  /// Maps legacy directory paths to match the security constraints in storage.rules.
+  static String _mapStoragePath(String path) {
+    if (path.startsWith('explorer_avatars/')) {
+      final filename = path.substring('explorer_avatars/'.length);
+      final parts = filename.split('_');
+      if (parts.isNotEmpty) {
+        final uid = parts[0];
+        return 'explorer_profiles/$uid/avatar_${parts.sublist(1).join('_')}';
+      }
+    } else if (path.startsWith('explorer_covers/')) {
+      final filename = path.substring('explorer_covers/'.length);
+      final parts = filename.split('_');
+      if (parts.isNotEmpty) {
+        final uid = parts[0];
+        return 'explorer_profiles/$uid/cover_${parts.sublist(1).join('_')}';
+      }
+    } else if (path.startsWith('voice_bios/')) {
+      final parts = path.split('/');
+      if (parts.length >= 3) {
+        final uid = parts[1];
+        return 'explorer_profiles/$uid/bio.m4a';
+      }
+    }
+    return path;
+  }
+
+  static String _getContentTypeForExtension(String ext) {
+    switch (ext.toLowerCase().replaceAll('.', '')) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'gif':
+        return 'image/gif';
+      case 'mp4':
+        return 'video/mp4';
+      case 'm4a':
+      case 'aac':
+        return 'audio/mp4';
+      case 'mp3':
+        return 'audio/mpeg';
+      case 'pdf':
+        return 'application/pdf';
+      default:
+        return 'image/jpeg';
+    }
+  }
+
+  /// Deconstructs a logical path into [tourOrChatId], [folder], and [filename].
   static (String tourId, String folder, String filename) _parsePath(
       String path) {
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
     if (segments.length >= 3) {
       return (segments[1], segments[0], segments[2]);
     } else if (segments.length == 2) {
-      return (segments[1], segments[0], segments[1]);
+      final seg0 = segments[0];
+      final seg1 = segments[1];
+      if (seg0 == 'explorer_avatars' || seg0 == 'avatars') {
+        return ('profiles', 'avatars', seg1);
+      } else if (seg0 == 'explorer_covers' || seg0 == 'covers') {
+        return ('profiles', 'covers', seg1);
+      } else if (seg0 == 'voice_bios') {
+        return ('profiles', 'voice_bios', seg1);
+      }
+      return ('general', seg0, seg1);
     } else if (segments.length == 1) {
       return ('general', 'media', segments[0]);
     }
@@ -55,123 +122,291 @@ class MediaUploadService {
     return ('general', 'media', '$randId.bin');
   }
 
-  /// Uploads [file] directly to the dedicated VPS media storage.
+  /// Uploads bytes directly to Firebase Storage.
+  static Future<String> _uploadBytesToFirebase({
+    required List<int> bytes,
+    required String path,
+    String? contentType,
+    void Function(double)? onProgress,
+  }) async {
+    final mappedPath = _mapStoragePath(path);
+    final ref = FirebaseStorage.instance.ref().child(mappedPath);
+    final ext = path.split('.').last.toLowerCase();
+    final effectiveContentType =
+        contentType ?? _getContentTypeForExtension(ext);
+
+    final uploadTask = ref.putData(
+      Uint8List.fromList(bytes),
+      SettableMetadata(contentType: effectiveContentType),
+    );
+
+    if (onProgress != null) {
+      uploadTask.snapshotEvents.listen((snap) {
+        final total = snap.totalBytes;
+        if (total > 0) {
+          onProgress(snap.bytesTransferred / total);
+        }
+      });
+    }
+
+    await uploadTask;
+    final downloadUrl = await ref.getDownloadURL();
+    debugPrint('MediaUploadService uploaded bytes to Firebase Storage: $downloadUrl');
+    return downloadUrl;
+  }
+
+  /// Uploads a file directly to Firebase Storage.
+  static Future<String> _uploadFileToFirebase({
+    required File file,
+    required String path,
+    void Function(double)? onProgress,
+  }) async {
+    final mappedPath = _mapStoragePath(path);
+    final ref = FirebaseStorage.instance.ref().child(mappedPath);
+    final ext = file.path.split('.').last.toLowerCase();
+    final effectiveContentType = _getContentTypeForExtension(ext);
+
+    final uploadTask = ref.putFile(
+      file,
+      SettableMetadata(contentType: effectiveContentType),
+    );
+
+    if (onProgress != null) {
+      uploadTask.snapshotEvents.listen((snap) {
+        final total = snap.totalBytes;
+        if (total > 0) {
+          onProgress(snap.bytesTransferred / total);
+        }
+      });
+    }
+
+    await uploadTask;
+    final downloadUrl = await ref.getDownloadURL();
+    debugPrint('MediaUploadService uploaded file to Firebase Storage: $downloadUrl');
+    return downloadUrl;
+  }
+
+  /// Uploads bytes directly to VPS media storage.
+  static Future<String> _uploadBytesToVps({
+    required List<int> bytes,
+    required String path,
+    String? contentType,
+    void Function(double)? onProgress,
+  }) async {
+    final (tourId, folder, filename) = _parsePath(path);
+    final options = await _authorizedOptions();
+
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: filename,
+        contentType: contentType != null ? DioMediaType.parse(contentType) : null,
+      ),
+      'tourId': tourId,
+      'folder': folder,
+    });
+
+    final response = await _dio.post<Map<String, dynamic>>(
+      uploadUrl,
+      data: formData,
+      options: options,
+      onSendProgress: (sent, total) {
+        if (total > 0 && onProgress != null) {
+          onProgress(sent / total);
+        }
+      },
+    );
+
+    final url = response.data?['url'] as String?;
+    if (url == null || url.isEmpty) {
+      throw Exception('VPS media server did not return a valid download URL');
+    }
+
+    debugPrint('MediaUploadService uploaded bytes to VPS: $url');
+    return url;
+  }
+
+  /// Uploads a file directly to VPS media storage.
+  static Future<String> _uploadFileToVps({
+    required File file,
+    required String path,
+    void Function(double)? onProgress,
+  }) async {
+    final (tourId, folder, filename) = _parsePath(path);
+    final options = await _authorizedOptions();
+
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        file.path,
+        filename: filename,
+      ),
+      'tourId': tourId,
+      'folder': folder,
+    });
+
+    final response = await _dio.post<Map<String, dynamic>>(
+      uploadUrl,
+      data: formData,
+      options: options,
+      onSendProgress: (sent, total) {
+        if (total > 0 && onProgress != null) {
+          onProgress(sent / total);
+        }
+      },
+    );
+
+    final url = response.data?['url'] as String?;
+    if (url == null || url.isEmpty) {
+      throw Exception('VPS media server did not return a valid download URL');
+    }
+
+    debugPrint('MediaUploadService uploaded file to VPS: $url');
+    return url;
+  }
+
+  /// Uploads [file] with automatic compression and resilient fallback.
   static Future<String> uploadFile({
     required File file,
     required String path,
     void Function(double)? onProgress,
   }) async {
-    try {
-      if (kIsWeb) {
-        throw UnsupportedError(
-            'Direct File upload is not supported on web. Use uploadBytes instead.');
-      }
-      if (!file.existsSync()) {
-        throw FileSystemException('File does not exist at path: ${file.path}');
-      }
+    if (kIsWeb) {
+      throw UnsupportedError(
+          'Direct File upload is not supported on web. Use uploadBytes instead.');
+    }
+    if (!file.existsSync()) {
+      throw FileSystemException('File does not exist at path: ${file.path}');
+    }
 
-      File fileToUpload = file;
-      final extension = file.path.split('.').last.toLowerCase();
-      if (extension == 'jpg' || extension == 'jpeg' || extension == 'png') {
+    File fileToUpload = file;
+    final extension = file.path.split('.').last.toLowerCase();
+    if (extension == 'jpg' || extension == 'jpeg' || extension == 'png') {
+      try {
+        final tempDir = await getTemporaryDirectory();
+        final targetPath =
+            '${tempDir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.$extension';
+
+        final compressedFile = await FlutterImageCompress.compressAndGetFile(
+          file.absolute.path,
+          targetPath,
+          quality: 75,
+          format:
+              extension == 'png' ? CompressFormat.png : CompressFormat.jpeg,
+        );
+
+        if (compressedFile != null) {
+          final xfile = File(compressedFile.path);
+          if (xfile.lengthSync() < file.lengthSync()) {
+            fileToUpload = xfile;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Prioritize Firebase Storage for profile and personal media paths
+    if (_isProfilePath(path)) {
+      try {
+        return await _uploadFileToFirebase(
+          file: fileToUpload,
+          path: path,
+          onProgress: onProgress,
+        );
+      } catch (fbErr) {
+        debugPrint(
+            'MediaUploadService: Firebase Storage profile upload failed ($fbErr), falling back to VPS...');
         try {
-          final tempDir = await getTemporaryDirectory();
-          final targetPath =
-              '${tempDir.path}/compressed_${DateTime.now().millisecondsSinceEpoch}.$extension';
-
-          final compressedFile = await FlutterImageCompress.compressAndGetFile(
-            file.absolute.path,
-            targetPath,
-            quality: 75,
-            format:
-                extension == 'png' ? CompressFormat.png : CompressFormat.jpeg,
+          return await _uploadFileToVps(
+            file: fileToUpload,
+            path: path,
+            onProgress: onProgress,
           );
-
-          if (compressedFile != null) {
-            final xfile = File(compressedFile.path);
-            if (xfile.lengthSync() < file.lengthSync()) {
-              fileToUpload = xfile;
-            }
-          }
-        } catch (_) {}
+        } catch (vpsErr) {
+          debugPrint('MediaUploadService: VPS fallback also failed ($vpsErr)');
+          rethrow;
+        }
       }
+    }
 
-      final (tourId, folder, filename) = _parsePath(path);
-      final options = await _authorizedOptions();
-
-      final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(
-          fileToUpload.path,
-          filename: filename,
-        ),
-        'tourId': tourId,
-        'folder': folder,
-      });
-
-      final response = await _dio.post<Map<String, dynamic>>(
-        uploadUrl,
-        data: formData,
-        options: options,
-        onSendProgress: (sent, total) {
-          if (total > 0 && onProgress != null) {
-            onProgress(sent / total);
-          }
-        },
+    // For other media, prioritize VPS and fallback to Firebase Storage
+    try {
+      return await _uploadFileToVps(
+        file: fileToUpload,
+        path: path,
+        onProgress: onProgress,
       );
-
-      final url = response.data?['url'] as String?;
-      if (url == null || url.isEmpty) {
-        throw Exception('VPS media server did not return a valid download URL');
+    } catch (vpsErr) {
+      debugPrint(
+          'MediaUploadService: VPS upload failed ($vpsErr), falling back to Firebase Storage...');
+      try {
+        return await _uploadFileToFirebase(
+          file: fileToUpload,
+          path: path,
+          onProgress: onProgress,
+        );
+      } catch (fbErr) {
+        debugPrint(
+            'MediaUploadService: Firebase Storage fallback also failed ($fbErr)');
+        rethrow;
       }
-
-      debugPrint('MediaUploadService uploaded file to VPS: $url');
-      return url;
-    } catch (e) {
-      debugPrint('MediaUploadService VPS Error (Path: $path): $e');
-      rethrow;
     }
   }
 
-  /// Uploads raw bytes (cross-platform, works on Web, Android, iOS) to VPS.
+  /// Uploads raw bytes (cross-platform, works on Web, Android, iOS) with resilient fallback.
   static Future<String> uploadBytes({
     required List<int> bytes,
     required String path,
     String? contentType,
     void Function(double)? onProgress,
   }) async {
-    try {
-      final (tourId, folder, filename) = _parsePath(path);
-      final options = await _authorizedOptions();
-
-      final formData = FormData.fromMap({
-        'file': MultipartFile.fromBytes(
-          bytes,
-          filename: filename,
-        ),
-        'tourId': tourId,
-        'folder': folder,
-      });
-
-      final response = await _dio.post<Map<String, dynamic>>(
-        uploadUrl,
-        data: formData,
-        options: options,
-        onSendProgress: (sent, total) {
-          if (total > 0 && onProgress != null) {
-            onProgress(sent / total);
-          }
-        },
-      );
-
-      final url = response.data?['url'] as String?;
-      if (url == null || url.isEmpty) {
-        throw Exception('VPS media server did not return a valid download URL');
+    // Prioritize Firebase Storage for profile and personal media paths
+    if (_isProfilePath(path)) {
+      try {
+        return await _uploadBytesToFirebase(
+          bytes: bytes,
+          path: path,
+          contentType: contentType,
+          onProgress: onProgress,
+        );
+      } catch (fbErr) {
+        debugPrint(
+            'MediaUploadService: Firebase Storage profile bytes upload failed ($fbErr), falling back to VPS...');
+        try {
+          return await _uploadBytesToVps(
+            bytes: bytes,
+            path: path,
+            contentType: contentType,
+            onProgress: onProgress,
+          );
+        } catch (vpsErr) {
+          debugPrint('MediaUploadService: VPS fallback also failed ($vpsErr)');
+          rethrow;
+        }
       }
+    }
 
-      debugPrint('MediaUploadService uploaded bytes to VPS: $url');
-      return url;
-    } catch (e) {
-      debugPrint('MediaUploadService Bytes VPS Error (Path: $path): $e');
-      rethrow;
+    // For other media, prioritize VPS and fallback to Firebase Storage
+    try {
+      return await _uploadBytesToVps(
+        bytes: bytes,
+        path: path,
+        contentType: contentType,
+        onProgress: onProgress,
+      );
+    } catch (vpsErr) {
+      debugPrint(
+          'MediaUploadService: VPS bytes upload failed ($vpsErr), falling back to Firebase Storage...');
+      try {
+        return await _uploadBytesToFirebase(
+          bytes: bytes,
+          path: path,
+          contentType: contentType,
+          onProgress: onProgress,
+        );
+      } catch (fbErr) {
+        debugPrint(
+            'MediaUploadService: Firebase Storage fallback also failed ($fbErr)');
+        rethrow;
+      }
     }
   }
 

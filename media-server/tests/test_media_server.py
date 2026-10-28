@@ -99,9 +99,15 @@ def test_bad_folder_tour_or_object_id_is_refused(client, overrides):
     assert upload(client, **overrides).status_code == 400
 
 
-@pytest.mark.parametrize("folder", ["covers", "reels", "stories", "channels"])
+@pytest.mark.parametrize("folder", ["covers", "reels", "stories", "channels", "avatars", "profiles", "trip_logs"])
 def test_every_folder_the_app_uses_is_accepted(client, folder):
     assert upload(client, folder=folder).status_code == 200
+
+
+def test_authenticated_user_can_upload_to_profiles_space(client):
+    res = upload(client, tour="profiles", folder="avatars")
+    assert res.status_code == 200
+    assert res.json()["url"].endswith(f"/profiles/avatars/{OBJECT}.jpg")
 
 
 @pytest.mark.parametrize("name", ["photo.heic", "clip.3gp", "clip.mkv"])

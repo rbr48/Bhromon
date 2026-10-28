@@ -46,7 +46,10 @@ ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-ALLOWED_FOLDERS = frozenset({"posts", "reels", "covers", "stories", "channels"})
+ALLOWED_FOLDERS = frozenset({
+    "posts", "reels", "covers", "stories", "channels",
+    "avatars", "profiles", "chat_media", "chat_voice", "chat_docs", "trip_logs", "media",
+})
 ALLOWED_EXTENSIONS = frozenset({
     ".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif",
     ".mp4", ".mov", ".m4v", ".webm", ".3gp", ".mkv",
@@ -197,10 +200,18 @@ def authenticate(authorization: Optional[str], legacy_key: Optional[str]) -> Cal
     )
 
 
+PUBLIC_OR_USER_SPACES = frozenset({
+    "profiles", "users", "general", "explorer", "trip_logs"
+})
+
+
 def require_member(tour_id: str, caller: Caller) -> str:
     """The caller's role in the tour. Raises 403 when they are not an active member."""
     if caller.legacy:
         return "legacy"
+    if tour_id in PUBLIC_OR_USER_SPACES or tour_id.startswith("chat_") or tour_id.startswith("user_"):
+        if caller.email:
+            return "member"
     role = backend.role_for(tour_id, caller.email)
     if role is None:
         raise HTTPException(
