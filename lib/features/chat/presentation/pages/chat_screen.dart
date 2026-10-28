@@ -338,6 +338,12 @@ class _ChatScreenState extends State<ChatScreen> {
     if (widget.otherUid != null && widget.otherUid!.isNotEmpty) {
       return widget.otherUid;
     }
+    if (widget.chatId.startsWith('${currentUid}_')) {
+      return widget.chatId.substring(currentUid.length + 1);
+    }
+    if (widget.chatId.endsWith('_$currentUid')) {
+      return widget.chatId.substring(0, widget.chatId.length - currentUid.length - 1);
+    }
     final parts = widget.chatId.split('_');
     if (parts.length == 2) {
       return parts[0] == currentUid ? parts[1] : parts[0];
@@ -449,7 +455,7 @@ class _ChatScreenState extends State<ChatScreen> {
         .collection('messages')
         .doc();
 
-    batch.set(msgRef, {
+    final msgData = <String, dynamic>{
       'senderId': currentUid,
       'type': 'text',
       'text': text,
@@ -457,7 +463,8 @@ class _ChatScreenState extends State<ChatScreen> {
       'seen': false,
       'status': 'sent', // delivery states: sent → delivered → read
       'timestamp': FieldValue.serverTimestamp(),
-    });
+    };
+    batch.set(msgRef, msgData);
 
     final resolvedOtherUid = _resolveOtherUid(currentUid);
 
@@ -485,7 +492,17 @@ class _ChatScreenState extends State<ChatScreen> {
     batch.set(chatRef, chatMeta, SetOptions(merge: true));
 
     try {
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (batchErr) {
+        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
+        await msgRef.set(msgData);
+        try {
+          await chatRef.set(chatMeta, SetOptions(merge: true));
+        } catch (metaErr) {
+          debugPrint('Chat metadata update failed: $metaErr');
+        }
+      }
       _scrollController.animateTo(
         0.0,
         duration: const Duration(milliseconds: 300),
@@ -520,6 +537,14 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       debugPrint('Error sending message: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send message: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -649,7 +674,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final replyPayload = _replyingMessage?.toMap();
       setState(() => _replyingMessage = null);
 
-      batch.set(msgRef, {
+      final msgData = <String, dynamic>{
         'senderId': currentUid,
         'type': type,
         'text': caption ?? '',
@@ -660,7 +685,8 @@ class _ChatScreenState extends State<ChatScreen> {
         'seen': false,
         'status': 'sent',
         'timestamp': FieldValue.serverTimestamp(),
-      });
+      };
+      batch.set(msgRef, msgData);
 
       final lastMsg = type == 'image'
           ? (caption != null && caption.isNotEmpty ? '📷 $caption' : '📷 Photo')
@@ -689,7 +715,17 @@ class _ChatScreenState extends State<ChatScreen> {
       };
       batch.set(chatRef, chatMeta, SetOptions(merge: true));
 
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (batchErr) {
+        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
+        await msgRef.set(msgData);
+        try {
+          await chatRef.set(chatMeta, SetOptions(merge: true));
+        } catch (metaErr) {
+          debugPrint('Chat metadata update failed: $metaErr');
+        }
+      }
 
       if (resolvedOtherUid != null &&
           resolvedOtherUid != 'guest' &&
@@ -781,7 +817,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final replyPayload = _replyingMessage?.toMap();
       setState(() => _replyingMessage = null);
 
-      batch.set(msgRef, {
+      final msgData = <String, dynamic>{
         'senderId': currentUid,
         'type': 'audio',
         'text': '',
@@ -791,7 +827,8 @@ class _ChatScreenState extends State<ChatScreen> {
         'seen': false,
         'status': 'sent',
         'timestamp': FieldValue.serverTimestamp(),
-      });
+      };
+      batch.set(msgRef, msgData);
 
       final chatRef =
           FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
@@ -815,7 +852,17 @@ class _ChatScreenState extends State<ChatScreen> {
       };
       batch.set(chatRef, chatMeta, SetOptions(merge: true));
 
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (batchErr) {
+        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
+        await msgRef.set(msgData);
+        try {
+          await chatRef.set(chatMeta, SetOptions(merge: true));
+        } catch (metaErr) {
+          debugPrint('Chat metadata update failed: $metaErr');
+        }
+      }
 
       if (resolvedOtherUid != null &&
           resolvedOtherUid != 'guest' &&
@@ -886,7 +933,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final replyPayload = _replyingMessage?.toMap();
       setState(() => _replyingMessage = null);
 
-      batch.set(msgRef, {
+      final msgData = <String, dynamic>{
         'senderId': currentUid,
         'type': 'document',
         'text': pFile.name,
@@ -897,7 +944,8 @@ class _ChatScreenState extends State<ChatScreen> {
         'seen': false,
         'status': 'sent',
         'timestamp': FieldValue.serverTimestamp(),
-      });
+      };
+      batch.set(msgRef, msgData);
 
       final chatRef =
           FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
@@ -921,9 +969,27 @@ class _ChatScreenState extends State<ChatScreen> {
       };
       batch.set(chatRef, chatMeta, SetOptions(merge: true));
 
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (batchErr) {
+        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
+        await msgRef.set(msgData);
+        try {
+          await chatRef.set(chatMeta, SetOptions(merge: true));
+        } catch (metaErr) {
+          debugPrint('Chat metadata update failed: $metaErr');
+        }
+      }
     } catch (e) {
       debugPrint('Error sending document: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send document: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -946,7 +1012,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final replyPayload = _replyingMessage?.toMap();
       setState(() => _replyingMessage = null);
 
-      batch.set(msgRef, {
+      final msgData = <String, dynamic>{
         'senderId': currentUid,
         'type': 'location',
         'latitude': pos.latitude,
@@ -958,7 +1024,8 @@ class _ChatScreenState extends State<ChatScreen> {
         'seen': false,
         'status': 'sent',
         'timestamp': FieldValue.serverTimestamp(),
-      });
+      };
+      batch.set(msgRef, msgData);
 
       final chatRef =
           FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
@@ -982,9 +1049,27 @@ class _ChatScreenState extends State<ChatScreen> {
       };
       batch.set(chatRef, chatMeta, SetOptions(merge: true));
 
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (batchErr) {
+        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
+        await msgRef.set(msgData);
+        try {
+          await chatRef.set(chatMeta, SetOptions(merge: true));
+        } catch (metaErr) {
+          debugPrint('Chat metadata update failed: $metaErr');
+        }
+      }
     } catch (e) {
       debugPrint('Error sending location: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to share location: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -1007,7 +1092,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final replyPayload = _replyingMessage?.toMap();
       setState(() => _replyingMessage = null);
 
-      batch.set(msgRef, {
+      final msgData = <String, dynamic>{
         'senderId': currentUid,
         'type': 'expense',
         'amount': amount,
@@ -1019,7 +1104,8 @@ class _ChatScreenState extends State<ChatScreen> {
         'seen': false,
         'status': 'sent',
         'timestamp': FieldValue.serverTimestamp(),
-      });
+      };
+      batch.set(msgRef, msgData);
 
       final chatRef =
           FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
@@ -1043,9 +1129,27 @@ class _ChatScreenState extends State<ChatScreen> {
       };
       batch.set(chatRef, chatMeta, SetOptions(merge: true));
 
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (batchErr) {
+        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
+        await msgRef.set(msgData);
+        try {
+          await chatRef.set(chatMeta, SetOptions(merge: true));
+        } catch (metaErr) {
+          debugPrint('Chat metadata update failed: $metaErr');
+        }
+      }
     } catch (e) {
       debugPrint('Error sending expense split: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send expense: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
