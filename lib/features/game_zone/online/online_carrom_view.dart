@@ -15,9 +15,9 @@ import '../domain/models/carrom_table.dart';
 import '../domain/models/online_game_session.dart';
 
 /// Pauses before the board plays a bot's shot, so people can follow it.
-/// The host's phone paces the bots, so they are not played twice as fast.
-const Duration _botPaceHost = Duration(milliseconds: 900);
-const Duration _botPaceOther = Duration(milliseconds: 1800);
+/// Pacing is tuned to feel natural and snappy, avoiding dead silence.
+const Duration _botPaceHost = Duration(milliseconds: 350);
+const Duration _botPaceOther = Duration(milliseconds: 900);
 
 /// Extra time after a person's deadline, to allow for clock differences.
 const Duration _deadlineGrace = Duration(seconds: 2);
@@ -26,6 +26,11 @@ const Duration _retryAfter = Duration(seconds: 3);
 /// Failed advances in a row before this phone stops asking for the same step.
 /// Reopening the table starts again, and another member's phone can still move it.
 const int _maxAdvanceFailures = 5;
+
+/// Private notifier to trigger 60/120 FPS piece repainting without top-level rebuilds.
+class _BoardNotifier extends ChangeNotifier {
+  void tick() => notifyListeners();
+}
 
 /// The online carrom board. The server plays every shot and stores the board.
 /// The phone shows the stored board, plays each shot's motion from the shot the
@@ -67,8 +72,18 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
   Timer? _advanceTimer;
   bool _busy = false;
 
+  /// Local optimistic shot record currently animating on this shooter's phone.
+  CarromShotRecord? _localShot;
+
+  /// Repaint notifier to drive 60/120 FPS piece animation and aim updates
+  /// without triggering expensive top-level widget rebuilds.
+  final _BoardNotifier _boardNotifier = _BoardNotifier();
+
   /// Where this person has slid the striker before shooting.
   double _strikerX = 0.5;
+  late final ValueNotifier<double> _strikerXNotifier;
+  final ValueNotifier<String?> _aimHintNotifier = ValueNotifier<String?>(null);
+
   Offset? _dragStart;
   Offset? _dragNow;
 
@@ -91,6 +106,7 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
   @override
   void initState() {
     super.initState();
+    _strikerXNotifier = ValueNotifier<double>(_strikerX);
     _ticker = createTicker(_onTick);
     _syncFromSession();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -108,6 +124,9 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
   void dispose() {
     _ticker.dispose();
     _advanceTimer?.cancel();
+    _boardNotifier.dispose();
+    _strikerXNotifier.dispose();
+    _aimHintNotifier.dispose();
     super.dispose();
   }
 
@@ -120,10 +139,24 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
     _lastStep = table.step;
     _advanceFailures = 0;
     _table = table;
-    _strikerX = table.strikerX;
+
+    // Keep striker position in sync if not actively aiming locally
+    if (!_canShoot || _dragStart == null) {
+      _strikerX = table.strikerX;
+      _strikerXNotifier.value = table.strikerX;
+    }
 
     final shot = table.lastShot;
-    if (shot != null && previous != null && previous.isNotEmpty) {
+    final local = _localShot;
+    final isOurLocalShot = local != null &&
+        shot != null &&
+        shot.shooter == _mySeat &&
+        _animPieces != null;
+
+    if (isOurLocalShot) {
+      // The server confirmed our optimistic shot! Keep the local simulation running smoothly.
+      _animTarget = table;
+    } else if (shot != null && previous != null && previous.isNotEmpty) {
       _animTarget = table;
       _animPieces = _piecesForShot(previous, shot);
       _animSeconds = 0;
@@ -133,8 +166,11 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
       _board = table.pieces;
       _animPieces = null;
       _animTarget = null;
+      _localShot = null;
     }
 
+    if (mounted) setState(() {});
+    _boardNotifier.tick();
     _scheduleAdvance();
   }
 
@@ -177,8 +213,11 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
         break;
       }
     }
-    if (settled) _finishAnimation();
-    if (mounted) setState(() {});
+    if (settled) {
+      _finishAnimation();
+    } else {
+      _boardNotifier.tick();
+    }
   }
 
   /// Snaps to the board the server stored, and lets the next step be scheduled.
@@ -187,7 +226,11 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
     final target = _animTarget;
     _animPieces = null;
     _animTarget = null;
+    _localShot = null;
+    _busy = false;
     if (target != null) _board = target.pieces;
+    if (mounted) setState(() {});
+    _boardNotifier.tick();
     _scheduleAdvance();
   }
 
@@ -259,30 +302,67 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
 
   // --- Aiming and shooting ---------------------------------------------------
 
-  void _onPanStart(DragStartDetails details) {
-    if (!_canShoot) return;
-    setState(() {
-      _dragStart = details.localPosition;
-      _dragNow = details.localPosition;
-    });
+  bool _strikerPlacementValid(double x, int player, List<CarromPiece> pieces) {
+    final baseY = CarromBoard.baselineY(player);
+    for (int i = 0; i < pieces.length; i++) {
+      final c = pieces[i];
+      if (c.pocketed || c.type == CarromPieceType.striker) continue;
+      final dx = c.x - x;
+      final dy = c.y - baseY;
+      final minDist = c.radius + CarromBoard.strikerRadius;
+      if (dx * dx + dy * dy < minDist * minDist) return false;
+    }
+    return true;
   }
 
-  void _onPanUpdate(DragUpdateDetails details) {
-    if (_dragStart == null) return;
-    setState(() => _dragNow = details.localPosition);
+  void _onPanStart(DragStartDetails details) {
+    if (!_canShoot) return;
+    _dragStart = details.localPosition;
+    _dragNow = details.localPosition;
+    _boardNotifier.tick();
+  }
+
+  void _onPanUpdate(DragUpdateDetails details, Size boardSize) {
+    final start = _dragStart;
+    if (!_canShoot || start == null) return;
+    _dragNow = details.localPosition;
+    final diff = start - details.localPosition;
+    if (diff.distance > 8) {
+      final maxPull = boardSize.width * 0.35;
+      final power = (diff.distance / maxPull).clamp(0.15, 1.0);
+      _aimHintNotifier.value =
+          'Power ${(power * 100).round()}% · release to strike';
+    } else {
+      _aimHintNotifier.value = null;
+    }
+    _boardNotifier.tick();
+  }
+
+  void _onPanCancel() {
+    _dragStart = null;
+    _dragNow = null;
+    _aimHintNotifier.value = null;
+    _boardNotifier.tick();
   }
 
   void _onPanEnd(Size boardSize) {
     final start = _dragStart;
     final now = _dragNow;
-    setState(() {
-      _dragStart = null;
-      _dragNow = null;
-    });
+    _dragStart = null;
+    _dragNow = null;
+    _aimHintNotifier.value = null;
+    _boardNotifier.tick();
     if (!_canShoot || start == null || now == null) return;
 
     final diff = start - now;
     if (diff.distance < 12) return;
+
+    final currentBoard = _board ?? _table?.pieces ?? const <CarromPiece>[];
+    if (!_strikerPlacementValid(_strikerX, _mySeat, currentBoard)) {
+      _snack('The striker is touching a coin — slide it to a free spot first.');
+      return;
+    }
+
     final angle = atan2(diff.dy, diff.dx);
     final maxPull = boardSize.width * 0.35;
     final power = (diff.distance / maxPull).clamp(0.15, 1.0).toDouble();
@@ -291,9 +371,26 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
 
   Future<void> _shoot(double angle, double power) async {
     final table = _table;
-    if (table == null || _busy) return;
+    final board = _board ?? table?.pieces;
+    if (table == null || board == null || _busy) return;
     setState(() => _busy = true);
     HapticFeedback.selectionClick();
+
+    // OPTIMISTIC SHOT: Immediately play the shot locally with zero response lag!
+    final localShot = CarromShotRecord(
+      shooter: _mySeat,
+      x: _strikerX,
+      angle: angle,
+      power: power,
+    );
+    _localShot = localShot;
+    _animPieces = _piecesForShot(board, localShot);
+    _animTarget = null;
+    _animSeconds = 0;
+    _lastTick = Duration.zero;
+    if (!_ticker.isActive) _ticker.start();
+    _boardNotifier.tick();
+
     try {
       await widget.repository.carrom.shoot(
         tourId: _session.tourId,
@@ -304,11 +401,23 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
         expectedStep: table.step,
       );
     } on FirebaseFunctionsException catch (e) {
+      _localShot = null;
+      _animPieces = null;
+      _ticker.stop();
       _snack(e.message ?? 'That shot did not go through.');
-    } catch (_) {
-      _snack('Could not reach the board. Check your connection and try again.');
-    } finally {
       if (mounted) setState(() => _busy = false);
+      _boardNotifier.tick();
+    } catch (_) {
+      _localShot = null;
+      _animPieces = null;
+      _ticker.stop();
+      _snack('Could not reach the board. Check your connection and try again.');
+      if (mounted) setState(() => _busy = false);
+      _boardNotifier.tick();
+    } finally {
+      if (mounted && _animPieces == null) {
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -354,11 +463,11 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
                 builder: (context, constraints) {
                   final size =
                       Size(constraints.maxWidth, constraints.maxHeight);
-                  final pieces = _animPieces ?? _board ?? const <CarromPiece>[];
                   return GestureDetector(
                     onPanStart: _onPanStart,
-                    onPanUpdate: _onPanUpdate,
+                    onPanUpdate: (d) => _onPanUpdate(d, size),
                     onPanEnd: (_) => _onPanEnd(size),
+                    onPanCancel: _onPanCancel,
                     child: Container(
                       margin: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -371,13 +480,38 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
                           ),
                         ],
                       ),
-                      child: CustomPaint(
-                        painter: _CarromBoardPainter(
-                          pieces: pieces,
-                          aimingPlayer: shooting ? _mySeat : null,
-                          strikerX: _strikerX,
-                          dragStart: _dragStart,
-                          dragNow: _dragNow,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // 1. Static wooden mahogany frame, Birch surface, mandala, baselines & pockets
+                            const RepaintBoundary(
+                              child: CustomPaint(
+                                painter: _CarromStaticBoardPainter(),
+                              ),
+                            ),
+                            // 2. High-performance dynamic pieces & aiming arrow painter
+                            RepaintBoundary(
+                              child: ListenableBuilder(
+                                listenable: _boardNotifier,
+                                builder: (context, _) {
+                                  final pieces = _animPieces ??
+                                      _board ??
+                                      const <CarromPiece>[];
+                                  return CustomPaint(
+                                    painter: _CarromPiecesPainter(
+                                      pieces: pieces,
+                                      aimingPlayer: shooting ? _mySeat : null,
+                                      strikerX: _strikerX,
+                                      dragStart: _dragStart,
+                                      dragNow: _dragNow,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -393,64 +527,83 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
   }
 
   Widget _bottomControlBar(CarromTable table, bool shooting) {
-    final statusText = table.status.isNotEmpty
-        ? table.status
-        : (shooting
-            ? 'Slide striker along baseline, then drag back anywhere on board to strike'
-            : (_animPieces != null
-                ? 'Strike in motion...'
-                : 'Waiting for ${_nameOf(table.currentPlayer)}...'));
+    return ValueListenableBuilder<String?>(
+      valueListenable: _aimHintNotifier,
+      builder: (context, aimHint, _) {
+        final statusText = aimHint ??
+            (table.status.isNotEmpty
+                ? table.status
+                : (shooting
+                    ? 'Slide striker along baseline, then drag back anywhere on board to strike'
+                    : (_animPieces != null
+                        ? 'Strike in motion...'
+                        : 'Waiting for ${_nameOf(table.currentPlayer)}...')));
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-      decoration: const BoxDecoration(
-        color: Color(0xFF14241B),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            statusText,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: shooting ? Colors.amberAccent : Colors.white70,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+          decoration: const BoxDecoration(
+            color: Color(0xFF14241B),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          const SizedBox(height: 2),
-          Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.swap_horiz,
-                color: shooting ? AppColors.mintGreen : Colors.white30,
-                size: 20,
-              ),
-              Expanded(
-                child: Slider(
-                  value: _strikerX.clamp(
-                      CarromBoard.baselineMin, CarromBoard.baselineMax),
-                  min: CarromBoard.baselineMin,
-                  max: CarromBoard.baselineMax,
-                  activeColor: shooting ? AppColors.mintGreen : Colors.white24,
-                  inactiveColor: Colors.white12,
-                  onChanged: shooting
-                      ? (value) => setState(() => _strikerX = value)
-                      : null,
+              Text(
+                statusText,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: (aimHint != null || shooting)
+                      ? Colors.amberAccent
+                      : Colors.white70,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Icon(
+                    Icons.swap_horiz,
+                    color: shooting ? AppColors.mintGreen : Colors.white30,
+                    size: 20,
+                  ),
+                  Expanded(
+                    child: ValueListenableBuilder<double>(
+                      valueListenable: _strikerXNotifier,
+                      builder: (context, strikerX, _) {
+                        return Slider(
+                          value: strikerX.clamp(
+                              CarromBoard.baselineMin, CarromBoard.baselineMax),
+                          min: CarromBoard.baselineMin,
+                          max: CarromBoard.baselineMax,
+                          activeColor:
+                              shooting ? AppColors.mintGreen : Colors.white24,
+                          inactiveColor: Colors.white12,
+                          onChanged: shooting
+                              ? (value) {
+                                  _strikerX = value;
+                                  _strikerXNotifier.value = value;
+                                  _boardNotifier.tick();
+                                }
+                              : null,
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _scoreBar(CarromTable table, String turnLabel, bool myTurn) {
-    Widget playerCard(int seat, String coinName, Color coinColor, Color borderColor) {
+    Widget playerCard(
+        int seat, String coinName, Color coinColor, Color borderColor) {
       final isCurrent = table.currentPlayer == seat && !table.isGameOver;
       final name = _nameOf(seat);
       final score = table.pocketedBy(seat);
@@ -533,7 +686,8 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
       ),
       child: Row(
         children: [
-          playerCard(0, 'White', const Color(0xFFF5F0E6), const Color(0xFF8D734B)),
+          playerCard(
+              0, 'White', const Color(0xFFF5F0E6), const Color(0xFF8D734B)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Container(
@@ -559,29 +713,19 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
               ),
             ),
           ),
-          playerCard(1, 'Black', const Color(0xFF222222), const Color(0xFF757575)),
+          playerCard(
+              1, 'Black', const Color(0xFF222222), const Color(0xFF757575)),
         ],
       ),
     );
   }
 }
 
-class _CarromBoardPainter extends CustomPainter {
-  _CarromBoardPainter({
-    required this.pieces,
-    required this.aimingPlayer,
-    required this.strikerX,
-    this.dragStart,
-    this.dragNow,
-  });
-
-  final List<CarromPiece> pieces;
-
-  /// The seat whose striker is being slid, or null when nobody is aiming here.
-  final int? aimingPlayer;
-  final double strikerX;
-  final Offset? dragStart;
-  final Offset? dragNow;
+/// Paints the static wooden frame, plywood surface, tournament mandala,
+/// baselines, and pocket brackets. This painter never repaints during gameplay,
+/// achieving maximum frame rates.
+class _CarromStaticBoardPainter extends CustomPainter {
+  const _CarromStaticBoardPainter();
 
   static const double _frameFraction = 0.07;
 
@@ -643,18 +787,7 @@ class _CarromBoardPainter extends CustomPainter {
       canvas.translate(-s / 2, -s / 2);
       const y = 1 - CarromBoard.baselineInset;
       const half = CarromBoard.coinRadius;
-      final isActive = (side == 0 && aimingPlayer == 0) ||
-          (side == 2 && aimingPlayer == 1);
-      if (isActive) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromPoints(p(CarromBoard.baselineMin - 0.02, y - half * 1.6),
-                p(CarromBoard.baselineMax + 0.02, y + half * 1.6)),
-            const Radius.circular(8),
-          ),
-          Paint()..color = const Color(0x35FFC107),
-        );
-      }
+
       canvas.drawLine(p(CarromBoard.baselineMin, y - half),
           p(CarromBoard.baselineMax, y - half), line);
       canvas.drawLine(p(CarromBoard.baselineMin, y + half),
@@ -712,9 +845,64 @@ class _CarromBoardPainter extends CustomPainter {
       canvas.drawLine(c - Offset(pr, 0), c + Offset(pr, 0), netPaint);
       canvas.drawLine(c - Offset(0, pr), c + Offset(0, pr), netPaint);
     }
+  }
 
-    // 7. Coins and striker on board
-    for (final piece in pieces) {
+  @override
+  bool shouldRepaint(covariant _CarromStaticBoardPainter oldDelegate) => false;
+}
+
+/// Dedicated high-speed painter for dynamic pieces, active baseline highlight,
+/// and aiming trajectory.
+class _CarromPiecesPainter extends CustomPainter {
+  _CarromPiecesPainter({
+    required this.pieces,
+    required this.aimingPlayer,
+    required this.strikerX,
+    this.dragStart,
+    this.dragNow,
+  });
+
+  final List<CarromPiece> pieces;
+
+  /// The seat whose striker is being slid, or null when nobody is aiming here.
+  final int? aimingPlayer;
+  final double strikerX;
+  final Offset? dragStart;
+  final Offset? dragNow;
+
+  static const double _frameFraction = 0.07;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.width;
+    final frame = s * _frameFraction;
+    final play = s - 2 * frame;
+    Offset p(double x, double y) => Offset(frame + x * play, frame + y * play);
+
+    // 1. Highlight active shooting baseline if aiming
+    if (aimingPlayer != null) {
+      const y = 1 - CarromBoard.baselineInset;
+      const half = CarromBoard.coinRadius;
+      canvas.save();
+      canvas.translate(s / 2, s / 2);
+      canvas.rotate(aimingPlayer! * pi);
+      canvas.translate(-s / 2, -s / 2);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromPoints(
+            p(CarromBoard.baselineMin - 0.02, y - half * 1.6),
+            p(CarromBoard.baselineMax + 0.02, y + half * 1.6),
+          ),
+          const Radius.circular(8),
+        ),
+        Paint()..color = const Color(0x35FFC107),
+      );
+      canvas.restore();
+    }
+
+    // 2. Coins and striker on board
+    for (int i = 0; i < pieces.length; i++) {
+      final piece = pieces[i];
       if (piece.pocketed) continue;
       if (piece.type == CarromPieceType.striker && aimingPlayer != null) {
         continue;
@@ -722,7 +910,7 @@ class _CarromBoardPainter extends CustomPainter {
       _drawPiece(canvas, piece, p(piece.x, piece.y), piece.radius * play);
     }
 
-    // 8. Aiming striker and slingshot pull arrow
+    // 3. Aiming striker and slingshot pull arrow
     if (aimingPlayer != null) {
       final striker = CarromPiece(
         id: 99,
@@ -769,10 +957,10 @@ class _CarromBoardPainter extends CustomPainter {
           canvas.drawPath(
             Path()
               ..moveTo(tip.dx + dir.dx * head, tip.dy + dir.dy * head)
-              ..lineTo(
-                  tip.dx + side.dx * head * 0.75, tip.dy + side.dy * head * 0.75)
-              ..lineTo(
-                  tip.dx - side.dx * head * 0.75, tip.dy - side.dy * head * 0.75)
+              ..lineTo(tip.dx + side.dx * head * 0.75,
+                  tip.dy + side.dy * head * 0.75)
+              ..lineTo(tip.dx - side.dx * head * 0.75,
+                  tip.dy - side.dy * head * 0.75)
               ..close(),
             Paint()..color = arrowColor,
           );
@@ -879,5 +1067,5 @@ class _CarromBoardPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CarromBoardPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _CarromPiecesPainter oldDelegate) => true;
 }
