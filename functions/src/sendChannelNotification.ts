@@ -42,9 +42,7 @@ export const sendChannelNotification = functions
       const recipients =
         channelId === EVERYONE_CHANNEL_ID
           ? members
-          : (isMentioned
-              ? members.filter((email) => mentions.has(email))
-              : members);
+          : members.filter((email) => mentions.has(email));
       if (recipients.length === 0) return;
 
       const channelSnap = await admin

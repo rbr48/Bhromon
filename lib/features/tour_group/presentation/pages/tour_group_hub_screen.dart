@@ -466,7 +466,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 );
               }
 
-              final groups = snapshot.data ?? [];
+              final rawGroups = snapshot.data ?? [];
+              final groups = (_activeGroup != null &&
+                      !rawGroups.any((g) => g.id == _activeGroup!.id))
+                  ? [_activeGroup!, ...rawGroups]
+                  : rawGroups;
+
               if (groups.isEmpty) {
                 return _buildEmptyState(context);
               }
@@ -1853,6 +1858,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   newGroup.id;
                               setState(() {
                                 _activeGroup = newGroup;
+                                _displayedGroup = newGroup;
+                                _groupsStream = _repository.watchMyGroups();
                               });
                               navigator.pop();
                               messenger.showSnackBar(
@@ -2324,6 +2331,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                   joinedGroup.id;
                               setState(() {
                                 _activeGroup = joinedGroup;
+                                _displayedGroup = joinedGroup;
+                                _groupsStream = _repository.watchMyGroups();
                               });
                               navigator.pop();
                               messenger.showSnackBar(

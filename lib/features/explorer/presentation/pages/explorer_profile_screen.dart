@@ -2251,6 +2251,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
+                              if (context.mounted) {
+                                context.go('/group-hub');
+                              }
                             }
                           } catch (e) {
                             setDialogState(() => isCreating = false);
@@ -2378,6 +2381,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
+                              if (context.mounted) {
+                                context.go('/group-hub');
+                              }
                             }
                           } catch (e) {
                             setDialogState(() => isJoining = false);

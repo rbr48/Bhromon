@@ -28,6 +28,7 @@ class FcmService {
       FlutterLocalNotificationsPlugin();
 
   StreamSubscription<User?>? _authSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _userNotificationsSub;
   String? _initializedUid;
 
   FcmService(this._messaging, this._firestore);
@@ -47,6 +48,8 @@ class FcmService {
 
   Future<void> _onSignedOut() async {
     _initializedUid = null;
+    await _userNotificationsSub?.cancel();
+    _userNotificationsSub = null;
     try {
       await _messaging.deleteToken();
     } catch (_) {}
@@ -56,79 +59,182 @@ class FcmService {
     if (_initializedUid == uid) return;
     _initializedUid = uid;
 
-    // ── 1. Request FCM permission ──────────────────────────────────────────
-    await _messaging.requestPermission(alert: true, badge: true, sound: true);
-    final token = await _messaging.getToken();
-    if (token != null) await _saveToken(uid, token);
-    _messaging.onTokenRefresh.listen((t) => _saveToken(uid, t));
+    // ── 1. Initialise flutter_local_notifications & channel immediately ──────
+    // Initializing local notifications first guarantees that notifications
+    // can always be posted even if FCM token fetching fails or times out.
+    try {
+      const androidInit =
+          AndroidInitializationSettings('@mipmap/launcher_icon');
+      const darwinInit = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      await _localNotif.initialize(
+        const InitializationSettings(android: androidInit, iOS: darwinInit),
+        onDidReceiveNotificationResponse: (details) {
+          final ctx = AppRouter.navigatorKey.currentContext;
+          if (ctx == null) return;
+          final payload = details.payload;
+          if (payload != null && payload.isNotEmpty) {
+            try {
+              final data = jsonDecode(payload) as Map<String, dynamic>;
+              _routeFromPayload(
+                data['action'] as String?,
+                ctx,
+                uid: data['uid'] as String?,
+                itemId: data['itemId'] as String?,
+                tourId: data['tourId'] as String?,
+              );
+            } catch (_) {
+              _routeFromPayload(payload, ctx);
+            }
+          }
+        },
+      );
 
-    // ── 2. Initialise flutter_local_notifications ──────────────────────────
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const darwinInit = DarwinInitializationSettings(
-      requestAlertPermission: false, // already requested above via FCM
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    await _localNotif.initialize(
-      const InitializationSettings(android: androidInit, iOS: darwinInit),
-      onDidReceiveNotificationResponse: (details) {
-        // Use the global navigator key so the context is never stale,
-        // even if the widget tree that called init() has been unmounted.
+      final androidPlugin = _localNotif.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      await androidPlugin?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _kChannelId,
+          _kChannelName,
+          description: _kChannelDesc,
+          importance: Importance.high,
+          enableVibration: true,
+          playSound: true,
+        ),
+      );
+
+      // Request runtime notification permission on Android 13+ (API 33+)
+      if (!kIsWeb && Platform.isAndroid) {
+        await androidPlugin?.requestNotificationsPermission();
+      }
+    } catch (e) {
+      debugPrint('[FcmService] Local notifications initialization error: $e');
+    }
+
+    // ── 2. Request FCM permissions & save device token ───────────────────────
+    try {
+      await _messaging.requestPermission(alert: true, badge: true, sound: true);
+      final token = await _messaging.getToken();
+      if (token != null) await _saveToken(uid, token);
+      _messaging.onTokenRefresh.listen((t) => _saveToken(uid, t));
+    } catch (e) {
+      debugPrint('[FcmService] FCM token acquisition error: $e');
+    }
+
+    // ── 3. Listen for foreground FCM messages ─────────────────────────────
+    try {
+      FirebaseMessaging.onMessage.listen((message) {
+        _handleForeground(message);
+      });
+
+      FirebaseMessaging.onMessageOpenedApp.listen((message) {
         final ctx = AppRouter.navigatorKey.currentContext;
-        if (ctx == null) return;
-        final payload = details.payload;
-        if (payload != null && payload.isNotEmpty) {
-          try {
-            final data = jsonDecode(payload) as Map<String, dynamic>;
-            _routeFromPayload(
-              data['action'] as String?,
-              ctx,
-              uid: data['uid'] as String?,
-              itemId: data['itemId'] as String?,
-              tourId: data['tourId'] as String?,
-            );
-          } catch (_) {
-            _routeFromPayload(payload, ctx);
+        if (ctx != null && ctx.mounted) _handleTap(message, ctx);
+      });
+
+      final initial = await _messaging.getInitialMessage();
+      if (initial != null) {
+        final ctx = AppRouter.navigatorKey.currentContext;
+        if (ctx != null && ctx.mounted) _handleTap(initial, ctx);
+      }
+    } catch (e) {
+      debugPrint('[FcmService] FCM message listener error: $e');
+    }
+
+    // ── 4. Listen for realtime in-app notifications in Firestore ────────────
+    _listenUserNotifications(uid);
+  }
+
+  void _listenUserNotifications(String uid) {
+    _userNotificationsSub?.cancel();
+    final sessionStart = Timestamp.now();
+    _userNotificationsSub = _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .limit(10)
+        .snapshots()
+        .listen(
+      (snapshot) {
+        for (final change in snapshot.docChanges) {
+          if (change.type == DocumentChangeType.added) {
+            final data = change.doc.data();
+            if (data == null) continue;
+            final ts = data['timestamp'] as Timestamp?;
+            // Show new notifications arriving during this session (allowing 30s for server time diff)
+            if (ts != null &&
+                ts.millisecondsSinceEpoch >=
+                    sessionStart.millisecondsSinceEpoch - 30000) {
+              final title = (data['title'] as String?) ?? 'Bhromon Notification';
+              final body = (data['body'] as String?) ?? '';
+              final imageUrl = data['imageUrl'] as String?;
+              showLocalNotification(
+                id: change.doc.id.hashCode,
+                title: title,
+                body: body,
+                payload: jsonEncode(data),
+                imageUrl: imageUrl,
+              );
+            }
           }
         }
       },
+      onError: (Object e) {
+        debugPrint('[FcmService] user notifications listener error: $e');
+      },
     );
+  }
 
-    // ── 3. Create Android notification channel ────────────────────────────
-    final androidPlugin = _localNotif.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    await androidPlugin?.createNotificationChannel(
-      const AndroidNotificationChannel(
-        _kChannelId,
-        _kChannelName,
-        description: _kChannelDesc,
-        importance: Importance.high,
-        enableVibration: true,
-        playSound: true,
-      ),
-    );
-
-    // ── 3a. Request POST_NOTIFICATIONS at runtime (Android 13+ / API 33+) ─
-    // FCM's requestPermission() handles iOS. On Android 13+ we must also ask
-    // the OS-level notification permission via the local-notifications plugin.
-    await androidPlugin?.requestNotificationsPermission();
-
-    // ── 4. Listen for foreground FCM messages ─────────────────────────────
-    FirebaseMessaging.onMessage.listen((message) {
-      _handleForeground(message);
-    });
-
-    // ── 5. Background / terminated-state tap handling ─────────────────────
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      final ctx = AppRouter.navigatorKey.currentContext;
-      if (ctx != null && ctx.mounted) _handleTap(message, ctx);
-    });
-    final initial = await _messaging.getInitialMessage();
-    if (initial != null) {
-      final ctx = AppRouter.navigatorKey.currentContext;
-      // ignore: use_build_context_synchronously
-      if (ctx != null) _handleTap(initial, ctx);
+  /// Show a rich local notification immediately on the device.
+  Future<void> showLocalNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+    String? imageUrl,
+  }) async {
+    StyleInformation? style;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      final base64Str = await _fetchImageAsBase64(imageUrl);
+      if (base64Str.isNotEmpty) {
+        style = BigPictureStyleInformation(
+          ByteArrayAndroidBitmap.fromBase64String(base64Str),
+          largeIcon: ByteArrayAndroidBitmap.fromBase64String(base64Str),
+          contentTitle: title,
+          summaryText: body,
+          htmlFormatContentTitle: false,
+          htmlFormatSummaryText: false,
+        );
+      }
     }
+
+    final androidDetails = AndroidNotificationDetails(
+      _kChannelId,
+      _kChannelName,
+      channelDescription: _kChannelDesc,
+      importance: Importance.high,
+      priority: Priority.high,
+      styleInformation: style,
+      icon: '@mipmap/launcher_icon',
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    await _localNotif.show(
+      id,
+      title,
+      body,
+      NotificationDetails(android: androidDetails, iOS: iosDetails),
+      payload: payload,
+    );
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
@@ -151,54 +257,19 @@ class FcmService {
   /// Show a rich local notification when the app is in the foreground.
   Future<void> _handleForeground(RemoteMessage message) async {
     final n = message.notification;
-    if (n == null) return;
+    final title = n?.title ?? (message.data['title'] as String?) ?? 'Bhromon';
+    final body = n?.body ?? (message.data['body'] as String?) ?? '';
+    if (title.isEmpty && body.isEmpty) return;
 
-    final title = n.title ?? '';
-    final body = n.body ?? '';
-
-    // FCM sets imageUrl on the android-specific notification object; also
-    // check the data payload for broadcast notifications sent by the admin.
     final String? imageUrl =
-        n.android?.imageUrl ?? (message.data['imageUrl'] as String?);
+        n?.android?.imageUrl ?? (message.data['imageUrl'] as String?);
 
-    StyleInformation? style;
-
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      final base64Str = await _fetchImageAsBase64(imageUrl);
-      if (base64Str.isNotEmpty) {
-        style = BigPictureStyleInformation(
-          ByteArrayAndroidBitmap.fromBase64String(base64Str),
-          largeIcon: ByteArrayAndroidBitmap.fromBase64String(base64Str),
-          contentTitle: title,
-          summaryText: body,
-          htmlFormatContentTitle: false,
-          htmlFormatSummaryText: false,
-        );
-      }
-    }
-
-    final androidDetails = AndroidNotificationDetails(
-      _kChannelId,
-      _kChannelName,
-      channelDescription: _kChannelDesc,
-      importance: Importance.high,
-      priority: Priority.high,
-      styleInformation: style,
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    await _localNotif.show(
-      // Use a stable ID derived from the message so duplicates don't stack
-      message.hashCode,
-      title,
-      body,
-      NotificationDetails(android: androidDetails, iOS: iosDetails),
+    await showLocalNotification(
+      id: message.hashCode,
+      title: title,
+      body: body,
       payload: jsonEncode(message.data),
+      imageUrl: imageUrl,
     );
   }
 
