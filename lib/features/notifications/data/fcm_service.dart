@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:injectable/injectable.dart';
@@ -15,7 +17,7 @@ import '../../../core/services/push_device.dart';
 const _kChannelId = 'bhromon_general';
 const _kChannelName = 'Bhromon Notifications';
 const _kChannelDesc =
-    'General announcements, tier upgrades, and broadcasts from Bhromon.';
+    'General announcements, messages, trip updates, and broadcasts from Bhromon.';
 
 @singleton
 class FcmService {
@@ -25,9 +27,35 @@ class FcmService {
   final FlutterLocalNotificationsPlugin _localNotif =
       FlutterLocalNotificationsPlugin();
 
+  StreamSubscription<User?>? _authSub;
+  String? _initializedUid;
+
   FcmService(this._messaging, this._firestore);
 
-  Future<void> init(String uid, BuildContext context) async {
+  /// Global lifecycle hook: listens to user auth state, automatically registers
+  /// FCM tokens on login, and cleans up tokens on sign-out.
+  void initGlobalListener() {
+    _authSub?.cancel();
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        init(user.uid);
+      } else {
+        _onSignedOut();
+      }
+    });
+  }
+
+  Future<void> _onSignedOut() async {
+    _initializedUid = null;
+    try {
+      await _messaging.deleteToken();
+    } catch (_) {}
+  }
+
+  Future<void> init(String uid, [BuildContext? context]) async {
+    if (_initializedUid == uid) return;
+    _initializedUid = uid;
+
     // ── 1. Request FCM permission ──────────────────────────────────────────
     await _messaging.requestPermission(alert: true, badge: true, sound: true);
     final token = await _messaging.getToken();
@@ -48,7 +76,21 @@ class FcmService {
         // even if the widget tree that called init() has been unmounted.
         final ctx = AppRouter.navigatorKey.currentContext;
         if (ctx == null) return;
-        _routeFromPayload(details.payload, ctx, uid: null, itemId: null);
+        final payload = details.payload;
+        if (payload != null && payload.isNotEmpty) {
+          try {
+            final data = jsonDecode(payload) as Map<String, dynamic>;
+            _routeFromPayload(
+              data['action'] as String?,
+              ctx,
+              uid: data['uid'] as String?,
+              itemId: data['itemId'] as String?,
+              tourId: data['tourId'] as String?,
+            );
+          } catch (_) {
+            _routeFromPayload(payload, ctx);
+          }
+        }
       },
     );
 
@@ -72,15 +114,11 @@ class FcmService {
     await androidPlugin?.requestNotificationsPermission();
 
     // ── 4. Listen for foreground FCM messages ─────────────────────────────
-    // We capture BuildContext validity via a WeakReference-style flag.
     FirebaseMessaging.onMessage.listen((message) {
       _handleForeground(message);
     });
 
     // ── 5. Background / terminated-state tap handling ─────────────────────
-    // NOTE: We deliberately do NOT capture [context] here. The listener is
-    // long-lived and [context] will be stale once the widget tree rebuilds.
-    // Instead we resolve the context lazily via the global navigator key.
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       final ctx = AppRouter.navigatorKey.currentContext;
       if (ctx != null && ctx.mounted) _handleTap(message, ctx);
@@ -111,10 +149,6 @@ class FcmService {
   }
 
   /// Show a rich local notification when the app is in the foreground.
-  ///
-  /// No BuildContext needed here — we call [_localNotif.show] which is
-  /// context-free; routing only happens on notification tap via the
-  /// [onDidReceiveNotificationResponse] callback registered in [init].
   Future<void> _handleForeground(RemoteMessage message) async {
     final n = message.notification;
     if (n == null) return;
@@ -164,7 +198,7 @@ class FcmService {
       title,
       body,
       NotificationDetails(android: androidDetails, iOS: iosDetails),
-      payload: (message.data['action'] as String?) ?? '',
+      payload: jsonEncode(message.data),
     );
   }
 
@@ -213,7 +247,24 @@ class FcmService {
       case 'channel':
         if (tourId != null) GoRouter.of(context).go('/group/$tourId/channels');
         break;
-      // Broadcast notifications simply bring the app to focus — no deep link.
+      case 'post':
+      case 'comment':
+      case 'like':
+        if (tourId != null) GoRouter.of(context).go('/group/$tourId/feed');
+        break;
+      case 'notice':
+        if (tourId != null) GoRouter.of(context).go('/group/$tourId/notices');
+        break;
+      case 'ledger':
+      case 'expense':
+        if (tourId != null) GoRouter.of(context).go('/group/$tourId/ledger');
+        break;
+      case 'journey':
+        if (tourId != null) GoRouter.of(context).go('/group/$tourId/journey');
+        break;
+      case 'call':
+        // Native CallNotificationService manages incoming call overlay/ringing
+        break;
       case 'broadcast':
         break;
     }
