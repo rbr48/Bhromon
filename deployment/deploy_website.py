@@ -76,43 +76,76 @@ def connect() -> paramiko.SSHClient:
     print(f"\n[2/5] Connecting to {VPS_USER}@{VPS_IP}:{VPS_PORT} ...")
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    if os.path.exists(VPS_KEY_PATH):
-        print(f"  Connecting using SSH key: {VPS_KEY_PATH}")
-        ssh.connect(VPS_IP, port=VPS_PORT, username=VPS_USER,
-                    key_filename=VPS_KEY_PATH, timeout=30)
-    else:
+    key_candidates = [
+        VPS_KEY_PATH,
+        os.path.join(os.path.expanduser("~"), ".ssh", "id_rsa_dbm"),
+        os.path.join(os.path.expanduser("~"), ".ssh", "bhromon_vps"),
+    ]
+    connected = False
+    for k in key_candidates:
+        if os.path.exists(k):
+            try:
+                print(f"  Trying SSH key: {k}")
+                ssh.connect(VPS_IP, port=VPS_PORT, username=VPS_USER,
+                            key_filename=k, timeout=20)
+                connected = True
+                print(f"  Connected using {k}!")
+                break
+            except Exception as e:
+                print(f"  Key {k} failed: {e}")
+    if not connected:
         if not os.environ.get('VPS_PASS'):
-            sys.exit('No SSH key at VPS_KEY_PATH, and VPS_PASS is not set')
-        print("  SSH key not found. Connecting using password fallback...")
+            sys.exit('No working SSH key found and VPS_PASS is not set')
+        print("  Connecting using password fallback...")
         ssh.connect(VPS_IP, port=VPS_PORT, username=VPS_USER,
                     password=os.environ.get("VPS_PASS", ""), timeout=30)
-    print("  Connected!")
+        print("  Connected!")
     return ssh
+
+
+def send_file(ssh: paramiko.SSHClient, local_path: str, remote_path: str):
+    """Transfers file via SFTP or falls back to SSH stdin stream if SFTP subsystem is unavailable."""
+    try:
+        sftp = ssh.open_sftp()
+        sftp.put(local_path, remote_path)
+        sftp.close()
+        return
+    except Exception as sftp_err:
+        print(f"    (SFTP unavailable: {sftp_err}; using SSH pipe transfer)")
+
+    # Fallback to stdin pipe
+    cmd = f"cat > '{remote_path}'"
+    stdin, stdout, stderr = ssh.exec_command(cmd)
+    with open(local_path, "rb") as f:
+        while True:
+            chunk = f.read(65536)
+            if not chunk:
+                break
+            stdin.write(chunk)
+    stdin.flush()
+    stdin.channel.shutdown_write()
+    exit_status = stdout.channel.recv_exit_status()
+    if exit_status != 0:
+        err = stderr.read().decode()
+        raise RuntimeError(f"Failed to stream {local_path} to {remote_path}: {err}")
 
 
 def upload(ssh: paramiko.SSHClient):
     print(f"\n[3/5] Uploading files ...")
-    sftp = ssh.open_sftp()
     # Ensure deploy dir
-    try:
-        sftp.mkdir(DEPLOY_DIR)
-    except IOError:
-        pass
+    run(ssh, f"mkdir -p '{DEPLOY_DIR}'")
 
-    sftp.put(ZIP_OUT, f"{DEPLOY_DIR}/website.zip")
+    send_file(ssh, ZIP_OUT, f"{DEPLOY_DIR}/website.zip")
     print(f"  [OK] website.zip uploaded")
 
     # Upload APK separately to downloads
     downloads_dir = "/var/www/bhromon/downloads"
-    try:
-        sftp.mkdir(downloads_dir)
-    except IOError:
-        pass
+    run(ssh, f"mkdir -p '{downloads_dir}'")
 
     if os.path.exists(APK_SRC):
         apk_size_mb = os.path.getsize(APK_SRC) / (1024 * 1024)
         print(f"  Uploading app-release.apk ({apk_size_mb:.1f} MB) ... this may take a moment")
-        sftp.put(APK_SRC, f"{downloads_dir}/app-release.apk")
+        send_file(ssh, APK_SRC, f"{downloads_dir}/app-release.apk")
         print(f"  [OK] app-release.apk uploaded to {downloads_dir}/")
     else:
         print(f"  (Skipping APK - not found at {APK_SRC})")
@@ -121,7 +154,7 @@ def upload(ssh: paramiko.SSHClient):
     if os.path.exists(AAB_SRC):
         aab_size_mb = os.path.getsize(AAB_SRC) / (1024 * 1024)
         print(f"  Uploading app-release.aab ({aab_size_mb:.1f} MB) ... this may take a moment")
-        sftp.put(AAB_SRC, f"{downloads_dir}/app-release.aab")
+        send_file(ssh, AAB_SRC, f"{downloads_dir}/app-release.aab")
         print(f"  [OK] app-release.aab uploaded to {downloads_dir}/")
     else:
         print(f"  (Skipping AAB - not found at {AAB_SRC})")
@@ -130,12 +163,10 @@ def upload(ssh: paramiko.SSHClient):
     if os.path.exists(SYMBOLS_SRC):
         symbols_size_mb = os.path.getsize(SYMBOLS_SRC) / (1024 * 1024)
         print(f"  Uploading symbols.zip ({symbols_size_mb:.1f} MB) ...")
-        sftp.put(SYMBOLS_SRC, f"{downloads_dir}/symbols.zip")
+        send_file(ssh, SYMBOLS_SRC, f"{downloads_dir}/symbols.zip")
         print(f"  [OK] symbols.zip uploaded to {downloads_dir}/")
     else:
         print(f"  (Skipping symbols.zip - not found at {SYMBOLS_SRC})")
-
-    sftp.close()
 
 
 def deploy_remote(ssh: paramiko.SSHClient):
