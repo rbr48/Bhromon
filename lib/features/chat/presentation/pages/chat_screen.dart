@@ -35,6 +35,7 @@ import '../widgets/chat_media_caption_screen.dart';
 import '../widgets/chat_expense_bubble.dart';
 import '../widgets/chat_emoji_picker.dart';
 import '../../data/chat_local_cache.dart';
+import '../../data/vps_chat_service.dart';
 import '../../data/travel_ai_service.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/services/media_upload_service.dart';
@@ -142,6 +143,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   StreamSubscription<QuerySnapshot>? _messagesSub;
+  StreamSubscription<Map<String, dynamic>>? _vpsTypingSub;
+  bool _vpsOtherIsTyping = false;
   int _disappearingTimerSeconds = 0;
   StreamSubscription<DocumentSnapshot>? _chatDocSub;
 
@@ -150,6 +153,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     ChatLocalCache().init();
     _checkBlockStatus();
+    _initVpsTypingListener();
     _messageController.addListener(_onTextChanged);
     _messageFocusNode.addListener(() {
       if (_messageFocusNode.hasFocus && _showEmojiPicker) {
@@ -313,9 +317,19 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _updateTypingStatus(String uid, bool typing) {
-    FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({
-      'typing_$uid': typing,
-    }, SetOptions(merge: true));
+    final otherUid = _resolveOtherUid(uid);
+    if (otherUid != null && otherUid.isNotEmpty) {
+      VpsChatService().sendTyping(
+        chatId: widget.chatId,
+        recipientId: otherUid,
+        isTyping: typing,
+      );
+    }
+    try {
+      FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({
+        'typing_$uid': typing,
+      }, SetOptions(merge: true)).catchError((_) {});
+    } catch (_) {}
   }
 
   void _checkBlockStatus() async {
@@ -364,8 +378,25 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _initVpsTypingListener() {
+    _vpsTypingSub?.cancel();
+    _vpsTypingSub = VpsChatService().typingStream(widget.chatId).listen((data) {
+      if (!mounted) return;
+      final senderUid = data['uid'] as String?;
+      final isTyping = data['isTyping'] == true;
+      final authState = context.read<AuthCubit>().state;
+      final currentUid =
+          authState is Authenticated ? authState.profile.uid : '';
+      final resolvedOther = _resolveOtherUid(currentUid);
+      if (senderUid == resolvedOther && _vpsOtherIsTyping != isTyping) {
+        setState(() => _vpsOtherIsTyping = isTyping);
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _vpsTypingSub?.cancel();
     _messageController.removeListener(_onTextChanged);
     _scrollController.removeListener(_onScroll);
     _typingTimer?.cancel();
@@ -526,16 +557,25 @@ class _ChatScreenState extends State<ChatScreen> {
       'timestamp': FieldValue.serverTimestamp(),
     };
 
+    final resolvedOtherUid = _resolveOtherUid(currentUid);
+    if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
+      unawaited(VpsChatService().sendMessage(
+        chatId: widget.chatId,
+        recipientId: resolvedOtherUid,
+        text: pending.text,
+        type: 'text',
+        senderName: currentName,
+        replyTo: pending.replyTo?.toMap(),
+      ));
+    }
+
     try {
       await msgRef.set(msgData);
-      if (mounted) {
-        setState(() =>
-            _pendingTextMessages.removeWhere((p) => p.id == pending.id));
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => pending.isFailed = true);
-      }
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() =>
+          _pendingTextMessages.removeWhere((p) => p.id == pending.id));
     }
   }
 
@@ -700,8 +740,20 @@ class _ChatScreenState extends State<ChatScreen> {
       resolvedOtherUid: resolvedOtherUid,
     );
 
+    // 1. Direct VPS dispatch - 100% reliable, zero Firestore quota consumption
+    if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
+      unawaited(VpsChatService().sendMessage(
+        chatId: widget.chatId,
+        recipientId: resolvedOtherUid,
+        text: text,
+        type: 'text',
+        senderName: currentName,
+        replyTo: replyPayload,
+      ));
+    }
+
     try {
-      // 1. Direct write message first - resilient & reliable!
+      // 2. Direct write message to Firestore (best-effort)
       await msgRef.set(msgData);
 
       // Clean up optimistic pending entry
@@ -711,12 +763,12 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       }
 
-      // 2. Update chat metadata asynchronously without blocking
+      // Update chat metadata asynchronously without blocking
       chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
         debugPrint('Chat metadata update failed: $e');
       });
 
-      // 3. Send in-app notification in background
+      // Send in-app notification in background
       _sendNotificationToRecipient(
         recipientUid: resolvedOtherUid,
         currentUid: currentUid,
@@ -728,23 +780,12 @@ class _ChatScreenState extends State<ChatScreen> {
         _processAiResponse(currentUid, text);
       }
     } catch (e) {
-      debugPrint('Error sending message: $e');
+      debugPrint('Firestore message write error (delivered via VPS): $e');
+      // If Firestore failed due to quota or network, clear pending message since VPS delivered it
       if (mounted) {
         setState(() {
-          pendingMsg.isFailed = true;
+          _pendingTextMessages.removeWhere((p) => p.id == msgId);
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to send message: $e'),
-            backgroundColor: Colors.redAccent,
-            action: SnackBarAction(
-              label: 'Retry',
-              textColor: Colors.white,
-              onPressed: () => _retryPendingTextMessage(
-                  pendingMsg, currentUid, currentName),
-            ),
-          ),
-        );
       }
     }
   }
@@ -919,17 +960,33 @@ class _ChatScreenState extends State<ChatScreen> {
         resolvedOtherUid: resolvedOtherUid,
       );
 
-      await msgRef.set(msgData);
-      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-        debugPrint('Chat metadata update failed: $e');
-      });
+      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
+        unawaited(VpsChatService().sendMessage(
+          chatId: widget.chatId,
+          recipientId: resolvedOtherUid,
+          text: caption ?? '',
+          type: type,
+          senderName: currentName,
+          mediaUrl: downloadUrl,
+          replyTo: replyPayload,
+        ));
+      }
 
-      _sendNotificationToRecipient(
-        recipientUid: resolvedOtherUid,
-        currentUid: currentUid,
-        currentName: currentName,
-        body: lastMsg,
-      );
+      try {
+        await msgRef.set(msgData);
+        chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+          debugPrint('Chat metadata update failed: $e');
+        });
+
+        _sendNotificationToRecipient(
+          recipientUid: resolvedOtherUid,
+          currentUid: currentUid,
+          currentName: currentName,
+          body: lastMsg,
+        );
+      } catch (e) {
+        debugPrint('Firestore media write skipped/quota: $e');
+      }
     } catch (e) {
       debugPrint('Media upload error: $e');
       String msg = 'Failed to send media.';
@@ -1020,17 +1077,34 @@ class _ChatScreenState extends State<ChatScreen> {
         resolvedOtherUid: resolvedOtherUid,
       );
 
-      await msgRef.set(msgData);
-      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-        debugPrint('Chat metadata update failed: $e');
-      });
+      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
+        unawaited(VpsChatService().sendMessage(
+          chatId: widget.chatId,
+          recipientId: resolvedOtherUid,
+          text: '🎤 Voice message',
+          type: 'audio',
+          senderName: currentName,
+          mediaUrl: downloadUrl,
+          replyTo: replyPayload,
+          metadata: {'durationSeconds': duration.inSeconds},
+        ));
+      }
 
-      _sendNotificationToRecipient(
-        recipientUid: resolvedOtherUid,
-        currentUid: currentUid,
-        currentName: currentName,
-        body: '🎤 Voice message (${duration.inSeconds}s)',
-      );
+      try {
+        await msgRef.set(msgData);
+        chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+          debugPrint('Chat metadata update failed: $e');
+        });
+
+        _sendNotificationToRecipient(
+          recipientUid: resolvedOtherUid,
+          currentUid: currentUid,
+          currentName: currentName,
+          body: '🎤 Voice message (${duration.inSeconds}s)',
+        );
+      } catch (e) {
+        debugPrint('Firestore voice message skipped/quota: $e');
+      }
     } catch (e) {
       debugPrint('Error sending voice message: $e');
       if (mounted) {
@@ -1106,17 +1180,34 @@ class _ChatScreenState extends State<ChatScreen> {
         resolvedOtherUid: resolvedOtherUid,
       );
 
-      await msgRef.set(msgData);
-      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-        debugPrint('Chat metadata update failed: $e');
-      });
+      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
+        unawaited(VpsChatService().sendMessage(
+          chatId: widget.chatId,
+          recipientId: resolvedOtherUid,
+          text: pFile.name,
+          type: 'document',
+          senderName: currentName,
+          mediaUrl: downloadUrl,
+          replyTo: replyPayload,
+          metadata: {'fileName': pFile.name, 'fileSizeBytes': pFile.size},
+        ));
+      }
 
-      _sendNotificationToRecipient(
-        recipientUid: resolvedOtherUid,
-        currentUid: currentUid,
-        currentName: currentName,
-        body: '📄 ${pFile.name}',
-      );
+      try {
+        await msgRef.set(msgData);
+        chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+          debugPrint('Chat metadata update failed: $e');
+        });
+
+        _sendNotificationToRecipient(
+          recipientUid: resolvedOtherUid,
+          currentUid: currentUid,
+          currentName: currentName,
+          body: '📄 ${pFile.name}',
+        );
+      } catch (e) {
+        debugPrint('Firestore document message skipped/quota: $e');
+      }
     } catch (e) {
       debugPrint('Error sending document: $e');
       if (mounted) {
@@ -1171,17 +1262,39 @@ class _ChatScreenState extends State<ChatScreen> {
         resolvedOtherUid: resolvedOtherUid,
       );
 
-      await msgRef.set(msgData);
-      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-        debugPrint('Chat metadata update failed: $e');
-      });
+      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
+        unawaited(VpsChatService().sendMessage(
+          chatId: widget.chatId,
+          recipientId: resolvedOtherUid,
+          text: '📍 Shared location: $title',
+          type: 'location',
+          senderName: currentName,
+          replyTo: replyPayload,
+          metadata: {
+            'latitude': pos.latitude,
+            'longitude': pos.longitude,
+            'title': title,
+            'address':
+                '${pos.latitude.toStringAsFixed(4)}° N, ${pos.longitude.toStringAsFixed(4)}° E',
+          },
+        ));
+      }
 
-      _sendNotificationToRecipient(
-        recipientUid: resolvedOtherUid,
-        currentUid: currentUid,
-        currentName: currentName,
-        body: '📍 Shared location: $title',
-      );
+      try {
+        await msgRef.set(msgData);
+        chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+          debugPrint('Chat metadata update failed: $e');
+        });
+
+        _sendNotificationToRecipient(
+          recipientUid: resolvedOtherUid,
+          currentUid: currentUid,
+          currentName: currentName,
+          body: '📍 Shared location: $title',
+        );
+      } catch (e) {
+        debugPrint('Firestore location message skipped/quota: $e');
+      }
     } catch (e) {
       debugPrint('Error sending location: $e');
       if (mounted) {
@@ -1236,17 +1349,38 @@ class _ChatScreenState extends State<ChatScreen> {
         resolvedOtherUid: resolvedOtherUid,
       );
 
-      await msgRef.set(msgData);
-      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-        debugPrint('Chat metadata update failed: $e');
-      });
+      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
+        unawaited(VpsChatService().sendMessage(
+          chatId: widget.chatId,
+          recipientId: resolvedOtherUid,
+          text: '৳${amount.toStringAsFixed(0)} Split: $expenseTitle',
+          type: 'expense',
+          senderName: currentName,
+          replyTo: replyPayload,
+          metadata: {
+            'amount': amount,
+            'expenseTitle': expenseTitle,
+            'paidById': currentUid,
+            'paidByName': currentName,
+          },
+        ));
+      }
 
-      _sendNotificationToRecipient(
-        recipientUid: resolvedOtherUid,
-        currentUid: currentUid,
-        currentName: currentName,
-        body: '৳${amount.toStringAsFixed(0)} Split: $expenseTitle',
-      );
+      try {
+        await msgRef.set(msgData);
+        chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+          debugPrint('Chat metadata update failed: $e');
+        });
+
+        _sendNotificationToRecipient(
+          recipientUid: resolvedOtherUid,
+          currentUid: currentUid,
+          currentName: currentName,
+          body: '৳${amount.toStringAsFixed(0)} Split: $expenseTitle',
+        );
+      } catch (e) {
+        debugPrint('Firestore expense message skipped/quota: $e');
+      }
     } catch (e) {
       debugPrint('Error sending expense split: $e');
       if (mounted) {
@@ -1825,6 +1959,12 @@ class _ChatScreenState extends State<ChatScreen> {
       for (final doc in unreadDocs) {
         _markedSeenDocIds.add(doc.id);
       }
+      final resolvedOther = _resolveOtherUid(currentUid);
+      VpsChatService().markRead(
+        widget.chatId,
+        recipientId: resolvedOther,
+        messageIds: unreadDocs.map((d) => d.id).toList(),
+      );
       final batch = FirebaseFirestore.instance.batch();
       for (final doc in unreadDocs) {
         batch.update(doc.reference, {

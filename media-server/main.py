@@ -27,6 +27,7 @@ from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile, stat
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 
+from chat import chat_router
 from notifications import FirestoreNotificationWatcher, NotificationEngine
 
 logger = logging.getLogger("media-server")
@@ -119,6 +120,9 @@ app = FastAPI(
     version="2.1.0",
     lifespan=lifespan,
 )
+
+app.include_router(chat_router, prefix="/api/chat")
+app.include_router(chat_router, prefix="/chat")
 
 app.add_middleware(
     CORSMiddleware,

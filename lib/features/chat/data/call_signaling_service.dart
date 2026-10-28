@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'vps_chat_service.dart';
 
 /// WebRTC signaling service that uses Firestore as the signaling channel
 /// for peer-to-peer audio/video calls between two users.
@@ -69,7 +70,9 @@ class CallSignalingService {
   MediaStream? _localStream;
   MediaStream? _remoteStream;
   String? _callId;
+  String? _remoteUid;
   bool _isCaller = false;
+  StreamSubscription<Map<String, dynamic>>? _vpsSignalingSub;
 
   // ── Public callbacks ───────────────────────────────────────────────────────
 
@@ -121,7 +124,9 @@ class CallSignalingService {
     String? callerAvatar,
   }) async {
     _callId = callId;
+    _remoteUid = remoteUid;
     _isCaller = true;
+    _attachVpsSignalingListener();
 
     await _getUserMedia(videoEnabled);
     await _createPeerConnection();
@@ -130,21 +135,36 @@ class CallSignalingService {
     final offer = await _peerConnection!.createOffer();
     await _peerConnection!.setLocalDescription(offer);
 
-    // Write the call document to Firestore.
-    await _callDoc(callId).set({
-      'callerId': localUid,
-      'calleeId': remoteUid,
-      'participants': [localUid, remoteUid],
-      'isVideo': videoEnabled,
-      if (callerName != null) 'callerName': callerName,
-      if (callerAvatar != null) 'callerAvatar': callerAvatar,
-      'offer': {
-        'type': offer.type,
-        'sdp': offer.sdp,
-      },
-      'status': 'calling',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    // Relay call offer via VPS WebSocket (<15ms, zero Firestore quota)
+    VpsChatService().sendCallSignal(
+      recipientId: remoteUid,
+      signalType: 'offer',
+      payload: {'type': offer.type, 'sdp': offer.sdp},
+      callId: callId,
+      isVideo: videoEnabled,
+      callerName: callerName,
+      avatarUrl: callerAvatar,
+    );
+
+    // Best-effort Firestore call document write
+    try {
+      await _callDoc(callId).set({
+        'callerId': localUid,
+        'calleeId': remoteUid,
+        'participants': [localUid, remoteUid],
+        'isVideo': videoEnabled,
+        if (callerName != null) 'callerName': callerName,
+        if (callerAvatar != null) 'callerAvatar': callerAvatar,
+        'offer': {
+          'type': offer.type,
+          'sdp': offer.sdp,
+        },
+        'status': 'calling',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('[CallSignaling] Firestore call doc set skipped/quota: $e');
+    }
 
     onCallStateChange?.call('calling');
 
@@ -216,6 +236,7 @@ class CallSignalingService {
   }) async {
     _callId = callId;
     _isCaller = false;
+    _attachVpsSignalingListener();
 
     // Read the existing call document to get the offer.
     final callSnapshot = await _callDoc(callId).get();
@@ -245,14 +266,28 @@ class CallSignalingService {
     final answer = await _peerConnection!.createAnswer();
     await _peerConnection!.setLocalDescription(answer);
 
-    // Write the answer back to Firestore and update status.
-    await _callDoc(callId).update({
-      'answer': {
-        'type': answer.type,
-        'sdp': answer.sdp,
-      },
-      'status': 'answered',
-    });
+    final callerId = callData['callerId'] as String? ?? '';
+    if (callerId.isNotEmpty) {
+      VpsChatService().sendCallSignal(
+        recipientId: callerId,
+        signalType: 'answer',
+        payload: {'type': answer.type, 'sdp': answer.sdp},
+        callId: callId,
+      );
+    }
+
+    // Best-effort Firestore answer update
+    try {
+      await _callDoc(callId).update({
+        'answer': {
+          'type': answer.type,
+          'sdp': answer.sdp,
+        },
+        'status': 'answered',
+      });
+    } catch (e) {
+      debugPrint('[CallSignaling] Firestore answer update skipped/quota: $e');
+    }
 
     onCallStateChange?.call('answered');
 
@@ -296,6 +331,14 @@ class CallSignalingService {
   /// Ends the call, notifies the remote peer via Firestore, and releases all
   /// resources.
   Future<void> endCall({int? durationSeconds}) async {
+    if (_remoteUid != null && _remoteUid!.isNotEmpty) {
+      VpsChatService().sendCallSignal(
+        recipientId: _remoteUid!,
+        signalType: 'end',
+        payload: {'durationSeconds': durationSeconds},
+        callId: _callId,
+      );
+    }
     if (_callId != null) {
       try {
         await _callDoc(_callId!).update({
@@ -315,7 +358,16 @@ class CallSignalingService {
   }
 
   /// Declines an incoming call before answering.
-  Future<void> declineCall(String callId) async {
+  Future<void> declineCall(String callId, {String? callerId}) async {
+    final targetId = callerId ?? _remoteUid;
+    if (targetId != null && targetId.isNotEmpty) {
+      VpsChatService().sendCallSignal(
+        recipientId: targetId,
+        signalType: 'declined',
+        payload: <String, dynamic>{},
+        callId: callId,
+      );
+    }
     try {
       await _callDoc(callId).update({
         'status': 'declined',
@@ -401,6 +453,14 @@ class CallSignalingService {
         'sdpMid': candidate.sdpMid,
         'sdpMLineIndex': candidate.sdpMLineIndex,
       };
+      if (_remoteUid != null && _remoteUid!.isNotEmpty) {
+        VpsChatService().sendCallSignal(
+          recipientId: _remoteUid!,
+          signalType: 'candidate',
+          payload: candidateData,
+          callId: _callId,
+        );
+      }
       if (_isCaller) {
         unawaited(_writeCandidate(
             _offerCandidates(_callId!), candidateData, 'offerCandidate'));
@@ -465,15 +525,44 @@ class CallSignalingService {
     }
   }
 
-  /// Cancels all Firestore subscriptions, closes the peer connection, and
-  /// stops all local media tracks.
+  void _attachVpsSignalingListener() {
+    _vpsSignalingSub?.cancel();
+    _vpsSignalingSub = VpsChatService().callSignalStream.listen((event) {
+      final cId = event['callId']?.toString();
+      if (cId != _callId) return;
+      final signalType = event['signalType'] as String?;
+      final payload = event['payload'];
+
+      if (signalType == 'answer' && _isCaller && payload is Map) {
+        final answerMap = Map<String, dynamic>.from(payload);
+        if (_peerConnection?.signalingState !=
+            RTCSignalingState.RTCSignalingStateStable) {
+          final sdp = answerMap['sdp'] as String? ?? '';
+          final type = answerMap['type'] as String? ?? 'answer';
+          _peerConnection
+              ?.setRemoteDescription(RTCSessionDescription(sdp, type));
+          onCallStateChange?.call('answered');
+        }
+      } else if (signalType == 'candidate' && payload is Map) {
+        _addIceCandidate(Map<String, dynamic>.from(payload));
+      } else if (signalType == 'end' || signalType == 'declined') {
+        onCallStateChange?.call(signalType!);
+        _releaseResources();
+        onCallEnded?.call();
+      }
+    });
+  }
+
+  /// Cancels all subscriptions, closes the peer connection, and stops all tracks.
   Future<void> _releaseResources() async {
     await _offerCandidatesSub?.cancel();
     await _answerCandidatesSub?.cancel();
     await _callDocSub?.cancel();
+    await _vpsSignalingSub?.cancel();
     _offerCandidatesSub = null;
     _answerCandidatesSub = null;
     _callDocSub = null;
+    _vpsSignalingSub = null;
 
     await _peerConnection?.close();
     _peerConnection = null;
@@ -486,6 +575,7 @@ class CallSignalingService {
     _remoteStream = null;
 
     _callId = null;
+    _remoteUid = null;
     _isCaller = false;
   }
 }
