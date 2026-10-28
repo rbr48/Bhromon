@@ -60,6 +60,8 @@ class _CallScreenState extends State<CallScreen> {
     _hasExited = true;
     if (context.canPop()) {
       context.pop();
+    } else {
+      context.go('/chats');
     }
   }
 
@@ -243,11 +245,12 @@ class _CallScreenState extends State<CallScreen> {
     final isVideo = widget.isVideoCall;
 
     return PopScope(
-        canPop: true,
+        canPop: context.canPop(),
         onPopInvokedWithResult: (didPop, result) {
-          if (didPop) {
-            _hasExited = true;
-            _signaling.endCall();
+          _hasExited = true;
+          _signaling.endCall(durationSeconds: _callDuration.inSeconds);
+          if (!didPop) {
+            context.go('/chats');
           }
         },
         child: Scaffold(

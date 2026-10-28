@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/value_objects/trust_tier.dart';
 import '../bloc/trust_bloc.dart';
@@ -42,14 +43,31 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        title: const Text('Trust & Moderation Dashboard'),
-        backgroundColor: AppColors.cardDark,
-        elevation: 0,
-        centerTitle: true,
-      ),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/group-hub');
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundDark,
+        appBar: AppBar(
+          title: const Text('Trust & Moderation Dashboard'),
+          backgroundColor: AppColors.cardDark,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white70, size: 18),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/group-hub');
+              }
+            },
+          ),
+        ),
       body: BlocConsumer<TrustBloc, TrustState>(
         listener: (context, state) {
           if (state.appealStatus == AppealStatus.success) {
@@ -247,7 +265,7 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
           );
         },
       ),
-    );
+    ));
   }
 
   Widget _buildFormulaRow(String label, String value, Color color) {

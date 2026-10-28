@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../common/game_zone_portrait_lock.dart';
 import '../data/game_analytics_service.dart';
 import '../domain/models/game_analytics_models.dart';
@@ -366,11 +367,28 @@ class _LudoScreenState extends State<LudoScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1E2125),
-      appBar: AppBar(
-        title: const Text('Ludo Express',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/game-zone');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF1E2125),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white70, size: 18),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/game-zone');
+              }
+            },
+          ),
+          title: const Text('Ludo Express',
+              style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF14171A),
         foregroundColor: Colors.white,
         elevation: 2,
@@ -422,7 +440,7 @@ class _LudoScreenState extends State<LudoScreen>
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildStatusBar() {

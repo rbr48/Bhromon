@@ -71,48 +71,74 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
         }
 
         if (session == null) {
-          return Scaffold(
-            backgroundColor: const Color(0xFF0F1E14),
-            appBar: AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                onPressed: () => context.pop(),
+          return PopScope(
+            canPop: context.canPop(),
+            onPopInvokedWithResult: (didPop, _) {
+              if (didPop) return;
+              context.go('/game-zone');
+            },
+            child: Scaffold(
+              backgroundColor: const Color(0xFF0F1E14),
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                leading: IconButton(
+                  icon:
+                      const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/game-zone');
+                    }
+                  },
+                ),
               ),
-            ),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.table_restaurant_outlined,
-                      color: Colors.white38, size: 54),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'This table is no longer available.',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => context.pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.mintGreen,
-                      foregroundColor: Colors.black87,
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.table_restaurant_outlined,
+                        color: Colors.white38, size: 54),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'This table is no longer available.',
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
                     ),
-                    child: const Text('Back to Game Zone'),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/game-zone');
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.mintGreen,
+                        foregroundColor: Colors.black87,
+                      ),
+                      child: const Text('Back to Game Zone'),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
         }
 
-        return Scaffold(
-          backgroundColor: const Color(0xFF0B1710),
-          appBar: AppBar(
-            backgroundColor: const Color(0xFF14241B),
-            elevation: 0,
-            title: Column(
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            _confirmLeaveTable(session);
+          },
+          child: Scaffold(
+            backgroundColor: const Color(0xFF0B1710),
+            appBar: AppBar(
+              backgroundColor: const Color(0xFF14241B),
+              elevation: 0,
+              title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -149,7 +175,7 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
           body: SafeArea(
             child: _buildSessionBody(session),
           ),
-        );
+        ));
       },
     );
   }
@@ -299,6 +325,12 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
       gameId: session.id,
     );
 
-    if (mounted) context.pop();
+    if (mounted) {
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go('/game-zone');
+      }
+    }
   }
 }

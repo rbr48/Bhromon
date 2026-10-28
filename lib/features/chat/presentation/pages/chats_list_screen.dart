@@ -122,7 +122,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     _ensureStreams(currentUid);
 
     return PopScope(
-      canPop: false,
+      canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         context.go('/group-hub');
@@ -134,7 +134,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           elevation: 1,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => context.go('/group-hub'),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/group-hub');
+              }
+            },
           ),
           title: Text(
             _bottomNavIndex == 0 ? 'Bhromon Chat' : 'Calls',

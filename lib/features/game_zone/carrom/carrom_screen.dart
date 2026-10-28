@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 import '../common/game_zone_portrait_lock.dart';
 import '../data/game_analytics_service.dart';
@@ -312,11 +313,28 @@ class _CarromScreenState extends State<CarromScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF241812),
-      appBar: AppBar(
-        title: const Text('Carrom (ক্যারম)',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/game-zone');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF241812),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white70, size: 18),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/game-zone');
+              }
+            },
+          ),
+          title: const Text('Carrom (ক্যারম)',
+              style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF1A110C),
         foregroundColor: Colors.white,
         elevation: 2,
@@ -367,7 +385,7 @@ class _CarromScreenState extends State<CarromScreen>
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildScoreHeader() {

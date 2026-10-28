@@ -48,13 +48,30 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF101C14),
-      appBar: AppBar(
-        title: const Text(
-          'Travel GameZone',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/group-hub');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF101C14),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white70, size: 18),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/group-hub');
+              }
+            },
+          ),
+          title: const Text(
+            'Travel GameZone',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
         centerTitle: true,
         backgroundColor: const Color(0xFF14241B),
         foregroundColor: Colors.white,
@@ -115,7 +132,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
         ),
       ),
       bottomNavigationBar: const BhromonBottomNav(selectedIndex: 3),
-    );
+    ));
   }
 
   // --- TAB 1: OFFLINE ARCADE ---

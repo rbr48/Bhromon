@@ -336,11 +336,33 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     final selected = _selectedOf(channels);
     final canPost = !selected.adminOnly || _isAdmin;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D1A12),
-      appBar: AppBar(
+    return PopScope(
+      canPop: !_searching,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_searching) {
+          _toggleSearch();
+        }
+      },
+      child: Scaffold(
         backgroundColor: const Color(0xFF0D1A12),
-        elevation: 0,
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF0D1A12),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              if (_searching) {
+                _toggleSearch();
+                return;
+              }
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/group-hub');
+              }
+            },
+          ),
         title: _searching
             ? TextField(
                 controller: _searchCtrl,
@@ -470,7 +492,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           ],
         ],
       ),
-    );
+    ));
   }
 
   // ---------------------------------------------------------------------------

@@ -638,7 +638,7 @@ class _MapScreenState extends State<MapScreen> {
         : TrustTier.unverified;
 
     return PopScope(
-      canPop: false,
+      canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         context.go('/group-hub');

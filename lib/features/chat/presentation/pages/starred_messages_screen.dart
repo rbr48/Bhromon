@@ -18,15 +18,27 @@ class StarredMessagesScreen extends StatelessWidget {
     final authState = context.watch<AuthCubit>().state;
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0B141A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1F2C34),
-        elevation: 1,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/chats');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0B141A),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF1F2C34),
+          elevation: 1,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/chats');
+              }
+            },
+          ),
         title: const Text(
           'Starred messages',
           style: TextStyle(
@@ -243,6 +255,7 @@ class StarredMessagesScreen extends StatelessWidget {
                 );
               },
             ),
+      ),
     );
   }
 

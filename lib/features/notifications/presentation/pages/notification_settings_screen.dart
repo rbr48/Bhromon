@@ -25,7 +25,7 @@ class _NotificationSettingsScreenState
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         if (context.canPop()) {
@@ -39,7 +39,13 @@ class _NotificationSettingsScreenState
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/group-hub');
+              }
+            },
           ),
           title: const Text(
             'SETTINGS & ACCOUNT',
