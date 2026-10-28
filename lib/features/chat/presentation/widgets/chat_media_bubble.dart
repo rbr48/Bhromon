@@ -135,35 +135,66 @@ class ChatMediaBubble extends StatelessWidget {
         final displayUrl = (thumbnailUrl != null && thumbnailUrl!.isNotEmpty)
             ? thumbnailUrl!
             : mediaUrl!;
+
+        Widget buildPlaceholder() => Container(
+          width: double.infinity,
+          height: 200,
+          color: const Color(0xFF1A2730),
+          child: const Center(
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                color: Color(0xFF00A884),
+                strokeWidth: 2,
+              ),
+            ),
+          ),
+        );
+
+        Widget buildBrokenPlaceholder() => Container(
+          width: double.infinity,
+          height: 200,
+          color: const Color(0xFF1A2730),
+          child: const Center(
+            child: Icon(Icons.broken_image_outlined,
+                color: Colors.white54, size: 36),
+          ),
+        );
+
+        if (kIsWeb) {
+          // On Web: use Image.network to avoid XHR CORS and flutter_cache_manager issues
+          return Image.network(
+            displayUrl,
+            width: double.infinity,
+            height: 200,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return buildPlaceholder();
+            },
+            errorBuilder: (context, error, stackTrace) =>
+                buildBrokenPlaceholder(),
+          );
+        }
+
         return CachedNetworkImage(
           memCacheWidth: decodeWidth,
           imageUrl: displayUrl,
           width: double.infinity,
           height: 200,
           fit: BoxFit.cover,
-          placeholder: (_, __) => Container(
+          placeholder: (_, __) => buildPlaceholder(),
+          errorWidget: (_, __, ___) => Image.network(
+            displayUrl,
             width: double.infinity,
             height: 200,
-            color: const Color(0xFF1A2730),
-            child: const Center(
-              child: SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(
-                  color: Color(0xFF00A884),
-                  strokeWidth: 2,
-                ),
-              ),
-            ),
-          ),
-          errorWidget: (_, __, ___) => Container(
-            width: double.infinity,
-            height: 200,
-            color: const Color(0xFF1A2730),
-            child: const Center(
-              child: Icon(Icons.broken_image_outlined,
-                  color: Colors.white54, size: 36),
-            ),
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return buildPlaceholder();
+            },
+            errorBuilder: (_, __, ___) => buildBrokenPlaceholder(),
           ),
         );
       }

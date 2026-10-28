@@ -2697,10 +2697,20 @@ class _ChatScreenState extends State<ChatScreen> {
                                             ),
                                             body: Center(
                                               child: InteractiveViewer(
-                                                child: CachedNetworkImage(
-                                                  imageUrl: mediaUrl,
-                                                  fit: BoxFit.contain,
-                                                ),
+                                                child: kIsWeb
+                                                    ? Image.network(
+                                                        mediaUrl,
+                                                        fit: BoxFit.contain,
+                                                      )
+                                                    : CachedNetworkImage(
+                                                        imageUrl: mediaUrl,
+                                                        fit: BoxFit.contain,
+                                                        errorWidget: (_, __, ___) =>
+                                                            Image.network(
+                                                          mediaUrl,
+                                                          fit: BoxFit.contain,
+                                                        ),
+                                                      ),
                                               ),
                                             ),
                                           ),
