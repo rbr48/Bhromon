@@ -37,6 +37,7 @@ import 'core/security/device_integrity_service.dart';
 import 'core/database/app_database.dart';
 import 'features/chat/data/call_notification_service.dart';
 import 'features/game_zone/data/game_analytics_service.dart';
+import 'features/notifications/data/fcm_service.dart';
 import 'features/notifications/geo_fence_service.dart'
     show registerGeoFenceWork;
 
@@ -327,6 +328,7 @@ void main() {
     // Background job registration and call listener isn't needed to draw the first frame.
     if (firebaseAvailable) {
       CallNotificationService().init();
+      getIt<FcmService>().initGlobalListener();
       if (!kIsWeb) {
         unawaited(_registerBackgroundWork());
       }

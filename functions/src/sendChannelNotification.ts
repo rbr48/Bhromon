@@ -36,10 +36,15 @@ export const sendChannelNotification = functions
 
     try {
       const members = await activeMemberEmails(tourId, senderEmail);
+      const mentions = mentionsOf(message);
+      const isMentioned = mentions.size > 0;
+      // If there are specific @mentions, target those members; otherwise notify all active members
       const recipients =
         channelId === EVERYONE_CHANNEL_ID
           ? members
-          : members.filter((email) => mentionsOf(message).has(email));
+          : (isMentioned
+              ? members.filter((email) => mentions.has(email))
+              : members);
       if (recipients.length === 0) return;
 
       const channelSnap = await admin
@@ -62,7 +67,10 @@ export const sendChannelNotification = functions
           },
           data: { action: 'channel', tourId, channelId, messageId },
           android: {
-            priority: channelId === EVERYONE_CHANNEL_ID ? 'high' : 'normal',
+            priority:
+              channelId === EVERYONE_CHANNEL_ID || isMentioned
+                ? 'high'
+                : 'normal',
           },
         },
         `sendChannelNotification ${messageId}`,
