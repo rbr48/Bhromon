@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../../app/router.dart';
 import '../../../core/services/push_device.dart';
+import '../../chat/data/vps_chat_service.dart';
 
 /// Channel used for all general Bhromon notifications.
 const _kChannelId = 'bhromon_general';
@@ -358,15 +359,28 @@ class FcmService {
   /// under `devices`, so a member with two phones gets pushes on both. The
   /// single document is also kept for the functions that read one token.
   Future<void> _saveToken(String uid, String token) async {
+    final platform = kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios');
     final Map<String, dynamic> data = {
       'token': token,
-      // Correctly record platform instead of hardcoding 'android'
-      'platform': kIsWeb ? 'web' : (Platform.isAndroid ? 'android' : 'ios'),
+      'platform': platform,
       'updatedAt': FieldValue.serverTimestamp(),
     };
-    final user = _firestore.collection('fcm_tokens').doc(uid);
-    await user.set(data);
-    await user.collection('devices').doc(pushDeviceId(token)).set(data);
+
+    // 1. Immediately register with VPS for instant server-direct push notifications
+    try {
+      await VpsChatService().registerDeviceToken(token, platform: platform);
+    } catch (e) {
+      debugPrint('[FcmService] VPS token registration error: $e');
+    }
+
+    // 2. Best-effort registration with Firestore (silently catch quota errors)
+    try {
+      final user = _firestore.collection('fcm_tokens').doc(uid);
+      await user.set(data);
+      await user.collection('devices').doc(pushDeviceId(token)).set(data);
+    } catch (e) {
+      debugPrint('[FcmService] Firestore token registration ignored/quota: $e');
+    }
   }
 
   /// Show a rich local notification when the app is in the foreground.

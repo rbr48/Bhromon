@@ -13,6 +13,7 @@ import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/doc_future_cache.dart';
 import '../../data/chat_local_cache.dart';
+import '../../data/vps_chat_service.dart';
 
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
@@ -35,10 +36,36 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   late Stream<QuerySnapshot> _chatsStream;
   late Stream<QuerySnapshot> _callsStream;
 
+  StreamSubscription<List<Map<String, dynamic>>>? _vpsConvSub;
+
   @override
   void initState() {
     super.initState();
     _loadOfflineConversations();
+    _listenToVpsConversations();
+  }
+
+  @override
+  void dispose() {
+    _vpsConvSub?.cancel();
+    super.dispose();
+  }
+
+  void _listenToVpsConversations() {
+    _vpsConvSub?.cancel();
+    _vpsConvSub = VpsChatService().conversationsStream.listen((vpsConvs) {
+      if (!mounted) return;
+      for (final conv in vpsConvs) {
+        final id = conv['chatId'] as String? ?? conv['id'] as String?;
+        if (id != null) {
+          ChatLocalCache().cacheConversation(id, conv);
+        }
+      }
+      setState(() {
+        _offlineConversations = vpsConvs;
+      });
+    });
+    unawaited(VpsChatService().fetchConversations());
   }
 
   Future<void> _loadOfflineConversations() async {
@@ -295,13 +322,17 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                           color: Color(0xFF00A884)));
                                 }
                                 if (snapshot.hasError) {
-                                  return Center(
+                                  if (_offlineConversations.isNotEmpty) {
+                                    return _buildOfflineConversationsList(
+                                        blockedUids, currentUid);
+                                  }
+                                  return const Center(
                                     child: Padding(
-                                      padding: const EdgeInsets.all(24.0),
+                                      padding: EdgeInsets.all(24.0),
                                       child: Text(
-                                        'Error loading chats: ${snapshot.error}',
-                                        style: const TextStyle(
-                                            color: Colors.redAccent,
+                                        'Connecting to chat server...',
+                                        style: TextStyle(
+                                            color: Colors.white54,
                                             fontSize: 13),
                                         textAlign: TextAlign.center,
                                       ),
@@ -495,7 +526,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       final otherUser =
           participants.firstWhere((p) => p != currentUid, orElse: () => '');
       if (blockedUids.contains(otherUser)) return false;
-      if (_lockedChatIds.contains(data['id'] as String? ?? '')) return false;
+      final cId = (data['chatId'] ?? data['id'] ?? '') as String;
+      if (_lockedChatIds.contains(cId)) return false;
       if (_searchQuery.isNotEmpty) {
         final lastMsg = (data['lastMessage'] as String? ?? '').toLowerCase();
         final otherUserLower = otherUser.toLowerCase();
@@ -518,14 +550,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       itemCount: filtered.length,
       itemBuilder: (context, index) {
         final data = filtered[index];
-        final chatId = data['id'] as String? ?? '';
+        final chatId = (data['chatId'] ?? data['id'] ?? '') as String;
         final participants =
             List<String>.from(data['participants'] as Iterable? ?? <dynamic>[]);
         final otherUserUid = participants.firstWhere((p) => p != currentUid,
             orElse: () => 'Guest');
         final String lastMsgMeta = (data['lastMessage'] as String?) ?? '';
         final String lastMsgType =
-            (data['lastMessageType'] as String?) ?? 'text';
+            (data['lastMessageType'] as String?) ?? (data['type'] as String?) ?? 'text';
         final unreadCounts =
             data['unreadCounts'] as Map<dynamic, dynamic>? ?? {};
         final unreadCount = (unreadCounts[currentUid] as num?)?.toInt() ?? 0;
@@ -536,14 +568,19 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 participantProfiles![otherUserUid] as Map)
             : null;
 
+        final lastTimeRaw = data['lastMessageTime'] ?? data['lastTime'];
+        final DateTime? lastTime = lastTimeRaw is int
+            ? DateTime.fromMillisecondsSinceEpoch(lastTimeRaw)
+            : (lastTimeRaw is Timestamp ? lastTimeRaw.toDate() : null);
+
         return ChatTile(
           chatId: chatId,
           otherUserUid: otherUserUid,
           currentUid: currentUid,
           lastMessage: lastMsgMeta,
           lastMessageType: lastMsgType,
-          lastTime: null,
-          lastMessageSenderId: data['lastMessageSenderId'] as String?,
+          lastTime: lastTime != null ? Timestamp.fromDate(lastTime) : null,
+          lastMessageSenderId: (data['lastSenderId'] ?? data['lastMessageSenderId']) as String?,
           unreadCount: unreadCount,
           cachedOtherProfile: cachedProfile,
           activeTabFilter: _activeTab,
@@ -660,7 +697,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                       size: 48, color: Colors.white.withValues(alpha: 0.15)),
                   const SizedBox(height: 12),
                   const Text(
-                    'Unable to load call log.',
+                    'No recent calls.',
                     style: TextStyle(color: Colors.white54, fontSize: 13),
                   ),
                 ],

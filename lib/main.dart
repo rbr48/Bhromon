@@ -37,6 +37,7 @@ import 'core/security/device_integrity_service.dart';
 import 'core/database/app_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'features/chat/data/call_notification_service.dart';
+import 'features/chat/data/vps_chat_service.dart';
 import 'features/game_zone/data/game_analytics_service.dart';
 import 'features/notifications/data/fcm_service.dart';
 import 'features/notifications/geo_fence_service.dart'
@@ -342,6 +343,7 @@ void main() {
         }
       }
       CallNotificationService().init();
+      VpsChatService().init();
       getIt<FcmService>().initGlobalListener();
       if (!kIsWeb) {
         unawaited(_registerBackgroundWork());

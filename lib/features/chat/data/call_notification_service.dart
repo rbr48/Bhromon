@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../app/router.dart';
 import '../../../core/utils/image_sizing.dart';
+import 'vps_chat_service.dart';
 
 /// Top-level WebRTC incoming call listener and VoIP manager.
 ///
@@ -26,6 +27,7 @@ class CallNotificationService {
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _callsSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _emailCallsSub;
   StreamSubscription<CallEvent?>? _callkitSub;
+  StreamSubscription<Map<String, dynamic>>? _vpsCallSub;
 
   String? _currentListeningUid;
   String? _activeIncomingCallId;
@@ -97,23 +99,54 @@ class CallNotificationService {
     _currentListeningUid = uid;
     _callsSub?.cancel();
     _emailCallsSub?.cancel();
+    _vpsCallSub?.cancel();
 
-    _callsSub = FirebaseFirestore.instance
-        .collection('calls')
-        .where('calleeId', isEqualTo: uid)
-        .where('status', isEqualTo: 'calling')
-        .snapshots()
-        .listen(_handleIncomingCallSnap);
+    // 1. Direct VPS WebSocket call signal listener (<20ms latency, zero Firestore quota)
+    _vpsCallSub = VpsChatService().callSignalStream.listen((event) {
+      final signalType = event['signalType'] as String?;
+      if (signalType == 'offer') {
+        final callId = event['callId']?.toString() ?? '';
+        final callerId = event['callerId']?.toString() ?? '';
+        final callerName = event['callerName']?.toString() ?? 'Traveler';
+        final avatarUrl = event['avatarUrl']?.toString();
+        final isVideo = event['isVideo'] == true;
+        _presentIncomingCall(
+          callId: callId,
+          callerId: callerId,
+          callerName: callerName,
+          callerAvatar: avatarUrl,
+          isVideo: isVideo,
+        );
+      } else if (signalType == 'end' || signalType == 'declined') {
+        _dismissIncomingUI();
+      }
+    });
 
-    final email =
-        FirebaseAuth.instance.currentUser?.email?.toLowerCase().trim();
-    if (email != null && email.isNotEmpty && email != uid) {
-      _emailCallsSub = FirebaseFirestore.instance
+    // 2. Best-effort Firestore listeners
+    try {
+      _callsSub = FirebaseFirestore.instance
           .collection('calls')
-          .where('calleeId', isEqualTo: email)
+          .where('calleeId', isEqualTo: uid)
           .where('status', isEqualTo: 'calling')
           .snapshots()
-          .listen(_handleIncomingCallSnap);
+          .listen(_handleIncomingCallSnap, onError: (Object e) {
+        debugPrint('[CallNotification] Firestore call sub error: $e');
+      });
+
+      final email =
+          FirebaseAuth.instance.currentUser?.email?.toLowerCase().trim();
+      if (email != null && email.isNotEmpty && email != uid) {
+        _emailCallsSub = FirebaseFirestore.instance
+            .collection('calls')
+            .where('calleeId', isEqualTo: email)
+            .where('status', isEqualTo: 'calling')
+            .snapshots()
+            .listen(_handleIncomingCallSnap, onError: (Object e) {
+          debugPrint('[CallNotification] Firestore email call sub error: $e');
+        });
+      }
+    } catch (e) {
+      debugPrint('[CallNotification] Firestore listeners failed: $e');
     }
   }
 
@@ -139,13 +172,11 @@ class CallNotificationService {
       }
     }
 
-    _activeIncomingCallId = callId;
     final callerId = data['callerId'] as String? ?? '';
     final offerMap = data['offer'] as Map<String, dynamic>?;
     final sdp = offerMap?['sdp'] as String? ?? '';
     final bool isVideo = sdp.contains('m=video');
 
-    // Fetch caller details (prefer direct fields if present)
     String callerName = (data['callerName'] as String?)?.trim() ?? '';
     String? callerAvatar = data['callerAvatar'] as String?;
     if (callerName.isEmpty || callerName == 'Traveler') {
@@ -166,6 +197,25 @@ class CallNotificationService {
     if (callerName.isEmpty) {
       callerName = 'Traveler';
     }
+
+    await _presentIncomingCall(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      callerAvatar: callerAvatar,
+      isVideo: isVideo,
+    );
+  }
+
+  Future<void> _presentIncomingCall({
+    required String callId,
+    required String callerId,
+    required String callerName,
+    required String? callerAvatar,
+    required bool isVideo,
+  }) async {
+    if (_activeIncomingCallId == callId) return;
+    _activeIncomingCallId = callId;
 
     // 1. Show CallKit if mobile native
     if (!kIsWeb) {
@@ -425,7 +475,11 @@ class CallNotificationService {
   void _stopListening() {
     _currentListeningUid = null;
     _callsSub?.cancel();
+    _callsSub = null;
     _emailCallsSub?.cancel();
+    _emailCallsSub = null;
+    _vpsCallSub?.cancel();
+    _vpsCallSub = null;
     _dismissIncomingUI();
   }
 
@@ -434,5 +488,6 @@ class CallNotificationService {
     _callsSub?.cancel();
     _emailCallsSub?.cancel();
     _callkitSub?.cancel();
+    _vpsCallSub?.cancel();
   }
 }
