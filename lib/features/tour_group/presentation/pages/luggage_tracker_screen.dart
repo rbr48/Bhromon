@@ -453,6 +453,8 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
           email: _me,
           displayName: _repository.currentDisplayName,
           role: _myRole ?? TourRole.member,
+          status: TourMemberStatus.active,
+          joinedAt: DateTime.now(),
         ),
       );
     }
