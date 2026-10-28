@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
@@ -78,20 +79,41 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                   ? InteractiveViewer(
                       minScale: 0.8,
                       maxScale: 5.0,
-                      child: CachedNetworkImage(
-                        memCacheWidth: kMaxDecodeDimension,
-                        imageUrl: widget.mediaUrl,
-                        fit: BoxFit.contain,
-                        placeholder: (_, __) => const Center(
-                          child: CircularProgressIndicator(
-                              color: Color(0xFF00A884)),
-                        ),
-                        errorWidget: (_, __, ___) => const Icon(
-                          Icons.broken_image_outlined,
-                          color: Colors.white54,
-                          size: 64,
-                        ),
-                      ),
+                      child: kIsWeb
+                          ? Image.network(
+                              widget.mediaUrl,
+                              fit: BoxFit.contain,
+                              loadingBuilder: (_, child, progress) {
+                                if (progress == null) return child;
+                                return const Center(
+                                  child: CircularProgressIndicator(
+                                      color: Color(0xFF00A884)),
+                                );
+                              },
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.broken_image_outlined,
+                                color: Colors.white54,
+                                size: 64,
+                              ),
+                            )
+                          : CachedNetworkImage(
+                              memCacheWidth: kMaxDecodeDimension,
+                              imageUrl: widget.mediaUrl,
+                              fit: BoxFit.contain,
+                              placeholder: (_, __) => const Center(
+                                child: CircularProgressIndicator(
+                                    color: Color(0xFF00A884)),
+                              ),
+                              errorWidget: (_, __, ___) => Image.network(
+                                widget.mediaUrl,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.broken_image_outlined,
+                                  color: Colors.white54,
+                                  size: 64,
+                                ),
+                              ),
+                            ),
                     )
                   : _buildVideoPlayer(),
             ),
