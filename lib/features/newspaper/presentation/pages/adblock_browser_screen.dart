@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -133,6 +134,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
         ),
       ];
 
+  bool _isExiting = false;
+
   @override
   void initState() {
     super.initState();
@@ -175,7 +178,14 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
 
     // 3. At initial page: exit back to Newspaper Hub
     if (mounted) {
-      Navigator.of(context).pop();
+      setState(() {
+        _isExiting = true;
+      });
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -201,12 +211,13 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
   }
 
   void _openInReaderMode() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => AdFreeArticleReaderScreen(
-          articleUrl: _currentUrl,
-        ),
-      ),
+    context.push(
+      '/newspaper-reader',
+      extra: {
+        'url': _currentUrl,
+        'title': _pageTitle,
+        'sourceName': widget.paper?.name,
+      },
     );
   }
 
@@ -413,7 +424,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: _isExiting,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         await _handleBackPress();
@@ -425,7 +436,16 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF111827), size: 24),
-            onPressed: _handleBackPress,
+            onPressed: () {
+              setState(() {
+                _isExiting = true;
+              });
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                Navigator.of(context).pop();
+              }
+            },
           ),
           titleSpacing: 0,
           title: Text(

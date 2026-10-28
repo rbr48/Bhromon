@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
 import '../../data/news_tts_service.dart';
 import '../../data/newspaper_service.dart';
@@ -171,15 +172,14 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
     _service.recordPaperRead(headline.paperId);
     _loadUserData();
 
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => AdFreeArticleReaderScreen(
-          articleUrl: headline.articleUrl,
-          initialTitle: headline.title,
-          initialSourceName: headline.paperName,
-          initialImageUrl: headline.imageUrl,
-        ),
-      ),
+    context.push(
+      '/newspaper-reader',
+      extra: {
+        'url': headline.articleUrl,
+        'title': headline.title,
+        'sourceName': headline.paperName,
+        'imageUrl': headline.imageUrl,
+      },
     );
   }
 
@@ -188,14 +188,13 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
       _service.recordPaperRead(paper.id);
       _loadUserData();
     }
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => AdBlockBrowserScreen(
-          initialUrl: url,
-          initialTitle: title,
-          paper: paper,
-        ),
-      ),
+    context.push(
+      '/newspaper-browser',
+      extra: {
+        'url': url,
+        'title': title,
+        'paper': paper,
+      },
     );
   }
 
@@ -311,7 +310,13 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/group-hub');
+            }
+          },
         ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
