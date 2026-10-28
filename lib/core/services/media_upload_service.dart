@@ -103,7 +103,9 @@ class MediaUploadService {
       String path) {
     final segments = path.split('/').where((s) => s.isNotEmpty).toList();
     if (segments.length >= 3) {
-      return (segments[1], segments[0], segments[2]);
+      final folder = segments[0];
+      final tourId = _normalizeTourOrChatId(segments[1], folder);
+      return (tourId, folder, segments[2]);
     } else if (segments.length == 2) {
       final seg0 = segments[0];
       final seg1 = segments[1];
@@ -120,6 +122,24 @@ class MediaUploadService {
     }
     final randId = const Uuid().v4().replaceAll('-', '');
     return ('general', 'media', '$randId.bin');
+  }
+
+  /// Normalizes a space/chat ID so that chat media always maps to a recognized
+  /// chat space on the VPS media server (`chat_*`), adhering to length (<= 64)
+  /// and character set (`[A-Za-z0-9_-]`) constraints.
+  static String _normalizeTourOrChatId(String id, String folder) {
+    if (folder.startsWith('chat_')) {
+      final clean = id.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+      if (clean.startsWith('chat_') && clean.length <= 64) {
+        return clean;
+      }
+      final candidate = 'chat_$clean';
+      if (candidate.length <= 64) {
+        return candidate;
+      }
+      return 'chat_direct';
+    }
+    return id;
   }
 
   /// Uploads bytes directly to Firebase Storage.
@@ -431,9 +451,10 @@ class MediaUploadService {
             await MultipartFile.fromFile(file.path, filename: uniqueName);
       }
 
+      final effectiveTourId = _normalizeTourOrChatId(tourOrChatId, folder);
       final formData = FormData.fromMap({
         'file': multipartFile,
-        'tourId': tourOrChatId,
+        'tourId': effectiveTourId,
         'folder': folder,
       });
 
