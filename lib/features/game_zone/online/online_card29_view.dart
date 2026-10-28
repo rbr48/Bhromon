@@ -333,32 +333,36 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
               return Stack(
                 alignment: Alignment.center,
                 children: [
+                  _buildCenterTable(table, me, hand, constraints),
                   Positioned(
                     top: 6,
-                    child: _buildSeatBadge(table, northSeat, me, 'North · Partner'),
+                    child: _buildSeatBadge(
+                        table, northSeat, me, 'North · Partner'),
                   ),
                   Positioned(
-                    left: 6,
+                    left: 8,
+                    top: (constraints.maxHeight * 0.22),
                     child: _buildSeatBadge(table, westSeat, me, 'West'),
                   ),
                   Positioned(
-                    right: 6,
+                    right: 8,
+                    top: (constraints.maxHeight * 0.22),
                     child: _buildSeatBadge(table, eastSeat, me, 'East'),
                   ),
-                  _buildCenterTable(table, me, hand, constraints),
-                  if (table.phase == Card29Phase.bidding && table.actingSeat == me)
+                  if (table.phase == Card29Phase.bidding &&
+                      table.actingSeat == me)
                     Positioned(
                       bottom: 6,
-                      left: 12,
-                      right: 12,
+                      left: 8,
+                      right: 8,
                       child: Center(child: _biddingControls(table, me)),
                     ),
                   if (table.phase == Card29Phase.trumpSelection &&
                       table.highestBidder == me)
                     Positioned(
                       bottom: 6,
-                      left: 12,
-                      right: 12,
+                      left: 8,
+                      right: 8,
                       child: Center(child: _trumpSelector(table)),
                     ),
                 ],
@@ -375,7 +379,12 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
           )
         else
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
+            padding: EdgeInsets.fromLTRB(
+              6,
+              0,
+              6,
+              max(8.0, MediaQuery.paddingOf(context).bottom + 4),
+            ),
             child: _handTray(cards, legal),
           ),
       ],
@@ -478,18 +487,22 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
     );
   }
 
-  Widget _buildSeatBadge(Card29Table table, int seat, int me, String fallbackLabel) {
+  Widget _buildSeatBadge(
+      Card29Table table, int seat, int me, String fallbackLabel) {
+    final isPartner = seat == (me + 2) % 4;
     final isTurn = table.currentTurn == seat &&
         (table.phase == Card29Phase.bidding ||
             table.phase == Card29Phase.playing);
     final count = table.handCounts.length > seat ? table.handCounts[seat] : 0;
     final isBidder = table.highestBidder == seat;
+    final displayName =
+        isPartner ? 'Partner' : _name(seat, me).split(' ').first;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: BoxDecoration(
             color: isTurn ? Colors.amber : const Color(0x990A1A10),
             borderRadius: BorderRadius.circular(12),
@@ -497,30 +510,37 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
               color: isTurn ? Colors.white : Colors.white24,
               width: isTurn ? 2 : 1,
             ),
+            boxShadow: isTurn
+                ? [
+                    BoxShadow(
+                      color: Colors.amber.withValues(alpha: 0.5),
+                      blurRadius: 6,
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.person_rounded,
-                size: 13,
+                isPartner ? Icons.handshake_rounded : Icons.person_rounded,
+                size: 11,
                 color: isTurn ? Colors.black87 : Colors.white,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 3),
               Text(
-                seat == (me + 2) % 4
-                    ? 'North · Partner'
-                    : _name(seat, me),
+                displayName,
                 style: TextStyle(
                   color: isTurn ? Colors.black87 : Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 11,
+                  fontSize: 10,
                 ),
               ),
               if (isBidder) ...[
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
                   decoration: BoxDecoration(
                     color: isTurn ? Colors.black87 : Colors.amber,
                     borderRadius: BorderRadius.circular(4),
@@ -529,8 +549,8 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
                     'BID',
                     style: TextStyle(
                       color: isTurn ? Colors.amber : Colors.black87,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ),
@@ -538,12 +558,12 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
             ],
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 2),
         SizedBox(
-          width: 40,
+          width: 36,
           child: Wrap(
-            spacing: 2,
-            runSpacing: 2,
+            spacing: 1.5,
+            runSpacing: 1.5,
             alignment: WrapAlignment.center,
             children: List.generate(
               count.clamp(0, 8),
@@ -552,8 +572,8 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
                 suitSymbol: '',
                 isRed: false,
                 isFaceUp: false,
-                width: 8,
-                height: 12,
+                width: 7,
+                height: 10,
                 backColor: Color(0xFF8B0000),
               ),
             ),
@@ -563,10 +583,11 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
     );
   }
 
-  Widget _buildCenterTable(
-      Card29Table table, int me, Card29PrivateHand? hand, BoxConstraints constraints) {
-    final tableSize = (min(constraints.maxWidth * 0.56, constraints.maxHeight - 110))
-        .clamp(160.0, 260.0);
+  Widget _buildCenterTable(Card29Table table, int me, Card29PrivateHand? hand,
+      BoxConstraints constraints) {
+    final tableSize =
+        (min(constraints.maxWidth * 0.50, constraints.maxHeight - 120))
+            .clamp(140.0, 210.0);
     final cardW = tableSize * 0.22;
     final cardH = cardW * 1.45;
     final offset = tableSize * 0.16;
@@ -738,11 +759,15 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.amber, width: 1.5),
         boxShadow: const [
-          BoxShadow(color: Colors.black87, blurRadius: 10, offset: Offset(0, 4))
+          BoxShadow(
+              color: Colors.black87, blurRadius: 10, offset: Offset(0, 4))
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           ElevatedButton(
             onPressed: _busy ? null : () => _act({'type': 'pass'}),
@@ -750,22 +775,27 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
               backgroundColor: Colors.white12,
               foregroundColor: Colors.white,
               visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             ),
-            child: const Text('Pass', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Pass',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
           ),
-          const SizedBox(width: 8),
-          for (var bid = minBid; bid <= Card29Engine.maxBid && bid < minBid + 3; bid++)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: ElevatedButton(
-                onPressed: _busy ? null : () => _act({'type': 'bid', 'bid': bid}),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.mintGreen,
-                  foregroundColor: Colors.black87,
-                  visualDensity: VisualDensity.compact,
-                ),
-                child: Text('Bid $bid', style: const TextStyle(fontWeight: FontWeight.bold)),
+          for (var bid = minBid;
+              bid <= Card29Engine.maxBid && bid < minBid + 3;
+              bid++)
+            ElevatedButton(
+              onPressed:
+                  _busy ? null : () => _act({'type': 'bid', 'bid': bid}),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.mintGreen,
+                foregroundColor: Colors.black87,
+                visualDensity: VisualDensity.compact,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               ),
+              child: Text('Bid $bid',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 11)),
             ),
         ],
       ),
@@ -774,42 +804,53 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
 
   Widget _trumpSelector(Card29Table table) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xEE092614),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.amber, width: 2),
+        boxShadow: const [
+          BoxShadow(
+              color: Colors.black87, blurRadius: 10, offset: Offset(0, 4)),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Choose Trump Suit',
-              style: TextStyle(
-                  color: Colors.amber,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12)),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          const Text(
+            'Choose Trump Suit',
+            style: TextStyle(
+              color: Colors.amber,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            alignment: WrapAlignment.center,
             children: [
               for (final suit in CardSuit.values)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: ElevatedButton(
-                    onPressed: _busy
-                        ? null
-                        : () => _act(
-                            {'type': 'selectTrump', 'suit': suitKey(suit)}),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: (suit == CardSuit.hearts ||
-                              suit == CardSuit.diamonds)
-                          ? Colors.red.shade900
-                          : Colors.grey.shade900,
-                      foregroundColor: Colors.white,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    child: Text('${suit.symbol} ${suit.name}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                ElevatedButton(
+                  onPressed: _busy
+                      ? null
+                      : () => _act(
+                          {'type': 'selectTrump', 'suit': suitKey(suit)}),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: (suit == CardSuit.hearts ||
+                            suit == CardSuit.diamonds)
+                        ? const Color(0xFFC62828)
+                        : const Color(0xFF263238),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: Text(
+                    '${suit.symbol} ${suit.name}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 11),
                   ),
                 ),
             ],
@@ -830,7 +871,8 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
       buttons.add(_button('New Match', () => _act({'type': 'newMatch'})));
     }
     if (table.canClaimPair(hand: cards, knownTrump: knownTrump)) {
-      buttons.add(_button('Claim Pair (Royalty)', () => _act({'type': 'claimRoyalty'})));
+      buttons.add(_button(
+          'Claim Pair (Royalty)', () => _act({'type': 'claimRoyalty'})));
     }
 
     if (buttons.isEmpty) return const SizedBox(height: 2);
@@ -842,7 +884,6 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
       ),
     );
   }
-
 
   Widget _button(String label, VoidCallback onPressed, {bool muted = false}) {
     return ElevatedButton(
@@ -858,30 +899,51 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
   }
 
   Widget _handTray(List<Card29> cards, List<Card29> legal) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (final card in cards)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: GestureDetector(
-                onTap: legal.contains(card) && !_busy
-                    ? () => _act({'type': 'play', 'card': card.code})
-                    : null,
-                child: PlayingCardView(
-                  rank: card.rank.code,
-                  suitSymbol: card.suit.symbol,
-                  isRed: card.suit == CardSuit.hearts ||
-                      card.suit == CardSuit.diamonds,
-                  width: 52,
-                  height: 74,
-                  highlighted: legal.contains(card),
-                ),
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const cardW = 50.0;
+        const cardH = 74.0;
+        final count = max(cards.length, 1);
+        final step = count == 1
+            ? cardW
+            : min(cardW + 4,
+                (constraints.maxWidth - cardW - 16) / (count - 1));
+        final totalWidth = cardW + step * (count - 1);
+
+        return Center(
+          child: SizedBox(
+            width: totalWidth,
+            height: cardH,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (int i = 0; i < cards.length; i++)
+                  Positioned(
+                    left: i * step,
+                    top: 0,
+                    bottom: 0,
+                    child: GestureDetector(
+                      onTap: legal.contains(cards[i]) && !_busy
+                          ? () => _act({'type': 'play', 'card': cards[i].code})
+                          : null,
+                      child: PlayingCardView(
+                        rank: cards[i].rank.code,
+                        suitSymbol: cards[i].suit.symbol,
+                        isRed: cards[i].suit == CardSuit.hearts ||
+                            cards[i].suit == CardSuit.diamonds,
+                        width: cardW,
+                        height: cardH,
+                        highlighted: legal.contains(cards[i]),
+                        dimmed:
+                            !legal.contains(cards[i]) && legal.isNotEmpty,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 }

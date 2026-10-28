@@ -293,7 +293,7 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
     final table = _table;
     if (table == null || _busy) return;
     setState(() => _busy = true);
-    HapticFeedback.mediumImpact();
+    HapticFeedback.selectionClick();
     try {
       await widget.repository.carrom.shoot(
         tourId: _session.tourId,
@@ -387,38 +387,65 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
             ),
           ),
         ),
-        if (shooting)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Row(
-              children: [
-                const Icon(Icons.arrow_back_rounded,
-                    color: Colors.white70, size: 16),
-                Expanded(
-                  child: Slider(
-                    value: _strikerX,
-                    min: CarromBoard.baselineMin,
-                    max: CarromBoard.baselineMax,
-                    activeColor: AppColors.mintGreen,
-                    inactiveColor: Colors.white24,
-                    onChanged: (value) => setState(() => _strikerX = value),
-                  ),
-                ),
-                const Icon(Icons.arrow_forward_rounded,
-                    color: Colors.white70, size: 16),
-              ],
-            ),
-          ),
-        if (table.status.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-            child: Text(
-              table.status,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          ),
+        _bottomControlBar(table, shooting),
       ],
+    );
+  }
+
+  Widget _bottomControlBar(CarromTable table, bool shooting) {
+    final statusText = table.status.isNotEmpty
+        ? table.status
+        : (shooting
+            ? 'Slide striker along baseline, then drag back anywhere on board to strike'
+            : (_animPieces != null
+                ? 'Strike in motion...'
+                : 'Waiting for ${_nameOf(table.currentPlayer)}...'));
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+      decoration: const BoxDecoration(
+        color: Color(0xFF14241B),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            statusText,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: shooting ? Colors.amberAccent : Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              Icon(
+                Icons.swap_horiz,
+                color: shooting ? AppColors.mintGreen : Colors.white30,
+                size: 20,
+              ),
+              Expanded(
+                child: Slider(
+                  value: _strikerX.clamp(
+                      CarromBoard.baselineMin, CarromBoard.baselineMax),
+                  min: CarromBoard.baselineMin,
+                  max: CarromBoard.baselineMax,
+                  activeColor: shooting ? AppColors.mintGreen : Colors.white24,
+                  inactiveColor: Colors.white12,
+                  onChanged: shooting
+                      ? (value) => setState(() => _strikerX = value)
+                      : null,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
