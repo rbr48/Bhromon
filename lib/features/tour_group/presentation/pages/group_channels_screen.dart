@@ -392,6 +392,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               members: _members,
               myEmail: _me,
               badgeFor: _badgeFor,
+              onStartChat: (m) => _startDirectChat(m),
               onStartCall: (m, isVideo) =>
                   _startDirectCall(m, isVideo: isVideo),
             ),
@@ -720,6 +721,24 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         _searchCtrl.clear();
       }
     });
+  }
+
+  void _startDirectChat(TourMember member) {
+    final me = _groups.currentEmail;
+    final myUid = _groups.currentUid.isNotEmpty ? _groups.currentUid : me;
+    final remoteId = (member.uid != null && member.uid!.isNotEmpty)
+        ? member.uid!
+        : member.email;
+    if (remoteId.isEmpty) return;
+
+    final uids = [myUid, remoteId]..sort();
+    final chatId = uids.join('_');
+    context.push(
+      '/chat/$chatId',
+      extra: {
+        'otherUid': remoteId,
+      },
+    );
   }
 
   void _startDirectCall(TourMember member, {required bool isVideo}) {

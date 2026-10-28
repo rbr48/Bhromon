@@ -470,6 +470,11 @@ class _ChatScreenState extends State<ChatScreen> {
       'lastMessageTime': FieldValue.serverTimestamp(),
       'lastMessageSenderId': currentUid,
       'unreadCounts.$currentUid': 0,
+      'participants': FieldValue.arrayUnion([
+        currentUid,
+        if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
+          resolvedOtherUid,
+      ]),
     };
     if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
       chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);
@@ -670,6 +675,11 @@ class _ChatScreenState extends State<ChatScreen> {
         'lastMessageTime': FieldValue.serverTimestamp(),
         'lastMessageSenderId': currentUid,
         'unreadCounts.$currentUid': 0,
+        'participants': FieldValue.arrayUnion([
+          currentUid,
+          if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
+            resolvedOtherUid,
+        ]),
       };
       if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
         chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);
@@ -791,6 +801,11 @@ class _ChatScreenState extends State<ChatScreen> {
         'lastMessageTime': FieldValue.serverTimestamp(),
         'lastMessageSenderId': currentUid,
         'unreadCounts.$currentUid': 0,
+        'participants': FieldValue.arrayUnion([
+          currentUid,
+          if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
+            resolvedOtherUid,
+        ]),
       };
       if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
         chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);
@@ -892,6 +907,11 @@ class _ChatScreenState extends State<ChatScreen> {
         'lastMessageTime': FieldValue.serverTimestamp(),
         'lastMessageSenderId': currentUid,
         'unreadCounts.$currentUid': 0,
+        'participants': FieldValue.arrayUnion([
+          currentUid,
+          if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
+            resolvedOtherUid,
+        ]),
       };
       if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
         chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);
@@ -948,6 +968,11 @@ class _ChatScreenState extends State<ChatScreen> {
         'lastMessageTime': FieldValue.serverTimestamp(),
         'lastMessageSenderId': currentUid,
         'unreadCounts.$currentUid': 0,
+        'participants': FieldValue.arrayUnion([
+          currentUid,
+          if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
+            resolvedOtherUid,
+        ]),
       };
       if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
         chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);
@@ -1004,6 +1029,11 @@ class _ChatScreenState extends State<ChatScreen> {
         'lastMessageTime': FieldValue.serverTimestamp(),
         'lastMessageSenderId': currentUid,
         'unreadCounts.$currentUid': 0,
+        'participants': FieldValue.arrayUnion([
+          currentUid,
+          if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
+            resolvedOtherUid,
+        ]),
       };
       if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
         chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);

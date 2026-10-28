@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
@@ -176,6 +177,25 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
         backgroundColor: AppColors.mintGreen,
         duration: const Duration(seconds: 2),
       ),
+    );
+  }
+
+  void _openDirectChat(BuildContext context, TourMember member) {
+    final me = _repo.currentEmail;
+    final myUid = _repo.currentUid.isNotEmpty ? _repo.currentUid : me;
+    final remoteId = (member.uid != null && member.uid!.isNotEmpty)
+        ? member.uid!
+        : member.email;
+    if (remoteId.isEmpty) return;
+
+    final uids = [myUid, remoteId]..sort();
+    final chatId = uids.join('_');
+    Navigator.pop(context);
+    GoRouter.of(context).push(
+      '/chat/$chatId',
+      extra: {
+        'otherUid': remoteId,
+      },
     );
   }
 
@@ -1058,7 +1078,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
               if (_isMe) {
                 _editNote(context);
               } else {
-                Navigator.pop(context);
+                _openDirectChat(context, member);
               }
             },
             icon: Icon(

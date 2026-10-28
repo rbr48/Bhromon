@@ -342,6 +342,7 @@ Future<void> showChannelMembersSheet(
   required String myEmail,
   required String Function(String email) badgeFor,
   void Function(TourMember member, bool isVideo)? onStartCall,
+  void Function(TourMember member)? onStartChat,
 }) {
   final l10n = context.l10n;
   return showModalBottomSheet<void>(
@@ -399,25 +400,37 @@ Future<void> showChannelMembersSheet(
                               color: AppColors.mintGreen, fontSize: 11),
                         ),
                       ),
-                    if (m.email != myEmail && onStartCall != null) ...[
-                      IconButton(
-                        icon: const Icon(Icons.call,
-                            size: 19, color: AppColors.mintGreen),
-                        tooltip: l10n.translate('chan_call_audio'),
-                        onPressed: () {
-                          Navigator.pop(context);
-                          onStartCall(m, false);
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.videocam,
-                            size: 21, color: AppColors.mintGreen),
-                        tooltip: l10n.translate('chan_call_video'),
-                        onPressed: () {
-                          Navigator.pop(context);
-                          onStartCall(m, true);
-                        },
-                      ),
+                    if (m.email != myEmail) ...[
+                      if (onStartChat != null)
+                        IconButton(
+                          icon: const Icon(Icons.chat_bubble_outline,
+                              size: 19, color: AppColors.mintGreen),
+                          tooltip: l10n.translate('chan_direct_message'),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            onStartChat(m);
+                          },
+                        ),
+                      if (onStartCall != null) ...[
+                        IconButton(
+                          icon: const Icon(Icons.call,
+                              size: 19, color: AppColors.mintGreen),
+                          tooltip: l10n.translate('chan_call_audio'),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            onStartCall(m, false);
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.videocam,
+                              size: 21, color: AppColors.mintGreen),
+                          tooltip: l10n.translate('chan_call_video'),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            onStartCall(m, true);
+                          },
+                        ),
+                      ],
                     ],
                   ],
                 ),
