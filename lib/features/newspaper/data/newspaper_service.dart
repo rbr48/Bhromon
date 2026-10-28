@@ -167,9 +167,39 @@ class NewspaperService {
   }
 
   /// Fetches the newspaper directory catalog.
-  Future<List<Newspaper>> fetchNewspapers({String? category}) async {
+  Future<List<Newspaper>> fetchNewspapers({
+    String? category,
+    bool forceRefresh = false,
+  }) async {
     final box = await _getBox();
     const cacheKey = 'cached_papers_directory';
+
+    if (!forceRefresh) {
+      final cachedStr = box.get(cacheKey);
+      if (cachedStr is String && cachedStr.isNotEmpty) {
+        // Discard any legacy mojibake encoding corruption
+        if (cachedStr.contains('à¦') || cachedStr.contains('â€')) {
+          await box.delete(cacheKey);
+        } else {
+          try {
+            final decoded = jsonDecode(cachedStr) as Map<String, dynamic>;
+            final raw = decoded['papers'] as List<dynamic>? ?? [];
+            final cachedPapers = raw
+                .whereType<Map<String, dynamic>>()
+                .map((m) => Newspaper.fromJson(m))
+                .toList();
+            if (cachedPapers.isNotEmpty) {
+              if (category != null && category != 'all') {
+                return cachedPapers
+                    .where((p) => p.category == category)
+                    .toList();
+              }
+              return cachedPapers;
+            }
+          } catch (_) {}
+        }
+      }
+    }
 
     try {
       final res = await _dio.get<Map<String, dynamic>>(
@@ -194,7 +224,7 @@ class NewspaperService {
 
     // Cache fallback
     final cachedStr = box.get(cacheKey);
-    if (cachedStr is String && cachedStr.isNotEmpty) {
+    if (cachedStr is String && cachedStr.isNotEmpty && !cachedStr.contains('à¦')) {
       try {
         final decoded = jsonDecode(cachedStr) as Map<String, dynamic>;
         final raw = decoded['papers'] as List<dynamic>? ?? [];

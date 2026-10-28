@@ -312,7 +312,7 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
             icon: const Icon(Icons.public_rounded, color: AppColors.mintGreen),
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
+                MaterialPageRoute<void>(
                   builder: (_) => AdBlockBrowserScreen(
                     initialUrl: widget.articleUrl,
                     initialTitle: title,

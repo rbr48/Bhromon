@@ -1332,8 +1332,109 @@ def proxy_newspaper(
             charset = resp.headers.get_content_charset() or "utf-8"
             html_text = raw_bytes.decode(charset, errors="replace")
     except Exception as e:
-        logger.error("Failed proxying newspaper URL %s: %s", url, e)
-        raise HTTPException(status_code=502, detail=f"Failed to fetch newspaper page: {str(e)}")
+        logger.warning("Failed proxying newspaper URL %s: %s", url, e)
+        # Return a responsive embeddable fallback card so Cloudflare never sets X-Frame-Options: SAMEORIGIN
+        clean_domain = parsed.netloc or url
+        fallback_html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(clean_domain)} - Bhromon News</title>
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0D1117;
+      color: #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }}
+    .card {{
+      background: #161B22;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 36px 28px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+    }}
+    .shield-badge {{
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: rgba(0, 208, 158, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #00D09E;
+      font-size: 28px;
+    }}
+    h1 {{ font-size: 20px; font-weight: 700; color: #FFFFFF; margin-bottom: 8px; }}
+    .domain {{ font-size: 14px; color: #00D09E; margin-bottom: 18px; font-weight: 600; word-break: break-all; }}
+    p {{ font-size: 13.5px; color: #94A3B8; line-height: 1.6; margin-bottom: 26px; }}
+    .btn-group {{ display: flex; flex-direction: column; gap: 12px; }}
+    .btn {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }}
+    .btn-primary {{
+      background: #00D09E;
+      color: #071912;
+      border: none;
+    }}
+    .btn-primary:hover {{ background: #00b98c; }}
+    .btn-secondary {{
+      background: transparent;
+      color: #FFFFFF;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }}
+    .btn-secondary:hover {{ background: rgba(255, 255, 255, 0.08); }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="shield-badge">🛡️</div>
+    <h1>Direct Protection Active</h1>
+    <div class="domain">{html.escape(clean_domain)}</div>
+    <p>
+      This newspaper employs automated Cloudflare or bot protection that restricts in-frame web embedding.
+      You can open it directly in a dedicated tab or read it in distraction-free Reader mode.
+    </p>
+    <div class="btn-group">
+      <a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+        Open {html.escape(clean_domain)} ↗
+      </a>
+      <a href="/api/news/reader-view?url={urllib.parse.quote_plus(url)}" class="btn btn-secondary">
+        Distraction-Free Reader Mode 📖
+      </a>
+    </div>
+  </div>
+</body>
+</html>"""
+        return Response(
+            content=fallback_html,
+            media_type="text/html; charset=utf-8",
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache",
+                "Content-Security-Policy": "frame-ancestors *",
+            },
+        )
 
     # 1. Strip external ad network script tags
     cleaned_html = _AD_SCRIPT_REGEX.sub("", html_text)
@@ -1377,5 +1478,120 @@ def proxy_newspaper(
             "Cache-Control": "public, max-age=120",
             # Remove any frame restriction headers
             "X-Frame-Options": "ALLOWALL",
+            "Content-Security-Policy": "frame-ancestors *",
         },
     )
+
+
+@router.get("/reader-view", response_class=HTMLResponse)
+def get_reader_html_view(
+    url: str = Query(..., description="Target article URL to render in clean reader mode"),
+):
+    """Renders the extracted clean article as an aesthetic, responsive reader webpage."""
+    article = _extract_clean_article(url)
+    hero_img_tag = f'<img src="{html.escape(article.heroImageUrl, quote=True)}" class="hero-img" alt="Hero Image">' if article.heroImageUrl else ""
+    paragraphs_html = "".join(f"<p>{html.escape(p)}</p>" for p in article.paragraphs)
+    
+    reader_page = f"""<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{html.escape(article.title)} - Bhromon Reader</title>
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Kalpurush", "SolaimanLipi", "Segoe UI", Roboto, sans-serif;
+      background: #0B0E12;
+      color: #E2E8F0;
+      line-height: 1.85;
+      padding: 24px 16px;
+      display: flex;
+      justify-content: center;
+    }}
+    .container {{
+      max-width: 680px;
+      width: 100%;
+    }}
+    .back-bar {{
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }}
+    .badge {{
+      background: rgba(0, 208, 158, 0.15);
+      color: #00D09E;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }}
+    .source {{
+      font-size: 13px;
+      color: #94A3B8;
+    }}
+    h1 {{
+      font-size: 26px;
+      font-weight: 800;
+      color: #FFFFFF;
+      line-height: 1.35;
+      margin-bottom: 16px;
+    }}
+    .hero-img {{
+      width: 100%;
+      max-height: 380px;
+      object-fit: cover;
+      border-radius: 14px;
+      margin-bottom: 24px;
+    }}
+    p {{
+      font-size: 17px;
+      color: #CBD5E1;
+      margin-bottom: 18px;
+      text-align: justify;
+    }}
+    .footer-bar {{
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #64748B;
+    }}
+    a {{
+      color: #00D09E;
+      text-decoration: none;
+    }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="back-bar">
+      <span class="badge">Ad-Free Reader</span>
+      <span class="source">{html.escape(article.sourceName or "News")}</span>
+    </div>
+    <h1>{html.escape(article.title)}</h1>
+    {hero_img_tag}
+    <div class="content">
+      {paragraphs_html or "<p>Could not extract readable article text. You may visit the official website below.</p>"}
+    </div>
+    <div class="footer-bar">
+      <span>Read via Bhromon</span>
+      <a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener">Open Source ↗</a>
+    </div>
+  </div>
+</body>
+</html>"""
+    return HTMLResponse(
+        content=reader_page,
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "public, max-age=300",
+            "Content-Security-Policy": "frame-ancestors *",
+        },
+    )
+
