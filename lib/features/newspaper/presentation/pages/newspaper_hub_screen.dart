@@ -124,9 +124,9 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
     }
   }
 
-  Future<void> _loadPapers() async {
+  Future<void> _loadPapers({bool forceRefresh = false}) async {
     setState(() => _isLoadingPapers = true);
-    final papers = await _service.fetchNewspapers();
+    final papers = await _service.fetchNewspapers(forceRefresh: forceRefresh);
     if (mounted) {
       setState(() {
         _allPapers = papers;
@@ -353,7 +353,10 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.mintGreen),
                   )
                 : const Icon(Icons.refresh_rounded, color: Colors.white70),
-            onPressed: () => _loadHeadlines(refresh: true),
+            onPressed: () {
+              _loadHeadlines(refresh: true);
+              _loadPapers(forceRefresh: true);
+            },
           ),
         ],
         bottom: TabBar(
@@ -558,7 +561,10 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                       style: TextButton.styleFrom(foregroundColor: AppColors.mintGreen),
                       icon: const Icon(Icons.refresh_rounded),
                       label: const Text('পুনরায় লোড করুন'),
-                      onPressed: () => _loadHeadlines(refresh: true),
+                      onPressed: () {
+              _loadHeadlines(refresh: true);
+              _loadPapers(forceRefresh: true);
+            },
                     ),
                   ],
                 ),
