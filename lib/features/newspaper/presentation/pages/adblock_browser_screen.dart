@@ -31,6 +31,7 @@ class AdBlockBrowserScreen extends StatefulWidget {
 class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
   InAppWebViewController? _webViewController;
   late String _currentUrl;
+  final List<String> _historyStack = [];
   String _pageTitle = '';
   double _progress = 0;
   bool _isLoading = true;
@@ -140,8 +141,53 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
   void initState() {
     super.initState();
     _currentUrl = widget.initialUrl;
+    _historyStack.add(widget.initialUrl);
     _pageTitle = widget.initialTitle ?? widget.paper?.name ?? 'Web Browser';
     _urlInputCtrl.text = _currentUrl;
+  }
+
+  void _pushHistory(String url) {
+    if (url.isEmpty || url.startsWith('about:')) return;
+    if (_historyStack.isEmpty || _historyStack.last != url) {
+      _historyStack.add(url);
+    }
+    if (mounted) {
+      setState(() {
+        _canGoBack = _historyStack.length > 1;
+      });
+    }
+  }
+
+  Future<void> _handleBackPress() async {
+    // 1. Try native webview controller if supported (mobile)
+    if (!kIsWeb) {
+      final controller = _webViewController;
+      if (controller != null && await controller.canGoBack()) {
+        await controller.goBack();
+        return;
+      }
+    }
+
+    // 2. Fall back to internal history stack (web + mobile fallback)
+    if (_historyStack.length > 1) {
+      _historyStack.removeLast(); // pop current page
+      final prev = _historyStack.last;
+      setState(() {
+        _currentUrl = prev;
+        _canGoBack = _historyStack.length > 1;
+        _isLoading = true;
+      });
+      final targetToLoad = _effectiveUrl;
+      _webViewController?.loadUrl(
+        urlRequest: URLRequest(url: WebUri(targetToLoad)),
+      );
+      return;
+    }
+
+    // 3. At initial page: exit back to Newspaper Hub
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -180,6 +226,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
 
     setState(() {
       _currentUrl = url;
+      _pushHistory(url);
       _blockedAdsCount = 0;
       _hasLoadError = false;
     });
@@ -402,18 +449,24 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
   Widget build(BuildContext context) {
     final cleanHost = _cleanDisplayUrl(_currentUrl);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F1216),
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: AppBar(
-          backgroundColor: const Color(0xFF14181E),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white, size: 18),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleBackPress();
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0F1216),
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: AppBar(
+            backgroundColor: const Color(0xFF14181E),
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white, size: 18),
+              onPressed: _handleBackPress,
+            ),
           titleSpacing: 0,
           title: Container(
             height: 38,
@@ -688,20 +741,21 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                       },
                       onLoadStart: (controller, url) {
                         if (mounted) {
+                          final urlStr = url?.toString() ?? _currentUrl;
+                          String resolved = urlStr;
+                          if (urlStr.contains('/api/news/proxy?url=')) {
+                            final uri = Uri.parse(urlStr);
+                            final orig = uri.queryParameters['url'];
+                            if (orig != null && orig.isNotEmpty) {
+                              resolved = orig;
+                            }
+                          }
                           setState(() {
                             _isLoading = true;
                             _hasLoadError = false;
-                            final urlStr = url?.toString() ?? _currentUrl;
-                            if (urlStr.contains('/api/news/proxy?url=')) {
-                              final uri = Uri.parse(urlStr);
-                              final orig = uri.queryParameters['url'];
-                              if (orig != null && orig.isNotEmpty) {
-                                _currentUrl = orig;
-                              }
-                            } else {
-                              _currentUrl = urlStr;
-                            }
+                            _currentUrl = resolved;
                           });
+                          _pushHistory(resolved);
                         }
                         if (_isAdBlockEnabled) {
                           controller.injectCSSCode(source: _adBlockCss);
@@ -719,28 +773,31 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                       },
                       onLoadStop: (controller, url) async {
                         if (mounted) {
-                          final canBack = await controller.canGoBack();
-                          final canFwd = await controller.canGoForward();
+                          bool canBack = false;
+                          bool canFwd = false;
+                          if (!kIsWeb) {
+                            canBack = await controller.canGoBack();
+                            canFwd = await controller.canGoForward();
+                          }
                           final title = await controller.getTitle();
+                          final urlStr = url?.toString() ?? _currentUrl;
+                          String resolved = urlStr;
+                          if (urlStr.contains('/api/news/proxy?url=')) {
+                            final uri = Uri.parse(urlStr);
+                            final orig = uri.queryParameters['url'];
+                            if (orig != null && orig.isNotEmpty) {
+                              resolved = orig;
+                            }
+                          }
+                          _pushHistory(resolved);
                           setState(() {
                             _isLoading = false;
-                            _canGoBack = canBack;
+                            _canGoBack = canBack || _historyStack.length > 1;
                             _canGoForward = canFwd;
                             if (title != null && title.isNotEmpty) {
                               _pageTitle = title;
                             }
-                            if (url != null) {
-                              final urlStr = url.toString();
-                              if (urlStr.contains('/api/news/proxy?url=')) {
-                                final uri = Uri.parse(urlStr);
-                                final orig = uri.queryParameters['url'];
-                                if (orig != null && orig.isNotEmpty) {
-                                  _currentUrl = orig;
-                                }
-                              } else {
-                                _currentUrl = urlStr;
-                              }
-                            }
+                            _currentUrl = resolved;
                           });
                         }
                         if (_isAdBlockEnabled) {
@@ -784,9 +841,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                 IconButton(
                   icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
                   color: _canGoBack ? Colors.white : Colors.white24,
-                  onPressed: _canGoBack
-                      ? () => _webViewController?.goBack()
-                      : null,
+                  onPressed: _canGoBack ? _handleBackPress : null,
                 ),
                 IconButton(
                   icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
@@ -839,8 +894,9 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildWebFallback() {
     return Center(
