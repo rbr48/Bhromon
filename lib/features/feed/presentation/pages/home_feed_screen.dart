@@ -48,7 +48,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
   String _selectedTab = 'Discover';
   StreamSubscription<AuthState>? _authSubscription;
   StreamSubscription<QuerySnapshot>? _notificationsSubscription;
-  DateTime? _appStartTime;
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -411,70 +410,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
   }
 
   void _setupNotificationsListener(String uid) {
+    // Realtime notifications & floating in-app banners are globally handled by FcmService
     _notificationsSubscription?.cancel();
-    _appStartTime = DateTime.now();
-    _notificationsSubscription = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('notifications')
-        .snapshots()
-        .listen((snapshot) {
-      for (final change in snapshot.docChanges) {
-        if (change.type == DocumentChangeType.added) {
-          final data = change.doc.data();
-          if (data == null) continue;
-
-          final timestamp = data['timestamp'] as Timestamp?;
-          if (timestamp != null && _appStartTime != null) {
-            // Check if this notification is new (added after app started)
-            if (timestamp.toDate().isAfter(_appStartTime!)) {
-              final String title = (data['title'] as String?) ?? 'New Alert';
-              final String body = (data['body'] as String?) ?? '';
-              final String action = (data['action'] as String?) ?? '';
-              final String? notifUid = data['uid'] as String?;
-
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  backgroundColor: AppColors.cardDark.withValues(alpha: 0.95),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.mintGreen,
-                            fontSize: 13),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        body,
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 12),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                  action: SnackBarAction(
-                    label: 'View',
-                    textColor: AppColors.mintGreen,
-                    onPressed: () {
-                      _handleNotificationAction(context, action, notifUid);
-                    },
-                  ),
-                ),
-              );
-            }
-          }
-        }
-      }
-    });
+    _notificationsSubscription = null;
   }
 
   void _cancelNotificationsListener() {

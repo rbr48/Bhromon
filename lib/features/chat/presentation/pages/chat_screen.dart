@@ -65,6 +65,22 @@ class _PendingUpload {
   });
 }
 
+/// Represents an optimistic outgoing text message shown instantly in the chat list.
+class _PendingTextMessage {
+  final String id;
+  final String text;
+  final ReplyMessageInfo? replyTo;
+  final DateTime createdAt;
+  bool isFailed;
+
+  _PendingTextMessage({
+    required this.id,
+    required this.text,
+    this.replyTo,
+    required this.createdAt,
+  }) : isFailed = false;
+}
+
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final FocusNode _messageFocusNode = FocusNode();
@@ -91,6 +107,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // Pending uploads shown optimistically before Firestore write completes.
   final List<_PendingUpload> _pendingUploads = [];
+  final List<_PendingTextMessage> _pendingTextMessages = [];
+  final Set<String> _markedSeenDocIds = {};
 
   // ── Pagination state ────────────────────────────────────────────────────────
   static const int _pageSize = 30;
@@ -178,7 +196,6 @@ class _ChatScreenState extends State<ChatScreen> {
         .snapshots()
         .listen((snap) {
       if (!mounted) return;
-      // Merge the live page into _allMessages (deduplication by doc ID)
       final incoming = snap.docs;
       // Cache messages locally for offline viewing
       final cacheList = <Map<String, dynamic>>[];
@@ -188,13 +205,42 @@ class _ChatScreenState extends State<ChatScreen> {
       if (cacheList.isNotEmpty) {
         ChatLocalCache().cacheMessages(widget.chatId, cacheList);
       }
-      final ids = _allMessages.map((d) => d.id).toSet();
-      final fresh = incoming.where((d) => !ids.contains(d.id)).toList();
+
+      final incomingMap = {for (final d in incoming) d.id: d};
+      final incomingIds = incomingMap.keys.toSet();
+
       setState(() {
-        _allMessages.insertAll(0, fresh);
+        // Remove from optimistic pending text list once confirmed by snapshot
+        _pendingTextMessages.removeWhere((p) => incomingIds.contains(p.id));
+
+        // 1. Update any existing docs in-place (updates delivery ticks, reactions, seen status)
+        for (int i = 0; i < _allMessages.length; i++) {
+          final id = _allMessages[i].id;
+          if (incomingMap.containsKey(id)) {
+            _allMessages[i] = incomingMap[id]!;
+          }
+        }
+
+        // 2. Insert any brand new incoming docs at the top
+        final existingIds = _allMessages.map((d) => d.id).toSet();
+        final fresh = incoming.where((d) => !existingIds.contains(d.id)).toList();
+        if (fresh.isNotEmpty) {
+          _allMessages.insertAll(0, fresh);
+        }
+
         if (incoming.length < _pageSize) _hasMoreMessages = false;
         if (incoming.isNotEmpty) _oldestLoadedDoc = incoming.last;
       });
+
+      // Automatically mark unread incoming messages as seen on snapshot receive
+      try {
+        final authState = context.read<AuthCubit>().state;
+        final currentUid =
+            authState is Authenticated ? authState.profile.uid : '';
+        if (currentUid.isNotEmpty) {
+          _markMessagesAsSeen(incoming, currentUid);
+        }
+      } catch (_) {}
     });
   }
 
@@ -399,6 +445,165 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Map<String, dynamic> _buildChatMeta({
+    required String lastMessage,
+    required String lastMessageType,
+    required String currentUid,
+    required String currentName,
+    required String? resolvedOtherUid,
+  }) {
+    return {
+      'lastMessage': lastMessage,
+      'lastMessageType': lastMessageType,
+      'lastMessageTime': FieldValue.serverTimestamp(),
+      'lastMessageSenderId': currentUid,
+      'unreadCounts': {
+        currentUid: 0,
+        if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
+          resolvedOtherUid: FieldValue.increment(1),
+      },
+      'participants': FieldValue.arrayUnion([
+        currentUid,
+        if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
+          resolvedOtherUid,
+      ]),
+      'participantProfiles': {
+        currentUid: {
+          'displayName': currentName,
+        },
+      },
+    };
+  }
+
+  void _sendNotificationToRecipient({
+    required String? recipientUid,
+    required String currentUid,
+    required String currentName,
+    required String body,
+  }) {
+    if (recipientUid != null &&
+        recipientUid != 'guest' &&
+        recipientUid != currentUid &&
+        recipientUid != 'bhromon_ai_advisor') {
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(recipientUid)
+          .collection('notifications')
+          .doc()
+          .set({
+        'title': 'New message from $currentName',
+        'body': body,
+        'action': 'chat',
+        'uid': currentUid,
+        'itemId': widget.chatId,
+        'chatId': widget.chatId,
+        'timestamp': FieldValue.serverTimestamp(),
+      }).catchError((Object e) {
+        debugPrint('Notification dispatch skipped: $e');
+      });
+    }
+  }
+
+  Future<void> _retryPendingTextMessage(
+    _PendingTextMessage pending,
+    String currentUid,
+    String currentName,
+  ) async {
+    setState(() => pending.isFailed = false);
+    final msgRef = FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .collection('messages')
+        .doc(pending.id);
+
+    final msgData = <String, dynamic>{
+      'senderId': currentUid,
+      'type': 'text',
+      'text': pending.text,
+      if (pending.replyTo != null) 'replyTo': pending.replyTo!.toMap(),
+      'seen': false,
+      'status': 'sent',
+      'timestamp': FieldValue.serverTimestamp(),
+    };
+
+    try {
+      await msgRef.set(msgData);
+      if (mounted) {
+        setState(() =>
+            _pendingTextMessages.removeWhere((p) => p.id == pending.id));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => pending.isFailed = true);
+      }
+    }
+  }
+
+  Widget _buildPendingTextMessageBubble(_PendingTextMessage pending) {
+    final timeStr = _formatTime(pending.createdAt);
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8, left: 48),
+        child: PhysicalShape(
+          clipper: SenderBubbleClipper(),
+          color: const Color(0xFF005C4B),
+          elevation: 1,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 6, 16, 6),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (pending.replyTo != null)
+                  ChatQuotedBubble(
+                    reply: pending.replyTo!,
+                    isMe: true,
+                    onTap: () {},
+                  ),
+                Text(
+                  pending.text,
+                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      timeStr,
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 9.5),
+                    ),
+                    const SizedBox(width: 4),
+                    if (pending.isFailed)
+                      GestureDetector(
+                        onTap: () {
+                          final authState = context.read<AuthCubit>().state;
+                          final currentUid = authState is Authenticated
+                              ? authState.profile.uid
+                              : '';
+                          final currentName = authState is Authenticated
+                              ? authState.profile.displayName
+                              : 'You';
+                          _retryPendingTextMessage(
+                              pending, currentUid, currentName);
+                        },
+                        child: const Icon(Icons.error_outline,
+                            size: 14, color: Colors.redAccent),
+                      )
+                    else
+                      const Icon(Icons.access_time,
+                          size: 11, color: Colors.white54),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _sendMessage(String currentUid, String currentName) async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -446,16 +651,33 @@ class _ChatScreenState extends State<ChatScreen> {
     }
 
     final replyPayload = _replyingMessage?.toMap();
+    final replyModel = _replyingMessage;
     setState(() => _replyingMessage = null);
 
-    final batch = FirebaseFirestore.instance.batch();
-
-    // Add message
+    // Reference & unique doc ID
     final msgRef = FirebaseFirestore.instance
         .collection('chats')
         .doc(widget.chatId)
         .collection('messages')
         .doc();
+    final msgId = msgRef.id;
+
+    // Add optimistic pending message so user sees it in 0ms!
+    final pendingMsg = _PendingTextMessage(
+      id: msgId,
+      text: text,
+      replyTo: replyModel,
+      createdAt: DateTime.now(),
+    );
+    setState(() {
+      _pendingTextMessages.add(pendingMsg);
+    });
+
+    _scrollController.animateTo(
+      0.0,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
 
     final msgData = <String, dynamic>{
       'senderId': currentUid,
@@ -466,73 +688,41 @@ class _ChatScreenState extends State<ChatScreen> {
       'status': 'sent', // delivery states: sent → delivered → read
       'timestamp': FieldValue.serverTimestamp(),
     };
-    batch.set(msgRef, msgData);
 
     final resolvedOtherUid = _resolveOtherUid(currentUid);
-
-    // Update chat meta with denormalized fields
     final chatRef =
         FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-    final Map<String, dynamic> chatMeta = {
-      'lastMessage': text,
-      'lastMessageType': 'text',
-      'lastMessageTime': FieldValue.serverTimestamp(),
-      'lastMessageSenderId': currentUid,
-      'unreadCounts.$currentUid': 0,
-      'participants': FieldValue.arrayUnion([
-        currentUid,
-        if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
-          resolvedOtherUid,
-      ]),
-    };
-    if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
-      chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);
-    }
-    chatMeta['participantProfiles.$currentUid'] = {
-      'displayName': currentName,
-    };
-    batch.set(chatRef, chatMeta, SetOptions(merge: true));
+    final chatMeta = _buildChatMeta(
+      lastMessage: text,
+      lastMessageType: 'text',
+      currentUid: currentUid,
+      currentName: currentName,
+      resolvedOtherUid: resolvedOtherUid,
+    );
 
     try {
-      try {
-        await batch.commit();
-      } catch (batchErr) {
-        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
-        await msgRef.set(msgData);
-        try {
-          await chatRef.set(chatMeta, SetOptions(merge: true));
-        } catch (metaErr) {
-          debugPrint('Chat metadata update failed: $metaErr');
-        }
-      }
-      _scrollController.animateTo(
-        0.0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      // 1. Direct write message first - resilient & reliable!
+      await msgRef.set(msgData);
 
-      // Send in-app notification in background without blocking the message
-      if (resolvedOtherUid != null &&
-          resolvedOtherUid != 'guest' &&
-          resolvedOtherUid != currentUid &&
-          resolvedOtherUid != 'bhromon_ai_advisor') {
-        try {
-          final notifRef = FirebaseFirestore.instance
-              .collection('users')
-              .doc(resolvedOtherUid)
-              .collection('notifications')
-              .doc();
-          await notifRef.set({
-            'title': 'New message from $currentName',
-            'body': text,
-            'action': 'chat',
-            'uid': currentUid,
-            'timestamp': FieldValue.serverTimestamp(),
-          });
-        } catch (e) {
-          debugPrint('Notification dispatch skipped: $e');
-        }
+      // Clean up optimistic pending entry
+      if (mounted) {
+        setState(() {
+          _pendingTextMessages.removeWhere((p) => p.id == msgId);
+        });
       }
+
+      // 2. Update chat metadata asynchronously without blocking
+      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+        debugPrint('Chat metadata update failed: $e');
+      });
+
+      // 3. Send in-app notification in background
+      _sendNotificationToRecipient(
+        recipientUid: resolvedOtherUid,
+        currentUid: currentUid,
+        currentName: currentName,
+        body: text,
+      );
 
       if (resolvedOtherUid == 'bhromon_ai_advisor') {
         _processAiResponse(currentUid, text);
@@ -540,10 +730,19 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       debugPrint('Error sending message: $e');
       if (mounted) {
+        setState(() {
+          pendingMsg.isFailed = true;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to send message: $e'),
             backgroundColor: Colors.redAccent,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _retryPendingTextMessage(
+                  pendingMsg, currentUid, currentName),
+            ),
           ),
         );
       }
@@ -579,9 +778,13 @@ class _ChatScreenState extends State<ChatScreen> {
         'lastMessageType': 'text',
         'lastMessageTime': FieldValue.serverTimestamp(),
         'lastMessageSenderId': 'bhromon_ai_advisor',
-        'unreadCounts.$currentUid': FieldValue.increment(1),
-        'participantProfiles.bhromon_ai_advisor': {
-          'displayName': 'Bhromon AI Guide',
+        'unreadCounts': {
+          currentUid: FieldValue.increment(1),
+        },
+        'participantProfiles': {
+          'bhromon_ai_advisor': {
+            'displayName': 'Bhromon AI Guide',
+          },
         },
       }, SetOptions(merge: true));
     } catch (e) {
@@ -679,8 +882,6 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
-      final batch = FirebaseFirestore.instance.batch();
-
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -702,7 +903,6 @@ class _ChatScreenState extends State<ChatScreen> {
         'status': 'sent',
         'timestamp': FieldValue.serverTimestamp(),
       };
-      batch.set(msgRef, msgData);
 
       final lastMsg = type == 'image'
           ? (caption != null && caption.isNotEmpty ? '📷 $caption' : '📷 Photo')
@@ -711,59 +911,25 @@ class _ChatScreenState extends State<ChatScreen> {
               : '🎬 Video');
       final chatRef =
           FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-      final Map<String, dynamic> chatMeta = {
-        'lastMessage': lastMsg,
-        'lastMessageType': type,
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'lastMessageSenderId': currentUid,
-        'unreadCounts.$currentUid': 0,
-        'participants': FieldValue.arrayUnion([
-          currentUid,
-          if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
-            resolvedOtherUid,
-        ]),
-      };
-      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
-        chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);
-      }
-      chatMeta['participantProfiles.$currentUid'] = {
-        'displayName': currentName,
-      };
-      batch.set(chatRef, chatMeta, SetOptions(merge: true));
+      final chatMeta = _buildChatMeta(
+        lastMessage: lastMsg,
+        lastMessageType: type,
+        currentUid: currentUid,
+        currentName: currentName,
+        resolvedOtherUid: resolvedOtherUid,
+      );
 
-      try {
-        await batch.commit();
-      } catch (batchErr) {
-        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
-        await msgRef.set(msgData);
-        try {
-          await chatRef.set(chatMeta, SetOptions(merge: true));
-        } catch (metaErr) {
-          debugPrint('Chat metadata update failed: $metaErr');
-        }
-      }
+      await msgRef.set(msgData);
+      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+        debugPrint('Chat metadata update failed: $e');
+      });
 
-      if (resolvedOtherUid != null &&
-          resolvedOtherUid != 'guest' &&
-          resolvedOtherUid != currentUid &&
-          resolvedOtherUid != 'bhromon_ai_advisor') {
-        try {
-          final notifRef = FirebaseFirestore.instance
-              .collection('users')
-              .doc(resolvedOtherUid)
-              .collection('notifications')
-              .doc();
-          await notifRef.set({
-            'title': 'New message from $currentName',
-            'body': lastMsg,
-            'action': 'chat',
-            'uid': currentUid,
-            'timestamp': FieldValue.serverTimestamp(),
-          });
-        } catch (e) {
-          debugPrint('Notification dispatch skipped: $e');
-        }
-      }
+      _sendNotificationToRecipient(
+        recipientUid: resolvedOtherUid,
+        currentUid: currentUid,
+        currentName: currentName,
+        body: lastMsg,
+      );
     } catch (e) {
       debugPrint('Media upload error: $e');
       String msg = 'Failed to send media.';
@@ -823,8 +989,6 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
-      final batch = FirebaseFirestore.instance.batch();
-
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -845,63 +1009,28 @@ class _ChatScreenState extends State<ChatScreen> {
         'status': 'sent',
         'timestamp': FieldValue.serverTimestamp(),
       };
-      batch.set(msgRef, msgData);
 
       final chatRef =
           FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-      final Map<String, dynamic> chatMeta = {
-        'lastMessage': '🎤 Voice message',
-        'lastMessageType': 'audio',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'lastMessageSenderId': currentUid,
-        'unreadCounts.$currentUid': 0,
-        'participants': FieldValue.arrayUnion([
-          currentUid,
-          if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
-            resolvedOtherUid,
-        ]),
-      };
-      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
-        chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);
-      }
-      chatMeta['participantProfiles.$currentUid'] = {
-        'displayName': currentName,
-      };
-      batch.set(chatRef, chatMeta, SetOptions(merge: true));
+      final chatMeta = _buildChatMeta(
+        lastMessage: '🎤 Voice message',
+        lastMessageType: 'audio',
+        currentUid: currentUid,
+        currentName: currentName,
+        resolvedOtherUid: resolvedOtherUid,
+      );
 
-      try {
-        await batch.commit();
-      } catch (batchErr) {
-        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
-        await msgRef.set(msgData);
-        try {
-          await chatRef.set(chatMeta, SetOptions(merge: true));
-        } catch (metaErr) {
-          debugPrint('Chat metadata update failed: $metaErr');
-        }
-      }
+      await msgRef.set(msgData);
+      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+        debugPrint('Chat metadata update failed: $e');
+      });
 
-      if (resolvedOtherUid != null &&
-          resolvedOtherUid != 'guest' &&
-          resolvedOtherUid != currentUid &&
-          resolvedOtherUid != 'bhromon_ai_advisor') {
-        try {
-          final notifRef = FirebaseFirestore.instance
-              .collection('users')
-              .doc(resolvedOtherUid)
-              .collection('notifications')
-              .doc();
-          await notifRef.set({
-            'title': 'New voice message from $currentName',
-            'body': '🎤 Voice message (${duration.inSeconds}s)',
-            'action': 'chat',
-            'uid': currentUid,
-            'timestamp': FieldValue.serverTimestamp(),
-          });
-        } catch (e) {
-          debugPrint('Notification dispatch skipped: $e');
-        }
-      }
+      _sendNotificationToRecipient(
+        recipientUid: resolvedOtherUid,
+        currentUid: currentUid,
+        currentName: currentName,
+        body: '🎤 Voice message (${duration.inSeconds}s)',
+      );
     } catch (e) {
       debugPrint('Error sending voice message: $e');
       if (mounted) {
@@ -945,8 +1074,6 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
-      final batch = FirebaseFirestore.instance.batch();
-
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -968,41 +1095,28 @@ class _ChatScreenState extends State<ChatScreen> {
         'status': 'sent',
         'timestamp': FieldValue.serverTimestamp(),
       };
-      batch.set(msgRef, msgData);
 
       final chatRef =
           FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-      final Map<String, dynamic> chatMeta = {
-        'lastMessage': '📄 ${pFile.name}',
-        'lastMessageType': 'document',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'lastMessageSenderId': currentUid,
-        'unreadCounts.$currentUid': 0,
-        'participants': FieldValue.arrayUnion([
-          currentUid,
-          if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
-            resolvedOtherUid,
-        ]),
-      };
-      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
-        chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);
-      }
-      chatMeta['participantProfiles.$currentUid'] = {
-        'displayName': currentName,
-      };
-      batch.set(chatRef, chatMeta, SetOptions(merge: true));
+      final chatMeta = _buildChatMeta(
+        lastMessage: '📄 ${pFile.name}',
+        lastMessageType: 'document',
+        currentUid: currentUid,
+        currentName: currentName,
+        resolvedOtherUid: resolvedOtherUid,
+      );
 
-      try {
-        await batch.commit();
-      } catch (batchErr) {
-        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
-        await msgRef.set(msgData);
-        try {
-          await chatRef.set(chatMeta, SetOptions(merge: true));
-        } catch (metaErr) {
-          debugPrint('Chat metadata update failed: $metaErr');
-        }
-      }
+      await msgRef.set(msgData);
+      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+        debugPrint('Chat metadata update failed: $e');
+      });
+
+      _sendNotificationToRecipient(
+        recipientUid: resolvedOtherUid,
+        currentUid: currentUid,
+        currentName: currentName,
+        body: '📄 ${pFile.name}',
+      );
     } catch (e) {
       debugPrint('Error sending document: $e');
       if (mounted) {
@@ -1024,8 +1138,6 @@ class _ChatScreenState extends State<ChatScreen> {
   ) async {
     try {
       final resolvedOtherUid = _resolveOtherUid(currentUid);
-      final batch = FirebaseFirestore.instance.batch();
-
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1048,41 +1160,28 @@ class _ChatScreenState extends State<ChatScreen> {
         'status': 'sent',
         'timestamp': FieldValue.serverTimestamp(),
       };
-      batch.set(msgRef, msgData);
 
       final chatRef =
           FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-      final Map<String, dynamic> chatMeta = {
-        'lastMessage': '📍 Shared location: $title',
-        'lastMessageType': 'location',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'lastMessageSenderId': currentUid,
-        'unreadCounts.$currentUid': 0,
-        'participants': FieldValue.arrayUnion([
-          currentUid,
-          if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
-            resolvedOtherUid,
-        ]),
-      };
-      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
-        chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);
-      }
-      chatMeta['participantProfiles.$currentUid'] = {
-        'displayName': currentName,
-      };
-      batch.set(chatRef, chatMeta, SetOptions(merge: true));
+      final chatMeta = _buildChatMeta(
+        lastMessage: '📍 Shared location: $title',
+        lastMessageType: 'location',
+        currentUid: currentUid,
+        currentName: currentName,
+        resolvedOtherUid: resolvedOtherUid,
+      );
 
-      try {
-        await batch.commit();
-      } catch (batchErr) {
-        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
-        await msgRef.set(msgData);
-        try {
-          await chatRef.set(chatMeta, SetOptions(merge: true));
-        } catch (metaErr) {
-          debugPrint('Chat metadata update failed: $metaErr');
-        }
-      }
+      await msgRef.set(msgData);
+      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+        debugPrint('Chat metadata update failed: $e');
+      });
+
+      _sendNotificationToRecipient(
+        recipientUid: resolvedOtherUid,
+        currentUid: currentUid,
+        currentName: currentName,
+        body: '📍 Shared location: $title',
+      );
     } catch (e) {
       debugPrint('Error sending location: $e');
       if (mounted) {
@@ -1104,8 +1203,6 @@ class _ChatScreenState extends State<ChatScreen> {
   ) async {
     try {
       final resolvedOtherUid = _resolveOtherUid(currentUid);
-      final batch = FirebaseFirestore.instance.batch();
-
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1128,41 +1225,28 @@ class _ChatScreenState extends State<ChatScreen> {
         'status': 'sent',
         'timestamp': FieldValue.serverTimestamp(),
       };
-      batch.set(msgRef, msgData);
 
       final chatRef =
           FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
-      final Map<String, dynamic> chatMeta = {
-        'lastMessage': '৳${amount.toStringAsFixed(0)} Split: $expenseTitle',
-        'lastMessageType': 'expense',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'lastMessageSenderId': currentUid,
-        'unreadCounts.$currentUid': 0,
-        'participants': FieldValue.arrayUnion([
-          currentUid,
-          if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty)
-            resolvedOtherUid,
-        ]),
-      };
-      if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
-        chatMeta['unreadCounts.$resolvedOtherUid'] = FieldValue.increment(1);
-      }
-      chatMeta['participantProfiles.$currentUid'] = {
-        'displayName': currentName,
-      };
-      batch.set(chatRef, chatMeta, SetOptions(merge: true));
+      final chatMeta = _buildChatMeta(
+        lastMessage: '৳${amount.toStringAsFixed(0)} Split: $expenseTitle',
+        lastMessageType: 'expense',
+        currentUid: currentUid,
+        currentName: currentName,
+        resolvedOtherUid: resolvedOtherUid,
+      );
 
-      try {
-        await batch.commit();
-      } catch (batchErr) {
-        debugPrint('Batch commit failed ($batchErr), attempting resilient direct write...');
-        await msgRef.set(msgData);
-        try {
-          await chatRef.set(chatMeta, SetOptions(merge: true));
-        } catch (metaErr) {
-          debugPrint('Chat metadata update failed: $metaErr');
-        }
-      }
+      await msgRef.set(msgData);
+      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
+        debugPrint('Chat metadata update failed: $e');
+      });
+
+      _sendNotificationToRecipient(
+        recipientUid: resolvedOtherUid,
+        currentUid: currentUid,
+        currentName: currentName,
+        body: '৳${amount.toStringAsFixed(0)} Split: $expenseTitle',
+      );
     } catch (e) {
       debugPrint('Error sending expense split: $e');
       if (mounted) {
@@ -1727,14 +1811,20 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Marks all unread incoming messages as seen and updates delivery status to 'read'.
   void _markMessagesAsSeen(
       List<QueryDocumentSnapshot> docs, String currentUid) {
+    if (currentUid.isEmpty) return;
     final unreadDocs = docs.where((doc) {
-      final data = doc.data() as Map<String, dynamic>;
+      if (_markedSeenDocIds.contains(doc.id)) return false;
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) return false;
       final senderId = data['senderId'] ?? '';
       final bool seen = data['seen'] as bool? ?? false;
       return senderId != currentUid && !seen;
     }).toList();
 
     if (unreadDocs.isNotEmpty) {
+      for (final doc in unreadDocs) {
+        _markedSeenDocIds.add(doc.id);
+      }
       final batch = FirebaseFirestore.instance.batch();
       for (final doc in unreadDocs) {
         batch.update(doc.reference, {
@@ -2361,12 +2451,15 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: RepaintBoundary(
                       child: () {
                         final docs = _visibleMessages;
-                        if (docs.isEmpty && _messagesSub == null) {
+                        final hasAnyMessages = docs.isNotEmpty ||
+                            _pendingUploads.isNotEmpty ||
+                            _pendingTextMessages.isNotEmpty;
+                        if (!hasAnyMessages && _messagesSub == null) {
                           return const Center(
                               child: CircularProgressIndicator(
                                   color: Color(0xFF00A884)));
                         }
-                        if (docs.isEmpty) {
+                        if (!hasAnyMessages) {
                           return Center(
                             child: Container(
                               padding: const EdgeInsets.symmetric(
@@ -2384,9 +2477,6 @@ class _ChatScreenState extends State<ChatScreen> {
                           );
                         }
 
-                        // Automatically mark unread messages as read/seen
-                        _markMessagesAsSeen(docs, currentUid);
-
                         return ListView.builder(
                           reverse: true,
                           controller: _scrollController,
@@ -2394,10 +2484,14 @@ class _ChatScreenState extends State<ChatScreen> {
                               horizontal: 16, vertical: 16),
                           itemCount: docs.length +
                               _pendingUploads.length +
+                              _pendingTextMessages.length +
                               (_isLoadingMore ? 1 : 0),
                           itemBuilder: (context, index) {
-                            // ── Loading more indicator at the bottom ────────
-                            if (index == docs.length + _pendingUploads.length) {
+                            // ── Loading more indicator at the bottom (oldest end) ──
+                            if (index ==
+                                docs.length +
+                                    _pendingUploads.length +
+                                    _pendingTextMessages.length) {
                               return const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 child: Center(
@@ -2413,10 +2507,19 @@ class _ChatScreenState extends State<ChatScreen> {
                               );
                             }
 
+                            // ── Pending text message bubbles (newest outgoing) ──
+                            if (index < _pendingTextMessages.length) {
+                              final pending = _pendingTextMessages[
+                                  _pendingTextMessages.length - 1 - index];
+                              return _buildPendingTextMessageBubble(pending);
+                            }
+
                             // ── Pending upload bubbles ──────────────────────
-                            if (index < _pendingUploads.length) {
+                            final uploadIndex =
+                                index - _pendingTextMessages.length;
+                            if (uploadIndex < _pendingUploads.length) {
                               final pending = _pendingUploads[
-                                  _pendingUploads.length - 1 - index];
+                                  _pendingUploads.length - 1 - uploadIndex];
                               return Semantics(
                                 label:
                                     'Uploading ${pending.type}. ${((pending.progress) * 100).toInt()}% complete.',
@@ -2438,7 +2541,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             }
 
                             // ── Real Firestore messages ─────────────────────
-                            final realIndex = index - _pendingUploads.length;
+                            final realIndex =
+                                uploadIndex - _pendingUploads.length;
                             final doc = docs[realIndex];
                             final data = doc.data() as Map<String, dynamic>;
                             final String msgType =
