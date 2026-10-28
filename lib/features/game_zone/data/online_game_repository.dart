@@ -77,7 +77,7 @@ class OnlineGameRepository {
 
   /// Streams active game sessions in the tour group.
   Stream<List<OnlineGameSession>> watchActiveGames(String tourId) {
-    if (tourId.isEmpty) return Stream.value(const []);
+    if (tourId.isEmpty) return const Stream<List<OnlineGameSession>>.empty();
     return _gamesRef(tourId)
         .orderBy('updatedAt', descending: true)
         .snapshots()
@@ -90,7 +90,9 @@ class OnlineGameRepository {
 
   /// Streams a single live game session.
   Stream<OnlineGameSession?> watchGame(String tourId, String gameId) {
-    if (tourId.isEmpty || gameId.isEmpty) return Stream.value(null);
+    if (tourId.isEmpty || gameId.isEmpty) {
+      return const Stream<OnlineGameSession?>.empty();
+    }
     return _gamesRef(tourId).doc(gameId).snapshots().map((doc) {
       if (!doc.exists || doc.data() == null) return null;
       return OnlineGameSession.fromMap(doc.id, doc.data()!);
