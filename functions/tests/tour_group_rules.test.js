@@ -430,6 +430,18 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(deleteDoc(doc(db('member'), 'tours', TOUR, 'hotel_rooms', 'r1')));
     });
 
+    test('luggage: members create and read, author or admin deletes', async () => {
+      const path = ['tours', TOUR, 'luggage', 'lug1'];
+      const item = { id: 'lug1', title: 'Red Trolley', ownerEmail: people.member.email, isLoaded: false };
+      await assertFails(setDoc(doc(db('outsider'), ...path), item));
+      await assertSucceeds(setDoc(doc(db('member'), ...path), item));
+      await assertSucceeds(getDocs(collection(db('member'), 'tours', TOUR, 'luggage')));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', TOUR, 'luggage')));
+      await assertSucceeds(updateDoc(doc(db('other'), ...path), { isLoaded: true }));
+      await assertFails(deleteDoc(doc(db('other'), ...path)));
+      await assertSucceeds(deleteDoc(doc(db('admin'), ...path)));
+    });
+
     test('route stops: anyone adds their own; the author or an admin edits; the author stays', async () => {
       const path = ['tours', TOUR, 'checkpoints', 'c1'];
       const cp = { id: 'c1', name: 'Paduar Bazar', kmFromStart: 100, kind: 'food', legKey: 'origin>a', addedByEmail: people.member.email };

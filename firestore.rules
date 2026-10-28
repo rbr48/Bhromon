@@ -931,6 +931,14 @@ service cloud.firestore {
         allow update: if isActiveMember(tourId);
       }
 
+      // Luggage and cargo items tracked for the tour group.
+      match /luggage/{luggageId} {
+        allow read: if isActiveMember(tourId);
+        allow create, update: if isActiveMember(tourId);
+        allow delete: if isActiveMember(tourId) &&
+                         (resource.data.ownerEmail == tourUserEmail() || isTourAdmin(tourId));
+      }
+
       // Online Game Zone tables for tour group members. Other games keep their
       // rules. The 29, Teen Patti and carrom tables are run by the server
       // (card29Start, card29Act, ..., teenPattiStart, teenPattiAct, ...,
