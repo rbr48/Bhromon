@@ -29,6 +29,11 @@ This document serves as the persistent system memory, architectural guidelines, 
 4. **Windows Gradle Build Contention**:
    - Always keep `org.gradle.vfs.watch=false` in `android/gradle.properties` to avoid Windows directory locks (`AccessDeniedException` during `mergeReleaseNativeLibs` or `packageRelease`).
    - In `android/app/build.gradle`, on Windows only, disable intermediate tasks: `artprofile`, `nativesymboltable`, `nativedebugmetadata`, `cleanmergereleaseassets`, `cleanmergereleasenativelibs`, and `cleanpackagerelease`. Keep `ndk { debugSymbolLevel 'SYMBOL_TABLE' }` on every platform: the release AAB fails to strip native libraries without it.
+5. **Windows Cross-Drive Kotlin Compilation Invariant**:
+   - The project repository is on drive `E:` (`E:\Projects\Bhromon`) while Flutter's Pub Cache resides on drive `C:` (`C:\Users\USER\AppData\Local\Pub\Cache`).
+   - Kotlin incremental compilation can throw `IllegalArgumentException: this and base files have different roots` when computing relative paths across different Windows drive roots.
+   - If incremental cache errors occur, set `kotlin.incremental=false` in `android/gradle.properties`.
+   - Terminate lingering Gradle/Java daemons (`Stop-Process -Name java -Force`) if build intermediates lock up.
 
 ---
 
@@ -127,6 +132,58 @@ static session while the user visits other screens, and asks before discarding a
    - Queen only after an own coin; must be covered on the same or next shot or she returns.
    - First to 9 coins wins the board: 1 point per opponent coin left, +3 for covering the queen.
    - Bot (`CarromBot`) builds cut shots from ghost-ball geometry with the minimum power that carries the coin (friction + momentum transfer), simulates each candidate, and adds aim noise per difficulty (Easy 0.035 / Medium 0.018 / Hard 0.008 rad). It runs via `compute(carromBotWorker, ...)`.
+
+### E. Newspaper Hub & AdBlock Reader Engine (`lib/features/newspaper/`, VPS microservice `media-server/news.py`)
+- **Multi-Source News Aggregation**: Real-time multi-category news feed (National, Business, Tech, Sports, International, Entertainment, Lifestyle, E-Paper) aggregating major Bangladesh news outlets (Prothom Alo, Daily Star, Kaler Kantho, Samakal, Jugantor, Ittefaq, BDNews24, Dhaka Tribune, etc.).
+- **Smart Topic Clustering**: "Same story, different papers" matrix compares how different editorial desks cover identical major breaking news events.
+- **Audio Headlines**: Bengali and English Text-To-Speech playback powered by `NewsTtsService` (`flutter_tts`).
+- **Ad-Free Clean Reader Mode (`AdFreeArticleReaderScreen`)**: Scrapes and renders clean article typography, stripping ad clutter, paywall scripts, popunders, and sticky banners.
+- **In-App AdBlock Browser (`AdBlockBrowserScreen`)**:
+  - UI strictly aligned with reference Android app Smart Utilities (`com.izhaanintellect.allinone`):
+    - Light Material 3 AppBar (`#F9FAFB`) with bold source title, dark text (`#111827`), AssistChip shield count badge `[ 🛡 Count ]` opening real-time blocked tracker details, reload/stop button, and 3-dots overflow menu.
+    - Zero bottom navigation bar (100% full-screen canvas).
+    - 60+ domain network blocker rules in `ContentBlocker` (`doubleclick`, `googlesyndication`, `adnxs`, `criteo`, `taboola`, `outbrain`, `propellerads`, `clarity`, `mixpanel`, etc.).
+    - Injected cosmetic CSS stylesheet hiding ad elements, banners, popups, and sticky wrappers.
+- **Navigation & Hardware Back Button Contract**:
+  - Pushed via GoRouter `context.push('/newspaper-browser', extra: ...)` and `context.push('/newspaper-reader', extra: ...)` so browser URL and history stack correctly on both web and mobile.
+  - Dynamic `PopScope(canPop: _isExiting)`:
+    - Pressing phone hardware/gesture back navigates backward in the webpage history first (via `controller.canGoBack()` on mobile or internal `_historyStack` on web).
+    - Only when the user reaches the root page does the browser pop back to `NewspaperHubScreen`. It never jumps past the hub or closes the app.
+    - Tapping the top App Bar back arrow (`←`) immediately returns to `NewspaperHubScreen`.
+- **Platform Invariant: Web Iframe vs Native Android WebView**:
+  - **Flutter Web (`kIsWeb == true`)**: Browser renders as an HTML `<iframe>`. Chrome strictly enforces `X-Frame-Options: SAMEORIGIN` and CSP `frame-ancestors 'self'`, blocking direct embedding of Samakal, Kaler Kantho, Jugantor, etc. While Prothom Alo and Daily Star proxy cleanly (HTTP 200), Cloudflare WAF on Samakal and Kaler Kantho challenges datacenter IPs (like Hostinger VPS `148.135.137.245`). On Web, these sites render a responsive fallback protection card offering: 1) "Open site directly ↗" in a new tab (`target="_blank"`), 2) "Distraction-Free Reader Mode 📖", or 3) "Download Bhromon Android App 📱".
+  - **Android APK (`!kIsWeb`)**: Runs native Chromium `android.webkit.WebView` directly with the phone's mobile/carrier IP. No `<iframe>` or `X-Frame-Options` restrictions exist, Cloudflare WAF is not triggered, and all newspaper sites open with 120 FPS hardware acceleration.
+  - Direct APK download URL: `https://bhromon.fun/media/apk/bhromon-release.apk` (served with byte-range support).
+
+### F. Realtime Calling & WebRTC Voice Lounge Architecture
+- **Direct 1-on-1 Calling (`CallSignalingService`, `call_screen.dart`)**:
+  - Audio and video calling initiated directly from tour group channel members sheet.
+  - Signaling stored in Firestore at `tours/{tourId}/calls/{callId}`:
+    - Caller creates call document with `callerId`, `calleeId`, `offer`, `type` (audio/video), and `status: ringing`.
+    - Callee listens to active incoming calls; accepts by writing `answer` and setting `status: connected`, or rejects (`rejected`/`ended`).
+    - ICE candidates exchanged under `tours/{tourId}/calls/{callId}/candidates`.
+  - Security rules ensure only caller or callee can read/write the call session.
+- **Discord-Style Group Voice Lounge (`VoiceRoomService`, `voice_room_screen.dart`)**:
+  - Drop-in / drop-out group voice channels backed by WebRTC multi-peer mesh.
+  - Active participants track their presence in Firestore at `tours/{tourId}/channels/{channelId}/participants/{email}` with heartbeat timestamps and mute states.
+  - Persistent floating docked voice bar allows users to browse itineraries, chat, or ledger while staying connected in the voice lounge.
+- **STUN/TURN Infrastructure (`sotto-coturn-1`)**:
+  - Running on Hostinger VPS (`coturn/coturn:4.18.0`) to relay media when direct peer-to-peer UDP is blocked by symmetric NATs or restrictive mobile carrier firewalls.
+
+### G. Hostinger VPS Infrastructure & Microservices Architecture
+- **Server**: Hostinger VPS (`148.135.137.245`), SSH port `2222`, user `root`, key `~/.ssh/id_rsa_dbm`.
+- **Containers**:
+  - `bhromon-media-app` (`127.0.0.1:8210` -> FastAPI/Uvicorn): Handles token-authenticated media uploads, deletions, and news proxy (`/api/news/`). **Note:** Python files deployed to container must be UTF-8 without BOM (`\ufeff`) to prevent Uvicorn restart crash loop.
+  - `bhromon-web-app` (`127.0.0.1:8085` -> Nginx container): Local web preview container.
+  - `bhromon-games-app` (`127.0.0.1:8220`): Multiplayer game server.
+  - `sotto-coturn-1`: Coturn WebRTC STUN/TURN server.
+  - `smart-utilities-web` (`127.0.0.1:8094`): Reference utility web services.
+- **Nginx Configuration (`/etc/nginx/sites-available/bhromon.fun`)**:
+  - Serves `https://bhromon.fun` with Let's Encrypt SSL.
+  - `/api/media/` -> reverse proxies to `http://127.0.0.1:8210/api/media/`.
+  - `/api/news/` -> reverse proxies to `http://127.0.0.1:8210/api/news/`.
+  - `/media/` -> directly serves `/var/www/bhromon-media/` with `http_mp4_module`, `accept-ranges: bytes`, Cloudflare cache headers, and CORS `*`.
+  - `/media/apk/` -> serves release APKs directly (`bhromon-release.apk`).
 
 ---
 
