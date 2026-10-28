@@ -799,9 +799,10 @@ class _ChatScreenState extends State<ChatScreen> {
           ? await XFile(filePath).readAsBytes()
           : await File(filePath).readAsBytes();
 
+      final cleanUploadId = uploadId.replaceAll('-', '');
       final downloadUrl = await MediaUploadService.uploadBytes(
         bytes: voiceBytes,
-        path: 'chat_voice/${widget.chatId}/$uploadId.m4a',
+        path: 'chat_voice/${widget.chatId}/$cleanUploadId.m4a',
         contentType: 'audio/mp4',
       );
 
@@ -915,9 +916,15 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
 
+      final cleanUploadId = uploadId.replaceAll('-', '');
+      final ext = pFile.extension != null && pFile.extension!.isNotEmpty
+          ? '.${pFile.extension!.toLowerCase()}'
+          : (pFile.name.contains('.')
+              ? '.${pFile.name.split('.').last.toLowerCase()}'
+              : '.bin');
       final downloadUrl = await MediaUploadService.uploadBytes(
         bytes: docBytes,
-        path: 'chat_docs/${widget.chatId}/${uploadId}_${pFile.name}',
+        path: 'chat_docs/${widget.chatId}/$cleanUploadId$ext',
         contentType: 'application/octet-stream',
       );
 
