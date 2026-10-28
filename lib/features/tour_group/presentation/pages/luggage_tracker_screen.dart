@@ -54,14 +54,23 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
       if (mounted) setState(() => _members = m);
     }));
 
-    _subs.add(_repository.watchLuggage(widget.tourId).listen((items) {
-      if (mounted) {
-        setState(() {
-          _items = items;
-          _loaded = true;
-        });
-      }
-    }));
+    _subs.add(_repository.watchLuggage(widget.tourId).listen(
+      (items) {
+        if (mounted) {
+          setState(() {
+            _items = items;
+            _loaded = true;
+          });
+        }
+      },
+      onError: (err) {
+        if (mounted) {
+          setState(() {
+            _loaded = true;
+          });
+        }
+      },
+    ));
   }
 
   @override
@@ -428,11 +437,42 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
         ? Color(int.tryParse(item.tagColor) ?? 0xFF00BFA5)
         : kLuggageTagColors.first;
 
+    final memberList = <TourMember>[];
+    final seenEmails = <String>{};
+    for (final m in _members) {
+      final em = m.email.toLowerCase().trim();
+      if (em.isNotEmpty && seenEmails.add(em)) {
+        memberList.add(m);
+      }
+    }
+    if (!seenEmails.contains(_me.toLowerCase().trim())) {
+      memberList.insert(
+        0,
+        TourMember(
+          tourId: widget.tourId,
+          email: _me,
+          displayName: _repository.currentDisplayName,
+          role: _myRole ?? TourRole.member,
+        ),
+      );
+    }
+
     String selectedOwnerEmail = item?.ownerEmail ?? _me;
     String selectedOwnerName =
         item?.ownerName ?? _repository.currentDisplayName;
     String? selectedCustodianEmail = item?.custodianEmail;
     String? selectedCustodianName = item?.custodianName;
+
+    final initialOwner = memberList.any((m) =>
+            m.email.toLowerCase() == selectedOwnerEmail.toLowerCase())
+        ? selectedOwnerEmail.toLowerCase()
+        : memberList.first.email.toLowerCase();
+
+    final initialCustodian = selectedCustodianEmail != null &&
+            memberList.any((m) =>
+                m.email.toLowerCase() == selectedCustodianEmail!.toLowerCase())
+        ? selectedCustodianEmail!.toLowerCase()
+        : null;
 
     bool isLoaded = item?.isLoaded ?? false;
 
@@ -507,36 +547,24 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
 
                 // Owner dropdown
                 DropdownButtonFormField<String>(
-                  initialValue: _members.any((m) =>
-                          m.email.toLowerCase() ==
-                          selectedOwnerEmail.toLowerCase())
-                      ? selectedOwnerEmail.toLowerCase()
-                      : (_members.isNotEmpty
-                          ? _members.first.email.toLowerCase()
-                          : _me.toLowerCase()),
+                  initialValue: initialOwner,
                   dropdownColor: const Color(0xFF1E3238),
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     labelText: l10n.translate('luggage_owner_label'),
                   ),
                   items: [
-                    if (_members.isEmpty)
+                    for (final m in memberList)
                       DropdownMenuItem(
-                        value: _me.toLowerCase(),
-                        child: Text(_repository.currentDisplayName),
-                      )
-                    else
-                      for (final m in _members)
-                        DropdownMenuItem(
-                          value: m.email.toLowerCase(),
-                          child: Text(m.displayName),
-                        ),
+                        value: m.email.toLowerCase(),
+                        child: Text(m.displayName),
+                      ),
                   ],
                   onChanged: (email) {
                     if (email != null) {
                       setModalState(() {
                         selectedOwnerEmail = email;
-                        final match = _members
+                        final match = memberList
                             .where((m) => m.email.toLowerCase() == email)
                             .firstOrNull;
                         selectedOwnerName = match?.displayName ??
@@ -549,7 +577,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
 
                 // Custodian dropdown
                 DropdownButtonFormField<String?>(
-                  initialValue: selectedCustodianEmail?.toLowerCase(),
+                  initialValue: initialCustodian,
                   dropdownColor: const Color(0xFF1E3238),
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
@@ -560,7 +588,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                       value: null,
                       child: Text('—', style: TextStyle(color: Colors.white54)),
                     ),
-                    for (final m in _members)
+                    for (final m in memberList)
                       DropdownMenuItem<String?>(
                         value: m.email.toLowerCase(),
                         child: Text(m.displayName),
@@ -571,7 +599,7 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
                       selectedCustodianEmail = email;
                       final match = email == null
                           ? null
-                          : _members
+                          : memberList
                               .where((m) => m.email.toLowerCase() == email)
                               .firstOrNull;
                       selectedCustodianName = match?.displayName;
