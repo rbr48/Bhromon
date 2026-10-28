@@ -87,13 +87,20 @@ service firebase.storage {
       allow delete: if isAuth() && isOwner(userId);
     }
 
-    // ── Chat media (legacy) ──────────────────────────────────────────────────
-    // Chat attachments are uploaded to the VPS media server now, so nothing
-    // writes here any more. Old files stay readable by signed-in users; the app
-    // can no longer delete them and they are removed from the console if needed.
+    // ── Chat media, docs & voice (VPS fallback & legacy) ─────────────────────
     match /chat_media/{allPaths=**} {
       allow read: if isAuth();
-      allow write, delete: if false;
+      allow write: if isAuth();
+    }
+
+    match /chat_docs/{allPaths=**} {
+      allow read: if isAuth();
+      allow write: if isAuth();
+    }
+
+    match /chat_voice/{allPaths=**} {
+      allow read: if isAuth();
+      allow write: if isAuth();
     }
 
     // ── Chat media thumbnails (written by Cloud Functions service account) ──
