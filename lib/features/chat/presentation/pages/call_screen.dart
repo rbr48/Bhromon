@@ -45,7 +45,7 @@ class _CallScreenState extends State<CallScreen> {
 
   bool _isAudioMuted = false;
   bool _isVideoOff = false;
-  bool _isSpeakerOn = false;
+  late bool _isSpeakerOn;
   bool _remoteVideoConnected = false;
   bool _controlsVisible = true;
   bool _hasExited = false;
@@ -71,8 +71,10 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
+    _isSpeakerOn = widget.isVideoCall;
     if (!kIsWeb) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      Helper.setSpeakerphoneOn(_isSpeakerOn);
     }
     _initCall();
   }
@@ -87,6 +89,7 @@ class _CallScreenState extends State<CallScreen> {
       if (widget.isVideoCall) {
         await Permission.camera.request();
       }
+      await Helper.setSpeakerphoneOn(_isSpeakerOn);
     }
 
     _signaling.onLocalStream = (stream) {
@@ -255,91 +258,99 @@ class _CallScreenState extends State<CallScreen> {
         },
         child: Scaffold(
           backgroundColor: const Color(0xFF0B141A), // WhatsApp dark background
-          body: GestureDetector(
-            onTap: isVideo ? _toggleControlsVisibility : null,
-            behavior: HitTestBehavior.opaque,
-            child: Stack(
-              children: [
-                // ── Background / Remote Video Layer ───────────────────────────────
-                if (isVideo && _remoteVideoConnected && !_isVideoOff)
-                  Positioned.fill(
-                    child: RTCVideoView(
-                      _remoteRenderer,
-                      objectFit:
-                          RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                    ),
-                  )
-                else
-                  _buildAudioOrPlaceholderBackground(),
+          body: SizedBox.expand(
+            child: GestureDetector(
+              onTap: isVideo ? _toggleControlsVisibility : null,
+              behavior: HitTestBehavior.opaque,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // ── Background / Remote Video Layer ───────────────────────────────
+                  if (isVideo && _remoteVideoConnected && !_isVideoOff)
+                    Positioned.fill(
+                      child: RTCVideoView(
+                        _remoteRenderer,
+                        objectFit:
+                            RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      ),
+                    )
+                  else
+                    _buildAudioOrPlaceholderBackground(),
 
-                // ── Top Header (Name, Status / Duration) ──────────────────────────
-                AnimatedOpacity(
-                  duration: const Duration(milliseconds: 250),
-                  opacity: _controlsVisible ? 1.0 : 0.0,
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back,
-                                color: Colors.white, size: 24),
-                            onPressed: _endCall,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  widget.remoteUserName,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black87,
-                                        blurRadius: 4,
+                  // ── Top Header (Name, Status / Duration) ──────────────────────────
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 250),
+                      opacity: _controlsVisible ? 1.0 : 0.0,
+                      child: SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back,
+                                    color: Colors.white, size: 24),
+                                onPressed: _endCall,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      widget.remoteUserName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        shadows: [
+                                          Shadow(
+                                            color: Colors.black87,
+                                            blurRadius: 4,
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _callDuration > Duration.zero
-                                      ? _formatDuration(_callDuration)
-                                      : _callStatusText,
-                                  style: TextStyle(
-                                    color: _callDuration > Duration.zero
-                                        ? const Color(0xFF00A884)
-                                        : Colors.white70,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    shadows: const [
-                                      Shadow(
-                                        color: Colors.black87,
-                                        blurRadius: 4,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _callDuration > Duration.zero
+                                          ? _formatDuration(_callDuration)
+                                          : _callStatusText,
+                                      style: TextStyle(
+                                        color: _callDuration > Duration.zero
+                                            ? const Color(0xFF00A884)
+                                            : Colors.white70,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        shadows: const [
+                                          Shadow(
+                                            color: Colors.black87,
+                                            blurRadius: 4,
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              if (isVideo)
+                                IconButton(
+                                  icon: const Icon(Icons.cameraswitch,
+                                      color: Colors.white, size: 24),
+                                  onPressed: _switchCamera,
+                                ),
+                            ],
                           ),
-                          if (isVideo)
-                            IconButton(
-                              icon: const Icon(Icons.cameraswitch,
-                                  color: Colors.white, size: 24),
-                              onPressed: _switchCamera,
-                            ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
 
                 // ── Local Video PIP (Picture-In-Picture for Video Calls) ─────────
                 if (isVideo && !_isVideoOff)
@@ -472,7 +483,9 @@ class _CallScreenState extends State<CallScreen> {
               ],
             ),
           ),
-        ));
+        ),
+      ),
+    );
   }
 
   Widget _buildAudioOrPlaceholderBackground() {

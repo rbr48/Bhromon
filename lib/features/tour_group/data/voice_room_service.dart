@@ -66,14 +66,6 @@ class VoiceRoomService {
   factory VoiceRoomService() => _instance;
   VoiceRoomService._internal();
 
-  static const String _turnUsername = String.fromEnvironment(
-    'BHROMON_TURN_USERNAME',
-    defaultValue: 'bhromon_user',
-  );
-  static const String _turnCredential = String.fromEnvironment(
-    'BHROMON_TURN_CREDENTIAL',
-    defaultValue: '',
-  );
   static const String _turnHost = String.fromEnvironment(
     'BHROMON_TURN_HOST',
     defaultValue: '148.135.137.245:3478',
@@ -81,21 +73,34 @@ class VoiceRoomService {
 
   static final Map<String, dynamic> _iceConfig = {
     'iceServers': [
+      // Primary STUN servers
       {
         'urls': [
           'stun:stun.l.google.com:19302',
           'stun:stun1.l.google.com:19302',
+          'stun:stun2.l.google.com:19302',
+          'stun:stun.cloudflare.com:3478',
         ],
       },
-      if (_turnCredential.isNotEmpty)
-        {
-          'urls': [
-            'turn:$_turnHost?transport=udp',
-            'turn:$_turnHost?transport=tcp',
-          ],
-          'username': _turnUsername,
-          'credential': _turnCredential,
-        },
+      // OpenRelay Public TURN Server (worldwide high-availability WebRTC relay)
+      {
+        'urls': [
+          'turn:openrelay.metered.ca:80',
+          'turn:openrelay.metered.ca:443',
+          'turn:openrelay.metered.ca:443?transport=tcp',
+        ],
+        'username': 'openrelayproject',
+        'credential': 'openrelayproject',
+      },
+      // VPS Coturn Dedicated Relay
+      {
+        'urls': [
+          'turn:$_turnHost?transport=udp',
+          'turn:$_turnHost?transport=tcp',
+        ],
+        'username': '2030000000:bhromon',
+        'credential': 'f99sT/qs6uiwqv32z/j1RYx+m0A=',
+      },
     ],
     'sdpSemantics': 'unified-plan',
   };
@@ -253,12 +258,30 @@ class VoiceRoomService {
 
   Future<void> _setupLocalMedia({required bool enableVideo}) async {
     final mediaConstraints = <String, dynamic>{
-      'audio': true,
-      'video': enableVideo ? <String, dynamic>{'facingMode': 'user'} : false,
+      'audio': {
+        'echoCancellation': true,
+        'noiseSuppression': true,
+        'autoGainControl': true,
+        'highpassFilter': true,
+      },
+      'video': enableVideo
+          ? <String, dynamic>{
+              'facingMode': 'user',
+              'width': {'ideal': 640},
+              'height': {'ideal': 480},
+              'frameRate': {'ideal': 30},
+            }
+          : false,
     };
 
     _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
     _localRenderer.srcObject = _localStream;
+
+    // Default to speakerphone for group voice rooms on mobile
+    if (!kIsWeb) {
+      _isSpeakerOn = true;
+      await Helper.setSpeakerphoneOn(true);
+    }
   }
 
   void _onParticipantsChanged(QuerySnapshot<Map<String, dynamic>> snap) {
@@ -314,6 +337,11 @@ class VoiceRoomService {
       _remoteRenderers[remoteEmail] = remoteRenderer;
 
       pc.onTrack = (RTCTrackEvent event) {
+        for (final track in event.streams.isNotEmpty
+            ? event.streams.first.getTracks()
+            : [event.track]) {
+          track.enabled = true;
+        }
         if (event.streams.isNotEmpty) {
           remoteRenderer.srcObject = event.streams.first;
         }
