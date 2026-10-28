@@ -1337,7 +1337,7 @@ def proxy_newspaper(
             html_text = raw_bytes.decode(charset, errors="replace")
     except Exception as e:
         logger.warning("Failed proxying newspaper URL %s: %s", url, e)
-        # Return a responsive embeddable fallback card so Cloudflare never sets X-Frame-Options: SAMEORIGIN
+        # Return a responsive embeddable fallback card matching Smart Utilities theme
         clean_domain = parsed.netloc or url
         fallback_html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -1349,8 +1349,8 @@ def proxy_newspaper(
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #0D1117;
-      color: #E2E8F0;
+      background: #FFFFFF;
+      color: #111827;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1358,30 +1358,31 @@ def proxy_newspaper(
       padding: 24px;
     }}
     .card {{
-      background: #161B22;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #F9FAFB;
+      border: 1.5px solid #E5E7EB;
       border-radius: 20px;
       padding: 36px 28px;
       max-width: 480px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.06);
     }}
     .shield-badge {{
       width: 64px;
       height: 64px;
       margin: 0 auto 20px;
       border-radius: 50%;
-      background: rgba(0, 208, 158, 0.12);
+      background: rgba(0, 208, 158, 0.15);
+      border: 1.5px solid #00D09E;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #00D09E;
       font-size: 28px;
     }}
-    h1 {{ font-size: 20px; font-weight: 700; color: #FFFFFF; margin-bottom: 8px; }}
-    .domain {{ font-size: 14px; color: #00D09E; margin-bottom: 18px; font-weight: 600; word-break: break-all; }}
-    p {{ font-size: 13.5px; color: #94A3B8; line-height: 1.6; margin-bottom: 26px; }}
+    h1 {{ font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 8px; }}
+    .domain {{ font-size: 14px; color: #059669; margin-bottom: 18px; font-weight: 600; word-break: break-all; }}
+    p {{ font-size: 13.5px; color: #4B5563; line-height: 1.6; margin-bottom: 26px; }}
     .btn-group {{ display: flex; flex-direction: column; gap: 12px; }}
     .btn {{
       display: inline-flex;
@@ -1402,11 +1403,11 @@ def proxy_newspaper(
     }}
     .btn-primary:hover {{ background: #00b98c; }}
     .btn-secondary {{
-      background: transparent;
-      color: #FFFFFF;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: #FFFFFF;
+      color: #111827;
+      border: 1.5px solid #D1D5DB;
     }}
-    .btn-secondary:hover {{ background: rgba(255, 255, 255, 0.08); }}
+    .btn-secondary:hover {{ background: #F3F4F6; }}
   </style>
 </head>
 <body>
@@ -1416,7 +1417,7 @@ def proxy_newspaper(
     <div class="domain">{html.escape(clean_domain)}</div>
     <p>
       This newspaper employs automated Cloudflare or bot protection that restricts in-frame web embedding.
-      You can open it directly in a dedicated tab or read it in distraction-free Reader mode.
+      Tap below to open directly, read in distraction-free Reader mode, or use the Bhromon Android App for native 120 FPS ad-free browsing.
     </p>
     <div class="btn-group">
       <a href="{html.escape(url, quote=True)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
@@ -1424,6 +1425,9 @@ def proxy_newspaper(
       </a>
       <a href="/api/news/reader-view?url={urllib.parse.quote_plus(url)}" class="btn btn-secondary">
         Distraction-Free Reader Mode 📖
+      </a>
+      <a href="https://bhromon.fun/media/apk/bhromon-release.apk" class="btn btn-secondary">
+        Download Bhromon Android App 📱
       </a>
     </div>
   </div>
