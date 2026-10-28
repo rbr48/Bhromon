@@ -51,6 +51,8 @@ import '../features/game_zone/carrom/carrom_screen.dart';
 import '../features/game_zone/online/online_game_table_screen.dart';
 import '../features/newspaper/presentation/pages/newspaper_hub_screen.dart';
 import '../features/newspaper/presentation/pages/adfree_article_reader_screen.dart';
+import '../features/newspaper/presentation/pages/adblock_browser_screen.dart';
+import '../features/newspaper/domain/models/newspaper_models.dart';
 
 import '../features/offline_vault/presentation/cubit/vault_cubit.dart';
 import '../features/trip_log/presentation/bloc/trip_log_bloc.dart';
@@ -368,6 +370,22 @@ class AppRouter {
               initialTitle: extra['title'] as String?,
               initialSourceName: extra['sourceName'] as String?,
               initialImageUrl: extra['imageUrl'] as String?,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/newspaper-browser',
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final url = state.uri.queryParameters['url'] ?? extra['url'] as String? ?? '';
+          final title = state.uri.queryParameters['title'] ?? extra['title'] as String? ?? 'Web Browser';
+          return _customPageTransition(
+            state,
+            AdBlockBrowserScreen(
+              initialUrl: url,
+              initialTitle: title,
+              paper: extra['paper'] as Newspaper?,
             ),
           );
         },

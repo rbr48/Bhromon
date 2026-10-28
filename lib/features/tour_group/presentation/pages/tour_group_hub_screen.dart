@@ -1353,7 +1353,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       _ModuleItem(
         title: context.l10n.translate('hub_module_news'),
         subtitle: context.l10n.translate('hub_module_news_sub'),
-        icon: Icons.newspaper_rounded,
+        icon: Icons.article_rounded,
         color: const Color(0xFF0EA5E9),
         onTap: () => context.push('/newspaper-hub'),
       ),
