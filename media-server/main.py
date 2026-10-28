@@ -29,6 +29,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from chat import chat_router
 from notifications import FirestoreNotificationWatcher, NotificationEngine
+from quiz import quiz_router
 
 logger = logging.getLogger("media-server")
 
@@ -123,6 +124,8 @@ app = FastAPI(
 
 app.include_router(chat_router, prefix="/api/chat")
 app.include_router(chat_router, prefix="/chat")
+app.include_router(quiz_router, prefix="/api/quiz")
+app.include_router(quiz_router, prefix="/quiz")
 
 app.add_middleware(
     CORSMiddleware,
