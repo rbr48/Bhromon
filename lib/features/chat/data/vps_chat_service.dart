@@ -15,7 +15,7 @@ class VpsChatService {
   factory VpsChatService() => _instance;
   VpsChatService._internal();
 
-  static const String baseUrl = 'https://bhromon.fun/api/chat';
+  static const String baseUrl = 'https://bhromon.fun/api/chat/';
   static const String wsUrl = 'wss://bhromon.fun/api/chat/ws';
 
   final Dio _dio = Dio(BaseOptions(
@@ -242,7 +242,7 @@ class VpsChatService {
       if (idToken == null) return;
 
       await _dio.post<Map<String, dynamic>>(
-        '/token',
+        'token',
         data: {
           'token': token,
           'platform': platform ?? (kIsWeb ? 'web' : 'mobile'),
@@ -263,7 +263,7 @@ class VpsChatService {
       if (idToken == null) return [];
 
       final res = await _dio.get<Map<String, dynamic>>(
-        '/conversations',
+        'conversations',
         options: _authHeader(idToken),
       );
 
@@ -291,7 +291,7 @@ class VpsChatService {
       if (idToken == null) return [];
 
       final res = await _dio.get<Map<String, dynamic>>(
-        '/messages/$chatId',
+        'messages/$chatId',
         queryParameters: {
           if (before != null) 'before': before,
           'limit': limit,
@@ -340,7 +340,7 @@ class VpsChatService {
       };
 
       final res = await _dio.post<Map<String, dynamic>>(
-        '/message',
+        'message',
         data: payload,
         options: _authHeader(idToken),
       );
@@ -384,7 +384,7 @@ class VpsChatService {
       if (idToken == null) return;
 
       await _dio.post<Map<String, dynamic>>(
-        '/read',
+        'read',
         data: {'chatId': chatId, 'messageIds': messageIds},
         options: _authHeader(idToken),
       );
@@ -403,7 +403,7 @@ class VpsChatService {
       if (idToken == null) return;
 
       await _dio.post<Map<String, dynamic>>(
-        '/reaction',
+        'reaction',
         data: {
           'chatId': chatId,
           'messageId': messageId,
@@ -426,7 +426,7 @@ class VpsChatService {
       if (idToken == null) return;
 
       await _dio.post<Map<String, dynamic>>(
-        '/delete',
+        'delete',
         data: {
           'chatId': chatId,
           'messageId': messageId,
