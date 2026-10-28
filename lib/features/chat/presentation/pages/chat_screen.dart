@@ -1567,6 +1567,8 @@ class _ChatScreenState extends State<ChatScreen> {
     required String otherUid,
     required String otherName,
     required String? avatarUrl,
+    String? localUserName,
+    String? localAvatarUrl,
   }) {
     if (otherUid == 'bhromon_ai_advisor') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1589,6 +1591,8 @@ class _ChatScreenState extends State<ChatScreen> {
         'remoteAvatarUrl': avatarUrl,
         'isCaller': true,
         'isVideoCall': isVideo,
+        'localUserName': localUserName,
+        'localAvatarUrl': localAvatarUrl,
       },
     );
   }
@@ -1745,6 +1749,8 @@ class _ChatScreenState extends State<ChatScreen> {
         authState is Authenticated ? authState.profile.uid : 'explorer_user';
     final currentName =
         authState is Authenticated ? authState.profile.displayName : 'Explorer';
+    final currentAvatarUrl =
+        authState is Authenticated ? authState.profile.avatarUrl : null;
     final resolvedOtherUid = _resolveOtherUid(currentUid) ?? 'guest';
 
     // ── Stream: Retrieve profile of the other explorer ──
@@ -2013,6 +2019,8 @@ class _ChatScreenState extends State<ChatScreen> {
                               otherUid: resolvedOtherUid,
                               otherName: otherName,
                               avatarUrl: avatarUrl,
+                              localUserName: currentName,
+                              localAvatarUrl: currentAvatarUrl,
                             ),
                           ),
                           IconButton(
@@ -2025,6 +2033,8 @@ class _ChatScreenState extends State<ChatScreen> {
                               otherUid: resolvedOtherUid,
                               otherName: otherName,
                               avatarUrl: avatarUrl,
+                              localUserName: currentName,
+                              localAvatarUrl: currentAvatarUrl,
                             ),
                           ),
                           IconButton(

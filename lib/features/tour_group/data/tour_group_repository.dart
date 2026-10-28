@@ -89,12 +89,45 @@ class TourGroupRepository {
   }
 
   String get currentDisplayName {
-    final name = _auth.currentUser?.displayName;
-    if (name != null && name.trim().isNotEmpty) return name.trim();
+    // Prefer in-app profile from the encrypted Hive cache (set by
+    // AuthRepositoryImpl), then Firebase Auth (which is kept in sync by
+    // AuthRepositoryImpl._syncFirebaseAuthProfile).
+    final cached = _cachedExplorerProfile();
+    if (cached != null && cached['displayName'] is String) {
+      final name = (cached['displayName'] as String).trim();
+      if (name.isNotEmpty) return name;
+    }
+    try {
+      final name = _auth.currentUser?.displayName;
+      if (name != null && name.trim().isNotEmpty) return name.trim();
+    } catch (_) {}
     return 'Explorer';
   }
 
-  String? get currentPhotoUrl => _auth.currentUser?.photoURL;
+  String? get currentPhotoUrl {
+    final cached = _cachedExplorerProfile();
+    if (cached != null && cached['avatarUrl'] is String) {
+      final url = cached['avatarUrl'] as String;
+      if (url.isNotEmpty) return url;
+    }
+    try {
+      return _auth.currentUser?.photoURL;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Reads the locally-cached explorer profile map from the encrypted Hive
+  /// `auth_box`, which [AuthRepositoryImpl] populates on every sign-in and
+  /// profile update. Returns `null` when the box is not open or empty.
+  static Map<String, dynamic>? _cachedExplorerProfile() {
+    try {
+      if (!Hive.isBoxOpen('auth_box')) return null;
+      final raw = Hive.box<dynamic>('auth_box').get('profile');
+      if (raw is Map) return Map<String, dynamic>.from(raw);
+    } catch (_) {}
+    return null;
+  }
 
   static String? _cachedActiveTourId;
 
@@ -495,12 +528,31 @@ class TourGroupRepository {
         (snapshot) {
           heardFromServer = true;
           rolesByTour.clear();
+          final myName = currentDisplayName;
+          final myPhoto = currentPhotoUrl;
+          final myUid = currentUid;
           for (final d in snapshot.docs) {
-            final id = d.data()['tourId'] as String? ?? '';
-            final rawStatus = (d.data()['status'] as String?)?.toLowerCase();
+            final data = d.data();
+            final id = data['tourId'] as String? ?? '';
+            final rawStatus = (data['status'] as String?)?.toLowerCase();
             final isActive = rawStatus == null || rawStatus == 'active';
             if (isActive && id.isNotEmpty) {
-              rolesByTour[id] = d.data()['role'] as String? ?? 'member';
+              rolesByTour[id] = data['role'] as String? ?? 'member';
+            }
+            // Proactively self-heal membership row with latest in-app profile.
+            final updates = <String, dynamic>{};
+            if (myUid.isNotEmpty &&
+                (data['uid'] == null || (data['uid'] as String).isEmpty)) {
+              updates['uid'] = myUid;
+            }
+            if (myName != 'Explorer' && data['displayName'] != myName) {
+              updates['displayName'] = myName;
+            }
+            if (myPhoto != null && data['photoUrl'] != myPhoto) {
+              updates['photoUrl'] = myPhoto;
+            }
+            if (updates.isNotEmpty) {
+              unawaited(d.reference.update(updates).catchError((_) {}));
             }
           }
           final ids = rolesByTour.keys.toSet();
@@ -641,7 +693,7 @@ class TourGroupRepository {
           tourName: name,
           email: email,
           displayName: currentDisplayName,
-          photoUrl: _auth.currentUser?.photoURL,
+          photoUrl: currentPhotoUrl,
           role: TourRole.owner,
           status: TourMemberStatus.active,
           joinedAt: now,
@@ -717,7 +769,7 @@ class TourGroupRepository {
         tourId: tourId,
         email: email,
         displayName: currentDisplayName,
-        photoUrl: _auth.currentUser?.photoURL,
+        photoUrl: currentPhotoUrl,
         role: TourRole.member,
         status: TourMemberStatus.active,
         joinedAt: DateTime.now(),
@@ -982,9 +1034,26 @@ class TourGroupRepository {
       if (myEmail.isNotEmpty && myUid.isNotEmpty) {
         for (final d in snapshot.docs) {
           final data = d.data();
-          if (normalizeEmail(data['email'] as String? ?? '') == myEmail &&
-              (data['uid'] == null || (data['uid'] as String).isEmpty)) {
-            unawaited(d.reference.update({'uid': myUid}).catchError((_) {}));
+          if (normalizeEmail(data['email'] as String? ?? '') == myEmail) {
+            final updates = <String, dynamic>{};
+            // Back-fill uid if missing.
+            if (data['uid'] == null || (data['uid'] as String).isEmpty) {
+              updates['uid'] = myUid;
+            }
+            // Self-heal displayName / photoUrl from in-app profile so that
+            // other members always see the latest name and avatar.
+            final myName = currentDisplayName;
+            final myPhoto = currentPhotoUrl;
+            if (data['displayName'] != myName && myName != 'Explorer') {
+              updates['displayName'] = myName;
+            }
+            if (data['photoUrl'] != myPhoto && myPhoto != null) {
+              updates['photoUrl'] = myPhoto;
+            }
+            if (updates.isNotEmpty) {
+              unawaited(
+                  d.reference.update(updates).catchError((_) {}));
+            }
             break;
           }
         }
@@ -1968,7 +2037,7 @@ class TourGroupRepository {
       tourId: tourId,
       authorEmail: email,
       authorName: currentDisplayName,
-      authorPhoto: _auth.currentUser?.photoURL,
+      authorPhoto: currentPhotoUrl,
       caption: caption.trim(),
       images: images,
       videoUrl: videoUrl,
@@ -2219,7 +2288,7 @@ class TourGroupRepository {
       id: commentId,
       authorEmail: email,
       authorName: currentDisplayName,
-      authorPhoto: _auth.currentUser?.photoURL,
+      authorPhoto: currentPhotoUrl,
       text: trimmed,
       reaction: reaction,
       createdAt: DateTime.now(),
@@ -2304,7 +2373,7 @@ class TourGroupRepository {
       id: id,
       authorEmail: email,
       authorName: currentDisplayName,
-      authorPhoto: _auth.currentUser?.photoURL,
+      authorPhoto: currentPhotoUrl,
       mediaUrl: mediaUrl,
       caption: caption?.trim().isEmpty ?? true ? null : caption!.trim(),
       createdAt: DateTime.now(),

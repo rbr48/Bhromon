@@ -94,6 +94,25 @@ class GameAnalyticsService {
       if (Firebase.apps.isNotEmpty) {
         final user = FirebaseAuth.instance.currentUser;
         if (user != null && !user.isAnonymous) {
+          String displayName = user.displayName ?? 'Player';
+          String? photoUrl = user.photoURL;
+          try {
+            if (Hive.isBoxOpen('auth_box')) {
+              final raw = Hive.box<dynamic>('auth_box').get('profile');
+              if (raw is Map) {
+                final map = Map<String, dynamic>.from(raw);
+                if (map['displayName'] is String &&
+                    (map['displayName'] as String).trim().isNotEmpty) {
+                  displayName = (map['displayName'] as String).trim();
+                }
+                if (map['avatarUrl'] is String &&
+                    (map['avatarUrl'] as String).isNotEmpty) {
+                  photoUrl = map['avatarUrl'] as String;
+                }
+              }
+            }
+          } catch (_) {}
+
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
@@ -102,8 +121,8 @@ class GameAnalyticsService {
               .set(
             {
               ..._current.toMap(),
-              'displayName': user.displayName ?? 'Player',
-              'photoUrl': user.photoURL,
+              'displayName': displayName,
+              'photoUrl': photoUrl,
               'updatedAt': FieldValue.serverTimestamp(),
             },
             SetOptions(merge: true),
