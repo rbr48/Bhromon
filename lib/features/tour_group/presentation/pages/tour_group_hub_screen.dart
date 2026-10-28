@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 import '../../domain/models/tour_group.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
@@ -52,6 +53,95 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       backgroundColor: error ? Colors.redAccent : AppColors.midGreen,
       behavior: SnackBarBehavior.floating,
     ));
+  }
+
+  void _startDirectChat(TourMember member) {
+    final me = _repository.currentEmail;
+    final myUid =
+        _repository.currentUid.isNotEmpty ? _repository.currentUid : me;
+    final remoteId = (member.uid != null && member.uid!.isNotEmpty)
+        ? member.uid!
+        : member.email;
+    if (remoteId.isEmpty) return;
+
+    final uids = [myUid, remoteId]..sort();
+    final chatId = uids.join('_');
+    context.push(
+      '/chat/$chatId',
+      extra: {
+        'otherUid': remoteId,
+      },
+    );
+  }
+
+  void _startDirectCall(TourMember member, {required bool isVideo}) {
+    final l10n = context.l10n;
+    final me = _repository.currentEmail;
+    final myUid =
+        _repository.currentUid.isNotEmpty ? _repository.currentUid : me;
+    final remoteId = (member.uid != null && member.uid!.isNotEmpty)
+        ? member.uid!
+        : member.email;
+    if (remoteId.isEmpty) {
+      _snack(l10n.translate('chan_call_offline'), error: true);
+      return;
+    }
+    final myName = _repository.currentDisplayName;
+    final myAvatar = _repository.currentPhotoUrl;
+    final callId = const Uuid().v4();
+    context.push(
+      '/call/$callId',
+      extra: {
+        'localUid': myUid,
+        'remoteUid': remoteId,
+        'remoteUserName': member.displayName.isNotEmpty
+            ? member.displayName
+            : member.email.split('@').first,
+        'remoteAvatarUrl': member.photoUrl,
+        'isCaller': true,
+        'isVideoCall': isVideo,
+        'localUserName': myName,
+        'localAvatarUrl': myAvatar,
+      },
+    );
+  }
+
+  Widget _buildMemberQuickAction({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 0.8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _copyInviteCode(String code) {
@@ -318,24 +408,46 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           _reportFailure(e);
         }
       case 'leave':
+        final nav = Navigator.of(context);
         final ok = await _confirm(l10n.translate('hub_leave_title'),
             l10n.translate('hub_leave_body', args: {'name': group.name}));
         if (!ok) return;
         try {
           await _repository.leaveTour(group.id);
           TourGroupRepository.lastActiveTourId = null;
-          if (mounted) setState(() => _activeGroup = null);
+          if (mounted) {
+            setState(() {
+              _activeGroup = null;
+              _displayedGroup = null;
+              _memberStreams.remove(group.id);
+              _groupsStream = _repository.watchMyGroups();
+            });
+            if (nav.canPop()) {
+              nav.pop();
+            }
+          }
         } catch (e) {
           _reportFailure(e);
         }
       case 'delete':
+        final nav = Navigator.of(context);
         final ok = await _confirm(l10n.translate('hub_delete_title'),
             l10n.translate('hub_delete_body', args: {'name': group.name}));
         if (!ok) return;
         try {
           await _repository.deleteTour(group.id, inviteCode: group.inviteCode);
           TourGroupRepository.lastActiveTourId = null;
-          if (mounted) setState(() => _activeGroup = null);
+          if (mounted) {
+            setState(() {
+              _activeGroup = null;
+              _displayedGroup = null;
+              _memberStreams.remove(group.id);
+              _groupsStream = _repository.watchMyGroups();
+            });
+            if (nav.canPop()) {
+              nav.pop();
+            }
+          }
         } catch (e) {
           _reportFailure(e);
         }
@@ -2332,6 +2444,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               setState(() {
                                 _activeGroup = joinedGroup;
                                 _displayedGroup = joinedGroup;
+                                _memberStreams[joinedGroup.id] =
+                                    _repository.watchMembers(joinedGroup.id);
                                 _groupsStream = _repository.watchMyGroups();
                               });
                               navigator.pop();
@@ -2479,6 +2593,48 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ),
                 ],
               ),
+              if (!isMe) ...[
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMemberQuickAction(
+                        icon: Icons.chat_bubble_outline_rounded,
+                        label: context.l10n.translate('chan_direct_message'),
+                        color: AppColors.mintGreen,
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _startDirectChat(member);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildMemberQuickAction(
+                        icon: Icons.call_outlined,
+                        label: context.l10n.translate('chan_call_audio'),
+                        color: const Color(0xFF64B5F6),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _startDirectCall(member, isVideo: false);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildMemberQuickAction(
+                        icon: Icons.videocam_outlined,
+                        label: context.l10n.translate('chan_call_video'),
+                        color: const Color(0xFF81C784),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _startDirectCall(member, isVideo: true);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 16),
               ListTile(
                 contentPadding: EdgeInsets.zero,

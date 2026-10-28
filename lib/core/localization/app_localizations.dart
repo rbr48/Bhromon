@@ -16,18 +16,55 @@ class AppLocalizations {
 
   /// Looks up [key] in this language, then in English, then returns the key
   /// itself. Each `{name}` in the text is replaced with `args['name']`.
+  ///
+  /// In Bengali, numeric arguments (`is num` or numeric string for count/n/etc)
+  /// are automatically converted to Bengali digits so English numerals are
+  /// never mixed into Bengali copy.
   String translate(String key, {Map<String, Object> args = const {}}) {
     final text = _lookup(locale.languageCode, key) ?? _lookup('en', key) ?? key;
     var filled = text;
     for (final entry in args.entries) {
-      filled = filled.replaceAll('{${entry.key}}', '${entry.value}');
+      final value = entry.value;
+      final String formatted;
+      if (locale.languageCode == 'bn') {
+        if (value is num) {
+          formatted = number(value);
+        } else if (value is String && _shouldLocalizeDigits(entry.key, value)) {
+          formatted = number(value);
+        } else {
+          formatted = '$value';
+        }
+      } else {
+        formatted = '$value';
+      }
+      filled = filled.replaceAll('{${entry.key}}', formatted);
     }
     return filled;
   }
 
+  static bool _shouldLocalizeDigits(String key, String value) {
+    const numericKeys = {
+      'count',
+      'n',
+      'amount',
+      'total',
+      'current',
+      'max',
+      'seat',
+      'room',
+      'days',
+      'nights',
+      'page',
+      'value',
+      'views',
+    };
+    if (!numericKeys.contains(key)) return false;
+    return int.tryParse(value) != null;
+  }
+
   /// [n] written with this language's digits: Bengali digits in Bengali,
-  /// Western digits otherwise.
-  String number(int n) {
+  /// Western digits otherwise. Accepts [int], [num], or numeric [String].
+  String number(Object n) {
     final text = '$n';
     if (locale.languageCode != 'bn') return text;
     const bengaliDigits = '০১২৩৪৫৬৭৮৯';

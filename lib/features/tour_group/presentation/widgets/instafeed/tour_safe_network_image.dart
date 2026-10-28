@@ -153,7 +153,7 @@ class _TourSafeNetworkImageState extends State<TourSafeNetworkImage> {
 
     Widget imageWidget;
     if (kIsWeb) {
-      // Direct Web HTML/Browser image decoding: immune to XHR CORS & cache manager failures
+      // Direct Web HTML/Browser image decoding with hardware downsampling
       imageWidget = Image.network(
         widget.imageUrl,
         key: effectiveKey,
@@ -161,6 +161,7 @@ class _TourSafeNetworkImageState extends State<TourSafeNetworkImage> {
         height: widget.height,
         fit: widget.fit,
         alignment: widget.alignment,
+        cacheWidth: 1080,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
           return _buildPlaceholder();
@@ -170,7 +171,7 @@ class _TourSafeNetworkImageState extends State<TourSafeNetworkImage> {
         },
       );
     } else {
-      // Mobile: CachedNetworkImage with automatic fallback to Image.network
+      // Mobile: CachedNetworkImage with memory downsampling & fallback
       imageWidget = CachedNetworkImage(
         key: effectiveKey,
         imageUrl: widget.imageUrl,
@@ -178,6 +179,10 @@ class _TourSafeNetworkImageState extends State<TourSafeNetworkImage> {
         height: widget.height,
         fit: widget.fit,
         alignment: widget.alignment,
+        memCacheWidth: 1080,
+        maxWidthDiskCache: 1440,
+        fadeInDuration: const Duration(milliseconds: 120),
+        fadeOutDuration: const Duration(milliseconds: 120),
         placeholder: (context, _) => _buildPlaceholder(),
         errorWidget: (context, _, __) {
           return Image.network(
@@ -186,6 +191,7 @@ class _TourSafeNetworkImageState extends State<TourSafeNetworkImage> {
             height: widget.height,
             fit: widget.fit,
             alignment: widget.alignment,
+            cacheWidth: 1080,
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;
               return _buildPlaceholder();
