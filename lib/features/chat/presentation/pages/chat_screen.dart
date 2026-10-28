@@ -53,12 +53,14 @@ class ChatScreen extends StatefulWidget {
 class _PendingUpload {
   final String id;
   File? file;
+  Uint8List? bytes;
   final String type;
   double progress = 0.0;
 
   _PendingUpload({
     required this.id,
     this.file,
+    this.bytes,
     required this.type,
   });
 }
@@ -604,8 +606,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
     File? fileToUpload =
         file ?? (!kIsWeb && xFile.path.isNotEmpty ? File(xFile.path) : null);
-    final pending =
-        _PendingUpload(id: uploadId, file: fileToUpload, type: type);
+
+    Uint8List? fileBytes;
+    if (kIsWeb || fileToUpload == null) {
+      try {
+        fileBytes = await xFile.readAsBytes();
+      } catch (e) {
+        debugPrint('Error reading media bytes for optimistic preview: $e');
+      }
+    }
+
+    final pending = _PendingUpload(
+      id: uploadId,
+      file: fileToUpload,
+      bytes: fileBytes,
+      type: type,
+    );
     setState(() => _pendingUploads.add(pending));
 
     Trace? uploadTrace;
@@ -2411,6 +2427,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                         bottom: 8, left: 48),
                                     child: ChatMediaBubble(
                                       localFile: pending.file,
+                                      bytes: pending.bytes,
                                       type: pending.type,
                                       uploadProgress: pending.progress,
                                       isMe: true,
@@ -2827,6 +2844,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   ),
                                   padding: const EdgeInsets.all(4),
                                   child: Column(
+                                    mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment: isMe
                                         ? CrossAxisAlignment.end
                                         : CrossAxisAlignment.start,
@@ -2948,6 +2966,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   padding: EdgeInsets.fromLTRB(
                                       isMe ? 10 : 16, 6, isMe ? 16 : 10, 6),
                                   child: Column(
+                                    mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment: isMe
                                         ? CrossAxisAlignment.end
                                         : CrossAxisAlignment.start,

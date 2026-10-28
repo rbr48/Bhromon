@@ -33,11 +33,16 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
       widget.tourRepository ?? TourGroupRepository();
 
   late final TabController _tabController;
+  late final Stream<List<TourGroup>> _groupsStream;
+
+  String? _cachedActiveTourId;
+  Stream<List<OnlineGameSession>>? _activeGamesStream;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _groupsStream = _tourRepo.watchMyGroups();
   }
 
   @override
@@ -109,25 +114,24 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildOfflineArcade(context),
-              _buildOnlineTablesTab(context),
-              StreamBuilder<List<TourGroup>>(
-                stream: _tourRepo.watchMyGroups(),
-                builder: (context, snapshot) {
-                  final activeId =
-                      snapshot.data != null && snapshot.data!.isNotEmpty
-                          ? snapshot.data!.first.id
-                          : null;
-                  return GameAnalyticsView(
-                    activeTourId: activeId,
+          child: StreamBuilder<List<TourGroup>>(
+            stream: _groupsStream,
+            builder: (context, groupSnapshot) {
+              final groups = groupSnapshot.data ?? [];
+              final activeTour = groups.isNotEmpty ? groups.first : null;
+
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildOfflineArcade(context),
+                  _buildOnlineTablesTab(context, groupSnapshot, activeTour),
+                  GameAnalyticsView(
+                    activeTourId: activeTour?.id,
                     tourRepository: _tourRepo,
-                  );
-                },
-              ),
-            ],
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -419,70 +423,73 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
 
   // --- TAB 2: ONLINE TOUR TABLES ---
 
-  Widget _buildOnlineTablesTab(BuildContext context) {
-    return StreamBuilder<List<TourGroup>>(
-      stream: _tourRepo.watchMyGroups(),
-      builder: (context, groupSnapshot) {
-        final groups = groupSnapshot.data ?? [];
-        if (groupSnapshot.connectionState == ConnectionState.waiting &&
-            groups.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.mintGreen),
-          );
-        }
+  Widget _buildOnlineTablesTab(
+    BuildContext context,
+    AsyncSnapshot<List<TourGroup>> groupSnapshot,
+    TourGroup? activeTour,
+  ) {
+    final groups = groupSnapshot.data ?? [];
+    if (groupSnapshot.connectionState == ConnectionState.waiting &&
+        groups.isEmpty) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.mintGreen),
+      );
+    }
 
-        if (groups.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.groups_outlined,
-                      color: Colors.white38, size: 64),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No Active Tour Group',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Join or create a tour group to unlock online multiplayer with in-game voice chat.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: () => context.go('/group-hub'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.mintGreen,
-                      foregroundColor: const Color(0xFF0F1E14),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    icon: const Icon(Icons.hub_outlined),
-                    label: const Text('Open Tours Hub'),
-                  ),
-                ],
+    if (activeTour == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.groups_outlined,
+                  color: Colors.white38, size: 64),
+              const SizedBox(height: 16),
+              const Text(
+                'No Active Tour Group',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          );
-        }
+              const SizedBox(height: 8),
+              const Text(
+                'Join or create a tour group to unlock online multiplayer with in-game voice chat.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () => context.go('/group-hub'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.mintGreen,
+                  foregroundColor: const Color(0xFF0F1E14),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                icon: const Icon(Icons.hub_outlined),
+                label: const Text('Open Tours Hub'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
-        // Use the first active tour group
-        final activeTour = groups.first;
+    if (_cachedActiveTourId != activeTour.id || _activeGamesStream == null) {
+      _cachedActiveTourId = activeTour.id;
+      _activeGamesStream = _gameRepo.watchActiveGames(activeTour.id);
+    }
 
-        return ListView(
-          padding: const EdgeInsets.all(18),
-          children: [
-            // Tour Banner & Host Table Action
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        // Tour Banner & Host Table Action
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -607,7 +614,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
 
             // Active Games Stream
             StreamBuilder<List<OnlineGameSession>>(
-              stream: _gameRepo.watchActiveGames(activeTour.id),
+              stream: _activeGamesStream!,
               builder: (context, snapshot) {
                 final sessions = snapshot.data ?? [];
                 if (snapshot.connectionState == ConnectionState.waiting &&
@@ -662,8 +669,6 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
             ),
           ],
         );
-      },
-    );
   }
 
   Widget _buildTableCard(BuildContext context, OnlineGameSession session) {

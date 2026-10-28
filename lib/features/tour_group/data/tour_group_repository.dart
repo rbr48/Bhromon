@@ -244,10 +244,23 @@ class TourGroupRepository {
     }
   }
 
+  static dynamic _deepSanitizeForHive(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate().toIso8601String();
+    } else if (value is DateTime) {
+      return value.toIso8601String();
+    } else if (value is Map) {
+      return value.map((k, v) => MapEntry(k.toString(), _deepSanitizeForHive(v)));
+    } else if (value is List) {
+      return value.map((v) => _deepSanitizeForHive(v)).toList();
+    }
+    return value;
+  }
+
   Future<void> _cacheLocalGroup(TourGroup group) async {
     try {
       final box = await _openBox();
-      await box.put('tour_${group.id}', group.toMap());
+      await box.put('tour_${group.id}', _deepSanitizeForHive(group.toMap()));
       final List<String> myIds = List<String>.from(
           box.get('my_tour_ids', defaultValue: <String>[]) as List);
       if (!myIds.contains(group.id)) {
@@ -578,7 +591,7 @@ class TourGroupRepository {
       );
     }
 
-    controller = StreamController<List<TourGroup>>(
+    controller = StreamController<List<TourGroup>>.broadcast(
       onListen: () {
         try {
           if (_auth.currentUser != null) {
