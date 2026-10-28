@@ -54,6 +54,10 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
 
   // Injected CSS Cosmetic Filtering to strip banners, overlays and interstitials
   static const String _adBlockCss = '''
+    html, body {
+      background-color: #ffffff !important;
+      color: #111111 !important;
+    }
     .ads, .ad, .ad-banner, .advertisement, .ad-container, .ad-wrapper,
     .ad-box, .ad-slot, .ad-placeholder, .adsbygoogle, [id^="google_ads_"],
     [id^="div-gpt-ad"], iframe[src*="doubleclick"], iframe[src*="adservice"],
@@ -646,84 +650,48 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
           Expanded(
             child: _hasLoadError
                 ? _buildWebFallback()
-                : InAppWebView(
-                    initialUrlRequest: URLRequest(url: WebUri(_effectiveUrl)),
-                    initialSettings: InAppWebViewSettings(
-                      javaScriptEnabled: true,
-                      domStorageEnabled: true,
-                      databaseEnabled: true,
-                      supportZoom: true,
-                      builtInZoomControls: true,
-                      displayZoomControls: false,
-                      useWideViewPort: true,
-                      loadWithOverviewMode: true,
-                      contentBlockers:
-                          (!kIsWeb && _isAdBlockEnabled) ? _contentBlockers : null,
-                      userAgent: _isDesktopMode
-                          ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                          : '',
-                    ),
-                    onWebViewCreated: (controller) {
-                      _webViewController = controller;
-                      // JS Handler for blocked ads reporting
-                      controller.addJavaScriptHandler(
-                        handlerName: 'onAdsBlocked',
-                        callback: (args) {
-                          if (args.isNotEmpty && args[0] is int) {
-                            if (mounted) {
-                              setState(() {
-                                _blockedAdsCount += (args[0] as int);
-                              });
+                : Container(
+                    color: Colors.white,
+                    child: InAppWebView(
+                      initialUrlRequest: URLRequest(url: WebUri(_effectiveUrl)),
+                      initialSettings: InAppWebViewSettings(
+                        transparentBackground: false,
+                        javaScriptEnabled: true,
+                        domStorageEnabled: true,
+                        databaseEnabled: true,
+                        supportZoom: true,
+                        builtInZoomControls: true,
+                        displayZoomControls: false,
+                        useWideViewPort: true,
+                        loadWithOverviewMode: true,
+                        contentBlockers:
+                            (!kIsWeb && _isAdBlockEnabled) ? _contentBlockers : null,
+                        userAgent: _isDesktopMode
+                            ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                            : '',
+                      ),
+                      onWebViewCreated: (controller) {
+                        _webViewController = controller;
+                        // JS Handler for blocked ads reporting
+                        controller.addJavaScriptHandler(
+                          handlerName: 'onAdsBlocked',
+                          callback: (args) {
+                            if (args.isNotEmpty && args[0] is int) {
+                              if (mounted) {
+                                setState(() {
+                                  _blockedAdsCount += (args[0] as int);
+                                });
+                              }
                             }
-                          }
-                        },
-                      );
-                    },
-                    onLoadStart: (controller, url) {
-                      if (mounted) {
-                        setState(() {
-                          _isLoading = true;
-                          _hasLoadError = false;
-                          final urlStr = url?.toString() ?? _currentUrl;
-                          if (urlStr.contains('/api/news/proxy?url=')) {
-                            final uri = Uri.parse(urlStr);
-                            final orig = uri.queryParameters['url'];
-                            if (orig != null && orig.isNotEmpty) {
-                              _currentUrl = orig;
-                            }
-                          } else {
-                            _currentUrl = urlStr;
-                          }
-                        });
-                      }
-                      if (_isAdBlockEnabled) {
-                        controller.injectCSSCode(source: _adBlockCss);
-                      }
-                    },
-                    onProgressChanged: (controller, progress) {
-                      if (mounted) {
-                        setState(() {
-                          _progress = progress / 100;
-                        });
-                      }
-                      if (_isAdBlockEnabled && progress > 30) {
-                        _triggerAdCleanup();
-                      }
-                    },
-                    onLoadStop: (controller, url) async {
-                      if (mounted) {
-                        final canBack = await controller.canGoBack();
-                        final canFwd = await controller.canGoForward();
-                        final title = await controller.getTitle();
-                        setState(() {
-                          _isLoading = false;
-                          _canGoBack = canBack;
-                          _canGoForward = canFwd;
-                          if (title != null && title.isNotEmpty) {
-                            _pageTitle = title;
-                          }
-                          if (url != null) {
-                            final urlStr = url.toString();
+                          },
+                        );
+                      },
+                      onLoadStart: (controller, url) {
+                        if (mounted) {
+                          setState(() {
+                            _isLoading = true;
+                            _hasLoadError = false;
+                            final urlStr = url?.toString() ?? _currentUrl;
                             if (urlStr.contains('/api/news/proxy?url=')) {
                               final uri = Uri.parse(urlStr);
                               final orig = uri.queryParameters['url'];
@@ -733,33 +701,73 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                             } else {
                               _currentUrl = urlStr;
                             }
-                          }
-                        });
-                      }
-                      if (_isAdBlockEnabled) {
-                        _triggerAdCleanup();
-                      }
-                    },
-                    onReceivedError: (controller, request, error) {
-                      if (mounted) {
-                        setState(() {
-                          _isLoading = false;
-                          if (kIsWeb) {
-                            _hasLoadError = true;
-                          }
-                        });
-                      }
-                    },
-                    onReceivedHttpError: (controller, request, errorResponse) {
-                      if (mounted && (errorResponse.statusCode ?? 0) >= 400) {
-                        setState(() {
-                          _isLoading = false;
-                          if (kIsWeb) {
-                            _hasLoadError = true;
-                          }
-                        });
-                      }
-                    },
+                          });
+                        }
+                        if (_isAdBlockEnabled) {
+                          controller.injectCSSCode(source: _adBlockCss);
+                        }
+                      },
+                      onProgressChanged: (controller, progress) {
+                        if (mounted) {
+                          setState(() {
+                            _progress = progress / 100;
+                          });
+                        }
+                        if (_isAdBlockEnabled && progress > 30) {
+                          _triggerAdCleanup();
+                        }
+                      },
+                      onLoadStop: (controller, url) async {
+                        if (mounted) {
+                          final canBack = await controller.canGoBack();
+                          final canFwd = await controller.canGoForward();
+                          final title = await controller.getTitle();
+                          setState(() {
+                            _isLoading = false;
+                            _canGoBack = canBack;
+                            _canGoForward = canFwd;
+                            if (title != null && title.isNotEmpty) {
+                              _pageTitle = title;
+                            }
+                            if (url != null) {
+                              final urlStr = url.toString();
+                              if (urlStr.contains('/api/news/proxy?url=')) {
+                                final uri = Uri.parse(urlStr);
+                                final orig = uri.queryParameters['url'];
+                                if (orig != null && orig.isNotEmpty) {
+                                  _currentUrl = orig;
+                                }
+                              } else {
+                                _currentUrl = urlStr;
+                              }
+                            }
+                          });
+                        }
+                        if (_isAdBlockEnabled) {
+                          _triggerAdCleanup();
+                        }
+                      },
+                      onReceivedError: (controller, request, error) {
+                        if (mounted) {
+                          setState(() {
+                            _isLoading = false;
+                            if (kIsWeb) {
+                              _hasLoadError = true;
+                            }
+                          });
+                        }
+                      },
+                      onReceivedHttpError: (controller, request, errorResponse) {
+                        if (mounted && (errorResponse.statusCode ?? 0) >= 400) {
+                          setState(() {
+                            _isLoading = false;
+                            if (kIsWeb) {
+                              _hasLoadError = true;
+                            }
+                          });
+                        }
+                      },
+                    ),
                   ),
           ),
 

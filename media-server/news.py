@@ -1238,6 +1238,10 @@ _AD_IFRAME_REGEX = re.compile(
 
 _BHROMON_ADBLOCK_CSS = """
 <style id="bhromon-adblock-injected">
+  html, body {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+  }
   .ads, .ad, .ad-banner, .advertisement, .ad-container, .ad-wrapper,
   .ad-box, .ad-slot, .ad-placeholder, .adsbygoogle, [id^="google_ads_"],
   [id^="div-gpt-ad"], iframe[src*="doubleclick"], iframe[src*="adservice"],
