@@ -565,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
       langToggleBtn.innerText = currentLang === 'en' ? 'বাং' : 'EN';
       
       // Update all elements with static translations
-      langTexts.forEach(el => {
+      document.querySelectorAll('.lang-text').forEach(el => {
         const text = el.getAttribute(`data-${currentLang}`);
         if (text) {
           el.innerHTML = text; // supports bold strong tags

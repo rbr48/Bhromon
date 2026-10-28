@@ -10,7 +10,7 @@
     <meta property="og:description" content="Discover Bangladesh like a local. Bhromon is Bangladesh's First Community Based Travel Directory, offering offline-first travel logs, verified local insights, safety index, and live route sharing.">
     <meta property="og:image" content="images/logo.png">
     <meta property="og:type" content="website">
-    <link rel="stylesheet" href="css/style.css?v=1.2.3">
+    <link rel="stylesheet" href="css/style.css?v=1.3.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" type="image/png" href="images/logo.png">
 </head>
@@ -29,8 +29,8 @@
 
     <!-- Sticky CTA Bar -->
     <div id="sticky-cta" class="sticky-cta">
-        <span class="lang-text" data-en="🚀 Bhromon is coming soon — Reserve your explorer name now!" data-bn="🚀 ভ্রমণ আসছে — এখনই আপনার এক্সপ্লোরার নাম সিকিউর করুন!">🚀 Bhromon is coming soon — Reserve your explorer name now!</span>
-        <button class="btn-primary open-modal lang-text" data-en="Claim My Spot" data-bn="সিট নিন" style="padding: 0.5rem 1.2rem; font-size: 0.9rem;">Claim My Spot</button>
+        <span class="lang-text" data-en="🚀 Bhromon is LIVE! Start your tour on Web or download the Android APK." data-bn="🚀 ভ্রমণ এখন লাইভ! ওয়েব অ্যাপে শুরু করুন অথবা অ্যান্ড্রয়েড এপিকে ডাউনলোড করুন।">🚀 Bhromon is LIVE! Start your tour on Web or download the Android APK.</span>
+        <a href="https://app.bhromon.fun" target="_blank" class="btn-primary lang-text" data-en="Launch Web App 🚀" data-bn="ওয়েব অ্যাপ খুলুন 🚀" style="padding: 0.5rem 1.2rem; font-size: 0.9rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">Launch Web App 🚀</a>
     </div>
 
     <!-- Image Lightbox -->
@@ -43,23 +43,23 @@
         <button class="lightbox-next"><i class="fa-solid fa-chevron-right"></i></button>
     </div>
 
-    <!-- Waitlist Modal -->
+    <!-- Waitlist / Newsletter Modal -->
     <div id="waitlist-modal" class="modal-overlay">
         <div class="modal-content glass">
             <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
-            <h2 class="lang-text" data-en="Join the Exclusive Beta" data-bn="এক্সক্লুসিভ বেটাতে যোগ দিন">Join the Exclusive Beta</h2>
-            <p class="lang-text" data-en="Be the first to experience Bangladesh's first community based travel directory." data-bn="বাংলাদেশের প্রথম কমিউনিটি ভিত্তিক ট্রাভেল ডিরেক্টরির অভিজ্ঞতা নিন সবার আগে।">Be the first to experience Bangladesh's first community based travel directory.</p>
+            <h2 class="lang-text" data-en="Connect with Bhromon Community" data-bn="ভ্রমণ কমিউনিটিতে যোগ দিন">Connect with Bhromon Community</h2>
+            <p class="lang-text" data-en="Receive instant tour alerts, verified travel updates, and upcoming features." data-bn="ট্যুর অ্যালার্ট, ভেরিফাইড ভ্রমণ তথ্য ও নতুন আপডেট পেতে যুক্ত থাকুন।">Receive instant tour alerts, verified travel updates, and upcoming features.</p>
             <form id="waitlist-form">
                 <!-- FormSubmit.co hidden config -->
-                <input type="hidden" name="_subject" value="🚀 New Bhromon Beta Reservation!">
+                <input type="hidden" name="_subject" value="🚀 New Bhromon Explorer Reservation!">
                 <input type="hidden" name="_captcha" value="false">
                 <input type="hidden" name="_template" value="table">
                 <input type="text" id="name" name="name" placeholder="Name / নাম" required>
                 <input type="text" id="contact" name="contact" placeholder="Email or WhatsApp / ইমেইল বা হোয়াটসঅ্যাপ" required>
-                <button type="submit" class="btn-primary lang-text" data-en="Reserve My Spot" data-bn="আমার সিট কনফার্ম করুন" style="width: 100%;">Reserve My Spot</button>
+                <button type="submit" class="btn-primary lang-text" data-en="Stay Connected" data-bn="কানেক্টেড থাকুন" style="width: 100%;">Stay Connected</button>
             </form>
             <div id="success-msg" style="display: none; color: var(--color-primary-light); margin-top: 1rem; text-align: center; font-weight: 600;">
-                <i class="fa-solid fa-circle-check"></i> <span class="lang-text" data-en="You're on the list! We'll contact you soon." data-bn="আপনার রিকোয়েস্ট সেভ হয়েছে! আমরা দ্রুত যোগাযোগ করব।">You're on the list! We'll contact you soon.</span>
+                <i class="fa-solid fa-circle-check"></i> <span class="lang-text" data-en="You're connected! Happy Exploring." data-bn="ধন্যবাদ! শুভ ভ্রমণ।">You're connected! Happy Exploring.</span>
             </div>
         </div>
     </div>
@@ -71,37 +71,38 @@
                 <img src="images/logo.png" alt="Bhromon Logo" class="brand-logo-img"> Bhromon
             </div>
             <div class="brand-tags">
-                <span class="brand-tag-pill lang-text" data-en="Community" data-bn="কমিউনিটি">Community</span>
-                <span class="brand-tag-pill lang-text" data-en="Trust" data-bn="বিশ্বাস">Trust</span>
-                <span class="brand-tag-pill lang-text" data-en="Explore" data-bn="অন্বেষণ">Explore</span>
+                <span class="brand-tag-pill lang-text" data-en="Universal Engine" data-bn="ট্যুর ইঞ্জিন">Universal Engine</span>
+                <span class="brand-tag-pill lang-text" data-en="Voice Lounge" data-bn="ভয়েস লাউঞ্জ">Voice Lounge</span>
+                <span class="brand-tag-pill lang-text" data-en="Ad-Free News" data-bn="বিজ্ঞাপনহীন নিউজ">Ad-Free News</span>
             </div>
         </a>
         <div class="nav-links">
             <a href="#features" class="lang-text" data-en="Features" data-bn="ফিচারস">Features</a>
             <a href="#interactive-demo" class="lang-text" data-en="Live Map" data-bn="লাইভ ম্যাপ">Live Map</a>
+            <a href="#ai-planner" class="lang-text" data-en="Tour Engine" data-bn="ট্যুর ইঞ্জিন">Tour Engine</a>
             <a href="#tiers" class="lang-text" data-en="Tiers" data-bn="লেভেলসমূহ">Tiers</a>
             <a href="#faq" class="lang-text" data-en="FAQ" data-bn="প্রশ্নোত্তর">FAQ</a>
         </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
             <button id="lang-toggle" class="lang-btn">বাং</button>
-            <button class="btn-primary open-modal lang-text" data-en="Join Beta" data-bn="বেটাতে যোগ দিন" style="padding: 0.6rem 1.4rem; font-size: 0.85rem;">Join Beta</button>
+            <a href="https://app.bhromon.fun" target="_blank" class="btn-primary lang-text" data-en="Launch Web App 🚀" data-bn="ওয়েব অ্যাপ 🚀" style="padding: 0.6rem 1.4rem; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">Launch Web App 🚀</a>
         </div>
     </nav>
 
     <!-- Hero Section -->
     <header class="hero">
         <div class="hero-content fade-in-up">
-            <span class="hero-tag lang-text" data-en="Bangladesh's First Community Based Travel Directory" data-bn="পথ যেখানে গল্প বলে">Bangladesh's First Community Based Travel Directory</span>
-            <h1 class="lang-text text-gradient" data-en="&quot;Where to next, Explorer?&quot;" data-bn="&quot;পরবর্তী গন্তব্য কোথায়, এক্সপ্লোরার?&quot;">"Where to next, Explorer?"</h1>
-            <h2 class="lang-text" data-en="Stop searching across 10 different Facebook groups and YouTube vlogs." data-bn="&quot;ভাই, সাজেক যেতে টোটাল কত খরচ হবে? কোন রিসোর্টটা ভালো?&quot; 🤔" style="font-size: 1.5rem; color: var(--color-primary-light); margin-bottom: 1.5rem; font-family: var(--font-body); font-weight: 500;">
-                Stop searching across 10 different Facebook groups and YouTube vlogs.
+            <span class="hero-tag lang-text" data-en="Universal Tour Engine & Real-Time Group Platform" data-bn="পথ যেখানে গল্প বলে — সর্বজনীন ভ্রমণ ও গ্রুপ প্ল্যাটফর্ম">Universal Tour Engine & Real-Time Group Platform</span>
+            <h1 class="lang-text text-gradient" data-en="Plan, Travel & Connect — All in One Open Platform" data-bn="পরিকল্পনা, ভ্রমণ ও আড্ডা — এক সাথে এক অ্যাপে">Plan, Travel & Connect — All in One Open Platform</h1>
+            <h2 class="lang-text" data-en="Multi-stop dynamic itineraries, transparent group ledgers, WebRTC voice lounges, ad-free newspapers, and family games." data-bn="মাল্টি-স্টপ ইটিনেরারি, নিখুঁত গ্রুপ লেজার, লাইভ ভয়েস লাউঞ্জ, বিজ্ঞাপনহীন খবরের কাগজ ও ফ্যামিলি গেম জোন।" style="font-size: 1.35rem; color: var(--color-primary-light); margin-bottom: 1.5rem; font-family: var(--font-body); font-weight: 500;">
+                Multi-stop dynamic itineraries, transparent group ledgers, WebRTC voice lounges, ad-free newspapers, and family games.
             </h2>
-            <p class="lang-text" data-en="Welcome to Bhromon. Bangladesh's first community-driven travel directory where verified crowdsourced insights meet offline-first vector navigation. Join us to build a better open travel ecosystem." data-bn="ভ্রমণে যাওয়ার আগে ফেসবুক গ্রুপ আর ইউটিউব ঘেঁটে ক্লান্ত? Welcome to Bhromon. বাংলাদেশের প্রথম কমিউনিটি ভিত্তিক ট্রাভেল ডিরেক্টরি যেখানে ভেরিফাইড তথ্যের সাথে পাচ্ছেন অফলাইন ম্যাপ ও গাইড।">
-                Welcome to Bhromon. Bangladesh's first community-driven travel directory where verified crowdsourced insights meet offline-first vector navigation. Join us to build a better open travel ecosystem.
+            <p class="lang-text" data-en="Welcome to Bhromon — Bangladesh's ultimate open-source travel ecosystem. Experience offline vector navigation, automatic expense settlement, emergency SOS broadcasts, and dedicated high-speed reels streaming." data-bn="স্বাগতম ভ্রমণে — বাংলাদেশের পূর্ণাঙ্গ ওপেন-সোর্স ট্রাভেল প্ল্যাটফর্ম। অফলাইন ভেক্টর নেভিগেশন, স্বয়ংক্রিয় খরচের হিসাব, জরুরি এসওএস পুশ নোটিফিকেশন এবং দ্রুতগতির ভিডিও রিলসের এক অনন্য সংমিশ্রণ।">
+                Welcome to Bhromon — Bangladesh's ultimate open-source travel ecosystem. Experience offline vector navigation, automatic expense settlement, emergency SOS broadcasts, and dedicated high-speed reels streaming.
             </p>
-            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                <a href="app-release.apk" download class="btn-primary lang-text" data-en="Download APK (Beta)" data-bn="এপিকে ডাউনলোড করুন (বেটা)" style="font-size: 1.05rem; padding: 0.95rem 2rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">Download APK (Beta) <i class="fa-solid fa-download"></i></a>
-                <a href="#interactive-demo" class="btn-secondary lang-text" data-en="Try Interactive Map" data-bn="ইন্টারেক্টিভ ম্যাপ দেখুন" style="font-size: 1.05rem; padding: 0.95rem 2rem;">Try Interactive Map</a>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap;">
+                <a href="https://app.bhromon.fun" target="_blank" class="btn-primary lang-text" data-en="Launch Web App 🚀" data-bn="ওয়েব অ্যাপ শুরু করুন 🚀" style="font-size: 1.05rem; padding: 0.95rem 2rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">Launch Web App 🚀</a>
+                <a href="https://bhromon.fun/media/apk/bhromon-release.apk" class="btn-secondary lang-text" data-en="Download Android APK 📱" data-bn="অ্যান্ড্রয়েড এপিকে ডাউনলোড 📱" style="font-size: 1.05rem; padding: 0.95rem 2rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;">Download Android APK 📱</a>
             </div>
 
             <!-- Social Proof Avatar Stack -->
@@ -173,118 +174,166 @@
             <p class="lang-text" data-en="Explore the key pillars of the Bhromon mobile application built for Bangladesh's terrains." data-bn="বাংলাদেশের ভৌগোলিক প্রেক্ষাপট ও নেটওয়ার্কের সীমাবদ্ধতা মাথায় রেখে তৈরি বিশেষ ফিচারসমূহ।">Explore the key pillars of the Bhromon mobile application built for Bangladesh's terrains.</p>
         </div>
         <div class="features-bento-grid">
-            <!-- Card 1: Social Feed & TripLogs (Large Bento Box) -->
+            <!-- Card 1: Universal Tour Engine & Route Roadmap (Large Bento Box) -->
             <div class="bento-card glass glass-glow fade-in-up bento-large-1">
                 <div class="bento-card-visual">
                     <div class="mock-triplog-box glass">
                         <div class="mock-triplog-header">
                             <div class="mock-author-profile">
-                                <div class="mock-author-avatar-initials">SR</div>
-                                <div class="mock-author-info">
-                                    <span class="mock-author-name">S. Rana</span>
-                                    <span class="mock-author-tier"><i class="fa-solid fa-award"></i> Pioneer</span>
-                                </div>
+                                <div class="mock-author-avatar-initials">Dhaka → Bandarban → Sajek</div>
                             </div>
-                            <span class="badge-primary" style="font-size: 0.6rem; padding: 2px 8px;">TripLog</span>
+                            <span class="badge-primary" style="font-size: 0.65rem; padding: 2px 8px;">Multi-Stop Leg</span>
                         </div>
-                        <p class="mock-triplog-body"><strong>Sajek road-trip:</strong> Chander Gari ride was bumpy but views from Konglak hill were breath-taking...</p>
+                        <p class="mock-triplog-body"><strong>Roadmap & Checkpoints:</strong> Highway Bus · Chander Gari · Food Stop · Army Checkpost · 428 km total with detour calculations.</p>
                         <div class="mock-triplog-map-preview">
                             <div class="mock-route-line">
                                 <div class="mock-route-dot" style="left: 10%;"></div>
-                                <div class="mock-route-dot" style="left: 50%;"></div>
-                                <div class="mock-route-dot" style="left: 90%;"></div>
+                                <div class="mock-route-dot" style="left: 45%;"></div>
+                                <div class="mock-route-dot" style="left: 88%;"></div>
                             </div>
-                            <span style="position: absolute; bottom: 4px; right: 8px; font-size: 0.55rem; color: var(--color-text-secondary);"><i class="fa-solid fa-map"></i> Mapped Route</span>
+                            <span style="position: absolute; bottom: 4px; right: 8px; font-size: 0.55rem; color: var(--color-primary-light);"><i class="fa-solid fa-map-location-dot"></i> Live Waypoint Sync</span>
                         </div>
                     </div>
                 </div>
                 <div class="bento-card-body">
                     <div class="bento-card-icon"><i class="fa-solid fa-route"></i></div>
-                    <h3 class="lang-text" data-en="Social Feed & TripLogs" data-bn="সোশ্যাল ফিড ও ট্রিপলগ">Social Feed & TripLogs</h3>
-                    <p class="lang-text" data-en="Share details about your tours. Features state restoration (HydratedBloc) so draft diaries are never lost, full bilingual support, and BlurHash performance placeholders for smooth remote image loading." data-bn="আপনার ডায়েরি ড্রাফটগুলো এখন সম্পূর্ণ সুরক্ষিত (HydratedBloc); এডিটর বন্ধ হলেও লেখা হারাবে না। সাথে থাকছে সম্পূর্ণ দ্বিভাষিক ফিচার ও দ্রুত ইমেজ লোডিংয়ের জন্য BlurHash টেকনোলজি।">Share details about your tours. Features state restoration (HydratedBloc) so draft diaries are never lost, full bilingual support, and BlurHash performance placeholders for smooth remote image loading.</p>
+                    <h3 class="lang-text" data-en="Universal Tour Engine & Roadmaps" data-bn="সর্বজনীন ট্যুর ইঞ্জিন ও রোডম্যাপ">Universal Tour Engine & Roadmaps</h3>
+                    <p class="lang-text" data-en="Plan any destination across Bangladesh — from 1-day day-trips to multi-week treks. Features 40+ destination presets with coordinates, custom transport modes, checkpoint timelines, and live Google Maps directions." data-bn="যেকোনো গন্তব্যের মাল্টি-স্টপ রুট ও ইটিনেরারি তৈরি করুন। ৪০+ প্রিসেট ডেস্টিনেশন, রুট চেকপয়েন্ট (খাবার, নামাজ, আর্মি চেকপোস্ট) এবং রিয়েল-টাইম দূরত্ব ও গুগল ম্যাপস ইন্টিগ্রেশন।">Plan any destination across Bangladesh — from 1-day day-trips to multi-week treks. Features 40+ destination presets with coordinates, custom transport modes, checkpoint timelines, and live Google Maps directions.</p>
                 </div>
             </div>
 
-            <!-- Card 2: Smart Budget Tracker (Small Bento Box) -->
+            <!-- Card 2: Smart Group Ledger (Small Bento Box) -->
             <div class="bento-card glass glass-glow fade-in-up bento-small-1">
                 <div class="bento-card-visual">
                     <div class="mock-budget-box glass">
                         <div class="mock-budget-row">
                             <div class="mock-budget-info">
-                                <span class="lang-text" data-en="Hotel Stay" data-bn="হোটেল খরচ">Hotel Stay</span>
-                                <span>৳2,500</span>
+                                <span class="lang-text" data-en="Family Weight Split" data-bn="ফ্যামিলি অনুপাত">Family Weight Split</span>
+                                <span>৳12,400</span>
                             </div>
                             <div class="mock-progress-track">
-                                <div class="mock-progress-bar" style="width: 40%; background: var(--color-primary);"></div>
+                                <div class="mock-progress-bar" style="width: 55%; background: var(--color-primary);"></div>
                             </div>
                         </div>
                         <div class="mock-budget-row">
                             <div class="mock-budget-info">
-                                <span class="lang-text" data-en="Transport" data-bn="যাতায়াত">Transport</span>
-                                <span>৳1,800</span>
+                                <span class="lang-text" data-en="Settle-Up Matrix" data-bn="সেটেল-আপ হিসাব">Settle-Up Matrix</span>
+                                <span>৳4,250</span>
                             </div>
                             <div class="mock-progress-track">
-                                <div class="mock-progress-bar" style="width: 30%; background: var(--color-accent);"></div>
+                                <div class="mock-progress-bar" style="width: 35%; background: var(--color-accent);"></div>
                             </div>
                         </div>
                         <div class="mock-budget-row">
                             <div class="mock-budget-info">
-                                <span class="lang-text" data-en="Food & Fuel" data-bn="খাবার ও ফুয়েল">Food & Fuel</span>
-                                <span>৳1,200</span>
+                                <span class="lang-text" data-en="Fund Burn Rate" data-bn="দৈনিক বার্ন রেট">Fund Burn Rate</span>
+                                <span>৳2,800/d</span>
                             </div>
                             <div class="mock-progress-track">
-                                <div class="mock-progress-bar" style="width: 20%; background: #6366f1;"></div>
+                                <div class="mock-progress-bar" style="width: 25%; background: #6366f1;"></div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="bento-card-body">
                     <div class="bento-card-icon"><i class="fa-solid fa-wallet"></i></div>
-                    <h3 class="lang-text" data-en="Smart Budget Tracker" data-bn="স্মার্ট বাজেট ট্র্যাকার">Smart Budget Tracker</h3>
-                    <p class="lang-text" data-en="Browse crowd-sourced, itemized cost breakdowns (hotels, transport, food) voted and approved by fellow travelers." data-bn="হোটেল, যাতায়াত ও খাবার খরচের আইটেমাইজড ব্রেকডাউন যা অন্য ব্যাকপ্যাকারদের ভোটে ভেরিফাইড এবং রিয়েল-টাইম আপডেটেড।">Browse crowd-sourced, itemized cost breakdowns (hotels, transport, food) voted and approved by fellow travelers.</p>
+                    <h3 class="lang-text" data-en="Paisa-Accurate Trip Ledger" data-bn="পয়সা-নির্ভুল ট্রিপ লেজার">Paisa-Accurate Trip Ledger</h3>
+                    <p class="lang-text" data-en="No more Excel sheets. Transparent expense splitting by family counts, equal shares, or exact amounts. Includes settle-up suggestions, foreign currencies, and UTF-8 CSV exports." data-bn="পয়সা লেভেলে নিখুঁত গ্রুপ লেজার; সদস্য সংখ্যা অনুযায়ী ভাগ, সেটেল-আপ ব্যালেন্স এবং এক ক্লিকে সম্পূর্ণ সিএসভি এক্সপোর্ট।">No more Excel sheets. Transparent expense splitting by family counts, equal shares, or exact amounts. Includes settle-up suggestions, foreign currencies, and UTF-8 CSV exports.</p>
                 </div>
             </div>
 
-            <!-- Card 3: Offline Vault & SOS (Small Bento Box) -->
+            <!-- Card 3: Safety Hub & SOS (Small Bento Box) -->
             <div class="bento-card glass glass-glow fade-in-up bento-small-2">
                 <div class="bento-card-visual">
                     <div class="mock-offline-vault glass">
                         <div class="mock-vault-toggle-container">
-                            <span class="mock-vault-status-label lang-text" data-en="Online" data-bn="অনলাইন">Online</span>
+                            <span class="mock-vault-status-label lang-text" data-en="Safe" data-bn="নিরাপদ">Safe</span>
                             <div class="mock-toggle-switch">
                                 <div class="mock-toggle-knob"></div>
                             </div>
-                            <span class="mock-vault-status-label active lang-text" data-en="Offline" data-bn="অফলাইন">Offline</span>
+                            <span class="mock-vault-status-label active lang-text" data-en="Active" data-bn="অ্যাক্টিভ">Active</span>
                         </div>
-                        <button class="mock-sos-button"><i class="fa-solid fa-circle-exclamation"></i> SOS Rescue Active</button>
+                        <button class="mock-sos-button"><i class="fa-solid fa-circle-exclamation"></i> Instant Siren & SOS</button>
                     </div>
                 </div>
                 <div class="bento-card-body">
                     <div class="bento-card-icon"><i class="fa-solid fa-shield-heart"></i></div>
-                    <h3 class="lang-text" data-en="Offline Vault & SOS" data-bn="অফলাইন ভল্ট ও এসওএস">Offline Vault & SOS</h3>
-                    <p class="lang-text" data-en="Download vector maps (MapLibre) and directory data. Includes SQLite/Drift-backed offline sync outbox (WAL) which automatically queues posts and syncs when connection is restored." data-bn="অফলাইন ভেক্টর ম্যাপ ও এসওএস সাপোর্টের সাথে পাবেন SQLite/Drift ভিত্তিক আউটবক্স সিঙ্ক প্রযুক্তি; অফলাইনে করা ডায়েরি পোস্টগুলো নেটওয়ার্ক ফিরে এলে স্বয়ংক্রিয়ভাবে আপলোড হবে।">Download vector maps (MapLibre) and directory data. Includes SQLite/Drift-backed offline sync outbox (WAL) which automatically queues posts and syncs when connection is restored.</p>
+                    <h3 class="lang-text" data-en="Family Safety Hub & SOS" data-bn="ফ্যামিলি সেফটি হাব ও এসওএস">Family Safety Hub & SOS</h3>
+                    <p class="lang-text" data-en="One-touch emergency siren broadcasts your live GPS location instantly to all tour group members via Cloud Functions push alerts." data-bn="বিপদে পড়লে এক স্পর্শেই লাইভ জিপিএস লোকেশন সহ জরুরি সাইরেন ও পুশ অ্যালার্ট সকল গ্রুপ মেম্বারের ফোনে চলে যায়।">One-touch emergency siren broadcasts your live GPS location instantly to all tour group members via Cloud Functions push alerts.</p>
                 </div>
             </div>
 
-            <!-- Card 4: Direct Chats (Large Bento Box) -->
-            <div class="bento-card glass glass-glow fade-in-up bento-large-2">
+            <!-- Card 4: Calling & Discord-Style Voice Lounge (Large Bento Box) -->
+            <div class="bento-card glass glass-glow fade-in-up bento-large-2" id="calling">
                 <div class="bento-card-visual">
-                    <div class="mock-chat-box glass">
-                        <div class="mock-chat-bubble chat-left">
-                            <strong>Local Guide (Izhaan):</strong> Sajek trails are dry and safe now. I can lead your group.
+                    <div class="mock-voice-box">
+                        <div class="mock-voice-tiles">
+                            <div class="mock-voice-user speaking">
+                                <div class="mock-voice-avatar">SR</div>
+                                <span class="mock-voice-name">S. Rana 🎙️</span>
+                            </div>
+                            <div class="mock-voice-user">
+                                <div class="mock-voice-avatar" style="background:#6366f1;color:#fff;">IZ</div>
+                                <span class="mock-voice-name">Izhaan</span>
+                            </div>
+                            <div class="mock-voice-user">
+                                <div class="mock-voice-avatar" style="background:#ec4899;color:#fff;">NA</div>
+                                <span class="mock-voice-name">Nafis</span>
+                            </div>
                         </div>
-                        <div class="mock-chat-bubble chat-right">
-                            <strong>You:</strong> Sounds good! Is Teletalk network active at Konglak hill?
-                        </div>
-                        <div class="mock-chat-bubble chat-left">
-                            <strong>Local Guide (Izhaan):</strong> Teletalk has limited signal, Robi is better there.
+                        <div class="mock-docked-bar">
+                            <span><i class="fa-solid fa-microphone"></i> Voice Lounge Active</span>
+                            <span>Docked · WebRTC</span>
                         </div>
                     </div>
                 </div>
                 <div class="bento-card-body">
-                    <div class="bento-card-icon"><i class="fa-solid fa-comments"></i></div>
-                    <h3 class="lang-text" data-en="Direct Group Chats" data-bn="ডিরেক্ট ও গ্রুপ চ্যাট">Direct Group Chats</h3>
-                    <p class="lang-text" data-en="Message verified local guides, host cottage managers, and other backpackers planning tours in the same division." data-bn="একই এলাকায় ঘুরতে যাওয়া ট্রাভেলার, স্থানীয় কটেজ মালিক এবং ভেরিফাইড গাইডদের সাথে সরাসরি কোনো চার্জ ছাড়াই গ্রুপে চ্যাট করুন।">Message verified local guides, host cottage managers, and other backpackers planning tours in the same division.</p>
+                    <div class="bento-card-icon"><i class="fa-solid fa-headset"></i></div>
+                    <h3 class="lang-text" data-en="HD Calls & WebRTC Voice Lounge" data-bn="এইচডি কল ও ভয়েস লাউঞ্জ">HD Calls & WebRTC Voice Lounge</h3>
+                    <p class="lang-text" data-en="Direct 1-on-1 audio/video calling and Discord-style drop-in/drop-out group voice channels backed by WebRTC mesh and dedicated VPS Coturn STUN/TURN servers. Stay docked in voice while exploring itineraries." data-bn="সরাসরি ১-অন-১ এইচডি কল এবং ডিসকর্ড-স্টাইলের ড্রপ-ইন গ্রুপ ভয়েস লাউঞ্জ। অ্যাপের অন্য স্ক্রিনে ঘুরলেও ব্যাকগ্রাউন্ড ডকড বারে ভয়েস চ্যাট অনায়াসে চালু থাকে।">Direct 1-on-1 audio/video calling and Discord-style drop-in/drop-out group voice channels backed by WebRTC mesh and dedicated VPS Coturn STUN/TURN servers. Stay docked in voice while exploring itineraries.</p>
+                </div>
+            </div>
+
+            <!-- Card 5: Smart Newspaper Hub & AdBlock Browser (Large Bento Box) -->
+            <div class="bento-card glass glass-glow fade-in-up bento-large-3" id="news-games">
+                <div class="bento-card-visual">
+                    <div class="mock-news-box">
+                        <div class="mock-news-header">
+                            <span style="font-weight:700;font-size:0.8rem;color:#111827;">National Dailies Matrix</span>
+                            <span class="mock-adblock-badge"><i class="fa-solid fa-shield"></i> 34 Ads Blocked</span>
+                        </div>
+                        <div style="font-size:0.72rem;color:#4b5563;line-height:1.4;">
+                            <strong>"Same Story, Different Papers"</strong> — Live topic clustering across Prothom Alo, Daily Star, Kaler Kantho, Samakal, and Jugantor.
+                        </div>
+                        <div style="margin-top:8px;display:flex;gap:6px;">
+                            <span class="badge-primary" style="font-size:0.6rem;padding:2px 6px;">Clean Reader Mode</span>
+                            <span class="badge-primary" style="font-size:0.6rem;padding:2px 6px;background:#e0f2fe;color:#0284c7;">Bengali TTS 🔊</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bento-card-body">
+                    <div class="bento-card-icon"><i class="fa-solid fa-newspaper"></i></div>
+                    <h3 class="lang-text" data-en="Ad-Free Newspaper Hub & Clean Reader" data-bn="বিজ্ঞাপনহীন খবরের কাগজ ও ক্লিন রিডার">Ad-Free Newspaper Hub & Clean Reader</h3>
+                    <p class="lang-text" data-en="Read leading Bangladesh newspapers completely free of popups, banner ads, and tracking scripts. Features 60+ domain network blockers, cosmetic filters, distraction-free reader mode, and TTS audio headlines." data-bn="পপ-আপ ও বিজ্ঞাপনের ঝামেলা ছাড়াই পড়ুন দেশের শীর্ষ জাতীয় দৈনিকসমূহ। ৬০+ অ্যাডব্লক ফিল্টার, ক্লিন রিডার মোড এবং বাংলা-ইংরেজি টেক্সট-টু-স্পিচ অডিও হেডলাইন।">Read leading Bangladesh newspapers completely free of popups, banner ads, and tracking scripts. Features 60+ domain network blockers, cosmetic filters, distraction-free reader mode, and TTS audio headlines.</p>
+                </div>
+            </div>
+
+            <!-- Card 6: Family Game Zone (Small Bento Box) -->
+            <div class="bento-card glass glass-glow fade-in-up bento-small-3">
+                <div class="bento-card-visual">
+                    <div class="mock-games-grid">
+                        <div class="mock-game-tile"><i class="fa-solid fa-cards"></i><span>Card 29</span></div>
+                        <div class="mock-game-tile"><i class="fa-solid fa-chess"></i><span>Chess AI</span></div>
+                        <div class="mock-game-tile"><i class="fa-solid fa-dice"></i><span>Ludo</span></div>
+                        <div class="mock-game-tile"><i class="fa-solid fa-crown"></i><span>Teen Patti</span></div>
+                        <div class="mock-game-tile"><i class="fa-solid fa-circle-dot"></i><span>Carrom</span></div>
+                        <div class="mock-game-tile" style="border-color:#00d09e;"><i class="fa-solid fa-bolt" style="color:#00d09e;"></i><span>Offline</span></div>
+                    </div>
+                </div>
+                <div class="bento-card-body">
+                    <div class="bento-card-icon"><i class="fa-solid fa-gamepad"></i></div>
+                    <h3 class="lang-text" data-en="Family Game Zone (Pure Dart)" data-bn="ফ্যামিলি গেম জোন (পিওর ডার্ট)">Family Game Zone (Pure Dart)</h3>
+                    <p class="lang-text" data-en="Classic games designed for long bus or train journeys: Card 29, Travel Chess (Negamax AI), Ludo Express, Teen Patti, and Carrom with deterministic physics. Sessions stay alive while switching screens." data-bn="লম্বা যাত্রায় পরিবার ও বন্ধুদের সাথে আড্ডায় খেলার জন্য ক্লাসিক গেম: কার্ড ২৯, দাবা এআই, লুডো, তিন পাত্তি ও ক্যারম। অফলাইনে শতভাগ কার্যকর।">Classic games designed for long bus or train journeys: Card 29, Travel Chess (Negamax AI), Ludo Express, Teen Patti, and Carrom with deterministic physics. Sessions stay alive while switching screens.</p>
                 </div>
             </div>
         </div>
@@ -465,9 +514,9 @@
          ============================================================ -->
     <section id="ai-planner" class="section planner-section">
         <div class="section-header fade-in-up">
-            <span class="section-subtitle lang-text" data-en="✨ Roadmap Feature" data-bn="✨ আসন্ন ফিচার">✨ Roadmap Feature</span>
-            <h2 class="lang-text" data-en="AI Trip Planner Simulator" data-bn="এআই ট্রিপ প্ল্যানার সিমুলেটর">AI Trip Planner Simulator</h2>
-            <p class="lang-text" data-en="Select a destination, group size and budget tier — then watch our AI draft a full itinerary in real-time. Coming to Bhromon v2." data-bn="গন্তব্য, গ্রুপ সাইজ ও বাজেট টায়ার বেছে নিন — তারপর দেখুন আমাদের এআই রিয়েল-টাইমে পূর্ণ ট্রিপ প্ল্যান তৈরি করছে। ভ্রমণ v2-এ আসছে।">Select a destination, group size and budget tier — then watch our AI draft a full itinerary in real-time. Coming to Bhromon v2.</p>
+            <span class="section-subtitle lang-text" data-en="✨ Universal Tour Engine" data-bn="✨ ইউনিভার্সাল ট্যুর ইঞ্জিন">✨ Universal Tour Engine</span>
+            <h2 class="lang-text" data-en="Smart Trip Planner Simulator" data-bn="স্মার্ট ট্রিপ প্ল্যানার সিমুলেটর">Smart Trip Planner Simulator</h2>
+            <p class="lang-text" data-en="Select a destination, group size and budget tier — then watch our Tour Engine draft a full itinerary and roadmap in real-time." data-bn="গন্তব্য, গ্রুপ সাইজ ও বাজেট টায়ার বেছে নিন — তারপর দেখুন আমাদের ট্যুর ইঞ্জিন রিয়েল-টাইমে পূর্ণ ট্রিপ প্ল্যান তৈরি করছে।">Select a destination, group size and budget tier — then watch our Tour Engine draft a full itinerary and roadmap in real-time.</p>
         </div>
 
         <div class="planner-container fade-in-up">
@@ -757,21 +806,21 @@
     </section>
 
     <!-- App Download Section -->
-    <section class="section download-section fade-in-up">
+    <section id="download" class="section download-section fade-in-up">
         <div class="download-inner glass">
             <div class="download-content">
                 <img src="images/logo.png" alt="Bhromon Logo" class="download-logo">
-                <h2 class="lang-text" data-en="Bhromon is Coming to Google Play" data-bn="ভ্রমণ আসছে গুগল প্লেতে">Bhromon is Coming to Google Play</h2>
-                <p class="lang-text" data-en="Join thousands of explorers on the waitlist. We'll notify you the moment the Android APK is published." data-bn="হাজারো ট্রাভেলারের সাথে ওয়েটলিস্টে যোগ দিন। নতুন সংস্করণ বা প্লে স্টোর লিংক পাবলিশ হওয়া মাত্রই আপনাকে জানানো হবে।">Join thousands of explorers on the waitlist. We'll notify you the moment the Android APK is published.</p>
+                <h2 class="lang-text" data-en="Experience Bhromon Everywhere" data-bn="যেকোনো ডিভাইসে উপভোগ করুন ভ্রমণ">Experience Bhromon Everywhere</h2>
+                <p class="lang-text" data-en="Access the full Progressive Web App instantly in your browser on desktop or mobile, or install the native Android APK for offline maps, emergency sirens, and high-performance gaming." data-bn="ব্রাউজারে সরাসরি ফুল প্রগ্রেসিভ ওয়েব অ্যাপ চালু করুন, অথবা অফলাইন ম্যাপ, ইমার্জেন্সি সাইরেন এবং গেম জোনের জন্য অ্যান্ড্রয়েড এপিকে ইনস্টল করুন।">Access the full Progressive Web App instantly in your browser on desktop or mobile, or install the native Android APK for offline maps, emergency sirens, and high-performance gaming.</p>
                 <div class="download-actions">
-                    <button class="store-btn open-modal">
-                        <i class="fa-brands fa-google-play"></i>
-                        <div>
-                            <small class="lang-text" data-en="Coming Soon on" data-bn="শীঘ্রই আসছে">Coming Soon on</small>
-                            <strong>Google Play</strong>
+                    <a href="https://app.bhromon.fun" target="_blank" rel="noopener noreferrer" class="btn-primary lang-text" data-en="Launch Web App 🚀" data-bn="ওয়েব অ্যাপ চালু করুন 🚀" style="padding: 1rem 2.25rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">Launch Web App 🚀 <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    <a href="https://bhromon.fun/media/apk/bhromon-release.apk" download class="store-btn lang-text" data-en="Download Android APK" data-bn="অ্যান্ড্রয়েড এপিকে ডাউনলোড" style="padding: 0.85rem 1.8rem; display: inline-flex; align-items: center; gap: 12px; text-decoration: none;">
+                        <i class="fa-brands fa-android" style="font-size: 1.8rem; color: var(--color-primary-mint);"></i>
+                        <div style="text-align: left;">
+                            <small class="lang-text" data-en="Direct Download" data-bn="সরাসরি ডাউনলোড" style="display: block; font-size: 0.75rem; color: var(--color-text-secondary);">Direct Download</small>
+                            <strong class="lang-text" data-en="Android APK" data-bn="অ্যান্ড্রয়েড APK">Android APK</strong>
                         </div>
-                    </button>
-                    <a href="app-release.apk" download class="btn-primary lang-text" data-en="Download Beta APK" data-bn="বেটা এপিকে ডাউনলোড" style="padding: 1rem 2.25rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">Download Beta APK <i class="fa-solid fa-download"></i></a>
+                    </a>
                 </div>
             </div>
             <div class="download-preview">
@@ -785,10 +834,16 @@
         <div class="footer-content">
             <div class="footer-col">
                 <h4><img src="images/logo.png" alt="Bhromon Logo"> Bhromon</h4>
-                <p style="color: var(--color-text-secondary); max-width: 300px; margin-bottom: 1rem; font-size: 0.9rem;" class="lang-text" data-en="Bangladesh's First Community Based Travel Directory." data-bn="পথ যেখানে গল্প বলে।">Bangladesh's First Community Based Travel Directory.</p>
+                <p style="color: var(--color-text-secondary); max-width: 300px; margin-bottom: 1rem; font-size: 0.9rem;" class="lang-text" data-en="Bangladesh's First All-in-One Community Travel Platform & Ledger." data-bn="পথ যেখানে গল্প বলে — বাংলাদেশের সর্বাধুনিক অল-ইন-ওয়ান ট্রাভেল প্ল্যাটফর্ম।">Bangladesh's First All-in-One Community Travel Platform & Ledger.</p>
+                <div style="display: flex; gap: 12px; margin-top: 0.8rem; font-size: 1.2rem;">
+                    <a href="https://github.com/rbr48/Bhromon" target="_blank" rel="noopener noreferrer" title="GitHub Repository" style="color: var(--color-text-secondary); transition: color 0.2s;"><i class="fa-brands fa-github"></i></a>
+                    <a href="https://app.bhromon.fun" target="_blank" rel="noopener noreferrer" title="Live Web App" style="color: var(--color-primary-mint); transition: color 0.2s;"><i class="fa-solid fa-globe"></i></a>
+                </div>
             </div>
             <div class="footer-col">
-                <h4 class="lang-text" data-en="Explore" data-bn="এক্সপ্লোর">Explore</h4>
+                <h4 class="lang-text" data-en="Explore Platform" data-bn="প্ল্যাটফর্ম">Explore Platform</h4>
+                <a href="https://app.bhromon.fun" target="_blank" rel="noopener noreferrer" style="color: var(--color-primary-mint); font-weight: 600;"><i class="fa-solid fa-rocket" style="margin-right: 6px;"></i><span class="lang-text" data-en="Launch Web App" data-bn="ওয়েব অ্যাপ চালু করুন">Launch Web App</span></a>
+                <a href="https://bhromon.fun/media/apk/bhromon-release.apk"><i class="fa-solid fa-download" style="margin-right: 6px;"></i><span class="lang-text" data-en="Download Android APK" data-bn="অ্যান্ড্রয়েড APK ডাউনলোড">Download Android APK</span></a>
                 <a href="#features" class="lang-text" data-en="Features" data-bn="ফিচারস">Features</a>
                 <a href="#interactive-demo" class="lang-text" data-en="Live Map" data-bn="লাইভ ম্যাপ">Live Map</a>
                 <a href="#faq" class="lang-text" data-en="FAQ" data-bn="প্রশ্নোত্তর">FAQ</a>
@@ -799,10 +854,11 @@
                 <a href="mailto:info@bhromon.fun"><i class="fa-solid fa-envelope"></i> info@bhromon.fun</a>
                 <a href="mailto:mybhromon@gmail.com"><i class="fa-solid fa-circle-info"></i> mybhromon@gmail.com</a>
                 <a href="https://wa.me/8801762033445" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp"></i> 01762033445</a>
+                <a href="https://github.com/rbr48/Bhromon" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-github"></i> github.com/rbr48/Bhromon</a>
             </div>
         </div>
         <div class="footer-bottom">
-            &copy; 2026 Bhromon Technologies Ltd. All rights reserved. Built with pride for Bangladesh.
+            &copy; 2026 Bhromon Technologies Ltd. All rights reserved. Free & Open Source Travel Platform for Bangladesh.
         </div>
     </footer>
 
@@ -815,6 +871,6 @@
         <button id="accept-cookies-btn" class="btn-primary lang-text" data-en="Accept" data-bn="স্বীকার করুন" style="padding: 0.55rem 1.2rem; font-size: 0.85rem;">Accept</button>
     </div>
 
-    <script src="js/main.js?v=1.2.2"></script>
+    <script src="js/main.js?v=1.3.0"></script>
 </body>
 </html>

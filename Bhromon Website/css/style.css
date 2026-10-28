@@ -739,11 +739,11 @@ nav.scrolled {
   gap: 1.5rem;
 }
 
-.bento-large-1, .bento-large-2 {
+.bento-large-1, .bento-large-2, .bento-large-3 {
   grid-column: span 2;
 }
 
-.bento-small-1, .bento-small-2 {
+.bento-small-1, .bento-small-2, .bento-small-3 {
   grid-column: span 1;
 }
 
@@ -1062,20 +1062,146 @@ nav.scrolled {
   font-weight: 600;
 }
 
+/* Mock Voice Lounge Box */
+.mock-voice-box {
+  width: 88%;
+  background: #0f141c;
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mock-voice-tiles {
+  display: flex;
+  gap: 8px;
+  justify-content: space-around;
+}
+
+.mock-voice-user {
+  background: #192231;
+  border-radius: 12px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 1.5px solid transparent;
+  flex: 1;
+  text-align: center;
+}
+
+.mock-voice-user.speaking {
+  border-color: #00d09e;
+  box-shadow: 0 0 10px rgba(0, 208, 158, 0.25);
+}
+
+.mock-voice-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #00d09e;
+  color: #022c1d;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+
+.mock-voice-name {
+  font-size: 0.65rem;
+  color: #e2e8f0;
+  white-space: nowrap;
+}
+
+.mock-docked-bar {
+  background: rgba(0, 208, 158, 0.12);
+  border: 1px solid rgba(0, 208, 158, 0.3);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.7rem;
+  color: #00d09e;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Mock News Box */
+.mock-news-box {
+  width: 88%;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px;
+  color: #111827;
+  box-shadow: var(--shadow-md);
+  border: 1px solid #e5e7eb;
+}
+
+.mock-news-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mock-adblock-badge {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Mock Games Grid */
+.mock-games-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 90%;
+}
+
+.mock-game-tile {
+  background: #161d27;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 8px 6px;
+  text-align: center;
+  font-size: 0.7rem;
+  color: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.mock-game-tile i {
+  color: var(--color-primary-light);
+  font-size: 1rem;
+}
+
 /* Desktop horizontal layouts for large bento blocks */
 @media (min-width: 993px) {
-  .bento-large-1, .bento-large-2 {
+  .bento-large-1, .bento-large-2, .bento-large-3 {
     display: flex;
     flex-direction: row !important;
   }
-  .bento-large-1 .bento-card-visual, .bento-large-2 .bento-card-visual {
+  .bento-large-1 .bento-card-visual, .bento-large-2 .bento-card-visual, .bento-large-3 .bento-card-visual {
     width: 48%;
     height: auto;
     min-height: 100%;
     border-bottom: none;
     border-right: 1px solid rgba(255, 255, 255, 0.03);
   }
-  .bento-large-1 .bento-card-body, .bento-large-2 .bento-card-body {
+  .bento-large-1 .bento-card-body, .bento-large-2 .bento-card-body, .bento-large-3 .bento-card-body {
     width: 52%;
     justify-content: center;
   }
@@ -2215,10 +2341,10 @@ footer {
   .features-bento-grid {
     grid-template-columns: 1fr 1fr;
   }
-  .bento-large-1, .bento-large-2 {
+  .bento-large-1, .bento-large-2, .bento-large-3 {
     grid-column: span 2;
   }
-  .bento-small-1, .bento-small-2 {
+  .bento-small-1, .bento-small-2, .bento-small-3 {
     grid-column: span 1;
   }
   .demo-container {
@@ -2260,7 +2386,7 @@ footer {
   .features-bento-grid {
     grid-template-columns: 1fr;
   }
-  .bento-large-1, .bento-large-2, .bento-small-1, .bento-small-2 {
+  .bento-large-1, .bento-large-2, .bento-large-3, .bento-small-1, .bento-small-2, .bento-small-3 {
     grid-column: span 1;
   }
   .download-inner {
