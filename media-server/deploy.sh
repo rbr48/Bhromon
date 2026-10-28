@@ -29,11 +29,21 @@ curl -sf http://127.0.0.1:8210/health > /dev/null && echo "  ✔ bhromon-media i
 # Health check for games service
 curl -sf http://127.0.0.1:8220/health > /dev/null && echo "  ✔ bhromon-games is healthy on :8220" || echo "  ✖ bhromon-games health check failed"
 
+echo "[3.5/4] Seeding quiz questions if needed..."
+docker compose exec -T bhromon-media python3 seed_quizzes.py || echo "  ℹ Quiz seeding step finished"
+
 echo "[4/4] Updating Nginx configuration..."
+NGINX_TARGET=""
 if [ -f "/etc/nginx/sites-available/bhromon.fun.conf" ]; then
-    sudo cp bhromon.fun.conf /etc/nginx/sites-available/bhromon.fun.conf
+    NGINX_TARGET="/etc/nginx/sites-available/bhromon.fun.conf"
+elif [ -f "/etc/nginx/sites-available/bhromon.fun" ]; then
+    NGINX_TARGET="/etc/nginx/sites-available/bhromon.fun"
+fi
+
+if [ -n "$NGINX_TARGET" ]; then
+    sudo cp bhromon.fun.conf "$NGINX_TARGET"
     sudo nginx -t && sudo systemctl reload nginx
-    echo "  ✔ Nginx reloaded successfully."
+    echo "  ✔ Nginx reloaded successfully ($NGINX_TARGET)."
 else
     echo "  ℹ Nginx config not found in standard path. Please update your Nginx config manually if needed."
 fi
