@@ -103,6 +103,7 @@ dependencies:
   web_socket_channel: ^3.0.3
   flutter_callkit_incoming: ^3.1.6
   file_picker: ^11.0.3
+  flutter_tts: ^4.2.5
 dev_dependencies:
   flutter_test:
     sdk: flutter
