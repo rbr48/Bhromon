@@ -305,6 +305,10 @@ class AuthRepositoryImpl implements IAuthRepository {
 
     await _updateLocalCache(profile);
 
+    // Keep Firebase Auth in sync so other services (TourGroupRepository,
+    // OnlineGameRepository) always see in-app data via _auth.currentUser.
+    await _syncFirebaseAuthProfile(user, profile);
+
     try {
       await _withRetry(
         () => _firestore
@@ -340,6 +344,9 @@ class AuthRepositoryImpl implements IAuthRepository {
       }
 
       await _updateLocalCache(profile);
+      // Push in-app name/avatar to Firebase Auth so services that read
+      // _auth.currentUser always see in-app data.
+      await _syncFirebaseAuthProfile(user, profile);
       return Right(profile);
     } catch (e, stack) {
       logWarning(
@@ -360,6 +367,32 @@ class AuthRepositoryImpl implements IAuthRepository {
             innerStack);
       }
       return Right(profile);
+    }
+  }
+
+  /// Pushes in-app profile name/avatar to Firebase Auth so that every service
+  /// reading `_auth.currentUser?.displayName` / `.photoURL` always reflects
+  /// the in-app explorer profile, not the original Google account data.
+  Future<void> _syncFirebaseAuthProfile(
+      User user, ExplorerProfile profile) async {
+    try {
+      final needsName = profile.displayName.isNotEmpty &&
+          user.displayName != profile.displayName;
+      final needsPhoto = profile.avatarUrl != null &&
+          profile.avatarUrl!.isNotEmpty &&
+          user.photoURL != profile.avatarUrl;
+
+      if (needsName || needsPhoto) {
+        await user.updateDisplayName(
+            needsName ? profile.displayName : user.displayName);
+        await user.updatePhotoURL(
+            needsPhoto ? profile.avatarUrl : user.photoURL);
+        // Reload so that subsequent reads of _auth.currentUser see the update.
+        await user.reload();
+      }
+    } catch (e, stack) {
+      logWarning(
+          'AuthRepository: failed to sync Firebase Auth profile', e, stack);
     }
   }
 

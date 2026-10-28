@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../domain/models/card29_table.dart';
 import '../domain/models/online_game_session.dart';
@@ -35,9 +36,40 @@ class OnlineGameRepository {
 
   String get currentEmail =>
       _auth.currentUser?.email?.trim().toLowerCase() ?? '';
-  String get currentDisplayName =>
-      _auth.currentUser?.displayName?.trim() ?? 'Explorer';
-  String? get currentPhotoUrl => _auth.currentUser?.photoURL;
+  String get currentDisplayName {
+    final cached = _cachedExplorerProfile();
+    if (cached != null && cached['displayName'] is String) {
+      final name = (cached['displayName'] as String).trim();
+      if (name.isNotEmpty) return name;
+    }
+    try {
+      return _auth.currentUser?.displayName?.trim() ?? 'Explorer';
+    } catch (_) {
+      return 'Explorer';
+    }
+  }
+
+  String? get currentPhotoUrl {
+    final cached = _cachedExplorerProfile();
+    if (cached != null && cached['avatarUrl'] is String) {
+      final url = cached['avatarUrl'] as String;
+      if (url.isNotEmpty) return url;
+    }
+    try {
+      return _auth.currentUser?.photoURL;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Map<String, dynamic>? _cachedExplorerProfile() {
+    try {
+      if (!Hive.isBoxOpen('auth_box')) return null;
+      final raw = Hive.box<dynamic>('auth_box').get('profile');
+      if (raw is Map) return Map<String, dynamic>.from(raw);
+    } catch (_) {}
+    return null;
+  }
   String get currentUid => _auth.currentUser?.uid ?? '';
 
   CollectionReference<Map<String, dynamic>> _gamesRef(String tourId) =>

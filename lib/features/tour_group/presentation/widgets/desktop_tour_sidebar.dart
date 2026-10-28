@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
@@ -446,21 +445,18 @@ class DesktopTourSidebar extends StatelessWidget {
     );
   }
 
-  /// Reads the signed-in user, or null when Firebase is not initialised (as in
-  /// widget tests), so the footer shows its placeholder instead of throwing.
-  User? _currentUser() {
-    try {
-      return FirebaseAuth.instance.currentUser;
-    } catch (_) {
-      return null;
-    }
-  }
-
   Widget _buildFooter(BuildContext context) {
-    final user = _currentUser();
-    final displayName = user?.displayName ?? 'এক্সপ্লোরার';
-    final email = user?.email ?? '';
-    final photoUrl = user?.photoURL;
+    String displayName = 'এক্সপ্লোরার';
+    String email = '';
+    String? photoUrl;
+    try {
+      final name = repository.currentDisplayName;
+      if (name.isNotEmpty && name != 'Explorer') {
+        displayName = name;
+      }
+      email = repository.currentEmail;
+      photoUrl = repository.currentPhotoUrl;
+    } catch (_) {}
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -519,7 +515,9 @@ class DesktopTourSidebar extends StatelessWidget {
                     size: 16, color: Colors.white54),
                 tooltip: 'প্রোফাইল সেটিংস',
                 onPressed: () {
-                  final uid = user?.uid ?? 'me';
+                  final uid = repository.currentUid.isNotEmpty
+                      ? repository.currentUid
+                      : 'me';
                   context.push('/profile/$uid');
                 },
               ),
