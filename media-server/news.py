@@ -9,6 +9,7 @@ Provides:
 5. Persistent thread-safe SQLite caching (WAL mode) for minimal bandwidth and offline readiness.
 """
 
+import gzip
 import hashlib
 import html
 import logging
@@ -25,6 +26,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("bhromon-news")
@@ -1213,3 +1215,167 @@ def trigger_news_sync():
     """Manually triggers headline synchronization across all newspapers."""
     news_aggregator.sync_all(background=True)
     return {"status": "sync_triggered", "timestamp": _now_ms()}
+
+
+# ---------------------------------------------------------------------------
+# Ad-Free Live Web Proxy for Embeddable Newspaper Browsing
+# ---------------------------------------------------------------------------
+
+_AD_SCRIPT_REGEX = re.compile(
+    r'<script\b[^>]*?(?:googlesyndication|googleadservices|doubleclick|taboola|outbrain|criteo|adnxs|pubmatic|rubiconproject|smartadserver|adroll|popads|adcash|exponential|inmobi|adcolony|chartbeat|mgid|revcontent|adservice)[^>]*?>.*?</script>',
+    re.IGNORECASE | re.DOTALL,
+)
+
+_INLINE_AD_SCRIPT_REGEX = re.compile(
+    r'<script\b[^>]*?>.*?(?:adsbygoogle|googletag\.display|googletag\.enableServices).*?</script>',
+    re.IGNORECASE | re.DOTALL,
+)
+
+_AD_IFRAME_REGEX = re.compile(
+    r'<iframe\b[^>]*?(?:doubleclick|googlesyndication|adservice|taboola|outbrain|criteo|adnxs)[^>]*?>.*?</iframe>',
+    re.IGNORECASE | re.DOTALL,
+)
+
+_BHROMON_ADBLOCK_CSS = """
+<style id="bhromon-adblock-injected">
+  .ads, .ad, .ad-banner, .advertisement, .ad-container, .ad-wrapper,
+  .ad-box, .ad-slot, .ad-placeholder, .adsbygoogle, [id^="google_ads_"],
+  [id^="div-gpt-ad"], iframe[src*="doubleclick"], iframe[src*="adservice"],
+  iframe[src*="googlesyndication"], .taboola, .outbrain, .interstitial-ad,
+  .sticky-ad, .floating-ad, .popup-overlay, .ad-flyout, #leaderboard-ad,
+  .top-ad, .bottom-sticky-ad, .modal-ad, [class*="advertisement" i],
+  [class*="ad-unit" i], [id*="ad_holder" i], [id*="ad-container" i],
+  .ads-placeholder, [aria-label*="advertisement" i], .native-ad-unit,
+  .ad-block, .sponsored-post, [data-ad], [data-ad-unit],
+  .dfp-tag, .ad_wrapper, .ad_container, .advert, .advert-box,
+  #ad-interstitial, .interstitial, .ad-popup, .floating-banner {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    left: -9999px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+</style>
+"""
+
+_BHROMON_LINK_REWRITER_JS = """
+<script id="bhromon-link-rewriter">
+  (function() {
+    window.open = function(u) { console.log('[Bhromon AdBlock] Blocked popup:', u); return null; };
+    document.addEventListener('click', function(e) {
+      var target = e.target;
+      while (target && target.tagName !== 'A') {
+        target = target.parentElement;
+      }
+      if (target && target.href && !target.href.startsWith('javascript:') && !target.href.startsWith('#')) {
+        var href = target.href;
+        if (!href.includes('/api/news/proxy?url=')) {
+          e.preventDefault();
+          var proxyUrl = 'https://bhromon.fun/api/news/proxy?url=' + encodeURIComponent(href);
+          window.location.href = proxyUrl;
+        }
+      }
+    }, true);
+  })();
+</script>
+"""
+
+
+@router.get("/proxy")
+def proxy_newspaper(
+    url: str = Query(..., description="Target newspaper URL to fetch and strip ads from"),
+):
+    """Fetches a newspaper webpage, strips ad scripts, popups, and banners,
+    removes X-Frame-Options/CSP restrictions, and returns embeddable ad-free HTML."""
+    if not url or not (url.startswith("http://") or url.startswith("https://")):
+        raise HTTPException(status_code=400, detail="Invalid URL: Scheme must be http or https")
+
+    parsed = urllib.parse.urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+    if (
+        hostname in ("localhost", "127.0.0.1", "0.0.0.0", "::1")
+        or hostname.startswith("192.168.")
+        or hostname.startswith("10.")
+        or hostname.endswith(".internal")
+    ):
+        raise HTTPException(status_code=403, detail="Prohibited private network host")
+
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 BhromonAdBlockBrowser/2.0"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "bn,en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, identity",
+            "Referer": f"{parsed.scheme}://{parsed.netloc}/",
+        },
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            content_encoding = resp.headers.get("Content-Encoding", "").lower()
+            raw_bytes = resp.read()
+            if "gzip" in content_encoding:
+                try:
+                    raw_bytes = gzip.decompress(raw_bytes)
+                except Exception as gz_err:
+                    logger.warning("Gzip decompress fallback for %s: %s", url, gz_err)
+
+            charset = resp.headers.get_content_charset() or "utf-8"
+            html_text = raw_bytes.decode(charset, errors="replace")
+    except Exception as e:
+        logger.error("Failed proxying newspaper URL %s: %s", url, e)
+        raise HTTPException(status_code=502, detail=f"Failed to fetch newspaper page: {str(e)}")
+
+    # 1. Strip external ad network script tags
+    cleaned_html = _AD_SCRIPT_REGEX.sub("", html_text)
+    # 2. Strip inline ad display scripts
+    cleaned_html = _INLINE_AD_SCRIPT_REGEX.sub("", cleaned_html)
+    # 3. Strip ad iframes
+    cleaned_html = _AD_IFRAME_REGEX.sub("", cleaned_html)
+
+    # 4. Inject <base href="..."> so all relative paths (css, js, images) resolve accurately
+    base_tag = f'<base href="{html.escape(url, quote=True)}">'
+    if "<head" in cleaned_html.lower():
+        # Inject right after <head ...>
+        cleaned_html = re.sub(
+            r'(<head\b[^>]*>)',
+            r'\1' + base_tag + _BHROMON_ADBLOCK_CSS,
+            cleaned_html,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+    else:
+        cleaned_html = base_tag + _BHROMON_ADBLOCK_CSS + cleaned_html
+
+    # 5. Inject link interceptor before </body>
+    if "</body" in cleaned_html.lower():
+        cleaned_html = re.sub(
+            r'(</body\b[^>]*>)',
+            _BHROMON_LINK_REWRITER_JS + r'\1',
+            cleaned_html,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+    else:
+        cleaned_html += _BHROMON_LINK_REWRITER_JS
+
+    return Response(
+        content=cleaned_html,
+        media_type="text/html; charset=utf-8",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Cache-Control": "public, max-age=120",
+            # Remove any frame restriction headers
+            "X-Frame-Options": "ALLOWALL",
+        },
+    )

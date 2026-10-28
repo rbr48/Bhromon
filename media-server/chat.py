@@ -7,6 +7,9 @@ completely eliminating Firestore read/write costs and quota exhaustion.
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -899,6 +902,46 @@ async def get_online_status(
     uid: str = Depends(authenticate_user),
 ):
     return {"uid": target_uid, "isOnline": ws_manager.is_online(target_uid)}
+
+
+@chat_router.get("/ice_servers")
+async def get_ice_servers():
+    """Returns dynamic WebRTC STUN and TURN configurations for robust P2P calling and voice rooms."""
+    secret = os.getenv("SOTTO_TURN_SECRET", "cca5620f5cc7916ccdb0112238e9e4b2ff1c4bd0dabd7583a7858d74b282b340").encode("utf-8")
+    expiry = int(time.time()) + 86400 * 7  # 7 days
+    turn_username = f"{expiry}:bhromon"
+    turn_credential = base64.b64encode(hmac.new(secret, turn_username.encode("utf-8"), hashlib.sha1).digest()).decode("utf-8")
+
+    return {
+        "iceServers": [
+            {
+                "urls": [
+                    "stun:stun.l.google.com:19302",
+                    "stun:stun1.l.google.com:19302",
+                    "stun:stun2.l.google.com:19302",
+                    "stun:stun.cloudflare.com:3478",
+                ],
+            },
+            {
+                "urls": [
+                    "turn:openrelay.metered.ca:80",
+                    "turn:openrelay.metered.ca:443",
+                    "turn:openrelay.metered.ca:443?transport=tcp",
+                ],
+                "username": "openrelayproject",
+                "credential": "openrelayproject",
+            },
+            {
+                "urls": [
+                    "turn:148.135.137.245:3478?transport=udp",
+                    "turn:148.135.137.245:3478?transport=tcp",
+                ],
+                "username": turn_username,
+                "credential": turn_credential,
+            },
+        ],
+        "sdpSemantics": "unified-plan",
+    }
 
 
 # ── Real-Time WebSocket Endpoint ──────────────────────────────────────────────

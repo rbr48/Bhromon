@@ -771,7 +771,7 @@ service cloud.firestore {
 
         match /voice_signals/{signalId} {
           allow read, write: if isActiveMember(tourId);
-          match /candidates/{candId} {
+          match /{candCollection}/{candId} {
             allow read, write: if isActiveMember(tourId);
           }
         }
