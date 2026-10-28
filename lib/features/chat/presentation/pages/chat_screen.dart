@@ -1877,12 +1877,37 @@ class _ChatScreenState extends State<ChatScreen> {
                 ? otherName.substring(0, 2).toUpperCase()
                 : 'TR');
 
+        final bool hasSubState = _showEmojiPicker ||
+            _selectedMessageIds.isNotEmpty ||
+            _isSearchingInChat;
+
         return PopScope(
-          canPop: !_showEmojiPicker,
+          canPop: !hasSubState && context.canPop(),
           onPopInvokedWithResult: (didPop, _) {
             if (didPop) return;
             if (_showEmojiPicker) {
               setState(() => _showEmojiPicker = false);
+              return;
+            }
+            if (_selectedMessageIds.isNotEmpty) {
+              setState(() {
+                _selectedMessageIds.clear();
+                _reactionTargetDoc = null;
+              });
+              return;
+            }
+            if (_isSearchingInChat) {
+              setState(() {
+                _isSearchingInChat = false;
+                _searchController.clear();
+                _matchingIndices.clear();
+              });
+              return;
+            }
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/chats');
             }
           },
           child: Scaffold(
@@ -2041,7 +2066,13 @@ class _ChatScreenState extends State<ChatScreen> {
                               padding: EdgeInsets.zero,
                               icon: const Icon(Icons.arrow_back,
                                   color: Colors.white),
-                              onPressed: () => context.pop(),
+                              onPressed: () {
+                                if (context.canPop()) {
+                                  context.pop();
+                                } else {
+                                  context.go('/chats');
+                                }
+                              },
                             ),
                             CircleAvatar(
                               radius: 18,

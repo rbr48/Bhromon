@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../common/game_zone_portrait_lock.dart';
 import '../common/playing_card_view.dart';
 import '../data/game_analytics_service.dart';
@@ -128,11 +129,28 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F381E),
-      appBar: AppBar(
-        title: const Text('29 Card Game (টুয়েন্টি নাইন)',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/game-zone');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0F381E),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white70, size: 18),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/game-zone');
+              }
+            },
+          ),
+          title: const Text('29 Card Game (টুয়েন্টি নাইন)',
+              style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF092614),
         foregroundColor: Colors.white,
         elevation: 2,
@@ -191,7 +209,7 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildScoreHeader() {

@@ -53,11 +53,10 @@ class TripShell extends StatelessWidget {
     }
 
     final wrappedChild = PopScope(
-      canPop: true,
+      canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && !context.canPop()) {
-          context.go('/group-hub');
-        }
+        if (didPop) return;
+        context.go('/group-hub');
       },
       child: child,
     );

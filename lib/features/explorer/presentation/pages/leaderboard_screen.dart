@@ -21,16 +21,28 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF050C08), // dark green-black background
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A140D),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Colors.white70, size: 18),
-          onPressed: () => context.pop(),
-        ),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/group-hub');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF050C08), // dark green-black background
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF0A140D),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white70, size: 18),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/group-hub');
+              }
+            },
+          ),
         title: const Text(
           'EXPLORER LEADERBOARD',
           style: TextStyle(
@@ -266,6 +278,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }

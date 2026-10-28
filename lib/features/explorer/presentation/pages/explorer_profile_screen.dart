@@ -333,7 +333,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final handle = rawHandle.replaceAll(RegExp(r'[^a-zA-Z0-9_.]'), '');
 
     return PopScope(
-      canPop: false,
+      canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         context.go('/group-hub');
@@ -356,7 +356,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white70),
             tooltip: _isBn ? 'ফিরে যান' : 'Back',
-            onPressed: () => context.go('/group-hub'),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/group-hub');
+              }
+            },
           ),
           actions: [
             IconButton(

@@ -153,18 +153,35 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0D1A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF14142B),
-        elevation: 0,
-        title: const Text(
-          'Explorer Dashboard',
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/group-hub');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0D0D1A),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF14142B),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white70, size: 18),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/group-hub');
+              }
+            },
+          ),
+          title: const Text(
+            'Explorer Dashboard',
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          centerTitle: true,
         ),
-        centerTitle: true,
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -394,7 +411,7 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildStatCard(

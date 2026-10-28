@@ -341,16 +341,28 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D0D14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF141421),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Colors.white70, size: 18),
-          onPressed: () => context.pop(),
-        ),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/group-hub');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0D0D14),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF141421),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white70, size: 18),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/group-hub');
+              }
+            },
+          ),
         title: const Text('Discover Destinations',
             style: TextStyle(
                 color: Colors.white,
@@ -414,7 +426,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 ],
               ),
       ),
-    );
+    ));
   }
 
   Widget _buildCard(LocationPin pin) {
@@ -715,7 +727,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 18, vertical: 12),
                   ),
-                  onPressed: () => context.pop(),
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/group-hub');
+                    }
+                  },
                   child: const Text('Back to Home',
                       style: TextStyle(fontWeight: FontWeight.bold)),
                 ),

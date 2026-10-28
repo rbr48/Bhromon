@@ -72,7 +72,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
   Widget build(BuildContext context) {
     if (!_isAuthenticated) {
       return PopScope(
-        canPop: false,
+        canPop: context.canPop(),
         onPopInvokedWithResult: (didPop, result) {
           if (didPop) return;
           context.go('/group-hub');
@@ -130,7 +130,13 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: () => context.go('/group-hub'),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/group-hub');
+                      }
+                    },
                     child: const Text(
                       'Back to Tours',
                       style: TextStyle(color: Colors.white54, fontSize: 14),
@@ -145,7 +151,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
     }
 
     return PopScope(
-      canPop: false,
+      canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         context.go('/group-hub');
@@ -153,6 +159,16 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
       child: Scaffold(
         backgroundColor: AppColors.backgroundDark,
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/group-hub');
+              }
+            },
+          ),
           title: const Text('Offline Vault'),
           backgroundColor: AppColors.cardDark,
           elevation: 0,

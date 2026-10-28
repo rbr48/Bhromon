@@ -201,39 +201,52 @@ class _ChallengesScreenState extends State<ChallengesScreen>
       );
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF141426),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Colors.white70, size: 18),
-          onPressed: () => context.pop(),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/group-hub');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0F0F1A),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF141426),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white70, size: 18),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/group-hub');
+              }
+            },
+          ),
+          title: const Text(
+            'Explorer Challenges',
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          centerTitle: true,
+          bottom: TabBar(
+            controller: _tabController,
+            indicatorColor: AppColors.mintGreen,
+            labelColor: AppColors.mintGreen,
+            unselectedLabelColor: Colors.white54,
+            tabs: const [
+              Tab(text: 'ACTIVE CHALLENGES'),
+              Tab(text: 'MY BADGES'),
+            ],
+          ),
         ),
-        title: const Text(
-          'Explorer Challenges',
-          style: TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        centerTitle: true,
-        bottom: TabBar(
+        body: TabBarView(
           controller: _tabController,
-          indicatorColor: AppColors.mintGreen,
-          labelColor: AppColors.mintGreen,
-          unselectedLabelColor: Colors.white54,
-          tabs: const [
-            Tab(text: 'ACTIVE CHALLENGES'),
-            Tab(text: 'MY BADGES'),
+          children: [
+            _buildChallengesTab(),
+            _buildBadgesTab(),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildChallengesTab(),
-          _buildBadgesTab(),
-        ],
       ),
     );
   }

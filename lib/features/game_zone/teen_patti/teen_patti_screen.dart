@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../common/game_zone_portrait_lock.dart';
 import '../common/playing_card_view.dart';
 import '../common/poker_chip_view.dart';
@@ -271,11 +272,28 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
     final user = _game.user;
     final isUserTurn = _game.isTurnOf(0);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F381E),
-      appBar: AppBar(
-        title: const Text('Teen Patti (৩ পাত্তি)',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/game-zone');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0F381E),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white70, size: 18),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/game-zone');
+              }
+            },
+          ),
+          title: const Text('Teen Patti (৩ পাত্তি)',
+              style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF092614),
         foregroundColor: Colors.white,
         elevation: 2,
@@ -336,7 +354,7 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildPotHeader() {

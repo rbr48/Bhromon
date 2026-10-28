@@ -73,10 +73,13 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        context.go('/group-hub');
+        final authState = context.read<AuthCubit>().state;
+        if (authState is Authenticated) {
+          context.go('/group-hub');
+        }
       },
       child: Scaffold(
         backgroundColor: _kBg,

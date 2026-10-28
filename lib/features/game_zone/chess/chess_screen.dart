@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../common/game_zone_portrait_lock.dart';
 import '../data/game_analytics_service.dart';
 import '../domain/models/game_analytics_models.dart';
@@ -411,11 +412,28 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     final isBlackInCheck = _engine.isCheck(PieceColor.black);
     final canUndo = _engine.moveHistory.isNotEmpty && !_isAiThinking;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF1E2429),
-      appBar: AppBar(
-        title: const Text('Travel Chess AI',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        context.go('/game-zone');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF1E2429),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white70, size: 18),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/game-zone');
+              }
+            },
+          ),
+          title: const Text('Travel Chess AI',
+              style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: const Color(0xFF14181B),
         foregroundColor: Colors.white,
         elevation: 2,
@@ -559,7 +577,7 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildMoveList() {

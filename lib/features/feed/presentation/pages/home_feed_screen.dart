@@ -544,8 +544,27 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
       isWide: isWideScreen,
     );
 
-    return Scaffold(
-      backgroundColor: mockBackground,
+    return PopScope(
+      canPop: !_isSearching && context.canPop(),
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_isSearching) {
+          _searchDebounce?.cancel();
+          setState(() {
+            _isSearching = false;
+            _searchQuery = '';
+            _searchController.clear();
+          });
+          return;
+        }
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/group-hub');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: mockBackground,
       body: BlocListener<AuthCubit, AuthState>(
         // React only when the viewer actually changes, not to every
         // intermediate auth state (loading, OTP sent, ...).
@@ -594,7 +613,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                 ],
               ),
       ),
-    );
+    ));
   }
 
   Widget _buildFeedScrollView({
