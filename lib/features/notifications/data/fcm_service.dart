@@ -30,6 +30,8 @@ class FcmService {
   StreamSubscription<User?>? _authSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _userNotificationsSub;
   String? _initializedUid;
+  final Set<String> _processedNotificationIds = {};
+  bool _initialSnapshotLoaded = false;
 
   FcmService(this._messaging, this._firestore);
 
@@ -59,56 +61,56 @@ class FcmService {
     if (_initializedUid == uid) return;
     _initializedUid = uid;
 
-    // ── 1. Initialise flutter_local_notifications & channel immediately ──────
-    // Initializing local notifications first guarantees that notifications
-    // can always be posted even if FCM token fetching fails or times out.
+    // ── 1. Initialise flutter_local_notifications & channel immediately (Mobile only)
     try {
-      const androidInit =
-          AndroidInitializationSettings('@mipmap/launcher_icon');
-      const darwinInit = DarwinInitializationSettings(
-        requestAlertPermission: true,
-        requestBadgePermission: true,
-        requestSoundPermission: true,
-      );
-      await _localNotif.initialize(
-        const InitializationSettings(android: androidInit, iOS: darwinInit),
-        onDidReceiveNotificationResponse: (details) {
-          final ctx = AppRouter.navigatorKey.currentContext;
-          if (ctx == null) return;
-          final payload = details.payload;
-          if (payload != null && payload.isNotEmpty) {
-            try {
-              final data = jsonDecode(payload) as Map<String, dynamic>;
-              _routeFromPayload(
-                data['action'] as String?,
-                ctx,
-                uid: data['uid'] as String?,
-                itemId: data['itemId'] as String?,
-                tourId: data['tourId'] as String?,
-              );
-            } catch (_) {
-              _routeFromPayload(payload, ctx);
+      if (!kIsWeb) {
+        const androidInit =
+            AndroidInitializationSettings('@mipmap/launcher_icon');
+        const darwinInit = DarwinInitializationSettings(
+          requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
+        );
+        await _localNotif.initialize(
+          const InitializationSettings(android: androidInit, iOS: darwinInit),
+          onDidReceiveNotificationResponse: (details) {
+            final ctx = AppRouter.navigatorKey.currentContext;
+            if (ctx == null) return;
+            final payload = details.payload;
+            if (payload != null && payload.isNotEmpty) {
+              try {
+                final data = jsonDecode(payload) as Map<String, dynamic>;
+                _routeFromPayload(
+                  data['action'] as String?,
+                  ctx,
+                  uid: data['uid'] as String?,
+                  itemId: (data['itemId'] as String?) ?? (data['chatId'] as String?),
+                  tourId: data['tourId'] as String?,
+                );
+              } catch (_) {
+                _routeFromPayload(payload, ctx);
+              }
             }
-          }
-        },
-      );
+          },
+        );
 
-      final androidPlugin = _localNotif.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-      await androidPlugin?.createNotificationChannel(
-        const AndroidNotificationChannel(
-          _kChannelId,
-          _kChannelName,
-          description: _kChannelDesc,
-          importance: Importance.high,
-          enableVibration: true,
-          playSound: true,
-        ),
-      );
+        final androidPlugin = _localNotif.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+        await androidPlugin?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            _kChannelId,
+            _kChannelName,
+            description: _kChannelDesc,
+            importance: Importance.high,
+            enableVibration: true,
+            playSound: true,
+          ),
+        );
 
-      // Request runtime notification permission on Android 13+ (API 33+)
-      if (!kIsWeb && Platform.isAndroid) {
-        await androidPlugin?.requestNotificationsPermission();
+        // Request runtime notification permission on Android 13+ (API 33+)
+        if (Platform.isAndroid) {
+          await androidPlugin?.requestNotificationsPermission();
+        }
       }
     } catch (e) {
       debugPrint('[FcmService] Local notifications initialization error: $e');
@@ -150,36 +152,65 @@ class FcmService {
 
   void _listenUserNotifications(String uid) {
     _userNotificationsSub?.cancel();
-    final sessionStart = Timestamp.now();
+    _processedNotificationIds.clear();
+    _initialSnapshotLoaded = false;
+
     _userNotificationsSub = _firestore
         .collection('users')
         .doc(uid)
         .collection('notifications')
         .orderBy('timestamp', descending: true)
-        .limit(10)
+        .limit(20)
         .snapshots()
         .listen(
       (snapshot) {
+        if (!_initialSnapshotLoaded) {
+          // On app launch / login, populate historical IDs so old items aren't alerted
+          for (final doc in snapshot.docs) {
+            _processedNotificationIds.add(doc.id);
+          }
+          _initialSnapshotLoaded = true;
+          return;
+        }
+
         for (final change in snapshot.docChanges) {
-          if (change.type == DocumentChangeType.added) {
-            final data = change.doc.data();
+          if (change.type == DocumentChangeType.added ||
+              change.type == DocumentChangeType.modified) {
+            final doc = change.doc;
+            if (_processedNotificationIds.contains(doc.id)) continue;
+            _processedNotificationIds.add(doc.id);
+
+            final data = doc.data();
             if (data == null) continue;
-            final ts = data['timestamp'] as Timestamp?;
-            // Show new notifications arriving during this session (allowing 30s for server time diff)
-            if (ts != null &&
-                ts.millisecondsSinceEpoch >=
-                    sessionStart.millisecondsSinceEpoch - 30000) {
-              final title = (data['title'] as String?) ?? 'Bhromon Notification';
-              final body = (data['body'] as String?) ?? '';
-              final imageUrl = data['imageUrl'] as String?;
+
+            final title = (data['title'] as String?) ?? 'Bhromon Notification';
+            final body = (data['body'] as String?) ?? '';
+            final imageUrl = data['imageUrl'] as String?;
+            final action = data['action'] as String?;
+            final notifUid = data['uid'] as String?;
+            final itemId = (data['itemId'] as String?) ?? (data['chatId'] as String?);
+            final tourId = data['tourId'] as String?;
+
+            // 1. Post local system tray notification (Android/iOS)
+            if (!kIsWeb) {
               showLocalNotification(
-                id: change.doc.id.hashCode,
+                id: doc.id.hashCode,
                 title: title,
                 body: body,
                 payload: jsonEncode(data),
                 imageUrl: imageUrl,
               );
             }
+
+            // 2. Display instant floating in-app notification banner across all platforms
+            _showInAppBanner(
+              title: title,
+              body: body,
+              action: action,
+              uid: notifUid,
+              itemId: itemId,
+              tourId: tourId,
+            );
           }
         }
       },
@@ -189,7 +220,7 @@ class FcmService {
     );
   }
 
-  /// Show a rich local notification immediately on the device.
+  /// Show a rich local notification immediately on mobile devices.
   Future<void> showLocalNotification({
     required int id,
     required String title,
@@ -197,6 +228,8 @@ class FcmService {
     String? payload,
     String? imageUrl,
   }) async {
+    if (kIsWeb) return;
+
     StyleInformation? style;
     if (imageUrl != null && imageUrl.isNotEmpty) {
       final base64Str = await _fetchImageAsBase64(imageUrl);
@@ -237,6 +270,88 @@ class FcmService {
     );
   }
 
+  /// Display an instant, modern in-app floating banner when a notification arrives.
+  void _showInAppBanner({
+    required String title,
+    required String body,
+    String? action,
+    String? uid,
+    String? itemId,
+    String? tourId,
+  }) {
+    final ctx = AppRouter.navigatorKey.currentContext;
+    if (ctx == null) return;
+    try {
+      final scaffold = ScaffoldMessenger.maybeOf(ctx);
+      if (scaffold != null) {
+        scaffold.hideCurrentSnackBar();
+        scaffold.showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFF00A884), width: 1),
+            ),
+            backgroundColor: const Color(0xFF1F2C34),
+            duration: const Duration(seconds: 4),
+            content: InkWell(
+              onTap: () {
+                scaffold.hideCurrentSnackBar();
+                _routeFromPayload(
+                  action,
+                  ctx,
+                  uid: uid,
+                  itemId: itemId,
+                  tourId: tourId,
+                );
+              },
+              child: Row(
+                children: [
+                  const Icon(Icons.notifications_active,
+                      color: Color(0xFF00A884), size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (body.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            body,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[FcmService] _showInAppBanner error: $e');
+    }
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
 
   /// Saves this device's token for [uid]. Each device keeps its own document
@@ -264,12 +379,23 @@ class FcmService {
     final String? imageUrl =
         n?.android?.imageUrl ?? (message.data['imageUrl'] as String?);
 
-    await showLocalNotification(
-      id: message.hashCode,
+    if (!kIsWeb) {
+      await showLocalNotification(
+        id: message.hashCode,
+        title: title,
+        body: body,
+        payload: jsonEncode(message.data),
+        imageUrl: imageUrl,
+      );
+    }
+
+    _showInAppBanner(
       title: title,
       body: body,
-      payload: jsonEncode(message.data),
-      imageUrl: imageUrl,
+      action: message.data['action'] as String?,
+      uid: message.data['uid'] as String?,
+      itemId: (message.data['itemId'] as String?) ?? (message.data['chatId'] as String?),
+      tourId: message.data['tourId'] as String?,
     );
   }
 
@@ -278,7 +404,7 @@ class FcmService {
       message.data['action'] as String?,
       context,
       uid: message.data['uid'] as String?,
-      itemId: message.data['itemId'] as String?,
+      itemId: (message.data['itemId'] as String?) ?? (message.data['chatId'] as String?),
       tourId: message.data['tourId'] as String?,
     );
   }
@@ -308,8 +434,9 @@ class FcmService {
         if (itemId != null) GoRouter.of(context).go('/trip/$itemId');
         break;
       case 'chat':
-        if (itemId != null) {
-          GoRouter.of(context).go('/chat/$itemId', extra: {'otherUid': uid});
+        final targetChatId = itemId ?? uid;
+        if (targetChatId != null && targetChatId.isNotEmpty) {
+          GoRouter.of(context).go('/chat/$targetChatId', extra: {'otherUid': uid});
         }
         break;
       case 'sos':
@@ -344,6 +471,7 @@ class FcmService {
   /// Downloads an image from [url] and returns it as a base-64 string so
   /// [BigPictureStyleInformation] can consume it synchronously.
   Future<String> _fetchImageAsBase64(String url) async {
+    if (kIsWeb) return '';
     try {
       final uri = Uri.parse(url);
       final client = HttpClient();
