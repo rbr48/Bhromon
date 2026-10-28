@@ -75,39 +75,47 @@ class CarromBoard {
   static double shotSpeed(double power) =>
       minShotSpeed + power.clamp(0.0, 1.0) * (maxShotSpeed - minShotSpeed);
 
-  static bool isSettled(Iterable<CarromPiece> pieces) =>
-      pieces.every((p) => p.pocketed || !p.isMoving);
+  static bool isSettled(Iterable<CarromPiece> pieces) {
+    for (final p in pieces) {
+      if (!p.pocketed && p.isMoving) return false;
+    }
+    return true;
+  }
 
   /// Advances every piece by one fixed step and returns the pieces that
   /// dropped into a pocket during it.
   static List<CarromPiece> step(List<CarromPiece> pieces) {
     const dt = stepSeconds;
-    final active = [
-      for (final p in pieces)
-        if (!p.pocketed) p
-    ];
+    final len = pieces.length;
 
-    for (final p in active) {
-      if (!p.isMoving) continue;
+    for (int i = 0; i < len; i++) {
+      final p = pieces[i];
+      if (p.pocketed || !p.isMoving) continue;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
     }
 
-    for (int i = 0; i < active.length; i++) {
-      final a = active[i];
-      for (int j = i + 1; j < active.length; j++) {
-        final b = active[j];
+    for (int i = 0; i < len; i++) {
+      final a = pieces[i];
+      if (a.pocketed) continue;
+      for (int j = i + 1; j < len; j++) {
+        final b = pieces[j];
+        if (b.pocketed) continue;
         if (!a.isMoving && !b.isMoving) continue;
         _collide(a, b);
       }
     }
 
-    for (final p in active) {
+    for (int i = 0; i < len; i++) {
+      final p = pieces[i];
+      if (p.pocketed) continue;
       _bounceOffWalls(p);
     }
 
-    final dropped = <CarromPiece>[];
-    for (final p in active) {
+    List<CarromPiece>? dropped;
+    for (int i = 0; i < len; i++) {
+      final p = pieces[i];
+      if (p.pocketed) continue;
       for (final pocket in pockets) {
         final dx = p.x - pocket.$1;
         final dy = p.y - pocket.$2;
@@ -118,13 +126,14 @@ class CarromBoard {
             ..vy = 0
             ..x = pocket.$1
             ..y = pocket.$2;
-          dropped.add(p);
+          (dropped ??= <CarromPiece>[]).add(p);
           break;
         }
       }
     }
 
-    for (final p in active) {
+    for (int i = 0; i < len; i++) {
+      final p = pieces[i];
       if (p.pocketed || !p.isMoving) continue;
       final speed = p.speed;
       final slowed = speed - friction * dt;
@@ -139,7 +148,7 @@ class CarromBoard {
           ..vy *= scale;
       }
     }
-    return dropped;
+    return dropped ?? const <CarromPiece>[];
   }
 
   static void _collide(CarromPiece a, CarromPiece b) {
