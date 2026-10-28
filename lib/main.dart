@@ -35,11 +35,17 @@ import 'features/ota/presentation/cubit/ota_state.dart';
 import 'features/ota/presentation/widgets/ota_update_dialog.dart';
 import 'core/security/device_integrity_service.dart';
 import 'core/database/app_database.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'features/chat/data/call_notification_service.dart';
 import 'features/game_zone/data/game_analytics_service.dart';
 import 'features/notifications/data/fcm_service.dart';
 import 'features/notifications/geo_fence_service.dart'
     show registerGeoFenceWork;
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+}
 
 void main() {
   runZonedGuarded(() async {
@@ -327,6 +333,14 @@ void main() {
 
     // Background job registration and call listener isn't needed to draw the first frame.
     if (firebaseAvailable) {
+      if (!kIsWeb) {
+        try {
+          FirebaseMessaging.onBackgroundMessage(
+              _firebaseMessagingBackgroundHandler);
+        } catch (e) {
+          logWarning('[FCM] Could not register background messaging handler', e);
+        }
+      }
       CallNotificationService().init();
       getIt<FcmService>().initGlobalListener();
       if (!kIsWeb) {

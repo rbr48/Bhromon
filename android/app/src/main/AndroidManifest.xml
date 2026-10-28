@@ -32,6 +32,14 @@
         android:enableOnBackInvokedCallback="true"
         android:hardwareAccelerated="true"
         android:usesCleartextTraffic="false">
+        <!-- Default Notification Channel & Icon for Firebase Cloud Messaging -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="bhromon_general" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/launcher_icon" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -197,8 +197,8 @@ describe('Push Notifications Cloud Functions', () => {
 
       // Verify FCM push message sent
       expect(sentMessages.length).toBe(1);
+      expect(sentMessages[0].tokens).toContain('token_recipient_123');
       expect(sentMessages[0]).toEqual(expect.objectContaining({
-        token: 'token_recipient_123',
         notification: {
           title: 'New message from John Doe',
           body: 'Are we still going to Sajek tomorrow?',

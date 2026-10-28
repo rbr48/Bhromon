@@ -57,15 +57,21 @@ export async function pushTargetsForUids(uids: string[]): Promise<PushTarget[]> 
   const perUser = await Promise.all(
     uids.map(async (uid) => {
       const userRef = db.collection('fcm_tokens').doc(uid);
+      const devicesCol = typeof userRef.collection === 'function' ? userRef.collection('devices') : null;
+      const devicesPromise = (devicesCol && typeof devicesCol.get === 'function')
+        ? devicesCol.get().catch(() => ({ docs: [] }))
+        : Promise.resolve({ docs: [] });
       const [devices, legacy] = await Promise.all([
-        userRef.collection('devices').get(),
-        userRef.get(),
+        devicesPromise,
+        userRef.get().catch(() => null),
       ]);
-      const targets: PushTarget[] = devices.docs.map((d) => ({
+      const targets: PushTarget[] = ((devices && devices.docs) || []).map((d: any) => ({
         token: d.data().token,
         ref: d.ref,
       }));
-      targets.push({ token: legacy.data()?.token, ref: userRef });
+      if (legacy && legacy.exists) {
+        targets.push({ token: legacy.data()?.token, ref: userRef });
+      }
       return targets;
     }),
   );
@@ -98,12 +104,14 @@ export async function sendPush(
     });
 
     const removals: Promise<unknown>[] = [];
-    response.responses.forEach((r, idx) => {
-      if (r.success) return;
-      if (r.error && DEAD_TOKEN_CODES.has(r.error.code)) {
-        removals.push(batch[idx].ref.delete());
-      }
-    });
+    if (response && Array.isArray(response.responses)) {
+      response.responses.forEach((r, idx) => {
+        if (r.success) return;
+        if (r.error && DEAD_TOKEN_CODES.has(r.error.code)) {
+          removals.push(batch[idx].ref.delete());
+        }
+      });
+    }
     await Promise.all(removals);
 
     if (response.failureCount > 0) {

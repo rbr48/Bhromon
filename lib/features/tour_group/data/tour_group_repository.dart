@@ -811,6 +811,8 @@ class TourGroupRepository {
     if (group == null) {
       throw const TourAccessException('ট্যুরটি এখন আর পাওয়া যাচ্ছে না।');
     }
+    await _cacheLocalGroup(group);
+    lastActiveTourId = group.id;
     return group;
   }
 
