@@ -28,6 +28,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 
 from chat import chat_router
+from news import router as news_router
 from notifications import FirestoreNotificationWatcher, NotificationEngine
 from quiz import quiz_router
 
@@ -126,6 +127,8 @@ app.include_router(chat_router, prefix="/api/chat")
 app.include_router(chat_router, prefix="/chat")
 app.include_router(quiz_router, prefix="/api/quiz")
 app.include_router(quiz_router, prefix="/quiz")
+app.include_router(news_router, prefix="/api/news")
+app.include_router(news_router, prefix="/news")
 
 app.add_middleware(
     CORSMiddleware,

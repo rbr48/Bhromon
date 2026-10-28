@@ -84,6 +84,14 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
         category: 'গেমস',
         color: Colors.purpleAccent,
       ),
+      const CommandPaletteItem(
+        title: 'সংবাদ হাব (Newspaper Hub)',
+        subtitle: 'বিজ্ঞাপনমুক্ত লাইভ সংবাদপত্র ও খবর',
+        icon: Icons.newspaper_rounded,
+        route: '/newspaper-hub',
+        category: 'সংবাদ ও তথ্য',
+        color: Colors.lightBlueAccent,
+      ),
       CommandPaletteItem(
         title: 'হিসাব ও স্প্লিট (Expense Ledger)',
         subtitle: 'ট্যুর ফান্ড, জমা, খরচ ও সেটেল-আপ',

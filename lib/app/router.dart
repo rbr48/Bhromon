@@ -49,6 +49,8 @@ import '../features/game_zone/chess/chess_screen.dart';
 import '../features/game_zone/ludo/ludo_screen.dart';
 import '../features/game_zone/carrom/carrom_screen.dart';
 import '../features/game_zone/online/online_game_table_screen.dart';
+import '../features/newspaper/presentation/pages/newspaper_hub_screen.dart';
+import '../features/newspaper/presentation/pages/adfree_article_reader_screen.dart';
 
 import '../features/offline_vault/presentation/cubit/vault_cubit.dart';
 import '../features/trip_log/presentation/bloc/trip_log_bloc.dart';
@@ -339,6 +341,34 @@ class AppRouter {
           return _customPageTransition(
             state,
             OnlineGameTableScreen(tourId: tourId, gameId: gameId),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/newspaper-hub',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const NewspaperHubScreen()),
+      ),
+      GoRoute(
+        path: '/group/:tourId/news',
+        pageBuilder: (context, state) => _tripPage(
+          state,
+          const NewspaperHubScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/newspaper-reader',
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final url = state.uri.queryParameters['url'] ?? extra['url'] as String? ?? '';
+          return _customPageTransition(
+            state,
+            AdFreeArticleReaderScreen(
+              articleUrl: url,
+              initialTitle: extra['title'] as String?,
+              initialSourceName: extra['sourceName'] as String?,
+              initialImageUrl: extra['imageUrl'] as String?,
+            ),
           );
         },
       ),
