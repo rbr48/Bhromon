@@ -9,13 +9,15 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/tour_media_journal.dart';
 import '../../data/tour_media_uploader.dart';
 import '../../domain/models/expense_models.dart';
 import '../../domain/models/itinerary_models.dart';
 import '../../domain/models/tour_group.dart';
-import '../../domain/services/fund_analytics.dart';
-import '../../domain/services/trip_ledger_engine.dart';
 import '../../domain/services/debt_simplifier.dart';
+import '../../domain/services/fund_analytics.dart';
+import '../../domain/services/media_rules.dart';
+import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/fund/expense_editor.dart';
 import '../widgets/fund/fund_sheets.dart';
 import '../../../../core/localization/localized_date.dart';
@@ -1567,13 +1569,17 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     await _run(() async {
       String? finalReceiptUrl = draft.receiptUrl;
       if (draft.newReceiptFile != null) {
+        final file = draft.newReceiptFile!;
+        final ext = storedExtension(file.name, 'jpg');
+        final cType = imageContentType(file.name) ?? 'image/jpeg';
         final upload = await TourMediaUploader.start(
           tourId: widget.tourId,
-          folder: 'expenses',
-          file: draft.newReceiptFile!,
-          contentType: 'image/jpeg',
-          extension: 'jpg',
-          maxBytes: 10 * 1024 * 1024,
+          folder: 'media',
+          file: file,
+          contentType: cType,
+          extension: ext,
+          maxBytes: kMaxImageBytes,
+          journal: TourMediaJournal.untracked,
         );
         finalReceiptUrl = await upload.finish();
       }

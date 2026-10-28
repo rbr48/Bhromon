@@ -49,6 +49,7 @@ ALLOWED_ORIGINS = [
 ALLOWED_FOLDERS = frozenset({
     "posts", "reels", "covers", "stories", "channels",
     "avatars", "profiles", "chat_media", "chat_voice", "chat_docs", "trip_logs", "media",
+    "expenses",
 })
 ALLOWED_EXTENSIONS = frozenset({
     ".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif",
