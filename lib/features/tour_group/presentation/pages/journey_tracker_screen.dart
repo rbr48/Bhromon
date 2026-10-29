@@ -15,6 +15,7 @@ import '../../domain/services/destination_catalog.dart';
 import '../../domain/services/route_engine.dart';
 import '../../domain/services/route_suggestions.dart';
 import '../../domain/services/prayer_calculator.dart';
+import '../../domain/services/journey_audio_guide_service.dart';
 import '../widgets/itinerary/itinerary_editor.dart';
 import '../../../../core/localization/localized_date.dart';
 
@@ -80,6 +81,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
   @override
   void dispose() {
     _clock?.cancel();
+    JourneyAudioGuideService().stop();
     for (final s in _subs) {
       unawaited(s.cancel());
     }
@@ -264,6 +266,30 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               title: Text('${c.kind.emoji} ${c.name}',
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              leading: ValueListenableBuilder<bool>(
+                valueListenable: JourneyAudioGuideService().isSpeaking,
+                builder: (context, speaking, _) {
+                  final active = speaking &&
+                      JourneyAudioGuideService().currentCheckpointId.value ==
+                          c.id;
+                  return Icon(
+                    active ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                    color: active ? AppColors.gold : AppColors.mintGreen,
+                  );
+                },
+              ),
+              title: Text(l10n.translate('route_cp_listen_guide'),
+                  style: const TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(ctx);
+                JourneyAudioGuideService().speakCheckpoint(
+                  checkpoint: c,
+                  kindLabel: l10n.translate(checkpointKindKey(c.kind)),
+                  isBengali: l10n.locale.languageCode == 'bn',
+                );
+              },
             ),
             if (c.hasLocation)
               ListTile(
@@ -1055,9 +1081,39 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                 ],
               ),
             ),
-            if (passed)
+            ValueListenableBuilder<bool>(
+              valueListenable: JourneyAudioGuideService().isSpeaking,
+              builder: (ctx, speaking, _) {
+                final isCurrent = speaking &&
+                    JourneyAudioGuideService().currentCheckpointId.value ==
+                        c.id;
+                return IconButton(
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 18,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  icon: Icon(
+                    isCurrent
+                        ? Icons.volume_up_rounded
+                        : Icons.volume_up_outlined,
+                    color: isCurrent ? AppColors.gold : Colors.white38,
+                  ),
+                  tooltip: l10n.translate('route_cp_audio_guide'),
+                  onPressed: () {
+                    JourneyAudioGuideService().speakCheckpoint(
+                      checkpoint: c,
+                      kindLabel: l10n.translate(checkpointKindKey(c.kind)),
+                      isBengali: l10n.locale.languageCode == 'bn',
+                    );
+                  },
+                );
+              },
+            ),
+            if (passed) ...[
+              const SizedBox(width: 4),
               const Icon(Icons.check_circle,
                   color: AppColors.mintGreen, size: 16),
+            ],
           ],
         ),
       ),
