@@ -1,5 +1,6 @@
 """Tests for Bhromon VPS Chat & Notification Engine."""
 
+import asyncio
 import os
 import shutil
 import tempfile
@@ -123,17 +124,19 @@ def test_reactions_and_deletion(temp_db):
     assert len(msgs_for_uA_after) == 0
 
 
-@pytest.mark.asyncio
-async def test_websocket_manager():
-    mgr = ChatWebSocketManager()
-    mock_ws = AsyncMock()
+def test_websocket_manager():
+    async def scenario():
+        mgr = ChatWebSocketManager()
+        mock_ws = AsyncMock()
 
-    await mgr.connect("user1", mock_ws)
-    assert mgr.is_online("user1") is True
-    assert mgr.is_online("user2") is False
+        await mgr.connect("user1", mock_ws)
+        assert mgr.is_online("user1") is True
+        assert mgr.is_online("user2") is False
 
-    mgr.disconnect("user1", mock_ws)
-    assert mgr.is_online("user1") is False
+        mgr.disconnect("user1", mock_ws)
+        assert mgr.is_online("user1") is False
+
+    asyncio.run(scenario())
 
 
 def test_push_notification_dispatch(temp_db):

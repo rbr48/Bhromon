@@ -20,14 +20,14 @@ import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import aiofiles
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 
-from chat import chat_router
+from chat import chat_db, chat_router
 from news import router as news_router
 from notifications import FirestoreNotificationWatcher, NotificationEngine
 from quiz import quiz_router
@@ -141,10 +141,11 @@ app.add_middleware(
 
 @dataclass(frozen=True)
 class Caller:
-    """Who is calling. The legacy key has no identity, so its email is empty."""
+    """Who is calling. The legacy key has no identity, so its uid and email are empty."""
 
     email: str
     legacy: bool = False
+    uid: str = ""
 
 
 class FirebaseBackend:
@@ -164,21 +165,37 @@ class FirebaseBackend:
             self._db = firestore.client()
         return self._db
 
-    def email_for_token(self, token: str) -> str:
+    def identity_for_token(self, token: str) -> Tuple[str, str]:
+        """The (uid, email) a Firebase ID token belongs to. Raises when either is missing."""
         self._ensure_app()
         from firebase_admin import auth
 
         decoded = auth.verify_id_token(token, clock_skew_seconds=10)
+        uid = str(decoded.get("uid") or "")
+        if not uid:
+            raise ValueError("The token has no uid.")
         email = (decoded.get("email") or "").strip().lower()
-        if not email and "uid" in decoded:
+        if not email:
             try:
-                user = auth.get_user(decoded["uid"])
+                user = auth.get_user(uid)
                 email = (user.email or "").strip().lower()
             except Exception as e:
-                logger.warning("Could not fetch user by uid %s: %s", decoded.get("uid"), e)
+                logger.warning("Could not fetch user by uid %s: %s", uid, e)
         if not email:
             raise ValueError("The token has no email address.")
-        return email
+        return uid, email
+
+    def email_for_token(self, token: str) -> str:
+        return self.identity_for_token(token)[1]
+
+    def tier_for_uid(self, uid: str) -> Optional[str]:
+        """The explorer tier stored on the user's profile, or None when there is no profile."""
+        if not uid:
+            return None
+        profile = self._client().collection("explorer_profiles").document(uid).get()
+        if not profile.exists:
+            return None
+        return str((profile.to_dict() or {}).get("tier") or "") or None
 
     def role_for(self, tour_id: str, email: str) -> Optional[str]:
         """The caller's role in the tour, or None when they are not an active member."""
@@ -199,24 +216,47 @@ class FirebaseBackend:
 backend = FirebaseBackend()
 
 
-def authenticate(authorization: Optional[str], legacy_key: Optional[str]) -> Caller:
-    """Identifies the caller from a Firebase ID token, or from the legacy key if enabled."""
+def authenticate(
+    authorization: Optional[str],
+    legacy_key: Optional[str],
+    allow_legacy: bool = False,
+) -> Caller:
+    """Identifies the caller from a Firebase ID token.
+
+    The legacy upload key is accepted only where `allow_legacy` is set (media
+    uploads and deletes). Old app builds ship that key, so it must not reach the
+    call, notification or admin routes.
+    """
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
         try:
-            return Caller(email=backend.email_for_token(token))
+            uid, email = backend.identity_for_token(token)
+            return Caller(email=email, uid=uid)
         except Exception as e:
             logger.warning("Bearer token authentication failed: %s: %s", type(e).__name__, e)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Sign in again to upload or delete media.",
             )
-    if LEGACY_UPLOAD_KEY and legacy_key and secrets.compare_digest(legacy_key, LEGACY_UPLOAD_KEY):
+    if allow_legacy and LEGACY_UPLOAD_KEY and legacy_key and secrets.compare_digest(legacy_key, LEGACY_UPLOAD_KEY):
         return Caller(email="", legacy=True)
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Missing or invalid authorization.",
     )
+
+
+# The explorer tiers the Firestore rules trust as platform admins (isRegionExpertOrAbove).
+PLATFORM_ADMIN_TIERS = frozenset({"regionExpert", "pioneer"})
+
+
+def require_platform_admin(caller: Caller) -> None:
+    """Raises 403 unless the caller is a platform admin. Legacy keys carry no identity."""
+    if caller.legacy or not caller.uid or backend.tier_for_uid(caller.uid) not in PLATFORM_ADMIN_TIERS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only platform admins can do this.",
+        )
 
 
 PUBLIC_OR_USER_SPACES = frozenset({
@@ -374,7 +414,7 @@ async def upload_media(
     authorization: Optional[str] = Header(None),
     x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
 ):
-    caller = await run_in_threadpool(authenticate, authorization, x_upload_key)
+    caller = await run_in_threadpool(authenticate, authorization, x_upload_key, True)
     check_tour_id(tourId)
     check_folder(folder)
     await run_in_threadpool(require_member, tourId, caller)
@@ -432,7 +472,7 @@ async def delete_media(
     authorization: Optional[str] = Header(None),
     x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
 ):
-    caller = await run_in_threadpool(authenticate, authorization, x_upload_key)
+    caller = await run_in_threadpool(authenticate, authorization, x_upload_key, True)
     check_tour_id(tourId)
     check_folder(folder)
     if not FILENAME_PATTERN.fullmatch(filename):
@@ -456,7 +496,9 @@ async def delete_media(
 
 
 @app.get("/notify/status")
-def notification_status():
+async def notification_status(authorization: Optional[str] = Header(None)):
+    caller = await run_in_threadpool(authenticate, authorization, None)
+    await run_in_threadpool(require_platform_admin, caller)
     return {
         "watcher_running": notification_watcher._is_running,
         "listeners": len(notification_watcher.active_listeners),
@@ -532,6 +574,14 @@ async def trigger_chat_notification(
     text = payload.get("text", "")
     message_type = payload.get("type", "text")
 
+    # Only a member of the conversation can notify it, and only as themselves.
+    participants = await run_in_threadpool(chat_db.participants_of, chat_id)
+    if participants is None or caller.uid not in participants or sender_id != caller.uid:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only notify a chat you are in, as yourself.",
+        )
+
     res = await run_in_threadpool(
         notification_engine.send_chat_notification,
         chat_id=chat_id,
@@ -547,6 +597,7 @@ async def trigger_maintenance(
     authorization: Optional[str] = Header(None),
     x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
 ):
-    await run_in_threadpool(authenticate, authorization, x_upload_key)
+    caller = await run_in_threadpool(authenticate, authorization, x_upload_key)
+    await run_in_threadpool(require_platform_admin, caller)
     res = await run_in_threadpool(notification_engine.run_retention_sweep)
     return res
