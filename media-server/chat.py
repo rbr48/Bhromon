@@ -7,6 +7,7 @@ completely eliminating Firestore read/write costs and quota exhaustion.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -16,8 +17,9 @@ import os
 import sqlite3
 import threading
 import time
+from collections import deque
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Deque, Dict, List, Optional, Set
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.concurrency import run_in_threadpool
@@ -203,6 +205,18 @@ class ChatDatabase:
             "createdAt": now,
             "updatedAt": now,
         }
+
+    def participants_of(self, chat_id: str) -> Optional[List[str]]:
+        """The uids in a conversation, or None when there is no conversation with that id."""
+        row = self._get_conn().execute(
+            "SELECT participants FROM conversations WHERE chat_id = ?", (chat_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        try:
+            return [str(uid) for uid in json.loads(row["participants"])]
+        except (TypeError, ValueError):
+            return []
 
     def list_conversations(self, uid: str) -> List[Dict[str, Any]]:
         conn = self._get_conn()
@@ -581,7 +595,6 @@ class PushNotificationDispatcher:
         body: str,
         data: Dict[str, str],
         image_url: Optional[str] = None,
-        is_call: bool = False,
     ) -> int:
         tokens = self.db.get_device_tokens(recipient_uid)
         if not tokens:
@@ -605,7 +618,7 @@ class PushNotificationDispatcher:
                         title=title,
                         body=body,
                         sound="default",
-                        channel_id="bhromon_calls" if is_call else "bhromon_general",
+                        channel_id="bhromon_general",
                         image=image_url,
                     ),
                 )
@@ -650,6 +663,17 @@ chat_router = APIRouter(tags=["chat"])
 
 # ── Dependency Authentication ─────────────────────────────────────────────────
 
+def verify_firebase_uid(token: str) -> str:
+    """The uid of a valid Firebase ID token. Raises ValueError for anything else."""
+    from firebase_admin import auth
+
+    decoded = auth.verify_id_token(token, clock_skew_seconds=10)
+    uid = str(decoded.get("uid") or "")
+    if not uid:
+        raise ValueError("Token contains no UID")
+    return uid
+
+
 def authenticate_user(
     authorization: Optional[str] = Header(None),
 ) -> str:
@@ -661,17 +685,10 @@ def authenticate_user(
         )
     token = authorization[7:].strip()
     try:
-        import firebase_admin
-        from firebase_admin import auth
-
-        decoded = auth.verify_id_token(token, clock_skew_seconds=10)
-        uid = decoded.get("uid") or ""
-        if not uid:
-            raise HTTPException(status_code=401, detail="Token contains no UID")
-        return uid
+        return verify_firebase_uid(token)
     except Exception as e:
         logger.warning("Token verification failed: %s", e)
-        raise HTTPException(status_code=401, detail=f"Invalid authentication token: {e}")
+        raise HTTPException(status_code=401, detail="Invalid authentication token.")
 
 
 # ── Pydantic Request Models ───────────────────────────────────────────────────
@@ -904,44 +921,151 @@ async def get_online_status(
     return {"uid": target_uid, "isOnline": ws_manager.is_online(target_uid)}
 
 
-@chat_router.get("/ice_servers")
-async def get_ice_servers():
-    """Returns dynamic WebRTC STUN and TURN configurations for robust P2P calling and voice rooms."""
-    secret = os.getenv("SOTTO_TURN_SECRET", "cca5620f5cc7916ccdb0112238e9e4b2ff1c4bd0dabd7583a7858d74b282b340").encode("utf-8")
-    expiry = int(time.time()) + 86400 * 7  # 7 days
-    turn_username = f"{expiry}:bhromon"
-    turn_credential = base64.b64encode(hmac.new(secret, turn_username.encode("utf-8"), hashlib.sha1).digest()).decode("utf-8")
+STUN_URLS = [
+    "stun:stun.l.google.com:19302",
+    "stun:stun1.l.google.com:19302",
+    "stun:stun2.l.google.com:19302",
+    "stun:stun.cloudflare.com:3478",
+]
+TURN_URLS = [
+    "turn:148.135.137.245:3478?transport=udp",
+    "turn:148.135.137.245:3478?transport=tcp",
+]
+# A TURN credential is short-lived and bound to the caller. The app refetches it
+# before it expires, so a leaked credential stops working within the hour.
+ICE_CREDENTIAL_TTL_SECONDS = 3600
 
+
+def build_ice_servers(uid: str, secret: str, now: Optional[int] = None) -> Dict[str, Any]:
+    """ICE servers for one caller. The TURN username is `<expiry>:<uid>`, the shared-secret form coturn checks."""
+    expires_at = (int(time.time()) if now is None else now) + ICE_CREDENTIAL_TTL_SECONDS
+    username = f"{expires_at}:{uid}"
+    digest = hmac.new(secret.encode("utf-8"), username.encode("utf-8"), hashlib.sha1).digest()
     return {
         "iceServers": [
+            {"urls": STUN_URLS},
             {
-                "urls": [
-                    "stun:stun.l.google.com:19302",
-                    "stun:stun1.l.google.com:19302",
-                    "stun:stun2.l.google.com:19302",
-                    "stun:stun.cloudflare.com:3478",
-                ],
-            },
-            {
-                "urls": [
-                    "turn:openrelay.metered.ca:80",
-                    "turn:openrelay.metered.ca:443",
-                    "turn:openrelay.metered.ca:443?transport=tcp",
-                ],
-                "username": "openrelayproject",
-                "credential": "openrelayproject",
-            },
-            {
-                "urls": [
-                    "turn:148.135.137.245:3478?transport=udp",
-                    "turn:148.135.137.245:3478?transport=tcp",
-                ],
-                "username": turn_username,
-                "credential": turn_credential,
+                "urls": TURN_URLS,
+                "username": username,
+                "credential": base64.b64encode(digest).decode("ascii"),
             },
         ],
         "sdpSemantics": "unified-plan",
+        "expiresAt": expires_at,
     }
+
+
+@chat_router.get("/ice_servers")
+async def get_ice_servers(uid: str = Depends(authenticate_user)):
+    """STUN and TURN settings for a call. Needs a signed-in user, and fails closed without the TURN secret."""
+    secret = os.getenv("SOTTO_TURN_SECRET", "")
+    if not secret:
+        # Without the secret no TURN credential can be issued. The app then falls back to STUN only.
+        raise HTTPException(status_code=503, detail="The call relay is not configured.")
+    return build_ice_servers(uid, secret)
+
+
+# ── Call Signaling Relay ──────────────────────────────────────────────────────
+
+# The signals the app sends (call_signaling_service.dart). Anything else is refused.
+CALL_SIGNAL_TYPES = frozenset({"offer", "answer", "candidate", "end", "declined"})
+MAX_CALL_SIGNAL_BYTES = 64 * 1024
+CALL_OFFERS_PER_WINDOW = 6
+CALL_OFFER_WINDOW_SECONDS = 600.0
+WS_AUTH_TIMEOUT_SECONDS = 10.0
+
+
+class CallOfferLimiter:
+    """Caps how often one caller can ring. An offer is what rings a phone, so offers are counted per caller."""
+
+    def __init__(
+        self,
+        limit: int = CALL_OFFERS_PER_WINDOW,
+        window_seconds: float = CALL_OFFER_WINDOW_SECONDS,
+    ) -> None:
+        self.limit = limit
+        self.window_seconds = window_seconds
+        self._offers: Dict[str, Deque[float]] = {}
+        self._lock = threading.Lock()
+
+    def allow(self, uid: str, now: Optional[float] = None) -> bool:
+        now = time.monotonic() if now is None else now
+        cutoff = now - self.window_seconds
+        with self._lock:
+            times = self._offers.setdefault(uid, deque())
+            while times and times[0] <= cutoff:
+                times.popleft()
+            if len(times) >= self.limit:
+                return False
+            times.append(now)
+            return True
+
+
+call_offer_limiter = CallOfferLimiter()
+
+
+def _short_text(value: Any, limit: int) -> Optional[str]:
+    """Display text from client input, cut to `limit` characters. Non-text or blank input gives None."""
+    if not isinstance(value, str):
+        return None
+    return value.strip()[:limit] or None
+
+
+def _https_url(value: Any) -> Optional[str]:
+    """Only https avatars are passed on, so a caller cannot point the callee's screen at another scheme."""
+    if isinstance(value, str) and value.startswith("https://") and len(value) <= 512:
+        return value
+    return None
+
+
+async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]) -> None:
+    """Relays one call signal to the callee, or tells the caller why it was refused.
+
+    The sender's uid comes from the socket, never from the message. An offer also
+    counts against the sender's rate limit. Only an offer gets an ack, which says
+    whether the callee was connected. A callee who is offline is still rung through
+    the Firestore call document.
+    """
+    call_id = _short_text(data.get("callId"), 64) or ""
+    signal_type = data.get("signalType")
+    recipient_id = data.get("recipientId")
+
+    refusal: Optional[str] = None
+    if (
+        not isinstance(signal_type, str)
+        or signal_type not in CALL_SIGNAL_TYPES
+        or not isinstance(recipient_id, str)
+        or not recipient_id
+        or recipient_id == uid
+    ):
+        refusal = "invalid"
+    elif len(json.dumps(data)) > MAX_CALL_SIGNAL_BYTES:
+        refusal = "too_large"
+    elif signal_type == "offer" and not call_offer_limiter.allow(uid):
+        refusal = "rate_limited"
+
+    if refusal:
+        logger.info("Refused call signal %s from uid %s: %s", signal_type, uid, refusal)
+        await websocket.send_json(
+            {"type": "call_signal_error", "callId": call_id, "signalType": signal_type, "reason": refusal}
+        )
+        return
+
+    delivered = await ws_manager.send_to_user(
+        recipient_id,
+        {
+            "type": "call_signal",
+            "callId": call_id,
+            "callerId": uid,
+            "signalType": signal_type,
+            "payload": data.get("payload"),
+            "isVideo": bool(data.get("isVideo", False)),
+            "callerName": _short_text(data.get("callerName"), 80),
+            "avatarUrl": _https_url(data.get("avatarUrl")),
+        },
+    )
+    if signal_type == "offer":
+        await websocket.send_json({"type": "call_signal_ack", "callId": call_id, "delivered": delivered})
 
 
 # ── Real-Time WebSocket Endpoint ──────────────────────────────────────────────
@@ -952,29 +1076,23 @@ async def chat_websocket(
     token: Optional[str] = Query(None),
 ):
     """Bidirectional WebSocket connection for instant 1-on-1 messages, typing, and WebRTC calls."""
-    # Authenticate from query token or first message
+    # The app sends its token as the first message. The query token is still read
+    # for builds that predate that change, and it is the reason this path is
+    # deprecated: a URL token can end up in proxy and access logs.
     authenticated_uid: Optional[str] = None
 
     if token:
         try:
-            import firebase_admin
-            from firebase_admin import auth
-
-            decoded = auth.verify_id_token(token, clock_skew_seconds=10)
-            authenticated_uid = decoded.get("uid")
+            authenticated_uid = await run_in_threadpool(verify_firebase_uid, token)
         except Exception as e:
             logger.warning("WS token auth failed: %s", e)
 
     if not authenticated_uid:
         await websocket.accept()
         try:
-            auth_msg = await websocket.receive_json()
+            auth_msg = await asyncio.wait_for(websocket.receive_json(), timeout=WS_AUTH_TIMEOUT_SECONDS)
             if auth_msg.get("type") == "auth" and auth_msg.get("token"):
-                import firebase_admin
-                from firebase_admin import auth
-
-                decoded = auth.verify_id_token(auth_msg["token"], clock_skew_seconds=10)
-                authenticated_uid = decoded.get("uid")
+                authenticated_uid = await run_in_threadpool(verify_firebase_uid, auth_msg["token"])
         except Exception:
             pass
 
@@ -1024,42 +1142,7 @@ async def chat_websocket(
                         )
 
             elif mtype == "call_signal":
-                # Instant WebRTC signaling relay between peers (zero Firestore reads/writes!)
-                recipient_id = data.get("recipientId")
-                signal_type = data.get("signalType")  # offer, answer, candidate, decline, end
-                payload = data.get("payload")
-
-                if recipient_id:
-                    delivered = await ws_manager.send_to_user(
-                        recipient_id,
-                        {
-                            "type": "call_signal",
-                            "callId": data.get("callId"),
-                            "callerId": uid,
-                            "signalType": signal_type,
-                            "payload": payload,
-                            "isVideo": data.get("isVideo", False),
-                            "callerName": data.get("callerName"),
-                            "avatarUrl": data.get("avatarUrl"),
-                        },
-                    )
-                    # If recipient is offline and this is a new call offer, send high-priority FCM call push
-                    if not delivered and signal_type == "offer":
-                        await run_in_threadpool(
-                            push_dispatcher.send_push_to_uid,
-                            recipient_uid=recipient_id,
-                            title=f"Incoming Call from {data.get('callerName', 'Traveler')}",
-                            body="Tap to answer audio/video call",
-                            data={
-                                "action": "call",
-                                "callId": data.get("callId", ""),
-                                "callerId": uid,
-                                "callerName": data.get("callerName", "Traveler"),
-                                "isVideo": "true" if data.get("isVideo") else "false",
-                                "avatarUrl": data.get("avatarUrl", ""),
-                            },
-                            is_call=True,
-                        )
+                await relay_call_signal(websocket, uid, data)
 
     except WebSocketDisconnect:
         ws_manager.disconnect(uid, websocket)

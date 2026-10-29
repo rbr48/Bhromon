@@ -1,4 +1,13 @@
+import * as admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
+import {
+  buildCallPushMessage,
+  callerDisplayName,
+  CALL_WINDOW_MS,
+  isOverCallLimit,
+  isStaleCall,
+  recentCallCount,
+} from './lib/callPush';
 import {
   pushTargetsForUids,
   sendPush,
@@ -8,8 +17,12 @@ import {
 /**
  * sendCallPushNotification
  *
- * Triggered on new calls in calls/{callId}.
- * Sends a high-priority incoming call push to wake up the callee's device.
+ * Triggered when a call document is created in calls/{callId}. This is the only
+ * push for a call. The VPS relay sends none, so one call rings one phone once.
+ *
+ * The caller's name comes from explorer_profiles, not from the call document,
+ * which the caller wrote. A caller who starts too many calls has the new call
+ * ended without a push.
  */
 export const sendCallPushNotification = functions
   .region('asia-south1')
@@ -19,45 +32,41 @@ export const sendCallPushNotification = functions
     if (!call) return;
 
     const { callId } = context.params;
+    const callerId = String(call.callerId ?? '').trim();
     const calleeId = String(call.calleeId ?? '').trim();
-    if (!calleeId) return;
+    if (!callerId || !calleeId) return;
+
+    const createdAtMs =
+      call.createdAt && typeof call.createdAt.toMillis === 'function'
+        ? call.createdAt.toMillis()
+        : Date.now();
+    if (isStaleCall(createdAtMs, Date.now())) return;
 
     try {
-      let uids: string[];
-      if (calleeId.includes('@')) {
-        uids = await uidsForEmails([calleeId.toLowerCase()]);
-      } else {
-        uids = [calleeId];
+      const db = admin.firestore();
+      const recent = await recentCallCount(db, callerId, Date.now() - CALL_WINDOW_MS);
+      if (isOverCallLimit(recent)) {
+        console.warn(`[sendCallPushNotification] ${callerId} started too many calls; ending ${callId}`);
+        await snap.ref.update({ status: 'ended', endReason: 'rate_limited' });
+        return;
       }
 
-      if (uids.length === 0) return;
+      const uids = calleeId.includes('@')
+        ? await uidsForEmails([calleeId.toLowerCase()])
+        : [calleeId];
+      const callees = uids.filter((uid) => uid !== callerId);
+      if (callees.length === 0) return;
 
-      const callerName =
-        typeof call.callerName === 'string' && call.callerName.trim() !== ''
-          ? call.callerName.trim()
-          : 'A traveler';
-      const isVideo = call.isVideo === true;
+      const profile = await db.collection('explorer_profiles').doc(callerId).get();
+      const callerName = callerDisplayName(profile.exists ? profile.data()?.displayName : undefined);
 
-      const targets = await pushTargetsForUids(uids);
+      const targets = await pushTargetsForUids(callees);
       await sendPush(
         targets,
-        {
-          notification: {
-            title: `Incoming ${isVideo ? 'Video' : 'Voice'} Call`,
-            body: `${callerName} is calling you on Bhromon...`,
-          },
-          data: {
-            action: 'call',
-            callId,
-            callerId: String(call.callerId ?? ''),
-            callerName,
-            callerAvatar: String(call.callerAvatar ?? ''),
-            isVideo: String(isVideo),
-          },
-          android: {
-            priority: 'high',
-          },
-        },
+        buildCallPushMessage(
+          { callId, callerId, callerName, isVideo: call.isVideo === true },
+          Date.now(),
+        ),
         `sendCallPushNotification ${callId}`,
       );
     } catch (e) {

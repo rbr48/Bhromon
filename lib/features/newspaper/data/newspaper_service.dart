@@ -72,7 +72,13 @@ class NewspaperService {
       return raw.map((e) => e.toString()).toList();
     }
     // Sensible defaults
-    return ['samakal', 'kaler_kantho', 'prothom_alo', 'daily_star', 'al_jazeera'];
+    return [
+      'samakal',
+      'kaler_kantho',
+      'prothom_alo',
+      'daily_star',
+      'al_jazeera'
+    ];
   }
 
   Future<void> recordPaperRead(String paperId) async {
@@ -93,7 +99,8 @@ class NewspaperService {
       final map = <String, NewsHeadline>{};
       raw.forEach((k, v) {
         if (v is Map) {
-          map[k.toString()] = NewsHeadline.fromJson(Map<String, dynamic>.from(v));
+          map[k.toString()] =
+              NewsHeadline.fromJson(Map<String, dynamic>.from(v));
         }
       });
       return map;
@@ -125,7 +132,8 @@ class NewspaperService {
     bool refresh = false,
   }) async {
     final box = await _getBox();
-    final cacheKey = 'cached_feed_${category ?? "all"}_${paperId ?? ""}_${query ?? ""}';
+    final cacheKey =
+        'cached_feed_${category ?? "all"}_${paperId ?? ""}_${query ?? ""}';
 
     try {
       final res = await _dio.get<Map<String, dynamic>>(
@@ -224,7 +232,9 @@ class NewspaperService {
 
     // Cache fallback
     final cachedStr = box.get(cacheKey);
-    if (cachedStr is String && cachedStr.isNotEmpty && !cachedStr.contains('à¦')) {
+    if (cachedStr is String &&
+        cachedStr.isNotEmpty &&
+        !cachedStr.contains('à¦')) {
       try {
         final decoded = jsonDecode(cachedStr) as Map<String, dynamic>;
         final raw = decoded['papers'] as List<dynamic>? ?? [];

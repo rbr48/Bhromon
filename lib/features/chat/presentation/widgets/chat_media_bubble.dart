@@ -51,9 +51,8 @@ class ChatMediaBubble extends StatelessWidget {
         isMe ? const Color(0xFF005C4B) : const Color(0xFF202C33);
 
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double maxBubbleWidth = kIsWeb
-        ? 340.0
-        : (screenWidth * 0.72).clamp(200.0, 320.0);
+    final double maxBubbleWidth =
+        kIsWeb ? 340.0 : (screenWidth * 0.72).clamp(200.0, 320.0);
     const double maxBubbleHeight = 360.0;
 
     return Container(
@@ -196,30 +195,30 @@ class ChatMediaBubble extends StatelessWidget {
             : mediaUrl!;
 
         Widget buildPlaceholder() => Container(
-          width: maxBubbleWidth,
-          height: 200,
-          color: const Color(0xFF1A2730),
-          child: const Center(
-            child: SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(
-                color: Color(0xFF00A884),
-                strokeWidth: 2,
+              width: maxBubbleWidth,
+              height: 200,
+              color: const Color(0xFF1A2730),
+              child: const Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF00A884),
+                    strokeWidth: 2,
+                  ),
+                ),
               ),
-            ),
-          ),
-        );
+            );
 
         Widget buildBrokenPlaceholder() => Container(
-          width: maxBubbleWidth,
-          height: 180,
-          color: const Color(0xFF1A2730),
-          child: const Center(
-            child: Icon(Icons.broken_image_outlined,
-                color: Colors.white54, size: 36),
-          ),
-        );
+              width: maxBubbleWidth,
+              height: 180,
+              color: const Color(0xFF1A2730),
+              child: const Center(
+                child: Icon(Icons.broken_image_outlined,
+                    color: Colors.white54, size: 36),
+              ),
+            );
 
         if (kIsWeb) {
           // On Web: use Image.network to avoid XHR CORS and flutter_cache_manager issues

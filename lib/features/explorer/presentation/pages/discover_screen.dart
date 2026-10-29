@@ -342,91 +342,91 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final double bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return PopScope(
-      canPop: context.canPop(),
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        context.go('/group-hub');
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0D0D14),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF141421),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white70, size: 18),
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/group-hub');
-              }
-            },
-          ),
-        title: const Text('Discover Destinations',
-            style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16)),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon:
-                const Icon(Icons.bookmark_outline, color: AppColors.mintGreen),
-            onPressed: _showWishlistSheet,
-          ),
-        ],
-      ),
-      // SafeArea prevents the Android 3-button navigation bar and iOS home bar
-      // from overlapping with the action buttons row.
-      body: SafeArea(
-        top: false,
-        bottom: true,
-        child: (_pins.isEmpty || _isDeckFinished)
-            ? _buildEmptyState()
-            : Column(
-                children: [
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: CardSwiper(
-                      controller: _swiperController,
-                      cardsCount: _pins.length,
-                      onSwipe: _onSwipe,
-                      onUndo: (previousIndex, currentIndex, direction) {
-                        setState(() {
-                          _isDeckFinished = false;
-                          _currentIndex = currentIndex;
-                        });
-                        return true;
-                      },
-                      onEnd: () {
-                        setState(() {
-                          _isDeckFinished = true;
-                        });
-                      },
-                      numberOfCardsDisplayed:
-                          _pins.length >= 3 ? 3 : _pins.length,
-                      // Negative Y offset lets back cards peek from the top without
-                      // extending downward into the action navigation buttons row.
-                      backCardOffset: const Offset(0, -14),
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                      cardBuilder: (context, index, percentX, percentY) {
-                        return _buildCard(_pins[index]);
-                      },
-                    ),
-                  ),
-                  // Safe padding lifts action buttons well above Android system navigation buttons
-                  Padding(
-                    padding: EdgeInsets.only(
-                      top: 4,
-                      bottom: math.max(bottomPadding, 16) + 4,
-                    ),
-                    child: _buildActionRow(),
-                  ),
-                ],
+        canPop: context.canPop(),
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          context.go('/group-hub');
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF0D0D14),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF141421),
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white70, size: 18),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/group-hub');
+                }
+              },
+            ),
+            title: const Text('Discover Destinations',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16)),
+            centerTitle: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.bookmark_outline,
+                    color: AppColors.mintGreen),
+                onPressed: _showWishlistSheet,
               ),
-      ),
-    ));
+            ],
+          ),
+          // SafeArea prevents the Android 3-button navigation bar and iOS home bar
+          // from overlapping with the action buttons row.
+          body: SafeArea(
+            top: false,
+            bottom: true,
+            child: (_pins.isEmpty || _isDeckFinished)
+                ? _buildEmptyState()
+                : Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: CardSwiper(
+                          controller: _swiperController,
+                          cardsCount: _pins.length,
+                          onSwipe: _onSwipe,
+                          onUndo: (previousIndex, currentIndex, direction) {
+                            setState(() {
+                              _isDeckFinished = false;
+                              _currentIndex = currentIndex;
+                            });
+                            return true;
+                          },
+                          onEnd: () {
+                            setState(() {
+                              _isDeckFinished = true;
+                            });
+                          },
+                          numberOfCardsDisplayed:
+                              _pins.length >= 3 ? 3 : _pins.length,
+                          // Negative Y offset lets back cards peek from the top without
+                          // extending downward into the action navigation buttons row.
+                          backCardOffset: const Offset(0, -14),
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                          cardBuilder: (context, index, percentX, percentY) {
+                            return _buildCard(_pins[index]);
+                          },
+                        ),
+                      ),
+                      // Safe padding lifts action buttons well above Android system navigation buttons
+                      Padding(
+                        padding: EdgeInsets.only(
+                          top: 4,
+                          bottom: math.max(bottomPadding, 16) + 4,
+                        ),
+                        child: _buildActionRow(),
+                      ),
+                    ],
+                  ),
+          ),
+        ));
   }
 
   Widget _buildCard(LocationPin pin) {

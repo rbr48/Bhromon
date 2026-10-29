@@ -337,162 +337,166 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     final canPost = !selected.adminOnly || _isAdmin;
 
     return PopScope(
-      canPop: !_searching,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        if (_searching) {
-          _toggleSearch();
-        }
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0D1A12),
-        appBar: AppBar(
+        canPop: !_searching,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          if (_searching) {
+            _toggleSearch();
+          }
+        },
+        child: Scaffold(
           backgroundColor: const Color(0xFF0D1A12),
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () {
-              if (_searching) {
-                _toggleSearch();
-                return;
-              }
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/group-hub');
-              }
-            },
-          ),
-        title: _searching
-            ? TextField(
-                controller: _searchCtrl,
-                autofocus: true,
-                style: const TextStyle(color: Colors.white, fontSize: 15),
-                cursorColor: AppColors.mintGreen,
-                decoration: InputDecoration(
-                  hintText: l10n.translate('chan_search_hint'),
-                  hintStyle: const TextStyle(color: Colors.white54),
-                  border: InputBorder.none,
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF0D1A12),
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                if (_searching) {
+                  _toggleSearch();
+                  return;
+                }
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/group-hub');
+                }
+              },
+            ),
+            title: _searching
+                ? TextField(
+                    controller: _searchCtrl,
+                    autofocus: true,
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                    cursorColor: AppColors.mintGreen,
+                    decoration: InputDecoration(
+                      hintText: l10n.translate('chan_search_hint'),
+                      hintStyle: const TextStyle(color: Colors.white54),
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (v) => _update(() => _searchText = v),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        l10n.translate('tour_channels_title'),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16),
+                      ),
+                      Text(
+                        l10n.translate('chan_online_count',
+                            args: {'count': l10n.number(_onlineCount())}),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 11),
+                      ),
+                    ],
+                  ),
+            actions: [
+              IconButton(
+                tooltip: l10n.translate('chan_search_tooltip'),
+                icon: Icon(_searching ? Icons.close : Icons.search,
+                    color: Colors.white70),
+                onPressed: _toggleSearch,
+              ),
+              IconButton(
+                tooltip: l10n.translate('chan_pins_tooltip'),
+                icon:
+                    const Icon(Icons.push_pin_outlined, color: Colors.white70),
+                onPressed: () => _showPins(selected),
+              ),
+              IconButton(
+                tooltip: l10n.translate('chan_members_tooltip'),
+                icon: const Icon(Icons.group_outlined, color: Colors.white70),
+                onPressed: () => showChannelMembersSheet(
+                  context,
+                  members: _members,
+                  myEmail: _me,
+                  badgeFor: _badgeFor,
+                  onStartChat: (m) => _startDirectChat(m),
+                  onStartCall: (m, isVideo) =>
+                      _startDirectCall(m, isVideo: isVideo),
                 ),
-                onChanged: (v) => _update(() => _searchText = v),
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    l10n.translate('tour_channels_title'),
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16),
+              ),
+              PopupMenuButton<_ChannelMenu>(
+                icon: const Icon(Icons.more_vert, color: Colors.white70),
+                color: const Color(0xFF1F2C34),
+                onSelected: (choice) => _onMenu(choice, selected),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: _ChannelMenu.toggleMute,
+                    child: Text(
+                      l10n.translate(_muted.contains(selected.id)
+                          ? 'chan_unmute'
+                          : 'chan_mute'),
+                      style: const TextStyle(color: Colors.white),
+                    ),
                   ),
-                  Text(
-                    l10n.translate('chan_online_count',
-                        args: {'count': l10n.number(_onlineCount())}),
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
-                  ),
+                  if (_isAdmin) ...[
+                    PopupMenuItem(
+                      value: _ChannelMenu.newChannel,
+                      child: Text(l10n.translate('chan_new_channel'),
+                          style: const TextStyle(color: Colors.white)),
+                    ),
+                    PopupMenuItem(
+                      value: _ChannelMenu.editChannel,
+                      child: Text(l10n.translate('chan_edit_channel'),
+                          style: const TextStyle(color: Colors.white)),
+                    ),
+                    if (!selected.isBuiltIn)
+                      PopupMenuItem(
+                        value: _ChannelMenu.deleteChannel,
+                        child: Text(l10n.translate('chan_delete_channel'),
+                            style: const TextStyle(color: Colors.redAccent)),
+                      ),
+                  ],
                 ],
               ),
-        actions: [
-          IconButton(
-            tooltip: l10n.translate('chan_search_tooltip'),
-            icon: Icon(_searching ? Icons.close : Icons.search,
-                color: Colors.white70),
-            onPressed: _toggleSearch,
+            ],
           ),
-          IconButton(
-            tooltip: l10n.translate('chan_pins_tooltip'),
-            icon: const Icon(Icons.push_pin_outlined, color: Colors.white70),
-            onPressed: () => _showPins(selected),
-          ),
-          IconButton(
-            tooltip: l10n.translate('chan_members_tooltip'),
-            icon: const Icon(Icons.group_outlined, color: Colors.white70),
-            onPressed: () => showChannelMembersSheet(
-              context,
-              members: _members,
-              myEmail: _me,
-              badgeFor: _badgeFor,
-              onStartChat: (m) => _startDirectChat(m),
-              onStartCall: (m, isVideo) =>
-                  _startDirectCall(m, isVideo: isVideo),
-            ),
-          ),
-          PopupMenuButton<_ChannelMenu>(
-            icon: const Icon(Icons.more_vert, color: Colors.white70),
-            color: const Color(0xFF1F2C34),
-            onSelected: (choice) => _onMenu(choice, selected),
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: _ChannelMenu.toggleMute,
-                child: Text(
-                  l10n.translate(_muted.contains(selected.id)
-                      ? 'chan_unmute'
-                      : 'chan_mute'),
-                  style: const TextStyle(color: Colors.white),
+          body: Column(
+            children: [
+              _buildItinerary(),
+              _buildChannelStrip(channels, selected),
+              if (selected.topic.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      selected.topic,
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                  ),
                 ),
-              ),
-              if (_isAdmin) ...[
-                PopupMenuItem(
-                  value: _ChannelMenu.newChannel,
-                  child: Text(l10n.translate('chan_new_channel'),
-                      style: const TextStyle(color: Colors.white)),
-                ),
-                PopupMenuItem(
-                  value: _ChannelMenu.editChannel,
-                  child: Text(l10n.translate('chan_edit_channel'),
-                      style: const TextStyle(color: Colors.white)),
-                ),
-                if (!selected.isBuiltIn)
-                  PopupMenuItem(
-                    value: _ChannelMenu.deleteChannel,
-                    child: Text(l10n.translate('chan_delete_channel'),
-                        style: const TextStyle(color: Colors.redAccent)),
+              if (selected.isVoice)
+                Expanded(child: _buildVoiceRoom(selected))
+              else ...[
+                Expanded(child: _buildMessages(selected)),
+                _TypingLine(stream: _typingOf(selected.id), myEmail: _me),
+                if (_voiceService.isConnected &&
+                    _voiceService.currentChannelId != selected.id)
+                  _buildDockedVoiceBar(channels),
+                if (canPost)
+                  _buildComposer(selected)
+                else
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                    child: Text(
+                      l10n.translate('chan_read_only'),
+                      textAlign: TextAlign.center,
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
                   ),
               ],
             ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildItinerary(),
-          _buildChannelStrip(channels, selected),
-          if (selected.topic.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  selected.topic,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
-                ),
-              ),
-            ),
-          if (selected.isVoice)
-            Expanded(child: _buildVoiceRoom(selected))
-          else ...[
-            Expanded(child: _buildMessages(selected)),
-            _TypingLine(stream: _typingOf(selected.id), myEmail: _me),
-            if (_voiceService.isConnected &&
-                _voiceService.currentChannelId != selected.id)
-              _buildDockedVoiceBar(channels),
-            if (canPost)
-              _buildComposer(selected)
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-                child: Text(
-                  l10n.translate('chan_read_only'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
-                ),
-              ),
-          ],
-        ],
-      ),
-    ));
+        ));
   }
 
   // ---------------------------------------------------------------------------

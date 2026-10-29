@@ -138,7 +138,8 @@ class StoryCluster extends Equatable {
 
     return StoryCluster(
       topic: json['topic'] as String? ?? '',
-      headlineCount: (json['headlineCount'] as num?)?.toInt() ?? rawItems.length,
+      headlineCount:
+          (json['headlineCount'] as num?)?.toInt() ?? rawItems.length,
       papers: rawPapers.map((e) => e.toString()).toList(),
       items: rawItems
           .whereType<Map<String, dynamic>>()

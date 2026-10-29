@@ -369,83 +369,83 @@ class _LudoScreenState extends State<LudoScreen>
   Widget build(BuildContext context) {
     final canPop = Navigator.of(context).canPop();
     return PopScope(
-      canPop: canPop,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        try {
-          context.go('/game-zone');
-        } catch (_) {}
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF1E2125),
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white70, size: 18),
-            onPressed: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                try {
-                  context.go('/game-zone');
-                } catch (_) {}
-              }
-            },
-          ),
-          title: const Text('Ludo Express',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF14171A),
-        foregroundColor: Colors.white,
-        elevation: 2,
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.group),
-              tooltip: 'Pass & Play Mode',
-              onPressed: _showPlayerModeDialog),
-          IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'New Game',
-              onPressed: _onResetPressed),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildStatusBar(),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final boardSize =
-                      min(constraints.maxWidth - 24, constraints.maxHeight - 16)
-                          .clamp(240.0, 520.0);
-                  return Center(
-                    child: Container(
-                      width: boardSize,
-                      height: boardSize,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: const [
-                          BoxShadow(
-                              color: Colors.black45,
-                              blurRadius: 10,
-                              offset: Offset(0, 4))
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: _buildLudoBoard(boardSize),
-                      ),
-                    ),
-                  );
-                },
-              ),
+        canPop: canPop,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          try {
+            context.go('/game-zone');
+          } catch (_) {}
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF1E2125),
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white70, size: 18),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  try {
+                    context.go('/game-zone');
+                  } catch (_) {}
+                }
+              },
             ),
-            _buildBottomControls(),
-          ],
-        ),
-      ),
-    ));
+            title: const Text('Ludo Express',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            backgroundColor: const Color(0xFF14171A),
+            foregroundColor: Colors.white,
+            elevation: 2,
+            actions: [
+              IconButton(
+                  icon: const Icon(Icons.group),
+                  tooltip: 'Pass & Play Mode',
+                  onPressed: _showPlayerModeDialog),
+              IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'New Game',
+                  onPressed: _onResetPressed),
+            ],
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildStatusBar(),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final boardSize = min(constraints.maxWidth - 24,
+                              constraints.maxHeight - 16)
+                          .clamp(240.0, 520.0);
+                      return Center(
+                        child: Container(
+                          width: boardSize,
+                          height: boardSize,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: const [
+                              BoxShadow(
+                                  color: Colors.black45,
+                                  blurRadius: 10,
+                                  offset: Offset(0, 4))
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: _buildLudoBoard(boardSize),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                _buildBottomControls(),
+              ],
+            ),
+          ),
+        ));
   }
 
   Widget _buildStatusBar() {

@@ -3,7 +3,16 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import '../../../core/utils/app_logger.dart';
+import 'call_ice_config.dart';
 import 'vps_chat_service.dart';
+
+/// How long an incoming call rings before it counts as missed. The native ring
+/// screen, the in-app dialog and the caller's timer all use this.
+const int kCallRingSeconds = 45;
+
+/// How long a call waits on the call server before it gives up.
+const Duration _serverTimeout = Duration(seconds: 8);
 
 enum CallNetworkQuality {
   good,
@@ -11,8 +20,27 @@ enum CallNetworkQuality {
   poor,
 }
 
-/// WebRTC signaling service that uses Firestore as the signaling channel
-/// for peer-to-peer audio/video calls between two users.
+/// A call that cannot start or be answered. [message] can be shown to the user.
+class CallSetupException implements Exception {
+  const CallSetupException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// The key that identifies an ICE candidate. The same candidate arrives over
+/// the relay and over Firestore, and it is kept once.
+String candidateKey(String candidate, String? sdpMid, int? sdpMLineIndex) =>
+    '${sdpMid ?? ''}|${sdpMLineIndex ?? ''}|$candidate';
+
+/// WebRTC signaling for a 1:1 audio or video call.
+///
+/// The fast path is the chat server's WebSocket relay. The durable path is the
+/// Firestore call document, which also rings the callee's phone through
+/// sendCallPushNotification. The caller writes that document before anything
+/// else, so the callee can always find the offer and the candidates.
 ///
 /// Firestore schema
 /// ────────────────
@@ -20,60 +48,22 @@ enum CallNetworkQuality {
 ///   callerId      : String
 ///   calleeId      : String
 ///   offer         : {type: String, sdp: String}
-///   answer        : {type: String, sdp: String}
-///   status        : 'calling' | 'answered' | 'ended' | 'declined'
+///   answer        : {type: String, sdp: String}   (set by the callee)
+///   status        : 'calling' | 'answered' | 'declined' | 'missed' | 'ended'
 ///   createdAt     : Timestamp
+///   endedAt       : Timestamp   (optional)
+///   durationSeconds : int       (optional)
 ///
-/// calls/{callId}/offerCandidates/{autoId}
-///   candidate     : String
-///   sdpMid        : String
-///   sdpMLineIndex : int
-///
-/// calls/{callId}/answerCandidates/{autoId}
-///   candidate     : String
-///   sdpMid        : String
-///   sdpMLineIndex : int
+/// calls/{callId}/offerCandidates/{autoId}     (written by the caller)
+/// calls/{callId}/answerCandidates/{autoId}    (written by the callee)
+///   candidate, sdpMid, sdpMLineIndex
 class CallSignalingService {
-  // ── ICE / STUN / TURN configuration ───────────────────────────────────────
+  /// The call this app is in, if any. Used to decline a second call while busy.
+  static String? _activeCallId;
 
-  static const String _turnHost = String.fromEnvironment(
-    'BHROMON_TURN_HOST',
-    defaultValue: '148.135.137.245:3478',
-  );
+  static String? get activeCallId => _activeCallId;
 
-  static final Map<String, dynamic> _iceConfig = {
-    'iceServers': [
-      // Primary STUN servers
-      {
-        'urls': [
-          'stun:stun.l.google.com:19302',
-          'stun:stun1.l.google.com:19302',
-          'stun:stun2.l.google.com:19302',
-          'stun:stun.cloudflare.com:3478',
-        ],
-      },
-      // OpenRelay Public TURN Server (worldwide high-availability WebRTC relay)
-      {
-        'urls': [
-          'turn:openrelay.metered.ca:80',
-          'turn:openrelay.metered.ca:443',
-          'turn:openrelay.metered.ca:443?transport=tcp',
-        ],
-        'username': 'openrelayproject',
-        'credential': 'openrelayproject',
-      },
-      // VPS Coturn Dedicated Relay
-      {
-        'urls': [
-          'turn:$_turnHost?transport=udp',
-          'turn:$_turnHost?transport=tcp',
-        ],
-        'username': '2030000000:bhromon',
-        'credential': 'f99sT/qs6uiwqv32z/j1RYx+m0A=',
-      },
-    ],
-    'sdpSemantics': 'unified-plan',
-  };
+  static bool get isInCall => _activeCallId != null;
 
   // ── Internal state ─────────────────────────────────────────────────────────
 
@@ -83,10 +73,20 @@ class CallSignalingService {
   String? _callId;
   String? _remoteUid;
   bool _isCaller = false;
+  bool _finished = false;
   bool _remoteDescriptionSet = false;
+  bool _remoteAnswerApplied = false;
+  bool _audioEnabled = true;
+  bool _videoEnabled = true;
   final List<RTCIceCandidate> _pendingIceCandidates = [];
-  StreamSubscription<Map<String, dynamic>>? _vpsSignalingSub;
+  final Set<String> _seenCandidates = {};
   Timer? _statsTimer;
+  Timer? _ringTimer;
+  StreamSubscription<Map<String, dynamic>>? _vpsSignalingSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _offerCandidatesSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _answerCandidatesSub;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _callDocSub;
+
   final ValueNotifier<CallNetworkQuality> networkQuality =
       ValueNotifier(CallNetworkQuality.good);
 
@@ -98,18 +98,12 @@ class CallSignalingService {
   /// Fired when the remote peer's track arrives.
   void Function(MediaStream)? onRemoteStream;
 
-  /// Fired on call-state transitions: `'calling'`, `'answered'`, `'ended'`,
-  /// `'declined'`.
+  /// Fired on each call-state change: `'calling'`, `'answered'`, `'ended'`,
+  /// `'declined'`, `'missed'`, or `'failed'` when setup did not succeed.
   void Function(String)? onCallStateChange;
 
-  /// Fired when the call has fully ended and resources have been released.
+  /// Fired once when the call has ended and its resources are released.
   void Function()? onCallEnded;
-
-  // ── Firestore stream subscriptions ────────────────────────────────────────
-
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _offerCandidatesSub;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _answerCandidatesSub;
-  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _callDocSub;
 
   // ── Firestore shorthand ────────────────────────────────────────────────────
 
@@ -126,11 +120,12 @@ class CallSignalingService {
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
-  /// Initiates an outgoing call from [localUid] to [remoteUid].
+  /// Starts an outgoing call from [localUid] to [remoteUid].
   ///
-  /// Creates a peer connection, captures local media, generates an SDP offer,
-  /// writes the call document to Firestore, and watches for the callee's
-  /// answer.
+  /// Order matters. The call document is written before the local description
+  /// is set, so the first candidates land on a document that exists. The offer
+  /// goes out over the relay last. Throws [CallSetupException] when the call
+  /// cannot be set up.
   Future<void> startCall(
     String callId,
     String localUid,
@@ -139,258 +134,147 @@ class CallSignalingService {
     String? callerName,
     String? callerAvatar,
   }) async {
-    _callId = callId;
-    _remoteUid = remoteUid;
-    _isCaller = true;
-    _remoteDescriptionSet = false;
-    _pendingIceCandidates.clear();
+    _begin(callId, remoteUid, isCaller: true);
     _attachVpsSignalingListener();
-
-    await _getUserMedia(videoEnabled);
-    await _createPeerConnection();
-
-    // Create SDP offer with explicit audio receive.
-    final offer = await _peerConnection!.createOffer({
-      'offerToReceiveAudio': 1,
-      'offerToReceiveVideo': videoEnabled ? 1 : 0,
-    });
-    await _peerConnection!.setLocalDescription(offer);
-
-    // Relay call offer via VPS WebSocket (<15ms, zero Firestore quota)
-    VpsChatService().sendCallSignal(
-      recipientId: remoteUid,
-      signalType: 'offer',
-      payload: {'type': offer.type, 'sdp': offer.sdp},
-      callId: callId,
-      isVideo: videoEnabled,
-      callerName: callerName,
-      avatarUrl: callerAvatar,
-    );
-
-    // Best-effort Firestore call document write
     try {
-      await _callDoc(callId).set({
-        'callerId': localUid,
-        'calleeId': remoteUid,
-        'participants': [localUid, remoteUid],
-        'isVideo': videoEnabled,
-        if (callerName != null) 'callerName': callerName,
-        if (callerAvatar != null) 'callerAvatar': callerAvatar,
-        'offer': {
-          'type': offer.type,
-          'sdp': offer.sdp,
-        },
-        'status': 'calling',
-        'createdAt': FieldValue.serverTimestamp(),
+      await _getUserMedia(videoEnabled);
+      await _createPeerConnection();
+      final offer = await _peerConnection!.createOffer({
+        'offerToReceiveAudio': 1,
+        'offerToReceiveVideo': videoEnabled ? 1 : 0,
       });
+
+      try {
+        await _callDoc(callId).set({
+          'callerId': localUid,
+          'calleeId': remoteUid,
+          'participants': [localUid, remoteUid],
+          'isVideo': videoEnabled,
+          if (callerName != null) 'callerName': callerName,
+          if (callerAvatar != null) 'callerAvatar': callerAvatar,
+          'offer': {'type': offer.type, 'sdp': offer.sdp},
+          'status': 'calling',
+          'createdAt': FieldValue.serverTimestamp(),
+        }).timeout(_serverTimeout);
+      } catch (e) {
+        throw const CallSetupException(
+          'Could not reach the call server. Check your connection and try again.',
+        );
+      }
+
+      await _peerConnection!.setLocalDescription(offer);
+      VpsChatService().sendCallSignal(
+        recipientId: remoteUid,
+        signalType: 'offer',
+        payload: {'type': offer.type, 'sdp': offer.sdp},
+        callId: callId,
+        isVideo: videoEnabled,
+        callerName: callerName,
+        avatarUrl: callerAvatar,
+      );
+
+      onCallStateChange?.call('calling');
+      _watchCallDocument(callId);
+      _watchCalleeCandidates(callId);
+      _ringTimer = Timer(
+        const Duration(seconds: kCallRingSeconds),
+        () => _end(
+          state: 'missed',
+          remoteSignal: 'end',
+          documentStatus: 'missed',
+        ),
+      );
     } catch (e) {
-      debugPrint('[CallSignaling] Firestore call doc set skipped/quota: $e');
+      await _end(
+        state: 'failed',
+        remoteSignal: 'end',
+        documentStatus: 'ended',
+      );
+      rethrow;
     }
-
-    onCallStateChange?.call('calling');
-
-    // Subscribe to ICE candidates sent by the callee.
-    _answerCandidatesSub = _answerCandidates(callId).snapshots().listen(
-      (snapshot) {
-        for (final change in snapshot.docChanges) {
-          if (change.type == DocumentChangeType.added) {
-            _addIceCandidate(change.doc.data());
-          }
-        }
-      },
-      onError: (Object e, StackTrace st) {
-        if (kDebugMode) {
-          debugPrint('CallSignalingService: answerCandidates error: $e\n$st');
-        }
-      },
-    );
-
-    // Watch the call document for the callee's answer SDP.
-    _callDocSub = _callDoc(callId).snapshots().listen(
-      (snapshot) async {
-        final data = snapshot.data();
-        if (data == null) return;
-
-        final status = data['status'] as String?;
-        if (status != null) {
-          onCallStateChange?.call(status);
-        }
-
-        final answerMap = data['answer'] as Map<String, dynamic>?;
-        if (answerMap != null &&
-            _peerConnection?.signalingState !=
-                RTCSignalingState.RTCSignalingStateStable) {
-          final answer = RTCSessionDescription(
-            answerMap['sdp'] as String,
-            answerMap['type'] as String,
-          );
-          try {
-            await _peerConnection!.setRemoteDescription(answer);
-            await _drainPendingIceCandidates();
-          } catch (e) {
-            if (kDebugMode) {
-              debugPrint('CallSignalingService: setRemoteDescription error: $e');
-            }
-          }
-        }
-
-        if (status == 'ended' || status == 'declined') {
-          _releaseResources();
-          onCallEnded?.call();
-        }
-      },
-      onError: (Object e, StackTrace st) {
-        if (kDebugMode) {
-          debugPrint('CallSignalingService: callDoc error: $e\n$st');
-        }
-      },
-    );
   }
 
   /// Answers an incoming call identified by [callId].
   ///
-  /// Reads the caller's SDP offer from Firestore, captures local media,
-  /// creates an answer, and writes it back. Also watches for the caller's
-  /// ICE candidates.
+  /// The call must still be ringing. If the caller has hung up, or the call was
+  /// answered on another device, this throws [CallSetupException] and the callee
+  /// sends nothing.
   Future<void> answerCall(
     String callId,
     String localUid, {
     bool videoEnabled = true,
   }) async {
-    _callId = callId;
-    _isCaller = false;
-    _remoteDescriptionSet = false;
-    _pendingIceCandidates.clear();
+    _begin(callId, null, isCaller: false);
     _attachVpsSignalingListener();
-
-    // Read the existing call document to get the offer.
-    final callSnapshot = await _callDoc(callId).get();
-    final callData = callSnapshot.data();
-    if (callData == null) {
-      throw StateError(
-          'CallSignalingService: call document $callId does not exist.');
-    }
-
-    final offerMap = callData['offer'] as Map<String, dynamic>?;
-    if (offerMap == null) {
-      throw StateError(
-          'CallSignalingService: call document $callId has no offer.');
-    }
-
-    final callerId = callData['callerId'] as String? ?? '';
-    if (callerId.isNotEmpty) {
-      _remoteUid = callerId;
-    }
-
-    await _getUserMedia(videoEnabled);
-    await _createPeerConnection();
-
-    // Set the caller's offer as the remote description and drain queued candidates.
-    final offer = RTCSessionDescription(
-      offerMap['sdp'] as String,
-      offerMap['type'] as String,
-    );
-    await _peerConnection!.setRemoteDescription(offer);
-    await _drainPendingIceCandidates();
-
-    // Create and set our answer with explicit audio receive.
-    final answer = await _peerConnection!.createAnswer({
-      'offerToReceiveAudio': 1,
-      'offerToReceiveVideo': videoEnabled ? 1 : 0,
-    });
-    await _peerConnection!.setLocalDescription(answer);
-
-    if (callerId.isNotEmpty) {
-      VpsChatService().sendCallSignal(
-        recipientId: callerId,
-        signalType: 'answer',
-        payload: {'type': answer.type, 'sdp': answer.sdp},
-        callId: callId,
-      );
-    }
-
-    // Best-effort Firestore answer update
     try {
-      await _callDoc(callId).update({
-        'answer': {
-          'type': answer.type,
-          'sdp': answer.sdp,
-        },
-        'status': 'answered',
-      });
-    } catch (e) {
-      debugPrint('[CallSignaling] Firestore answer update skipped/quota: $e');
-    }
-
-    onCallStateChange?.call('answered');
-
-    // Subscribe to ICE candidates from the caller.
-    _offerCandidatesSub = _offerCandidates(callId).snapshots().listen(
-      (snapshot) {
-        for (final change in snapshot.docChanges) {
-          if (change.type == DocumentChangeType.added) {
-            _addIceCandidate(change.doc.data());
-          }
-        }
-      },
-      onError: (Object e, StackTrace st) {
-        if (kDebugMode) {
-          debugPrint('CallSignalingService: offerCandidates error: $e\n$st');
-        }
-      },
-    );
-
-    // Watch the call document for status changes (e.g. caller ends the call).
-    _callDocSub = _callDoc(callId).snapshots().listen(
-      (snapshot) {
-        final data = snapshot.data();
-        if (data == null) return;
-
-        final status = data['status'] as String?;
-        if (status == 'ended' || status == 'declined') {
-          onCallStateChange?.call(status!);
-          _releaseResources();
-          onCallEnded?.call();
-        }
-      },
-      onError: (Object e, StackTrace st) {
-        if (kDebugMode) {
-          debugPrint('CallSignalingService: callDoc error: $e\n$st');
-        }
-      },
-    );
-  }
-
-  /// Ends the call, notifies the remote peer via Firestore, and releases all
-  /// resources.
-  Future<void> endCall({int? durationSeconds}) async {
-    if (_remoteUid != null && _remoteUid!.isNotEmpty) {
-      VpsChatService().sendCallSignal(
-        recipientId: _remoteUid!,
-        signalType: 'end',
-        payload: {'durationSeconds': durationSeconds},
-        callId: _callId,
-      );
-    }
-    if (_callId != null) {
-      try {
-        await _callDoc(_callId!).update({
-          'status': 'ended',
-          'endedAt': FieldValue.serverTimestamp(),
-          if (durationSeconds != null) 'durationSeconds': durationSeconds,
-        });
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint(
-              'CallSignalingService: endCall Firestore update error: $e');
-        }
+      final callData =
+          (await _callDoc(callId).get().timeout(_serverTimeout)).data();
+      if (callData == null) {
+        throw const CallSetupException('This call is no longer available.');
       }
+      if (callData['status'] != 'calling') {
+        throw const CallSetupException('This call has already ended.');
+      }
+
+      final offerMap = callData['offer'];
+      if (offerMap is! Map) {
+        throw const CallSetupException('This call has no offer.');
+      }
+      final callerId = callData['callerId'] as String? ?? '';
+      _remoteUid = callerId.isEmpty ? null : callerId;
+
+      await _getUserMedia(videoEnabled);
+      await _createPeerConnection();
+      await _peerConnection!.setRemoteDescription(
+        RTCSessionDescription(
+            offerMap['sdp'] as String, offerMap['type'] as String),
+      );
+      await _drainPendingIceCandidates();
+
+      final answer = await _peerConnection!.createAnswer({
+        'offerToReceiveAudio': 1,
+        'offerToReceiveVideo': videoEnabled ? 1 : 0,
+      });
+      await _peerConnection!.setLocalDescription(answer);
+
+      final accepted = await _writeAnswer(callId, answer);
+      if (!accepted) {
+        throw const CallSetupException('This call has already ended.');
+      }
+
+      if (callerId.isNotEmpty) {
+        VpsChatService().sendCallSignal(
+          recipientId: callerId,
+          signalType: 'answer',
+          payload: {'type': answer.type, 'sdp': answer.sdp},
+          callId: callId,
+        );
+      }
+
+      onCallStateChange?.call('answered');
+      _watchCallDocument(callId);
+      _watchCallerCandidates(callId);
+    } catch (e) {
+      await _end(
+        state: 'failed',
+        remoteSignal: 'declined',
+        documentStatus: 'declined',
+      );
+      if (e is CallSetupException) rethrow;
+      throw const CallSetupException(
+          'Could not answer the call. Please try again.');
     }
-    await _releaseResources();
-    onCallEnded?.call();
   }
 
-  /// Declines an incoming call before answering.
+  /// Hangs up and tells the other side. Safe to call more than once.
+  Future<void> endCall({int? durationSeconds}) => _end(
+        state: 'ended',
+        remoteSignal: 'end',
+        documentStatus: 'ended',
+        durationSeconds: durationSeconds,
+      );
+
+  /// Declines an incoming call before it is answered. The caller's phone stops ringing.
   Future<void> declineCall(String callId, {String? callerId}) async {
     final targetId = callerId ?? _remoteUid;
     if (targetId != null && targetId.isNotEmpty) {
@@ -405,29 +289,27 @@ class CallSignalingService {
       await _callDoc(callId).update({
         'status': 'declined',
         'endedAt': FieldValue.serverTimestamp(),
-      });
+      }).timeout(_serverTimeout);
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint(
-            'CallSignalingService: declineCall Firestore update error: $e');
-      }
+      logWarning(
+          'CallSignalingService: declineCall Firestore update error: $e');
     }
   }
 
-  /// Enables or disables all audio tracks on the local stream.
+  /// Turns the microphone on or off. Applies to the stream now, or when it starts.
   Future<void> toggleAudio(bool enabled) async {
-    final stream = _localStream;
-    if (stream == null) return;
-    for (final track in stream.getAudioTracks()) {
+    _audioEnabled = enabled;
+    for (final track
+        in _localStream?.getAudioTracks() ?? const <MediaStreamTrack>[]) {
       track.enabled = enabled;
     }
   }
 
-  /// Enables or disables all video tracks on the local stream.
+  /// Turns the camera on or off. Applies to the stream now, or when it starts.
   Future<void> toggleVideo(bool enabled) async {
-    final stream = _localStream;
-    if (stream == null) return;
-    for (final track in stream.getVideoTracks()) {
+    _videoEnabled = enabled;
+    for (final track
+        in _localStream?.getVideoTracks() ?? const <MediaStreamTrack>[]) {
       track.enabled = enabled;
     }
   }
@@ -444,15 +326,220 @@ class CallSignalingService {
     await Helper.switchCamera(videoTracks.first);
   }
 
-  /// Disposes of the service. Should be called when the owning widget or
-  /// service is permanently destroyed.
+  /// Ends a call that is still open when the owning screen goes away.
   void dispose() {
-    if (_peerConnection != null) {
-      endCall();
+    if (_callId != null && !_finished) {
+      unawaited(endCall());
+    } else {
+      unawaited(_releaseResources());
     }
   }
 
-  // ── Private helpers ────────────────────────────────────────────────────────
+  // ── Call lifecycle ─────────────────────────────────────────────────────────
+
+  void _begin(String callId, String? remoteUid, {required bool isCaller}) {
+    _finished = false;
+    _callId = callId;
+    _remoteUid = remoteUid;
+    _isCaller = isCaller;
+    _remoteDescriptionSet = false;
+    _remoteAnswerApplied = false;
+    _pendingIceCandidates.clear();
+    _seenCandidates.clear();
+    _activeCallId = callId;
+  }
+
+  /// Ends this call once. Later calls do nothing. [remoteSignal] goes to the
+  /// other side over the relay, [documentStatus] is written to the call
+  /// document, and [state] is reported to the UI.
+  Future<void> _end({
+    required String state,
+    String? remoteSignal,
+    String? documentStatus,
+    int? durationSeconds,
+  }) async {
+    if (_finished) return;
+    _finished = true;
+    final callId = _callId;
+    final remoteUid = _remoteUid;
+    await _releaseResources();
+
+    if (callId != null && remoteUid != null && remoteSignal != null) {
+      VpsChatService().sendCallSignal(
+        recipientId: remoteUid,
+        signalType: remoteSignal,
+        payload: {
+          if (durationSeconds != null) 'durationSeconds': durationSeconds
+        },
+        callId: callId,
+      );
+    }
+    if (callId != null && documentStatus != null) {
+      try {
+        await _callDoc(callId).update({
+          'status': documentStatus,
+          'endedAt': FieldValue.serverTimestamp(),
+          if (durationSeconds != null) 'durationSeconds': durationSeconds,
+        }).timeout(_serverTimeout);
+      } catch (e) {
+        // The other side has usually ended it already, which the rules refuse.
+        logInfo('CallSignalingService: end update skipped: $e');
+      }
+    }
+
+    onCallStateChange?.call(state);
+    onCallEnded?.call();
+  }
+
+  /// Ends the call when the other side has ended it, without telling them again.
+  void _endFromRemote(String state) {
+    unawaited(_end(state: state));
+  }
+
+  // ── Signal and document watchers ───────────────────────────────────────────
+
+  void _attachVpsSignalingListener() {
+    _vpsSignalingSub?.cancel();
+    _vpsSignalingSub = VpsChatService().callSignalStream.listen((event) {
+      if (event['callId']?.toString() != _callId) return;
+      final signalType = event['signalType'] as String?;
+      final payload = event['payload'];
+
+      switch (signalType) {
+        case 'answer':
+          if (_isCaller && payload is Map) {
+            unawaited(_applyRemoteAnswer(
+              payload['sdp'] as String? ?? '',
+              payload['type'] as String? ?? 'answer',
+            ));
+          }
+        case 'candidate':
+          if (payload is Map) {
+            unawaited(_addIceCandidate(Map<String, dynamic>.from(payload)));
+          }
+        case 'end':
+          _endFromRemote('ended');
+        case 'declined':
+          _endFromRemote('declined');
+        case 'refused':
+          // The relay refused our offer. The call document still exists, so
+          // end it there as well, or the callee would keep ringing.
+          if (event['refusedSignal'] == 'offer') {
+            unawaited(_end(
+              state: 'failed',
+              documentStatus: 'ended',
+            ));
+          }
+      }
+    });
+  }
+
+  /// The caller watches the document for the callee's answer and for an end.
+  void _watchCallDocument(String callId) {
+    _callDocSub?.cancel();
+    _callDocSub = _callDoc(callId).snapshots().listen(
+      (snapshot) {
+        final data = snapshot.data();
+        if (data == null || _finished) return;
+        final status = data['status'] as String?;
+
+        if (_isCaller && status == 'answered') {
+          final answer = data['answer'];
+          if (answer is Map) {
+            unawaited(_applyRemoteAnswer(
+              answer['sdp'] as String? ?? '',
+              answer['type'] as String? ?? 'answer',
+            ));
+          }
+        }
+        if (status == 'declined' || status == 'ended' || status == 'missed') {
+          _endFromRemote(status!);
+        }
+      },
+      onError: (Object e, StackTrace st) {
+        if (kDebugMode) {
+          debugPrint('CallSignalingService: callDoc error: $e\n$st');
+        }
+      },
+    );
+  }
+
+  void _watchCalleeCandidates(String callId) {
+    _answerCandidatesSub?.cancel();
+    _answerCandidatesSub = _answerCandidates(callId).snapshots().listen(
+      (snapshot) {
+        for (final change in snapshot.docChanges) {
+          if (change.type == DocumentChangeType.added) {
+            unawaited(_addIceCandidate(change.doc.data()));
+          }
+        }
+      },
+      onError: (Object e, StackTrace st) {
+        if (kDebugMode) {
+          debugPrint('CallSignalingService: answerCandidates error: $e\n$st');
+        }
+      },
+    );
+  }
+
+  void _watchCallerCandidates(String callId) {
+    _offerCandidatesSub?.cancel();
+    _offerCandidatesSub = _offerCandidates(callId).snapshots().listen(
+      (snapshot) {
+        for (final change in snapshot.docChanges) {
+          if (change.type == DocumentChangeType.added) {
+            unawaited(_addIceCandidate(change.doc.data()));
+          }
+        }
+      },
+      onError: (Object e, StackTrace st) {
+        if (kDebugMode) {
+          debugPrint('CallSignalingService: offerCandidates error: $e\n$st');
+        }
+      },
+    );
+  }
+
+  /// Applies the callee's answer once. The relay and the document both carry it.
+  Future<void> _applyRemoteAnswer(String sdp, String type) async {
+    final pc = _peerConnection;
+    if (pc == null || _finished || _remoteAnswerApplied || sdp.isEmpty) return;
+    _remoteAnswerApplied = true;
+    try {
+      await pc.setRemoteDescription(RTCSessionDescription(sdp, type));
+      await _drainPendingIceCandidates();
+      _ringTimer?.cancel();
+      _ringTimer = null;
+      onCallStateChange?.call('answered');
+    } catch (e) {
+      // Let the other channel try again.
+      _remoteAnswerApplied = false;
+      if (kDebugMode) {
+        debugPrint('CallSignalingService: setRemoteDescription error: $e');
+      }
+    }
+  }
+
+  /// Writes the answer. Returns false when the rules refuse it, which means the
+  /// call has already ended. Other failures return true, and the relay carries the answer.
+  Future<bool> _writeAnswer(String callId, RTCSessionDescription answer) async {
+    try {
+      await _callDoc(callId).update({
+        'answer': {'type': answer.type, 'sdp': answer.sdp},
+        'status': 'answered',
+      }).timeout(_serverTimeout);
+      return true;
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') return false;
+      logWarning('CallSignalingService: answer write skipped: $e');
+      return true;
+    } catch (e) {
+      logWarning('CallSignalingService: answer write skipped: $e');
+      return true;
+    }
+  }
+
+  // ── Media and peer connection ──────────────────────────────────────────────
 
   /// Captures audio (and optionally video) from the local device.
   Future<void> _getUserMedia(bool videoEnabled) async {
@@ -472,49 +559,56 @@ class CallSignalingService {
           : false,
     };
 
-    _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
-    for (final track in _localStream!.getTracks()) {
-      track.enabled = true;
+    final stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+    _localStream = stream;
+    for (final track in stream.getAudioTracks()) {
+      track.enabled = _audioEnabled;
     }
-    onLocalStream?.call(_localStream!);
+    for (final track in stream.getVideoTracks()) {
+      track.enabled = _videoEnabled;
+    }
+    onLocalStream?.call(stream);
   }
 
   /// Creates the [RTCPeerConnection], adds local tracks, and wires up
   /// ICE-candidate and track-received event handlers.
   Future<void> _createPeerConnection() async {
-    _peerConnection = await createPeerConnection(_iceConfig);
+    final iceConfig = await CallIceConfig.shared.current();
+    if (_finished) throw const CallSetupException('This call was cancelled.');
+    _peerConnection = await createPeerConnection(iceConfig);
 
-    // Add all local tracks to the peer connection and ensure enabled.
     final localStream = _localStream;
     if (localStream != null) {
       for (final track in localStream.getTracks()) {
-        track.enabled = true;
         await _peerConnection!.addTrack(track, localStream);
       }
     }
 
-    // ICE candidate handler — write candidates to the appropriate subcollection.
+    // ICE candidates go over the relay for speed and into the call document
+    // for the durable copy. The receiver keeps one of each.
     _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
-      if (_callId == null) return;
+      final callId = _callId;
+      if (callId == null || _finished) return;
       final candidateData = {
         'candidate': candidate.candidate,
         'sdpMid': candidate.sdpMid,
         'sdpMLineIndex': candidate.sdpMLineIndex,
       };
-      if (_remoteUid != null && _remoteUid!.isNotEmpty) {
+      final remoteUid = _remoteUid;
+      if (remoteUid != null && remoteUid.isNotEmpty) {
         VpsChatService().sendCallSignal(
-          recipientId: _remoteUid!,
+          recipientId: remoteUid,
           signalType: 'candidate',
           payload: candidateData,
-          callId: _callId,
+          callId: callId,
         );
       }
       if (_isCaller) {
         unawaited(_writeCandidate(
-            _offerCandidates(_callId!), candidateData, 'offerCandidate'));
+            _offerCandidates(callId), candidateData, 'offerCandidate'));
       } else {
         unawaited(_writeCandidate(
-            _answerCandidates(_callId!), candidateData, 'answerCandidate'));
+            _answerCandidates(callId), candidateData, 'answerCandidate'));
       }
     };
 
@@ -536,7 +630,6 @@ class CallSignalingService {
       onRemoteStream?.call(stream);
     };
 
-    // Log connection-state changes and track live network quality.
     _peerConnection!.onConnectionState = (RTCPeerConnectionState state) {
       if (kDebugMode) {
         debugPrint('CallSignalingService: connectionState → $state');
@@ -569,18 +662,21 @@ class CallSignalingService {
     };
   }
 
-  /// Parses a candidate map and adds it to the peer connection or queues it.
+  /// Parses a candidate and adds it to the peer connection, or queues it until
+  /// the remote description is set. A candidate already seen is skipped.
   Future<void> _addIceCandidate(Map<String, dynamic>? data) async {
-    if (data == null) return;
-    final candStr = data['candidate'] as String?;
-    if (candStr == null || candStr.trim().isEmpty) return;
+    if (data == null || _finished) return;
+    final candidateText = data['candidate'] as String?;
+    if (candidateText == null || candidateText.trim().isEmpty) return;
 
-    final candidate = RTCIceCandidate(
-      candStr,
-      data['sdpMid'] as String?,
-      (data['sdpMLineIndex'] as num?)?.toInt(),
-    );
+    final sdpMid = data['sdpMid'] as String?;
+    final sdpMLineIndex = (data['sdpMLineIndex'] as num?)?.toInt();
+    if (!_seenCandidates
+        .add(candidateKey(candidateText, sdpMid, sdpMLineIndex))) {
+      return;
+    }
 
+    final candidate = RTCIceCandidate(candidateText, sdpMid, sdpMLineIndex);
     if (!_remoteDescriptionSet ||
         _peerConnection == null ||
         _peerConnection!.signalingState ==
@@ -598,7 +694,7 @@ class CallSignalingService {
     }
   }
 
-  /// Flushes all queued ICE candidates once the remote description is active.
+  /// Flushes queued ICE candidates once the remote description is active.
   Future<void> _drainPendingIceCandidates() async {
     _remoteDescriptionSet = true;
     if (_peerConnection == null) return;
@@ -666,46 +762,19 @@ class CallSignalingService {
     }
   }
 
-  void _attachVpsSignalingListener() {
-    _vpsSignalingSub?.cancel();
-    _vpsSignalingSub = VpsChatService().callSignalStream.listen((event) async {
-      final cId = event['callId']?.toString();
-      if (cId != _callId) return;
-      final signalType = event['signalType'] as String?;
-      final payload = event['payload'];
-
-      if (signalType == 'answer' && _isCaller && payload is Map) {
-        final answerMap = Map<String, dynamic>.from(payload);
-        if (_peerConnection?.signalingState !=
-            RTCSignalingState.RTCSignalingStateStable) {
-          final sdp = answerMap['sdp'] as String? ?? '';
-          final type = answerMap['type'] as String? ?? 'answer';
-          try {
-            await _peerConnection!
-                .setRemoteDescription(RTCSessionDescription(sdp, type));
-            await _drainPendingIceCandidates();
-            onCallStateChange?.call('answered');
-          } catch (e) {
-            if (kDebugMode) {
-              debugPrint('CallSignalingService: vps answer error: $e');
-            }
-          }
-        }
-      } else if (signalType == 'candidate' && payload is Map) {
-        await _addIceCandidate(Map<String, dynamic>.from(payload));
-      } else if (signalType == 'end' || signalType == 'declined') {
-        onCallStateChange?.call(signalType!);
-        _releaseResources();
-        onCallEnded?.call();
-      }
-    });
-  }
-
-  /// Cancels all subscriptions, closes the peer connection, and stops all tracks.
+  /// Cancels everything this call started. Idempotent.
   Future<void> _releaseResources() async {
+    final releasedCallId = _callId;
+    if (releasedCallId != null && _activeCallId == releasedCallId) {
+      _activeCallId = null;
+    }
+
+    _ringTimer?.cancel();
+    _ringTimer = null;
     _statsTimer?.cancel();
     _statsTimer = null;
     networkQuality.value = CallNetworkQuality.good;
+
     await _offerCandidatesSub?.cancel();
     await _answerCandidatesSub?.cancel();
     await _callDocSub?.cancel();
@@ -715,7 +784,9 @@ class CallSignalingService {
     _callDocSub = null;
     _vpsSignalingSub = null;
     _pendingIceCandidates.clear();
+    _seenCandidates.clear();
     _remoteDescriptionSet = false;
+    _remoteAnswerApplied = false;
 
     await _peerConnection?.close();
     _peerConnection = null;

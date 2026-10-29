@@ -46,6 +46,17 @@ import 'features/notifications/geo_fence_service.dart'
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // A call push is data-only, so this is what rings the phone while the app is
+  // closed. The name in it is only a placeholder until the app loads the profile.
+  if (message.data['action'] == 'call') {
+    await CallNotificationService.showNativeIncomingCall(
+      callId: (message.data['callId'] as String?) ?? '',
+      callerId: (message.data['callerId'] as String?) ?? '',
+      callerName: (message.data['callerName'] as String?) ?? 'Traveler',
+      callerAvatar: null,
+      isVideo: message.data['isVideo'] == 'true',
+    );
+  }
 }
 
 void main() {
@@ -339,7 +350,8 @@ void main() {
           FirebaseMessaging.onBackgroundMessage(
               _firebaseMessagingBackgroundHandler);
         } catch (e) {
-          logWarning('[FCM] Could not register background messaging handler', e);
+          logWarning(
+              '[FCM] Could not register background messaging handler', e);
         }
       }
       CallNotificationService().init();

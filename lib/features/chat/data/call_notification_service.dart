@@ -10,13 +10,36 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../app/router.dart';
 import '../../../core/utils/image_sizing.dart';
+import 'call_signaling_service.dart';
 import 'vps_chat_service.dart';
+
+/// A call older than this when it is seen is not rung.
+const Duration _staleCallAge = Duration(seconds: 60);
+
+/// Remembers which calls have been handled, so the push, the relay and the
+/// Firestore listener cannot ring or answer the same call twice.
+class IncomingCallRegistry {
+  IncomingCallRegistry({this.window = const Duration(minutes: 2)});
+
+  final Duration window;
+  final Map<String, DateTime> _seenAt = {};
+
+  /// True the first time [callId] is seen within [window]. Later sightings return false.
+  bool claim(String callId, DateTime now) {
+    _seenAt.removeWhere((_, at) => now.difference(at) > window);
+    if (_seenAt.containsKey(callId)) return false;
+    _seenAt[callId] = now;
+    return true;
+  }
+}
 
 /// Top-level WebRTC incoming call listener and VoIP manager.
 ///
-/// Listens to incoming calls from anywhere in the application,
-/// rings native CallKit/ConnectionService on Android/iOS,
-/// and displays a WhatsApp-styled incoming call modal.
+/// Calls reach the phone three ways: the chat server's relay (while the app is
+/// open), the Firestore call document (which the Cloud Function pushes), and
+/// the data-only push itself, which shows the native call screen even when the
+/// app is closed. Every path goes through [_presentIncomingCall], so one call
+/// shows one screen.
 class CallNotificationService {
   static final CallNotificationService _instance =
       CallNotificationService._internal();
@@ -32,6 +55,17 @@ class CallNotificationService {
   String? _currentListeningUid;
   String? _activeIncomingCallId;
   bool _isCallDialogShowing = false;
+  Timer? _dialogTimeout;
+
+  final IncomingCallRegistry _shown = IncomingCallRegistry();
+  final IncomingCallRegistry _settled = IncomingCallRegistry();
+
+  /// The calls each Firestore query reported as ringing last time. A call that
+  /// drops out of the list has been answered, declined or ended.
+  final Map<String, Set<String>> _ringingBySource = {};
+
+  /// An Accept that arrived before the app's navigator was ready (a cold start).
+  Timer? _pendingAcceptTimer;
 
   void init() {
     if (Firebase.apps.isEmpty) return;
@@ -49,184 +83,31 @@ class CallNotificationService {
     }
   }
 
-  void _initCallkitEvents() {
-    _callkitSub?.cancel();
-    _callkitSub = FlutterCallkitIncoming.onEvent.listen((event) async {
-      if (event == null) return;
-      switch (event) {
-        case CallEventActionCallAccept(:final callKitParams):
-          final extra = callKitParams.extra ?? {};
-          final callId = extra['callId']?.toString() ?? callKitParams.id;
-          final callerId = extra['callerId']?.toString() ?? '';
-          final callerName = extra['callerName']?.toString() ??
-              (callKitParams.nameCaller ?? 'Traveler');
-          final avatarUrl =
-              extra['avatarUrl']?.toString() ?? callKitParams.avatar;
-          final isVideo = extra['isVideo'] == true || callKitParams.type == 1;
+  // ── Native call screen ─────────────────────────────────────────────────────
 
-          if (callId.isNotEmpty) {
-            await _acceptCall(
-              callId: callId,
-              callerId: callerId,
-              callerName: callerName,
-              avatarUrl: avatarUrl,
-              isVideo: isVideo,
-            );
-          }
-          break;
-
-        case CallEventActionCallDecline(:final callKitParams):
-          final extra = callKitParams.extra ?? {};
-          final callId = extra['callId']?.toString() ?? callKitParams.id;
-          if (callId.isNotEmpty) {
-            await _declineCall(callId);
-          }
-          break;
-
-        case CallEventActionCallEnded():
-        case CallEventActionCallTimeout():
-          _dismissIncomingUI();
-          break;
-
-        default:
-          break;
-      }
-    });
-  }
-
-  void _startListening(String uid) {
-    if (_currentListeningUid == uid) return;
-    _currentListeningUid = uid;
-    _callsSub?.cancel();
-    _emailCallsSub?.cancel();
-    _vpsCallSub?.cancel();
-
-    // 1. Direct VPS WebSocket call signal listener (<20ms latency, zero Firestore quota)
-    _vpsCallSub = VpsChatService().callSignalStream.listen((event) {
-      final signalType = event['signalType'] as String?;
-      if (signalType == 'offer') {
-        final callId = event['callId']?.toString() ?? '';
-        final callerId = event['callerId']?.toString() ?? '';
-        final callerName = event['callerName']?.toString() ?? 'Traveler';
-        final avatarUrl = event['avatarUrl']?.toString();
-        final isVideo = event['isVideo'] == true;
-        _presentIncomingCall(
-          callId: callId,
-          callerId: callerId,
-          callerName: callerName,
-          callerAvatar: avatarUrl,
-          isVideo: isVideo,
-        );
-      } else if (signalType == 'end' || signalType == 'declined') {
-        _dismissIncomingUI();
-      }
-    });
-
-    // 2. Best-effort Firestore listeners
-    try {
-      _callsSub = FirebaseFirestore.instance
-          .collection('calls')
-          .where('calleeId', isEqualTo: uid)
-          .where('status', isEqualTo: 'calling')
-          .snapshots()
-          .listen(_handleIncomingCallSnap, onError: (Object e) {
-        debugPrint('[CallNotification] Firestore call sub error: $e');
-      });
-
-      final email =
-          FirebaseAuth.instance.currentUser?.email?.toLowerCase().trim();
-      if (email != null && email.isNotEmpty && email != uid) {
-        _emailCallsSub = FirebaseFirestore.instance
-            .collection('calls')
-            .where('calleeId', isEqualTo: email)
-            .where('status', isEqualTo: 'calling')
-            .snapshots()
-            .listen(_handleIncomingCallSnap, onError: (Object e) {
-          debugPrint('[CallNotification] Firestore email call sub error: $e');
-        });
-      }
-    } catch (e) {
-      debugPrint('[CallNotification] Firestore listeners failed: $e');
-    }
-  }
-
-  Future<void> _handleIncomingCallSnap(
-      QuerySnapshot<Map<String, dynamic>> snap) async {
-    if (snap.docs.isEmpty) {
-      _dismissIncomingUI();
-      return;
-    }
-
-    final callDoc = snap.docs.first;
-    final callId = callDoc.id;
-    if (_activeIncomingCallId == callId) return;
-
-    final data = callDoc.data();
-    final createdAt = data['createdAt'] as Timestamp?;
-    if (createdAt != null) {
-      final age = DateTime.now().difference(createdAt.toDate());
-      if (age.inSeconds > 60) {
-        // Stale call; ignore or auto-decline
-        _declineCall(callId);
-        return;
-      }
-    }
-
-    final callerId = data['callerId'] as String? ?? '';
-    final offerMap = data['offer'] as Map<String, dynamic>?;
-    final sdp = offerMap?['sdp'] as String? ?? '';
-    final bool isVideo = sdp.contains('m=video');
-
-    String callerName = (data['callerName'] as String?)?.trim() ?? '';
-    String? callerAvatar = data['callerAvatar'] as String?;
-    if (callerName.isEmpty || callerName == 'Traveler') {
-      try {
-        final profileSnap = await FirebaseFirestore.instance
-            .collection('explorer_profiles')
-            .doc(callerId)
-            .get();
-        if (profileSnap.exists) {
-          final pData = profileSnap.data();
-          callerName = (pData?['displayName'] as String?) ?? 'Traveler';
-          callerAvatar ??= pData?['avatarUrl'] as String?;
-        }
-      } catch (e) {
-        debugPrint('Error fetching caller profile: $e');
-      }
-    }
-    if (callerName.isEmpty) {
-      callerName = 'Traveler';
-    }
-
-    await _presentIncomingCall(
-      callId: callId,
-      callerId: callerId,
-      callerName: callerName,
-      callerAvatar: callerAvatar,
-      isVideo: isVideo,
-    );
-  }
-
-  Future<void> _presentIncomingCall({
+  /// Shows the native incoming-call screen for a call. Also runs in the
+  /// background isolate when a call push arrives, so it touches no app state.
+  /// A call that is already on screen is not shown again.
+  static Future<void> showNativeIncomingCall({
     required String callId,
     required String callerId,
     required String callerName,
     required String? callerAvatar,
     required bool isVideo,
   }) async {
-    if (_activeIncomingCallId == callId) return;
-    _activeIncomingCallId = callId;
+    if (kIsWeb || callId.isEmpty) return;
+    final active = await FlutterCallkitIncoming.activeCalls();
+    if (active.any((call) => call.id == callId)) return;
 
-    // 1. Show CallKit if mobile native
-    if (!kIsWeb) {
-      final callKitParams = CallKitParams(
+    await FlutterCallkitIncoming.showCallkitIncoming(
+      CallKitParams(
         id: callId,
         nameCaller: callerName,
         appName: 'Bhromon',
         avatar: callerAvatar,
         handle: isVideo ? 'Bhromon Video Call' : 'Bhromon Voice Call',
         type: isVideo ? 1 : 0,
-        duration: 30000,
+        duration: kCallRingSeconds * 1000,
         extra: <String, dynamic>{
           'callId': callId,
           'callerId': callerId,
@@ -250,13 +131,234 @@ class CallNotificationService {
           maximumCallsPerCallGroup: 1,
           audioSessionMode: 'videoChat',
         ),
+      ),
+    );
+  }
+
+  void _initCallkitEvents() {
+    _callkitSub?.cancel();
+    _callkitSub = FlutterCallkitIncoming.onEvent.listen((event) async {
+      if (event == null) return;
+      switch (event) {
+        case CallEventActionCallAccept(:final callKitParams):
+          final extra = callKitParams.extra ?? {};
+          final callId = extra['callId']?.toString() ?? callKitParams.id;
+          if (callId.isEmpty) break;
+          await _acceptCall(
+            callId: callId,
+            callerId: extra['callerId']?.toString() ?? '',
+            callerName: extra['callerName']?.toString() ??
+                (callKitParams.nameCaller ?? 'Traveler'),
+            avatarUrl: extra['avatarUrl']?.toString() ?? callKitParams.avatar,
+            isVideo: extra['isVideo'] == true || callKitParams.type == 1,
+          );
+          break;
+
+        case CallEventActionCallDecline(:final callKitParams):
+          final extra = callKitParams.extra ?? {};
+          final callId = extra['callId']?.toString() ?? callKitParams.id;
+          if (callId.isNotEmpty) {
+            await _declineCall(callId, callerId: extra['callerId']?.toString());
+          }
+          break;
+
+        case CallEventActionCallEnded():
+        case CallEventActionCallTimeout():
+          // The native screen timed out or closed. The caller's own timer marks
+          // the call missed, so nothing is written here.
+          _dismissIncomingUI();
+          break;
+
+        default:
+          break;
+      }
+    });
+  }
+
+  // ── Listening ──────────────────────────────────────────────────────────────
+
+  void _startListening(String uid) {
+    if (_currentListeningUid == uid) return;
+    _currentListeningUid = uid;
+    _callsSub?.cancel();
+    _emailCallsSub?.cancel();
+    _vpsCallSub?.cancel();
+    _ringingBySource.clear();
+
+    // 1. The chat server relay, while the app is open.
+    _vpsCallSub = VpsChatService().callSignalStream.listen((event) {
+      final signalType = event['signalType'] as String?;
+      final callId = event['callId']?.toString() ?? '';
+      if (signalType == 'offer') {
+        unawaited(_presentFromRelay(event, callId));
+      } else if (signalType == 'end' || signalType == 'declined') {
+        _dismissIncomingUI(callId: callId);
+      }
+    });
+
+    // 2. The call document, which the Cloud Function also pushes for.
+    try {
+      _callsSub = FirebaseFirestore.instance
+          .collection('calls')
+          .where('calleeId', isEqualTo: uid)
+          .where('status', isEqualTo: 'calling')
+          .snapshots()
+          .listen(
+        (snap) => _handleIncomingCallSnap(snap, 'uid'),
+        onError: (Object e) {
+          debugPrint('[CallNotification] Firestore call sub error: $e');
+        },
       );
-      await FlutterCallkitIncoming.showCallkitIncoming(callKitParams);
+
+      final email =
+          FirebaseAuth.instance.currentUser?.email?.toLowerCase().trim();
+      if (email != null && email.isNotEmpty && email != uid) {
+        _emailCallsSub = FirebaseFirestore.instance
+            .collection('calls')
+            .where('calleeId', isEqualTo: email)
+            .where('status', isEqualTo: 'calling')
+            .snapshots()
+            .listen(
+          (snap) => _handleIncomingCallSnap(snap, 'email'),
+          onError: (Object e) {
+            debugPrint('[CallNotification] Firestore email call sub error: $e');
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('[CallNotification] Firestore listeners failed: $e');
+    }
+  }
+
+  Future<void> _handleIncomingCallSnap(
+      QuerySnapshot<Map<String, dynamic>> snap, String source) async {
+    final ringing = snap.docs.map((doc) => doc.id).toSet();
+    final previous = _ringingBySource[source] ?? const <String>{};
+    _ringingBySource[source] = ringing;
+
+    // A call that stopped ringing was answered, declined or ended. Only a call
+    // this query had reported as ringing counts, so a first empty snapshot
+    // cannot dismiss a call that is already on screen.
+    final stopped = previous.difference(ringing);
+    final active = _activeIncomingCallId;
+    if (active != null && stopped.contains(active)) {
+      _dismissIncomingUI();
     }
 
-    // 2. Show in-app overlay dialog if context is available
+    if (snap.docs.isEmpty) return;
+    final callDoc = snap.docs.first;
+    final callId = callDoc.id;
+    final data = callDoc.data();
+
+    final createdAt = data['createdAt'] as Timestamp?;
+    if (createdAt != null &&
+        DateTime.now().difference(createdAt.toDate()) > _staleCallAge) {
+      unawaited(_declineCall(callId, callerId: data['callerId'] as String?));
+      return;
+    }
+
+    final callerId = data['callerId'] as String? ?? '';
+    final sdp =
+        (data['offer'] as Map<String, dynamic>?)?['sdp'] as String? ?? '';
+    final isVideo = data['isVideo'] is bool
+        ? data['isVideo'] as bool
+        : sdp.contains('m=video');
+    final (callerName, callerAvatar) = await _resolveCaller(
+      callerId,
+      fallbackName: data['callerName'] as String?,
+      fallbackAvatar: data['callerAvatar'] as String?,
+    );
+
+    await _presentIncomingCall(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      callerAvatar: callerAvatar,
+      isVideo: isVideo,
+    );
+  }
+
+  Future<void> _presentFromRelay(
+      Map<String, dynamic> event, String callId) async {
+    if (callId.isEmpty) return;
+    final callerId = event['callerId']?.toString() ?? '';
+    final (callerName, callerAvatar) = await _resolveCaller(
+      callerId,
+      fallbackName: event['callerName']?.toString(),
+      fallbackAvatar: event['avatarUrl']?.toString(),
+    );
+    await _presentIncomingCall(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      callerAvatar: callerAvatar,
+      isVideo: event['isVideo'] == true,
+    );
+  }
+
+  /// The caller's name and photo come from their profile. The name sent with
+  /// the call is used only when the profile cannot be read.
+  Future<(String, String?)> _resolveCaller(
+    String callerId, {
+    String? fallbackName,
+    String? fallbackAvatar,
+  }) async {
+    if (callerId.isNotEmpty) {
+      try {
+        final profile = await FirebaseFirestore.instance
+            .collection('explorer_profiles')
+            .doc(callerId)
+            .get()
+            .timeout(const Duration(seconds: 4));
+        final data = profile.data();
+        final name = (data?['displayName'] as String?)?.trim();
+        if (name != null && name.isNotEmpty) {
+          return (name, (data?['avatarUrl'] as String?) ?? fallbackAvatar);
+        }
+      } catch (e) {
+        debugPrint('Error fetching caller profile: $e');
+      }
+    }
+    final name = fallbackName?.trim();
+    return ((name == null || name.isEmpty) ? 'Traveler' : name, fallbackAvatar);
+  }
+
+  // ── Presenting and answering ───────────────────────────────────────────────
+
+  Future<void> _presentIncomingCall({
+    required String callId,
+    required String callerId,
+    required String callerName,
+    required String? callerAvatar,
+    required bool isVideo,
+  }) async {
+    if (!_shown.claim(callId, DateTime.now())) return;
+
+    if (CallSignalingService.isInCall &&
+        CallSignalingService.activeCallId != callId) {
+      // Already on a call: refuse this one so the caller is not left ringing.
+      await CallSignalingService().declineCall(callId, callerId: callerId);
+      return;
+    }
+
+    _activeIncomingCallId = callId;
+    final showsInApp = _canShowInAppDialog();
+    // In the foreground the in-app dialog is enough. A native screen on top of it would ring twice.
+    if (!kIsWeb && !(showsInApp && _isAppInForeground())) {
+      await showNativeIncomingCall(
+        callId: callId,
+        callerId: callerId,
+        callerName: callerName,
+        callerAvatar: callerAvatar,
+        isVideo: isVideo,
+      );
+    }
+
     final context = AppRouter.navigatorKey.currentContext;
-    if (context != null && context.mounted && !_isCallDialogShowing) {
+    if (showsInApp &&
+        context != null &&
+        context.mounted &&
+        !_isCallDialogShowing) {
       _showInAppCallDialog(
         context: context,
         callId: callId,
@@ -268,6 +370,14 @@ class CallNotificationService {
     }
   }
 
+  bool _canShowInAppDialog() {
+    final context = AppRouter.navigatorKey.currentContext;
+    return context != null && context.mounted && !_isCallDialogShowing;
+  }
+
+  bool _isAppInForeground() =>
+      WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+
   void _showInAppCallDialog({
     required BuildContext context,
     required String callId,
@@ -277,6 +387,10 @@ class CallNotificationService {
     required bool isVideo,
   }) {
     _isCallDialogShowing = true;
+    _dialogTimeout?.cancel();
+    _dialogTimeout = Timer(const Duration(seconds: kCallRingSeconds), () {
+      if (_activeIncomingCallId == callId) _dismissIncomingUI();
+    });
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -341,7 +455,7 @@ class CallNotificationService {
                   onTap: () async {
                     Navigator.of(ctx).pop();
                     _isCallDialogShowing = false;
-                    await _declineCall(callId);
+                    await _declineCall(callId, callerId: callerId);
                   },
                   child: Column(
                     children: [
@@ -401,6 +515,7 @@ class CallNotificationService {
       ),
     ).then((_) {
       _isCallDialogShowing = false;
+      _dialogTimeout?.cancel();
     });
   }
 
@@ -411,18 +526,39 @@ class CallNotificationService {
     required String? avatarUrl,
     required bool isVideo,
   }) async {
+    // Native and in-app buttons can both report the same Accept.
+    if (!_settled.claim('accept:$callId', DateTime.now())) return;
     _activeIncomingCallId = null;
+    _closeInAppDialog();
     if (!kIsWeb) {
-      await FlutterCallkitIncoming.endAllCalls();
+      await FlutterCallkitIncoming.endCall(callId);
     }
+    _openCall(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      avatarUrl: avatarUrl,
+      isVideo: isVideo,
+    );
+  }
 
+  /// Opens the call screen. A cold start from the native screen can get here
+  /// before the navigator exists, so the Accept waits for it for up to 15 seconds.
+  void _openCall({
+    required String callId,
+    required String callerId,
+    required String callerName,
+    required String? avatarUrl,
+    required bool isVideo,
+  }) {
     final context = AppRouter.navigatorKey.currentContext;
-    if (context != null && context.mounted) {
-      final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (context != null && context.mounted && uid.isNotEmpty) {
+      _pendingAcceptTimer?.cancel();
       GoRouter.of(context).push(
         '/call/$callId',
         extra: {
-          'localUid': currentUid,
+          'localUid': uid,
           'remoteUid': callerId,
           'remoteUserName': callerName,
           'remoteAvatarUrl': avatarUrl,
@@ -430,30 +566,59 @@ class CallNotificationService {
           'isVideoCall': isVideo,
         },
       );
+      return;
     }
+
+    _pendingAcceptTimer?.cancel();
+    var attempts = 0;
+    _pendingAcceptTimer =
+        Timer.periodic(const Duration(milliseconds: 250), (timer) {
+      attempts++;
+      final ready = AppRouter.navigatorKey.currentContext != null &&
+          FirebaseAuth.instance.currentUser != null;
+      if (ready) {
+        timer.cancel();
+        _openCall(
+          callId: callId,
+          callerId: callerId,
+          callerName: callerName,
+          avatarUrl: avatarUrl,
+          isVideo: isVideo,
+        );
+      } else if (attempts >= 60) {
+        // The app never came up. Decline so the caller is not left ringing.
+        timer.cancel();
+        unawaited(_declineCall(callId, callerId: callerId));
+      }
+    });
   }
 
-  Future<void> _declineCall(String callId) async {
-    _activeIncomingCallId = null;
+  Future<void> _declineCall(String callId, {String? callerId}) async {
+    if (!_settled.claim('decline:$callId', DateTime.now())) return;
+    if (_activeIncomingCallId == callId) _activeIncomingCallId = null;
     if (!kIsWeb) {
-      await FlutterCallkitIncoming.endAllCalls();
+      await FlutterCallkitIncoming.endCall(callId);
     }
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('calls')
-          .doc(callId)
-          .update({'status': 'declined'});
-    } catch (e) {
-      debugPrint('Error declining call: $e');
-    }
+    await CallSignalingService().declineCall(callId, callerId: callerId);
   }
 
-  void _dismissIncomingUI() {
+  // ── Dismissing ─────────────────────────────────────────────────────────────
+
+  /// Closes the call screen and native ring for the call on screen. When
+  /// [callId] is given, only that call is closed.
+  void _dismissIncomingUI({String? callId}) {
+    final active = _activeIncomingCallId;
+    if (callId != null && callId != active) return;
     _activeIncomingCallId = null;
-    if (!kIsWeb) {
-      FlutterCallkitIncoming.endAllCalls();
+    if (!kIsWeb && active != null) {
+      unawaited(FlutterCallkitIncoming.endCall(active));
     }
+    _closeInAppDialog();
+  }
+
+  void _closeInAppDialog() {
+    _dialogTimeout?.cancel();
+    _dialogTimeout = null;
     if (_isCallDialogShowing) {
       final context = AppRouter.navigatorKey.currentContext;
       if (context != null && Navigator.of(context).canPop()) {
@@ -471,6 +636,8 @@ class CallNotificationService {
     _emailCallsSub = null;
     _vpsCallSub?.cancel();
     _vpsCallSub = null;
+    _ringingBySource.clear();
+    _pendingAcceptTimer?.cancel();
     _dismissIncomingUI();
   }
 
@@ -480,5 +647,7 @@ class CallNotificationService {
     _emailCallsSub?.cancel();
     _callkitSub?.cancel();
     _vpsCallSub?.cancel();
+    _pendingAcceptTimer?.cancel();
+    _dialogTimeout?.cancel();
   }
 }

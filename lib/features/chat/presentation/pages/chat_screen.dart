@@ -227,7 +227,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
         // 2. Insert any brand new incoming docs at the top
         final existingIds = _allMessages.map((d) => d.id).toSet();
-        final fresh = incoming.where((d) => !existingIds.contains(d.id)).toList();
+        final fresh =
+            incoming.where((d) => !existingIds.contains(d.id)).toList();
         if (fresh.isNotEmpty) {
           _allMessages.insertAll(0, fresh);
         }
@@ -421,7 +422,8 @@ class _ChatScreenState extends State<ChatScreen> {
       return widget.chatId.substring(currentUid.length + 1);
     }
     if (widget.chatId.endsWith('_$currentUid')) {
-      return widget.chatId.substring(0, widget.chatId.length - currentUid.length - 1);
+      return widget.chatId
+          .substring(0, widget.chatId.length - currentUid.length - 1);
     }
     final parts = widget.chatId.split('_');
     if (parts.length == 2) {
@@ -574,8 +576,8 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (_) {}
 
     if (mounted) {
-      setState(() =>
-          _pendingTextMessages.removeWhere((p) => p.id == pending.id));
+      setState(
+          () => _pendingTextMessages.removeWhere((p) => p.id == pending.id));
     }
   }
 
@@ -3004,8 +3006,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                                     : CachedNetworkImage(
                                                         imageUrl: mediaUrl,
                                                         fit: BoxFit.contain,
-                                                        errorWidget: (_, __, ___) =>
-                                                            Image.network(
+                                                        errorWidget:
+                                                            (_, __, ___) =>
+                                                                Image.network(
                                                           mediaUrl,
                                                           fit: BoxFit.contain,
                                                         ),

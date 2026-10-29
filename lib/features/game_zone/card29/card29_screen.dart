@@ -131,90 +131,90 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
   Widget build(BuildContext context) {
     final canPop = Navigator.of(context).canPop();
     return PopScope(
-      canPop: canPop,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        try {
-          context.go('/game-zone');
-        } catch (_) {}
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0F381E),
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white70, size: 18),
-            onPressed: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                try {
-                  context.go('/game-zone');
-                } catch (_) {}
-              }
-            },
-          ),
-          title: const Text('29 Card Game (টুয়েন্টি নাইন)',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF092614),
-        foregroundColor: Colors.white,
-        elevation: 2,
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'New Round',
-              onPressed: _onNewRoundPressed),
-          IconButton(
-              icon: const Icon(Icons.help_outline),
-              tooltip: '29 Rules',
-              onPressed: _showRulesDialog),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildScoreHeader(),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Positioned(top: 6, child: _buildPlayerSeat(2)),
-                      Positioned(left: 6, child: _buildPlayerSeat(3)),
-                      Positioned(right: 6, child: _buildPlayerSeat(1)),
-                      _buildCenterTable(constraints),
-                      if (_game.phase == Card29Phase.bidding &&
-                          _game.currentTurn == 0)
-                        Positioned(
-                            left: 8,
-                            right: 8,
-                            bottom: 8,
-                            child: Center(child: _buildBiddingControls())),
-                      if (_game.phase == Card29Phase.trumpSelection)
-                        Positioned(
-                            left: 8,
-                            right: 8,
-                            bottom: 8,
-                            child: Center(child: _buildTrumpSelector())),
-                      if (_game.phase == Card29Phase.roundOver ||
-                          _game.phase == Card29Phase.matchOver)
-                        Positioned(
-                            left: 8,
-                            right: 8,
-                            bottom: 8,
-                            child: Center(child: _buildRoundOverBanner())),
-                    ],
-                  );
-                },
-              ),
+        canPop: canPop,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          try {
+            context.go('/game-zone');
+          } catch (_) {}
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF0F381E),
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white70, size: 18),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  try {
+                    context.go('/game-zone');
+                  } catch (_) {}
+                }
+              },
             ),
-            _buildActionBar(),
-            _buildUserHand(),
-          ],
-        ),
-      ),
-    ));
+            title: const Text('29 Card Game (টুয়েন্টি নাইন)',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            backgroundColor: const Color(0xFF092614),
+            foregroundColor: Colors.white,
+            elevation: 2,
+            actions: [
+              IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'New Round',
+                  onPressed: _onNewRoundPressed),
+              IconButton(
+                  icon: const Icon(Icons.help_outline),
+                  tooltip: '29 Rules',
+                  onPressed: _showRulesDialog),
+            ],
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildScoreHeader(),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Positioned(top: 6, child: _buildPlayerSeat(2)),
+                          Positioned(left: 6, child: _buildPlayerSeat(3)),
+                          Positioned(right: 6, child: _buildPlayerSeat(1)),
+                          _buildCenterTable(constraints),
+                          if (_game.phase == Card29Phase.bidding &&
+                              _game.currentTurn == 0)
+                            Positioned(
+                                left: 8,
+                                right: 8,
+                                bottom: 8,
+                                child: Center(child: _buildBiddingControls())),
+                          if (_game.phase == Card29Phase.trumpSelection)
+                            Positioned(
+                                left: 8,
+                                right: 8,
+                                bottom: 8,
+                                child: Center(child: _buildTrumpSelector())),
+                          if (_game.phase == Card29Phase.roundOver ||
+                              _game.phase == Card29Phase.matchOver)
+                            Positioned(
+                                left: 8,
+                                right: 8,
+                                bottom: 8,
+                                child: Center(child: _buildRoundOverBanner())),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                _buildActionBar(),
+                _buildUserHand(),
+              ],
+            ),
+          ),
+        ));
   }
 
   Widget _buildScoreHeader() {

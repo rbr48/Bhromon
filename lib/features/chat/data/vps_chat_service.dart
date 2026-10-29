@@ -104,9 +104,12 @@ class VpsChatService {
         return;
       }
 
-      final uri = Uri.parse('$wsUrl?token=${Uri.encodeComponent(token)}');
-      _wsChannel = WebSocketChannel.connect(uri);
+      // The token goes in the first message, not the URL, so it stays out of
+      // proxy and access logs. The server closes a socket whose first message
+      // is not this, so nothing else is sent before it.
+      _wsChannel = WebSocketChannel.connect(Uri.parse(wsUrl));
       await _wsChannel!.ready;
+      sendWsEvent({'type': 'auth', 'token': token});
 
       _reconnectAttempts = 0;
       _isConnecting = false;
@@ -221,6 +224,17 @@ class VpsChatService {
 
         case 'call_signal':
           _callSignalController.add(data);
+          break;
+
+        case 'call_signal_error':
+          // The server refused one of our signals. It is reported as its own
+          // signal type, so it cannot be mistaken for the signal that was refused.
+          _callSignalController.add({
+            'signalType': 'refused',
+            'callId': data['callId'],
+            'refusedSignal': data['signalType'],
+            'reason': data['reason'],
+          });
           break;
 
         case 'pong':
@@ -370,7 +384,8 @@ class VpsChatService {
     });
   }
 
-  Future<void> markRead(String chatId, {List<String>? messageIds, String? recipientId}) async {
+  Future<void> markRead(String chatId,
+      {List<String>? messageIds, String? recipientId}) async {
     // Send via WebSocket for instant update
     sendWsEvent({
       'type': 'read',

@@ -402,6 +402,14 @@
         { "fieldPath": "violationCount", "order": "DESCENDING" },
         { "fieldPath": "lastViolationAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "calls",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "callerId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

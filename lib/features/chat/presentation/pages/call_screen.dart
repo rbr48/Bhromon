@@ -87,24 +87,25 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _initCall() async {
     await _localRenderer.initialize();
     await _remoteRenderer.initialize();
+    if (!mounted) return;
 
-    // Request permissions
+    // The messenger outlives this screen, so an error can still be shown after it closes.
+    final messenger = ScaffoldMessenger.maybeOf(context);
+
+    // Without a microphone there is no call. A refused camera turns a video
+    // call into an audio call instead of failing it.
+    var videoEnabled = widget.isVideoCall;
     if (!kIsWeb) {
       final micStatus = await Permission.microphone.request();
       if (micStatus.isDenied || micStatus.isPermanentlyDenied) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Microphone permission is required for calls'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-          _safeExit();
-        }
+        await _failCall(
+          'Microphone permission is required for calls.',
+          messenger,
+        );
         return;
       }
       if (widget.isVideoCall) {
-        await Permission.camera.request();
+        videoEnabled = (await Permission.camera.request()).isGranted;
       }
       _applyAudioRouting();
     }
@@ -138,8 +139,15 @@ class _CallScreenState extends State<CallScreen> {
           _callStatusText = 'Connected';
           _applyAudioRouting();
           _startDurationTimer();
-        } else if (state == 'ended' || state == 'declined') {
-          _callStatusText = 'Call ended';
+        } else if (state == 'declined' ||
+            state == 'missed' ||
+            state == 'ended' ||
+            state == 'failed') {
+          _callStatusText = switch (state) {
+            'declined' => 'Call declined',
+            'missed' => 'No answer',
+            _ => 'Call ended',
+          };
           Future.delayed(const Duration(milliseconds: 300), _safeExit);
         }
       });
@@ -155,7 +163,7 @@ class _CallScreenState extends State<CallScreen> {
           widget.callId,
           widget.localUid,
           widget.remoteUid,
-          videoEnabled: widget.isVideoCall,
+          videoEnabled: videoEnabled,
           callerName: widget.localUserName,
           callerAvatar: widget.localAvatarUrl,
         );
@@ -163,22 +171,42 @@ class _CallScreenState extends State<CallScreen> {
         await _signaling.answerCall(
           widget.callId,
           widget.localUid,
-          videoEnabled: widget.isVideoCall,
+          videoEnabled: videoEnabled,
         );
       }
       _applyAudioRouting();
     } catch (e) {
+      // The signaling service has already ended the call and closed this screen.
       debugPrint('CallScreen initialization error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to establish call: $e'),
-            backgroundColor: Colors.redAccent,
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(
+            e is CallSetupException
+                ? e.message
+                : 'Could not connect the call. Please try again.',
           ),
-        );
-        _safeExit();
-      }
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      _safeExit();
     }
+  }
+
+  /// Ends the call from this side, says why, and leaves the screen. A callee
+  /// who has not answered declines, so the caller stops ringing.
+  Future<void> _failCall(
+    String message,
+    ScaffoldMessengerState? messenger,
+  ) async {
+    if (widget.isCaller) {
+      await _signaling.endCall();
+    } else {
+      await _signaling.declineCall(widget.callId, callerId: widget.remoteUid);
+    }
+    messenger?.showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+    );
+    _safeExit();
   }
 
   void _startDurationTimer() {
@@ -267,196 +295,195 @@ class _CallScreenState extends State<CallScreen> {
     final canPop = Navigator.of(context).canPop();
 
     return PopScope(
-        canPop: canPop,
-        onPopInvokedWithResult: (didPop, result) {
-          _hasExited = true;
-          _signaling.endCall(durationSeconds: _callDuration.inSeconds);
-          if (!didPop) {
-            try {
-              context.go('/chats');
-            } catch (_) {}
-          }
-        },
-        child: Scaffold(
-          backgroundColor: const Color(0xFF0B141A), // WhatsApp dark background
-          body: SizedBox.expand(
-            child: GestureDetector(
-              onTap: isVideo ? _toggleControlsVisibility : null,
-              behavior: HitTestBehavior.opaque,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // ── Background / Remote Video Layer ───────────────────────────────
-                  if (isVideo && _remoteVideoConnected && !_isVideoOff)
-                    Positioned.fill(
-                      child: RTCVideoView(
-                        _remoteRenderer,
-                        objectFit:
-                            RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                      ),
-                    )
-                  else ...[
-                    _buildAudioOrPlaceholderBackground(),
-                    // Invisible 1x1 audio sink ensures RTCVideoRenderer is mounted in the widget tree so WebRTC audio flows reliably on all platforms (especially Web).
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      width: 1,
-                      height: 1,
-                      child: Opacity(
-                        opacity: 0.01,
-                        child: RTCVideoView(_remoteRenderer),
-                      ),
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        _hasExited = true;
+        _signaling.endCall(durationSeconds: _callDuration.inSeconds);
+        if (!didPop) {
+          try {
+            context.go('/chats');
+          } catch (_) {}
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0B141A), // WhatsApp dark background
+        body: SizedBox.expand(
+          child: GestureDetector(
+            onTap: isVideo ? _toggleControlsVisibility : null,
+            behavior: HitTestBehavior.opaque,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // ── Background / Remote Video Layer ───────────────────────────────
+                if (isVideo && _remoteVideoConnected && !_isVideoOff)
+                  Positioned.fill(
+                    child: RTCVideoView(
+                      _remoteRenderer,
+                      objectFit:
+                          RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                     ),
-                  ],
-
-                  // ── Top Header (Name, Status / Duration) ──────────────────────────
+                  )
+                else ...[
+                  _buildAudioOrPlaceholderBackground(),
+                  // Invisible 1x1 audio sink ensures RTCVideoRenderer is mounted in the widget tree so WebRTC audio flows reliably on all platforms (especially Web).
                   Positioned(
-                    top: 0,
                     left: 0,
-                    right: 0,
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 250),
-                      opacity: _controlsVisible ? 1.0 : 0.0,
-                      child: SafeArea(
-                        bottom: false,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.arrow_back,
-                                    color: Colors.white, size: 24),
-                                onPressed: _endCall,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      widget.remoteUserName,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.black87,
-                                            blurRadius: 4,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          _callDuration > Duration.zero
-                                              ? _formatDuration(_callDuration)
-                                              : _callStatusText,
-                                          style: TextStyle(
-                                            color: _callDuration > Duration.zero
-                                                ? const Color(0xFF00A884)
-                                                : Colors.white70,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                            shadows: const [
-                                              Shadow(
-                                                color: Colors.black87,
-                                                blurRadius: 4,
-                                              ),
-                                            ],
-                                          ),
+                    top: 0,
+                    width: 1,
+                    height: 1,
+                    child: Opacity(
+                      opacity: 0.01,
+                      child: RTCVideoView(_remoteRenderer),
+                    ),
+                  ),
+                ],
+
+                // ── Top Header (Name, Status / Duration) ──────────────────────────
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 250),
+                    opacity: _controlsVisible ? 1.0 : 0.0,
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back,
+                                  color: Colors.white, size: 24),
+                              onPressed: _endCall,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    widget.remoteUserName,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      shadows: [
+                                        Shadow(
+                                          color: Colors.black87,
+                                          blurRadius: 4,
                                         ),
-                                        if (_callDuration > Duration.zero) ...[
-                                          const SizedBox(width: 8),
-                                          ValueListenableBuilder<CallNetworkQuality>(
-                                            valueListenable:
-                                                _signaling.networkQuality,
-                                            builder: (ctx, quality, _) {
-                                              Color dotColor;
-                                              String label;
-                                              switch (quality) {
-                                                case CallNetworkQuality.good:
-                                                  dotColor =
-                                                      const Color(0xFF00E676);
-                                                  label = 'HD';
-                                                  break;
-                                                case CallNetworkQuality.fair:
-                                                  dotColor =
-                                                      const Color(0xFFFFD600);
-                                                  label = 'Fair';
-                                                  break;
-                                                case CallNetworkQuality.poor:
-                                                  dotColor =
-                                                      const Color(0xFFFF1744);
-                                                  label = 'Weak';
-                                                  break;
-                                              }
-                                              return Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 1),
-                                                decoration: BoxDecoration(
-                                                  color: dotColor
-                                                      .withValues(alpha: 0.15),
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                  border: Border.all(
-                                                      color: dotColor
-                                                          .withValues(
-                                                              alpha: 0.4),
-                                                      width: 0.8),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Container(
-                                                      width: 6,
-                                                      height: 6,
-                                                      decoration: BoxDecoration(
-                                                        color: dotColor,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      label,
-                                                      style: TextStyle(
-                                                        color: dotColor,
-                                                        fontSize: 10,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ],
                                       ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _callDuration > Duration.zero
+                                            ? _formatDuration(_callDuration)
+                                            : _callStatusText,
+                                        style: TextStyle(
+                                          color: _callDuration > Duration.zero
+                                              ? const Color(0xFF00A884)
+                                              : Colors.white70,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          shadows: const [
+                                            Shadow(
+                                              color: Colors.black87,
+                                              blurRadius: 4,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (_callDuration > Duration.zero) ...[
+                                        const SizedBox(width: 8),
+                                        ValueListenableBuilder<
+                                            CallNetworkQuality>(
+                                          valueListenable:
+                                              _signaling.networkQuality,
+                                          builder: (ctx, quality, _) {
+                                            Color dotColor;
+                                            String label;
+                                            switch (quality) {
+                                              case CallNetworkQuality.good:
+                                                dotColor =
+                                                    const Color(0xFF00E676);
+                                                label = 'HD';
+                                                break;
+                                              case CallNetworkQuality.fair:
+                                                dotColor =
+                                                    const Color(0xFFFFD600);
+                                                label = 'Fair';
+                                                break;
+                                              case CallNetworkQuality.poor:
+                                                dotColor =
+                                                    const Color(0xFFFF1744);
+                                                label = 'Weak';
+                                                break;
+                                            }
+                                            return Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: dotColor.withValues(
+                                                    alpha: 0.15),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                                border: Border.all(
+                                                    color: dotColor.withValues(
+                                                        alpha: 0.4),
+                                                    width: 0.8),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Container(
+                                                    width: 6,
+                                                    height: 6,
+                                                    decoration: BoxDecoration(
+                                                      color: dotColor,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    label,
+                                                    style: TextStyle(
+                                                      color: dotColor,
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
                               ),
-                              if (isVideo)
-                                IconButton(
-                                  icon: const Icon(Icons.cameraswitch,
-                                      color: Colors.white, size: 24),
-                                  onPressed: _switchCamera,
-                                ),
-                            ],
-                          ),
+                            ),
+                            if (isVideo)
+                              IconButton(
+                                icon: const Icon(Icons.cameraswitch,
+                                    color: Colors.white, size: 24),
+                                onPressed: _switchCamera,
+                              ),
+                          ],
                         ),
                       ),
                     ),
                   ),
+                ),
 
                 // ── Local Video PIP (Picture-In-Picture for Video Calls) ─────────
                 if (isVideo && !_isVideoOff)

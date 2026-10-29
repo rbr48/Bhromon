@@ -556,8 +556,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         final otherUserUid = participants.firstWhere((p) => p != currentUid,
             orElse: () => 'Guest');
         final String lastMsgMeta = (data['lastMessage'] as String?) ?? '';
-        final String lastMsgType =
-            (data['lastMessageType'] as String?) ?? (data['type'] as String?) ?? 'text';
+        final String lastMsgType = (data['lastMessageType'] as String?) ??
+            (data['type'] as String?) ??
+            'text';
         final unreadCounts =
             data['unreadCounts'] as Map<dynamic, dynamic>? ?? {};
         final unreadCount = (unreadCounts[currentUid] as num?)?.toInt() ?? 0;
@@ -580,7 +581,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           lastMessage: lastMsgMeta,
           lastMessageType: lastMsgType,
           lastTime: lastTime != null ? Timestamp.fromDate(lastTime) : null,
-          lastMessageSenderId: (data['lastSenderId'] ?? data['lastMessageSenderId']) as String?,
+          lastMessageSenderId:
+              (data['lastSenderId'] ?? data['lastMessageSenderId']) as String?,
           unreadCount: unreadCount,
           cachedOtherProfile: cachedProfile,
           activeTabFilter: _activeTab,

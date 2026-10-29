@@ -88,9 +88,11 @@ service firebase.storage {
     }
 
     // ── Chat media, docs & voice (VPS fallback & legacy) ─────────────────────
+    // Chat media is uploaded to the VPS media server, not Firebase Storage, so no
+    // client may write here. Files already stored here stay readable.
     match /chat_media/{allPaths=**} {
       allow read: if isAuth();
-      allow write: if isAuth();
+      allow write: if false;
     }
 
     match /chat_docs/{allPaths=**} {

@@ -25,7 +25,8 @@ class AdFreeArticleReaderScreen extends StatefulWidget {
   });
 
   @override
-  State<AdFreeArticleReaderScreen> createState() => _AdFreeArticleReaderScreenState();
+  State<AdFreeArticleReaderScreen> createState() =>
+      _AdFreeArticleReaderScreenState();
 }
 
 class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
@@ -138,7 +139,7 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
         return const Color(0xFF4A3B2C);
       case ReaderTheme.dark:
         return const Color(0xFFE2E8F0);
-      }
+    }
   }
 
   Color get _subTextColor {
@@ -166,7 +167,8 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
   @override
   Widget build(BuildContext context) {
     final title = _article?.title ?? widget.initialTitle ?? 'News Article';
-    final sourceName = _article?.sourceName ?? widget.initialSourceName ?? 'Newspaper';
+    final sourceName =
+        _article?.sourceName ?? widget.initialSourceName ?? 'Newspaper';
     final heroImage = _article?.heroImageUrl ?? widget.initialImageUrl;
 
     return Scaffold(
@@ -187,7 +189,8 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.shield_outlined, size: 14, color: AppColors.mintGreen),
+              const Icon(Icons.shield_outlined,
+                  size: 14, color: AppColors.mintGreen),
               const SizedBox(width: 4),
               Text(
                 sourceName,
@@ -362,11 +365,15 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline_rounded, size: 48, color: Colors.amber),
+              const Icon(Icons.error_outline_rounded,
+                  size: 48, color: Colors.amber),
               const SizedBox(height: 12),
               Text(
                 'নিবন্ধটি রিডার মোডে লোড করা যায়নি',
-                style: TextStyle(color: _textColor, fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: _textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
@@ -381,7 +388,8 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                 ),
                 icon: const Icon(Icons.open_in_browser_rounded),
                 label: const Text('মূল ওয়েবসাইটে পড়ুন'),
-                onPressed: () => launchUrl(Uri.parse(widget.articleUrl), mode: LaunchMode.externalApplication),
+                onPressed: () => launchUrl(Uri.parse(widget.articleUrl),
+                    mode: LaunchMode.externalApplication),
               ),
             ],
           ),
@@ -403,15 +411,18 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
               if (_isSpeaking)
                 Container(
                   margin: const EdgeInsets.only(bottom: 20),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppColors.mintGreen.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.3)),
+                    border: Border.all(
+                        color: AppColors.mintGreen.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.graphic_eq_rounded, color: AppColors.mintGreen, size: 20),
+                      const Icon(Icons.graphic_eq_rounded,
+                          color: AppColors.mintGreen, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -425,7 +436,8 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                       ),
                       TextButton(
                         onPressed: _toggleTts,
-                        child: const Text('থামান', style: TextStyle(color: AppColors.mintGreen)),
+                        child: const Text('থামান',
+                            style: TextStyle(color: AppColors.mintGreen)),
                       ),
                     ],
                   ),
@@ -500,13 +512,16 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                       height: 220,
                       color: Colors.black12,
                       child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.mintGreen),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppColors.mintGreen),
                       ),
                     ),
-                    errorWidget: (context, url, error) => const SizedBox.shrink(),
+                    errorWidget: (context, url, error) =>
+                        const SizedBox.shrink(),
                   ),
                 ),
-              if (heroImage != null && heroImage.isNotEmpty) const SizedBox(height: 24),
+              if (heroImage != null && heroImage.isNotEmpty)
+                const SizedBox(height: 24),
 
               // Divider
               Divider(color: _textColor.withValues(alpha: 0.08), height: 1),
@@ -545,9 +560,12 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _textColor,
-                        side: BorderSide(color: _textColor.withValues(alpha: 0.2)),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        side: BorderSide(
+                            color: _textColor.withValues(alpha: 0.2)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
                       ),
                       icon: const Icon(Icons.launch_rounded, size: 16),
                       label: const Text('মূল ওয়েবসাইট থেকে পড়ুন'),
@@ -560,7 +578,8 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.verified_user_outlined, size: 14, color: AppColors.mintGreen),
+                        const Icon(Icons.verified_user_outlined,
+                            size: 14, color: AppColors.mintGreen),
                         const SizedBox(width: 6),
                         Text(
                           'সম্পূর্ণ বিজ্ঞাপনমুক্ত ও ডেটা-সাশ্রয়ী মোড • Bhromon',
