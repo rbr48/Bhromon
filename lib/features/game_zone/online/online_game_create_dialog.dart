@@ -39,6 +39,7 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
   OnlineGameType _selectedGame = OnlineGameType.ludo;
   late final TextEditingController _nameController;
   bool _autoFillBots = false;
+  bool _isTournament = false;
   bool _isCreating = false;
 
   @override
@@ -63,6 +64,7 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
         tourId: widget.tourId,
         gameType: _selectedGame,
         tableName: _nameController.text.trim(),
+        isTournament: _isTournament,
       );
 
       if (_autoFillBots) {
@@ -218,6 +220,32 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
             activeThumbColor: AppColors.mintGreen,
             contentPadding: EdgeInsets.zero,
             onChanged: (val) => setState(() => _autoFillBots = val),
+          ),
+
+          // Tour Tournament Match toggle
+          SwitchListTile(
+            title: const Row(
+              children: [
+                Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  'Tour Tournament Match',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            subtitle: const Text(
+              'Feature on Tour Leaderboard & award tournament trophies',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            value: _isTournament,
+            activeThumbColor: AppColors.gold,
+            activeTrackColor: AppColors.gold.withValues(alpha: 0.3),
+            contentPadding: EdgeInsets.zero,
+            onChanged: (val) => setState(() => _isTournament = val),
           ),
 
           const SizedBox(height: 16),

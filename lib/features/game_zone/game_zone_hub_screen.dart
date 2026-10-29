@@ -1121,6 +1121,37 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (session.isTournament) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              margin: const EdgeInsets.only(right: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.gold.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                    color:
+                                        AppColors.gold.withValues(alpha: 0.5),
+                                    width: 0.8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.emoji_events_rounded,
+                                      size: 11, color: AppColors.gold),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'TOURNAMENT',
+                                    style: TextStyle(
+                                      color: AppColors.gold,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 2),

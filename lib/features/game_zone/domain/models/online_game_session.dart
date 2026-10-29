@@ -151,6 +151,7 @@ class OnlineGameSession {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int version;
+  final bool isTournament;
 
   const OnlineGameSession({
     required this.id,
@@ -168,6 +169,7 @@ class OnlineGameSession {
     required this.createdAt,
     required this.updatedAt,
     this.version = 0,
+    this.isTournament = false,
   });
 
   factory OnlineGameSession.fromMap(String id, Map<String, dynamic> map) {
@@ -203,6 +205,7 @@ class OnlineGameSession {
       createdAt: parseTime(map['createdAt']),
       updatedAt: parseTime(map['updatedAt']),
       version: (map['version'] as num?)?.toInt() ?? 0,
+      isTournament: map['isTournament'] == true,
     );
   }
 
@@ -222,6 +225,7 @@ class OnlineGameSession {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'version': version,
+      'isTournament': isTournament,
     };
   }
 
