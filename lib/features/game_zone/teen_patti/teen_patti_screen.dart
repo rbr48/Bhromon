@@ -272,11 +272,14 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
     final user = _game.user;
     final isUserTurn = _game.isTurnOf(0);
 
+    final canPop = Navigator.of(context).canPop();
     return PopScope(
-      canPop: context.canPop(),
+      canPop: canPop,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        context.go('/game-zone');
+        try {
+          context.go('/game-zone');
+        } catch (_) {}
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF0F381E),
@@ -285,10 +288,12 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
             icon: const Icon(Icons.arrow_back_ios_new_rounded,
                 color: Colors.white70, size: 18),
             onPressed: () {
-              if (context.canPop()) {
-                context.pop();
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
               } else {
-                context.go('/game-zone');
+                try {
+                  context.go('/game-zone');
+                } catch (_) {}
               }
             },
           ),

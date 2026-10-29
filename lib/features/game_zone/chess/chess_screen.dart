@@ -412,11 +412,14 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
     final isBlackInCheck = _engine.isCheck(PieceColor.black);
     final canUndo = _engine.moveHistory.isNotEmpty && !_isAiThinking;
 
+    final canPop = Navigator.of(context).canPop();
     return PopScope(
-      canPop: context.canPop(),
+      canPop: canPop,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        context.go('/game-zone');
+        try {
+          context.go('/game-zone');
+        } catch (_) {}
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF1E2429),
@@ -425,10 +428,12 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
             icon: const Icon(Icons.arrow_back_ios_new_rounded,
                 color: Colors.white70, size: 18),
             onPressed: () {
-              if (context.canPop()) {
-                context.pop();
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
               } else {
-                context.go('/game-zone');
+                try {
+                  context.go('/game-zone');
+                } catch (_) {}
               }
             },
           ),
