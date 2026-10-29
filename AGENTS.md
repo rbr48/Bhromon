@@ -158,18 +158,19 @@ static session while the user visits other screens, and asks before discarding a
 
 ### F. Realtime Calling & WebRTC Voice Lounge Architecture
 - **Direct 1-on-1 Calling (`CallSignalingService`, `call_screen.dart`)**:
-  - Audio and video calling initiated directly from tour group channel members sheet.
-  - Signaling stored in Firestore at `tours/{tourId}/calls/{callId}`:
-    - Caller creates call document with `callerId`, `calleeId`, `offer`, `type` (audio/video), and `status: ringing`.
-    - Callee listens to active incoming calls; accepts by writing `answer` and setting `status: connected`, or rejects (`rejected`/`ended`).
-    - ICE candidates exchanged under `tours/{tourId}/calls/{callId}/candidates`.
-  - Security rules ensure only caller or callee can read/write the call session.
-- **Discord-Style Group Voice Lounge (`VoiceRoomService`, `voice_room_screen.dart`)**:
-  - Drop-in / drop-out group voice channels backed by WebRTC multi-peer mesh.
+  - Audio and video calling initiated directly from tour group channel members sheet and direct chat.
+  - Hybrid signaling: Instant VPS WebSocket relay (<15ms) backed by Firestore `calls/{callId}` fallback.
+  - **ICE Candidate Queuing (MANDATORY)**: Early ICE candidates that arrive over WebSocket or Firestore before `setRemoteDescription` completes are collected in `_pendingIceCandidates` and drained immediately upon remote description stabilization. This prevents dropped candidates and silent audio failure.
+  - **Native Remote Stream Binding**: Always bind genuine WebRTC remote stream (`event.streams.first`) directly to remote renderer with all tracks enabled; avoid wrapping in dummy local media streams.
+  - **Continuous Audio Sink**: Audio calls and Voice Lounge must keep an invisible 1x1 `RTCVideoView` mounted in the widget tree so WebRTC audio flows reliably on Web DOM and mobile audio sinks.
+  - **Mobile Audio Routing**: Call `Helper.setSpeakerphoneOn` upon `getUserMedia`, `onRemoteStream`, `onCallStateChange == 'answered'`, and speaker toggling to lock Android `MODE_IN_COMMUNICATION` routing properly.
+  - **Bidirectional Negotiation**: Explicitly pass `{ 'offerToReceiveAudio': 1, 'offerToReceiveVideo': isVideo ? 1 : 0 }` to `createOffer` and `createAnswer`.
+- **Discord-Style Group Voice Lounge (`VoiceRoomService`, `voice_room_screen.dart`, `group_channels_screen.dart`)**:
+  - Drop-in / drop-out group voice channels backed by WebRTC multi-peer mesh with per-peer candidate queuing.
   - Active participants track their presence in Firestore at `tours/{tourId}/channels/{channelId}/participants/{email}` with heartbeat timestamps and mute states.
   - Persistent floating docked voice bar allows users to browse itineraries, chat, or ledger while staying connected in the voice lounge.
 - **STUN/TURN Infrastructure (`sotto-coturn-1`)**:
-  - Running on Hostinger VPS (`coturn/coturn:4.18.0`) to relay media when direct peer-to-peer UDP is blocked by symmetric NATs or restrictive mobile carrier firewalls.
+  - Running on Hostinger VPS (`coturn/coturn:4.18.0`) to relay media when direct peer-to-peer UDP is blocked by symmetric NATs or restrictive mobile carrier firewalls. OpenRelay fallback configured.
 
 ### G. Hostinger VPS Infrastructure & Microservices Architecture
 - **Server**: Hostinger VPS (`148.135.137.245`), SSH port `2222`, user `root`, key `~/.ssh/id_rsa_dbm`.

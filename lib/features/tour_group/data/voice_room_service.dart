@@ -262,7 +262,6 @@ class VoiceRoomService {
         'echoCancellation': true,
         'noiseSuppression': true,
         'autoGainControl': true,
-        'highpassFilter': true,
       },
       'video': enableVideo
           ? <String, dynamic>{
@@ -275,6 +274,9 @@ class VoiceRoomService {
     };
 
     _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+    for (final track in _localStream!.getTracks()) {
+      track.enabled = true;
+    }
     _localRenderer.srcObject = _localStream;
 
     // Default to speakerphone for group voice rooms on mobile
@@ -336,7 +338,8 @@ class VoiceRoomService {
       await remoteRenderer.initialize();
       _remoteRenderers[remoteEmail] = remoteRenderer;
 
-      pc.onTrack = (RTCTrackEvent event) {
+      pc.onTrack = (RTCTrackEvent event) async {
+        event.track.enabled = true;
         for (final track in event.streams.isNotEmpty
             ? event.streams.first.getTracks()
             : [event.track]) {
@@ -344,6 +347,15 @@ class VoiceRoomService {
         }
         if (event.streams.isNotEmpty) {
           remoteRenderer.srcObject = event.streams.first;
+        } else {
+          final existing = remoteRenderer.srcObject;
+          if (existing != null) {
+            existing.addTrack(event.track);
+          } else {
+            final s = await createLocalMediaStream('remote_$remoteEmail');
+            s.addTrack(event.track);
+            remoteRenderer.srcObject = s;
+          }
         }
         _notify();
       };
@@ -360,7 +372,19 @@ class VoiceRoomService {
       // Deterministic role: alphabetically smaller email is the offerer
       final isOfferer = myEmail.compareTo(remoteEmail) < 0;
 
-      // ICE candidates
+      // ICE candidates queue to prevent losing candidates before setRemoteDescription
+      final List<RTCIceCandidate> pendingCandidates = [];
+      bool remoteDescSet = false;
+
+      Future<void> drainCandidates() async {
+        remoteDescSet = true;
+        for (final cand in List<RTCIceCandidate>.from(pendingCandidates)) {
+          await pc.addCandidate(cand).catchError((_) {});
+        }
+        pendingCandidates.clear();
+      }
+
+      // ICE candidates emission
       pc.onIceCandidate = (RTCIceCandidate candidate) {
         final candsCol = signalRef
             .collection(isOfferer ? 'offerCandidates' : 'answerCandidates');
@@ -378,17 +402,25 @@ class VoiceRoomService {
       // Watch peer's candidates
       final peerCandsCol = signalRef
           .collection(isOfferer ? 'answerCandidates' : 'offerCandidates');
-      final candSub = peerCandsCol.snapshots().listen((snap) {
+      final candSub = peerCandsCol.snapshots().listen((snap) async {
         for (final change in snap.docChanges) {
           if (change.type == DocumentChangeType.added) {
             final d = change.doc.data();
             if (d != null) {
+              final candStr = d['candidate'] as String?;
+              if (candStr == null || candStr.trim().isEmpty) continue;
               final cand = RTCIceCandidate(
-                d['candidate'] as String?,
+                candStr,
                 d['sdpMid'] as String?,
-                d['sdpMLineIndex'] as int?,
+                (d['sdpMLineIndex'] as num?)?.toInt(),
               );
-              pc.addCandidate(cand).catchError((_) {});
+              if (!remoteDescSet ||
+                  pc.signalingState ==
+                      RTCSignalingState.RTCSignalingStateClosed) {
+                pendingCandidates.add(cand);
+              } else {
+                await pc.addCandidate(cand).catchError((_) {});
+              }
             }
           }
         }
@@ -396,8 +428,11 @@ class VoiceRoomService {
       _signalSubs['${remoteEmail}_cand'] = candSub;
 
       if (isOfferer) {
-        // Create offer
-        final offer = await pc.createOffer();
+        // Create offer with explicit audio receive
+        final offer = await pc.createOffer({
+          'offerToReceiveAudio': 1,
+          'offerToReceiveVideo': 1,
+        });
         await pc.setLocalDescription(offer);
 
         await signalRef.set({
@@ -419,6 +454,7 @@ class VoiceRoomService {
               answerMap['type'] as String,
             );
             await pc.setRemoteDescription(answer).catchError((_) {});
+            await drainCandidates();
           }
         });
         _signalSubs['${remoteEmail}_sig'] = sigSub;
@@ -436,8 +472,12 @@ class VoiceRoomService {
               offerMap['type'] as String,
             );
             await pc.setRemoteDescription(offer).catchError((_) {});
+            await drainCandidates();
 
-            final answer = await pc.createAnswer();
+            final answer = await pc.createAnswer({
+              'offerToReceiveAudio': 1,
+              'offerToReceiveVideo': 1,
+            });
             await pc.setLocalDescription(answer);
 
             await signalRef.update({

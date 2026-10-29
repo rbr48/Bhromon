@@ -470,10 +470,11 @@ class _LuggageTrackerScreenState extends State<LuggageTrackerScreen> {
         ? selectedOwnerEmail.toLowerCase()
         : memberList.first.email.toLowerCase();
 
-    final initialCustodian = selectedCustodianEmail != null &&
+    final custodian = selectedCustodianEmail;
+    final initialCustodian = custodian != null &&
             memberList.any((m) =>
-                m.email.toLowerCase() == selectedCustodianEmail!.toLowerCase())
-        ? selectedCustodianEmail!.toLowerCase()
+                m.email.toLowerCase() == custodian.toLowerCase())
+        ? custodian.toLowerCase()
         : null;
 
     bool isLoaded = item?.isLoaded ?? false;

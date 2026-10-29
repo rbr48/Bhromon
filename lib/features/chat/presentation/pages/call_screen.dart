@@ -74,9 +74,14 @@ class _CallScreenState extends State<CallScreen> {
     _isSpeakerOn = widget.isVideoCall;
     if (!kIsWeb) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-      Helper.setSpeakerphoneOn(_isSpeakerOn);
     }
     _initCall();
+  }
+
+  void _applyAudioRouting() {
+    if (!kIsWeb) {
+      Helper.setSpeakerphoneOn(_isSpeakerOn);
+    }
   }
 
   Future<void> _initCall() async {
@@ -85,11 +90,23 @@ class _CallScreenState extends State<CallScreen> {
 
     // Request permissions
     if (!kIsWeb) {
-      await Permission.microphone.request();
+      final micStatus = await Permission.microphone.request();
+      if (micStatus.isDenied || micStatus.isPermanentlyDenied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Microphone permission is required for calls'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+          _safeExit();
+        }
+        return;
+      }
       if (widget.isVideoCall) {
         await Permission.camera.request();
       }
-      await Helper.setSpeakerphoneOn(_isSpeakerOn);
+      _applyAudioRouting();
     }
 
     _signaling.onLocalStream = (stream) {
@@ -107,6 +124,7 @@ class _CallScreenState extends State<CallScreen> {
           _remoteVideoConnected = true;
           _callStatusText = 'Connected';
         });
+        _applyAudioRouting();
         _startDurationTimer();
       }
     };
@@ -118,6 +136,7 @@ class _CallScreenState extends State<CallScreen> {
           _callStatusText = widget.isCaller ? 'Ringing...' : 'Incoming call...';
         } else if (state == 'answered') {
           _callStatusText = 'Connected';
+          _applyAudioRouting();
           _startDurationTimer();
         } else if (state == 'ended' || state == 'declined') {
           _callStatusText = 'Call ended';
@@ -147,6 +166,7 @@ class _CallScreenState extends State<CallScreen> {
           videoEnabled: widget.isVideoCall,
         );
       }
+      _applyAudioRouting();
     } catch (e) {
       debugPrint('CallScreen initialization error: $e');
       if (mounted) {
@@ -190,9 +210,7 @@ class _CallScreenState extends State<CallScreen> {
     setState(() {
       _isSpeakerOn = !_isSpeakerOn;
     });
-    if (!kIsWeb) {
-      Helper.setSpeakerphoneOn(_isSpeakerOn);
-    }
+    _applyAudioRouting();
   }
 
   void _switchCamera() {
@@ -246,14 +264,17 @@ class _CallScreenState extends State<CallScreen> {
   @override
   Widget build(BuildContext context) {
     final isVideo = widget.isVideoCall;
+    final canPop = Navigator.of(context).canPop();
 
     return PopScope(
-        canPop: context.canPop(),
+        canPop: canPop,
         onPopInvokedWithResult: (didPop, result) {
           _hasExited = true;
           _signaling.endCall(durationSeconds: _callDuration.inSeconds);
           if (!didPop) {
-            context.go('/chats');
+            try {
+              context.go('/chats');
+            } catch (_) {}
           }
         },
         child: Scaffold(
@@ -274,8 +295,20 @@ class _CallScreenState extends State<CallScreen> {
                             RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                       ),
                     )
-                  else
+                  else ...[
                     _buildAudioOrPlaceholderBackground(),
+                    // Invisible 1x1 audio sink ensures RTCVideoRenderer is mounted in the widget tree so WebRTC audio flows reliably on all platforms (especially Web).
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      width: 1,
+                      height: 1,
+                      child: Opacity(
+                        opacity: 0.01,
+                        child: RTCVideoView(_remoteRenderer),
+                      ),
+                    ),
+                  ],
 
                   // ── Top Header (Name, Status / Duration) ──────────────────────────
                   Positioned(

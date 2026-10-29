@@ -77,6 +77,8 @@ class CallSignalingService {
   String? _callId;
   String? _remoteUid;
   bool _isCaller = false;
+  bool _remoteDescriptionSet = false;
+  final List<RTCIceCandidate> _pendingIceCandidates = [];
   StreamSubscription<Map<String, dynamic>>? _vpsSignalingSub;
 
   // ── Public callbacks ───────────────────────────────────────────────────────
@@ -131,13 +133,18 @@ class CallSignalingService {
     _callId = callId;
     _remoteUid = remoteUid;
     _isCaller = true;
+    _remoteDescriptionSet = false;
+    _pendingIceCandidates.clear();
     _attachVpsSignalingListener();
 
     await _getUserMedia(videoEnabled);
     await _createPeerConnection();
 
-    // Create SDP offer.
-    final offer = await _peerConnection!.createOffer();
+    // Create SDP offer with explicit audio receive.
+    final offer = await _peerConnection!.createOffer({
+      'offerToReceiveAudio': 1,
+      'offerToReceiveVideo': videoEnabled ? 1 : 0,
+    });
     await _peerConnection!.setLocalDescription(offer);
 
     // Relay call offer via VPS WebSocket (<15ms, zero Firestore quota)
@@ -191,7 +198,7 @@ class CallSignalingService {
 
     // Watch the call document for the callee's answer SDP.
     _callDocSub = _callDoc(callId).snapshots().listen(
-      (snapshot) {
+      (snapshot) async {
         final data = snapshot.data();
         if (data == null) return;
 
@@ -208,12 +215,14 @@ class CallSignalingService {
             answerMap['sdp'] as String,
             answerMap['type'] as String,
           );
-          _peerConnection!.setRemoteDescription(answer).catchError((Object e) {
+          try {
+            await _peerConnection!.setRemoteDescription(answer);
+            await _drainPendingIceCandidates();
+          } catch (e) {
             if (kDebugMode) {
-              debugPrint(
-                  'CallSignalingService: setRemoteDescription error: $e');
+              debugPrint('CallSignalingService: setRemoteDescription error: $e');
             }
-          });
+          }
         }
 
         if (status == 'ended' || status == 'declined') {
@@ -241,6 +250,8 @@ class CallSignalingService {
   }) async {
     _callId = callId;
     _isCaller = false;
+    _remoteDescriptionSet = false;
+    _pendingIceCandidates.clear();
     _attachVpsSignalingListener();
 
     // Read the existing call document to get the offer.
@@ -257,21 +268,29 @@ class CallSignalingService {
           'CallSignalingService: call document $callId has no offer.');
     }
 
+    final callerId = callData['callerId'] as String? ?? '';
+    if (callerId.isNotEmpty) {
+      _remoteUid = callerId;
+    }
+
     await _getUserMedia(videoEnabled);
     await _createPeerConnection();
 
-    // Set the caller's offer as the remote description.
+    // Set the caller's offer as the remote description and drain queued candidates.
     final offer = RTCSessionDescription(
       offerMap['sdp'] as String,
       offerMap['type'] as String,
     );
     await _peerConnection!.setRemoteDescription(offer);
+    await _drainPendingIceCandidates();
 
-    // Create and set our answer.
-    final answer = await _peerConnection!.createAnswer();
+    // Create and set our answer with explicit audio receive.
+    final answer = await _peerConnection!.createAnswer({
+      'offerToReceiveAudio': 1,
+      'offerToReceiveVideo': videoEnabled ? 1 : 0,
+    });
     await _peerConnection!.setLocalDescription(answer);
 
-    final callerId = callData['callerId'] as String? ?? '';
     if (callerId.isNotEmpty) {
       VpsChatService().sendCallSignal(
         recipientId: callerId,
@@ -433,7 +452,6 @@ class CallSignalingService {
         'echoCancellation': true,
         'noiseSuppression': true,
         'autoGainControl': true,
-        'highpassFilter': true,
       },
       'video': videoEnabled
           ? <String, dynamic>{
@@ -446,6 +464,9 @@ class CallSignalingService {
     };
 
     _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+    for (final track in _localStream!.getTracks()) {
+      track.enabled = true;
+    }
     onLocalStream?.call(_localStream!);
   }
 
@@ -454,10 +475,11 @@ class CallSignalingService {
   Future<void> _createPeerConnection() async {
     _peerConnection = await createPeerConnection(_iceConfig);
 
-    // Add all local tracks to the peer connection.
+    // Add all local tracks to the peer connection and ensure enabled.
     final localStream = _localStream;
     if (localStream != null) {
       for (final track in localStream.getTracks()) {
+        track.enabled = true;
         await _peerConnection!.addTrack(track, localStream);
       }
     }
@@ -487,17 +509,22 @@ class CallSignalingService {
       }
     };
 
-    // Capture the remote peer's media stream.
-    _remoteStream ??= await createLocalMediaStream('remoteStream');
-
-    _peerConnection!.onTrack = (RTCTrackEvent event) {
-      for (final track in event.streams.isNotEmpty
-          ? event.streams.first.getTracks()
-          : [event.track]) {
-        track.enabled = true;
-        _remoteStream!.addTrack(track);
+    // Capture the genuine remote peer's media stream.
+    _peerConnection!.onTrack = (RTCTrackEvent event) async {
+      MediaStream stream;
+      if (event.streams.isNotEmpty) {
+        stream = event.streams.first;
+      } else {
+        _remoteStream ??= await createLocalMediaStream('remoteStream');
+        _remoteStream!.addTrack(event.track);
+        stream = _remoteStream!;
       }
-      onRemoteStream?.call(_remoteStream!);
+      event.track.enabled = true;
+      for (final track in stream.getTracks()) {
+        track.enabled = true;
+      }
+      _remoteStream = stream;
+      onRemoteStream?.call(stream);
     };
 
     // Log connection-state changes in debug builds.
@@ -514,19 +541,50 @@ class CallSignalingService {
     };
   }
 
-  /// Parses a Firestore candidate map and adds it to the peer connection.
-  void _addIceCandidate(Map<String, dynamic>? data) {
+  /// Parses a candidate map and adds it to the peer connection or queues it.
+  Future<void> _addIceCandidate(Map<String, dynamic>? data) async {
     if (data == null) return;
+    final candStr = data['candidate'] as String?;
+    if (candStr == null || candStr.trim().isEmpty) return;
+
     final candidate = RTCIceCandidate(
-      data['candidate'] as String?,
+      candStr,
       data['sdpMid'] as String?,
-      data['sdpMLineIndex'] as int?,
+      (data['sdpMLineIndex'] as num?)?.toInt(),
     );
-    _peerConnection?.addCandidate(candidate).catchError((Object e) {
+
+    if (!_remoteDescriptionSet ||
+        _peerConnection == null ||
+        _peerConnection!.signalingState ==
+            RTCSignalingState.RTCSignalingStateClosed) {
+      _pendingIceCandidates.add(candidate);
+      return;
+    }
+
+    try {
+      await _peerConnection!.addCandidate(candidate);
+    } catch (e) {
       if (kDebugMode) {
         debugPrint('CallSignalingService: addCandidate error: $e');
       }
-    });
+    }
+  }
+
+  /// Flushes all queued ICE candidates once the remote description is active.
+  Future<void> _drainPendingIceCandidates() async {
+    _remoteDescriptionSet = true;
+    if (_peerConnection == null) return;
+    final queued = List<RTCIceCandidate>.from(_pendingIceCandidates);
+    _pendingIceCandidates.clear();
+    for (final candidate in queued) {
+      try {
+        await _peerConnection!.addCandidate(candidate);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('CallSignalingService: queued addCandidate error: $e');
+        }
+      }
+    }
   }
 
   Future<void> _writeCandidate(
@@ -545,7 +603,7 @@ class CallSignalingService {
 
   void _attachVpsSignalingListener() {
     _vpsSignalingSub?.cancel();
-    _vpsSignalingSub = VpsChatService().callSignalStream.listen((event) {
+    _vpsSignalingSub = VpsChatService().callSignalStream.listen((event) async {
       final cId = event['callId']?.toString();
       if (cId != _callId) return;
       final signalType = event['signalType'] as String?;
@@ -557,12 +615,19 @@ class CallSignalingService {
             RTCSignalingState.RTCSignalingStateStable) {
           final sdp = answerMap['sdp'] as String? ?? '';
           final type = answerMap['type'] as String? ?? 'answer';
-          _peerConnection
-              ?.setRemoteDescription(RTCSessionDescription(sdp, type));
-          onCallStateChange?.call('answered');
+          try {
+            await _peerConnection!
+                .setRemoteDescription(RTCSessionDescription(sdp, type));
+            await _drainPendingIceCandidates();
+            onCallStateChange?.call('answered');
+          } catch (e) {
+            if (kDebugMode) {
+              debugPrint('CallSignalingService: vps answer error: $e');
+            }
+          }
         }
       } else if (signalType == 'candidate' && payload is Map) {
-        _addIceCandidate(Map<String, dynamic>.from(payload));
+        await _addIceCandidate(Map<String, dynamic>.from(payload));
       } else if (signalType == 'end' || signalType == 'declined') {
         onCallStateChange?.call(signalType!);
         _releaseResources();
@@ -581,6 +646,8 @@ class CallSignalingService {
     _answerCandidatesSub = null;
     _callDocSub = null;
     _vpsSignalingSub = null;
+    _pendingIceCandidates.clear();
+    _remoteDescriptionSet = false;
 
     await _peerConnection?.close();
     _peerConnection = null;

@@ -416,15 +416,6 @@ class CallNotificationService {
       await FlutterCallkitIncoming.endAllCalls();
     }
 
-    try {
-      await FirebaseFirestore.instance
-          .collection('calls')
-          .doc(callId)
-          .update({'status': 'answered'});
-    } catch (e) {
-      debugPrint('Error updating call status to answered: $e');
-    }
-
     final context = AppRouter.navigatorKey.currentContext;
     if (context != null && context.mounted) {
       final currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
