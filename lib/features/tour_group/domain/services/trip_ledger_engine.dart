@@ -1,5 +1,6 @@
 import 'dart:math';
 import '../models/expense_models.dart';
+import 'debt_simplifier.dart';
 
 class LedgerMemberInput {
   final String id;
@@ -219,10 +220,19 @@ class TripLedgerEngine {
     return parts;
   }
 
-  /// Pairs the largest debtor with the largest creditor, repeatedly, until
-  /// all balances are cleared. This greedy method is simple and usually close
-  /// to the fewest transfers possible, but it is not guaranteed to be minimal.
+  /// Computes a simplified settlement plan with the minimum number of bilateral
+  /// cash transfers required to balance all accounts. Falls back to greedy pairing
+  /// if non-strict party totals are passed.
   static List<SettlementTransaction> settle(
+      List<({String name, int netPaisa, bool fund, String? id})> parties) {
+    try {
+      return DebtSimplifier.simplifyDebts(parties);
+    } catch (_) {
+      return _greedySettle(parties);
+    }
+  }
+
+  static List<SettlementTransaction> _greedySettle(
       List<({String name, int netPaisa, bool fund, String? id})> parties) {
     final balanceSum = parties.fold<int>(0, (sum, p) => sum + p.netPaisa);
     if (balanceSum.abs() > 1) {
