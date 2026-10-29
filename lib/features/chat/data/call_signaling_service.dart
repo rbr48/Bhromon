@@ -5,6 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'vps_chat_service.dart';
 
+enum CallNetworkQuality {
+  good,
+  fair,
+  poor,
+}
+
 /// WebRTC signaling service that uses Firestore as the signaling channel
 /// for peer-to-peer audio/video calls between two users.
 ///
@@ -80,6 +86,9 @@ class CallSignalingService {
   bool _remoteDescriptionSet = false;
   final List<RTCIceCandidate> _pendingIceCandidates = [];
   StreamSubscription<Map<String, dynamic>>? _vpsSignalingSub;
+  Timer? _statsTimer;
+  final ValueNotifier<CallNetworkQuality> networkQuality =
+      ValueNotifier(CallNetworkQuality.good);
 
   // ── Public callbacks ───────────────────────────────────────────────────────
 
@@ -527,16 +536,35 @@ class CallSignalingService {
       onRemoteStream?.call(stream);
     };
 
-    // Log connection-state changes in debug builds.
+    // Log connection-state changes and track live network quality.
     _peerConnection!.onConnectionState = (RTCPeerConnectionState state) {
       if (kDebugMode) {
         debugPrint('CallSignalingService: connectionState → $state');
+      }
+      switch (state) {
+        case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
+          _updateNetworkQuality(CallNetworkQuality.good);
+          _startStatsMonitoring();
+          break;
+        case RTCPeerConnectionState.RTCPeerConnectionStateConnecting:
+          _updateNetworkQuality(CallNetworkQuality.fair);
+          break;
+        case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected:
+        case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
+          _updateNetworkQuality(CallNetworkQuality.poor);
+          break;
+        default:
+          break;
       }
     };
 
     _peerConnection!.onIceConnectionState = (RTCIceConnectionState state) {
       if (kDebugMode) {
         debugPrint('CallSignalingService: iceConnectionState → $state');
+      }
+      if (state == RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
+          state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
+        _updateNetworkQuality(CallNetworkQuality.poor);
       }
     };
   }
@@ -601,6 +629,43 @@ class CallSignalingService {
     }
   }
 
+  void _startStatsMonitoring() {
+    _statsTimer?.cancel();
+    _statsTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
+      final pc = _peerConnection;
+      if (pc == null) return;
+      try {
+        final stats = await pc.getStats();
+        int packetsLost = 0;
+        int packetsReceived = 0;
+        for (final report in stats) {
+          if (report.values['type'] == 'inbound-rtp') {
+            packetsLost += (report.values['packetsLost'] as num?)?.toInt() ?? 0;
+            packetsReceived +=
+                (report.values['packetsReceived'] as num?)?.toInt() ?? 0;
+          }
+        }
+        if (packetsReceived > 0) {
+          final total = packetsLost + packetsReceived;
+          final lossRatio = packetsLost / total;
+          if (lossRatio > 0.15) {
+            _updateNetworkQuality(CallNetworkQuality.poor);
+          } else if (lossRatio > 0.05) {
+            _updateNetworkQuality(CallNetworkQuality.fair);
+          } else {
+            _updateNetworkQuality(CallNetworkQuality.good);
+          }
+        }
+      } catch (_) {}
+    });
+  }
+
+  void _updateNetworkQuality(CallNetworkQuality q) {
+    if (networkQuality.value != q) {
+      networkQuality.value = q;
+    }
+  }
+
   void _attachVpsSignalingListener() {
     _vpsSignalingSub?.cancel();
     _vpsSignalingSub = VpsChatService().callSignalStream.listen((event) async {
@@ -638,6 +703,9 @@ class CallSignalingService {
 
   /// Cancels all subscriptions, closes the peer connection, and stops all tracks.
   Future<void> _releaseResources() async {
+    _statsTimer?.cancel();
+    _statsTimer = null;
+    networkQuality.value = CallNetworkQuality.good;
     await _offerCandidatesSub?.cancel();
     await _answerCandidatesSub?.cancel();
     await _callDocSub?.cancel();

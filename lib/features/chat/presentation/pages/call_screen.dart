@@ -351,23 +351,96 @@ class _CallScreenState extends State<CallScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 2),
-                                    Text(
-                                      _callDuration > Duration.zero
-                                          ? _formatDuration(_callDuration)
-                                          : _callStatusText,
-                                      style: TextStyle(
-                                        color: _callDuration > Duration.zero
-                                            ? const Color(0xFF00A884)
-                                            : Colors.white70,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                        shadows: const [
-                                          Shadow(
-                                            color: Colors.black87,
-                                            blurRadius: 4,
+                                    Row(
+                                      children: [
+                                        Text(
+                                          _callDuration > Duration.zero
+                                              ? _formatDuration(_callDuration)
+                                              : _callStatusText,
+                                          style: TextStyle(
+                                            color: _callDuration > Duration.zero
+                                                ? const Color(0xFF00A884)
+                                                : Colors.white70,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                            shadows: const [
+                                              Shadow(
+                                                color: Colors.black87,
+                                                blurRadius: 4,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (_callDuration > Duration.zero) ...[
+                                          const SizedBox(width: 8),
+                                          ValueListenableBuilder<CallNetworkQuality>(
+                                            valueListenable:
+                                                _signaling.networkQuality,
+                                            builder: (ctx, quality, _) {
+                                              Color dotColor;
+                                              String label;
+                                              switch (quality) {
+                                                case CallNetworkQuality.good:
+                                                  dotColor =
+                                                      const Color(0xFF00E676);
+                                                  label = 'HD';
+                                                  break;
+                                                case CallNetworkQuality.fair:
+                                                  dotColor =
+                                                      const Color(0xFFFFD600);
+                                                  label = 'Fair';
+                                                  break;
+                                                case CallNetworkQuality.poor:
+                                                  dotColor =
+                                                      const Color(0xFFFF1744);
+                                                  label = 'Weak';
+                                                  break;
+                                              }
+                                              return Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 1),
+                                                decoration: BoxDecoration(
+                                                  color: dotColor
+                                                      .withValues(alpha: 0.15),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                  border: Border.all(
+                                                      color: dotColor
+                                                          .withValues(
+                                                              alpha: 0.4),
+                                                      width: 0.8),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Container(
+                                                      width: 6,
+                                                      height: 6,
+                                                      decoration: BoxDecoration(
+                                                        color: dotColor,
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      label,
+                                                      style: TextStyle(
+                                                        color: dotColor,
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
                                           ),
                                         ],
-                                      ),
+                                      ],
                                     ),
                                   ],
                                 ),
