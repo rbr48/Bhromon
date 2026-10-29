@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../../core/utils/app_logger.dart';
 import 'call_ice_config.dart';
+import 'call_media.dart';
 import 'vps_chat_service.dart';
 
 /// How long an incoming call rings before it counts as missed. The native ring
@@ -78,6 +79,7 @@ class CallSignalingService {
   bool _remoteAnswerApplied = false;
   bool _audioEnabled = true;
   bool _videoEnabled = true;
+  bool _hasLocalVideo = false;
   final List<RTCIceCandidate> _pendingIceCandidates = [];
   final Set<String> _seenCandidates = {};
   Timer? _statsTimer;
@@ -304,6 +306,10 @@ class CallSignalingService {
       track.enabled = enabled;
     }
   }
+
+  /// Whether this call sends the local camera. False for an audio call, and for
+  /// a video call whose camera could not be opened.
+  bool get hasLocalVideo => _hasLocalVideo;
 
   /// Turns the camera on or off. Applies to the stream now, or when it starts.
   Future<void> toggleVideo(bool enabled) async {
@@ -541,26 +547,17 @@ class CallSignalingService {
 
   // ── Media and peer connection ──────────────────────────────────────────────
 
-  /// Captures audio (and optionally video) from the local device.
+  /// Captures audio, and video when the call asks for it. A camera that cannot
+  /// be opened leaves the call on audio, and [hasLocalVideo] reports that.
   Future<void> _getUserMedia(bool videoEnabled) async {
-    final mediaConstraints = <String, dynamic>{
-      'audio': {
-        'echoCancellation': true,
-        'noiseSuppression': true,
-        'autoGainControl': true,
-      },
-      'video': videoEnabled
-          ? <String, dynamic>{
-              'facingMode': 'user',
-              'width': {'ideal': 640},
-              'height': {'ideal': 480},
-              'frameRate': {'ideal': 30},
-            }
-          : false,
-    };
-
-    final stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+    final media = await captureCallMedia<MediaStream>(
+      wantVideo: videoEnabled,
+      getUserMedia: (constraints) =>
+          navigator.mediaDevices.getUserMedia(constraints),
+    );
+    final stream = media.stream;
     _localStream = stream;
+    _hasLocalVideo = media.hasVideo;
     for (final track in stream.getAudioTracks()) {
       track.enabled = _audioEnabled;
     }

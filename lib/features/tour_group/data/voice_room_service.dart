@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../chat/data/call_ice_config.dart';
+import '../../chat/data/call_media.dart';
 import '../domain/models/channel_models.dart';
 import '../domain/models/date_codec.dart';
 
@@ -244,23 +245,15 @@ class VoiceRoomService {
   }
 
   Future<void> _setupLocalMedia({required bool enableVideo}) async {
-    final mediaConstraints = <String, dynamic>{
-      'audio': {
-        'echoCancellation': true,
-        'noiseSuppression': true,
-        'autoGainControl': true,
-      },
-      'video': enableVideo
-          ? <String, dynamic>{
-              'facingMode': 'user',
-              'width': {'ideal': 640},
-              'height': {'ideal': 480},
-              'frameRate': {'ideal': 30},
-            }
-          : false,
-    };
-
-    final stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+    final media = await captureCallMedia<MediaStream>(
+      wantVideo: enableVideo,
+      getUserMedia: (constraints) =>
+          navigator.mediaDevices.getUserMedia(constraints),
+    );
+    // A camera that could not be opened joins on audio. The camera button can
+    // still switch video on later.
+    _isVideoOn = media.hasVideo;
+    final stream = media.stream;
     _localStream = stream;
     for (final track in stream.getTracks()) {
       track.enabled = true;
