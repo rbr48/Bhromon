@@ -342,7 +342,9 @@ class CallNotificationService {
     }
 
     _activeIncomingCallId = callId;
-    if (!kIsWeb) {
+    final showsInApp = _canShowInAppDialog();
+    // In the foreground the in-app dialog is enough. A native screen on top of it would ring twice.
+    if (!kIsWeb && !(showsInApp && _isAppInForeground())) {
       await showNativeIncomingCall(
         callId: callId,
         callerId: callerId,
@@ -353,7 +355,10 @@ class CallNotificationService {
     }
 
     final context = AppRouter.navigatorKey.currentContext;
-    if (context != null && context.mounted && !_isCallDialogShowing) {
+    if (showsInApp &&
+        context != null &&
+        context.mounted &&
+        !_isCallDialogShowing) {
       _showInAppCallDialog(
         context: context,
         callId: callId,
@@ -364,6 +369,14 @@ class CallNotificationService {
       );
     }
   }
+
+  bool _canShowInAppDialog() {
+    final context = AppRouter.navigatorKey.currentContext;
+    return context != null && context.mounted && !_isCallDialogShowing;
+  }
+
+  bool _isAppInForeground() =>
+      WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
 
   void _showInAppCallDialog({
     required BuildContext context,
