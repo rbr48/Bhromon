@@ -173,11 +173,12 @@ def test_offers_are_rate_limited_per_caller(client, fake_firebase, monkeypatch):
     assert replies[2]["reason"] == "rate_limited"
 
 
-def test_an_offer_to_an_offline_callee_is_not_pushed_twice(client, fake_firebase, monkeypatch):
-    # The Firestore call document (sendCallPushNotification) rings an offline callee.
-    # The relay must not send a second push for the same call.
+def test_an_offer_rings_the_callee_with_a_call_push(client, fake_firebase, monkeypatch):
+    # A phone that is asleep or closed is reached only by a push, so every offer
+    # sends one. The phone shows a call id once, so a second push for the same
+    # call from sendCallPushNotification does not ring twice.
     push = MagicMock(return_value=1)
-    monkeypatch.setattr(chat.push_dispatcher, "send_push_to_uid", push)
+    monkeypatch.setattr(chat.push_dispatcher, "send_call_push_to_uid", push)
     with _signed_in(client, "tok-alice") as alice:
         alice.receive_json()
         alice.send_json({
@@ -186,9 +187,54 @@ def test_an_offer_to_an_offline_callee_is_not_pushed_twice(client, fake_firebase
             "recipientId": "uid-bob",
             "signalType": "offer",
             "payload": {},
+            "isVideo": True,
+            "callerName": "Alice",
         })
         assert alice.receive_json() == {"type": "call_signal_ack", "callId": "c1", "delivered": False}
+    push.assert_called_once_with(
+        recipient_uid="uid-bob", call_id="c1", caller_id="uid-alice", caller_name="Alice", is_video=True
+    )
+
+
+def test_only_an_offer_sends_a_call_push(client, fake_firebase, monkeypatch):
+    push = MagicMock(return_value=1)
+    monkeypatch.setattr(chat.push_dispatcher, "send_call_push_to_uid", push)
+    with _signed_in(client, "tok-alice") as alice:
+        alice.receive_json()
+        alice.send_json({
+            "type": "call_signal",
+            "callId": "c1",
+            "recipientId": "uid-bob",
+            "signalType": "end",
+            "payload": {},
+        })
+        alice.send_json({"type": "ping"})
+        assert alice.receive_json() == {"type": "pong"}
     push.assert_not_called()
+
+
+def test_a_call_push_is_data_only_on_android(monkeypatch, tmp_path):
+    db = chat.ChatDatabase(tmp_path / "chat.db")
+    db.register_device_token("uid-bob", "android-token", device_id="d1", platform="android")
+    sent = []
+    monkeypatch.setattr("firebase_admin._apps", {"[DEFAULT]": object()})
+    monkeypatch.setattr("firebase_admin.messaging.send", lambda msg: sent.append(msg))
+
+    count = chat.PushNotificationDispatcher(db).send_call_push_to_uid(
+        "uid-bob", call_id="c1", caller_id="uid-alice", caller_name="Alice", is_video=False
+    )
+
+    assert count == 1
+    message = sent[0]
+    assert message.notification is None
+    assert message.data == {
+        "action": "call",
+        "callId": "c1",
+        "callerId": "uid-alice",
+        "callerName": "Alice",
+        "isVideo": "false",
+    }
+    assert message.android.priority == "high"
 
 
 # ── Offer limiter and conversation membership ─────────────────────────────────

@@ -682,6 +682,88 @@ class PushNotificationDispatcher:
 
         return sent_count
 
+    def send_call_push_to_uid(
+        self,
+        recipient_uid: str,
+        call_id: str,
+        caller_id: str,
+        caller_name: str,
+        is_video: bool,
+    ) -> int:
+        """Rings the recipient's phones for an incoming call.
+
+        Android gets a data-only message, so the app's background handler shows
+        the native incoming-call screen. A `notification` block would show a
+        plain alert instead. The phone shows a call id once, so this push and
+        the one from sendCallPushNotification ring a single time.
+        """
+        tokens = self.db.get_device_tokens(recipient_uid)
+        if not tokens:
+            return 0
+
+        import firebase_admin
+        from firebase_admin import messaging
+
+        if not firebase_admin._apps:
+            logger.warning("Firebase Admin SDK not initialized; skipping call push.")
+            return 0
+
+        kind = "Video" if is_video else "Voice"
+        title = f"Incoming {kind} Call"
+        body = f"{caller_name} is calling you on Bhromon..."
+        data = {
+            "action": "call",
+            "callId": call_id,
+            "callerId": caller_id,
+            "callerName": caller_name,
+            "isVideo": "true" if is_video else "false",
+        }
+
+        sent_count = 0
+        for entry in tokens:
+            token = entry["token"]
+            try:
+                if entry.get("platform") == "web":
+                    # A browser has no native call screen, so it gets a visible alert.
+                    msg = messaging.Message(
+                        token=token,
+                        data=data,
+                        webpush=messaging.WebpushConfig(
+                            headers={"Urgency": "high", "TTL": str(CALL_RING_SECONDS)},
+                            notification=messaging.WebpushNotification(
+                                title=title, body=body, icon="/icons/Icon-192.png"
+                            ),
+                        ),
+                    )
+                else:
+                    msg = messaging.Message(
+                        token=token,
+                        data=data,
+                        android=messaging.AndroidConfig(priority="high", ttl=CALL_RING_SECONDS),
+                        apns=messaging.APNSConfig(
+                            headers={
+                                "apns-priority": "10",
+                                "apns-expiration": str(int(time.time()) + CALL_RING_SECONDS),
+                            },
+                            payload=messaging.APNSPayload(
+                                aps=messaging.Aps(
+                                    alert=messaging.ApsAlert(title=title, body=body),
+                                    sound="default",
+                                    content_available=True,
+                                )
+                            ),
+                        ),
+                    )
+                messaging.send(msg)
+                sent_count += 1
+            except Exception as e:
+                err_str = str(e)
+                logger.warning("Failed to send call push to token %s: %s", token[:15], err_str)
+                if any(dead_code in err_str for dead_code in DEAD_TOKEN_CODES):
+                    self.db.delete_device_token(token)
+
+        return sent_count
+
 
 # ── Global Singletons & Router ────────────────────────────────────────────────
 
@@ -1040,6 +1122,8 @@ WS_AUTH_TIMEOUT_SECONDS = 10.0
 # How long a chat message waits for its recipient's app to confirm it on screen,
 # over a socket that can confirm, before the push goes out.
 MESSAGE_ACK_SECONDS = 8.0
+# How long an incoming call rings. The app and sendCallPushNotification use the same.
+CALL_RING_SECONDS = 45
 
 
 class CallOfferLimiter:
@@ -1090,8 +1174,9 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
 
     The sender's uid comes from the socket, never from the message. An offer also
     counts against the sender's rate limit. Only an offer gets an ack, which says
-    whether the callee was connected. A callee who is offline is still rung through
-    the Firestore call document.
+    whether the callee was connected. Every offer also rings the callee's phones
+    with a push: a phone that is asleep or frozen still accepts the socket write,
+    so a delivered offer is not proof that the phone is ringing.
     """
     call_id = _short_text(data.get("callId"), 64) or ""
     signal_type = data.get("signalType")
@@ -1133,6 +1218,16 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
     )
     if signal_type == "offer":
         await websocket.send_json({"type": "call_signal_ack", "callId": call_id, "delivered": delivered})
+        _start_background(
+            run_in_threadpool(
+                push_dispatcher.send_call_push_to_uid,
+                recipient_uid=recipient_id,
+                call_id=call_id,
+                caller_id=uid,
+                caller_name=_short_text(data.get("callerName"), 80) or "A traveler",
+                is_video=bool(data.get("isVideo", False)),
+            )
+        )
 
 
 # ── Real-Time WebSocket Endpoint ──────────────────────────────────────────────
