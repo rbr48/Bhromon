@@ -452,40 +452,95 @@ service cloud.firestore {
     }
 
     // ── WebRTC Calling & Signaling ───────────────────────────────────────────
+    // A call is a document between two parties. The caller creates it, and that
+    // write rings the callee (sendCallPushNotification). After creation the
+    // identity fields are fixed. The only moves left are the ones a call makes:
+    // answer, decline, miss, or end. Candidates carry each device's network
+    // addresses, so only the two parties can read them.
     match /calls/{callId} {
-      function isCallParticipant() {
-        return isAuth() && (
-          (resource != null && (
-            request.auth.uid == resource.data.callerId ||
-            request.auth.uid == resource.data.calleeId ||
-            tourUserEmail() == resource.data.callerId ||
-            tourUserEmail() == resource.data.calleeId ||
-            (resource.data.participants != null && (
-              request.auth.uid in resource.data.participants ||
-              tourUserEmail() in resource.data.participants
-            ))
-          )) ||
-          (resource == null && (
-            request.auth.uid == request.resource.data.callerId ||
-            request.auth.uid == request.resource.data.calleeId ||
-            tourUserEmail() == request.resource.data.callerId ||
-            tourUserEmail() == request.resource.data.calleeId ||
-            (request.resource.data.participants != null && (
-              request.auth.uid in request.resource.data.participants ||
-              tourUserEmail() in request.resource.data.participants
-            ))
-          ))
-        );
+      function isCaller(data) {
+        return request.auth.uid == data.callerId || tourUserEmail() == data.callerId;
+      }
+      function isCallee(data) {
+        return request.auth.uid == data.calleeId || tourUserEmail() == data.calleeId;
+      }
+      function isParty(data) {
+        return isCaller(data) || isCallee(data);
+      }
+      function isSdp(description, sdpType) {
+        return description is map
+          && description.keys().hasOnly(['type', 'sdp'])
+          && description.type == sdpType
+          && description.sdp is string
+          && description.sdp.size() <= 65536;
+      }
+      function isCandidate(data) {
+        return data.keys().hasOnly(['candidate', 'sdpMid', 'sdpMLineIndex'])
+          && data.candidate is string
+          && data.candidate.size() <= 2048;
       }
 
-      allow read, write: if isCallParticipant();
+      allow read: if isAuth() && resource != null && isParty(resource.data);
+
+      allow create: if isAuth()
+        && isCaller(request.resource.data)
+        && request.resource.data.calleeId is string
+        && request.resource.data.calleeId.size() > 0
+        && request.resource.data.calleeId.size() <= 128
+        && request.resource.data.calleeId != request.resource.data.callerId
+        && request.resource.data.keys().hasOnly([
+          'callerId', 'calleeId', 'participants', 'isVideo',
+          'callerName', 'callerAvatar', 'offer', 'status', 'createdAt'
+        ])
+        && request.resource.data.isVideo is bool
+        && request.resource.data.status == 'calling'
+        && request.resource.data.createdAt == request.time
+        && isSdp(request.resource.data.offer, 'offer')
+        && maxLength('callerName', 80)
+        && maxLength('callerAvatar', 512);
+
+      // Moves the status from one of `fromStatuses` to `newStatus`, leaving the answer alone.
+      function movesTo(newStatus, fromStatuses) {
+        return request.resource.data.status == newStatus
+          && resource.data.status in fromStatuses
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['answer']);
+      }
+
+      allow update: if isAuth()
+        && resource != null
+        && isParty(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'answer'])
+        && (
+          // The callee answers a ringing call. The status and the SDP answer change together.
+          (request.resource.data.status == 'answered'
+            && resource.data.status == 'calling'
+            && isCallee(resource.data)
+            && isSdp(request.resource.data.answer, 'answer'))
+          // The callee declines a ringing call.
+          || (isCallee(resource.data) && movesTo('declined', ['calling']))
+          // The caller gives up on a call that nobody answered.
+          || (isCaller(resource.data) && movesTo('missed', ['calling']))
+          // Either party hangs up a call that is ringing or in progress.
+          || movesTo('ended', ['calling', 'answered'])
+        );
+
+      allow delete: if false;
 
       match /offerCandidates/{candidateId} {
-        allow read, write: if isAuth();
+        allow read: if isAuth() && isParty(get(/databases/$(database)/documents/calls/$(callId)).data);
+        allow create: if isAuth()
+          && isCaller(get(/databases/$(database)/documents/calls/$(callId)).data)
+          && isCandidate(request.resource.data);
+        allow update, delete: if false;
       }
 
       match /answerCandidates/{candidateId} {
-        allow read, write: if isAuth();
+        allow read: if isAuth() && isParty(get(/databases/$(database)/documents/calls/$(callId)).data);
+        allow create: if isAuth()
+          && isCallee(get(/databases/$(database)/documents/calls/$(callId)).data)
+          && isCandidate(request.resource.data);
+        allow update, delete: if false;
       }
     }
 
@@ -763,16 +818,39 @@ service cloud.firestore {
           allow write: if isActiveMember(tourId) && typingEmail == tourUserEmail();
         }
 
-        // Voice room participants & signaling
+        // Voice room seats. A member writes only their own seat. The heartbeat
+        // (lastSeenAt) is stamped by the server, so a seat whose app died stops
+        // looking live once it goes stale.
         match /voice_participants/{participantEmail} {
+          function isOwnSeat() {
+            return isActiveMember(tourId) && participantEmail == tourUserEmail();
+          }
           allow read: if isActiveMember(tourId);
-          allow write: if isActiveMember(tourId) && participantEmail == tourUserEmail();
+          allow create, update: if isOwnSeat()
+            && request.resource.data.email == participantEmail
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.keys().hasOnly([
+              'email', 'displayName', 'photoUrl', 'uid', 'isAudioMuted',
+              'isVideoOn', 'joinedAt', 'lastSeenAt', 'sessionId'
+            ])
+            && request.resource.data.lastSeenAt == request.time
+            && maxLength('displayName', 80)
+            && maxLength('photoUrl', 512);
+          allow delete: if isOwnSeat();
         }
 
-        match /voice_signals/{signalId} {
-          allow read, write: if isActiveMember(tourId);
+        // Voice signaling for one pair. The id is the two sorted emails joined by
+        // "__", and only those two members can read or write it. Offers, answers
+        // and candidates carry network addresses, so other members cannot see them.
+        match /voice_signals/{pairId} {
+          function isPairMember() {
+            return isActiveMember(tourId)
+              && pairId.split('__').size() == 2
+              && tourUserEmail() in pairId.split('__');
+          }
+          allow read, write: if isPairMember();
           match /{candCollection}/{candId} {
-            allow read, write: if isActiveMember(tourId);
+            allow read, write: if isPairMember();
           }
         }
 
