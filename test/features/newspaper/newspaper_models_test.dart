@@ -137,7 +137,7 @@ void main() {
         'count': 1,
         'updatedAt': 1793180000000,
         'isSyncing': false,
-        'clusters': [],
+        'clusters': <Map<String, dynamic>>[],
         'items': [
           {
             'id': '10',
