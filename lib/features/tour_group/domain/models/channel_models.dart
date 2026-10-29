@@ -17,13 +17,22 @@ const String kBuiltInVoiceChannelId = 'voice_lounge';
 /// person's upload grows with the room's size.
 const int kVoiceRoomMaxParticipants = 8;
 
-/// A seat older than this counts as empty. A phone that crashes never removes
-/// its own seat, so without this a room could stay full for good.
-const Duration kVoiceSeatStaleAfter = Duration(hours: 12);
+/// A seat whose heartbeat is older than this counts as empty. Each phone in a
+/// room refreshes its seat every 45 seconds. A phone that crashes or loses its
+/// network never removes its own seat, so without this the seat would stay
+/// taken, and the room could fill with ghosts. Three minutes allows for
+/// clock drift between phones and the server.
+const Duration kVoiceSeatStaleAfter = Duration(minutes: 3);
 
-/// How many people hold a seat in a voice room, leaving out [exceptEmail] and
-/// seats older than [kVoiceSeatStaleAfter]. [seats] maps each seat's email to
-/// its stored data. A seat with no join time still counts.
+/// Whether a seat's heartbeat (`lastSeenAt`) is recent enough to be live. A
+/// seat with no heartbeat is not live.
+bool isVoiceSeatLive(Map<String, dynamic> seat, {required DateTime now}) {
+  final seenAt = readDate(seat['lastSeenAt']);
+  return seenAt != null && now.difference(seenAt) <= kVoiceSeatStaleAfter;
+}
+
+/// How many people hold a live seat in a voice room, leaving out [exceptEmail].
+/// [seats] maps each seat's email to its stored data. See [isVoiceSeatLive].
 int countSeatedVoiceParticipants(
   Map<String, Map<String, dynamic>> seats, {
   required String exceptEmail,
@@ -32,11 +41,7 @@ int countSeatedVoiceParticipants(
   var count = 0;
   for (final entry in seats.entries) {
     if (entry.key == exceptEmail) continue;
-    final joined = readDate(entry.value['joinedAt']);
-    if (joined != null && now.difference(joined) > kVoiceSeatStaleAfter) {
-      continue;
-    }
-    count++;
+    if (isVoiceSeatLive(entry.value, now: now)) count++;
   }
   return count;
 }

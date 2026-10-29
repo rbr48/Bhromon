@@ -5,26 +5,48 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final now = DateTime(2026, 1, 2, 12);
 
-  Map<String, dynamic> seat(DateTime joinedAt) => {
+  /// A seat whose phone last refreshed it [age] ago.
+  Map<String, dynamic> seen(Duration age) => {
         'email': 'x@x.com',
-        'joinedAt': writeDate(joinedAt),
+        'lastSeenAt': writeDate(now.subtract(age)),
       };
+
+  group('isVoiceSeatLive', () {
+    test('a seat refreshed within the stale limit is live', () {
+      expect(isVoiceSeatLive(seen(Duration.zero), now: now), isTrue);
+      expect(isVoiceSeatLive(seen(kVoiceSeatStaleAfter), now: now), isTrue);
+    });
+
+    test('a seat not refreshed for longer than the limit is not live', () {
+      expect(
+        isVoiceSeatLive(
+          seen(kVoiceSeatStaleAfter + const Duration(seconds: 1)),
+          now: now,
+        ),
+        isFalse,
+      );
+    });
+
+    test('a seat with no heartbeat is not live', () {
+      expect(isVoiceSeatLive(<String, dynamic>{}, now: now), isFalse);
+    });
+  });
 
   group('countSeatedVoiceParticipants', () {
     test('leaves out the person joining, whose old seat is replaced', () {
       final count = countSeatedVoiceParticipants(
-        {'me@x.com': seat(now), 'asha@x.com': seat(now)},
+        {'me@x.com': seen(Duration.zero), 'asha@x.com': seen(Duration.zero)},
         exceptEmail: 'me@x.com',
         now: now,
       );
       expect(count, 1);
     });
 
-    test('counts seats joined recently', () {
+    test('counts seats that were refreshed recently', () {
       final count = countSeatedVoiceParticipants(
         {
-          'asha@x.com': seat(now.subtract(const Duration(hours: 1))),
-          'babu@x.com': seat(now.subtract(const Duration(hours: 11))),
+          'asha@x.com': seen(const Duration(seconds: 45)),
+          'babu@x.com': seen(const Duration(minutes: 2)),
         },
         exceptEmail: 'me@x.com',
         now: now,
@@ -32,12 +54,11 @@ void main() {
       expect(count, 2);
     });
 
-    test('ignores seats older than the stale limit, such as a crashed phone',
-        () {
+    test('ignores a seat whose phone crashed and stopped refreshing', () {
       final count = countSeatedVoiceParticipants(
         {
-          'asha@x.com': seat(now.subtract(const Duration(hours: 13))),
-          'babu@x.com': seat(now.subtract(const Duration(days: 2))),
+          'asha@x.com': seen(const Duration(minutes: 4)),
+          'babu@x.com': seen(const Duration(days: 2)),
         },
         exceptEmail: 'me@x.com',
         now: now,
@@ -45,19 +66,10 @@ void main() {
       expect(count, 0);
     });
 
-    test('counts a seat that has no join time', () {
-      final count = countSeatedVoiceParticipants(
-        {'asha@x.com': <String, dynamic>{}},
-        exceptEmail: 'me@x.com',
-        now: now,
-      );
-      expect(count, 1);
-    });
-
     test('a room with the cap of other people is full for a newcomer', () {
       final seats = {
         for (var i = 0; i < kVoiceRoomMaxParticipants; i++)
-          'p$i@x.com': seat(now),
+          'p$i@x.com': seen(Duration.zero),
       };
       final count = countSeatedVoiceParticipants(
         seats,
