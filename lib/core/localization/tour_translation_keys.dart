@@ -1415,6 +1415,8 @@ class TourTranslationKeys {
       'ig_share_external_story_text':
           'See the story by {author} in the Bhromon app:\n{caption}\n{link}',
       'ig_reaction_failed': 'Could not send the reaction: {error}',
+      'ig_auto_next_on': 'Auto-next: on',
+      'ig_auto_next_off': 'Auto-next: off',
       'ig_save': 'Save',
       'ig_post_edited': 'Post edited',
       'ig_post_edit_failed': 'Could not edit the post: {error}',
@@ -3015,6 +3017,8 @@ class TourTranslationKeys {
       'ig_share_external_story_text':
           'ভ্রমণ অ্যাপে {author}-এর স্টোরি দেখুন:\n{caption}\n{link}',
       'ig_reaction_failed': 'প্রতিক্রিয়া পাঠানো যায়নি: {error}',
+      'ig_auto_next_on': 'অটো-নেক্সট: চালু',
+      'ig_auto_next_off': 'অটো-নেক্সট: বন্ধ',
       'ig_save': 'সংরক্ষণ করুন',
       'ig_post_edited': 'পোস্ট সফলভাবে সম্পাদিত হয়েছে',
       'ig_post_edit_failed': 'পোস্ট সম্পাদনা ব্যর্থ: {error}',
