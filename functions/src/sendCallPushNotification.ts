@@ -17,8 +17,8 @@ import {
 /**
  * sendCallPushNotification
  *
- * Triggered when a call document is created in calls/{callId}. This is the only
- * push for a call. The VPS relay sends none, so one call rings one phone once.
+ * Triggered when a call document is created in calls/{callId}. The VPS relay
+ * also pushes each offer. The phone shows a call id once, so the call rings once.
  *
  * The caller's name comes from explorer_profiles, not from the call document,
  * which the caller wrote. A caller who starts too many calls has the new call
