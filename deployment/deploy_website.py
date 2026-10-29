@@ -185,9 +185,13 @@ def deploy_remote(ssh: paramiko.SSHClient):
         f"find {WEBSITE_ROOT} -type f -exec chmod 644 {{}} \\;",
         f"find {WEBSITE_ROOT} -type d -exec chmod 755 {{}} \\;",
         f"chown -R www-data:www-data {WEBSITE_ROOT} 2>/dev/null || true",
-        # Downloads dir permissions
+        # Downloads dir permissions and dual-location sync
         "chown -R www-data:www-data /var/www/bhromon/downloads 2>/dev/null || true",
         "find /var/www/bhromon/downloads -type f -exec chmod 644 {} \\; 2>/dev/null || true",
+        "cp -p /var/www/bhromon/downloads/app-release.apk /var/www/bhromon/downloads/bhromon-release.apk 2>/dev/null || true",
+        "mkdir -p /var/www/bhromon-media/apk 2>/dev/null || true",
+        "cp -p /var/www/bhromon/downloads/app-release.apk /var/www/bhromon-media/apk/bhromon-release.apk 2>/dev/null || true",
+        "ln -sfn /var/www/bhromon/downloads /var/www/bhromon/website/downloads 2>/dev/null || true",
         # Test and reload nginx
         "nginx -t",
         "systemctl reload nginx",
