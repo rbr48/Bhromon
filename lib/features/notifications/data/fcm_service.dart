@@ -385,6 +385,10 @@ class FcmService {
 
   /// Show a rich local notification when the app is in the foreground.
   Future<void> _handleForeground(RemoteMessage message) async {
+    // A call is shown by CallNotificationService, from the relay and the call
+    // document. A banner here would ring the same call twice.
+    if (message.data['action'] == 'call') return;
+
     final n = message.notification;
     final title = n?.title ?? (message.data['title'] as String?) ?? 'Bhromon';
     final body = n?.body ?? (message.data['body'] as String?) ?? '';

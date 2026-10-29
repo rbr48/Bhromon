@@ -510,7 +510,9 @@ service cloud.firestore {
         && resource != null
         && isParty(resource.data)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['status', 'answer'])
+             .hasOnly(['status', 'answer', 'endedAt', 'durationSeconds'])
+        && (!('endedAt' in request.resource.data) || request.resource.data.endedAt == request.time)
+        && (!('durationSeconds' in request.resource.data) || request.resource.data.durationSeconds is int)
         && (
           // The callee answers a ringing call. The status and the SDP answer change together.
           (request.resource.data.status == 'answered'

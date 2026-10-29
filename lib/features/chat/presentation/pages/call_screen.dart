@@ -87,24 +87,25 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _initCall() async {
     await _localRenderer.initialize();
     await _remoteRenderer.initialize();
+    if (!mounted) return;
 
-    // Request permissions
+    // The messenger outlives this screen, so an error can still be shown after it closes.
+    final messenger = ScaffoldMessenger.maybeOf(context);
+
+    // Without a microphone there is no call. A refused camera turns a video
+    // call into an audio call instead of failing it.
+    var videoEnabled = widget.isVideoCall;
     if (!kIsWeb) {
       final micStatus = await Permission.microphone.request();
       if (micStatus.isDenied || micStatus.isPermanentlyDenied) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Microphone permission is required for calls'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-          _safeExit();
-        }
+        await _failCall(
+          'Microphone permission is required for calls.',
+          messenger,
+        );
         return;
       }
       if (widget.isVideoCall) {
-        await Permission.camera.request();
+        videoEnabled = (await Permission.camera.request()).isGranted;
       }
       _applyAudioRouting();
     }
@@ -138,8 +139,15 @@ class _CallScreenState extends State<CallScreen> {
           _callStatusText = 'Connected';
           _applyAudioRouting();
           _startDurationTimer();
-        } else if (state == 'ended' || state == 'declined') {
-          _callStatusText = 'Call ended';
+        } else if (state == 'declined' ||
+            state == 'missed' ||
+            state == 'ended' ||
+            state == 'failed') {
+          _callStatusText = switch (state) {
+            'declined' => 'Call declined',
+            'missed' => 'No answer',
+            _ => 'Call ended',
+          };
           Future.delayed(const Duration(milliseconds: 300), _safeExit);
         }
       });
@@ -155,7 +163,7 @@ class _CallScreenState extends State<CallScreen> {
           widget.callId,
           widget.localUid,
           widget.remoteUid,
-          videoEnabled: widget.isVideoCall,
+          videoEnabled: videoEnabled,
           callerName: widget.localUserName,
           callerAvatar: widget.localAvatarUrl,
         );
@@ -163,22 +171,42 @@ class _CallScreenState extends State<CallScreen> {
         await _signaling.answerCall(
           widget.callId,
           widget.localUid,
-          videoEnabled: widget.isVideoCall,
+          videoEnabled: videoEnabled,
         );
       }
       _applyAudioRouting();
     } catch (e) {
+      // The signaling service has already ended the call and closed this screen.
       debugPrint('CallScreen initialization error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to establish call: $e'),
-            backgroundColor: Colors.redAccent,
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(
+            e is CallSetupException
+                ? e.message
+                : 'Could not connect the call. Please try again.',
           ),
-        );
-        _safeExit();
-      }
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      _safeExit();
     }
+  }
+
+  /// Ends the call from this side, says why, and leaves the screen. A callee
+  /// who has not answered declines, so the caller stops ringing.
+  Future<void> _failCall(
+    String message,
+    ScaffoldMessengerState? messenger,
+  ) async {
+    if (widget.isCaller) {
+      await _signaling.endCall();
+    } else {
+      await _signaling.declineCall(widget.callId, callerId: widget.remoteUid);
+    }
+    messenger?.showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+    );
+    _safeExit();
   }
 
   void _startDurationTimer() {

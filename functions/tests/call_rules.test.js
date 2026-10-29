@@ -190,6 +190,19 @@ describe('call and voice rules', () => {
       await assertFails(updateDoc(callRef(BOB), { status: 'ringing' }));
     });
 
+    test('hang-up and decline record the end time and duration', async () => {
+      await assertSucceeds(updateDoc(callRef(BOB), { status: 'declined', endedAt: serverTimestamp() }));
+      await seedCall({ status: 'answered', answer: ANSWER });
+      await assertSucceeds(
+        updateDoc(callRef(ALICE), { status: 'ended', endedAt: serverTimestamp(), durationSeconds: 12 }),
+      );
+    });
+
+    test('the end time must be the server time and the duration a whole number', async () => {
+      await assertFails(updateDoc(callRef(ALICE), { status: 'ended', endedAt: new Date(0) }));
+      await assertFails(updateDoc(callRef(ALICE), { status: 'ended', durationSeconds: '12' }));
+    });
+
     test('calls are never deleted by a client', async () => {
       await assertFails(deleteDoc(callRef(ALICE)));
       await assertFails(deleteDoc(callRef(BOB)));
