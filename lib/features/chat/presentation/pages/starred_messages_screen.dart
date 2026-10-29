@@ -39,222 +39,224 @@ class StarredMessagesScreen extends StatelessWidget {
               }
             },
           ),
-        title: const Text(
-          'Starred messages',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+          title: const Text(
+            'Starred messages',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-      ),
-      body: currentUid.isEmpty
-          ? const Center(
-              child: Text(
-                'Please sign in to view starred messages',
-                style: TextStyle(color: Colors.white54),
-              ),
-            )
-          : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collectionGroup('messages')
-                  .where('isStarred', isEqualTo: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFF00A884),
-                    ),
-                  );
-                }
-
-                final allDocs = snapshot.data?.docs ?? [];
-                // Filter messages that belong to user or starred by user
-                final userStarredDocs = allDocs.where((doc) {
-                  final data = doc.data();
-                  final starredBy = data['starredBy'] as Map<String, dynamic>?;
-                  if (starredBy != null && starredBy[currentUid] == true) {
-                    return true;
-                  }
-                  // Fallback for single isStarred flag
-                  final senderId = data['senderId'] as String?;
-                  return senderId == currentUid || (data['isStarred'] == true);
-                }).toList();
-
-                if (userStarredDocs.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFF1F2C34),
-                              border: Border.all(
-                                color: Colors.amber.withValues(alpha: 0.3),
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.star_outline_rounded,
-                              size: 54,
-                              color: Colors.amber,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          const Text(
-                            'No starred messages',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Tap and hold on any message in any chat to star it, so you can easily find it later.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white60,
-                              fontSize: 14,
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
+        body: currentUid.isEmpty
+            ? const Center(
+                child: Text(
+                  'Please sign in to view starred messages',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              )
+            : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: FirebaseFirestore.instance
+                    .collectionGroup('messages')
+                    .where('isStarred', isEqualTo: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF00A884),
                       ),
-                    ),
-                  );
-                }
+                    );
+                  }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: userStarredDocs.length,
-                  separatorBuilder: (_, __) => const Divider(
-                    color: Colors.white10,
-                    height: 1,
-                  ),
-                  itemBuilder: (context, index) {
-                    final doc = userStarredDocs[index];
+                  final allDocs = snapshot.data?.docs ?? [];
+                  // Filter messages that belong to user or starred by user
+                  final userStarredDocs = allDocs.where((doc) {
                     final data = doc.data();
-                    final type = (data['type'] as String?) ?? 'text';
-                    final text = (data['text'] as String?) ?? '';
-                    final senderId = (data['senderId'] as String?) ?? '';
-                    final isMe = senderId == currentUid;
-                    final timestamp = data['timestamp'] as Timestamp?;
-                    final date = timestamp?.toDate();
-                    final timeStr = date != null
-                        ? '${date.day}/${date.month}/${date.year} at ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}'
-                        : '';
+                    final starredBy =
+                        data['starredBy'] as Map<String, dynamic>?;
+                    if (starredBy != null && starredBy[currentUid] == true) {
+                      return true;
+                    }
+                    // Fallback for single isStarred flag
+                    final senderId = data['senderId'] as String?;
+                    return senderId == currentUid ||
+                        (data['isStarred'] == true);
+                  }).toList();
 
-                    // Extract chatId from document reference parent
-                    final chatId = doc.reference.parent.parent?.id ?? '';
-
-                    return InkWell(
-                      onTap: () {
-                        if (chatId.isNotEmpty) {
-                          context.push(
-                            '/chat/$chatId',
-                            extra: {
-                              'chatId': chatId,
-                              'otherUserName': isMe ? 'Traveler' : 'Chat',
-                              'otherUserAvatar': '',
-                              'otherUid': isMe ? '' : senderId,
-                            },
-                          );
-                        }
-                      },
+                  if (userStarredDocs.isEmpty) {
+                    return Center(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        padding: const EdgeInsets.symmetric(horizontal: 40),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              width: 40,
-                              height: 40,
+                              width: 100,
+                              height: 100,
                               decoration: BoxDecoration(
+                                shape: BoxShape.circle,
                                 color: const Color(0xFF1F2C34),
-                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.amber.withValues(alpha: 0.3),
+                                  width: 2,
+                                ),
                               ),
-                              child: Icon(
-                                _typeIcon(type),
-                                color: const Color(0xFF00A884),
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        isMe ? 'You' : 'Traveler',
-                                        style: const TextStyle(
-                                          color: Color(0xFF00A884),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        timeStr,
-                                        style: const TextStyle(
-                                          color: Colors.white38,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _typeSnippet(type, text, data),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      height: 1.3,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.star,
+                              child: const Icon(
+                                Icons.star_outline_rounded,
+                                size: 54,
                                 color: Colors.amber,
-                                size: 20,
                               ),
-                              tooltip: 'Unstar',
-                              onPressed: () async {
-                                try {
-                                  await doc.reference.update({
-                                    'isStarred': false,
-                                    'starredBy.$currentUid':
-                                        FieldValue.delete(),
-                                  });
-                                } catch (e) {
-                                  debugPrint('Error unstarring: $e');
-                                }
-                              },
+                            ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'No starred messages',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Tap and hold on any message in any chat to star it, so you can easily find it later.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white60,
+                                fontSize: 14,
+                                height: 1.4,
+                              ),
                             ),
                           ],
                         ),
                       ),
                     );
-                  },
-                );
-              },
-            ),
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: userStarredDocs.length,
+                    separatorBuilder: (_, __) => const Divider(
+                      color: Colors.white10,
+                      height: 1,
+                    ),
+                    itemBuilder: (context, index) {
+                      final doc = userStarredDocs[index];
+                      final data = doc.data();
+                      final type = (data['type'] as String?) ?? 'text';
+                      final text = (data['text'] as String?) ?? '';
+                      final senderId = (data['senderId'] as String?) ?? '';
+                      final isMe = senderId == currentUid;
+                      final timestamp = data['timestamp'] as Timestamp?;
+                      final date = timestamp?.toDate();
+                      final timeStr = date != null
+                          ? '${date.day}/${date.month}/${date.year} at ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}'
+                          : '';
+
+                      // Extract chatId from document reference parent
+                      final chatId = doc.reference.parent.parent?.id ?? '';
+
+                      return InkWell(
+                        onTap: () {
+                          if (chatId.isNotEmpty) {
+                            context.push(
+                              '/chat/$chatId',
+                              extra: {
+                                'chatId': chatId,
+                                'otherUserName': isMe ? 'Traveler' : 'Chat',
+                                'otherUserAvatar': '',
+                                'otherUid': isMe ? '' : senderId,
+                              },
+                            );
+                          }
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1F2C34),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  _typeIcon(type),
+                                  color: const Color(0xFF00A884),
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          isMe ? 'You' : 'Traveler',
+                                          style: const TextStyle(
+                                            color: Color(0xFF00A884),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          timeStr,
+                                          style: const TextStyle(
+                                            color: Colors.white38,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _typeSnippet(type, text, data),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.star,
+                                  color: Colors.amber,
+                                  size: 20,
+                                ),
+                                tooltip: 'Unstar',
+                                onPressed: () async {
+                                  try {
+                                    await doc.reference.update({
+                                      'isStarred': false,
+                                      'starredBy.$currentUid':
+                                          FieldValue.delete(),
+                                    });
+                                  } catch (e) {
+                                    debugPrint('Error unstarring: $e');
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
       ),
     );
   }

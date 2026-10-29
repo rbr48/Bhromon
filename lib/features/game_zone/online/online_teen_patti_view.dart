@@ -301,7 +301,8 @@ class _OnlineTeenPattiViewState extends State<OnlineTeenPattiView> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.monetization_on, size: 14, color: Colors.amber),
+                    const Icon(Icons.monetization_on,
+                        size: 14, color: Colors.amber),
                     const SizedBox(width: 4),
                     Text(
                       'Chips: $myChips',
@@ -420,11 +421,13 @@ class _OnlineTeenPattiViewState extends State<OnlineTeenPattiView> {
                   if (_isHost) ...[
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
-                      onPressed: _busy ? null : () => _act({'type': 'nextHand'}),
+                      onPressed:
+                          _busy ? null : () => _act({'type': 'nextHand'}),
                       icon: const Icon(Icons.play_arrow, color: Colors.black87),
                       label: const Text('Deal Hand',
                           style: TextStyle(
-                              fontWeight: FontWeight.bold, color: Colors.black87)),
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.mintGreen,
                         padding: const EdgeInsets.symmetric(
@@ -506,7 +509,8 @@ class _OnlineTeenPattiViewState extends State<OnlineTeenPattiView> {
         ),
         border: Border.all(color: const Color(0xFFD4AF37), width: 2.5),
         boxShadow: const [
-          BoxShadow(color: Colors.black87, blurRadius: 10, offset: Offset(0, 4)),
+          BoxShadow(
+              color: Colors.black87, blurRadius: 10, offset: Offset(0, 4)),
         ],
       ),
       child: Center(
@@ -935,8 +939,8 @@ class _OnlineTeenPattiViewState extends State<OnlineTeenPattiView> {
             'Raise', Colors.amber, () => _act({'type': 'raise'})));
       }
       if (table.canShow(mySeat)) {
-        buttons.add(_actionButton(
-            'Show', Colors.amber, () => _act({'type': 'show'})));
+        buttons.add(
+            _actionButton('Show', Colors.amber, () => _act({'type': 'show'})));
       }
       if (table.canSideshow(mySeat)) {
         buttons.add(_actionButton('Sideshow', Colors.lightBlueAccent,

@@ -328,7 +328,8 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.tealAccent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
@@ -557,8 +558,7 @@ class _TourQuizScreenState extends State<TourQuizScreen> {
     String badge = _achievedBadge ?? context.l10n.translate('tq_badge_learner');
     if (_achievedBadge == null) {
       if (pct >= 85) {
-        badge =
-            context.l10n.translate('tq_badge_expert', args: {'dest': dest});
+        badge = context.l10n.translate('tq_badge_expert', args: {'dest': dest});
       } else if (pct >= 60) {
         badge = context.l10n.translate('tq_badge_skilled');
       }

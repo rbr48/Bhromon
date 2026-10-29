@@ -385,8 +385,8 @@ class AuthRepositoryImpl implements IAuthRepository {
       if (needsName || needsPhoto) {
         await user.updateDisplayName(
             needsName ? profile.displayName : user.displayName);
-        await user.updatePhotoURL(
-            needsPhoto ? profile.avatarUrl : user.photoURL);
+        await user
+            .updatePhotoURL(needsPhoto ? profile.avatarUrl : user.photoURL);
         // Reload so that subsequent reads of _auth.currentUser see the update.
         await user.reload();
       }

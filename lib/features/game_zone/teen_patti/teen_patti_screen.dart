@@ -274,92 +274,92 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
 
     final canPop = Navigator.of(context).canPop();
     return PopScope(
-      canPop: canPop,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        try {
-          context.go('/game-zone');
-        } catch (_) {}
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0F381E),
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white70, size: 18),
-            onPressed: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                try {
-                  context.go('/game-zone');
-                } catch (_) {}
-              }
-            },
+        canPop: canPop,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          try {
+            context.go('/game-zone');
+          } catch (_) {}
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF0F381E),
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white70, size: 18),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  try {
+                    context.go('/game-zone');
+                  } catch (_) {}
+                }
+              },
+            ),
+            title: const Text('Teen Patti (৩ পাত্তি)',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            backgroundColor: const Color(0xFF092614),
+            foregroundColor: Colors.white,
+            elevation: 2,
+            actions: [
+              IconButton(
+                  icon: const Icon(Icons.help_outline),
+                  tooltip: 'Rules',
+                  onPressed: _showRulesDialog),
+              IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'New Hand',
+                  onPressed: _onNewHandPressed),
+            ],
           ),
-          title: const Text('Teen Patti (৩ পাত্তি)',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF092614),
-        foregroundColor: Colors.white,
-        elevation: 2,
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.help_outline),
-              tooltip: 'Rules',
-              onPressed: _showRulesDialog),
-          IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'New Hand',
-              onPressed: _onNewHandPressed),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildPotHeader(),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // On short screens the seats drop their card row so the table never overflows.
-                  final compact = constraints.maxHeight < 190;
-                  return Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                                child: _buildPlayerSeat(_game.players[3],
-                                    compact: compact)),
-                            Expanded(
-                                child: _buildPlayerSeat(_game.players[2],
-                                    compact: compact)),
-                            Expanded(
-                                child: _buildPlayerSeat(_game.players[1],
-                                    compact: compact)),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                          child: LayoutBuilder(
-                              builder: (context, c) =>
-                                  Center(child: _buildCenterPot(c)))),
-                    ],
-                  );
-                },
-              ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildPotHeader(),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // On short screens the seats drop their card row so the table never overflows.
+                      final compact = constraints.maxHeight < 190;
+                      return Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                    child: _buildPlayerSeat(_game.players[3],
+                                        compact: compact)),
+                                Expanded(
+                                    child: _buildPlayerSeat(_game.players[2],
+                                        compact: compact)),
+                                Expanded(
+                                    child: _buildPlayerSeat(_game.players[1],
+                                        compact: compact)),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                              child: LayoutBuilder(
+                                  builder: (context, c) =>
+                                      Center(child: _buildCenterPot(c)))),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * 0.5),
+                  child: SingleChildScrollView(
+                      child: _buildUserControls(user, isUserTurn)),
+                ),
+              ],
             ),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                  maxHeight: MediaQuery.sizeOf(context).height * 0.5),
-              child: SingleChildScrollView(
-                  child: _buildUserControls(user, isUserTurn)),
-            ),
-          ],
-        ),
-      ),
-    ));
+          ),
+        ));
   }
 
   Widget _buildPotHeader() {

@@ -70,6 +70,7 @@ class OnlineGameRepository {
     } catch (_) {}
     return null;
   }
+
   String get currentUid => _auth.currentUser?.uid ?? '';
 
   CollectionReference<Map<String, dynamic>> _gamesRef(String tourId) =>

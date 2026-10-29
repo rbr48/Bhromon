@@ -135,54 +135,55 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
         }
 
         return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, _) {
-            if (didPop) return;
-            _confirmLeaveTable(session);
-          },
-          child: Scaffold(
-            backgroundColor: const Color(0xFF0B1710),
-            appBar: AppBar(
-              backgroundColor: const Color(0xFF14241B),
-              elevation: 0,
-              title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  session.tableName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+            canPop: false,
+            onPopInvokedWithResult: (didPop, _) {
+              if (didPop) return;
+              _confirmLeaveTable(session);
+            },
+            child: Scaffold(
+              backgroundColor: const Color(0xFF0B1710),
+              appBar: AppBar(
+                backgroundColor: const Color(0xFF14241B),
+                elevation: 0,
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      session.tableName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '${session.gameType.label} • ${session.status.name.toUpperCase()}',
+                      style: const TextStyle(
+                        color: AppColors.mintGreen,
+                        fontSize: 11,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  '${session.gameType.label} • ${session.status.name.toUpperCase()}',
-                  style: const TextStyle(
-                    color: AppColors.mintGreen,
-                    fontSize: 11,
-                    letterSpacing: 0.5,
-                  ),
+                leading: IconButton(
+                  icon:
+                      const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                  onPressed: () => _confirmLeaveTable(session),
                 ),
-              ],
-            ),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              onPressed: () => _confirmLeaveTable(session),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.exit_to_app_rounded,
-                    color: Colors.white70),
-                tooltip: 'Leave Table',
-                onPressed: () => _confirmLeaveTable(session),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.exit_to_app_rounded,
+                        color: Colors.white70),
+                    tooltip: 'Leave Table',
+                    onPressed: () => _confirmLeaveTable(session),
+                  ),
+                ],
               ),
-            ],
-          ),
-          body: SafeArea(
-            child: _buildSessionBody(session),
-          ),
-        ));
+              body: SafeArea(
+                child: _buildSessionBody(session),
+              ),
+            ));
       },
     );
   }

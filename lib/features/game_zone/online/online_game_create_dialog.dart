@@ -226,7 +226,8 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
           SwitchListTile(
             title: const Row(
               children: [
-                Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 18),
+                Icon(Icons.emoji_events_rounded,
+                    color: AppColors.gold, size: 18),
                 SizedBox(width: 8),
                 Text(
                   'Tour Tournament Match',

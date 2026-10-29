@@ -424,8 +424,10 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
                             color: Colors.amber,
                             fontWeight: FontWeight.bold,
                             fontSize: 11)),
-                    Text('$myTeamPoints pts · pips $myTeamPips/${Card29Game.pipsToWin}',
-                        style: const TextStyle(color: Colors.white, fontSize: 11)),
+                    Text(
+                        '$myTeamPoints pts · pips $myTeamPips/${Card29Game.pipsToWin}',
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 11)),
                   ],
                 ),
               ),
@@ -452,8 +454,10 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
                             color: Colors.redAccent.shade100,
                             fontWeight: FontWeight.bold,
                             fontSize: 11)),
-                    Text('$oppTeamPoints pts · pips $oppTeamPips/${Card29Game.pipsToWin}',
-                        style: const TextStyle(color: Colors.white, fontSize: 11)),
+                    Text(
+                        '$oppTeamPoints pts · pips $oppTeamPips/${Card29Game.pipsToWin}',
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 11)),
                   ],
                 ),
               ),
@@ -477,9 +481,7 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 10),
+              style: const TextStyle(color: Colors.white70, fontSize: 10),
             ),
           ],
         ],
@@ -594,7 +596,8 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
 
     final trump = table.trumpSuit;
     final trumpRevealed = table.trumpRevealed;
-    final canReveal = table.canRevealTrump(seat: me, hand: hand?.cards ?? const []);
+    final canReveal =
+        table.canRevealTrump(seat: me, hand: hand?.cards ?? const []);
     final canAsk = table.canAskTrump(seat: me, hand: hand?.cards ?? const []);
 
     // Placed cards mapped by relative direction
@@ -651,7 +654,9 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
                       : const Color(0x88000000),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: (canReveal || canAsk) ? Colors.amber : Colors.amber.withValues(alpha: 0.5),
+                    color: (canReveal || canAsk)
+                        ? Colors.amber
+                        : Colors.amber.withValues(alpha: 0.5),
                     width: 1.5,
                   ),
                 ),
@@ -664,7 +669,8 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
                       Text(
                         '${trump.symbol} ${trump.name}',
                         style: TextStyle(
-                          color: (trump == CardSuit.hearts || trump == CardSuit.diamonds)
+                          color: (trump == CardSuit.hearts ||
+                                  trump == CardSuit.diamonds)
                               ? Colors.redAccent
                               : Colors.white,
                           fontWeight: FontWeight.bold,
@@ -759,8 +765,7 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.amber, width: 1.5),
         boxShadow: const [
-          BoxShadow(
-              color: Colors.black87, blurRadius: 10, offset: Offset(0, 4))
+          BoxShadow(color: Colors.black87, blurRadius: 10, offset: Offset(0, 4))
         ],
       ),
       child: Wrap(
@@ -784,8 +789,7 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
               bid <= Card29Engine.maxBid && bid < minBid + 3;
               bid++)
             ElevatedButton(
-              onPressed:
-                  _busy ? null : () => _act({'type': 'bid', 'bid': bid}),
+              onPressed: _busy ? null : () => _act({'type': 'bid', 'bid': bid}),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.mintGreen,
                 foregroundColor: Colors.black87,
@@ -835,16 +839,16 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
                 ElevatedButton(
                   onPressed: _busy
                       ? null
-                      : () => _act(
-                          {'type': 'selectTrump', 'suit': suitKey(suit)}),
+                      : () =>
+                          _act({'type': 'selectTrump', 'suit': suitKey(suit)}),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: (suit == CardSuit.hearts ||
-                            suit == CardSuit.diamonds)
-                        ? const Color(0xFFC62828)
-                        : const Color(0xFF263238),
+                    backgroundColor:
+                        (suit == CardSuit.hearts || suit == CardSuit.diamonds)
+                            ? const Color(0xFFC62828)
+                            : const Color(0xFF263238),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     visualDensity: VisualDensity.compact,
                   ),
                   child: Text(
@@ -906,8 +910,7 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
         final count = max(cards.length, 1);
         final step = count == 1
             ? cardW
-            : min(cardW + 4,
-                (constraints.maxWidth - cardW - 16) / (count - 1));
+            : min(cardW + 4, (constraints.maxWidth - cardW - 16) / (count - 1));
         final totalWidth = cardW + step * (count - 1);
 
         return Center(
@@ -934,8 +937,7 @@ class _OnlineCard29ViewState extends State<OnlineCard29View> {
                         width: cardW,
                         height: cardH,
                         highlighted: legal.contains(cards[i]),
-                        dimmed:
-                            !legal.contains(cards[i]) && legal.isNotEmpty,
+                        dimmed: !legal.contains(cards[i]) && legal.isNotEmpty,
                       ),
                     ),
                   ),

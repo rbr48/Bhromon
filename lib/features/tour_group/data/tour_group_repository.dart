@@ -250,7 +250,8 @@ class TourGroupRepository {
     } else if (value is DateTime) {
       return value.toIso8601String();
     } else if (value is Map) {
-      return value.map((k, v) => MapEntry(k.toString(), _deepSanitizeForHive(v)));
+      return value
+          .map((k, v) => MapEntry(k.toString(), _deepSanitizeForHive(v)));
     } else if (value is List) {
       return value.map((v) => _deepSanitizeForHive(v)).toList();
     }
@@ -448,7 +449,8 @@ class TourGroupRepository {
             emit();
           }
         } catch (e, st) {
-          debugPrint('[TourGroupRepository] eager get tour $tourId failed: $e\n$st');
+          debugPrint(
+              '[TourGroupRepository] eager get tour $tourId failed: $e\n$st');
         }
       }).catchError((Object e) {
         debugPrint('[TourGroupRepository] eager get tour $tourId error: $e');
@@ -1075,8 +1077,7 @@ class TourGroupRepository {
               updates['photoUrl'] = myPhoto;
             }
             if (updates.isNotEmpty) {
-              unawaited(
-                  d.reference.update(updates).catchError((_) {}));
+              unawaited(d.reference.update(updates).catchError((_) {}));
             }
             break;
           }

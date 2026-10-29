@@ -29,7 +29,8 @@ class FcmService {
       FlutterLocalNotificationsPlugin();
 
   StreamSubscription<User?>? _authSub;
-  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _userNotificationsSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+      _userNotificationsSub;
   String? _initializedUid;
   final Set<String> _processedNotificationIds = {};
   bool _initialSnapshotLoaded = false;
@@ -85,7 +86,8 @@ class FcmService {
                   data['action'] as String?,
                   ctx,
                   uid: data['uid'] as String?,
-                  itemId: (data['itemId'] as String?) ?? (data['chatId'] as String?),
+                  itemId: (data['itemId'] as String?) ??
+                      (data['chatId'] as String?),
                   tourId: data['tourId'] as String?,
                 );
               } catch (_) {
@@ -189,7 +191,8 @@ class FcmService {
             final imageUrl = data['imageUrl'] as String?;
             final action = data['action'] as String?;
             final notifUid = data['uid'] as String?;
-            final itemId = (data['itemId'] as String?) ?? (data['chatId'] as String?);
+            final itemId =
+                (data['itemId'] as String?) ?? (data['chatId'] as String?);
             final tourId = data['tourId'] as String?;
 
             // 1. Post local system tray notification (Android/iOS)
@@ -412,7 +415,8 @@ class FcmService {
       body: body,
       action: message.data['action'] as String?,
       uid: message.data['uid'] as String?,
-      itemId: (message.data['itemId'] as String?) ?? (message.data['chatId'] as String?),
+      itemId: (message.data['itemId'] as String?) ??
+          (message.data['chatId'] as String?),
       tourId: message.data['tourId'] as String?,
     );
   }
@@ -422,7 +426,8 @@ class FcmService {
       message.data['action'] as String?,
       context,
       uid: message.data['uid'] as String?,
-      itemId: (message.data['itemId'] as String?) ?? (message.data['chatId'] as String?),
+      itemId: (message.data['itemId'] as String?) ??
+          (message.data['chatId'] as String?),
       tourId: message.data['tourId'] as String?,
     );
   }
@@ -454,7 +459,8 @@ class FcmService {
       case 'chat':
         final targetChatId = itemId ?? uid;
         if (targetChatId != null && targetChatId.isNotEmpty) {
-          GoRouter.of(context).go('/chat/$targetChatId', extra: {'otherUid': uid});
+          GoRouter.of(context)
+              .go('/chat/$targetChatId', extra: {'otherUid': uid});
         }
         break;
       case 'sos':

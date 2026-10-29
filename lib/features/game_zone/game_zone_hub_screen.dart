@@ -683,12 +683,10 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color:
-                                      item.tagColor.withValues(alpha: 0.18),
+                                  color: item.tagColor.withValues(alpha: 0.18),
                                   borderRadius: BorderRadius.circular(5),
                                   border: Border.all(
-                                    color:
-                                        item.tagColor.withValues(alpha: 0.4),
+                                    color: item.tagColor.withValues(alpha: 0.4),
                                     width: 0.8,
                                   ),
                                 ),
@@ -785,8 +783,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.stars_rounded,
-                          size: 11, color: item.tagColor),
+                      Icon(Icons.stars_rounded, size: 11, color: item.tagColor),
                       const SizedBox(width: 4),
                       Text(
                         item.highlight,
@@ -852,8 +849,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.mintGreen,
                   foregroundColor: const Color(0xFF0F1E14),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -876,185 +873,184 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
       padding: const EdgeInsets.all(18),
       children: [
         // Tour Banner & Host Table Action
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1B3827), Color(0xFF102419)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: AppColors.mintGreen.withValues(alpha: 0.4),
-                  width: 1.2,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1B3827), Color(0xFF102419)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: AppColors.mintGreen.withValues(alpha: 0.4),
+              width: 1.2,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.mintGreen.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.table_bar_rounded,
-                            color: AppColors.mintGreen, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              activeTour.name,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const Text(
-                              'Live multiplayer tables with voice chat',
-                              style: TextStyle(
-                                  color: Colors.white70, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            OnlineGameCreateDialog.show(
-                              context,
-                              tourId: activeTour.id,
-                              repository: _gameRepo,
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.mintGreen,
-                            foregroundColor: const Color(0xFF0F1E14),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          icon: const Icon(Icons.add_circle_outline_rounded,
-                              size: 18),
-                          label: const Text(
-                            'Create Table',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () =>
-                              _showJoinByCodeDialog(context, activeTour.id),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white24),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          icon: const Icon(Icons.pin_rounded,
-                              size: 18, color: AppColors.mintGreen),
-                          label: const Text(
-                            'Join with Code',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-            const Text(
-              'ACTIVE TOUR TABLES',
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Active Games Stream
-            StreamBuilder<List<OnlineGameSession>>(
-              stream: _activeGamesStream!,
-              builder: (context, snapshot) {
-                final sessions = snapshot.data ?? [];
-                if (snapshot.connectionState == ConnectionState.waiting &&
-                    sessions.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: CircularProgressIndicator(
-                        color: AppColors.mintGreen,
-                      ),
-                    ),
-                  );
-                }
-
-                if (sessions.isEmpty) {
-                  return Container(
-                    padding: const EdgeInsets.all(24),
+                  Container(
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.03),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white10),
+                      color: AppColors.mintGreen.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
                     ),
-                    child: const Column(
+                    child: const Icon(Icons.table_bar_rounded,
+                        color: AppColors.mintGreen, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.table_restaurant_outlined,
-                            color: Colors.white24, size: 48),
-                        SizedBox(height: 12),
                         Text(
-                          'No open game tables yet',
-                          style: TextStyle(
+                          activeTour.name,
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 15,
                             fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Create a table above and invite your tour group members to play!',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white54, fontSize: 12),
+                        const Text(
+                          'Live multiplayer tables with voice chat',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                       ],
                     ),
-                  );
-                }
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        OnlineGameCreateDialog.show(
+                          context,
+                          tourId: activeTour.id,
+                          repository: _gameRepo,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.mintGreen,
+                        foregroundColor: const Color(0xFF0F1E14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.add_circle_outline_rounded,
+                          size: 18),
+                      label: const Text(
+                        'Create Table',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          _showJoinByCodeDialog(context, activeTour.id),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white24),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.pin_rounded,
+                          size: 18, color: AppColors.mintGreen),
+                      label: const Text(
+                        'Join with Code',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
 
-                return Column(
-                  children:
-                      sessions.map((s) => _buildTableCard(context, s)).toList(),
-                );
-              },
-            ),
-          ],
-        );
+        const SizedBox(height: 24),
+        const Text(
+          'ACTIVE TOUR TABLES',
+          style: TextStyle(
+            color: Colors.white54,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Active Games Stream
+        StreamBuilder<List<OnlineGameSession>>(
+          stream: _activeGamesStream!,
+          builder: (context, snapshot) {
+            final sessions = snapshot.data ?? [];
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                sessions.isEmpty) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(
+                    color: AppColors.mintGreen,
+                  ),
+                ),
+              );
+            }
+
+            if (sessions.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: const Column(
+                  children: [
+                    Icon(Icons.table_restaurant_outlined,
+                        color: Colors.white24, size: 48),
+                    SizedBox(height: 12),
+                    Text(
+                      'No open game tables yet',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Create a table above and invite your tour group members to play!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return Column(
+              children:
+                  sessions.map((s) => _buildTableCard(context, s)).toList(),
+            );
+          },
+        ),
+      ],
+    );
   }
 
   Widget _buildTableCard(BuildContext context, OnlineGameSession session) {

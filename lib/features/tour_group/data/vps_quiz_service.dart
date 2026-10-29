@@ -39,7 +39,8 @@ class ServerQuizQuestion {
       question: (json['question_bn'] ?? json['question'])?.toString() ?? '',
       options: opts,
       correctIndex: (json['correct_index'] as num?)?.toInt() ?? 0,
-      explanation: (json['explanation_bn'] ?? json['explanation'])?.toString() ?? '',
+      explanation:
+          (json['explanation_bn'] ?? json['explanation'])?.toString() ?? '',
     );
   }
 
@@ -129,8 +130,8 @@ class VpsQuizService {
       final cached = box.get(cacheKey) as List?;
       if (cached != null && cached.isNotEmpty) {
         return cached
-            .map((e) =>
-                ServerQuizQuestion.fromJson(Map<String, dynamic>.from(e as Map)))
+            .map((e) => ServerQuizQuestion.fromJson(
+                Map<String, dynamic>.from(e as Map)))
             .toList();
       }
     } catch (e) {
@@ -244,10 +245,12 @@ class VpsQuizService {
         category: 'travel_safety',
         destinationTag: 'all',
         difficulty: 'easy',
-        question: 'বাংলাদেশে যেকোনো জরুরি প্রয়োজনে জাতীয় জরুরি সেবা নম্বর কত?',
+        question:
+            'বাংলাদেশে যেকোনো জরুরি প্রয়োজনে জাতীয় জরুরি সেবা নম্বর কত?',
         options: ['৯৯৯ (999)', '১০০', '১১১', '৭৭৭'],
         correctIndex: 0,
-        explanation: '৯৯৯-এ বিনামূল্যে কল করে তাৎক্ষণিক পুলিশ, অ্যাম্বুলেন্স ও ফায়ার সার্ভিস সেবা পাওয়া যায়।',
+        explanation:
+            '৯৯৯-এ বিনামূল্যে কল করে তাৎক্ষণিক পুলিশ, অ্যাম্বুলেন্স ও ফায়ার সার্ভিস সেবা পাওয়া যায়।',
       ),
     ];
   }

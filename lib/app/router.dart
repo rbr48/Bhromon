@@ -362,7 +362,8 @@ class AppRouter {
         path: '/newspaper-reader',
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
-          final url = state.uri.queryParameters['url'] ?? extra['url'] as String? ?? '';
+          final url =
+              state.uri.queryParameters['url'] ?? extra['url'] as String? ?? '';
           return _customPageTransition(
             state,
             AdFreeArticleReaderScreen(
@@ -378,8 +379,11 @@ class AppRouter {
         path: '/newspaper-browser',
         pageBuilder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
-          final url = state.uri.queryParameters['url'] ?? extra['url'] as String? ?? '';
-          final title = state.uri.queryParameters['title'] ?? extra['title'] as String? ?? 'Web Browser';
+          final url =
+              state.uri.queryParameters['url'] ?? extra['url'] as String? ?? '';
+          final title = state.uri.queryParameters['title'] ??
+              extra['title'] as String? ??
+              'Web Browser';
           return _customPageTransition(
             state,
             AdBlockBrowserScreen(

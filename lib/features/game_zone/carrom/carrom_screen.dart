@@ -315,82 +315,82 @@ class _CarromScreenState extends State<CarromScreen>
   Widget build(BuildContext context) {
     final canPop = Navigator.of(context).canPop();
     return PopScope(
-      canPop: canPop,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        try {
-          context.go('/game-zone');
-        } catch (_) {}
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF241812),
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white70, size: 18),
-            onPressed: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                try {
-                  context.go('/game-zone');
-                } catch (_) {}
-              }
-            },
-          ),
-          title: const Text('Carrom (ক্যারম)',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1A110C),
-        foregroundColor: Colors.white,
-        elevation: 2,
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.help_outline),
-              tooltip: 'Rules',
-              onPressed: _showRulesDialog),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.tune),
-            tooltip: 'Opponent',
-            onSelected: _setMode,
-            itemBuilder: (ctx) => [
-              for (final entry in _difficulties.entries)
-                CheckedPopupMenuItem(
-                  value: entry.key,
-                  checked:
-                      _game.vsBot && _CarromSession.aimNoise == entry.value,
-                  child: Text('Bot - ${entry.key}'),
-                ),
-              CheckedPopupMenuItem(
-                  value: 'two',
-                  checked: !_game.vsBot,
-                  child: const Text('2 Players (Pass & Play)')),
+        canPop: canPop,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          try {
+            context.go('/game-zone');
+          } catch (_) {}
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF241812),
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white70, size: 18),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  try {
+                    context.go('/game-zone');
+                  } catch (_) {}
+                }
+              },
+            ),
+            title: const Text('Carrom (ক্যারম)',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            backgroundColor: const Color(0xFF1A110C),
+            foregroundColor: Colors.white,
+            elevation: 2,
+            actions: [
+              IconButton(
+                  icon: const Icon(Icons.help_outline),
+                  tooltip: 'Rules',
+                  onPressed: _showRulesDialog),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.tune),
+                tooltip: 'Opponent',
+                onSelected: _setMode,
+                itemBuilder: (ctx) => [
+                  for (final entry in _difficulties.entries)
+                    CheckedPopupMenuItem(
+                      value: entry.key,
+                      checked:
+                          _game.vsBot && _CarromSession.aimNoise == entry.value,
+                      child: Text('Bot - ${entry.key}'),
+                    ),
+                  CheckedPopupMenuItem(
+                      value: 'two',
+                      checked: !_game.vsBot,
+                      child: const Text('2 Players (Pass & Play)')),
+                ],
+              ),
+              IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'New Board',
+                  onPressed: _confirmNewGame),
             ],
           ),
-          IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'New Board',
-              onPressed: _confirmNewGame),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildScoreHeader(),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final size =
-                      min(constraints.maxWidth - 16, constraints.maxHeight - 8)
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildScoreHeader(),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final size = min(constraints.maxWidth - 16,
+                              constraints.maxHeight - 8)
                           .clamp(220.0, 560.0);
-                  return Center(child: _buildBoard(size));
-                },
-              ),
+                      return Center(child: _buildBoard(size));
+                    },
+                  ),
+                ),
+                _buildControls(),
+              ],
             ),
-            _buildControls(),
-          ],
-        ),
-      ),
-    ));
+          ),
+        ));
   }
 
   Widget _buildScoreHeader() {

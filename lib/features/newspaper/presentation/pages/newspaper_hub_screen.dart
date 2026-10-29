@@ -46,10 +46,26 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
 
   final List<Map<String, String>> _categories = const [
     {'id': 'all', 'label': 'All', 'labelBn': 'সব'},
-    {'id': 'bangla_dailies', 'label': 'Bangla dailies', 'labelBn': 'বাংলা পত্রিকা'},
-    {'id': 'english_dailies', 'label': 'English dailies', 'labelBn': 'ইংরেজি পত্রিকা'},
-    {'id': 'online_portals', 'label': 'Online portals', 'labelBn': 'অনলাইন পোর্টাল'},
-    {'id': 'world_tech', 'label': 'World & Tech', 'labelBn': 'আন্তর্জাতিক ও প্রযুক্তি'},
+    {
+      'id': 'bangla_dailies',
+      'label': 'Bangla dailies',
+      'labelBn': 'বাংলা পত্রিকা'
+    },
+    {
+      'id': 'english_dailies',
+      'label': 'English dailies',
+      'labelBn': 'ইংরেজি পত্রিকা'
+    },
+    {
+      'id': 'online_portals',
+      'label': 'Online portals',
+      'labelBn': 'অনলাইন পোর্টাল'
+    },
+    {
+      'id': 'world_tech',
+      'label': 'World & Tech',
+      'labelBn': 'আন্তর্জাতিক ও প্রযুক্তি'
+    },
     {'id': 'sports', 'label': 'Sports', 'labelBn': 'খেলাধুলা'},
   ];
 
@@ -181,7 +197,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
     );
   }
 
-  void _openAdBlockBrowser({required String url, required String title, Newspaper? paper}) {
+  void _openAdBlockBrowser(
+      {required String url, required String title, Newspaper? paper}) {
     if (paper != null) {
       _service.recordPaperRead(paper.id);
       _loadUserData();
@@ -197,7 +214,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
   }
 
   void _speakHeadline(NewsHeadline headline) {
-    final textToSpeak = '${headline.paperName}. ${headline.title}. ${headline.snippet}';
+    final textToSpeak =
+        '${headline.paperName}. ${headline.title}. ${headline.snippet}';
     _ttsService.speak(id: headline.id, text: textToSpeak);
   }
 
@@ -217,7 +235,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
             children: [
               Row(
                 children: [
-                  const Icon(Icons.layers_rounded, color: AppColors.mintGreen, size: 20),
+                  const Icon(Icons.layers_rounded,
+                      color: AppColors.mintGreen, size: 20),
                   const SizedBox(width: 8),
                   const Text(
                     'Same story, different papers',
@@ -229,7 +248,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                    icon:
+                        const Icon(Icons.close_rounded, color: Colors.white70),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -254,16 +274,20 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: cluster.items.length,
-                  separatorBuilder: (_, __) => Divider(color: Colors.white.withValues(alpha: 0.08)),
+                  separatorBuilder: (_, __) =>
+                      Divider(color: Colors.white.withValues(alpha: 0.08)),
                   itemBuilder: (context, idx) {
                     final item = cluster.items[idx];
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
                         radius: 16,
-                        backgroundColor: AppColors.mintGreen.withValues(alpha: 0.15),
+                        backgroundColor:
+                            AppColors.mintGreen.withValues(alpha: 0.15),
                         child: Text(
-                          item.paperName.isNotEmpty ? item.paperName[0].toUpperCase() : 'N',
+                          item.paperName.isNotEmpty
+                              ? item.paperName[0].toUpperCase()
+                              : 'N',
                           style: const TextStyle(
                             color: AppColors.mintGreen,
                             fontSize: 12,
@@ -281,9 +305,11 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                       ),
                       subtitle: Text(
                         '${item.paperName} • ${item.relativeTime}',
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12),
                       ),
-                      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white38),
+                      trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                          size: 14, color: Colors.white38),
                       onTap: () {
                         Navigator.pop(context);
                         _openArticleReader(item);
@@ -353,7 +379,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.mintGreen),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.mintGreen),
                   )
                 : const Icon(Icons.refresh_rounded, color: Colors.white70),
             onPressed: () {
@@ -368,7 +395,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
           indicatorWeight: 3,
           labelColor: AppColors.mintGreen,
           unselectedLabelColor: Colors.white54,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          labelStyle:
+              const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           tabs: const [
             Tab(text: 'Live headlines'),
             Tab(text: 'All newspapers'),
@@ -417,10 +445,12 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
               decoration: InputDecoration(
                 hintText: 'Search headlines across all papers',
                 hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54, size: 20),
+                prefixIcon: const Icon(Icons.search_rounded,
+                    color: Colors.white54, size: 20),
                 suffixIcon: _headlineSearchCtrl.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
+                        icon: const Icon(Icons.clear_rounded,
+                            color: Colors.white54, size: 18),
                         onPressed: () {
                           _headlineSearchCtrl.clear();
                           _loadHeadlines();
@@ -428,7 +458,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                       )
                     : null,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               ),
               onSubmitted: (_) => _loadHeadlines(),
             ),
@@ -458,7 +489,9 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                     side: BorderSide(
-                      color: isSelected ? AppColors.mintGreen : Colors.white.withValues(alpha: 0.1),
+                      color: isSelected
+                          ? AppColors.mintGreen
+                          : Colors.white.withValues(alpha: 0.1),
                     ),
                   ),
                   onSelected: (_) => _onCategorySelected(cat['id']!),
@@ -484,7 +517,10 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 const SizedBox(width: 8),
                 const Text(
                   'Updated Just now',
-                  style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(width: 8),
                 const Text('•', style: TextStyle(color: Colors.white38)),
@@ -510,14 +546,20 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  const Text('Filtering by: ', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  const Text('Filtering by: ',
+                      style: TextStyle(color: Colors.white54, fontSize: 12)),
                   Chip(
-                    backgroundColor: AppColors.mintGreen.withValues(alpha: 0.15),
+                    backgroundColor:
+                        AppColors.mintGreen.withValues(alpha: 0.15),
                     label: Text(
                       _selectedPaperId!,
-                      style: const TextStyle(color: AppColors.mintGreen, fontSize: 12, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: AppColors.mintGreen,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold),
                     ),
-                    deleteIcon: const Icon(Icons.close_rounded, size: 16, color: AppColors.mintGreen),
+                    deleteIcon: const Icon(Icons.close_rounded,
+                        size: 16, color: AppColors.mintGreen),
                     onDeleted: () => _onPaperFilterSelected(null),
                   ),
                 ],
@@ -553,7 +595,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 padding: const EdgeInsets.all(40),
                 child: Column(
                   children: [
-                    const Icon(Icons.article_rounded, size: 48, color: Colors.white24),
+                    const Icon(Icons.article_rounded,
+                        size: 48, color: Colors.white24),
                     const SizedBox(height: 12),
                     const Text(
                       'কোনো শিরোনাম পাওয়া যায়নি',
@@ -561,13 +604,14 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     ),
                     const SizedBox(height: 12),
                     TextButton.icon(
-                      style: TextButton.styleFrom(foregroundColor: AppColors.mintGreen),
+                      style: TextButton.styleFrom(
+                          foregroundColor: AppColors.mintGreen),
                       icon: const Icon(Icons.refresh_rounded),
                       label: const Text('পুনরায় লোড করুন'),
                       onPressed: () {
-              _loadHeadlines(refresh: true);
-              _loadPapers(forceRefresh: true);
-            },
+                        _loadHeadlines(refresh: true);
+                        _loadPapers(forceRefresh: true);
+                      },
                     ),
                   ],
                 ),
@@ -591,7 +635,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
         decoration: BoxDecoration(
           color: const Color(0xFF1B222C),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.25)),
+          border:
+              Border.all(color: AppColors.mintGreen.withValues(alpha: 0.25)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.2),
@@ -605,7 +650,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
           children: [
             Row(
               children: [
-                const Icon(Icons.layers_rounded, color: AppColors.mintGreen, size: 18),
+                const Icon(Icons.layers_rounded,
+                    color: AppColors.mintGreen, size: 18),
                 const SizedBox(width: 8),
                 const Text(
                   'Same story, different papers',
@@ -617,14 +663,18 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.mintGreen.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     '${_clusters.length} stories',
-                    style: const TextStyle(color: AppColors.mintGreen, fontSize: 11, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: AppColors.mintGreen,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -643,18 +693,23 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.compare_arrows_rounded, size: 14, color: Colors.white70),
+                      const Icon(Icons.compare_arrows_rounded,
+                          size: 14, color: Colors.white70),
                       const SizedBox(width: 6),
                       Text(
                         '${cluster.papers.length} papers • Tap to compare coverage',
-                        style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -692,7 +747,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(6),
@@ -709,18 +765,26 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     const SizedBox(width: 8),
                     Text(
                       item.relativeTime,
-                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      style:
+                          const TextStyle(color: Colors.white38, fontSize: 11),
                     ),
                     const Spacer(),
                     // TTS Audio Speaker Button
                     IconButton(
                       iconSize: 18,
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      tooltip: isSpeakingThis ? 'Stop Audio' : 'Listen Headline (TTS)',
+                      constraints:
+                          const BoxConstraints(minWidth: 32, minHeight: 32),
+                      tooltip: isSpeakingThis
+                          ? 'Stop Audio'
+                          : 'Listen Headline (TTS)',
                       icon: Icon(
-                        isSpeakingThis ? Icons.volume_up_rounded : Icons.volume_down_rounded,
-                        color: isSpeakingThis ? AppColors.mintGreen : Colors.white54,
+                        isSpeakingThis
+                            ? Icons.volume_up_rounded
+                            : Icons.volume_down_rounded,
+                        color: isSpeakingThis
+                            ? AppColors.mintGreen
+                            : Colors.white54,
                       ),
                       onPressed: () => _speakHeadline(item),
                     ),
@@ -728,11 +792,16 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     IconButton(
                       iconSize: 18,
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                      tooltip: isBookmarked ? 'Remove Bookmark' : 'Bookmark Story',
+                      constraints:
+                          const BoxConstraints(minWidth: 32, minHeight: 32),
+                      tooltip:
+                          isBookmarked ? 'Remove Bookmark' : 'Bookmark Story',
                       icon: Icon(
-                        isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                        color: isBookmarked ? AppColors.mintGreen : Colors.white54,
+                        isBookmarked
+                            ? Icons.bookmark_rounded
+                            : Icons.bookmark_border_rounded,
+                        color:
+                            isBookmarked ? AppColors.mintGreen : Colors.white54,
                       ),
                       onPressed: () => _toggleBookmark(item),
                     ),
@@ -740,7 +809,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     IconButton(
                       iconSize: 18,
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      constraints:
+                          const BoxConstraints(minWidth: 32, minHeight: 32),
                       tooltip: 'Open in AdBlock Browser',
                       icon: const Icon(
                         Icons.public_rounded,
@@ -869,7 +939,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
               );
 
               return ActionChip(
-                avatar: const Icon(Icons.bookmark_rounded, size: 14, color: AppColors.mintGreen),
+                avatar: const Icon(Icons.bookmark_rounded,
+                    size: 14, color: AppColors.mintGreen),
                 label: Text(paper.name),
                 backgroundColor: const Color(0xFF1B1F24),
                 labelStyle: const TextStyle(
@@ -912,17 +983,20 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
             decoration: InputDecoration(
               hintText: 'Search newspapers',
               hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-              prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54, size: 20),
+              prefixIcon: const Icon(Icons.search_rounded,
+                  color: Colors.white54, size: 20),
               suffixIcon: _paperSearchCtrl.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
+                      icon: const Icon(Icons.clear_rounded,
+                          color: Colors.white54, size: 18),
                       onPressed: () {
                         setState(() => _paperSearchCtrl.clear());
                       },
                     )
                   : null,
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -938,9 +1012,12 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
             ),
           )
         else ...[
-          _buildCategorySection('BANGLA DAILIES', grouped['bangla_dailies'] ?? []),
-          _buildCategorySection('ENGLISH DAILIES', grouped['english_dailies'] ?? []),
-          _buildCategorySection('ONLINE PORTALS', grouped['online_portals'] ?? []),
+          _buildCategorySection(
+              'BANGLA DAILIES', grouped['bangla_dailies'] ?? []),
+          _buildCategorySection(
+              'ENGLISH DAILIES', grouped['english_dailies'] ?? []),
+          _buildCategorySection(
+              'ONLINE PORTALS', grouped['online_portals'] ?? []),
           _buildCategorySection('WORLD & TECH', grouped['world_tech'] ?? []),
           _buildCategorySection('SPORTS & OTHERS', grouped['sports'] ?? []),
         ],
@@ -1044,7 +1121,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 1.5),
                             decoration: BoxDecoration(
-                              color: AppColors.mintGreen.withValues(alpha: 0.14),
+                              color:
+                                  AppColors.mintGreen.withValues(alpha: 0.14),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Row(
@@ -1085,8 +1163,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     _tabController.animateTo(0);
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(8),

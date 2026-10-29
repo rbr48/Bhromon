@@ -226,7 +226,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
       _triggerAdCleanup();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('🛡️ AdBlock Enabled — Clean & ad-free browsing active'),
+          content:
+              Text('🛡️ AdBlock Enabled — Clean & ad-free browsing active'),
           backgroundColor: Color(0xFF1B4332),
           duration: Duration(seconds: 2),
         ),
@@ -431,7 +432,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
           backgroundColor: const Color(0xFFF9FAFB),
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFF111827), size: 24),
+            icon: const Icon(Icons.arrow_back,
+                color: Color(0xFF111827), size: 24),
             tooltip: 'Go back',
             onPressed: _handleBackPress,
           ),
@@ -453,7 +455,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
               onTap: _showShieldInfoDialog,
               child: Container(
                 margin: const EdgeInsets.symmetric(vertical: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(16),
@@ -466,7 +469,9 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      _isAdBlockEnabled ? Icons.shield_rounded : Icons.shield_outlined,
+                      _isAdBlockEnabled
+                          ? Icons.shield_rounded
+                          : Icons.shield_outlined,
                       color: const Color(0xFF111827),
                       size: 16,
                     ),
@@ -504,10 +509,12 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
 
             // 3-dots Overflow Menu
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF111827), size: 24),
+              icon: const Icon(Icons.more_vert_rounded,
+                  color: Color(0xFF111827), size: 24),
               color: Colors.white,
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               onSelected: (val) {
                 switch (val) {
                   case 'toggle_adblock':
@@ -522,7 +529,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                     );
                     break;
                   case 'open_browser':
-                    launchUrl(Uri.parse(_currentUrl), mode: LaunchMode.externalApplication);
+                    launchUrl(Uri.parse(_currentUrl),
+                        mode: LaunchMode.externalApplication);
                     break;
                   case 'desktop':
                     _toggleDesktopMode();
@@ -541,14 +549,19 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        _isAdBlockEnabled ? Icons.shield_moon_rounded : Icons.shield_rounded,
+                        _isAdBlockEnabled
+                            ? Icons.shield_moon_rounded
+                            : Icons.shield_rounded,
                         color: const Color(0xFF111827),
                         size: 20,
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        _isAdBlockEnabled ? 'Allow ads on this site' : 'Block ads on this site',
-                        style: const TextStyle(color: Color(0xFF111827), fontSize: 14),
+                        _isAdBlockEnabled
+                            ? 'Allow ads on this site'
+                            : 'Block ads on this site',
+                        style: const TextStyle(
+                            color: Color(0xFF111827), fontSize: 14),
                       ),
                     ],
                   ),
@@ -557,9 +570,12 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   value: 'reader',
                   child: Row(
                     children: [
-                      Icon(Icons.chrome_reader_mode_rounded, color: Color(0xFF111827), size: 20),
+                      Icon(Icons.chrome_reader_mode_rounded,
+                          color: Color(0xFF111827), size: 20),
                       SizedBox(width: 12),
-                      Text('Clean Reader Mode', style: TextStyle(color: Color(0xFF111827), fontSize: 14)),
+                      Text('Clean Reader Mode',
+                          style: TextStyle(
+                              color: Color(0xFF111827), fontSize: 14)),
                     ],
                   ),
                 ),
@@ -567,9 +583,12 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   value: 'share',
                   child: Row(
                     children: [
-                      Icon(Icons.share_rounded, color: Color(0xFF111827), size: 20),
+                      Icon(Icons.share_rounded,
+                          color: Color(0xFF111827), size: 20),
                       SizedBox(width: 12),
-                      Text('Share this page', style: TextStyle(color: Color(0xFF111827), fontSize: 14)),
+                      Text('Share this page',
+                          style: TextStyle(
+                              color: Color(0xFF111827), fontSize: 14)),
                     ],
                   ),
                 ),
@@ -577,9 +596,12 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   value: 'open_browser',
                   child: Row(
                     children: [
-                      Icon(Icons.open_in_browser_rounded, color: Color(0xFF111827), size: 20),
+                      Icon(Icons.open_in_browser_rounded,
+                          color: Color(0xFF111827), size: 20),
                       SizedBox(width: 12),
-                      Text('Open in browser', style: TextStyle(color: Color(0xFF111827), fontSize: 14)),
+                      Text('Open in browser',
+                          style: TextStyle(
+                              color: Color(0xFF111827), fontSize: 14)),
                     ],
                   ),
                 ),
@@ -588,14 +610,17 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        _isDesktopMode ? Icons.phone_android_rounded : Icons.desktop_windows_rounded,
+                        _isDesktopMode
+                            ? Icons.phone_android_rounded
+                            : Icons.desktop_windows_rounded,
                         color: const Color(0xFF111827),
                         size: 20,
                       ),
                       const SizedBox(width: 12),
                       Text(
                         _isDesktopMode ? 'Mobile View' : 'Desktop View',
-                        style: const TextStyle(color: Color(0xFF111827), fontSize: 14),
+                        style: const TextStyle(
+                            color: Color(0xFF111827), fontSize: 14),
                       ),
                     ],
                   ),
@@ -604,16 +629,20 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   value: 'copy',
                   child: Row(
                     children: [
-                      Icon(Icons.copy_rounded, color: Color(0xFF111827), size: 20),
+                      Icon(Icons.copy_rounded,
+                          color: Color(0xFF111827), size: 20),
                       SizedBox(width: 12),
-                      Text('Copy Link', style: TextStyle(color: Color(0xFF111827), fontSize: 14)),
+                      Text('Copy Link',
+                          style: TextStyle(
+                              color: Color(0xFF111827), fontSize: 14)),
                     ],
                   ),
                 ),
               ],
             ),
             IconButton(
-              icon: const Icon(Icons.close_rounded, color: Color(0xFF111827), size: 24),
+              icon: const Icon(Icons.close_rounded,
+                  color: Color(0xFF111827), size: 24),
               tooltip: 'Close browser',
               onPressed: () {
                 if (context.canPop()) {
@@ -631,7 +660,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                 ? LinearProgressIndicator(
                     value: _progress > 0 ? _progress : null,
                     backgroundColor: Colors.transparent,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.mintGreen),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.mintGreen),
                     minHeight: 2,
                   )
                 : const SizedBox(height: 2),
@@ -656,7 +686,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                     mediaPlaybackRequiresUserGesture: false,
                     supportMultipleWindows: true,
                     javaScriptCanOpenWindowsAutomatically: true,
-                    mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+                    mixedContentMode:
+                        MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
                     safeBrowsingEnabled: false,
                     cacheEnabled: true,
                     clearCache: false,
@@ -665,8 +696,9 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                     allowContentAccess: true,
                     allowFileAccessFromFileURLs: true,
                     allowUniversalAccessFromFileURLs: true,
-                    contentBlockers:
-                        (!kIsWeb && _isAdBlockEnabled) ? _contentBlockers : null,
+                    contentBlockers: (!kIsWeb && _isAdBlockEnabled)
+                        ? _contentBlockers
+                        : null,
                     userAgent: _isDesktopMode
                         ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                         : 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36',
@@ -674,23 +706,30 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   onCreateWindow: (controller, createWindowAction) async {
                     final targetUrl = createWindowAction.request.url;
                     if (targetUrl != null) {
-                      controller.loadUrl(urlRequest: URLRequest(url: targetUrl));
+                      controller.loadUrl(
+                          urlRequest: URLRequest(url: targetUrl));
                       return true;
                     }
                     return false;
                   },
-                  onReceivedServerTrustAuthRequest: (controller, challenge) async {
-                    return ServerTrustAuthResponse(action: ServerTrustAuthResponseAction.PROCEED);
+                  onReceivedServerTrustAuthRequest:
+                      (controller, challenge) async {
+                    return ServerTrustAuthResponse(
+                        action: ServerTrustAuthResponseAction.PROCEED);
                   },
-                  shouldOverrideUrlLoading: (controller, navigationAction) async {
+                  shouldOverrideUrlLoading:
+                      (controller, navigationAction) async {
                     final uri = navigationAction.request.url;
                     if (uri != null) {
                       final scheme = uri.scheme.toLowerCase();
                       if (scheme == 'http' || scheme == 'https') {
                         return NavigationActionPolicy.ALLOW;
-                      } else if (scheme == 'tel' || scheme == 'mailto' || scheme == 'intent') {
+                      } else if (scheme == 'tel' ||
+                          scheme == 'mailto' ||
+                          scheme == 'intent') {
                         try {
-                          await launchUrl(Uri.parse(uri.toString()), mode: LaunchMode.externalApplication);
+                          await launchUrl(Uri.parse(uri.toString()),
+                              mode: LaunchMode.externalApplication);
                         } catch (_) {}
                         return NavigationActionPolicy.CANCEL;
                       }
@@ -838,7 +877,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
             const SizedBox(height: 16),
             const Text(
               'To bypass external web security headers (X-Frame-Options) on browser platforms, you can read this newspaper in Clean Distraction-Free Reader mode, or launch in a dedicated tab.',
-              style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+              style:
+                  TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -854,7 +894,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    icon: const Icon(Icons.chrome_reader_mode_rounded, size: 18),
+                    icon:
+                        const Icon(Icons.chrome_reader_mode_rounded, size: 18),
                     label: const Text('Clean Reader',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     onPressed: _openInReaderMode,

@@ -36,7 +36,8 @@ void main() {
         'paperName': 'The Daily Star',
         'paperLogo': 'https://google.com/favicon.ico',
         'title': 'Historic Cricket Victory for Tigers',
-        'snippet': 'Bangladesh won the series by 5 wickets in an exciting finish.',
+        'snippet':
+            'Bangladesh won the series by 5 wickets in an exciting finish.',
         'imageUrl': 'https://example.com/tiger.jpg',
         'articleUrl': 'https://thedailystar.net/sports/cricket/123',
         'publishedAt': 1793180000000,
@@ -53,7 +54,8 @@ void main() {
 
       final outJson = headline.toJson();
       expect(outJson['id'], 'hd_123');
-      expect(outJson['articleUrl'], 'https://thedailystar.net/sports/cricket/123');
+      expect(
+          outJson['articleUrl'], 'https://thedailystar.net/sports/cricket/123');
     });
 
     test('StoryCluster parsing ("Same story, different papers")', () {
@@ -81,7 +83,8 @@ void main() {
             'paperName': 'Daily Star',
             'paperLogo': '',
             'title': 'Cautionary signal 4 hoisted at seaports',
-            'snippet': 'Deep depression in Bay of Bengal prompts weather warning.',
+            'snippet':
+                'Deep depression in Bay of Bengal prompts weather warning.',
             'imageUrl': null,
             'articleUrl': 'https://thedailystar.net/news/2',
             'publishedAt': 1793180000000,

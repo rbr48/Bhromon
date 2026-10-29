@@ -1091,7 +1091,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                   visualDensity: VisualDensity.compact,
                   iconSize: 18,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  constraints:
+                      const BoxConstraints(minWidth: 28, minHeight: 28),
                   icon: Icon(
                     isCurrent
                         ? Icons.volume_up_rounded

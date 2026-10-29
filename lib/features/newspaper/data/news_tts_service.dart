@@ -11,7 +11,8 @@ class NewsTtsService {
 
   FlutterTts? _flutterTts;
   final ValueNotifier<bool> isPlayingNotifier = ValueNotifier<bool>(false);
-  final ValueNotifier<String?> currentPlayingIdNotifier = ValueNotifier<String?>(null);
+  final ValueNotifier<String?> currentPlayingIdNotifier =
+      ValueNotifier<String?>(null);
 
   bool _initialized = false;
 

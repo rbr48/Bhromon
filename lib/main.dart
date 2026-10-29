@@ -350,7 +350,8 @@ void main() {
           FirebaseMessaging.onBackgroundMessage(
               _firebaseMessagingBackgroundHandler);
         } catch (e) {
-          logWarning('[FCM] Could not register background messaging handler', e);
+          logWarning(
+              '[FCM] Could not register background messaging handler', e);
         }
       }
       CallNotificationService().init();

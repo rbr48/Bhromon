@@ -384,7 +384,8 @@ class VpsChatService {
     });
   }
 
-  Future<void> markRead(String chatId, {List<String>? messageIds, String? recipientId}) async {
+  Future<void> markRead(String chatId,
+      {List<String>? messageIds, String? recipientId}) async {
     // Send via WebSocket for instant update
     sendWsEvent({
       'type': 'read',

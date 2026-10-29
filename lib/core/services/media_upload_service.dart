@@ -171,7 +171,8 @@ class MediaUploadService {
 
     await uploadTask;
     final downloadUrl = await ref.getDownloadURL();
-    debugPrint('MediaUploadService uploaded bytes to Firebase Storage: $downloadUrl');
+    debugPrint(
+        'MediaUploadService uploaded bytes to Firebase Storage: $downloadUrl');
     return downloadUrl;
   }
 
@@ -202,7 +203,8 @@ class MediaUploadService {
 
     await uploadTask;
     final downloadUrl = await ref.getDownloadURL();
-    debugPrint('MediaUploadService uploaded file to Firebase Storage: $downloadUrl');
+    debugPrint(
+        'MediaUploadService uploaded file to Firebase Storage: $downloadUrl');
     return downloadUrl;
   }
 
@@ -220,7 +222,8 @@ class MediaUploadService {
       'file': MultipartFile.fromBytes(
         bytes,
         filename: filename,
-        contentType: contentType != null ? DioMediaType.parse(contentType) : null,
+        contentType:
+            contentType != null ? DioMediaType.parse(contentType) : null,
       ),
       'tourId': tourId,
       'folder': folder,
@@ -310,8 +313,7 @@ class MediaUploadService {
           file.absolute.path,
           targetPath,
           quality: 75,
-          format:
-              extension == 'png' ? CompressFormat.png : CompressFormat.jpeg,
+          format: extension == 'png' ? CompressFormat.png : CompressFormat.jpeg,
         );
 
         if (compressedFile != null) {

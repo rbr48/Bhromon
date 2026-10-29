@@ -483,75 +483,75 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
     );
 
     return PopScope(
-      canPop: !_isSearching && context.canPop(),
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        if (_isSearching) {
-          _searchDebounce?.cancel();
-          setState(() {
-            _isSearching = false;
-            _searchQuery = '';
-            _searchController.clear();
-          });
-          return;
-        }
-        if (context.canPop()) {
-          context.pop();
-        } else {
-          context.go('/group-hub');
-        }
-      },
-      child: Scaffold(
-        backgroundColor: mockBackground,
-      body: BlocListener<AuthCubit, AuthState>(
-        // React only when the viewer actually changes, not to every
-        // intermediate auth state (loading, OTP sent, ...).
-        listenWhen: (previous, current) =>
-            _viewerFor(current) != null &&
-            _viewerFor(current)?.uid != _viewerFor(previous)?.uid,
-        listener: (context, state) => _loadFeedFor(state),
-        child: isWideScreen
-            ? Row(
-                children: [
-                  // ── Desktop Left Sidebar / Navigation Rail ──
-                  _buildWebNavigationSidebar(
-                      context, uid, displayName, screenWidth),
+        canPop: !_isSearching && context.canPop(),
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          if (_isSearching) {
+            _searchDebounce?.cancel();
+            setState(() {
+              _isSearching = false;
+              _searchQuery = '';
+              _searchController.clear();
+            });
+            return;
+          }
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/group-hub');
+          }
+        },
+        child: Scaffold(
+          backgroundColor: mockBackground,
+          body: BlocListener<AuthCubit, AuthState>(
+            // React only when the viewer actually changes, not to every
+            // intermediate auth state (loading, OTP sent, ...).
+            listenWhen: (previous, current) =>
+                _viewerFor(current) != null &&
+                _viewerFor(current)?.uid != _viewerFor(previous)?.uid,
+            listener: (context, state) => _loadFeedFor(state),
+            child: isWideScreen
+                ? Row(
+                    children: [
+                      // ── Desktop Left Sidebar / Navigation Rail ──
+                      _buildWebNavigationSidebar(
+                          context, uid, displayName, screenWidth),
 
-                  const VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    color: Color(0xFFE5E3DC),
-                  ),
+                      const VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: Color(0xFFE5E3DC),
+                      ),
 
-                  // ── Centered Constrained Feed Column ──
-                  Expanded(
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 960),
+                      // ── Centered Constrained Feed Column ──
+                      Expanded(
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 960),
+                            child: feedBody,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Stack(
+                    children: [
+                      // Scrollable Body
+                      Positioned.fill(
                         child: feedBody,
                       ),
-                    ),
-                  ),
-                ],
-              )
-            : Stack(
-                children: [
-                  // Scrollable Body
-                  Positioned.fill(
-                    child: feedBody,
-                  ),
 
-                  // 3. CUSTOM BOTTOM GLASSMORPHIC NAV BAR (mobile only)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: _buildCustomBottomNavigationBar(uid),
+                      // 3. CUSTOM BOTTOM GLASSMORPHIC NAV BAR (mobile only)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: _buildCustomBottomNavigationBar(uid),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-      ),
-    ));
+          ),
+        ));
   }
 
   Widget _buildFeedScrollView({

@@ -414,175 +414,180 @@ class _ChessScreenState extends State<ChessScreen> with GameZonePortraitLock {
 
     final canPop = Navigator.of(context).canPop();
     return PopScope(
-      canPop: canPop,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        try {
-          context.go('/game-zone');
-        } catch (_) {}
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF1E2429),
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white70, size: 18),
-            onPressed: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                try {
-                  context.go('/game-zone');
-                } catch (_) {}
-              }
-            },
-          ),
-          title: const Text('Travel Chess AI',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF14181B),
-        foregroundColor: Colors.white,
-        elevation: 2,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.undo),
-            tooltip: 'Takeback Move',
-            onPressed: canUndo ? _undoMove : null,
-          ),
-          PopupMenuButton<int>(
-            icon: const Icon(Icons.tune),
-            tooltip: 'Difficulty',
-            onSelected: (depth) {
-              setState(() {
-                _ChessSession.aiDepth = depth;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text('AI: ${_depthLabels[depth]}'),
-                    duration: const Duration(seconds: 1)),
-              );
-            },
-            itemBuilder: (ctx) => [
-              for (final entry in _depthLabels.entries)
-                CheckedPopupMenuItem(
-                  value: entry.key,
-                  checked: _ChessSession.aiDepth == entry.key,
-                  child: Text(entry.value),
-                ),
-            ],
-          ),
-          PopupMenuButton<ChessBoardTheme>(
-            icon: const Icon(Icons.palette_outlined),
-            tooltip: 'Board Theme',
-            onSelected: (theme) {
-              setState(() {
-                _ChessSession.boardTheme = theme;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text('Theme: ${theme.label}'),
-                    duration: const Duration(seconds: 1)),
-              );
-            },
-            itemBuilder: (ctx) => [
-              for (final theme in ChessBoardTheme.values)
-                CheckedPopupMenuItem(
-                  value: theme,
-                  checked: _ChessSession.boardTheme == theme,
-                  child: Text(theme.label),
-                ),
-            ],
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            tooltip: 'Game options',
-            onSelected: (value) {
-              if (value == 'new') _confirmNewGame();
-              if (value == 'draw') _offerDraw();
-              if (value == 'resign') _resign();
-            },
-            itemBuilder: (ctx) => [
-              const PopupMenuItem(value: 'new', child: Text('New game')),
-              PopupMenuItem(
-                value: 'draw',
-                enabled: !_isGameOver &&
-                    !_isAiThinking &&
-                    _engine.moveHistory.isNotEmpty,
-                child: const Text('Offer draw'),
-              ),
-              PopupMenuItem(
-                value: 'resign',
-                enabled: !_isGameOver && _engine.moveHistory.isNotEmpty,
-                child: const Text('Resign'),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildPlayerBanner(
-              name: 'DeepTravel AI (Black)',
-              isAi: true,
-              isTurn: !_isGameOver && _engine.currentTurn == PieceColor.black,
-              inCheck: isBlackInCheck,
-              capturedPieces: _engine.capturedByBlack,
+        canPop: canPop,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          try {
+            context.go('/game-zone');
+          } catch (_) {}
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF1E2429),
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white70, size: 18),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  try {
+                    context.go('/game-zone');
+                  } catch (_) {}
+                }
+              },
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-              color: isWhiteInCheck && !_isGameOver
-                  ? Colors.red.shade900
-                  : const Color(0xFF262D34),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (_isAiThinking) ...[
-                    const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.amber),
+            title: const Text('Travel Chess AI',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            backgroundColor: const Color(0xFF14181B),
+            foregroundColor: Colors.white,
+            elevation: 2,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.undo),
+                tooltip: 'Takeback Move',
+                onPressed: canUndo ? _undoMove : null,
+              ),
+              PopupMenuButton<int>(
+                icon: const Icon(Icons.tune),
+                tooltip: 'Difficulty',
+                onSelected: (depth) {
+                  setState(() {
+                    _ChessSession.aiDepth = depth;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('AI: ${_depthLabels[depth]}'),
+                        duration: const Duration(seconds: 1)),
+                  );
+                },
+                itemBuilder: (ctx) => [
+                  for (final entry in _depthLabels.entries)
+                    CheckedPopupMenuItem(
+                      value: entry.key,
+                      checked: _ChessSession.aiDepth == entry.key,
+                      child: Text(entry.value),
                     ),
-                    const SizedBox(width: 8),
-                  ],
-                  Flexible(
-                    child: Text(
-                      _statusText,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: isWhiteInCheck ? Colors.white : Colors.white70,
-                        fontSize: 13,
-                        fontWeight:
-                            isWhiteInCheck ? FontWeight.bold : FontWeight.w500,
-                      ),
+                ],
+              ),
+              PopupMenuButton<ChessBoardTheme>(
+                icon: const Icon(Icons.palette_outlined),
+                tooltip: 'Board Theme',
+                onSelected: (theme) {
+                  setState(() {
+                    _ChessSession.boardTheme = theme;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('Theme: ${theme.label}'),
+                        duration: const Duration(seconds: 1)),
+                  );
+                },
+                itemBuilder: (ctx) => [
+                  for (final theme in ChessBoardTheme.values)
+                    CheckedPopupMenuItem(
+                      value: theme,
+                      checked: _ChessSession.boardTheme == theme,
+                      child: Text(theme.label),
                     ),
+                ],
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                tooltip: 'Game options',
+                onSelected: (value) {
+                  if (value == 'new') _confirmNewGame();
+                  if (value == 'draw') _offerDraw();
+                  if (value == 'resign') _resign();
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(value: 'new', child: Text('New game')),
+                  PopupMenuItem(
+                    value: 'draw',
+                    enabled: !_isGameOver &&
+                        !_isAiThinking &&
+                        _engine.moveHistory.isNotEmpty,
+                    child: const Text('Offer draw'),
+                  ),
+                  PopupMenuItem(
+                    value: 'resign',
+                    enabled: !_isGameOver && _engine.moveHistory.isNotEmpty,
+                    child: const Text('Resign'),
                   ),
                 ],
               ),
-            ),
-            _buildMoveList(),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final boardSize =
-                      min(constraints.maxWidth - 24, constraints.maxHeight - 16)
+            ],
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildPlayerBanner(
+                  name: 'DeepTravel AI (Black)',
+                  isAi: true,
+                  isTurn:
+                      !_isGameOver && _engine.currentTurn == PieceColor.black,
+                  inCheck: isBlackInCheck,
+                  capturedPieces: _engine.capturedByBlack,
+                ),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                  color: isWhiteInCheck && !_isGameOver
+                      ? Colors.red.shade900
+                      : const Color(0xFF262D34),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (_isAiThinking) ...[
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.amber),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Flexible(
+                        child: Text(
+                          _statusText,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color:
+                                isWhiteInCheck ? Colors.white : Colors.white70,
+                            fontSize: 13,
+                            fontWeight: isWhiteInCheck
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _buildMoveList(),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final boardSize = min(constraints.maxWidth - 24,
+                              constraints.maxHeight - 16)
                           .clamp(200.0, 520.0);
-                  return Center(child: _buildBoard(boardSize));
-                },
-              ),
+                      return Center(child: _buildBoard(boardSize));
+                    },
+                  ),
+                ),
+                _buildPlayerBanner(
+                  name: 'You (White)',
+                  isAi: false,
+                  isTurn:
+                      !_isGameOver && _engine.currentTurn == PieceColor.white,
+                  inCheck: isWhiteInCheck,
+                  capturedPieces: _engine.capturedByWhite,
+                ),
+              ],
             ),
-            _buildPlayerBanner(
-              name: 'You (White)',
-              isAi: false,
-              isTurn: !_isGameOver && _engine.currentTurn == PieceColor.white,
-              inCheck: isWhiteInCheck,
-              capturedPieces: _engine.capturedByWhite,
-            ),
-          ],
-        ),
-      ),
-    ));
+          ),
+        ));
   }
 
   Widget _buildMoveList() {
