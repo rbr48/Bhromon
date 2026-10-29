@@ -1,7 +1,7 @@
 // Call and voice-room rules. Needs the Firestore emulator on port 8080:
 //   npx firebase-tools@13.35.1 emulators:exec --only firestore --project bhromon-rules-test-project "cd functions && npx jest --runInBand tests/call_rules"
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp } = require('firebase/firestore');
+const { doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, query, collection, where, getDocs } = require('firebase/firestore');
 const fs = require('fs');
 const path = require('path');
 
@@ -136,6 +136,24 @@ describe('call and voice rules', () => {
       await assertSucceeds(getDoc(callRef(BOB)));
       await assertFails(getDoc(callRef(EVE)));
       await assertFails(getDoc(doc(anon(), 'calls', CALL)));
+    });
+
+    test('callee can query incoming calls by uid', async () => {
+      const q = query(
+        collection(as(BOB), 'calls'),
+        where('calleeId', '==', BOB.uid),
+        where('status', '==', 'calling')
+      );
+      await assertSucceeds(getDocs(q));
+    });
+
+    test('callee can query incoming calls by email', async () => {
+      const q = query(
+        collection(as(BOB), 'calls'),
+        where('calleeId', '==', BOB.email),
+        where('status', '==', 'calling')
+      );
+      await assertSucceeds(getDocs(q));
     });
   });
 

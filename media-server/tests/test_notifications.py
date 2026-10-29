@@ -174,6 +174,132 @@ def test_send_channel_message_notification():
     assert res["recipients"] == 1
 
 
+def test_send_call_push():
+    mock_messaging = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.success_count = 1
+    mock_resp.responses = [MagicMock(success=True, exception=None)]
+    mock_messaging.send_each_for_multicast.return_value = mock_resp
+
+    mock_db = MagicMock()
+    profile_doc = MagicMock()
+    profile_doc.exists = True
+    profile_doc.to_dict.return_value = {"displayName": "Alice Caller"}
+    mock_db.collection.return_value.document.return_value.get.return_value = profile_doc
+
+    engine = NotificationEngine(db=mock_db, messaging_mod=mock_messaging)
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_bob", MagicMock())])
+
+    res = engine.send_call_push(
+        call_id="c_123",
+        caller_id="uid_alice",
+        callee_id="uid_bob",
+        is_video=True,
+    )
+
+    assert res["status"] == "success"
+    assert res["devices_sent"] == 1
+    assert engine.stats["call_pushes_sent"] == 1
+
+    # Verify data-only payload format for Android background handler
+    mock_messaging.send_each_for_multicast.assert_called_once()
+    kwargs = mock_messaging.MulticastMessage.call_args[1]
+    data = kwargs["data"]
+    assert data["action"] == "call"
+    assert data["callId"] == "c_123"
+    assert data["callerId"] == "uid_alice"
+    assert data["callerName"] == "Alice Caller"
+    assert data["isVideo"] == "true"
+    # Ensure notification is not set (data-only for Android!)
+    assert "notification" not in kwargs or kwargs.get("notification") is None
+
+
+def test_send_call_push_email_resolution():
+    mock_messaging = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.success_count = 1
+    mock_resp.responses = [MagicMock(success=True, exception=None)]
+    mock_messaging.send_each_for_multicast.return_value = mock_resp
+
+    mock_db = MagicMock()
+    mock_db.collection.return_value.document.return_value.get.return_value.exists = False
+
+    engine = NotificationEngine(db=mock_db, messaging_mod=mock_messaging)
+    engine.get_uids_for_emails = MagicMock(return_value=["uid_bob"])
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_bob", MagicMock())])
+
+    res = engine.send_call_push(
+        call_id="c_124",
+        caller_id="uid_alice",
+        callee_id="bob@example.com",
+        is_video=False,
+    )
+
+    assert res["status"] == "success"
+    engine.get_uids_for_emails.assert_called_once_with(["bob@example.com"])
+    engine.get_push_targets_for_uids.assert_called_once_with(["uid_bob"])
+
+
+def test_send_call_ended_push():
+    mock_messaging = MagicMock()
+    mock_resp = MagicMock()
+    mock_resp.success_count = 1
+    mock_resp.responses = [MagicMock(success=True, exception=None)]
+    mock_messaging.send_each_for_multicast.return_value = mock_resp
+
+    engine = NotificationEngine(messaging_mod=mock_messaging)
+    engine.get_push_targets_for_uids = MagicMock(return_value=[("tok_bob", MagicMock())])
+
+    res = engine.send_call_ended_push(call_id="c_123", callee_id="uid_bob")
+    assert res["status"] == "success"
+    assert res["devices_sent"] == 1
+
+
+def test_watcher_call_snapshot():
+    engine = NotificationEngine()
+    engine.send_call_push = MagicMock(return_value={"status": "success"})
+    engine.send_call_ended_push = MagicMock(return_value={"status": "success"})
+
+    watcher = FirestoreNotificationWatcher(engine)
+
+    # Change 1: Call created
+    doc1 = MagicMock()
+    doc1.id = "call_abc"
+    doc1.to_dict.return_value = {
+        "status": "calling",
+        "callerId": "uid_alice",
+        "calleeId": "uid_bob",
+        "isVideo": True,
+        "callerName": "Alice",
+    }
+    change1 = MagicMock()
+    change1.type.name = "ADDED"
+    change1.document = doc1
+
+    watcher.on_call_snapshot(None, [change1], None)
+    engine.send_call_push.assert_called_once_with(
+        call_id="call_abc",
+        caller_id="uid_alice",
+        callee_id="uid_bob",
+        is_video=True,
+        caller_name="Alice",
+    )
+
+    # Change 2: Call ended
+    doc2 = MagicMock()
+    doc2.id = "call_abc"
+    doc2.to_dict.return_value = {
+        "status": "ended",
+        "calleeId": "uid_bob",
+    }
+    change2 = MagicMock()
+    change2.type.name = "MODIFIED"
+    change2.document = doc2
+
+    watcher.on_call_snapshot(None, [change2], None)
+    engine.send_call_ended_push.assert_called_once_with("call_abc", "uid_bob")
+
+
 def test_firestore_watcher_deduplication():
     engine = NotificationEngine()
     watcher = FirestoreNotificationWatcher(engine)
