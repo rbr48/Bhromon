@@ -1118,8 +1118,17 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
         )
         return
 
+    target_uid = recipient_id
+    if isinstance(recipient_id, str) and "@" in recipient_id:
+        try:
+            from firebase_admin import auth as fb_auth
+            user = await run_in_threadpool(fb_auth.get_user_by_email, recipient_id.strip().lower())
+            target_uid = user.uid
+        except Exception as ex:
+            logger.debug("Could not resolve recipient email %s to uid: %s", recipient_id, ex)
+
     delivered = await ws_manager.send_to_user(
-        recipient_id,
+        target_uid,
         {
             "type": "call_signal",
             "callId": call_id,
@@ -1131,6 +1140,20 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
             "avatarUrl": _https_url(data.get("avatarUrl")),
         },
     )
+    if not delivered and target_uid != recipient_id:
+        delivered = await ws_manager.send_to_user(
+            recipient_id,
+            {
+                "type": "call_signal",
+                "callId": call_id,
+                "callerId": uid,
+                "signalType": signal_type,
+                "payload": data.get("payload"),
+                "isVideo": bool(data.get("isVideo", False)),
+                "callerName": _short_text(data.get("callerName"), 80),
+                "avatarUrl": _https_url(data.get("avatarUrl")),
+            },
+        )
     if signal_type == "offer":
         await websocket.send_json({"type": "call_signal_ack", "callId": call_id, "delivered": delivered})
 

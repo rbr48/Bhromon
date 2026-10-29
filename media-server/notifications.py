@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections import deque
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
@@ -18,6 +19,9 @@ AUTH_LOOKUP_LIMIT = 100
 FCM_BATCH_LIMIT = 500
 PREVIEW_LIMIT = 120
 EVERYONE_CHANNEL_ID = "emergency"
+CALL_RING_SECONDS = 45
+CALL_OFFERS_PER_WINDOW = 10
+CALL_OFFER_WINDOW_SECONDS = 600.0
 
 DEAD_TOKEN_CODES = {
     "messaging/registration-token-not-registered",
@@ -60,9 +64,12 @@ class NotificationEngine:
             "sos_sent": 0,
             "channel_pushes_sent": 0,
             "chat_pushes_sent": 0,
+            "call_pushes_sent": 0,
             "dead_tokens_purged": 0,
             "errors": 0,
         }
+        self._call_push_times: Dict[str, deque[float]] = {}
+        self._call_lock = threading.Lock()
 
     def _get_db(self):
         if self._db is None:
@@ -376,6 +383,180 @@ class NotificationEngine:
             logger.error("Error in send_chat_notification: %s", e)
             return {"status": "error", "error": str(e)}
 
+    def send_call_push(
+        self,
+        call_id: str,
+        caller_id: str,
+        callee_id: str,
+        is_video: bool = False,
+        caller_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Dispatch high-priority call push notification to the callee's devices.
+
+        Android gets a data-only payload (no notification block) so the background
+        handler runs and triggers FlutterCallkitIncoming to ring.
+        iOS gets an APNs alert block so the system alerts the recipient.
+        """
+        logger.info("Triggering call push for call=%s from caller=%s to callee=%s", call_id, caller_id, callee_id)
+        now = time.monotonic()
+        # Rate limiting check
+        with self._call_lock:
+            times = self._call_push_times.setdefault(caller_id, deque())
+            cutoff = now - CALL_OFFER_WINDOW_SECONDS
+            while times and times[0] <= cutoff:
+                times.popleft()
+            if len(times) >= CALL_OFFERS_PER_WINDOW:
+                logger.warning("Caller %s rate limited for call pushes (exceeded %d in %ds)", caller_id, CALL_OFFERS_PER_WINDOW, CALL_OFFER_WINDOW_SECONDS)
+                return {"status": "rate_limited"}
+            times.append(now)
+
+        try:
+            # Resolve callee email to UID if needed
+            callee_uid = callee_id.strip()
+            if "@" in callee_uid:
+                uids = self.get_uids_for_emails([callee_uid.lower()])
+                if uids:
+                    callee_uid = uids[0]
+                else:
+                    logger.warning("Could not resolve callee email %s to UID", callee_uid)
+                    return {"status": "callee_not_found"}
+
+            if callee_uid == caller_id:
+                return {"status": "self_call"}
+
+            # Resolve caller displayName if not provided
+            c_name = (caller_name or "").strip()
+            if not c_name:
+                try:
+                    db = self._get_db()
+                    profile_doc = db.collection("explorer_profiles").document(caller_id).get()
+                    if profile_doc.exists:
+                        c_name = str((profile_doc.to_dict() or {}).get("displayName", "")).strip()
+                except Exception as ex:
+                    logger.debug("Failed to fetch caller profile for %s: %s", caller_id, ex)
+            if not c_name:
+                c_name = "Traveler"
+
+            targets = self.get_push_targets_for_uids([callee_uid])
+            if not targets:
+                logger.info("No FCM tokens registered for callee %s", callee_uid)
+                return {"status": "no_targets"}
+
+            messaging_mod = self._get_messaging()
+            now_epoch = int(time.time())
+            kind = "Video" if is_video else "Voice"
+
+            data_payload = {
+                "action": "call",
+                "callId": str(call_id),
+                "callerId": str(caller_id),
+                "callerName": str(c_name)[:80],
+                "isVideo": "true" if is_video else "false",
+            }
+
+            android_config = None
+            if hasattr(messaging_mod, "AndroidConfig"):
+                android_config = messaging_mod.AndroidConfig(
+                    priority="high",
+                    ttl=CALL_RING_SECONDS,
+                )
+
+            apns_config = None
+            if hasattr(messaging_mod, "APNSConfig"):
+                apns_config = messaging_mod.APNSConfig(
+                    headers={
+                        "apns-priority": "10",
+                        "apns-expiration": str(now_epoch + CALL_RING_SECONDS),
+                    },
+                    payload=messaging_mod.APNSPayload(
+                        aps=messaging_mod.Aps(
+                            alert=messaging_mod.ApsAlert(
+                                title=f"Incoming {kind} Call",
+                                body=f"{c_name} is calling you on Bhromon...",
+                            ),
+                            sound="default",
+                            content_available=True,
+                        ),
+                    ),
+                )
+
+            sent_count = 0
+            for i in range(0, len(targets), FCM_BATCH_LIMIT):
+                batch = targets[i : i + FCM_BATCH_LIMIT]
+                tokens = [t[0] for t in batch]
+
+                multicast = messaging_mod.MulticastMessage(
+                    tokens=tokens,
+                    data=data_payload,  # DATA-ONLY for Android!
+                    android=android_config,
+                    apns=apns_config,
+                )
+
+                try:
+                    response = messaging_mod.send_each_for_multicast(multicast)
+                    sent_count += response.success_count
+
+                    for idx, resp in enumerate(response.responses):
+                        if not resp.success and resp.exception:
+                            err_code = getattr(resp.exception, "code", "") or str(resp.exception)
+                            if any(code in err_code for code in DEAD_TOKEN_CODES):
+                                try:
+                                    batch[idx][1].delete()
+                                    self.stats["dead_tokens_purged"] += 1
+                                    logger.info("Purged dead FCM token: %s", err_code)
+                                except Exception as ex:
+                                    logger.warning("Could not delete dead token doc: %s", ex)
+                except Exception as e:
+                    self.stats["errors"] += 1
+                    logger.error("Failed to send call multicast batch: %s", e)
+
+            self.stats["call_pushes_sent"] += sent_count
+            logger.info("Sent call push for call %s to %d devices", call_id, sent_count)
+            return {"status": "success", "devices_sent": sent_count}
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error("Error in send_call_push: %s", e)
+            return {"status": "error", "error": str(e)}
+
+    def send_call_ended_push(self, call_id: str, callee_id: str) -> Dict[str, Any]:
+        """Notify callee devices that the ringing call ended, dismissing incoming CallKit UI."""
+        try:
+            callee_uid = callee_id.strip()
+            if "@" in callee_uid:
+                uids = self.get_uids_for_emails([callee_uid.lower()])
+                if uids:
+                    callee_uid = uids[0]
+                else:
+                    return {"status": "callee_not_found"}
+
+            targets = self.get_push_targets_for_uids([callee_uid])
+            if not targets:
+                return {"status": "no_targets"}
+
+            messaging_mod = self._get_messaging()
+            android_config = None
+            if hasattr(messaging_mod, "AndroidConfig"):
+                android_config = messaging_mod.AndroidConfig(
+                    priority="high",
+                    ttl=10,
+                )
+
+            data_payload = {
+                "action": "end_call",
+                "callId": str(call_id),
+            }
+
+            multicast = messaging_mod.MulticastMessage(
+                tokens=[t[0] for t in targets],
+                data=data_payload,
+                android=android_config,
+            )
+            response = messaging_mod.send_each_for_multicast(multicast)
+            return {"status": "success", "devices_sent": response.success_count}
+        except Exception as e:
+            logger.error("Error in send_call_ended_push: %s", e)
+            return {"status": "error", "error": str(e)}
+
     def run_retention_sweep(self, max_days: int = 90) -> Dict[str, int]:
         """Purge trust events and audit logs older than max_days."""
         try:
@@ -454,6 +635,51 @@ class FirestoreNotificationWatcher:
                         sender_name=sender_name,
                     )
 
+    def on_call_snapshot(self, col_snapshot, changes, read_time):
+        """Called when call documents are created or updated in Firestore."""
+        for change in changes:
+            if change.type.name in {"ADDED", "MODIFIED"}:
+                doc = change.document
+                call_id = doc.id
+                data = doc.to_dict() or {}
+                status = data.get("status")
+
+                if status == "calling":
+                    if self.is_seen(f"call_start_{call_id}"):
+                        continue
+
+                    created_at = data.get("createdAt")
+                    if isinstance(created_at, datetime):
+                        if created_at.tzinfo is None:
+                            created_at = created_at.replace(tzinfo=timezone.utc)
+                        if created_at < self.started_at:
+                            continue
+                        age = (datetime.now(timezone.utc) - created_at).total_seconds()
+                        if age > 60:
+                            continue
+
+                    caller_id = str(data.get("callerId", "")).strip()
+                    callee_id = str(data.get("calleeId", "")).strip()
+                    if not caller_id or not callee_id or caller_id == callee_id:
+                        continue
+
+                    is_video = bool(data.get("isVideo", False))
+                    caller_name = data.get("callerName")
+
+                    self.engine.send_call_push(
+                        call_id=call_id,
+                        caller_id=caller_id,
+                        callee_id=callee_id,
+                        is_video=is_video,
+                        caller_name=caller_name,
+                    )
+                elif status in {"ended", "declined", "missed"}:
+                    if self.is_seen(f"call_end_{call_id}"):
+                        continue
+                    callee_id = str(data.get("calleeId", "")).strip()
+                    if callee_id:
+                        self.engine.send_call_ended_push(call_id, callee_id)
+
     def start(self) -> None:
         """Start real-time Firestore listeners."""
         if self._is_running:
@@ -464,6 +690,8 @@ class FirestoreNotificationWatcher:
             logger.info("Starting FirestoreNotificationWatcher listeners...")
             sos_watch = db.collection_group("sos").on_snapshot(self.on_sos_snapshot)
             self.active_listeners.append(sos_watch)
+            calls_watch = db.collection("calls").on_snapshot(self.on_call_snapshot)
+            self.active_listeners.append(calls_watch)
         except Exception as e:
             logger.warning("Could not attach real-time Firestore listener: %s", e)
 

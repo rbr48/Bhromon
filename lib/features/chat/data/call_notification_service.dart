@@ -85,6 +85,11 @@ class CallNotificationService {
 
   // ── Native call screen ─────────────────────────────────────────────────────
 
+  static Future<void> endNativeIncomingCall(String callId) async {
+    if (kIsWeb || callId.isEmpty) return;
+    await FlutterCallkitIncoming.endCall(callId);
+  }
+
   /// Shows the native incoming-call screen for a call. Also runs in the
   /// background isolate when a call push arrives, so it touches no app state.
   /// A call that is already on screen is not shown again.
@@ -342,9 +347,7 @@ class CallNotificationService {
     }
 
     _activeIncomingCallId = callId;
-    final showsInApp = _canShowInAppDialog();
-    // In the foreground the in-app dialog is enough. A native screen on top of it would ring twice.
-    if (!kIsWeb && !(showsInApp && _isAppInForeground())) {
+    if (!kIsWeb) {
       await showNativeIncomingCall(
         callId: callId,
         callerId: callerId,
@@ -354,6 +357,7 @@ class CallNotificationService {
       );
     }
 
+    final showsInApp = _canShowInAppDialog();
     final context = AppRouter.navigatorKey.currentContext;
     if (showsInApp &&
         context != null &&
@@ -374,9 +378,6 @@ class CallNotificationService {
     final context = AppRouter.navigatorKey.currentContext;
     return context != null && context.mounted && !_isCallDialogShowing;
   }
-
-  bool _isAppInForeground() =>
-      WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
 
   void _showInAppCallDialog({
     required BuildContext context,

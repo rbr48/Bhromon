@@ -56,6 +56,11 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       callerAvatar: null,
       isVideo: message.data['isVideo'] == 'true',
     );
+  } else if (message.data['action'] == 'end_call') {
+    final callId = message.data['callId'] as String?;
+    if (callId != null && callId.isNotEmpty) {
+      await CallNotificationService.endNativeIncomingCall(callId);
+    }
   }
 }
 
