@@ -32,7 +32,7 @@ void main() {
 
     test('rejects a response with no servers', () {
       expect(CallIceConfig.parse(null), isNull);
-      expect(CallIceConfig.parse({'iceServers': []}), isNull);
+      expect(CallIceConfig.parse({'iceServers': <Object>[]}), isNull);
       expect(CallIceConfig.parse({'other': 1}), isNull);
     });
   });
