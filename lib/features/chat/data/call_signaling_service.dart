@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import '../../../core/utils/app_logger.dart';
 import 'call_ice_config.dart';
 import 'vps_chat_service.dart';
 
@@ -290,7 +291,7 @@ class CallSignalingService {
         'endedAt': FieldValue.serverTimestamp(),
       }).timeout(_serverTimeout);
     } catch (e) {
-      debugPrint(
+      logWarning(
           'CallSignalingService: declineCall Firestore update error: $e');
     }
   }
@@ -382,7 +383,7 @@ class CallSignalingService {
         }).timeout(_serverTimeout);
       } catch (e) {
         // The other side has usually ended it already, which the rules refuse.
-        debugPrint('CallSignalingService: end update skipped: $e');
+        logInfo('CallSignalingService: end update skipped: $e');
       }
     }
 
@@ -530,10 +531,10 @@ class CallSignalingService {
       return true;
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') return false;
-      debugPrint('CallSignalingService: answer write skipped: $e');
+      logWarning('CallSignalingService: answer write skipped: $e');
       return true;
     } catch (e) {
-      debugPrint('CallSignalingService: answer write skipped: $e');
+      logWarning('CallSignalingService: answer write skipped: $e');
       return true;
     }
   }

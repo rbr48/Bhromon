@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+
+import '../../../core/utils/app_logger.dart';
 
 /// The ICE servers (STUN and the VPS TURN relay) for a call or a voice room.
 ///
@@ -105,8 +106,8 @@ class CallIceConfig {
       );
       return response.data;
     } catch (e) {
-      // The token is never logged.
-      debugPrint('[CallIceConfig] TURN unavailable, using STUN only: $e');
+      // The token is never logged. Falling back to STUN is expected, so this is informational.
+      logInfo('CallIceConfig: TURN unavailable, using STUN only: $e');
       return null;
     }
   }
