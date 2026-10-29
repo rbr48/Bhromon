@@ -31,9 +31,11 @@ SCRIPT_DIR   = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 WEBSITE_SRC  = os.path.join(PROJECT_ROOT, "Bhromon Website")
 ZIP_OUT      = os.path.join(SCRIPT_DIR,   "website.zip")
-APK_SRC      = os.path.join(WEBSITE_SRC,  "app-release.apk")
-AAB_SRC      = os.path.join(PROJECT_ROOT, "build", "app", "outputs", "bundle", "release", "app-release.aab")
-SYMBOLS_SRC  = os.path.join(PROJECT_ROOT, "build", "app", "outputs", "symbols.zip")
+APK_SRC          = os.path.join(WEBSITE_SRC,  "app-release.apk")
+ARM64_APK_SRC    = os.path.join(PROJECT_ROOT, "build", "app", "outputs", "flutter-apk", "app-arm64-v8a-release.apk")
+UNIVERSAL_APK_SRC = os.path.join(PROJECT_ROOT, "build", "app", "outputs", "flutter-apk", "app-release.apk")
+AAB_SRC          = os.path.join(PROJECT_ROOT, "build", "app", "outputs", "bundle", "release", "app-release.aab")
+SYMBOLS_SRC      = os.path.join(PROJECT_ROOT, "build", "app", "outputs", "symbols.zip")
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -142,13 +144,22 @@ def upload(ssh: paramiko.SSHClient):
     downloads_dir = "/var/www/bhromon/downloads"
     run(ssh, f"mkdir -p '{downloads_dir}'")
 
-    if os.path.exists(APK_SRC):
-        apk_size_mb = os.path.getsize(APK_SRC) / (1024 * 1024)
+    # Upload Split ARM64 APK
+    if os.path.exists(ARM64_APK_SRC):
+        arm64_mb = os.path.getsize(ARM64_APK_SRC) / (1024 * 1024)
+        print(f"  Uploading app-arm64-v8a-release.apk ({arm64_mb:.1f} MB) ...")
+        send_file(ssh, ARM64_APK_SRC, f"{downloads_dir}/app-arm64-v8a-release.apk")
+        print(f"  [OK] app-arm64-v8a-release.apk uploaded to {downloads_dir}/")
+
+    # Upload Universal APK
+    src_to_use = UNIVERSAL_APK_SRC if os.path.exists(UNIVERSAL_APK_SRC) else APK_SRC
+    if os.path.exists(src_to_use):
+        apk_size_mb = os.path.getsize(src_to_use) / (1024 * 1024)
         print(f"  Uploading app-release.apk ({apk_size_mb:.1f} MB) ... this may take a moment")
-        send_file(ssh, APK_SRC, f"{downloads_dir}/app-release.apk")
+        send_file(ssh, src_to_use, f"{downloads_dir}/app-release.apk")
         print(f"  [OK] app-release.apk uploaded to {downloads_dir}/")
     else:
-        print(f"  (Skipping APK - not found at {APK_SRC})")
+        print(f"  (Skipping Universal APK - not found)")
 
     # Upload AAB separately to downloads
     if os.path.exists(AAB_SRC):
@@ -188,9 +199,10 @@ def deploy_remote(ssh: paramiko.SSHClient):
         # Downloads dir permissions and dual-location sync
         "chown -R www-data:www-data /var/www/bhromon/downloads 2>/dev/null || true",
         "find /var/www/bhromon/downloads -type f -exec chmod 644 {} \\; 2>/dev/null || true",
-        "cp -p /var/www/bhromon/downloads/app-release.apk /var/www/bhromon/downloads/bhromon-release.apk 2>/dev/null || true",
+        "cd /var/www/bhromon/downloads && ln -sfn app-release.apk bhromon-release.apk 2>/dev/null || true",
         "mkdir -p /var/www/bhromon-media/apk 2>/dev/null || true",
-        "cp -p /var/www/bhromon/downloads/app-release.apk /var/www/bhromon-media/apk/bhromon-release.apk 2>/dev/null || true",
+        "ln -sfn /var/www/bhromon/downloads/app-release.apk /var/www/bhromon-media/apk/bhromon-release.apk 2>/dev/null || true",
+        "ln -sfn /var/www/bhromon/downloads/app-release.apk /var/www/bhromon-media/apk/app-release.apk 2>/dev/null || true",
         "ln -sfn /var/www/bhromon/downloads /var/www/bhromon/website/downloads 2>/dev/null || true",
         # Test and reload nginx
         "nginx -t",
