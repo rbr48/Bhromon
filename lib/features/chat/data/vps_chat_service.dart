@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Bhromon VPS Chat Service.
@@ -109,7 +110,9 @@ class VpsChatService {
       // is not this, so nothing else is sent before it.
       _wsChannel = WebSocketChannel.connect(Uri.parse(wsUrl));
       await _wsChannel!.ready;
-      sendWsEvent({'type': 'auth', 'token': token});
+      // confirms: this app confirms the chat messages it shows on screen, so the
+      // server can push to a phone that does not confirm.
+      sendWsEvent({'type': 'auth', 'token': token, 'confirms': true});
 
       _reconnectAttempts = 0;
       _isConnecting = false;
@@ -175,6 +178,10 @@ class VpsChatService {
     }
   }
 
+  /// True while the app is on screen. Only then does this phone confirm a chat message.
+  bool get _isOnScreen =>
+      WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+
   void _handleWsMessage(dynamic raw) {
     try {
       final data = jsonDecode(raw.toString()) as Map<String, dynamic>;
@@ -187,6 +194,12 @@ class VpsChatService {
             final chatId = msg['chatId'] as String?;
             if (chatId != null) {
               _messagesControllers[chatId]?.add(msg);
+            }
+            // Confirm only while the app is on screen. The server pushes to a
+            // recipient that does not confirm, so a backgrounded app cannot miss it.
+            final messageId = msg['id'];
+            if (messageId is String && _isOnScreen) {
+              sendWsEvent({'type': 'ack', 'messageId': messageId});
             }
             unawaited(fetchConversations());
           }
