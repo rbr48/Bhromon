@@ -148,14 +148,19 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
 
     final shot = table.lastShot;
     final local = _localShot;
-    final isOurLocalShot = local != null &&
-        shot != null &&
-        shot.shooter == _mySeat &&
-        _animPieces != null;
+    final isOurLocalShot =
+        local != null && shot != null && shot.shooter == _mySeat;
 
-    if (isOurLocalShot) {
-      // The server confirmed our optimistic shot! Keep the local simulation running smoothly.
+    if (isOurLocalShot && _animPieces != null) {
+      // The server confirmed our optimistic shot while it is still rolling.
+      // Let it finish, then settle on the server's board.
       _animTarget = table;
+    } else if (isOurLocalShot) {
+      // Our shot already came to rest and was held there. Settle on the
+      // server's board now; it is where the coins stopped.
+      _board = table.pieces;
+      _localShot = null;
+      _busy = false;
     } else if (shot != null && previous != null && previous.isNotEmpty) {
       _animTarget = table;
       _animPieces = _piecesForShot(previous, shot);
@@ -180,12 +185,15 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
     final pieces = [for (final p in from) p.copy()];
     final striker = pieces.firstWhere((p) => p.type == CarromPieceType.striker);
     final speed = CarromBoard.shotSpeed(shot.power);
+    // The server's own velocity, when it sent one, replays the shot exactly.
+    // Recomputing it from the angle can differ in the last bit, and a break
+    // amplifies that into visibly different positions.
     striker
       ..pocketed = false
       ..x = shot.x
       ..y = CarromBoard.baselineY(shot.shooter)
-      ..vx = cos(shot.angle) * speed
-      ..vy = sin(shot.angle) * speed;
+      ..vx = shot.vx ?? cos(shot.angle) * speed
+      ..vy = shot.vy ?? sin(shot.angle) * speed;
     return pieces;
   }
 
@@ -224,11 +232,22 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
   void _finishAnimation() {
     _ticker.stop();
     final target = _animTarget;
+    final settled = _animPieces;
     _animPieces = null;
     _animTarget = null;
-    _localShot = null;
-    _busy = false;
-    if (target != null) _board = target.pieces;
+    if (target != null) {
+      _board = target.pieces;
+      _localShot = null;
+      _busy = false;
+    } else if (_localShot != null && settled != null) {
+      // Our shot stopped before the server answered. Hold the coins where they
+      // came to rest, and keep shooting locked until the server's board
+      // arrives; going back to the old board would replay the shot twice.
+      _board = settled;
+    } else {
+      _localShot = null;
+      _busy = false;
+    }
     if (mounted) setState(() {});
     _boardNotifier.tick();
     _scheduleAdvance();
@@ -327,14 +346,10 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
     if (!_canShoot || start == null) return;
     _dragNow = details.localPosition;
     final diff = start - details.localPosition;
-    if (diff.distance > 8) {
-      final maxPull = boardSize.width * 0.35;
-      final power = (diff.distance / maxPull).clamp(0.15, 1.0);
-      _aimHintNotifier.value =
-          'Power ${(power * 100).round()}% · release to strike';
-    } else {
-      _aimHintNotifier.value = null;
-    }
+    final power = CarromBoard.powerForPull(diff.distance / boardSize.width);
+    _aimHintNotifier.value = power == null
+        ? null
+        : 'Power ${(power * 100).round()}% · release to strike';
     _boardNotifier.tick();
   }
 
@@ -355,7 +370,8 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
     if (!_canShoot || start == null || now == null) return;
 
     final diff = start - now;
-    if (diff.distance < 12) return;
+    final power = CarromBoard.powerForPull(diff.distance / boardSize.width);
+    if (power == null) return;
 
     final currentBoard = _board ?? _table?.pieces ?? const <CarromPiece>[];
     if (!_strikerPlacementValid(_strikerX, _mySeat, currentBoard)) {
@@ -364,8 +380,6 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
     }
 
     final angle = atan2(diff.dy, diff.dx);
-    final maxPull = boardSize.width * 0.35;
-    final power = (diff.distance / maxPull).clamp(0.15, 1.0).toDouble();
     _shoot(angle, power);
   }
 
@@ -403,6 +417,7 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
     } on FirebaseFunctionsException catch (e) {
       _localShot = null;
       _animPieces = null;
+      _board = _table?.pieces ?? board;
       _ticker.stop();
       _snack(e.message ?? 'That shot did not go through.');
       if (mounted) setState(() => _busy = false);
@@ -410,12 +425,14 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
     } catch (_) {
       _localShot = null;
       _animPieces = null;
+      _board = _table?.pieces ?? board;
       _ticker.stop();
       _snack('Could not reach the board. Check your connection and try again.');
       if (mounted) setState(() => _busy = false);
       _boardNotifier.tick();
     } finally {
-      if (mounted && _animPieces == null) {
+      // A shot the server took stays locked until its board arrives.
+      if (mounted && _animPieces == null && _localShot == null) {
         setState(() => _busy = false);
       }
     }
@@ -437,7 +454,7 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
     final table = _table ?? CarromTable.fromState(const {});
     final shooting = _canShoot;
     final turnLabel = table.isGameOver
-        ? 'Board finished'
+        ? 'Match finished'
         : _animPieces != null
             ? 'Shot in play…'
             : shooting
@@ -657,7 +674,7 @@ class _OnlineCarromViewState extends State<OnlineCarromView>
                       ),
                     ),
                     Text(
-                      '$score/${CarromGame.coinsPerPlayer} $coinName',
+                      '${table.matchScore[seat]} pts · $score/${CarromGame.coinsPerPlayer} $coinName',
                       style: TextStyle(
                         color: isCurrent ? AppColors.mintGreen : Colors.white54,
                         fontSize: 10,
@@ -925,10 +942,9 @@ class _CarromPiecesPainter extends CustomPainter {
       final now = dragNow;
       if (start != null && now != null) {
         final diff = start - now;
-        if (diff.distance > 8) {
+        final power = CarromBoard.powerForPull(diff.distance / size.width);
+        if (power != null) {
           final dir = diff / diff.distance;
-          final maxPull = size.width * 0.35;
-          final power = (diff.distance / maxPull).clamp(0.15, 1.0);
 
           // Faint guide line
           canvas.drawLine(

@@ -19,9 +19,11 @@ class CarromShot {
 /// Scoring follows the ICF foul rules:
 /// - Pocket one of your own coins and you shoot again; opponent coins you
 ///   pocket stay down and count for the opponent.
-/// - Fouls: pocketing the striker, pocketing your own last coin before the
-///   queen is covered (covering her with it in the same shot included), and
-///   pocketing your opponent's last coin. On a foul your coins from that
+/// - Fouls: pocketing the striker, pocketing your own last coin while the
+///   Queen is still on the board, pocketing your opponent's last coin, and
+///   hitting a coin behind your own baseline with the striker before it has
+///   touched a cushion. Covering the Queen with your last coin, in the same
+///   shot or the next one, is legal and wins the board. On a foul your coins from that
 ///   shot, the queen (if she went down or was awaiting cover) and the
 ///   opponent's last coin come back to the centre, you pay one penalty coin,
 ///   and your turn ends. With no coin to pay, the penalty becomes due and is
@@ -30,9 +32,17 @@ class CarromShot {
 ///   she must be covered by pocketing one of your coins on the same or the
 ///   next shot, otherwise she returns to the centre.
 /// - The first player to pocket all nine coins (with the queen covered) wins
-///   the board, scoring 1 per opponent coin left plus 3 if they covered the queen.
+///   the board, scoring 1 per opponent coin left plus 3 if they covered the
+///   queen. The Queen's 3 only count while the winner has under 22 points.
+/// - A match is the first to 25 points, or the leader after 8 boards (more
+///   boards are played while it is tied). The break alternates each board.
 class CarromGame {
   static const int coinsPerPlayer = 9;
+  static const int matchPoints = 25;
+  static const int matchBoards = 8;
+
+  /// The Queen's points only count for a player below this match score.
+  static const int queenPointsLimit = 22;
 
   CarromGame({Random? random}) : _random = random ?? Random() {
     reset();
@@ -57,6 +67,15 @@ class CarromGame {
   /// each is paid back from the next coin they pocket.
   final List<int> penaltyDue = [0, 0];
 
+  /// Match points so far, and the board being played (1-based).
+  final List<int> matchScore = [0, 0];
+  int board = 1;
+
+  /// Who won the last finished board, and the points it gave them.
+  int? boardWinner;
+  int boardPoints = 0;
+
+  /// The match winner and their match points, once the match is over.
   int? winner;
   int winnerPoints = 0;
   String status = '';
@@ -64,6 +83,10 @@ class CarromGame {
 
   final List<CarromPiece> _pocketedThisShot = [];
   double _shotSeconds = 0;
+  StrikerContact _contact = StrikerContact();
+
+  /// Coins behind the shooter's baseline when the shot was played.
+  Set<int> _behindBaseline = const {};
 
   static const List<String> _names = ['You', 'Bot'];
 
@@ -85,30 +108,45 @@ class CarromGame {
       coins.where((c) => c.type == colorOf(player) && !c.pocketed).length;
 
   bool get hasStarted =>
+      board > 1 ||
       coins.any((c) => c.pocketed) ||
       coins.any((c) => (c.x - 0.5).abs() > 0.2 || (c.y - 0.5).abs() > 0.2);
 
+  /// Starts a new match.
   void reset() {
+    matchScore[0] = 0;
+    matchScore[1] = 0;
+    board = 1;
+    boardWinner = null;
+    boardPoints = 0;
+    winner = null;
+    winnerPoints = 0;
+    _layOutBoard();
+    status =
+        'Your break! Slide the striker along your baseline, then drag back anywhere on the board and let go to shoot.';
+  }
+
+  /// The player who breaks on [board]: the break alternates.
+  int get breaker => (board - 1) % 2;
+
+  /// Sets the coins out for the current board, with its breaker to shoot.
+  void _layOutBoard() {
     coins = _initialLayout();
     striker = CarromPiece(
         id: 99,
         type: CarromPieceType.striker,
         x: 0.5,
-        y: CarromBoard.baselineY(0));
+        y: CarromBoard.baselineY(breaker));
     pocketed[0].clear();
     pocketed[1].clear();
     queenCoveredBy = null;
     queenPendingFor = null;
     penaltyDue[0] = 0;
     penaltyDue[1] = 0;
-    winner = null;
-    winnerPoints = 0;
-    currentPlayer = 0;
+    currentPlayer = breaker;
     phase = CarromPhase.aiming;
     _pocketedThisShot.clear();
     _setUpStriker();
-    status =
-        'Your break! Slide the striker along your baseline, then drag back anywhere on the board and let go to shoot.';
   }
 
   /// Queen in the middle, a ring of 6 and a ring of 12, colours alternating.
@@ -195,6 +233,11 @@ class CarromGame {
       ..vy = sin(angle) * speed;
     _pocketedThisShot.clear();
     _shotSeconds = 0;
+    _contact = StrikerContact();
+    _behindBaseline = {
+      for (final c in coins)
+        if (!c.pocketed && CarromBoard.isBehindBaseline(c, currentPlayer)) c.id
+    };
     phase = CarromPhase.moving;
     status =
         '${nameOf(currentPlayer)} ${currentPlayer == 0 ? 'shoot' : 'shoots'}...';
@@ -208,7 +251,7 @@ class CarromGame {
     final steps = max(1, (seconds / CarromBoard.stepSeconds).round());
     final pieces = allPieces;
     for (int i = 0; i < steps; i++) {
-      _pocketedThisShot.addAll(CarromBoard.step(pieces));
+      _pocketedThisShot.addAll(CarromBoard.step(pieces, _contact));
       _shotSeconds += CarromBoard.stepSeconds;
       if (CarromBoard.isSettled(pieces) || _shotSeconds > 20) {
         for (final p in pieces) {
@@ -255,8 +298,20 @@ class CarromGame {
     if (pocketedThisShot.any((p) => p.type == CarromPieceType.striker)) {
       fouls.add('striker pocketed');
     }
-    if (ownNow.isNotEmpty && remaining(player) == 0 && !queenWasCovered) {
+    // Your last coin may cover the Queen, pocketed this shot or awaiting cover.
+    final coversQueen =
+        ownNow.isNotEmpty && (queenNow || queenPendingFor == player);
+    if (ownNow.isNotEmpty &&
+        remaining(player) == 0 &&
+        !queenWasCovered &&
+        !coversQueen) {
       fouls.add('last coin pocketed before the Queen was covered');
+    }
+    final firstHit = _contact.firstCoinId;
+    if (firstHit != null &&
+        !_contact.cushionFirst &&
+        _behindBaseline.contains(firstHit)) {
+      fouls.add('a coin behind the baseline was hit directly');
     }
     if (oppNow.isNotEmpty && remaining(opp) == 0) {
       fouls.add("${nameOf(opp)}${opp == 0 ? 'r' : "'s"} last coin pocketed");
@@ -340,12 +395,7 @@ class CarromGame {
 
     for (final p in [player, opp]) {
       if (remaining(p) == 0 && queenCoveredBy != null) {
-        winner = p;
-        winnerPoints = remaining(1 - p) + (queenCoveredBy == p ? 3 : 0);
-        phase = CarromPhase.gameOver;
-        status =
-            '${messages.join(' ')} ${nameOf(p)} ${p == 0 ? 'win' : 'wins'} the board with $winnerPoints points!'
-                .trim();
+        _finishBoard(p, messages);
         return;
       }
     }
@@ -362,6 +412,35 @@ class CarromGame {
       currentPlayer = opp;
     }
     _finishTurn(messages, continueTurn: continueTurn, shooter: player);
+  }
+
+  /// Scores the board for [p], then ends the match or lays out the next board.
+  void _finishBoard(int p, List<String> messages) {
+    final queenBonus =
+        queenCoveredBy == p && matchScore[p] < queenPointsLimit ? 3 : 0;
+    final points = remaining(1 - p) + queenBonus;
+    matchScore[p] += points;
+    boardWinner = p;
+    boardPoints = points;
+    messages.add('${nameOf(p)} ${p == 0 ? 'win' : 'wins'} board $board '
+        'with $points point${points == 1 ? '' : 's'} '
+        '(${matchScore[0]}-${matchScore[1]}).');
+
+    final decided = matchScore[p] >= matchPoints ||
+        (board >= matchBoards && matchScore[0] != matchScore[1]);
+    if (decided) {
+      final w = matchScore[0] > matchScore[1] ? 0 : 1;
+      winner = w;
+      winnerPoints = matchScore[w];
+      phase = CarromPhase.gameOver;
+      status = '${messages.join(' ')} '
+          '${nameOf(w)} ${w == 0 ? 'win' : 'wins'} the match!';
+      return;
+    }
+    board++;
+    _layOutBoard();
+    final who = breaker == 0 ? 'Your break.' : '${nameOf(breaker)} breaks.';
+    status = '${messages.join(' ')} Board $board: $who';
   }
 
   /// Returns one of [player]'s pocketed coins to the centre, or records it as
@@ -414,6 +493,7 @@ class CarromGame {
         player: currentPlayer,
         ownPocketed: pocketed[currentPlayer].length,
         queenCovered: queenCoveredBy != null,
+        queenPending: queenPendingFor == currentPlayer,
         aimNoise: aimNoise,
         seed: _random.nextInt(1 << 30),
       );
@@ -426,6 +506,7 @@ class CarromBotRequest {
     required this.player,
     required this.ownPocketed,
     required this.queenCovered,
+    this.queenPending = false,
     required this.aimNoise,
     required this.seed,
   });
@@ -434,6 +515,9 @@ class CarromBotRequest {
   final int player;
   final int ownPocketed;
   final bool queenCovered;
+
+  /// The player pocketed the Queen last shot and must cover her now.
+  final bool queenPending;
   final double aimNoise;
   final int seed;
 }
@@ -490,8 +574,9 @@ class CarromBot {
 
     final ownLeft = active.where((c) => c.type == own).length;
     final oppLeft = active.where((c) => c.type == opp).length;
-    // Under ICF rules the last coin may only go down once the Queen is covered.
-    final lastCoinLocked = ownLeft == 1 && !request.queenCovered;
+    // The last coin may only go down once the Queen is covered, or to cover her.
+    final lastCoinLocked =
+        ownLeft == 1 && !request.queenCovered && !request.queenPending;
     final targets = active
         .where((c) =>
             (c.type == own && !lastCoinLocked) ||
@@ -588,8 +673,9 @@ class CarromBot {
       striker
         ..vx = cos(shot.angle) * speed
         ..vy = sin(shot.angle) * speed;
-      final dropped =
-          CarromBoard.simulateToRest([...pieces, striker], maxSeconds: 12);
+      final contact = StrikerContact();
+      final dropped = CarromBoard.simulateToRest([...pieces, striker],
+          maxSeconds: 12, contact: contact);
       final strikerFoul = dropped.any((p) => p.type == CarromPieceType.striker);
       final ownDown = dropped.where((p) => p.type == own).length;
       final oppDown = dropped.where((p) => p.type == opp).length;
@@ -597,10 +683,20 @@ class CarromBot {
       var score = ownDown * 10.0 -
           oppDown * 7.0 +
           (queenDown ? (request.ownPocketed > 0 ? 6.0 : -2.0) : 0);
-      final lastCoinFoul =
-          (ownDown > 0 && ownDown >= ownLeft && !request.queenCovered) ||
-              (oppDown > 0 && oppDown >= oppLeft);
-      if (strikerFoul || lastCoinFoul) score -= 15 + ownDown * 10.0;
+      final coversQueen = queenDown || request.queenPending;
+      final lastCoinFoul = (ownDown > 0 &&
+              ownDown >= ownLeft &&
+              !request.queenCovered &&
+              !coversQueen) ||
+          (oppDown > 0 && oppDown >= oppLeft);
+      final hit = contact.firstCoinId;
+      final directHitFoul = hit != null &&
+          !contact.cushionFirst &&
+          active.any(
+              (c) => c.id == hit && CarromBoard.isBehindBaseline(c, player));
+      if (strikerFoul || lastCoinFoul || directHitFoul) {
+        score -= 15 + ownDown * 10.0;
+      }
       score += random.nextDouble() * 0.5;
       if (score > bestScore) {
         bestScore = score;

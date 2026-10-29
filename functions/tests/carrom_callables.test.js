@@ -143,7 +143,10 @@ describe('shooting', () => {
     expect(result.ok).toBe(true);
     const game = await readGame();
     expect(game.state.step).toBe(2);
-    expect(game.state.lastShot).toEqual({ shooter: 0, x: 0.5, angle: -Math.PI / 2, power: 0.6 });
+    expect(game.state.lastShot).toMatchObject({ shooter: 0, x: 0.5, angle: -Math.PI / 2, power: 0.6 });
+    // The striker's starting velocity, so the phones replay the shot exactly.
+    expect(game.state.lastShot.vx).toBe(Math.cos(-Math.PI / 2) * 2.1799999999999997);
+    expect(game.state.lastShot.vy).toBe(Math.sin(-Math.PI / 2) * 2.1799999999999997);
     expect(game.state.phase === 'aiming' || game.state.phase === 'gameOver').toBe(true);
     expectAccounted(game.state);
   });

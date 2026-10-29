@@ -96,12 +96,15 @@ class _CarromScreenState extends State<CarromScreen>
       if (!_CarromSession.resultShown) {
         _CarromSession.resultShown = true;
         HapticFeedback.heavyImpact();
-        final userWon = _game.winner == 0;
-        GameAnalyticsService().recordMatch(
-          gameType: OnlineGameType.carrom,
-          won: userWon,
-          score: userWon ? _game.winnerPoints : 0,
-        );
+        // Pass & Play is two people on one phone, not a result against the bot.
+        if (_game.vsBot) {
+          final userWon = _game.winner == 0;
+          GameAnalyticsService().recordMatch(
+            gameType: OnlineGameType.carrom,
+            won: userWon,
+            score: userWon ? _game.winnerPoints : 0,
+          );
+        }
         _showResultDialog();
       }
       return;
@@ -188,8 +191,8 @@ class _CarromScreenState extends State<CarromScreen>
     final now = _dragNow;
     if (start == null || now == null) return null;
     final pull = start - now;
-    final power = (pull.distance / 0.3).clamp(0.0, 1.0);
-    if (power < 0.05) return null;
+    final power = CarromBoard.powerForPull(pull.distance);
+    if (power == null) return null;
     return (atan2(pull.dy, pull.dx), power);
   }
 
@@ -205,8 +208,8 @@ class _CarromScreenState extends State<CarromScreen>
   Future<void> _confirmNewGame() async {
     if (_game.hasStarted && _game.phase != CarromPhase.gameOver) {
       final ok = await confirmDiscardGame(context,
-          title: 'Start a new board?',
-          message: 'The current board will be lost.');
+          title: 'Start a new match?',
+          message: 'The current match will be lost.');
       if (!ok || !mounted) return;
     }
     _newGame();
@@ -249,15 +252,14 @@ class _CarromScreenState extends State<CarromScreen>
         backgroundColor: const Color(0xFF3E2414),
         title: Text(
           winner == 0
-              ? '🏆 You win the board!'
-              : '${_game.nameOf(winner)} wins the board',
+              ? '🏆 You win the match!'
+              : '${_game.nameOf(winner)} wins the match',
           style:
               const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          '${_game.nameOf(winner)} scored ${_game.winnerPoints} points '
-          '(${_game.remaining(1 - winner)} opponent coins left'
-          '${_game.queenCoveredBy == winner ? ' + 3 for the Queen' : ''}).',
+          'Final score ${_game.matchScore[0]}-${_game.matchScore[1]} '
+          'after ${_game.board} board${_game.board == 1 ? '' : 's'}.',
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -294,11 +296,16 @@ class _CarromScreenState extends State<CarromScreen>
             'pocket stay down and count for them.\n'
             '• The Queen (red) can be taken once you have pocketed a coin of your own. Cover her by pocketing '
             'one of your coins on the same or the next shot, or she goes back to the centre.\n'
-            '• Fouls (ICF rules): pocketing the striker, pocketing your last coin before the Queen is covered, '
-            'or pocketing your opponent\'s last coin. Your coins from that shot, the Queen and the opponent\'s '
+            '• Fouls (ICF rules): pocketing the striker, pocketing your last coin while the Queen is still on '
+            'the board, pocketing your opponent\'s last coin, or hitting a coin behind your own baseline '
+            'without bouncing off a cushion first. Your coins from that shot, the Queen and the opponent\'s '
             'last coin come back, you pay one penalty coin, and your turn ends.\n'
+            '• Your last coin may cover the Queen, on the same shot or the next one - that wins the board.\n'
             '• If you have no coin to pay, the penalty is due and comes out of the next coin you pocket.\n'
-            '• First to pocket all 9 coins wins the board: 1 point per opponent coin left, +3 for covering the Queen.',
+            '• A coin moving very fast can rattle out of a pocket.\n'
+            '• First to pocket all 9 coins wins the board: 1 point per opponent coin left, +3 for covering the '
+            'Queen (only while you have under 22 points).\n'
+            '• The match goes to 25 points, or to the leader after 8 boards. The break alternates.',
           ),
         ),
         actions: [
@@ -443,7 +450,7 @@ class _CarromScreenState extends State<CarromScreen>
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '${_game.pocketed[player].length}/${CarromGame.coinsPerPlayer} pocketed$queenNote$dueNote',
+                        '${_game.matchScore[player]} pts · ${_game.pocketed[player].length}/${CarromGame.coinsPerPlayer} pocketed$queenNote$dueNote',
                         style: const TextStyle(
                             color: Colors.white70, fontSize: 12),
                       ),
@@ -516,7 +523,7 @@ class _CarromScreenState extends State<CarromScreen>
         ? (_game.phase == CarromPhase.moving
             ? 'Coins in motion...'
             : (_game.phase == CarromPhase.gameOver
-                ? 'Board finished - tap ↻ for a new board.'
+                ? 'Match finished - tap ↻ for a new match.'
                 : 'Opponent is playing...'))
         : aim != null
             ? 'Power ${(aim.$2 * 100).round()}% - release to shoot'

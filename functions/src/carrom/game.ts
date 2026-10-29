@@ -15,9 +15,12 @@ import {
   STEP_SECONDS,
   STRIKER_ID,
   STRIKER_RADIUS,
+  StrikerContact,
   baselineY,
+  isBehindBaseline,
   isSettled,
   makePiece,
+  newContact,
   shotSpeed,
   step,
 } from './physics';
@@ -32,9 +35,20 @@ export interface Shot {
 
 export interface LastShot extends Shot {
   shooter: number;
+  /**
+   * The striker's starting velocity. The phone replays the shot from these,
+   * not from the angle, so its trig cannot drift from the server's.
+   */
+  vx: number;
+  vy: number;
 }
 
 export const COINS_PER_PLAYER = 9;
+/** A match is the first to this many points, or the leader after MATCH_BOARDS boards. */
+export const MATCH_POINTS = 25;
+export const MATCH_BOARDS = 8;
+/** The Queen's 3 points only count for a player below this match score. */
+export const QUEEN_POINTS_LIMIT = 22;
 
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
@@ -78,6 +92,13 @@ export class CarromTable {
   queenPendingFor: number | null = null;
   /** Penalty coins a player owes, each taken back from their next coin pocketed. */
   penaltyDue: [number, number] = [0, 0];
+  /** Match points so far, and the board being played (1-based). */
+  matchScore: [number, number] = [0, 0];
+  board = 1;
+  /** Who won the last finished board, and the points it gave them. */
+  boardWinner: number | null = null;
+  boardPoints = 0;
+  /** The match winner and their match points, once the match is over. */
   winner: number | null = null;
   winnerPoints = 0;
   status = '';
@@ -85,8 +106,13 @@ export class CarromTable {
   lastShot: LastShot | null = null;
 
   /** The 19 coins (queen first), on the board or in a pocket. */
-  readonly coins: Piece[];
-  readonly striker: Piece;
+  coins: Piece[];
+  striker: Piece;
+
+  /** What the striker touched first in the shot being played. */
+  private contact: StrikerContact = newContact();
+  /** Coins behind the shooter's baseline when the shot was played. */
+  private behindBaseline = new Set<number>();
 
   constructor(readonly names: [string, string], coins: Piece[], striker: Piece) {
     this.coins = coins;
@@ -99,6 +125,24 @@ export class CarromTable {
     table.setUpStriker();
     table.status = `${names[0]} breaks. Slide the striker along the baseline, then drag back and let go to shoot.`;
     return table;
+  }
+
+  /** The player who breaks on the current board: the break alternates. */
+  get breaker(): number {
+    return (this.board - 1) % 2;
+  }
+
+  /** Sets the coins out for the current board, with its breaker to shoot. */
+  private layOutBoard(): void {
+    this.coins = initialLayout();
+    this.striker = makePiece(STRIKER_ID, 'striker', 0.5, baselineY(this.breaker));
+    this.pocketed = [[], []];
+    this.queenCoveredBy = null;
+    this.queenPendingFor = null;
+    this.penaltyDue = [0, 0];
+    this.currentPlayer = this.breaker;
+    this.phase = 'aiming';
+    this.setUpStriker();
   }
 
   /** Every piece on the board: the coins, then the striker. */
@@ -149,7 +193,14 @@ export class CarromTable {
     if (this.phase !== 'aiming' || shooter !== this.currentPlayer) return false;
     this.placeStriker(x);
     if (!this.shoot(angle, power)) return false;
-    this.lastShot = { shooter, x: this.strikerX, angle, power: clamp01(power) };
+    this.lastShot = {
+      shooter,
+      x: this.strikerX,
+      angle,
+      power: clamp01(power),
+      vx: this.striker.vx,
+      vy: this.striker.vy,
+    };
     this.runToRest();
     return true;
   }
@@ -160,6 +211,10 @@ export class CarromTable {
     const speed = shotSpeed(power);
     this.striker.vx = Math.cos(angle) * speed;
     this.striker.vy = Math.sin(angle) * speed;
+    this.contact = newContact();
+    this.behindBaseline = new Set(
+      this.coins.filter((c) => !c.pocketed && isBehindBaseline(c, this.currentPlayer)).map((c) => c.id),
+    );
     return true;
   }
 
@@ -169,7 +224,7 @@ export class CarromTable {
     const pocketedThisShot: Piece[] = [];
     let shotSeconds = 0;
     for (;;) {
-      pocketedThisShot.push(...step(pieces));
+      pocketedThisShot.push(...step(pieces, this.contact));
       shotSeconds += STEP_SECONDS;
       if (isSettled(pieces) || shotSeconds > MAX_SHOT_SECONDS) {
         for (const p of pieces) {
@@ -234,8 +289,14 @@ export class CarromTable {
     // --- Fouls (ICF) ---
     const fouls: string[] = [];
     if (pocketedNow.some((p) => p.type === 'striker')) fouls.push('striker pocketed');
-    if (ownNow.length > 0 && this.remaining(player) === 0 && !queenWasCovered) {
+    // Your last coin may cover the Queen, pocketed this shot or awaiting cover.
+    const coversQueen = ownNow.length > 0 && (queenNow || this.queenPendingFor === player);
+    if (ownNow.length > 0 && this.remaining(player) === 0 && !queenWasCovered && !coversQueen) {
       fouls.push('last coin pocketed before the Queen was covered');
+    }
+    const firstHit = this.contact.firstCoinId;
+    if (firstHit !== null && !this.contact.cushionFirst && this.behindBaseline.has(firstHit)) {
+      fouls.push('a coin behind the baseline was hit directly');
     }
     if (oppNow.length > 0 && this.remaining(opp) === 0) {
       fouls.push(`${this.nameOf(opp)}${opp === 0 ? 'r' : "'s"} last coin pocketed`);
@@ -313,10 +374,7 @@ export class CarromTable {
 
     for (const p of [player, opp]) {
       if (this.remaining(p) === 0 && this.queenCoveredBy !== null) {
-        this.winner = p;
-        this.winnerPoints = this.remaining(1 - p) + (this.queenCoveredBy === p ? 3 : 0);
-        this.phase = 'gameOver';
-        this.status = `${messages.join(' ')} ${this.nameOf(p)} wins the board with ${this.winnerPoints} points!`.trim();
+        this.finishBoard(p, messages);
         return;
       }
     }
@@ -332,6 +390,33 @@ export class CarromTable {
       this.currentPlayer = opp;
     }
     this.finishTurn(messages, continueTurn, player);
+  }
+
+  /** Scores the board for [p], then ends the match or lays out the next board. */
+  private finishBoard(p: number, messages: string[]): void {
+    const queenBonus = this.queenCoveredBy === p && this.matchScore[p] < QUEEN_POINTS_LIMIT ? 3 : 0;
+    const points = this.remaining(1 - p) + queenBonus;
+    this.matchScore[p] += points;
+    this.boardWinner = p;
+    this.boardPoints = points;
+    messages.push(
+      `${this.nameOf(p)} wins board ${this.board} with ${points} point${points === 1 ? '' : 's'} ` +
+        `(${this.matchScore[0]}-${this.matchScore[1]}).`,
+    );
+
+    const decided =
+      this.matchScore[p] >= MATCH_POINTS || (this.board >= MATCH_BOARDS && this.matchScore[0] !== this.matchScore[1]);
+    if (decided) {
+      const w = this.matchScore[0] > this.matchScore[1] ? 0 : 1;
+      this.winner = w;
+      this.winnerPoints = this.matchScore[w];
+      this.phase = 'gameOver';
+      this.status = `${messages.join(' ')} ${this.nameOf(w)} wins the match!`;
+      return;
+    }
+    this.board++;
+    this.layOutBoard();
+    this.status = `${messages.join(' ')} Board ${this.board}: ${this.nameOf(this.breaker)} breaks.`;
   }
 
   /** Returns one of [player]'s pocketed coins to the centre, or records it as due. */
@@ -394,6 +479,10 @@ export function publicState(t: CarromTable, step: number, turnDeadline: number |
     currentPlayer: t.currentPlayer,
     winner: t.winner,
     winnerPoints: t.winnerPoints,
+    matchScore: [...t.matchScore],
+    board: t.board,
+    boardWinner: t.boardWinner,
+    boardPoints: t.boardPoints,
     queenCoveredBy: t.queenCoveredBy,
     queenPendingFor: t.queenPendingFor,
     penaltyDue: [...t.penaltyDue],
@@ -433,11 +522,24 @@ export function restoreTable(state: Record<string, unknown>, names: [string, str
   t.penaltyDue = [Number(penalty[0]), Number(penalty[1])];
   t.winner = state.winner === null || state.winner === undefined ? null : Number(state.winner);
   t.winnerPoints = Number(state.winnerPoints);
+  // Boards stored before match scoring are a match's first board.
+  const score = Array.isArray(state.matchScore) ? (state.matchScore as unknown[]) : [0, 0];
+  t.matchScore = [Number(score[0] ?? 0), Number(score[1] ?? 0)];
+  t.board = typeof state.board === 'number' ? state.board : 1;
+  t.boardWinner = typeof state.boardWinner === 'number' ? state.boardWinner : null;
+  t.boardPoints = typeof state.boardPoints === 'number' ? state.boardPoints : 0;
   t.status = String(state.status ?? '');
   t.strikerX = Number(state.strikerX);
   const last = state.lastShot as Record<string, unknown> | null;
   t.lastShot = last
-    ? { shooter: Number(last.shooter), x: Number(last.x), angle: Number(last.angle), power: Number(last.power) }
+    ? {
+        shooter: Number(last.shooter),
+        x: Number(last.x),
+        angle: Number(last.angle),
+        power: Number(last.power),
+        vx: Number(last.vx ?? 0),
+        vy: Number(last.vy ?? 0),
+      }
     : null;
   return t;
 }

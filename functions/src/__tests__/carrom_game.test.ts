@@ -1,13 +1,15 @@
 import { BOT_AIM_NOISE, chooseShot } from '../carrom/bot';
-import { CarromTable, Shot } from '../carrom/game';
+import { CarromTable, Shot, publicState, restoreTable } from '../carrom/game';
 import {
   BASELINE_MAX,
   BASELINE_MIN,
   Piece,
+  PieceType,
   STRIKER_ID,
   makePiece,
   shotSpeed,
   simulateToRest,
+  step,
 } from '../carrom/physics';
 
 function prng(seed: number): () => number {
@@ -155,5 +157,161 @@ describe('carrom bot', () => {
       const queenDown = queenOf(table).pocketed ? 1 : 0;
       expect(flagged).toBe(listed + queenDown);
     }
+  });
+});
+
+// A break shot whose result test/features/game_zone/carrom_parity_test.dart
+// checks on the phone's engine too. Both must agree bit for bit.
+const GOLDEN_VX = 0.041423333219775885;
+const GOLDEN_VY = -3.1862307445420464;
+const GOLDEN_START: Array<[number, PieceType, number, number]> = [
+  [0, 'queen', 0.5, 0.5],
+  [1, 'white', 0.5, 0.54386],
+  [2, 'black', 0.46201612579001455, 0.52193],
+  [3, 'white', 0.4620161257900145, 0.47807],
+  [4, 'black', 0.5, 0.45614],
+  [5, 'white', 0.5379838742099855, 0.47807],
+  [6, 'black', 0.5379838742099855, 0.52193],
+  [7, 'black', 0.5, 0.58772],
+  [8, 'white', 0.45614000000000005, 0.575967748419971],
+  [9, 'black', 0.42403225158002905, 0.54386],
+  [10, 'white', 0.41228, 0.5],
+  [11, 'black', 0.42403225158002905, 0.45614000000000005],
+  [12, 'white', 0.45614000000000005, 0.42403225158002905],
+  [13, 'black', 0.5, 0.41228],
+  [14, 'white', 0.5438599999999999, 0.424032251580029],
+  [15, 'black', 0.5759677484199709, 0.45614],
+  [16, 'white', 0.58772, 0.5],
+  [17, 'black', 0.575967748419971, 0.54386],
+  [18, 'white', 0.54386, 0.5759677484199709],
+  [99, 'striker', 0.5, 0.845],
+];
+/** Where each coin comes to rest. */
+const GOLDEN_END: Array<[number, number, number, boolean]> = [
+  [0, 0.39909468590158453, 0.17328294054717144, false],
+  [1, 0.5167747634618395, 0.5370611084713123, false],
+  [2, 0.45885043551658583, 0.5189562165851487, false],
+  [3, 0.44670603161652933, 0.47032891900113505, false],
+  [4, 0.6473804822495929, 0.3452438132414054, false],
+  [5, 0.5830937766731544, 0.450331434676579, false],
+  [6, 0.5674600973129902, 0.49308408386878677, false],
+  [7, 0.4247674984033129, 0.568871863184978, false],
+  [8, 0.15503938167604112, 0.7893282107373064, false],
+  [9, 0.38737019457281474, 0.5465748123214239, false],
+  [10, 0.4030048669795413, 0.48426615530294176, false],
+  [11, 0.18741871994278278, 0.08416732742074995, false],
+  [12, 0.3841581677362726, 0.4107264548819789, false],
+  [13, 0.4907153523868395, 0.4886402011565425, false],
+  [14, 0.6073500191252046, 0.3802232166340815, false],
+  [15, 0.9072188133325689, 0.1615356671629447, false],
+  [16, 0.6340456713861573, 0.46171026608610755, false],
+  [17, 0.773478877766681, 0.5290815552436978, false],
+  [18, 0.5948915798383954, 0.6682263769038964, false],
+];
+
+describe('carrom fixes', () => {
+  it('a break shot ends where the phone\'s engine puts it', () => {
+    const table = CarromTable.fresh(['Asha', 'Babu']);
+    expect(table.pieces.map((p) => [p.id, p.type, p.x, p.y])).toEqual(GOLDEN_START);
+    expect(table.resolveShot(0, 0.5, -Math.PI / 2 + 0.013, 0.93)).toBe(true);
+    expect(table.lastShot!.vx).toBe(GOLDEN_VX);
+    expect(table.lastShot!.vy).toBe(GOLDEN_VY);
+
+    const pieces = GOLDEN_START.map(([id, type, x, y]) => makePiece(id, type, x, y));
+    pieces[pieces.length - 1].vx = GOLDEN_VX;
+    pieces[pieces.length - 1].vy = GOLDEN_VY;
+    simulateToRest(pieces);
+    // The coins only: after scoring, the server puts the striker back on a baseline.
+    expect(pieces.slice(0, -1).map((p) => [p.id, p.x, p.y, p.pocketed])).toEqual(GOLDEN_END);
+  });
+
+  it('covering the queen with your last coin wins the board, and the match carries on', () => {
+    const table = CarromTable.fresh(['Asha', 'Babu']);
+    const whites = table.coins.filter((c) => c.type === 'white');
+    for (const w of whites.slice(0, 8)) w.pocketed = true;
+    score(table, whites.slice(0, 8));
+    const queen = queenOf(table);
+    queen.pocketed = true;
+    whites[8].pocketed = true;
+    score(table, [queen, whites[8]]);
+    expect(table.boardWinner).toBe(0);
+    expect(table.boardPoints).toBe(12);
+    expect(table.matchScore).toEqual([12, 0]);
+    expect(table.phase).toBe('aiming');
+    expect(table.board).toBe(2);
+    expect(table.currentPlayer).toBe(1);
+    expect(table.remaining(0)).toBe(9);
+  });
+
+  it('a queen awaiting cover may be covered by the last coin on the next shot', () => {
+    const table = CarromTable.fresh(['Asha', 'Babu']);
+    const whites = table.coins.filter((c) => c.type === 'white');
+    for (const w of whites.slice(0, 8)) w.pocketed = true;
+    score(table, whites.slice(0, 8));
+    const queen = queenOf(table);
+    queen.pocketed = true;
+    score(table, [queen]);
+    expect(table.queenPendingFor).toBe(0);
+    whites[8].pocketed = true;
+    score(table, [whites[8]]);
+    expect(table.boardWinner).toBe(0);
+  });
+
+  it('the match ends at 25, and the queen stops counting at 22', () => {
+    const table = CarromTable.fresh(['Asha', 'Babu']);
+    table.matchScore = [22, 0];
+    const whites = table.coins.filter((c) => c.type === 'white');
+    for (const w of whites.slice(0, 8)) w.pocketed = true;
+    score(table, whites.slice(0, 8));
+    const queen = queenOf(table);
+    queen.pocketed = true;
+    whites[8].pocketed = true;
+    score(table, [queen, whites[8]]);
+    expect(table.boardPoints).toBe(9);
+    expect(table.phase).toBe('gameOver');
+    expect(table.winner).toBe(0);
+    expect(table.winnerPoints).toBe(31);
+  });
+
+  it('hitting a coin behind your baseline directly is a foul', () => {
+    const table = CarromTable.fresh(['Asha', 'Babu']);
+    for (const c of table.coins) c.pocketed = true;
+    const behind = table.coins.find((c) => c.type === 'white')!;
+    behind.pocketed = false;
+    behind.x = 0.5;
+    behind.y = 0.93;
+    expect(table.resolveShot(0, 0.5, Math.PI / 2, 0.4)).toBe(true);
+    expect(table.status).toContain('behind the baseline');
+    expect(table.currentPlayer).toBe(1);
+  });
+
+  it('a coin too fast for a pocket rattles out', () => {
+    const coin = makePiece(1, 'white', 0.9, 0.9);
+    coin.vx = 3;
+    coin.vy = 3;
+    const dropped: Piece[] = [];
+    for (let i = 0; i < 12; i++) dropped.push(...step([coin]));
+    expect(dropped).toEqual([]);
+  });
+
+  it('stores and restores the match and the shot velocity', () => {
+    const table = CarromTable.fresh(['Asha', 'Babu']);
+    table.matchScore = [5, 7];
+    table.board = 3;
+    expect(table.resolveShot(table.currentPlayer, 0.5, -Math.PI / 2, 0.5)).toBe(true);
+    const restored = restoreTable(publicState(table, 4, null), ['Asha', 'Babu']);
+    expect(restored.matchScore).toEqual(table.matchScore);
+    expect(restored.board).toBe(3);
+    expect(restored.lastShot).toEqual(table.lastShot);
+  });
+
+  it('reads a board stored before match scoring as a first board', () => {
+    const table = CarromTable.fresh(['Asha', 'Babu']);
+    const state = publicState(table, 1, null);
+    delete state.matchScore;
+    delete state.board;
+    const restored = restoreTable(state, ['Asha', 'Babu']);
+    expect(restored.matchScore).toEqual([0, 0]);
+    expect(restored.board).toBe(1);
   });
 });

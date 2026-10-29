@@ -19,7 +19,9 @@ import {
   STRIKER_MASS,
   STRIKER_RADIUS,
   baselineY,
+  isBehindBaseline,
   makePiece,
+  newContact,
   shotSpeed,
   simulateToRest,
 } from './physics';
@@ -53,6 +55,7 @@ export function chooseShot(
   const baseY = baselineY(player);
   const ownPocketed = table.pocketed[player].length;
   const queenCovered = table.queenCoveredBy !== null;
+  const queenPending = table.queenPendingFor === player;
   const active = table.coins.filter((c) => !c.pocketed);
 
   const strikerFits = (x: number): boolean =>
@@ -87,8 +90,8 @@ export function chooseShot(
 
   const ownLeft = active.filter((c) => c.type === own).length;
   const oppLeft = active.filter((c) => c.type === opp).length;
-  // Under ICF rules the last coin may only go down once the Queen is covered.
-  const lastCoinLocked = ownLeft === 1 && !queenCovered;
+  // The last coin may only go down once the Queen is covered, or to cover her.
+  const lastCoinLocked = ownLeft === 1 && !queenCovered && !queenPending;
   const targets = active.filter(
     (c) => (c.type === own && !lastCoinLocked) || (c.type === 'queen' && ownPocketed > 0),
   );
@@ -167,16 +170,21 @@ export function chooseShot(
     const speed = shotSpeed(shot.power);
     striker.vx = Math.cos(shot.angle) * speed;
     striker.vy = Math.sin(shot.angle) * speed;
-    const dropped = simulateToRest([...pieces, striker], 12);
+    const contact = newContact();
+    const dropped = simulateToRest([...pieces, striker], 12, contact);
 
     const strikerFoul = dropped.some((p) => p.type === 'striker');
     const ownDown = dropped.filter((p) => p.type === own).length;
     const oppDown = dropped.filter((p) => p.type === opp).length;
     const queenDown = dropped.some((p) => p.type === 'queen');
     let score = ownDown * 10.0 - oppDown * 7.0 + (queenDown ? (ownPocketed > 0 ? 6.0 : -2.0) : 0);
+    const coversQueen = queenDown || queenPending;
     const lastCoinFoul =
-      (ownDown > 0 && ownDown >= ownLeft && !queenCovered) || (oppDown > 0 && oppDown >= oppLeft);
-    if (strikerFoul || lastCoinFoul) score -= 15 + ownDown * 10.0;
+      (ownDown > 0 && ownDown >= ownLeft && !queenCovered && !coversQueen) || (oppDown > 0 && oppDown >= oppLeft);
+    const hit = contact.firstCoinId;
+    const directHitFoul =
+      hit !== null && !contact.cushionFirst && active.some((c) => c.id === hit && isBehindBaseline(c, player));
+    if (strikerFoul || lastCoinFoul || directHitFoul) score -= 15 + ownDown * 10.0;
     score += random() * 0.5;
     if (score > bestScore) {
       bestScore = score;
