@@ -19,7 +19,7 @@ import threading
 import time
 from collections import deque
 from pathlib import Path
-from typing import Any, Deque, Dict, List, Optional, Set
+from typing import Any, Deque, Dict, List, Optional, Set, Tuple
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.concurrency import run_in_threadpool
@@ -521,6 +521,10 @@ class ChatWebSocketManager:
 
     def __init__(self) -> None:
         self._connections: Dict[str, Set[WebSocket]] = {}
+        # Sockets whose app confirms chat messages once it shows them.
+        self._confirming: Set[WebSocket] = set()
+        # Messages waiting for their recipient to confirm them: id -> (recipient, event).
+        self._awaiting_ack: Dict[str, Tuple[str, asyncio.Event]] = {}
         self._lock = threading.Lock()
 
     async def connect(self, uid: str, websocket: WebSocket) -> None:
@@ -533,6 +537,7 @@ class ChatWebSocketManager:
 
     def disconnect(self, uid: str, websocket: WebSocket) -> None:
         with self._lock:
+            self._confirming.discard(websocket)
             if uid in self._connections:
                 self._connections[uid].discard(websocket)
                 if not self._connections[uid]:
@@ -542,6 +547,33 @@ class ChatWebSocketManager:
     def is_online(self, uid: str) -> bool:
         with self._lock:
             return bool(self._connections.get(uid))
+
+    def mark_confirming(self, websocket: WebSocket) -> None:
+        with self._lock:
+            self._confirming.add(websocket)
+
+    def recipient_confirms(self, uid: str) -> bool:
+        """True when one of the user's sockets confirms messages it shows on screen."""
+        with self._lock:
+            return any(ws in self._confirming for ws in self._connections.get(uid, ()))
+
+    def expect_ack(self, message_id: str, recipient_uid: str) -> asyncio.Event:
+        """Returns an event that is set when [recipient_uid] confirms [message_id]."""
+        event = asyncio.Event()
+        with self._lock:
+            self._awaiting_ack[message_id] = (recipient_uid, event)
+        return event
+
+    def acknowledge(self, message_id: str, uid: str) -> None:
+        """Marks a message as shown. Only its recipient can confirm it."""
+        with self._lock:
+            pending = self._awaiting_ack.get(message_id)
+        if pending is not None and pending[0] == uid:
+            pending[1].set()
+
+    def forget_ack(self, message_id: str) -> None:
+        with self._lock:
+            self._awaiting_ack.pop(message_id, None)
 
     async def send_to_user(self, uid: str, payload: Dict[str, Any]) -> bool:
         """Sends payload to user's active sockets. Returns True if at least one socket received it."""
@@ -657,6 +689,29 @@ DATA_DIR = Path(os.getenv("MEDIA_META_ROOT", "/data/media-meta"))
 chat_db = ChatDatabase(DATA_DIR / "bhromon_chat.db")
 ws_manager = ChatWebSocketManager()
 push_dispatcher = PushNotificationDispatcher(chat_db)
+
+# Confirmation waits still running. Held here so the tasks are not dropped early.
+_confirmation_waits: Set[asyncio.Task] = set()
+
+
+def _start_background(coro: Any) -> None:
+    """Runs [coro] after the request that started it has returned."""
+    task = asyncio.ensure_future(coro)
+    _confirmation_waits.add(task)
+    task.add_done_callback(_confirmation_waits.discard)
+
+
+async def _push_unless_confirmed(ack: asyncio.Event, message_id: str, push_args: Dict[str, Any]) -> None:
+    """Pushes a chat message unless its recipient's app confirms it on screen in time."""
+    try:
+        await asyncio.wait_for(ack.wait(), timeout=MESSAGE_ACK_SECONDS)
+        return
+    except asyncio.TimeoutError:
+        pass
+    finally:
+        ws_manager.forget_ack(message_id)
+    await run_in_threadpool(push_dispatcher.send_push_to_uid, **push_args)
+
 
 chat_router = APIRouter(tags=["chat"])
 
@@ -805,29 +860,38 @@ async def send_message(
     }
 
     saved = await run_in_threadpool(chat_db.save_message, msg_dict)
+    message_id = saved["id"]
+
+    # A socket that accepted the write is not proof that the phone showed the
+    # message: a phone that is asleep or frozen accepts writes too. A recipient
+    # whose app confirms messages is pushed unless the confirmation arrives.
+    confirming = ws_manager.recipient_confirms(req.recipientId)
+    ack = ws_manager.expect_ack(message_id, req.recipientId) if confirming else None
 
     # Broadcast to recipient via WebSocket
     ws_payload = {"type": "new_message", "message": saved}
     delivered = await ws_manager.send_to_user(req.recipientId, ws_payload)
 
-    # If recipient did not receive via WebSocket, trigger immediate high-priority FCM push
-    if not delivered:
-        preview = req.text or (f"Sent a {req.type}" if req.type != "text" else "New message")
-        data_payload = {
+    preview = req.text or (f"Sent a {req.type}" if req.type != "text" else "New message")
+    push_args = {
+        "recipient_uid": req.recipientId,
+        "title": req.senderName or "New Message",
+        "body": preview,
+        "data": {
             "action": "chat",
             "chatId": req.chatId,
             "senderId": uid,
             "senderName": req.senderName or "Explorer",
-            "messageId": saved["id"],
-        }
-        await run_in_threadpool(
-            push_dispatcher.send_push_to_uid,
-            recipient_uid=req.recipientId,
-            title=req.senderName or "New Message",
-            body=preview,
-            data=data_payload,
-            image_url=req.thumbnailUrl or req.mediaUrl,
-        )
+            "messageId": message_id,
+        },
+        "image_url": req.thumbnailUrl or req.mediaUrl,
+    }
+    if not delivered:
+        # No socket took the message, so trigger immediate high-priority FCM push.
+        ws_manager.forget_ack(message_id)
+        await run_in_threadpool(push_dispatcher.send_push_to_uid, **push_args)
+    elif ack is not None:
+        _start_background(_push_unless_confirmed(ack, message_id, push_args))
 
     return {"status": "success", "message": saved, "onlineDelivered": delivered}
 
@@ -973,6 +1037,9 @@ MAX_CALL_SIGNAL_BYTES = 64 * 1024
 CALL_OFFERS_PER_WINDOW = 6
 CALL_OFFER_WINDOW_SECONDS = 600.0
 WS_AUTH_TIMEOUT_SECONDS = 10.0
+# How long a chat message waits for its recipient's app to confirm it on screen,
+# over a socket that can confirm, before the push goes out.
+MESSAGE_ACK_SECONDS = 8.0
 
 
 class CallOfferLimiter:
@@ -1080,6 +1147,7 @@ async def chat_websocket(
     # for builds that predate that change, and it is the reason this path is
     # deprecated: a URL token can end up in proxy and access logs.
     authenticated_uid: Optional[str] = None
+    confirms = False
 
     if token:
         try:
@@ -1093,6 +1161,7 @@ async def chat_websocket(
             auth_msg = await asyncio.wait_for(websocket.receive_json(), timeout=WS_AUTH_TIMEOUT_SECONDS)
             if auth_msg.get("type") == "auth" and auth_msg.get("token"):
                 authenticated_uid = await run_in_threadpool(verify_firebase_uid, auth_msg["token"])
+                confirms = auth_msg.get("confirms") is True
         except Exception:
             pass
 
@@ -1105,6 +1174,8 @@ async def chat_websocket(
             if authenticated_uid not in ws_manager._connections:
                 ws_manager._connections[authenticated_uid] = set()
             ws_manager._connections[authenticated_uid].add(websocket)
+        if confirms:
+            ws_manager.mark_confirming(websocket)
     else:
         await ws_manager.connect(authenticated_uid, websocket)
 
@@ -1118,6 +1189,11 @@ async def chat_websocket(
 
             if mtype == "ping":
                 await websocket.send_json({"type": "pong"})
+
+            elif mtype == "ack":
+                message_id = data.get("messageId")
+                if isinstance(message_id, str):
+                    ws_manager.acknowledge(message_id, uid)
 
             elif mtype == "typing":
                 chat_id = data.get("chatId")

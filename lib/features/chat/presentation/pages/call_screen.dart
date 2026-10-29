@@ -114,6 +114,8 @@ class _CallScreenState extends State<CallScreen> {
       if (mounted) {
         setState(() {
           _localRenderer.srcObject = stream;
+          // A camera that could not be opened leaves the call with video off.
+          _isVideoOff = !_signaling.hasLocalVideo;
         });
       }
     };
@@ -228,6 +230,15 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _toggleVideo() {
+    // A call that started without a camera has no video track to switch on.
+    if (_isVideoOff && !_signaling.hasLocalVideo) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text('The camera is not available for this call.'),
+        ),
+      );
+      return;
+    }
     setState(() {
       _isVideoOff = !_isVideoOff;
     });
@@ -292,6 +303,10 @@ class _CallScreenState extends State<CallScreen> {
   @override
   Widget build(BuildContext context) {
     final isVideo = widget.isVideoCall;
+    // Show the other person's video whenever they send it. Our own camera
+    // being off must not hide it.
+    final remoteHasVideo =
+        _remoteRenderer.srcObject?.getVideoTracks().isNotEmpty ?? false;
     final canPop = Navigator.of(context).canPop();
 
     return PopScope(
@@ -315,7 +330,7 @@ class _CallScreenState extends State<CallScreen> {
               fit: StackFit.expand,
               children: [
                 // ── Background / Remote Video Layer ───────────────────────────────
-                if (isVideo && _remoteVideoConnected && !_isVideoOff)
+                if (isVideo && _remoteVideoConnected && remoteHasVideo)
                   Positioned.fill(
                     child: RTCVideoView(
                       _remoteRenderer,
