@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../domain/models/tour_group.dart';
+import 'instafeed_day_label.dart';
 import '../../../domain/models/tour_post_models.dart';
 
 class InstafeedDayFilterBar extends StatelessWidget {
@@ -49,32 +51,6 @@ class InstafeedDayFilterBar extends StatelessWidget {
     }
   }
 
-  String _dayLabelBn(int dayNumber) {
-    const bnNums = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-    final s = dayNumber.toString();
-    final bnStr = s.split('').map((c) {
-      final i = int.tryParse(c);
-      return i != null ? bnNums[i] : c;
-    }).join();
-
-    switch (dayNumber) {
-      case 1:
-        return '১ম দিন';
-      case 2:
-        return '২য় দিন';
-      case 3:
-        return '৩য় দিন';
-      case 4:
-        return '৪র্থ দিন';
-      case 5:
-        return '৫ম দিন';
-      case 6:
-        return '৬ষ্ঠ দিন';
-      default:
-        return '$bnStrতম দিন';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final effectiveDays = days.isNotEmpty
@@ -85,7 +61,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
               id: 'day${i + 1}',
               dayNumber: i + 1,
               date: DateTime.now().add(Duration(days: i)),
-              label: '${i + 1}ম দিন',
+              label: 'Day ${i + 1}',
             ),
           );
 
@@ -106,10 +82,10 @@ class InstafeedDayFilterBar extends StatelessWidget {
                   final isSelected = selectedDay == 'all';
                   final count = _countFor('all');
                   return _buildCircleItem(
-                    label: 'সব দিন',
-                    topWidget: const Text(
-                      'সব',
-                      style: TextStyle(
+                    label: context.l10n.translate('ig_all_days'),
+                    topWidget: Text(
+                      context.l10n.translate('ig_all_short'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
@@ -125,7 +101,7 @@ class InstafeedDayFilterBar extends StatelessWidget {
                 final isSelected = selectedDay == d.id;
                 final count = _countFor(d.id);
                 final emoji = _dayEmoji(d.dayNumber);
-                final label = _dayLabelBn(d.dayNumber);
+                final label = instafeedDayLabel(context, d.dayNumber);
 
                 return _buildCircleItem(
                   label: label,
@@ -152,7 +128,8 @@ class InstafeedDayFilterBar extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'পোস্ট ($filteredCountটি)',
+                      context.l10n.translate('ig_posts_count',
+                          args: {'count': filteredCount}),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 13.5,
@@ -172,11 +149,11 @@ class InstafeedDayFilterBar extends StatelessWidget {
                                   AppColors.mintGreen.withValues(alpha: 0.4)),
                         ),
                         child: Text(
-                          selectedDay == 'all'
-                              ? 'সব দিন'
-                              : _dayLabelBn(int.tryParse(
-                                      selectedDay.replaceAll('day', '')) ??
-                                  1),
+                          instafeedDayLabel(
+                            context,
+                            int.tryParse(selectedDay.replaceAll('day', '')) ??
+                                1,
+                          ),
                           style: const TextStyle(
                             color: AppColors.mintGreen,
                             fontSize: 10,

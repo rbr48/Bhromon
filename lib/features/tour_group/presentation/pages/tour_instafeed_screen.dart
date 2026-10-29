@@ -7,6 +7,7 @@ import '../../data/paged_post_feed.dart';
 import '../../data/tour_group_repository.dart';
 import '../../data/tour_media_journal.dart';
 import '../../data/tour_media_uploader.dart';
+import '../../domain/models/logistics_models.dart';
 import '../../domain/models/safety_alert_models.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
@@ -25,15 +26,6 @@ import '../widgets/instafeed/instafeed_story_viewer.dart';
 import '../widgets/instafeed/instafeed_travel_banners.dart';
 import '../widgets/instafeed/tour_safe_network_image.dart';
 import '../../../../core/localization/app_localizations.dart';
-
-// Bengali numeral helper
-String toBengaliNum(int number) {
-  const digits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-  return number.toString().split('').map((c) {
-    final idx = int.tryParse(c);
-    return idx != null ? digits[idx] : c;
-  }).join('');
-}
 
 class TourInstaFeedScreen extends StatefulWidget {
   final String tourId;
@@ -77,6 +69,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   bool _settleScheduled = false;
   TourGroup? _tourGroup;
   StreamSubscription<TourGroup?>? _groupSub;
+  StreamSubscription<List<BusSeat>>? _seatSub;
+  StreamSubscription<List<HotelRoom>>? _roomSub;
 
   // Logistics cache (Seat & Room mappings: email -> seat/room)
   final Map<String, String> _seatMap = {};
@@ -123,6 +117,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   @override
   void dispose() {
     _groupSub?.cancel();
+    _seatSub?.cancel();
+    _roomSub?.cancel();
     unawaited(_feed.close());
     super.dispose();
   }
@@ -165,7 +161,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   }
 
   void _loadLogistics() {
-    _repository.watchBusSeats(widget.tourId).listen((seats) {
+    _seatSub = _repository.watchBusSeats(widget.tourId).listen((seats) {
       if (!mounted) return;
       setState(() {
         _seatMap.clear();
@@ -178,7 +174,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       });
     });
 
-    _repository.watchHotelRooms(widget.tourId).listen((rooms) {
+    _roomSub = _repository.watchHotelRooms(widget.tourId).listen((rooms) {
       if (!mounted) return;
       setState(() {
         _roomMap.clear();
@@ -1337,6 +1333,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                               post.id, () => GlobalKey())
                                           : ValueKey(post.id),
                                       post: post,
+                                      tourDays: _tourDays,
                                       videoPlaying: post.id == _playingVideoId,
                                       onVideoTap: isVideo
                                           ? () => setState(

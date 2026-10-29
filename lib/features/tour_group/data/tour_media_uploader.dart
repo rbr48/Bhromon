@@ -129,8 +129,6 @@ class TourMediaUploader {
   static const String baseUrl = 'https://bhromon.fun';
   static const String uploadUrl = '$baseUrl/api/media/upload';
   static const String deleteBaseUrl = '$baseUrl/api/media/media';
-  static const String legacyUploadKey =
-      String.fromEnvironment('MEDIA_UPLOAD_KEY', defaultValue: '');
 
   static final Dio _dio = Dio(
     BaseOptions(
@@ -140,15 +138,12 @@ class TourMediaUploader {
     ),
   );
 
-  /// Authentication options for media server requests.
-  /// Sends the caller's Firebase ID token as a Bearer token.
+  /// Authentication options for media server requests. Sends the caller's
+  /// Firebase ID token as a Bearer token; the app holds no shared key.
   static Future<Options> _authorized() async {
     final user = FirebaseAuth.instance.currentUser;
     final token = await user?.getIdToken();
     final headers = <String, String>{};
-    if (legacyUploadKey.isNotEmpty) {
-      headers['X-Upload-Key'] = legacyUploadKey;
-    }
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }

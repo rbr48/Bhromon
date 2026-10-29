@@ -312,16 +312,35 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     }
   }
 
-  void _sendQuickReaction(String emoji) {
+  Future<void> _sendQuickReaction(String emoji) async {
     final story = _currentStory;
     if (story == null) return;
-
-    widget.repository.addStoryReaction(widget.tourId, story.id, emoji);
-    final updatedReactions = Map<String, String>.from(story.reactions);
+    final before = story.reactions;
+    final updatedReactions = Map<String, String>.from(before);
     updatedReactions[widget.repository.currentEmail] = emoji;
-    _currentAuthorStories[_storyIndex] =
-        story.copyWith(reactions: updatedReactions);
 
+    // Show the reaction at once; take it back if the server refuses it.
+    setState(() {
+      _currentAuthorStories[_storyIndex] =
+          story.copyWith(reactions: updatedReactions);
+    });
+    try {
+      await widget.repository.addStoryReaction(widget.tourId, story.id, emoji);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _currentAuthorStories[_storyIndex] = story.copyWith(reactions: before);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              context.l10n.translate('ig_reaction_failed', args: {'error': e})),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
