@@ -10,12 +10,20 @@ class CarromShotRecord {
     required this.x,
     required this.angle,
     required this.power,
+    this.vx,
+    this.vy,
   });
 
   final int shooter;
   final double x;
   final double angle;
   final double power;
+
+  /// The striker's starting velocity as the server fired it. Replaying from
+  /// these, rather than from [angle], lands every coin exactly where the
+  /// server did. Null for shots stored before the server sent them.
+  final double? vx;
+  final double? vy;
 }
 
 /// The public board, read from the server's state. Every piece is in it: the
@@ -36,6 +44,10 @@ class CarromTable {
     required this.status,
     required this.lastShot,
     required this.turnDeadline,
+    this.matchScore = const [0, 0],
+    this.board = 1,
+    this.boardWinner,
+    this.boardPoints = 0,
   });
 
   factory CarromTable.fromState(Map<String, dynamic> state) {
@@ -49,6 +61,9 @@ class CarromTable {
         : const <Object?>[0, 0];
     final last = state['lastShot'] is Map ? state['lastShot'] as Map : null;
     final deadline = state['turnDeadline'];
+    final rawScore = state['matchScore'] is List
+        ? state['matchScore'] as List
+        : const <Object?>[0, 0];
     return CarromTable(
       step: _intOf(state['step']),
       phase: state['phase'] == 'gameOver'
@@ -79,10 +94,19 @@ class CarromTable {
               x: _doubleOf(last['x'], 0.5),
               angle: _doubleOf(last['angle'], 0),
               power: _doubleOf(last['power'], 0),
+              vx: last['vx'] is num ? (last['vx'] as num).toDouble() : null,
+              vy: last['vy'] is num ? (last['vy'] as num).toDouble() : null,
             ),
       turnDeadline: deadline is num
           ? DateTime.fromMillisecondsSinceEpoch(deadline.toInt())
           : null,
+      matchScore: [
+        for (var i = 0; i < 2; i++)
+          i < rawScore.length ? _intOf(rawScore[i]) : 0,
+      ],
+      board: state['board'] is num ? _intOf(state['board']) : 1,
+      boardWinner: _optionalInt(state['boardWinner']),
+      boardPoints: _intOf(state['boardPoints']),
     );
   }
 
@@ -108,6 +132,14 @@ class CarromTable {
 
   /// When the seat to shoot runs out of time. Null for bots and once the board is finished.
   final DateTime? turnDeadline;
+
+  /// Match points so far, and the board being played (1-based).
+  final List<int> matchScore;
+  final int board;
+
+  /// Who won the last finished board, and the points it gave them.
+  final int? boardWinner;
+  final int boardPoints;
 
   bool get isGameOver => phase == CarromTablePhase.gameOver;
 

@@ -1,9 +1,8 @@
 /**
  * Board geometry and the fixed-step physics of a carrom shot, ported from
- * lib/features/game_zone/carrom/carrom_engine.dart. The server is the only
- * place a shot is simulated, so the two versions only need to agree with each
- * other in what the rules say, not bit for bit. The arithmetic is kept in the
- * same order anyway, so the animation on the phone matches the stored result.
+ * lib/features/game_zone/carrom/carrom_engine.dart. The arithmetic is kept in
+ * exactly the same order. The phone replays a stored shot from the striker
+ * velocity the server used, so its animation ends where the stored board is.
  *
  * Positions are in board units: the playing surface spans 0..1 on both axes,
  * with (0, 0) at the top-left pocket.
@@ -44,6 +43,24 @@ export const MAX_SHOT_SPEED = 3.4;
 export const STEP_SECONDS = 1 / 480;
 export const REST_SPEED = 0.004;
 
+/** A piece crossing a pocket faster than this rattles off the lip instead of dropping in. */
+export const MAX_POCKET_SPEED = 2.6;
+
+/**
+ * What the striker touched first during a shot. The rules use it to tell a
+ * legal shot from a direct hit on a coin behind the shooter's baseline.
+ */
+export interface StrikerContact {
+  /** The first coin the striker hit, or null if it has hit none yet. */
+  firstCoinId: number | null;
+  /** Whether the striker touched a cushion before hitting firstCoinId. */
+  cushionFirst: boolean;
+}
+
+export function newContact(): StrikerContact {
+  return { firstCoinId: null, cushionFirst: false };
+}
+
 /** A shot that has not settled by then is scored as it stands. */
 export const MAX_SHOT_SECONDS = 20;
 
@@ -59,6 +76,14 @@ export const STRIKER_ID = 99;
 /** Player 0 shoots from the bottom baseline, player 1 from the top. */
 export function baselineY(player: number): number {
   return player === 0 ? 1 - BASELINE_INSET : BASELINE_INSET;
+}
+
+/**
+ * Whether [coin] lies behind [player]'s baseline, between it and their edge.
+ * The striker may only reach such a coin off a cushion.
+ */
+export function isBehindBaseline(coin: Piece, player: number): boolean {
+  return player === 0 ? coin.y > baselineY(0) : coin.y < baselineY(1);
 }
 
 function clamp01(value: number): number {
@@ -101,7 +126,7 @@ export function isSettled(pieces: readonly Piece[]): boolean {
  * Advances every piece by one fixed step and returns the pieces that dropped
  * into a pocket during it.
  */
-export function step(pieces: Piece[]): Piece[] {
+export function step(pieces: Piece[], contact?: StrikerContact): Piece[] {
   const dt = STEP_SECONDS;
   const active = pieces.filter((p) => !p.pocketed);
 
@@ -116,18 +141,27 @@ export function step(pieces: Piece[]): Piece[] {
     for (let j = i + 1; j < active.length; j++) {
       const b = active[j];
       if (!isMoving(a) && !isMoving(b)) continue;
-      collide(a, b);
+      const hit = collide(a, b);
+      if (hit && contact && contact.firstCoinId === null) {
+        if (a.type === 'striker') contact.firstCoinId = b.id;
+        else if (b.type === 'striker') contact.firstCoinId = a.id;
+      }
     }
   }
 
-  for (const p of active) bounceOffWalls(p);
+  for (const p of active) {
+    const bounced = bounceOffWalls(p);
+    if (bounced && contact && contact.firstCoinId === null && p.type === 'striker') {
+      contact.cushionFirst = true;
+    }
+  }
 
   const dropped: Piece[] = [];
   for (const p of active) {
     for (const [px, py] of POCKETS) {
       const dx = p.x - px;
       const dy = p.y - py;
-      if (dx * dx + dy * dy < POCKET_RADIUS * POCKET_RADIUS) {
+      if (dx * dx + dy * dy < POCKET_RADIUS * POCKET_RADIUS && speedOf(p) <= MAX_POCKET_SPEED) {
         p.pocketed = true;
         p.vx = 0;
         p.vy = 0;
@@ -155,12 +189,13 @@ export function step(pieces: Piece[]): Piece[] {
   return dropped;
 }
 
-function collide(a: Piece, b: Piece): void {
+/** Separates two overlapping pieces. Returns true when momentum changed hands. */
+function collide(a: Piece, b: Piece): boolean {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const minDist = a.radius + b.radius;
   const distSq = dx * dx + dy * dy;
-  if (distSq >= minDist * minDist || distSq === 0) return;
+  if (distSq >= minDist * minDist || distSq === 0) return false;
 
   const dist = Math.sqrt(distSq);
   const nx = dx / dist;
@@ -178,41 +213,61 @@ function collide(a: Piece, b: Piece): void {
 
   // Exchange momentum along the line of centres if they are approaching.
   const approach = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
-  if (approach <= 0) return;
+  if (approach <= 0) return false;
   const impulse = ((1 + PIECE_RESTITUTION) * approach) / (invA + invB);
   a.vx -= impulse * invA * nx;
   a.vy -= impulse * invA * ny;
   b.vx += impulse * invB * nx;
   b.vy += impulse * invB * ny;
+  return true;
 }
 
-function bounceOffWalls(p: Piece): void {
+/** Keeps a piece on the board. Returns true when it bounced off a cushion. */
+function bounceOffWalls(p: Piece): boolean {
   const r = p.radius;
+  let bounced = false;
   if (p.x < r) {
     p.x = r;
-    if (p.vx < 0) p.vx = -p.vx * WALL_RESTITUTION;
+    if (p.vx < 0) {
+      p.vx = -p.vx * WALL_RESTITUTION;
+      bounced = true;
+    }
   } else if (p.x > 1 - r) {
     p.x = 1 - r;
-    if (p.vx > 0) p.vx = -p.vx * WALL_RESTITUTION;
+    if (p.vx > 0) {
+      p.vx = -p.vx * WALL_RESTITUTION;
+      bounced = true;
+    }
   }
   if (p.y < r) {
     p.y = r;
-    if (p.vy < 0) p.vy = -p.vy * WALL_RESTITUTION;
+    if (p.vy < 0) {
+      p.vy = -p.vy * WALL_RESTITUTION;
+      bounced = true;
+    }
   } else if (p.y > 1 - r) {
     p.y = 1 - r;
-    if (p.vy > 0) p.vy = -p.vy * WALL_RESTITUTION;
+    if (p.vy > 0) {
+      p.vy = -p.vy * WALL_RESTITUTION;
+      bounced = true;
+    }
   }
+  return bounced;
 }
 
 /**
  * Runs [pieces] until everything has stopped (or [maxSeconds] passes) and
  * returns every piece pocketed on the way, in order.
  */
-export function simulateToRest(pieces: Piece[], maxSeconds = MAX_SHOT_SECONDS): Piece[] {
+export function simulateToRest(
+  pieces: Piece[],
+  maxSeconds = MAX_SHOT_SECONDS,
+  contact?: StrikerContact,
+): Piece[] {
   const dropped: Piece[] = [];
   const maxSteps = Math.ceil(maxSeconds / STEP_SECONDS);
   for (let i = 0; i < maxSteps; i++) {
-    dropped.push(...step(pieces));
+    dropped.push(...step(pieces, contact));
     if (isSettled(pieces)) return dropped;
   }
   for (const p of pieces) {

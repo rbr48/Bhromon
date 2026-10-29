@@ -31,6 +31,29 @@ void main() {
       expect(c.pocketed, isFalse);
     });
 
+    test('A coin too fast for the pocket rattles out', () {
+      // Heading straight into the bottom-right pocket at full pace.
+      final c = _coin(1, CarromPieceType.white, 0.9, 0.9)
+        ..vx = 3.0
+        ..vy = 3.0;
+      final dropped = <CarromPiece>[];
+      for (int i = 0; i < 12; i++) {
+        dropped.addAll(CarromBoard.step([c]));
+      }
+      expect(dropped, isEmpty, reason: 'too fast on the first pass');
+    });
+
+    test('The striker contact records the first coin it hits', () {
+      final striker =
+          CarromPiece(id: 99, type: CarromPieceType.striker, x: 0.5, y: 0.8)
+            ..vy = -1.5;
+      final coin = _coin(3, CarromPieceType.black, 0.5, 0.6);
+      final contact = StrikerContact();
+      CarromBoard.simulateToRest([coin, striker], contact: contact);
+      expect(contact.firstCoinId, 3);
+      expect(contact.cushionFirst, isFalse);
+    });
+
     test('A coin bounces off the cushion', () {
       final c = _coin(1, CarromPieceType.white, 0.5, 0.5)..vx = 2.0;
       for (int i = 0; i < 200; i++) {
@@ -178,8 +201,7 @@ void main() {
       expect(g.winner, isNull);
     });
 
-    test('ICF: covering the Queen with your last coin in one shot is a foul',
-        () {
+    test('ICF: covering the Queen with your last coin in one shot wins', () {
       final g = CarromGame(random: Random(2));
       final whites =
           g.coins.where((c) => c.type == CarromPieceType.white).toList();
@@ -190,11 +212,50 @@ void main() {
       whites[8].pocketed = true;
       g.queen.pocketed = true;
       g.scoreShot([g.queen, whites[8]]);
-      expect(g.queen.pocketed, isFalse);
-      expect(g.queenCoveredBy, isNull);
-      expect(whites[8].pocketed, isFalse);
-      expect(g.pocketed[0].length, 7);
+      expect(g.boardWinner, 0);
+      expect(g.boardPoints, 9 + 3);
+      expect(g.matchScore, [12, 0]);
+    });
+
+    test('ICF: your last coin may cover the Queen on the next shot', () {
+      final g = CarromGame(random: Random(2));
+      final whites =
+          g.coins.where((c) => c.type == CarromPieceType.white).toList();
+      for (final w in whites.take(8)) {
+        w.pocketed = true;
+      }
+      g.scoreShot(whites.take(8).toList());
+      g.queen.pocketed = true;
+      g.scoreShot([g.queen]);
+      expect(g.queenPendingFor, 0);
+      expect(g.currentPlayer, 0, reason: 'shoots again to cover her');
+      whites[8].pocketed = true;
+      g.scoreShot([whites[8]]);
+      expect(g.boardWinner, 0);
+      expect(g.boardPoints, 12);
+    });
+
+    test('ICF: hitting a coin behind your baseline directly is a foul', () {
+      // A white coin sits behind player 0's baseline; the striker is fired
+      // straight back at it.
+      final behind = _coin(1, CarromPieceType.white, 0.5, 0.93);
+      final g = _gameWith([behind]);
+      g.placeStriker(0.5);
+      expect(g.shoot(pi / 2, 0.4), isTrue);
+      g.simulateToRest();
+      expect(g.status, contains('behind the baseline'));
       expect(g.currentPlayer, 1);
+      expect(g.penaltyDue[0], 1);
+    });
+
+    test('A coin behind the baseline may be reached off a cushion', () {
+      final behind = _coin(1, CarromPieceType.white, 0.5, 0.93);
+      final g = _gameWith([behind]);
+      g.placeStriker(0.3);
+      // Up into the top cushion, well clear of the coin on the way.
+      expect(g.shoot(-pi / 2, 0.9), isTrue);
+      g.simulateToRest();
+      expect(g.status, isNot(contains('behind the baseline')));
     });
 
     test('ICF: pocketing the opponent\'s last coin is a foul', () {
@@ -249,9 +310,62 @@ void main() {
       expect(g.queenCoveredBy, 0);
       whites[8].pocketed = true;
       g.scoreShot([whites[8]]);
-      expect(g.winner, 0);
-      expect(g.winnerPoints, 9 + 3);
+      expect(g.boardWinner, 0);
+      expect(g.boardPoints, 9 + 3);
+      expect(g.matchScore, [12, 0]);
+      // The match carries on: a fresh board, and the other player breaks.
+      expect(g.phase, CarromPhase.aiming);
+      expect(g.board, 2);
+      expect(g.currentPlayer, 1);
+      expect(g.remaining(0), 9);
+      expect(g.winner, isNull);
+    });
+
+    test('The Queen\'s points stop counting at 22, and 25 wins the match', () {
+      final g = CarromGame(random: Random(6));
+      void winBoardWithQueen() {
+        final p = g.currentPlayer = 0;
+        final whites = g.coins
+            .where((c) => c.type == CarromGame.colorOf(p) && !c.pocketed)
+            .toList();
+        for (final w in whites.take(whites.length - 1)) {
+          w.pocketed = true;
+        }
+        g.scoreShot(whites.take(whites.length - 1).toList());
+        g.queen.pocketed = true;
+        whites.last.pocketed = true;
+        g.scoreShot([g.queen, whites.last]);
+      }
+
+      g.matchScore[0] = 21;
+      winBoardWithQueen();
+      expect(g.boardPoints, 12, reason: 'under 22: the Queen counts');
       expect(g.phase, CarromPhase.gameOver);
+      expect(g.winner, 0);
+      expect(g.winnerPoints, 33);
+
+      g.reset();
+      g.matchScore[0] = 22;
+      winBoardWithQueen();
+      expect(g.boardPoints, 9, reason: 'at 22 the Queen no longer counts');
+    });
+
+    test('The match ends with the leader after eight boards', () {
+      final g = CarromGame(random: Random(7));
+      g.board = 8;
+      g.matchScore[1] = 10;
+      final whites =
+          g.coins.where((c) => c.type == CarromPieceType.white).toList();
+      for (final w in whites.take(8)) {
+        w.pocketed = true;
+      }
+      g.scoreShot(whites.take(8).toList());
+      g.queen.pocketed = true;
+      whites[8].pocketed = true;
+      g.scoreShot([g.queen, whites[8]]);
+      expect(g.matchScore, [12, 10]);
+      expect(g.phase, CarromPhase.gameOver);
+      expect(g.winner, 0);
     });
 
     test('The striker cannot be placed on top of a coin', () {
@@ -286,15 +400,31 @@ void main() {
       g.placeStriker(shot.x);
       expect(g.shoot(shot.angle, shot.power), isTrue);
       g.simulateToRest();
-      expect(g.remaining(1), 0);
-      expect(g.striker.pocketed, isFalse);
-      expect(g.winner, 1);
+      expect(g.boardWinner, 1);
     });
 
-    test('Bot plays a whole game against itself to a finish', () {
+    test('Bot covers a pending Queen with its last coin', () {
+      final g = _gameWith([
+        _coin(1, CarromPieceType.black, 0.8, 0.8),
+        _coin(2, CarromPieceType.white, 0.3, 0.5),
+      ])
+        ..currentPlayer = 1
+        ..queenPendingFor = 1;
+      g.queen.pocketed = true;
+      g.pocketed[1].add(g.coins
+          .firstWhere((c) => c.type == CarromPieceType.black && c.pocketed));
+      g.placeStriker(0.5);
+      final shot = CarromBot.chooseShot(g.botRequest(aimNoise: 0));
+      g.placeStriker(shot.x);
+      expect(g.shoot(shot.angle, shot.power), isTrue);
+      g.simulateToRest();
+      expect(g.boardWinner, 1);
+    });
+
+    test('Bot plays a whole board against itself to a finish', () {
       final g = CarromGame(random: Random(11))..vsBot = true;
       var shots = 0;
-      while (g.phase != CarromPhase.gameOver && shots < 400) {
+      while (g.boardWinner == null && shots < 400) {
         final shot = CarromBot.chooseShot(g.botRequest(aimNoise: 0.004));
         g.placeStriker(shot.x);
         if (!g.shoot(shot.angle, shot.power)) {
@@ -304,8 +434,7 @@ void main() {
         g.simulateToRest();
         shots++;
       }
-      expect(g.phase, CarromPhase.gameOver, reason: 'after $shots shots');
-      expect(g.winner, isNotNull);
+      expect(g.boardWinner, isNotNull, reason: 'after $shots shots');
     }, timeout: const Timeout(Duration(minutes: 3)));
   });
 }

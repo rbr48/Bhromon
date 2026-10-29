@@ -94,6 +94,43 @@ void main() {
       expect(table.pieces, isEmpty);
       expect(table.lastShot, isNull);
       expect(table.isGameOver, isFalse);
+      expect(table.matchScore, [0, 0]);
+      expect(table.board, 1);
+    });
+
+    test('reads the match score and the last board result', () {
+      final table = CarromTable.fromState({
+        ..._state(),
+        'matchScore': [12, 7],
+        'board': 3,
+        'boardWinner': 0,
+        'boardPoints': 12,
+      });
+      expect(table.matchScore, [12, 7]);
+      expect(table.board, 3);
+      expect(table.boardWinner, 0);
+      expect(table.boardPoints, 12);
+    });
+
+    test('reads the striker velocity the server fired, when it sent one', () {
+      final withVelocity = CarromTable.fromState(_state(lastShot: {
+        'shooter': 0,
+        'x': 0.5,
+        'angle': -1.5,
+        'power': 0.9,
+        'vx': 0.041423333219775885,
+        'vy': -3.1862307445420464,
+      }));
+      expect(withVelocity.lastShot!.vx, 0.041423333219775885);
+      expect(withVelocity.lastShot!.vy, -3.1862307445420464);
+
+      final older = CarromTable.fromState(_state(lastShot: {
+        'shooter': 0,
+        'x': 0.5,
+        'angle': -1.5,
+        'power': 0.9,
+      }));
+      expect(older.lastShot!.vx, isNull);
     });
   });
 }
