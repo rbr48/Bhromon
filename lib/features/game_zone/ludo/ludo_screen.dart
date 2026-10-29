@@ -367,11 +367,14 @@ class _LudoScreenState extends State<LudoScreen>
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.of(context).canPop();
     return PopScope(
-      canPop: context.canPop(),
+      canPop: canPop,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        context.go('/game-zone');
+        try {
+          context.go('/game-zone');
+        } catch (_) {}
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF1E2125),
@@ -380,10 +383,12 @@ class _LudoScreenState extends State<LudoScreen>
             icon: const Icon(Icons.arrow_back_ios_new_rounded,
                 color: Colors.white70, size: 18),
             onPressed: () {
-              if (context.canPop()) {
-                context.pop();
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
               } else {
-                context.go('/game-zone');
+                try {
+                  context.go('/game-zone');
+                } catch (_) {}
               }
             },
           ),

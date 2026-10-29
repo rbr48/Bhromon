@@ -6,8 +6,6 @@ import '../../../../core/theme/colors.dart';
 import '../../data/news_tts_service.dart';
 import '../../data/newspaper_service.dart';
 import '../../domain/models/newspaper_models.dart';
-import 'adfree_article_reader_screen.dart';
-import 'adblock_browser_screen.dart';
 
 class NewspaperHubScreen extends StatefulWidget {
   final String? initialCategory;
@@ -251,19 +249,19 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 style: const TextStyle(color: Colors.white54, fontSize: 13),
               ),
               const SizedBox(height: 16),
-              Divider(color: Colors.white.withOpacity(0.1)),
+              Divider(color: Colors.white.withValues(alpha: 0.1)),
               Expanded(
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: cluster.items.length,
-                  separatorBuilder: (_, __) => Divider(color: Colors.white.withOpacity(0.08)),
+                  separatorBuilder: (_, __) => Divider(color: Colors.white.withValues(alpha: 0.08)),
                   itemBuilder: (context, idx) {
                     final item = cluster.items[idx];
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(
                         radius: 16,
-                        backgroundColor: AppColors.mintGreen.withOpacity(0.15),
+                        backgroundColor: AppColors.mintGreen.withValues(alpha: 0.15),
                         child: Text(
                           item.paperName.isNotEmpty ? item.paperName[0].toUpperCase() : 'N',
                           style: const TextStyle(
@@ -411,7 +409,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
             decoration: BoxDecoration(
               color: const Color(0xFF1B1F24),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: TextField(
               controller: _headlineSearchCtrl,
@@ -460,7 +458,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                     side: BorderSide(
-                      color: isSelected ? AppColors.mintGreen : Colors.white.withOpacity(0.1),
+                      color: isSelected ? AppColors.mintGreen : Colors.white.withValues(alpha: 0.1),
                     ),
                   ),
                   onSelected: (_) => _onCategorySelected(cat['id']!),
@@ -514,7 +512,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 children: [
                   const Text('Filtering by: ', style: TextStyle(color: Colors.white54, fontSize: 12)),
                   Chip(
-                    backgroundColor: AppColors.mintGreen.withOpacity(0.15),
+                    backgroundColor: AppColors.mintGreen.withValues(alpha: 0.15),
                     label: Text(
                       _selectedPaperId!,
                       style: const TextStyle(color: AppColors.mintGreen, fontSize: 12, fontWeight: FontWeight.bold),
@@ -593,10 +591,10 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
         decoration: BoxDecoration(
           color: const Color(0xFF1B222C),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.mintGreen.withOpacity(0.25)),
+          border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.25)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -621,7 +619,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.mintGreen.withOpacity(0.12),
+                    color: AppColors.mintGreen.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -647,7 +645,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
+                    color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
@@ -678,7 +676,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF14181E),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -696,7 +694,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
+                        color: Colors.white.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -881,7 +879,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
                 ),
                 onPressed: () {
                   if (paper.websiteUrl.isNotEmpty) {
@@ -906,7 +904,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
           decoration: BoxDecoration(
             color: const Color(0xFF1B1F24),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: TextField(
             controller: _paperSearchCtrl,
@@ -984,7 +982,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
       decoration: BoxDecoration(
         color: const Color(0xFF14181E),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -1005,10 +1003,10 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
+                    color: Colors.white.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppColors.mintGreen.withOpacity(0.25),
+                      color: AppColors.mintGreen.withValues(alpha: 0.25),
                       width: 1,
                     ),
                   ),
@@ -1046,7 +1044,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 1.5),
                             decoration: BoxDecoration(
-                              color: AppColors.mintGreen.withOpacity(0.14),
+                              color: AppColors.mintGreen.withValues(alpha: 0.14),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Row(
@@ -1090,7 +1088,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
+                      color: Colors.white.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.white10),
                     ),

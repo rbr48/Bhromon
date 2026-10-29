@@ -71,11 +71,14 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
         }
 
         if (session == null) {
+          final canPop = Navigator.of(context).canPop();
           return PopScope(
-            canPop: context.canPop(),
+            canPop: canPop,
             onPopInvokedWithResult: (didPop, _) {
               if (didPop) return;
-              context.go('/game-zone');
+              try {
+                context.go('/game-zone');
+              } catch (_) {}
             },
             child: Scaffold(
               backgroundColor: const Color(0xFF0F1E14),
@@ -86,10 +89,12 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
                   icon:
                       const Icon(Icons.arrow_back_rounded, color: Colors.white),
                   onPressed: () {
-                    if (context.canPop()) {
-                      context.pop();
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
                     } else {
-                      context.go('/game-zone');
+                      try {
+                        context.go('/game-zone');
+                      } catch (_) {}
                     }
                   },
                 ),
@@ -108,10 +113,12 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
                         } else {
-                          context.go('/game-zone');
+                          try {
+                            context.go('/game-zone');
+                          } catch (_) {}
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -326,10 +333,12 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
     );
 
     if (mounted) {
-      if (context.canPop()) {
-        context.pop();
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
       } else {
-        context.go('/game-zone');
+        try {
+          context.go('/game-zone');
+        } catch (_) {}
       }
     }
   }

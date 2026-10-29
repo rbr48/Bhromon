@@ -181,7 +181,7 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
         title: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: AppColors.mintGreen.withOpacity(0.12),
+            color: AppColors.mintGreen.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
@@ -326,6 +326,7 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
             tooltip: 'Share',
             icon: Icon(Icons.share_rounded, color: _textColor),
             onPressed: () {
+              // ignore: deprecated_member_use
               Share.share(
                 '$title\n\nRead ad-free on Bhromon Newspaper Hub: ${widget.articleUrl}',
               );
@@ -404,9 +405,9 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                   margin: const EdgeInsets.only(bottom: 20),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.mintGreen.withOpacity(0.15),
+                    color: AppColors.mintGreen.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.mintGreen.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -448,7 +449,7 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                 children: [
                   CircleAvatar(
                     radius: 12,
-                    backgroundColor: AppColors.mintGreen.withOpacity(0.2),
+                    backgroundColor: AppColors.mintGreen.withValues(alpha: 0.2),
                     child: Text(
                       sourceName.isNotEmpty ? sourceName[0].toUpperCase() : 'N',
                       style: const TextStyle(
@@ -508,7 +509,7 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
               if (heroImage != null && heroImage.isNotEmpty) const SizedBox(height: 24),
 
               // Divider
-              Divider(color: _textColor.withOpacity(0.08), height: 1),
+              Divider(color: _textColor.withValues(alpha: 0.08), height: 1),
               const SizedBox(height: 24),
 
               // Article Paragraphs
@@ -534,7 +535,7 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                 ),
 
               const SizedBox(height: 32),
-              Divider(color: _textColor.withOpacity(0.08), height: 1),
+              Divider(color: _textColor.withValues(alpha: 0.08), height: 1),
               const SizedBox(height: 24),
 
               // Footer: Open original web & Ad-free notice
@@ -544,7 +545,7 @@ class _AdFreeArticleReaderScreenState extends State<AdFreeArticleReaderScreen> {
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: _textColor,
-                        side: BorderSide(color: _textColor.withOpacity(0.2)),
+                        side: BorderSide(color: _textColor.withValues(alpha: 0.2)),
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                       ),

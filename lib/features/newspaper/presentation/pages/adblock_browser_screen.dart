@@ -9,7 +9,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/colors.dart';
 import '../../domain/models/newspaper_models.dart';
-import 'adfree_article_reader_screen.dart';
 
 /// Ad-Free and Ad-Blocker Enabled In-App Web Browser for reading newspapers
 /// without annoying popups, video ads, or banner clutter.
@@ -134,8 +133,6 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
         ),
       ];
 
-  bool _isExiting = false;
-
   @override
   void initState() {
     super.initState();
@@ -153,12 +150,14 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
 
   Future<void> _handleBackPress() async {
     // 1. Try native webview controller if supported (mobile)
-    if (!kIsWeb) {
-      final controller = _webViewController;
-      if (controller != null && await controller.canGoBack()) {
-        await controller.goBack();
-        return;
-      }
+    if (!kIsWeb && _webViewController != null) {
+      try {
+        final canGoBack = await _webViewController!.canGoBack();
+        if (canGoBack) {
+          await _webViewController!.goBack();
+          return;
+        }
+      } catch (_) {}
     }
 
     // 2. Fall back to internal history stack (web + mobile fallback)
@@ -178,9 +177,6 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
 
     // 3. At initial page: exit back to Newspaper Hub
     if (mounted) {
-      setState(() {
-        _isExiting = true;
-      });
       if (context.canPop()) {
         context.pop();
       } else {
@@ -424,7 +420,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: _isExiting,
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         await _handleBackPress();
@@ -436,16 +432,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF111827), size: 24),
-            onPressed: () {
-              setState(() {
-                _isExiting = true;
-              });
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                Navigator.of(context).pop();
-              }
-            },
+            tooltip: 'Go back',
+            onPressed: _handleBackPress,
           ),
           titleSpacing: 0,
           title: Text(
@@ -624,6 +612,17 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                 ),
               ],
             ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded, color: Color(0xFF111827), size: 24),
+              tooltip: 'Close browser',
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
             const SizedBox(width: 4),
           ],
           bottom: PreferredSize(
@@ -654,15 +653,50 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                     displayZoomControls: false,
                     useWideViewPort: true,
                     loadWithOverviewMode: true,
-                    mediaPlaybackRequiresUserGesture: true,
-                    supportMultipleWindows: false,
-                    javaScriptCanOpenWindowsAutomatically: false,
+                    mediaPlaybackRequiresUserGesture: false,
+                    supportMultipleWindows: true,
+                    javaScriptCanOpenWindowsAutomatically: true,
+                    mixedContentMode: MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
+                    safeBrowsingEnabled: false,
+                    cacheEnabled: true,
+                    clearCache: false,
+                    thirdPartyCookiesEnabled: true,
+                    allowFileAccess: true,
+                    allowContentAccess: true,
+                    allowFileAccessFromFileURLs: true,
+                    allowUniversalAccessFromFileURLs: true,
                     contentBlockers:
                         (!kIsWeb && _isAdBlockEnabled) ? _contentBlockers : null,
                     userAgent: _isDesktopMode
                         ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                        : '',
+                        : 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36',
                   ),
+                  onCreateWindow: (controller, createWindowAction) async {
+                    final targetUrl = createWindowAction.request.url;
+                    if (targetUrl != null) {
+                      controller.loadUrl(urlRequest: URLRequest(url: targetUrl));
+                      return true;
+                    }
+                    return false;
+                  },
+                  onReceivedServerTrustAuthRequest: (controller, challenge) async {
+                    return ServerTrustAuthResponse(action: ServerTrustAuthResponseAction.PROCEED);
+                  },
+                  shouldOverrideUrlLoading: (controller, navigationAction) async {
+                    final uri = navigationAction.request.url;
+                    if (uri != null) {
+                      final scheme = uri.scheme.toLowerCase();
+                      if (scheme == 'http' || scheme == 'https') {
+                        return NavigationActionPolicy.ALLOW;
+                      } else if (scheme == 'tel' || scheme == 'mailto' || scheme == 'intent') {
+                        try {
+                          await launchUrl(Uri.parse(uri.toString()), mode: LaunchMode.externalApplication);
+                        } catch (_) {}
+                        return NavigationActionPolicy.CANCEL;
+                      }
+                    }
+                    return NavigationActionPolicy.ALLOW;
+                  },
                   onWebViewCreated: (controller) {
                     _webViewController = controller;
                     // JS Handler for blocked ads reporting
