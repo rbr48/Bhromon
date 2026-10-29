@@ -979,7 +979,20 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
               ),
             )
-          else
+          else ...[
+            if (!isMe &&
+                _voiceService.remoteRenderers.containsKey(p.email) &&
+                _voiceService.remoteRenderers[p.email]!.srcObject != null)
+              Positioned(
+                left: 0,
+                top: 0,
+                width: 1,
+                height: 1,
+                child: Opacity(
+                  opacity: 0.01,
+                  child: RTCVideoView(_voiceService.remoteRenderers[p.email]!),
+                ),
+              ),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -1026,6 +1039,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 ),
               ],
             ),
+          ],
           Positioned(
             left: 8,
             right: 8,
