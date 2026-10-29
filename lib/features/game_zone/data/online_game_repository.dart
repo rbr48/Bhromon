@@ -142,6 +142,7 @@ class OnlineGameRepository {
     required OnlineGameType gameType,
     required String tableName,
     int? customMaxPlayers,
+    bool isTournament = false,
   }) async {
     final host = OnlinePlayer(
       email: currentEmail,
@@ -173,6 +174,7 @@ class OnlineGameRepository {
       createdAt: now,
       updatedAt: now,
       version: 1,
+      isTournament: isTournament,
     );
 
     await docRef.set(session.toMap());
