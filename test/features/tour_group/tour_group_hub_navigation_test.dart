@@ -145,6 +145,7 @@ void main() {
     expect(find.text('Shared fund & ledger'), findsOneWidget);
     expect(find.text('Highway roadmap 🛣️'), findsOneWidget);
     expect(find.text('Safety hub & SOS 🚨'), findsOneWidget);
+    expect(find.text('Holiday calendar 📅'), findsOneWidget);
 
     // Verify Navigation bar tabs
     expect(find.byType(NavigationBar), findsOneWidget);
