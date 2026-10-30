@@ -109,6 +109,14 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
         color: Colors.orangeAccent,
       ),
       CommandPaletteItem(
+        title: 'ছুটির ক্যালেন্ডার (Holiday Calendar)',
+        subtitle: 'ছুটি, কর্মদিবস ও ছুটি পরিকল্পনা',
+        icon: Icons.event_note_rounded,
+        route: '/group/$tourId/calendar',
+        category: 'নেভিগেশন',
+        color: const Color(0xFF84CC16),
+      ),
+      CommandPaletteItem(
         title: 'নোটিশ ও মিটিং (Notice Board)',
         subtitle: 'জরুরি ঘোষণা ও মিটিং শিডিউল',
         icon: Icons.campaign_rounded,

@@ -1274,6 +1274,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           color: const Color(0xFF6366F1),
           onTap: () => context.push('/group/${group.id}/logistics'),
         ),
+      _ModuleItem(
+        title: context.l10n.translate('hub_module_calendar'),
+        subtitle: context.l10n.translate('hub_module_calendar_sub'),
+        icon: Icons.calendar_month_rounded,
+        color: const Color(0xFF84CC16),
+        onTap: () => context.push('/group/${group.id}/calendar'),
+      ),
       if (group.modules.tideSafety)
         _ModuleItem(
           title: group.tourType == TourType.beach
