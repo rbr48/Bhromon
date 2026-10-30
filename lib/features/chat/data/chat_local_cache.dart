@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../../core/utils/app_logger.dart';
 
 /// Ultra-fast local offline storage for Bhromon 1-on-1 Chat.
 ///
@@ -26,8 +26,8 @@ class ChatLocalCache {
       _convBox = await Hive.openBox<Map<dynamic, dynamic>>(_kConversationsBox);
       _lockedBox = await Hive.openBox<bool>(_kLockedChatsBox);
       _initialized = true;
-    } catch (e) {
-      debugPrint('Error initializing ChatLocalCache: $e');
+    } catch (e, st) {
+      logWarning('Error initializing ChatLocalCache', e, st);
     }
   }
 
@@ -70,8 +70,8 @@ class ChatLocalCache {
         }
       }
       await box.putAll(mapToStore);
-    } catch (e) {
-      debugPrint('Error caching messages for $chatId: $e');
+    } catch (e, st) {
+      logWarning('Error caching messages for $chatId', e, st);
     }
   }
 
@@ -85,8 +85,8 @@ class ChatLocalCache {
         list.add(Map<String, dynamic>.from(val));
       }
       return list;
-    } catch (e) {
-      debugPrint('Error reading cached messages for $chatId: $e');
+    } catch (e, st) {
+      logWarning('Error reading cached messages for $chatId', e, st);
       return [];
     }
   }
@@ -97,8 +97,8 @@ class ChatLocalCache {
     try {
       await init();
       await _convBox?.put(chatId, _sanitizeForHive(data));
-    } catch (e) {
-      debugPrint('Error caching conversation $chatId: $e');
+    } catch (e, st) {
+      logWarning('Error caching conversation $chatId', e, st);
     }
   }
 
@@ -113,8 +113,8 @@ class ChatLocalCache {
         }
       }
       return list;
-    } catch (e) {
-      debugPrint('Error reading cached conversations: $e');
+    } catch (e, st) {
+      logWarning('Error reading cached conversations', e, st);
       return [];
     }
   }
@@ -129,8 +129,8 @@ class ChatLocalCache {
     try {
       await init();
       await _lockedBox?.put(chatId, locked);
-    } catch (e) {
-      debugPrint('Error setting chat lock for $chatId: $e');
+    } catch (e, st) {
+      logWarning('Error setting chat lock for $chatId', e, st);
     }
   }
 
@@ -142,8 +142,8 @@ class ChatLocalCache {
           .cast<String>()
           .where((id) => _lockedBox!.get(id) == true)
           .toSet();
-    } catch (e) {
-      debugPrint('Error getting locked chat IDs: $e');
+    } catch (e, st) {
+      logWarning('Error getting locked chat IDs', e, st);
       return {};
     }
   }

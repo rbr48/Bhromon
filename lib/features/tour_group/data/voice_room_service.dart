@@ -6,6 +6,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/utils/app_logger.dart';
 import '../../chat/data/call_ice_config.dart';
 import '../../chat/data/call_media.dart';
 import '../domain/models/channel_models.dart';
@@ -490,8 +491,8 @@ class VoiceRoomService {
           }).catchError((_) {});
         });
       }
-    } catch (e) {
-      debugPrint('VoiceRoomService: connectToPeer error for $remoteEmail: $e');
+    } catch (e, st) {
+      logWarning('VoiceRoomService: connectToPeer error for $remoteEmail', e, st);
       _disconnectFromPeer(remoteEmail);
       _scheduleRetry();
     } finally {
@@ -600,8 +601,8 @@ class VoiceRoomService {
       stream.addTrack(track);
       _localRenderer.srcObject = stream;
       return track;
-    } catch (e) {
-      debugPrint('Error enabling video in voice room: $e');
+    } catch (e, st) {
+      logWarning('Error enabling video in voice room', e, st);
       return null;
     }
   }

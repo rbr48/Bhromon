@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/utils/logger.dart';
 
 /// WhatsApp-style location card message bubble.
 class ChatLocationBubble extends StatelessWidget {
@@ -32,7 +33,7 @@ class ChatLocationBubble extends StatelessWidget {
         await launchUrl(uri);
       }
     } catch (e) {
-      debugPrint('Could not open map: $e');
+      logError('Could not open map: $e');
     }
   }
 

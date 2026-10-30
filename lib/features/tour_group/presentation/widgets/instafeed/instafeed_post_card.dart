@@ -14,6 +14,7 @@ import 'reel_thumbnail_preview.dart';
 import 'tour_safe_network_image.dart';
 import '../member_profile/tour_member_profile_modal.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/utils/logger.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
@@ -162,7 +163,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
         _isVideoInitialized = true;
       });
     }).catchError((Object e) {
-      debugPrint('[InstafeedPostCard] Video init error: $e');
+      logWarning('[InstafeedPostCard] Video init error: $e');
     });
     ctrl.addListener(_onVideoStateChanged);
   }

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+import '../../../../core/utils/app_logger.dart';
 
 /// Calls the server that runs the online carrom board. The server plays every
 /// shot and scores it, so the phone only sends where the striker sits and how
@@ -147,14 +147,12 @@ class CarromApi {
             );
           }
         }
-        debugPrint(
-          '[CarromApi] VPS call $name failed (${e.message}). Falling back to Functions.',
-        );
-      } catch (e) {
+        logWarning(
+          '[CarromApi] VPS call $name failed (${e.message}). Falling back to Functions.', e);
+      } catch (e, st) {
         if (e is FirebaseFunctionsException) rethrow;
-        debugPrint(
-          '[CarromApi] VPS call $name error ($e). Falling back to Functions.',
-        );
+        logWarning(
+          '[CarromApi] VPS call $name error. Falling back to Functions.', e, st);
       }
     }
 

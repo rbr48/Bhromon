@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/entities/trip_log.dart';
 import '../../../../core/entities/explorer_profile.dart';
@@ -198,9 +199,9 @@ class FeedRepositoryImpl implements IFeedRepository {
         data['tripId'] = doc.id;
         _sanitizeTripLogData(data);
         logs.add(TripLog.fromJson(data));
-      } catch (e) {
+      } catch (e, st) {
         // Skip a malformed document instead of failing the whole page.
-        debugPrint('[FeedRepo] Skipped malformed trip_log ${doc.id}: $e');
+        logWarning('[FeedRepo] Skipped malformed trip_log ${doc.id}', e, st);
       }
     }
     return logs;

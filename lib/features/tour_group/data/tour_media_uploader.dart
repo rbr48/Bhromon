@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
+
+import '../../../../core/utils/app_logger.dart';
 
 import '../domain/services/media_rules.dart';
 import 'tour_media_journal.dart';
@@ -246,8 +248,8 @@ class TourMediaUploader {
               attempt >= kUploadAttempts) {
             rethrow;
           }
-          debugPrint(
-              'TourMediaUploader: attempt $attempt of $kUploadAttempts failed, retrying: ${e.type}');
+          logWarning(
+              'TourMediaUploader: attempt $attempt of $kUploadAttempts failed, retrying: ${e.type}', e);
           await Future<void>.delayed(Duration(seconds: 2 * attempt));
           if (cancelToken.isCancelled) throw const TourUploadCancelled();
         }
@@ -328,8 +330,8 @@ class TourMediaUploader {
           options: options,
         );
         return response.statusCode == 200;
-      } catch (e) {
-        debugPrint('[TourMediaUploader] Could not delete media ($url): $e');
+      } catch (e, st) {
+        logWarning('[TourMediaUploader] Could not delete media ($url)', e, st);
         return false;
       }
     }
@@ -338,9 +340,9 @@ class TourMediaUploader {
       try {
         await FirebaseStorage.instance.refFromURL(url).delete();
         return true;
-      } catch (e) {
-        debugPrint(
-            '[TourMediaUploader] Could not delete legacy media ($url): $e');
+      } catch (e, st) {
+        logWarning(
+            '[TourMediaUploader] Could not delete legacy media ($url)', e, st);
         return false;
       }
     }

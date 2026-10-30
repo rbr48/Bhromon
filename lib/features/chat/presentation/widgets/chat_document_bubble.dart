@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/utils/logger.dart';
 
 /// WhatsApp-style document attachment card.
 class ChatDocumentBubble extends StatefulWidget {
@@ -109,7 +110,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
         await OpenFilex.open(localFilePath);
       }
     } catch (e) {
-      debugPrint('Error downloading/opening document: $e');
+      logError('Error downloading/opening document: $e');
       if (mounted) {
         setState(() => _isDownloading = false);
         ScaffoldMessenger.of(context).showSnackBar(

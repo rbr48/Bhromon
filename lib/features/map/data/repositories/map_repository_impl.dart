@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import '../../../../core/utils/app_logger.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:drift/drift.dart' show Value;
@@ -110,9 +111,9 @@ class MapRepositoryImpl implements IMapRepository {
             jsonData: Value(jsonEncode(pin.toJson())),
           ),
       ]);
-    } catch (dbError) {
+    } catch (dbError, st) {
       // Non-blocking: the network result is still returned.
-      debugPrint('[MapRepository] Failed to cache pins in Drift: $dbError');
+      logWarning('[MapRepository] Failed to cache pins in Drift', dbError, st);
     }
   }
 
@@ -196,8 +197,8 @@ class MapRepositoryImpl implements IMapRepository {
           }
           // Save them to the local SQLite database so they are cached inside Drift
           await _cachePinsLocally(pins);
-        } catch (e) {
-          debugPrint('Failed to load predefined travel spots: $e');
+        } catch (e, st) {
+          logWarning('Failed to load predefined travel spots', e, st);
         }
       }
 

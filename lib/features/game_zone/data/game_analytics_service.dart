@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../domain/models/game_analytics_models.dart';
 
 /// Service managing persistent Game Zone analytics, match records, and win rates.
@@ -47,8 +47,8 @@ class GameAnalyticsService {
               PlayerGameAnalytics.fromMap(Map<String, dynamic>.from(raw));
         }
       }
-    } catch (e) {
-      debugPrint('[GameAnalyticsService] Hive load error: $e');
+    } catch (e, st) {
+      logWarning('[GameAnalyticsService] Hive load error', e, st);
       _current = PlayerGameAnalytics.empty();
     }
     _initialized = true;
@@ -84,8 +84,8 @@ class GameAnalyticsService {
           final box = await Hive.openBox<dynamic>(boxName);
           await box.put(statsKey, _current.toMap());
         }
-      } catch (e) {
-        debugPrint('[GameAnalyticsService] Hive save error: $e');
+      } catch (e, st) {
+        logWarning('[GameAnalyticsService] Hive save error', e, st);
       }
     }
 
@@ -129,8 +129,8 @@ class GameAnalyticsService {
           );
         }
       }
-    } catch (e) {
-      debugPrint('[GameAnalyticsService] Firestore sync error: $e');
+    } catch (e, st) {
+      logWarning('[GameAnalyticsService] Firestore sync error', e, st);
     }
   }
 
@@ -171,8 +171,8 @@ class GameAnalyticsService {
             rankBadge: 'Rookie',
           ));
         }
-      } catch (e) {
-        debugPrint('[GameAnalyticsService] Failed to load stats for $uid: $e');
+      } catch (e, st) {
+        logWarning('[GameAnalyticsService] Failed to load member stats', e, st);
       }
     }
 

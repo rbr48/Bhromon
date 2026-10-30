@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/utils/logger.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/expense_models.dart';
 import '../../domain/models/tour_group.dart';
@@ -70,7 +71,7 @@ class _TourScrapbookScreenState extends State<TourScrapbookScreen> {
       try {
         expenses = await _repository.watchExpenses(widget.tourId).first;
       } catch (e) {
-        debugPrint('Scrapbook: ledger not available: $e');
+        logWarning('Scrapbook: ledger not available: $e');
       }
       if (!mounted) return;
       setState(() {

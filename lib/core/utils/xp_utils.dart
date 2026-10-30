@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:flutter/foundation.dart';
+import 'app_logger.dart';
 
 class XpUtils {
   /// Awards standard XP amount to the explorer by writing a trust event.
@@ -33,7 +33,7 @@ class XpUtils {
         'weight': amount,
       });
 
-      debugPrint(
+      logDebug(
           '[XpUtils] Successfully enqueued trust event for $uid: $type ($amount XP)');
 
       // Recalculate score immediately via the Callable Cloud Function
@@ -41,14 +41,14 @@ class XpUtils {
         final callable = FirebaseFunctions.instanceFor(region: 'asia-south1')
             .httpsCallable('computeExplorerScore');
         await callable.call<dynamic>();
-        debugPrint(
+        logDebug(
             '[XpUtils] Recalculated explorer score successfully via Cloud Function');
-      } catch (e) {
-        debugPrint(
-            '[XpUtils] Failed to invoke computeExplorerScore Callable function: $e');
+      } catch (e, st) {
+        logWarning(
+            '[XpUtils] Failed to invoke computeExplorerScore Callable function', e, st);
       }
-    } catch (e) {
-      debugPrint('[XpUtils] Error awarding XP: $e');
+    } catch (e, st) {
+      logWarning('[XpUtils] Error awarding XP', e, st);
     }
   }
 
@@ -72,10 +72,10 @@ class XpUtils {
       if (difference == 0) return;
 
       await awardXp(uid, difference);
-      debugPrint(
+      logDebug(
           '[XpUtils] Set XP by adjusting difference of $difference for $uid');
-    } catch (e) {
-      debugPrint('[XpUtils] Error setting XP: $e');
+    } catch (e, st) {
+      logWarning('[XpUtils] Error setting XP', e, st);
     }
   }
 }

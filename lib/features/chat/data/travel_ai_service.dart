@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import '../../../core/utils/logger.dart';
 import '../../tour_group/domain/services/destination_catalog.dart';
 
 /// Intelligent AI Travel Guide service for Bhromon 1-on-1 chat.
@@ -30,7 +30,7 @@ class TravelAiService {
           return response;
         }
       } catch (e) {
-        debugPrint('Gemini API call failed, falling back to catalog: $e');
+        logWarning('Gemini API call failed, falling back to catalog: $e');
       }
     }
 

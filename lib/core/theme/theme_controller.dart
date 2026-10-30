@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../utils/app_logger.dart';
 
 /// The theme the user picked: follow the system, light or dark. Dark stays the
 /// default before a preference is loaded. The choice is kept on this device
@@ -52,8 +53,8 @@ class ThemeController extends ChangeNotifier {
         _mode = parsed;
         notifyListeners();
       }
-    } catch (e) {
-      debugPrint('[ThemeController] Could not load theme preference: $e');
+    } catch (e, st) {
+      logWarning('[ThemeController] Could not load theme preference', e, st);
     }
   }
 
@@ -64,8 +65,8 @@ class ThemeController extends ChangeNotifier {
     try {
       final box = await _openBox();
       await box.put(_key, nameOf(mode));
-    } catch (e) {
-      debugPrint('[ThemeController] Could not save theme preference: $e');
+    } catch (e, st) {
+      logWarning('[ThemeController] Could not save theme preference', e, st);
     }
   }
 
@@ -73,9 +74,9 @@ class ThemeController extends ChangeNotifier {
     try {
       if (Hive.isBoxOpen(_boxName)) return Hive.box<dynamic>(_boxName);
       return await Hive.openBox<dynamic>(_boxName);
-    } catch (e) {
-      debugPrint(
-          '[ThemeController] Corrupt preferences box: $e. Re-initializing...');
+    } catch (e, st) {
+      logWarning(
+          '[ThemeController] Corrupt preferences box: $e. Re-initializing...', e, st);
       try {
         await Hive.deleteBoxFromDisk(_boxName);
         return await Hive.openBox<dynamic>(_boxName);

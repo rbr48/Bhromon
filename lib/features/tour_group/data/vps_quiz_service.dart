@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+
+import '../../../../core/utils/app_logger.dart';
 
 /// Represents a single travel quiz question rendered from the server.
 class ServerQuizQuestion {
@@ -121,7 +122,7 @@ class VpsQuizService {
         return questions;
       }
     } catch (e) {
-      debugPrint('[VpsQuiz] Remote fetch failed, falling back to cache: $e');
+      logDebug('[VpsQuiz] Remote fetch failed, falling back to cache: $e');
     }
 
     // 2. Fallback to cached questions
@@ -134,8 +135,8 @@ class VpsQuizService {
                 Map<String, dynamic>.from(e as Map)))
             .toList();
       }
-    } catch (e) {
-      debugPrint('[VpsQuiz] Cache read error: $e');
+    } catch (e, st) {
+      logWarning('[VpsQuiz] Cache read error', e, st);
     }
 
     // 3. Fallback to built-in verified questions
@@ -166,8 +167,8 @@ class VpsQuizService {
         },
       );
       return res.data;
-    } catch (e) {
-      debugPrint('[VpsQuiz] Failed to submit attempt: $e');
+    } catch (e, st) {
+      logWarning('[VpsQuiz] Failed to submit attempt', e, st);
       return null;
     }
   }
@@ -181,8 +182,8 @@ class VpsQuizService {
       );
       final raw = res.data?['leaderboard'] as List? ?? [];
       return raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    } catch (e) {
-      debugPrint('[VpsQuiz] Failed to fetch leaderboard: $e');
+    } catch (e, st) {
+      logWarning('[VpsQuiz] Failed to fetch leaderboard', e, st);
       return [];
     }
   }

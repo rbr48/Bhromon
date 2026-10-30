@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 
@@ -245,7 +246,7 @@ class StarredMessagesScreen extends StatelessWidget {
                                           FieldValue.delete(),
                                     });
                                   } catch (e) {
-                                    debugPrint('Error unstarring: $e');
+                                    logError('Error unstarring: $e');
                                   }
                                 },
                               ),

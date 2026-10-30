@@ -7,6 +7,7 @@ import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart'
 import 'instafeed_zoomable_media.dart';
 import 'tour_safe_network_image.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/utils/logger.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
 /// Full-screen vertical Reels player modal with video pre-caching, hold-to-pause
@@ -108,7 +109,7 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
       }
       setState(() {});
     }).catchError((Object e) {
-      debugPrint('[ReelsModal] Failed to init controller $index: $e');
+      logWarning('[ReelsModal] Failed to init controller $index: $e');
     });
 
     return controller;

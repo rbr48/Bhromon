@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/utils/concurrency.dart';
 import '../../../../core/utils/image_sizing.dart';
+import '../../../../core/utils/logger.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:io';
@@ -1305,7 +1306,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
             );
           }
         } catch (e) {
-          debugPrint('Firebase Storage upload failed: $e');
+          logError('Firebase Storage upload failed: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -1338,7 +1339,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
         );
       }
     } catch (e) {
-      debugPrint('Error picking images: $e');
+      logError('Error picking images: $e');
     } finally {
       if (mounted) {
         setState(() {
@@ -1392,7 +1393,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
             );
           }
         } catch (e) {
-          debugPrint('Firebase Storage video upload failed: $e');
+          logError('Firebase Storage video upload failed: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -1421,7 +1422,7 @@ class _TripLogEditorState extends State<TripLogEditor> {
         }
       }
     } catch (e) {
-      debugPrint('Error picking video: $e');
+      logError('Error picking video: $e');
     } finally {
       if (mounted) {
         setState(() {

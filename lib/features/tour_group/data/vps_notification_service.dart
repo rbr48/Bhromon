@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/utils/app_logger.dart';
 import 'tour_media_uploader.dart';
 
 /// Direct client for triggering background notifications via the Bhromon VPS
@@ -48,8 +47,8 @@ class VpsNotificationService {
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-    } catch (e) {
-      debugPrint('[VpsNotificationService] notifySos error: $e');
+    } catch (e, st) {
+      logWarning('[VpsNotificationService] notifySos error', e, st);
     }
   }
 
@@ -81,8 +80,8 @@ class VpsNotificationService {
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-    } catch (e) {
-      debugPrint('[VpsNotificationService] notifyChannelMessage error: $e');
+    } catch (e, st) {
+      logWarning('[VpsNotificationService] notifyChannelMessage error', e, st);
     }
   }
 }

@@ -8,6 +8,7 @@ import 'package:bhromon/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:bhromon/features/auth/presentation/cubit/auth_state.dart';
 import 'package:bhromon/core/entities/location_pin.dart';
 import 'package:bhromon/core/widgets/adaptive_columns.dart';
+import 'package:bhromon/core/utils/logger.dart';
 
 class ExplorerDashboardScreen extends StatefulWidget {
   const ExplorerDashboardScreen({super.key});
@@ -131,7 +132,7 @@ class _ExplorerDashboardScreenState extends State<ExplorerDashboardScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error loading dashboard data: $e');
+      logError('Error loading dashboard data: $e');
       if (mounted) {
         setState(() {
           _loading = false;

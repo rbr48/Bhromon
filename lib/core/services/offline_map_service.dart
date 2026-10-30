@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import '../utils/app_logger.dart';
 
 class MapProgress {
   final String districtId;
@@ -122,8 +122,8 @@ class OfflineMapService {
     try {
       await setOfflineTileCountLimit(60000);
       _tileLimitRaised = true;
-    } catch (e) {
-      debugPrint('[OfflineMapService] Could not raise tile count limit: $e');
+    } catch (e, st) {
+      logWarning('[OfflineMapService] Could not raise tile count limit', e, st);
     }
   }
 
@@ -173,11 +173,10 @@ class OfflineMapService {
 
       _progressController.add(MapProgress(districtId, 1.0));
       onProgress?.call(1.0);
-      debugPrint('[OfflineMapService] Offline region ready for $districtId');
+      logInfo('[OfflineMapService] Offline region ready for $districtId');
       return true;
-    } catch (e) {
-      debugPrint(
-          '[OfflineMapService] Failed to download region $districtId: $e');
+    } catch (e, st) {
+      logError('[OfflineMapService] Failed to download region $districtId', e, st);
       return false;
     }
   }
@@ -191,8 +190,8 @@ class OfflineMapService {
           .whereType<String>()
           .toSet()
           .toList();
-    } catch (e) {
-      debugPrint('[OfflineMapService] Could not list offline regions: $e');
+    } catch (e, st) {
+      logWarning('[OfflineMapService] Could not list offline regions', e, st);
       return [];
     }
   }
@@ -213,8 +212,8 @@ class OfflineMapService {
           await deleteOfflineRegion(region.id);
         }
       }
-    } catch (e) {
-      debugPrint('[OfflineMapService] Failed to delete region $districtId: $e');
+    } catch (e, st) {
+      logWarning('[OfflineMapService] Failed to delete region $districtId', e, st);
     }
   }
 }

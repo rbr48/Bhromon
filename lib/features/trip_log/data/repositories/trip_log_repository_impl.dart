@@ -1,8 +1,8 @@
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../../../../core/entities/trip_log.dart';
@@ -52,8 +52,7 @@ class TripLogRepositoryImpl implements ITripLogRepository {
             _sanitizeTripLogData(data);
             logs.add(TripLog.fromJson(data));
           } catch (e) {
-            // ignore: avoid_print
-            print('[TripLogRepo] Skipped malformed trip_log ${doc.id}: $e');
+            logWarning('[TripLogRepo] Skipped malformed trip_log ${doc.id}: $e');
           }
         }
       }
@@ -132,8 +131,8 @@ class TripLogRepositoryImpl implements ITripLogRepository {
       await XpUtils.awardXp(tripLog.authorId, 25);
 
       return Right(tripLog);
-    } catch (e) {
-      debugPrint('[TripLogRepo] Direct publish failed: $e');
+    } catch (e, st) {
+      logWarning('[TripLogRepo] Direct publish failed', e, st);
       return Left(ServerFailure(e.toString()));
     }
   }

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:bhromon/core/theme/colors.dart';
+import 'package:bhromon/core/utils/logger.dart';
 import 'package:bhromon/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:bhromon/features/auth/presentation/cubit/auth_state.dart';
 
@@ -179,7 +180,7 @@ class _ChallengesScreenState extends State<ChallengesScreen>
         });
       }
     } catch (e) {
-      debugPrint('Error loading challenges: $e');
+      logError('Error loading challenges: $e');
       if (mounted) {
         setState(() {
           _loading = false;

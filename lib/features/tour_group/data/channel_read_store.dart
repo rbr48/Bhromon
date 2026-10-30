@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../../core/utils/app_logger.dart';
 
 /// Per-device channel state: when each channel was last read, and which
 /// channels are muted. Nothing here is shared with other members. If the box
@@ -13,8 +13,8 @@ class ChannelReadStore {
     if (_box != null) return _box;
     try {
       _box = await Hive.openBox<dynamic>(_boxName);
-    } catch (e) {
-      debugPrint('[ChannelReadStore] could not open $_boxName: $e');
+    } catch (e, st) {
+      logWarning('[ChannelReadStore] could not open $_boxName', e, st);
     }
     return _box;
   }
@@ -31,8 +31,8 @@ class ChannelReadStore {
               key is String && prefixes.any((prefix) => key.startsWith(prefix)))
           .toList();
       await box.deleteAll(doomed);
-    } catch (e) {
-      debugPrint('[ChannelReadStore] could not clear $tourId: $e');
+    } catch (e, st) {
+      logWarning('[ChannelReadStore] could not clear $tourId', e, st);
     }
   }
 

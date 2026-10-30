@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../../core/utils/logger.dart';
 
 typedef VoiceRecordCallback = void Function(String filePath, Duration duration);
 
@@ -89,7 +90,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
         }
       });
     } catch (e) {
-      debugPrint('VoiceMessageRecorder start error: $e');
+      logError('VoiceMessageRecorder start error: $e');
       widget.onCancel();
     }
   }
@@ -111,7 +112,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
         widget.onCancel();
       }
     } catch (e) {
-      debugPrint('VoiceMessageRecorder stop error: $e');
+      logError('VoiceMessageRecorder stop error: $e');
       widget.onCancel();
     }
   }

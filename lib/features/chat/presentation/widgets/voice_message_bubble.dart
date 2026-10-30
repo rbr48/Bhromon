@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import '../../../../core/utils/logger.dart';
 
 /// WhatsApp-style voice message playback bubble.
 ///
@@ -85,7 +86,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           await _player.play(UrlSource(widget.audioUrl));
         }
       } catch (e) {
-        debugPrint('AudioPlayer error: $e');
+        logError('AudioPlayer error: $e');
         if (mounted) {
           setState(() => _isLoading = false);
         }

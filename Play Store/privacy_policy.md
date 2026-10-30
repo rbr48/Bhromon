@@ -14,7 +14,8 @@ This Privacy Policy explains how we collect, use, disclose, and protect your inf
 
 ### A. Location Data
 Location services power our Universal Tour Engine, multi-stop route roadmaps, and emergency response features:
-* **Foreground Location (GPS)**: When the App is in use, we access your device's precise coordinates to display your position on the map, verify tour checkpoint arrivals, and calculate distances along travel legs.
+* **Zero Background Tracking**: Bhromon never requests or performs background location tracking. Your location is never tracked while the app is in the background or closed.
+* **Foreground Location (GPS)**: Only when the App is actively in use, we access your device's precise coordinates to display your position on the map, verify tour checkpoint arrivals, and calculate distances along travel legs.
 * **Emergency SOS Location**: When you activate the emergency SOS siren in the Family Safety Hub, your approximate or precise GPS coordinates are included with the alert broadcast to other members of your active tour group.
 * **User Control**: Location access is strictly opt-in. You can enable or disable location services at any time via device settings. Map browsing, group ledgers, voice channels, and offline features remain accessible even without GPS permissions.
 

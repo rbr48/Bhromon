@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/utils/logger.dart';
 import '../../../domain/models/expense_models.dart';
 import '../../../domain/models/itinerary_models.dart';
 import '../../../domain/models/tour_group.dart';
@@ -294,7 +295,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
         _pickedReceiptBytes = bytes;
       });
     } catch (err) {
-      debugPrint('Receipt pick error: $err');
+      logError('Receipt pick error: $err');
     }
   }
 

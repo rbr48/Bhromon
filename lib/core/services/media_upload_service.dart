@@ -3,7 +3,8 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../utils/app_logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:uuid/uuid.dart';
@@ -171,7 +172,7 @@ class MediaUploadService {
 
     await uploadTask;
     final downloadUrl = await ref.getDownloadURL();
-    debugPrint(
+    logInfo(
         'MediaUploadService uploaded bytes to Firebase Storage: $downloadUrl');
     return downloadUrl;
   }
@@ -203,7 +204,7 @@ class MediaUploadService {
 
     await uploadTask;
     final downloadUrl = await ref.getDownloadURL();
-    debugPrint(
+    logInfo(
         'MediaUploadService uploaded file to Firebase Storage: $downloadUrl');
     return downloadUrl;
   }
@@ -245,7 +246,7 @@ class MediaUploadService {
       throw Exception('VPS media server did not return a valid download URL');
     }
 
-    debugPrint('MediaUploadService uploaded bytes to VPS: $url');
+    logInfo('MediaUploadService uploaded bytes to VPS: $url');
     return url;
   }
 
@@ -283,7 +284,7 @@ class MediaUploadService {
       throw Exception('VPS media server did not return a valid download URL');
     }
 
-    debugPrint('MediaUploadService uploaded file to VPS: $url');
+    logInfo('MediaUploadService uploaded file to VPS: $url');
     return url;
   }
 
@@ -333,17 +334,17 @@ class MediaUploadService {
           path: path,
           onProgress: onProgress,
         );
-      } catch (fbErr) {
-        debugPrint(
-            'MediaUploadService: Firebase Storage profile upload failed ($fbErr), falling back to VPS...');
+      } catch (fbErr, st) {
+        logWarning(
+            'MediaUploadService: Firebase Storage profile upload failed, falling back to VPS...', fbErr, st);
         try {
           return await _uploadFileToVps(
             file: fileToUpload,
             path: path,
             onProgress: onProgress,
           );
-        } catch (vpsErr) {
-          debugPrint('MediaUploadService: VPS fallback also failed ($vpsErr)');
+        } catch (vpsErr, vst) {
+          logError('MediaUploadService: VPS fallback also failed', vpsErr, vst);
           rethrow;
         }
       }
@@ -356,18 +357,18 @@ class MediaUploadService {
         path: path,
         onProgress: onProgress,
       );
-    } catch (vpsErr) {
-      debugPrint(
-          'MediaUploadService: VPS upload failed ($vpsErr), falling back to Firebase Storage...');
+    } catch (vpsErr, st) {
+      logWarning(
+          'MediaUploadService: VPS upload failed, falling back to Firebase Storage...', vpsErr, st);
       try {
         return await _uploadFileToFirebase(
           file: fileToUpload,
           path: path,
           onProgress: onProgress,
         );
-      } catch (fbErr) {
-        debugPrint(
-            'MediaUploadService: Firebase Storage fallback also failed ($fbErr)');
+      } catch (fbErr, fst) {
+        logError(
+            'MediaUploadService: Firebase Storage fallback also failed', fbErr, fst);
         rethrow;
       }
     }
@@ -389,9 +390,9 @@ class MediaUploadService {
           contentType: contentType,
           onProgress: onProgress,
         );
-      } catch (fbErr) {
-        debugPrint(
-            'MediaUploadService: Firebase Storage profile bytes upload failed ($fbErr), falling back to VPS...');
+      } catch (fbErr, st) {
+        logWarning(
+            'MediaUploadService: Firebase Storage profile bytes upload failed, falling back to VPS...', fbErr, st);
         try {
           return await _uploadBytesToVps(
             bytes: bytes,
@@ -399,8 +400,8 @@ class MediaUploadService {
             contentType: contentType,
             onProgress: onProgress,
           );
-        } catch (vpsErr) {
-          debugPrint('MediaUploadService: VPS fallback also failed ($vpsErr)');
+        } catch (vpsErr, vst) {
+          logError('MediaUploadService: VPS fallback also failed', vpsErr, vst);
           rethrow;
         }
       }
@@ -414,9 +415,9 @@ class MediaUploadService {
         contentType: contentType,
         onProgress: onProgress,
       );
-    } catch (vpsErr) {
-      debugPrint(
-          'MediaUploadService: VPS bytes upload failed ($vpsErr), falling back to Firebase Storage...');
+    } catch (vpsErr, st) {
+      logWarning(
+          'MediaUploadService: VPS bytes upload failed, falling back to Firebase Storage...', vpsErr, st);
       try {
         return await _uploadBytesToFirebase(
           bytes: bytes,
@@ -424,9 +425,9 @@ class MediaUploadService {
           contentType: contentType,
           onProgress: onProgress,
         );
-      } catch (fbErr) {
-        debugPrint(
-            'MediaUploadService: Firebase Storage fallback also failed ($fbErr)');
+      } catch (fbErr, fst) {
+        logError(
+            'MediaUploadService: Firebase Storage fallback also failed', fbErr, fst);
         rethrow;
       }
     }
@@ -476,10 +477,10 @@ class MediaUploadService {
         throw Exception('VPS media server did not return a valid download URL');
       }
 
-      debugPrint('MediaUploadService uploaded XFile to VPS: $url');
+      logInfo('MediaUploadService uploaded XFile to VPS: $url');
       return url;
-    } catch (e) {
-      debugPrint('MediaUploadService XFile VPS Error: $e');
+    } catch (e, st) {
+      logError('MediaUploadService XFile VPS Error', e, st);
       rethrow;
     }
   }
@@ -499,7 +500,7 @@ class MediaUploadService {
             '$deleteBaseUrl/$tourId/$folder/$filename',
             options: options,
           );
-          debugPrint('MediaUploadService deleted VPS media: $path');
+          logInfo('MediaUploadService deleted VPS media: $path');
           return;
         }
       }
@@ -508,10 +509,10 @@ class MediaUploadService {
       if (path.startsWith('gs://') ||
           path.contains('firebasestorage.googleapis.com')) {
         await FirebaseStorage.instance.refFromURL(path).delete();
-        debugPrint('MediaUploadService deleted legacy Firebase media: $path');
+        logInfo('MediaUploadService deleted legacy Firebase media: $path');
       }
-    } catch (e) {
-      debugPrint('MediaUploadService Delete Error (Path: $path): $e');
+    } catch (e, st) {
+      logWarning('MediaUploadService Delete Error (Path: $path)', e, st);
     }
   }
 }

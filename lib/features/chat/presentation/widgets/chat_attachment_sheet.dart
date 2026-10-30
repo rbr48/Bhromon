@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/utils/logger.dart';
 
 enum AttachmentType {
   document,
@@ -50,7 +51,7 @@ class ChatAttachmentSheet extends StatelessWidget {
         onDocumentPicked(res.files.first);
       }
     } catch (e) {
-      debugPrint('Error picking document: $e');
+      logError('Error picking document: $e');
     }
   }
 
@@ -64,7 +65,7 @@ class ChatAttachmentSheet extends StatelessWidget {
         onMediaPicked(photo, false);
       }
     } catch (e) {
-      debugPrint('Error capturing photo: $e');
+      logError('Error capturing photo: $e');
     }
   }
 
@@ -78,7 +79,7 @@ class ChatAttachmentSheet extends StatelessWidget {
         onMediaPicked(media, false);
       }
     } catch (e) {
-      debugPrint('Error picking gallery image: $e');
+      logError('Error picking gallery image: $e');
     }
   }
 
@@ -90,7 +91,7 @@ class ChatAttachmentSheet extends StatelessWidget {
         onAudioPicked(res.files.first);
       }
     } catch (e) {
-      debugPrint('Error picking audio: $e');
+      logError('Error picking audio: $e');
     }
   }
 
@@ -113,7 +114,7 @@ class ChatAttachmentSheet extends StatelessWidget {
       );
       onLocationPicked(pos, 'Current Location');
     } catch (e) {
-      debugPrint('Error getting location: $e');
+      logError('Error getting location: $e');
     }
   }
 

@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../../../../core/utils/app_logger.dart';
+
 /// Bhromon VPS Chat Service.
 ///
 /// Exclusively uses the Bhromon Hostinger VPS (bhromon.fun) for 1-on-1 chat,
@@ -116,7 +118,7 @@ class VpsChatService {
 
       _reconnectAttempts = 0;
       _isConnecting = false;
-      debugPrint('[VpsChat] WebSocket connected for uid: $_currentUid');
+      logInfo('[VpsChat] WebSocket connected');
 
       // Start ping keep-alive
       _pingTimer?.cancel();
@@ -128,16 +130,16 @@ class VpsChatService {
       _wsSubscription = _wsChannel!.stream.listen(
         _handleWsMessage,
         onError: (Object error) {
-          debugPrint('[VpsChat] WebSocket error: $error');
+          logWarning('[VpsChat] WebSocket error', error);
           _scheduleReconnect();
         },
         onDone: () {
-          debugPrint('[VpsChat] WebSocket closed');
+          logDebug('[VpsChat] WebSocket closed');
           _scheduleReconnect();
         },
       );
-    } catch (e) {
-      debugPrint('[VpsChat] WebSocket connection failed: $e');
+    } catch (e, st) {
+      logWarning('[VpsChat] WebSocket connection failed', e, st);
       _isConnecting = false;
       _scheduleReconnect();
     }
@@ -150,7 +152,7 @@ class VpsChatService {
 
     _reconnectAttempts++;
     final delaySeconds = (_reconnectAttempts * 2).clamp(1, 20);
-    debugPrint('[VpsChat] Scheduling reconnect in ${delaySeconds}s...');
+    logDebug('[VpsChat] Scheduling reconnect in ${delaySeconds}s...');
     _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
       _connectWebSocket();
     });
@@ -173,8 +175,8 @@ class VpsChatService {
       if (_wsChannel != null) {
         _wsChannel!.sink.add(jsonEncode(event));
       }
-    } catch (e) {
-      debugPrint('[VpsChat] Failed to send WS event: $e');
+    } catch (e, st) {
+      logWarning('[VpsChat] Failed to send WS event', e, st);
     }
   }
 
@@ -256,8 +258,8 @@ class VpsChatService {
         default:
           break;
       }
-    } catch (e) {
-      debugPrint('[VpsChat] Error handling WS message: $e');
+    } catch (e, st) {
+      logWarning('[VpsChat] Error handling WS message', e, st);
     }
   }
 
@@ -276,9 +278,9 @@ class VpsChatService {
         },
         options: _authHeader(idToken),
       );
-      debugPrint('[VpsChat] Registered device token to VPS');
-    } catch (e) {
-      debugPrint('[VpsChat] Failed to register device token: $e');
+      logDebug('[VpsChat] Registered device token to VPS');
+    } catch (e, st) {
+      logWarning('[VpsChat] Failed to register device token', e, st);
     }
   }
 
@@ -295,8 +297,8 @@ class VpsChatService {
         options: _authHeader(idToken),
       );
       return res.data?['isOnline'] as bool?;
-    } catch (e) {
-      debugPrint('[VpsChat] Failed to fetch online status: $e');
+    } catch (e, st) {
+      logWarning('[VpsChat] Failed to fetch online status', e, st);
       return null;
     }
   }
@@ -317,8 +319,8 @@ class VpsChatService {
 
       _conversationsController.add(list);
       return list;
-    } catch (e) {
-      debugPrint('[VpsChat] Failed to fetch conversations: $e');
+    } catch (e, st) {
+      logWarning('[VpsChat] Failed to fetch conversations', e, st);
       return [];
     }
   }
@@ -346,8 +348,8 @@ class VpsChatService {
       return (res.data?['messages'] as List? ?? [])
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
-    } catch (e) {
-      debugPrint('[VpsChat] Failed to fetch messages: $e');
+    } catch (e, st) {
+      logWarning('[VpsChat] Failed to fetch messages', e, st);
       return [];
     }
   }
@@ -395,8 +397,8 @@ class VpsChatService {
         unawaited(fetchConversations());
       }
       return saved;
-    } catch (e) {
-      debugPrint('[VpsChat] Failed to send message: $e');
+    } catch (e, st) {
+      logError('[VpsChat] Failed to send message', e, st);
       return null;
     }
   }
@@ -433,8 +435,8 @@ class VpsChatService {
         data: {'chatId': chatId, 'messageIds': messageIds},
         options: _authHeader(idToken),
       );
-    } catch (e) {
-      debugPrint('[VpsChat] Failed to mark read: $e');
+    } catch (e, st) {
+      logWarning('[VpsChat] Failed to mark read', e, st);
     }
   }
 
@@ -456,8 +458,8 @@ class VpsChatService {
         },
         options: _authHeader(idToken),
       );
-    } catch (e) {
-      debugPrint('[VpsChat] Failed to toggle reaction: $e');
+    } catch (e, st) {
+      logWarning('[VpsChat] Failed to toggle reaction', e, st);
     }
   }
 
@@ -479,8 +481,8 @@ class VpsChatService {
         },
         options: _authHeader(idToken),
       );
-    } catch (e) {
-      debugPrint('[VpsChat] Failed to delete message: $e');
+    } catch (e, st) {
+      logWarning('[VpsChat] Failed to delete message', e, st);
     }
   }
 

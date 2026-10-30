@@ -39,6 +39,7 @@ import '../../data/vps_chat_service.dart';
 import '../../domain/call_log_entry.dart';
 import '../../data/travel_ai_service.dart';
 import '../../../../core/utils/image_sizing.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../core/services/media_upload_service.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -556,7 +557,7 @@ class _ChatScreenState extends State<ChatScreen> {
         'chatId': widget.chatId,
         'timestamp': FieldValue.serverTimestamp(),
       }).catchError((Object e) {
-        debugPrint('Notification dispatch skipped: $e');
+        logWarning('Notification dispatch skipped: $e');
       });
     }
   }
@@ -762,7 +763,7 @@ class _ChatScreenState extends State<ChatScreen> {
           'editedAt': FieldValue.serverTimestamp(),
         });
       } catch (e) {
-        debugPrint('Error editing message: $e');
+        logError('Error editing message: $e');
       }
       return;
     }
@@ -862,7 +863,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
       // Update chat metadata asynchronously without blocking
       chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-        debugPrint('Chat metadata update failed: $e');
+        logWarning('Chat metadata update failed: $e');
       });
 
       // Send in-app notification in background
@@ -877,7 +878,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _processAiResponse(currentUid, text);
       }
     } catch (e) {
-      debugPrint('Firestore message write error (delivered via VPS): $e');
+      logWarning('Firestore message write error (delivered via VPS): $e');
       // If Firestore failed due to quota or network, clear pending message since VPS delivered it
       if (mounted) {
         setState(() {
@@ -926,7 +927,7 @@ class _ChatScreenState extends State<ChatScreen> {
         },
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Error in TravelAiService: $e');
+      logError('Error in TravelAiService: $e');
     } finally {
       _updateTypingStatus('bhromon_ai_advisor', false);
     }
@@ -953,7 +954,7 @@ class _ChatScreenState extends State<ChatScreen> {
       try {
         fileBytes = await xFile.readAsBytes();
       } catch (e) {
-        debugPrint('Error reading media bytes for optimistic preview: $e');
+        logWarning('Error reading media bytes for optimistic preview: $e');
       }
     }
 
@@ -981,7 +982,7 @@ class _ChatScreenState extends State<ChatScreen> {
         try {
           await currentUser.getIdToken();
         } catch (e) {
-          debugPrint('Auth token refresh error: $e');
+          logWarning('Auth token refresh error: $e');
         }
       }
 
@@ -1003,10 +1004,10 @@ class _ChatScreenState extends State<ChatScreen> {
           if (compressed != null) {
             fileToUpload = File(compressed.path);
             pending.file = fileToUpload;
-            debugPrint('Image compressed: ${fileToUpload.lengthSync()} bytes');
+            logInfo('Image compressed: ${fileToUpload.lengthSync()} bytes');
           }
         } catch (e) {
-          debugPrint('Compression failed, using original: $e');
+          logWarning('Compression failed, using original: $e');
         }
       }
 
@@ -1072,7 +1073,7 @@ class _ChatScreenState extends State<ChatScreen> {
       try {
         await msgRef.set(msgData);
         chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-          debugPrint('Chat metadata update failed: $e');
+          logWarning('Chat metadata update failed: $e');
         });
 
         _sendNotificationToRecipient(
@@ -1082,10 +1083,10 @@ class _ChatScreenState extends State<ChatScreen> {
           body: lastMsg,
         );
       } catch (e) {
-        debugPrint('Firestore media write skipped/quota: $e');
+        logWarning('Firestore media write skipped/quota: $e');
       }
     } catch (e) {
-      debugPrint('Media upload error: $e');
+      logError('Media upload error: $e');
       String msg = 'Failed to send media.';
       if (e is FirebaseException &&
           e.message != null &&
@@ -1127,7 +1128,7 @@ class _ChatScreenState extends State<ChatScreen> {
         try {
           await currentUser.getIdToken();
         } catch (e) {
-          debugPrint('Auth token refresh error: $e');
+          logWarning('Auth token refresh error: $e');
         }
       }
 
@@ -1190,7 +1191,7 @@ class _ChatScreenState extends State<ChatScreen> {
       try {
         await msgRef.set(msgData);
         chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-          debugPrint('Chat metadata update failed: $e');
+          logWarning('Chat metadata update failed: $e');
         });
 
         _sendNotificationToRecipient(
@@ -1200,10 +1201,10 @@ class _ChatScreenState extends State<ChatScreen> {
           body: '🎤 Voice message (${duration.inSeconds}s)',
         );
       } catch (e) {
-        debugPrint('Firestore voice message skipped/quota: $e');
+        logWarning('Firestore voice message skipped/quota: $e');
       }
     } catch (e) {
-      debugPrint('Error sending voice message: $e');
+      logError('Error sending voice message: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1293,7 +1294,7 @@ class _ChatScreenState extends State<ChatScreen> {
       try {
         await msgRef.set(msgData);
         chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-          debugPrint('Chat metadata update failed: $e');
+          logWarning('Chat metadata update failed: $e');
         });
 
         _sendNotificationToRecipient(
@@ -1303,10 +1304,10 @@ class _ChatScreenState extends State<ChatScreen> {
           body: '📄 ${pFile.name}',
         );
       } catch (e) {
-        debugPrint('Firestore document message skipped/quota: $e');
+        logWarning('Firestore document message skipped/quota: $e');
       }
     } catch (e) {
-      debugPrint('Error sending document: $e');
+      logError('Error sending document: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1380,7 +1381,7 @@ class _ChatScreenState extends State<ChatScreen> {
       try {
         await msgRef.set(msgData);
         chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-          debugPrint('Chat metadata update failed: $e');
+          logWarning('Chat metadata update failed: $e');
         });
 
         _sendNotificationToRecipient(
@@ -1390,10 +1391,10 @@ class _ChatScreenState extends State<ChatScreen> {
           body: '📍 Shared location: $title',
         );
       } catch (e) {
-        debugPrint('Firestore location message skipped/quota: $e');
+        logWarning('Firestore location message skipped/quota: $e');
       }
     } catch (e) {
-      debugPrint('Error sending location: $e');
+      logError('Error sending location: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1466,7 +1467,7 @@ class _ChatScreenState extends State<ChatScreen> {
       try {
         await msgRef.set(msgData);
         chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-          debugPrint('Chat metadata update failed: $e');
+          logWarning('Chat metadata update failed: $e');
         });
 
         _sendNotificationToRecipient(
@@ -1476,10 +1477,10 @@ class _ChatScreenState extends State<ChatScreen> {
           body: '৳${amount.toStringAsFixed(0)} Split: $expenseTitle',
         );
       } catch (e) {
-        debugPrint('Firestore expense message skipped/quota: $e');
+        logWarning('Firestore expense message skipped/quota: $e');
       }
     } catch (e) {
-      debugPrint('Error sending expense split: $e');
+      logError('Error sending expense split: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1548,7 +1549,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _openMediaCaptionFlow(photo, false, currentUid, currentName);
       }
     } catch (e) {
-      debugPrint('Error opening camera: $e');
+      logError('Error opening camera: $e');
     }
   }
 
@@ -1785,7 +1786,7 @@ class _ChatScreenState extends State<ChatScreen> {
             .doc(doc.id)
             .update({'reactions.$currentUid': FieldValue.delete()});
       } catch (e) {
-        debugPrint('Error removing reaction: $e');
+        logError('Error removing reaction: $e');
       }
     } else {
       try {
@@ -1796,7 +1797,7 @@ class _ChatScreenState extends State<ChatScreen> {
             .doc(doc.id)
             .update({'reactions.$currentUid': emoji});
       } catch (e) {
-        debugPrint('Error adding reaction: $e');
+        logError('Error adding reaction: $e');
       }
     }
   }
@@ -1819,7 +1820,7 @@ class _ChatScreenState extends State<ChatScreen> {
           'starredBy.$currentUid': isStarred ? FieldValue.delete() : true,
         });
       } catch (e) {
-        debugPrint('Error toggling star: $e');
+        logError('Error toggling star: $e');
       }
     }
     setState(() => _selectedMessageIds.clear());
@@ -1876,7 +1877,7 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     } catch (e) {
-      debugPrint('Error pinning message: $e');
+      logError('Error pinning message: $e');
     }
     setState(() => _selectedMessageIds.clear());
   }
@@ -1944,7 +1945,7 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     } catch (e) {
-      debugPrint('Error forwarding message: $e');
+      logError('Error forwarding message: $e');
     }
   }
 
@@ -2081,7 +2082,7 @@ class _ChatScreenState extends State<ChatScreen> {
           },
           SetOptions(merge: true));
       batch.commit().catchError((Object e) {
-        debugPrint('Error marking messages as seen: $e');
+        logWarning('Error marking messages as seen: $e');
       });
     }
   }
@@ -2162,7 +2163,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   _allMessages.removeWhere((d) => d.id == doc.id);
                 });
               } catch (e) {
-                debugPrint('Error deleting for me: $e');
+                logError('Error deleting for me: $e');
               }
             },
             child: const Text('DELETE FOR ME',
@@ -2185,7 +2186,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     'deletedAt': FieldValue.serverTimestamp(),
                   });
                 } catch (e) {
-                  debugPrint('Error deleting for everyone: $e');
+                  logError('Error deleting for everyone: $e');
                 }
               },
               child: const Text('DELETE FOR EVERYONE',

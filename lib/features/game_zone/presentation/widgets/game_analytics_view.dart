@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../data/game_analytics_service.dart';
 import '../../domain/models/game_analytics_models.dart';
@@ -73,7 +74,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
         });
       }
     } catch (e) {
-      debugPrint('[GameAnalyticsView] Error loading leaderboard: $e');
+      logError('[GameAnalyticsView] Error loading leaderboard: $e');
       if (mounted) {
         setState(() => _isLoadingLeaderboard = false);
       }

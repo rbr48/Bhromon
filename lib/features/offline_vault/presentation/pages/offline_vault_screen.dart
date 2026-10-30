@@ -6,6 +6,7 @@ import '../../../../core/entities/outbox_entry.dart';
 import '../../../../core/theme/colors.dart';
 import '../cubit/vault_cubit.dart';
 import '../cubit/vault_state.dart';
+import '../../../../core/utils/logger.dart';
 
 import 'package:local_auth/local_auth.dart';
 
@@ -60,7 +61,7 @@ class _OfflineVaultScreenState extends State<OfflineVaultScreen> {
         _isAuthenticating = false;
       });
     } catch (e) {
-      debugPrint('Biometric auth error: $e');
+      logError('Biometric auth error: $e');
       setState(() {
         _isAuthenticated = false;
         _isAuthenticating = false;

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../models/tour_activity_models.dart';
 
 /// Text-To-Speech audio guide service for real-time journey checkpoints.
@@ -40,8 +41,8 @@ class JourneyAudioGuideService {
         currentCheckpointId.value = null;
       });
       _initialized = true;
-    } catch (e) {
-      debugPrint('JourneyAudioGuideService init warning: $e');
+    } catch (e, st) {
+      logWarning('JourneyAudioGuideService init warning', e, st);
     }
   }
 
@@ -111,8 +112,8 @@ class JourneyAudioGuideService {
         await _flutterTts!.setLanguage('bn-IN');
         await _flutterTts!.speak(text);
       }
-    } catch (e) {
-      debugPrint('JourneyAudioGuideService speak error: $e');
+    } catch (e, st) {
+      logWarning('JourneyAudioGuideService speak error', e, st);
       isSpeaking.value = false;
       currentCheckpointId.value = null;
     }

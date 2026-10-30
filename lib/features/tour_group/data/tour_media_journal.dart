@@ -1,7 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:hive_flutter/hive_flutter.dart';
+
+import '../../../../core/utils/app_logger.dart';
 
 /// A file on the media server, named by the client so its URL is known before
 /// the upload returns.
@@ -156,8 +157,8 @@ class HiveJournalStore implements JournalStore {
     if (_box != null) return _box;
     try {
       _box = await Hive.openBox<dynamic>(_boxName);
-    } catch (e) {
-      debugPrint('[TourMediaJournal] could not open $_boxName: $e');
+    } catch (e, st) {
+      logWarning('[TourMediaJournal] could not open $_boxName', e, st);
     }
     return _box;
   }
@@ -230,8 +231,8 @@ class TourMediaJournal {
         final entry = JournalEntry.fromMap(raw);
         if (entry != null) loaded[entry.url] = entry;
       }
-    } catch (e) {
-      debugPrint('[TourMediaJournal] could not read entries: $e');
+    } catch (e, st) {
+      logWarning('[TourMediaJournal] could not read entries', e, st);
     }
     return _entries = loaded;
   }
@@ -240,8 +241,8 @@ class TourMediaJournal {
     final entries = _entries ?? const {};
     try {
       await _store.write(entries.values.map((e) => e.toMap()).toList());
-    } catch (e) {
-      debugPrint('[TourMediaJournal] could not save entries: $e');
+    } catch (e, st) {
+      logWarning('[TourMediaJournal] could not save entries', e, st);
     }
   }
 

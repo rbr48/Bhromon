@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+import '../../../../core/utils/app_logger.dart';
 
 /// Calls the server that runs the online 29 table. The server checks every
 /// action, so the phone only asks; it never decides the result.
@@ -143,14 +143,12 @@ class Card29Api {
             );
           }
         }
-        debugPrint(
-          '[Card29Api] VPS call $name failed (${e.message}). Falling back to Functions.',
-        );
-      } catch (e) {
+        logWarning(
+          '[Card29Api] VPS call $name failed (${e.message}). Falling back to Functions.', e);
+      } catch (e, st) {
         if (e is FirebaseFunctionsException) rethrow;
-        debugPrint(
-          '[Card29Api] VPS call $name error ($e). Falling back to Functions.',
-        );
+        logWarning(
+          '[Card29Api] VPS call $name error. Falling back to Functions.', e, st);
       }
     }
 
