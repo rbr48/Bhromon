@@ -42,6 +42,7 @@ import '../features/tour_group/presentation/pages/notice_board_screen.dart';
 import '../features/tour_group/presentation/pages/tour_quiz_screen.dart';
 import '../features/tour_group/presentation/pages/tour_scrapbook_screen.dart';
 import '../features/tour_group/presentation/widgets/trip_shell.dart';
+import 'tour_page_key.dart';
 import '../features/game_zone/teen_patti/teen_patti_screen.dart';
 
 import '../features/game_zone/game_zone_hub_screen.dart';
@@ -321,8 +322,11 @@ class AppRouter {
       ),
       GoRoute(
         path: '/game-zone',
-        pageBuilder: (context, state) =>
-            _customPageTransition(state, const GameZoneHubScreen()),
+        pageBuilder: (context, state) => _customPageTransition(
+          state,
+          GameZoneHubScreen(initialTourId: state.uri.queryParameters['tourId']),
+          key: pageKeyFor(state),
+        ),
       ),
       GoRoute(
         path: '/game-zone/card29',
@@ -421,12 +425,17 @@ class AppRouter {
         location: state.uri.path,
         child: screen,
       ),
+      key: pageKeyFor(state),
     );
   }
 
-  static Page<void> _customPageTransition(GoRouterState state, Widget child) {
+  static Page<void> _customPageTransition(
+    GoRouterState state,
+    Widget child, {
+    ValueKey<String>? key,
+  }) {
     return CustomTransitionPage<void>(
-      key: state.pageKey,
+      key: key ?? state.pageKey,
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         return FadeTransition(

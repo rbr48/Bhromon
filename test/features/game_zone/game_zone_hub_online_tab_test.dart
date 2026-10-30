@@ -129,4 +129,65 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsNothing);
   });
+
+  group('the tour the games are about', () {
+    TourGroup tour(String id, String name) => TourGroup(
+          id: id,
+          name: name,
+          ownerEmail: 'lead@bhromon.fun',
+          inviteCode: 'CODE${id.hashCode.abs() % 1000}',
+          destination: 'Sajek',
+          originCity: 'Dhaka',
+          startDate: DateTime(2026, 11, 1),
+          endDate: DateTime(2026, 11, 4),
+          tourType: TourType.hill,
+          modules: const TourModules(),
+          createdAt: DateTime(2026, 10, 1),
+        );
+
+    Future<void> openOnlineTab(
+      WidgetTester tester,
+      List<TourGroup> groups,
+      String? initialTourId,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: GameZoneHubScreen(
+            tourRepository: _FakeTourGroupRepository(groups: groups),
+            gameRepository: _FakeOnlineGameRepository(games: const []),
+            initialTourId: initialTourId,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tour Online Tables'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the games open for the tour the user came from, not the first',
+        (tester) async {
+      final first = tour('tour_dhaka', 'Dhaka Beach Weekend');
+      final second = tour('tour_sajek', "Sajek Cloud Trek '26");
+
+      await openOnlineTab(tester, [first, second], second.id);
+
+      expect(find.text("Sajek Cloud Trek '26"), findsOneWidget);
+      expect(find.text('Dhaka Beach Weekend'), findsNothing);
+    });
+
+    testWidgets('without a tour, the games open for the first tour',
+        (tester) async {
+      final first = tour('tour_dhaka', 'Dhaka Beach Weekend');
+      final second = tour('tour_sajek', "Sajek Cloud Trek '26");
+
+      await openOnlineTab(tester, [first, second], null);
+
+      expect(find.text('Dhaka Beach Weekend'), findsOneWidget);
+    });
+  });
 }
