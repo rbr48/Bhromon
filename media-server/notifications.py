@@ -37,7 +37,9 @@ def _preview_of(text: Optional[str], attachments: Optional[list] = None, kind: s
     if not body:
         if attachments:
             first = attachments[0] if isinstance(attachments[0], dict) else {}
-            if first.get("isVideo") is True or first.get("kind") == "video":
+            if first.get("kind") == "audio":
+                body = "🎤 Voice message"
+            elif first.get("isVideo") is True or first.get("kind") == "video":
                 body = "🎬 Video"
             else:
                 body = "📷 Photo"

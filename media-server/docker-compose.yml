@@ -23,6 +23,7 @@ services:
       # environment, never from git. Without it /api/chat/ice_servers answers 503
       # and calls use STUN only.
       - SOTTO_TURN_SECRET=${SOTTO_TURN_SECRET:-}
+      - PURGE_KEY=${PURGE_KEY:-}
       - BASE_URL=https://bhromon.fun/media
 
   bhromon-games:
