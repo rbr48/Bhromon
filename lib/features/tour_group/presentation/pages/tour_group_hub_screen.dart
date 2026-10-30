@@ -12,6 +12,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../widgets/bhromon_bottom_nav.dart';
 import '../widgets/member_profile/tour_member_profile_modal.dart';
+import '../tour_pdf_export.dart';
 
 class TourGroupHubScreen extends StatefulWidget {
   final TourGroupRepository? repository;
@@ -422,6 +423,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     switch (action) {
       case 'copy_code':
         _copyInviteCode(group.inviteCode);
+      case 'export_pdf':
+        await exportTourPdf(context, group: group, repository: _repository);
       case 'add_member':
         _showAddMemberDialog(context, group.id);
       case 'code':
@@ -837,6 +840,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               SizedBox(width: 8),
                               Text('ইনভাইট কোড কপি করুন',
                                   style: TextStyle(color: Colors.white)),
+                            ],
+                          )),
+                      PopupMenuItem(
+                          value: 'export_pdf',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.picture_as_pdf_rounded,
+                                  size: 16, color: AppColors.mintGreen),
+                              const SizedBox(width: 8),
+                              Text(context.l10n.translate('pdf_export_menu'),
+                                  style: const TextStyle(color: Colors.white)),
                             ],
                           )),
                       if (group.ownerEmail == _repository.currentEmail) ...[
