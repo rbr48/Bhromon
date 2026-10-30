@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../app/router.dart';
 import '../../../core/utils/image_sizing.dart';
+import '../../../firebase_options.dart';
 import 'call_signaling_service.dart';
 import 'vps_chat_service.dart';
 
@@ -30,6 +31,31 @@ class IncomingCallRegistry {
     if (_seenAt.containsKey(callId)) return false;
     _seenAt[callId] = now;
     return true;
+  }
+}
+
+/// Top-level background callback invoked by flutter_callkit_incoming when
+/// user interacts with call screen while app is in background or terminated.
+@pragma('vm:entry-point')
+Future<void> callkitBackgroundCallback(CallEvent event) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (Firebase.apps.isEmpty) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (_) {}
+  }
+  switch (event) {
+    case CallEventActionCallDecline(:final callKitParams):
+      final extra = callKitParams.extra ?? {};
+      final callId = extra['callId']?.toString() ?? callKitParams.id;
+      if (callId.isNotEmpty) {
+        await FlutterCallkitIncoming.endCall(callId);
+      }
+      break;
+    default:
+      break;
   }
 }
 
@@ -80,6 +106,30 @@ class CallNotificationService {
 
     if (!kIsWeb) {
       _initCallkitEvents();
+      try {
+        FlutterCallkitIncoming.onBackgroundMessage(callkitBackgroundCallback);
+      } catch (e) {
+        debugPrint(
+            '[CallNotificationService] Failed to set background handler: $e');
+      }
+    }
+  }
+
+  /// Checks whether Android 14+ full-screen intent is granted, and requests it if needed.
+  static Future<bool> ensureFullScreenIntentPermission() async {
+    if (kIsWeb ||
+        !defaultTargetPlatform.name.toLowerCase().contains('android')) {
+      return true;
+    }
+    try {
+      final canUse = await FlutterCallkitIncoming.canUseFullScreenIntent();
+      if (!canUse) {
+        await FlutterCallkitIncoming.requestFullIntentPermission();
+        return await FlutterCallkitIncoming.canUseFullScreenIntent();
+      }
+      return true;
+    } catch (_) {
+      return true;
     }
   }
 
@@ -127,6 +177,11 @@ class CallNotificationService {
           backgroundColor: '#075E54',
           actionColor: '#00A884',
           textColor: '#FFFFFF',
+          incomingCallNotificationChannelName: 'Bhromon Incoming Calls',
+          missedCallNotificationChannelName: 'Bhromon Missed Calls',
+          isShowFullLockedScreen: true,
+          isImportant: true,
+          isFullScreen: true,
         ),
         ios: const IOSParams(
           iconName: 'AppIcon',

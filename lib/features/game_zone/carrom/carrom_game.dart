@@ -85,16 +85,20 @@ class CarromGame {
   double _shotSeconds = 0;
   StrikerContact _contact = StrikerContact();
 
-  /// Coins behind the shooter's baseline when the shot was played.
-  Set<int> _behindBaseline = const {};
-
   static const List<String> _names = ['You', 'Bot'];
 
   String nameOf(int player) =>
       player == 0 ? _names[0] : (vsBot ? _names[1] : 'Player 2');
 
-  static CarromPieceType colorOf(int player) =>
-      player == 0 ? CarromPieceType.white : CarromPieceType.black;
+  /// The color for [player] on [board]. Colors alternate each board (White always breaks).
+  static CarromPieceType colorFor(int player, int board) {
+    final whitePlayer = (board - 1) % 2;
+    return player == whitePlayer
+        ? CarromPieceType.white
+        : CarromPieceType.black;
+  }
+
+  CarromPieceType colorOf(int player) => colorFor(player, board);
 
   List<CarromPiece> get allPieces => [...coins, striker];
   CarromPiece get queen =>
@@ -234,10 +238,6 @@ class CarromGame {
     _pocketedThisShot.clear();
     _shotSeconds = 0;
     _contact = StrikerContact();
-    _behindBaseline = {
-      for (final c in coins)
-        if (!c.pocketed && CarromBoard.isBehindBaseline(c, currentPlayer)) c.id
-    };
     phase = CarromPhase.moving;
     status =
         '${nameOf(currentPlayer)} ${currentPlayer == 0 ? 'shoot' : 'shoots'}...';
@@ -307,12 +307,6 @@ class CarromGame {
         !coversQueen) {
       fouls.add('last coin pocketed before the Queen was covered');
     }
-    final firstHit = _contact.firstCoinId;
-    if (firstHit != null &&
-        !_contact.cushionFirst &&
-        _behindBaseline.contains(firstHit)) {
-      fouls.add('a coin behind the baseline was hit directly');
-    }
     if (oppNow.isNotEmpty && remaining(opp) == 0) {
       fouls.add("${nameOf(opp)}${opp == 0 ? 'r' : "'s"} last coin pocketed");
     }
@@ -374,8 +368,10 @@ class CarromGame {
           '$who pocketed ${ownNow.length} coin${ownNow.length == 1 ? '' : 's'}.');
     }
     if (oppNow.isNotEmpty) {
+      final oppColor =
+          colorOf(opp) == CarromPieceType.white ? 'white' : 'black';
       messages.add(
-          '${oppNow.length} ${opp == 0 ? 'white' : 'black'} coin${oppNow.length == 1 ? '' : 's'} '
+          '${oppNow.length} $oppColor coin${oppNow.length == 1 ? '' : 's'} '
           'went down for ${nameOf(opp)}.');
     }
 
@@ -440,7 +436,10 @@ class CarromGame {
     board++;
     _layOutBoard();
     final who = breaker == 0 ? 'Your break.' : '${nameOf(breaker)} breaks.';
-    status = '${messages.join(' ')} Board $board: $who';
+    final yourColor = colorOf(0) == CarromPieceType.white ? 'White' : 'Black';
+    final oppColor = colorOf(1) == CarromPieceType.white ? 'White' : 'Black';
+    status =
+        '${messages.join(' ')} Board $board: $who (You: $yourColor, ${nameOf(1)}: $oppColor)';
   }
 
   /// Returns one of [player]'s pocketed coins to the centre, or records it as
@@ -491,6 +490,7 @@ class CarromGame {
   CarromBotRequest botRequest({double aimNoise = 0.01}) => CarromBotRequest(
         coins: [for (final c in coins) c.copy()],
         player: currentPlayer,
+        board: board,
         ownPocketed: pocketed[currentPlayer].length,
         queenCovered: queenCoveredBy != null,
         queenPending: queenPendingFor == currentPlayer,
@@ -504,6 +504,7 @@ class CarromBotRequest {
   const CarromBotRequest({
     required this.coins,
     required this.player,
+    this.board = 1,
     required this.ownPocketed,
     required this.queenCovered,
     this.queenPending = false,
@@ -513,6 +514,7 @@ class CarromBotRequest {
 
   final List<CarromPiece> coins;
   final int player;
+  final int board;
   final int ownPocketed;
   final bool queenCovered;
 
@@ -544,8 +546,8 @@ class CarromBot {
   static CarromShot chooseShot(CarromBotRequest request) {
     final random = Random(request.seed);
     final player = request.player;
-    final own = CarromGame.colorOf(player);
-    final opp = CarromGame.colorOf(1 - player);
+    final own = CarromGame.colorFor(player, request.board);
+    final opp = CarromGame.colorFor(1 - player, request.board);
     final baseY = CarromBoard.baselineY(player);
     final active = request.coins.where((c) => !c.pocketed).toList();
 
@@ -689,12 +691,7 @@ class CarromBot {
               !request.queenCovered &&
               !coversQueen) ||
           (oppDown > 0 && oppDown >= oppLeft);
-      final hit = contact.firstCoinId;
-      final directHitFoul = hit != null &&
-          !contact.cushionFirst &&
-          active.any(
-              (c) => c.id == hit && CarromBoard.isBehindBaseline(c, player));
-      if (strikerFoul || lastCoinFoul || directHitFoul) {
+      if (strikerFoul || lastCoinFoul) {
         score -= 15 + ownDown * 10.0;
       }
       score += random.nextDouble() * 0.5;

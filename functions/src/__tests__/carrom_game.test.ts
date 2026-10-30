@@ -1,11 +1,12 @@
 import { BOT_AIM_NOISE, chooseShot } from '../carrom/bot';
-import { CarromTable, Shot, publicState, restoreTable } from '../carrom/game';
+import { CarromTable, Shot, colorOf, publicState, restoreTable } from '../carrom/game';
 import {
   BASELINE_MAX,
   BASELINE_MIN,
   Piece,
   PieceType,
   STRIKER_ID,
+  baselineY,
   makePiece,
   shotSpeed,
   simulateToRest,
@@ -273,16 +274,36 @@ describe('carrom fixes', () => {
     expect(table.winnerPoints).toBe(31);
   });
 
-  it('hitting a coin behind your baseline directly is a foul', () => {
+  it('hitting and pocketing a coin in bottom pocket is legal and not a foul', () => {
     const table = CarromTable.fresh(['Asha', 'Babu']);
-    for (const c of table.coins) c.pocketed = true;
-    const behind = table.coins.find((c) => c.type === 'white')!;
-    behind.pocketed = false;
-    behind.x = 0.5;
-    behind.y = 0.93;
-    expect(table.resolveShot(0, 0.5, Math.PI / 2, 0.4)).toBe(true);
-    expect(table.status).toContain('behind the baseline');
-    expect(table.currentPlayer).toBe(1);
+    table.queenCoveredBy = 0;
+    const coin = table.coins.find((c) => c.type === 'white')!;
+    coin.x = 0.06;
+    coin.y = 0.90;
+    const dx = coin.x - 0.35;
+    const dy = coin.y - baselineY(0);
+    const angle = Math.atan2(dy, dx);
+    expect(table.resolveShot(0, 0.35, angle, 0.35)).toBe(true);
+    expect(table.status).not.toContain('behind the baseline');
+    expect(table.status).not.toContain('Foul');
+  });
+
+  it('player colors alternate each board (White breaks, then swaps to Black)', () => {
+    const table = CarromTable.fresh(['Asha', 'Babu']);
+    expect(table.board).toBe(1);
+    expect(colorOf(0, table.board)).toBe('white');
+    expect(colorOf(1, table.board)).toBe('black');
+    expect(table.breaker).toBe(0);
+
+    table.board = 2;
+    expect(colorOf(0, table.board)).toBe('black');
+    expect(colorOf(1, table.board)).toBe('white');
+    expect(table.breaker).toBe(1);
+
+    table.board = 3;
+    expect(colorOf(0, table.board)).toBe('white');
+    expect(colorOf(1, table.board)).toBe('black');
+    expect(table.breaker).toBe(0);
   });
 
   it('a coin too fast for a pocket rattles out', () => {

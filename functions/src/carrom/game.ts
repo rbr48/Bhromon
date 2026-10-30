@@ -17,7 +17,6 @@ import {
   STRIKER_RADIUS,
   StrikerContact,
   baselineY,
-  isBehindBaseline,
   isSettled,
   makePiece,
   newContact,
@@ -58,8 +57,9 @@ function clampRange(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function colorOf(player: number): PieceType {
-  return player === 0 ? 'white' : 'black';
+export function colorOf(player: number, board: number = 1): PieceType {
+  const whitePlayer = (board - 1) % 2;
+  return player === whitePlayer ? 'white' : 'black';
 }
 
 /** Queen in the middle, a ring of 6 and a ring of 12, colours alternating. */
@@ -111,8 +111,6 @@ export class CarromTable {
 
   /** What the striker touched first in the shot being played. */
   private contact: StrikerContact = newContact();
-  /** Coins behind the shooter's baseline when the shot was played. */
-  private behindBaseline = new Set<number>();
 
   constructor(readonly names: [string, string], coins: Piece[], striker: Piece) {
     this.coins = coins;
@@ -157,7 +155,7 @@ export class CarromTable {
   }
 
   remaining(player: number): number {
-    return this.coins.filter((c) => c.type === colorOf(player) && !c.pocketed).length;
+    return this.coins.filter((c) => c.type === colorOf(player, this.board) && !c.pocketed).length;
   }
 
   nameOf(player: number): string {
@@ -212,9 +210,6 @@ export class CarromTable {
     this.striker.vx = Math.cos(angle) * speed;
     this.striker.vy = Math.sin(angle) * speed;
     this.contact = newContact();
-    this.behindBaseline = new Set(
-      this.coins.filter((c) => !c.pocketed && isBehindBaseline(c, this.currentPlayer)).map((c) => c.id),
-    );
     return true;
   }
 
@@ -278,8 +273,8 @@ export class CarromTable {
     const who = this.nameOf(player);
     const whose = `${who}${player === 0 ? 'r' : "'s"}`;
 
-    const ownNow = pocketedNow.filter((p) => p.type === colorOf(player));
-    const oppNow = pocketedNow.filter((p) => p.type === colorOf(opp));
+    const ownNow = pocketedNow.filter((p) => p.type === colorOf(player, this.board));
+    const oppNow = pocketedNow.filter((p) => p.type === colorOf(opp, this.board));
     let queenNow = pocketedNow.some((p) => p.type === 'queen');
     const queenWasCovered = this.queenCoveredBy !== null;
 
@@ -293,10 +288,6 @@ export class CarromTable {
     const coversQueen = ownNow.length > 0 && (queenNow || this.queenPendingFor === player);
     if (ownNow.length > 0 && this.remaining(player) === 0 && !queenWasCovered && !coversQueen) {
       fouls.push('last coin pocketed before the Queen was covered');
-    }
-    const firstHit = this.contact.firstCoinId;
-    if (firstHit !== null && !this.contact.cushionFirst && this.behindBaseline.has(firstHit)) {
-      fouls.push('a coin behind the baseline was hit directly');
     }
     if (oppNow.length > 0 && this.remaining(opp) === 0) {
       fouls.push(`${this.nameOf(opp)}${opp === 0 ? 'r' : "'s"} last coin pocketed`);
@@ -356,8 +347,9 @@ export class CarromTable {
       messages.push(`${who} pocketed ${ownNow.length} coin${ownNow.length === 1 ? '' : 's'}.`);
     }
     if (oppNow.length > 0) {
+      const oppColor = colorOf(opp, this.board);
       messages.push(
-        `${oppNow.length} ${opp === 0 ? 'white' : 'black'} coin${oppNow.length === 1 ? '' : 's'} went down for ${this.nameOf(opp)}.`,
+        `${oppNow.length} ${oppColor} coin${oppNow.length === 1 ? '' : 's'} went down for ${this.nameOf(opp)}.`,
       );
     }
 
@@ -416,7 +408,7 @@ export class CarromTable {
     }
     this.board++;
     this.layOutBoard();
-    this.status = `${messages.join(' ')} Board ${this.board}: ${this.nameOf(this.breaker)} breaks.`;
+    this.status = `${messages.join(' ')} Board ${this.board}: ${this.nameOf(this.breaker)} breaks (${this.nameOf(0)}: ${colorOf(0, this.board)}, ${this.nameOf(1)}: ${colorOf(1, this.board)}).`;
   }
 
   /** Returns one of [player]'s pocketed coins to the centre, or records it as due. */

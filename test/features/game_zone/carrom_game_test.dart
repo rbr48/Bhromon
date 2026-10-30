@@ -235,27 +235,56 @@ void main() {
       expect(g.boardPoints, 12);
     });
 
-    test('ICF: hitting a coin behind your baseline directly is a foul', () {
-      // A white coin sits behind player 0's baseline; the striker is fired
-      // straight back at it.
-      final behind = _coin(1, CarromPieceType.white, 0.5, 0.93);
-      final g = _gameWith([behind]);
-      g.placeStriker(0.5);
-      expect(g.shoot(pi / 2, 0.4), isTrue);
-      g.simulateToRest();
-      expect(g.status, contains('behind the baseline'));
-      expect(g.currentPlayer, 1);
-      expect(g.penaltyDue[0], 1);
-    });
-
-    test('A coin behind the baseline may be reached off a cushion', () {
-      final behind = _coin(1, CarromPieceType.white, 0.5, 0.93);
-      final g = _gameWith([behind]);
-      g.placeStriker(0.3);
-      // Up into the top cushion, well clear of the coin on the way.
-      expect(g.shoot(-pi / 2, 0.9), isTrue);
+    test('hitting and pocketing a coin in bottom pocket is legal and not a foul', () {
+      final g = CarromGame();
+      g.queenCoveredBy = 0;
+      final coinNearPocket = g.coins.firstWhere((c) => c.type == g.colorOf(0));
+      coinNearPocket.x = 0.06;
+      coinNearPocket.y = 0.90;
+      g.placeStriker(0.35);
+      final dx = coinNearPocket.x - g.striker.x;
+      final dy = coinNearPocket.y - g.striker.y;
+      final angle = atan2(dy, dx);
+      expect(g.shoot(angle, 0.35), isTrue);
       g.simulateToRest();
       expect(g.status, isNot(contains('behind the baseline')));
+      expect(g.status, isNot(contains('a coin behind the baseline')));
+    });
+
+    test('player colors alternate between boards (White breaks, then swaps to Black)', () {
+      final g = CarromGame();
+      expect(g.board, 1);
+      expect(g.colorOf(0), CarromPieceType.white);
+      expect(g.colorOf(1), CarromPieceType.black);
+      expect(g.breaker, 0);
+
+      // Finish board 1 (player 0 wins)
+      final whites =
+          g.coins.where((c) => c.type == g.colorOf(0)).toList();
+      for (final w in whites) {
+        w.pocketed = true;
+      }
+      g.queen.pocketed = true;
+      g.scoreShot([g.queen, ...whites]);
+
+      expect(g.board, 2);
+      expect(g.colorOf(0), CarromPieceType.black);
+      expect(g.colorOf(1), CarromPieceType.white);
+      expect(g.breaker, 1);
+
+      // Finish board 2 (player 1 wins)
+      final p1Whites =
+          g.coins.where((c) => c.type == g.colorOf(1)).toList();
+      for (final w in p1Whites) {
+        w.pocketed = true;
+      }
+      g.queen.pocketed = true;
+      g.scoreShot([g.queen, ...p1Whites]);
+
+      expect(g.board, 3);
+      expect(g.colorOf(0), CarromPieceType.white);
+      expect(g.colorOf(1), CarromPieceType.black);
+      expect(g.breaker, 0);
     });
 
     test('ICF: pocketing the opponent\'s last coin is a foul', () {
@@ -326,7 +355,7 @@ void main() {
       void winBoardWithQueen() {
         final p = g.currentPlayer = 0;
         final whites = g.coins
-            .where((c) => c.type == CarromGame.colorOf(p) && !c.pocketed)
+            .where((c) => c.type == g.colorOf(p) && !c.pocketed)
             .toList();
         for (final w in whites.take(whites.length - 1)) {
           w.pocketed = true;
@@ -354,15 +383,15 @@ void main() {
       final g = CarromGame(random: Random(7));
       g.board = 8;
       g.matchScore[1] = 10;
-      final whites =
-          g.coins.where((c) => c.type == CarromPieceType.white).toList();
-      for (final w in whites.take(8)) {
+      final ownCoins =
+          g.coins.where((c) => c.type == g.colorOf(0)).toList();
+      for (final w in ownCoins.take(8)) {
         w.pocketed = true;
       }
-      g.scoreShot(whites.take(8).toList());
+      g.scoreShot(ownCoins.take(8).toList());
       g.queen.pocketed = true;
-      whites[8].pocketed = true;
-      g.scoreShot([g.queen, whites[8]]);
+      ownCoins[8].pocketed = true;
+      g.scoreShot([g.queen, ownCoins[8]]);
       expect(g.matchScore, [12, 10]);
       expect(g.phase, CarromPhase.gameOver);
       expect(g.winner, 0);
