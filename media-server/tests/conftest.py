@@ -45,6 +45,29 @@ class FakeBackend:
     def role_for(self, tour_id, email):
         return self.memberships.get(f"{tour_id}__{email}")
 
+    def email_for_uid(self, uid):
+        for token_uid, email in self.tokens.values():
+            if token_uid == uid:
+                return email
+        return ""
+
+    def shares_group(self, uid_a, uid_b):
+        """Two people share a tour when both are members of the same one."""
+        email_a, email_b = self.email_for_uid(uid_a), self.email_for_uid(uid_b)
+        if not email_a or not email_b or uid_a == uid_b:
+            return False
+
+        def tours(email):
+            return {key.split("__")[0] for key in self.memberships if key.endswith("__" + email)}
+
+        return bool(tours(email_a) & tours(email_b))
+
+
+@pytest.fixture(autouse=True)
+def contacts_never_reach_firebase(monkeypatch):
+    """Tests answer the contact check from the fake tours, never from Firebase."""
+    monkeypatch.setattr(main.backend, "shares_group", FakeBackend().shares_group)
+
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):

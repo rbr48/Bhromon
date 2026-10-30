@@ -17,6 +17,7 @@ import logging
 import re
 import secrets
 import shutil
+import time
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+import chat
 from chat import chat_db, chat_router
 from news import router as news_router
 from notifications import FirestoreNotificationWatcher, NotificationEngine
@@ -153,11 +155,19 @@ class Caller:
     uid: str = ""
 
 
+# How long a uid's email, and a person's tours, are remembered. A person who leaves
+# a tour can still be reached for at most this long.
+EMAIL_CACHE_SECONDS = 600
+TOURS_CACHE_SECONDS = 15
+
+
 class FirebaseBackend:
     """Checks ID tokens and tour memberships with the Firebase Admin SDK."""
 
     def __init__(self) -> None:
         self._db = None
+        self._email_cache: Dict[str, Tuple[float, str]] = {}
+        self._tours_cache: Dict[str, Tuple[float, frozenset]] = {}
 
     def _ensure_app(self) -> None:
         init_firebase_admin()
@@ -202,6 +212,51 @@ class FirebaseBackend:
             return None
         return str((profile.to_dict() or {}).get("tier") or "") or None
 
+    def email_for_uid(self, uid: str) -> str:
+        """The email Firebase Auth holds for a uid, or "" when there is no such account."""
+        if not uid:
+            return ""
+        now = time.monotonic()
+        cached = self._email_cache.get(uid)
+        if cached and now - cached[0] < EMAIL_CACHE_SECONDS:
+            return cached[1]
+        self._ensure_app()
+        from firebase_admin import auth
+
+        try:
+            email = (auth.get_user(uid).email or "").strip().lower()
+        except Exception as e:  # No such account, or the lookup failed.
+            logger.info("No email for uid %s: %s", uid, e)
+            return ""
+        self._email_cache[uid] = (now, email)
+        return email
+
+    def active_tours_for_email(self, email: str) -> frozenset:
+        """The tours the email is an active member of, owned tours included."""
+        if not email:
+            return frozenset()
+        now = time.monotonic()
+        cached = self._tours_cache.get(email)
+        if cached and now - cached[0] < TOURS_CACHE_SECONDS:
+            return cached[1]
+        db = self._client()
+        rows = db.collection("memberships").where("email", "==", email).where("status", "==", "active").stream()
+        tours = {str((row.to_dict() or {}).get("tourId") or "") for row in rows}
+        tours |= {doc.id for doc in db.collection("tours").where("ownerEmail", "==", email).stream()}
+        tours.discard("")
+        result = frozenset(tours)
+        self._tours_cache[email] = (now, result)
+        return result
+
+    def shares_group(self, uid_a: str, uid_b: str) -> bool:
+        """Whether two people are active members of one tour together."""
+        if not uid_a or not uid_b or uid_a == uid_b:
+            return False
+        tours_a = self.active_tours_for_email(self.email_for_uid(uid_a))
+        if not tours_a:
+            return False
+        return not tours_a.isdisjoint(self.active_tours_for_email(self.email_for_uid(uid_b)))
+
     def role_for(self, tour_id: str, email: str) -> Optional[str]:
         """The caller's role in the tour, or None when they are not an active member."""
         db = self._client()
@@ -219,6 +274,10 @@ class FirebaseBackend:
 
 
 backend = FirebaseBackend()
+
+# Chat and call routes ask this before they reach another person. The lookup goes
+# through `backend` at call time, so tests that swap the backend swap this too.
+chat.shares_group = lambda uid_a, uid_b: backend.shares_group(uid_a, uid_b)
 
 
 def authenticate(
@@ -434,7 +493,6 @@ async def upload_media(
         max_allowed = MAX_DOC_BYTES
     else:
         max_allowed = MAX_IMAGE_BYTES
-
     target_dir = MEDIA_ROOT / tourId / folder
     target_dir.mkdir(parents=True, exist_ok=True)
     target = target_dir / filename

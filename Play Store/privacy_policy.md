@@ -1,6 +1,6 @@
 # Privacy Policy for Bhromon
 
-**Last Updated: October 28, 2026**
+**Last Updated: October 30, 2026**
 
 Welcome to **Bhromon** (the "App" and "Platform"). Bhromon is an all-in-one universal travel companion, group tour ledger, and community platform owned and operated by **Bhromon Technologies Ltd.** ("we," "our," or "us"). 
 
@@ -34,7 +34,7 @@ Location services power our Universal Tour Engine, multi-stop route roadmaps, an
 
 ### E. Account & Profile Information
 * **Authentication Data**: When you register or sign in via Firebase Auth (Email/Password or Google Sign-In), we store your email address, display name, and avatar image.
-* **Group Memberships & Roles**: Tour group relationships (`owner`, `admin`, `member`) are stored securely to govern channel access, ledger permissions, and itinerary editing rights.
+* **Group Memberships & Roles**: Each tour you join stores your name, email, photo, role (`owner`, `admin`, `member`), family size, and the user ID that lets members of that tour chat and call you. Roles govern channel access, ledger permissions, and itinerary editing rights.
 
 ### F. Local Database & Offline Relational Storage
 * **Drift (SQLite) & Hive**: Your tour itineraries, checklists, bus seat selections, hotel room assignments, and offline drafts are stored locally on your device using encrypted Drift SQLite and Hive boxes.
@@ -51,6 +51,7 @@ We utilize collected data strictly for operational, safety, and coordination pur
 4. **Offline Synchronization**: Queuing offline ledger entries, checklist updates, and seat bookings locally, securely synchronizing with Firebase Firestore once connectivity is restored.
 5. **Dedicated Media Streaming**: Hosting uploaded trip photos and video reels on our dedicated media microservice (`https://bhromon.fun/api/media/`) using token-authenticated access.
 6. **Community Integrity**: Enforcing tour group membership rules and preventing spam or unauthorized modifications.
+7. **Notices & Reminders**: Delivering group notices to members, a reminder 30 minutes before a timed notice, and push alerts for chat messages, calls, and SOS alerts. You can turn push notifications off in your device settings.
 
 ---
 
@@ -67,7 +68,7 @@ To protect user privacy and avoid third-party data tracking:
 ## 4. Data Sharing and Disclosure
 
 **We do NOT sell, lease, monetize, or trade your personal data.** Data is only shared in the following scenarios:
-* **With Your Tour Group Members**: Itinerary updates, shared ledger expenses, vehicle seat bookings, and feed posts are visible only to fellow active members of that specific tour group.
+* **With Your Tour Group Members**: Posts, photos, chat, notices, ledger entries, and vehicle or room bookings are visible only to the active members of that tour. You can start a chat or a call only with a member of a tour you both belong to. Bhromon has no public profiles, no directory of users, and no search for people outside your tours.
 * **Push Notifications**: Emergency SOS alerts and important channel notifications are routed through Firebase Cloud Messaging (FCM).
 * **Legal Compliance**: We may disclose information only if required by valid court order or applicable law in Bangladesh.
 
@@ -85,16 +86,23 @@ We implement enterprise-grade security practices across our platform:
 
 ## 6. Your Rights & Data Deletion
 
-You maintain complete ownership and control of your personal data:
-* **Account Deletion**: You can request immediate and permanent deletion of your account from within App Settings or by emailing us.
-* **Media & Post Deletion**: You can delete any of your photos, reels, or channel messages at any time; deleted media is permanently removed from our storage server.
-* **Tour Data Portability**: Tour ledger reports can be exported directly to standard CSV format at any time.
+You control your data:
+* **Leaving a tour**: When you leave a tour, or an admin removes you, your posts, stories, highlights, comments, chat messages, live locations, luggage, and seat selections are permanently deleted, together with your photos and videos on our media server. You are also taken out of other members' likes, votes, reactions, and mentions. Shared records such as the ledger and notices keep their amounts and dates, and your name is replaced with a stand-in name.
+* **Tours you own**: When you close your account, ownership of each tour you own passes to an admin, or else to the longest-standing member. If no one else is in a tour, the tour and everything in it is deleted.
+* **Deleting a tour**: The owner can delete a tour. Everything in it is deleted, including its photos and videos.
+* **Closing your account**: You can permanently delete your account from App Settings, or by emailing us. This removes your profile, your sign-in account, your device notification tokens, your files in our storage, and your content in every tour as described above. Two kinds of record are kept: an audit record that an account was deleted, which includes the account's ID (kept for up to two years), and anti-abuse trust records (kept for up to one year).
+* **Media removal**: Deleted photos and videos are removed from our media server. Copies held by our content-delivery network may remain for a short time until they expire.
+* **Unfinished uploads**: Uploads that were never attached to a post or story are removed automatically after 30 minutes.
+* **Data portability**: A tour's full record can be exported as a PDF by its owner or an admin. Ledger reports can be exported as CSV.
 
 ---
 
-## 7. Children's Privacy
+## 7. Families & Children's Privacy
 
-Bhromon does not knowingly collect personally identifiable information from children under the age of 13. If you believe a child under 13 has provided personal data without parental consent, please contact us immediately, and we will purge the account and associated records.
+Bhromon is built for families. A family circle is a private tour group: only its members see its photos, chat, notices, games, and ledger. A parent or guardian should create the circle, decide who is invited, and manage its members.
+* **Children's photos**: Photos and videos of children are visible only to the members of the group they were shared in. Only the group's owner or an admin can export the group's complete record, including its photos, as a PDF.
+* **What members can still do**: Members can see the photos in their group. The app has no button that saves other members' photos to a device, but a screenshot can always be taken, and scrapbook pages can be shared through the device's share menu. Please share with care.
+* **Consent and age**: Bhromon does not knowingly collect personal information from children under 13 without a parent's or guardian's consent. A parent or guardian who has concerns can ask us to remove a child's content or account, and we will do so.
 
 ---
 

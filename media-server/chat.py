@@ -19,7 +19,7 @@ import threading
 import time
 from collections import deque
 from pathlib import Path
-from typing import Any, Deque, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.concurrency import run_in_threadpool
@@ -828,6 +828,11 @@ def authenticate_user(
         raise HTTPException(status_code=401, detail="Invalid authentication token.")
 
 
+# Whether two people are active members of one tour together. main.py sets this to
+# the Firestore check. Until it is set, nobody may be contacted.
+shares_group: Callable[[str, str], bool] = lambda uid_a, uid_b: False
+
+
 # ── Pydantic Request Models ───────────────────────────────────────────────────
 
 class TokenRegistrationRequest(BaseModel):
@@ -887,11 +892,20 @@ async def register_device_token(
     return {"status": "success"}
 
 
+async def _may_talk_to_other(uid: str, participants: List[str]) -> bool:
+    """Whether the other person in a conversation is someone uid may talk to now."""
+    others = [p for p in participants if p != uid]
+    if not others:
+        return True
+    return await run_in_threadpool(shares_group, uid, others[0])
+
+
 @chat_router.get("/conversations")
 async def list_conversations(uid: str = Depends(authenticate_user)):
-    """Returns all conversations for the authenticated user."""
+    """Returns the conversations with people uid shares a tour with, or the Guide."""
     convs = await run_in_threadpool(chat_db.list_conversations, uid=uid)
-    return {"conversations": convs}
+    visible = [c for c in convs if await _may_talk_to_other(uid, c.get("participants") or [])]
+    return {"conversations": visible}
 
 
 @chat_router.get("/messages/{chat_id}")
@@ -901,7 +915,10 @@ async def get_messages(
     limit: int = Query(50, ge=1, le=100),
     uid: str = Depends(authenticate_user),
 ):
-    """Returns paginated messages for a conversation."""
+    """Returns paginated messages for a conversation, while its other person is still reachable."""
+    participants = await run_in_threadpool(chat_db.participants_of, chat_id)
+    if participants and uid in participants and not await _may_talk_to_other(uid, participants):
+        raise HTTPException(status_code=403, detail="You can only read chats with people in a tour you share.")
     msgs = await run_in_threadpool(
         chat_db.get_messages,
         chat_id=chat_id,
@@ -918,6 +935,8 @@ async def send_message(
     uid: str = Depends(authenticate_user),
 ):
     """Sends a message, delivers via WebSocket if recipient is online, or via FCM push."""
+    if not await run_in_threadpool(shares_group, uid, req.recipientId):
+        raise HTTPException(status_code=403, detail="You can only message people in a tour you share.")
     participants = sorted([uid, req.recipientId])
     await run_in_threadpool(
         chat_db.get_or_create_conversation,
@@ -1064,7 +1083,8 @@ async def get_online_status(
     target_uid: str,
     uid: str = Depends(authenticate_user),
 ):
-    return {"uid": target_uid, "isOnline": ws_manager.is_online(target_uid)}
+    online = ws_manager.is_online(target_uid) and await run_in_threadpool(shares_group, uid, target_uid)
+    return {"uid": target_uid, "isOnline": online}
 
 
 STUN_URLS = [
@@ -1193,6 +1213,8 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
         refusal = "invalid"
     elif len(json.dumps(data)) > MAX_CALL_SIGNAL_BYTES:
         refusal = "too_large"
+    elif not await run_in_threadpool(shares_group, uid, recipient_id):
+        refusal = "not_in_group"
     elif signal_type == "offer" and not call_offer_limiter.allow(uid):
         refusal = "rate_limited"
 
@@ -1317,7 +1339,7 @@ async def chat_websocket(
                 chat_id = data.get("chatId")
                 recipient_id = data.get("recipientId")
                 is_typing = bool(data.get("isTyping", False))
-                if recipient_id:
+                if recipient_id and await run_in_threadpool(shares_group, uid, recipient_id):
                     await ws_manager.send_to_user(
                         recipient_id,
                         {"type": "typing", "chatId": chat_id, "uid": uid, "isTyping": is_typing},
@@ -1329,7 +1351,7 @@ async def chat_websocket(
                 if chat_id:
                     updated = await run_in_threadpool(chat_db.mark_read, chat_id, uid, message_ids)
                     recipient_id = data.get("recipientId")
-                    if recipient_id:
+                    if recipient_id and await run_in_threadpool(shares_group, uid, recipient_id):
                         await ws_manager.send_to_user(
                             recipient_id,
                             {"type": "read", "chatId": chat_id, "readerId": uid, "messageIds": updated},

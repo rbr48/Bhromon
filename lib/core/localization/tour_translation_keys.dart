@@ -1740,6 +1740,20 @@ class TourTranslationKeys {
       'ig_sea_safety_title': 'Sea safety and tide information',
       'fsh_sea_guide_body':
           "• When the red flag is up, do not go into the sea under any circumstances.\n• At low tide the sea's pull (rip current) is very strong, so do not wade deeper than your waist.\n• Save the compass directions to Hotel Sea Moon and the bus parking point so you do not lose your way in a crowd.\n• In any unexpected situation, call the tourist police (01320-163599) or 999 directly.",
+      // ── Family circles ─────────────────────────────────────────────────────
+      'hub_create_family': 'Create a family circle',
+      'hub_family_title': 'New family circle',
+      'hub_family_intro':
+          'A private circle for your family: photos and moments, chat, games, notices and safety alerts. It has no trip dates or travel tools.',
+      'hub_family_name_hint': 'Family name (e.g. Rahman Family)',
+      'hub_family_create': 'Create circle',
+      'hub_family_created':
+          'Family circle "{name}" is ready. Invite your family with the code.',
+      'hub_family_badge': 'Family',
+      'pdf_export_admin_only':
+          'Only the owner or an admin can export the whole tour.',
+      'notice_post_failed':
+          'Could not post the notice. Check your connection and try again.',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -3475,6 +3489,20 @@ class TourTranslationKeys {
       'ig_sea_safety_title': 'সমুদ্র নিরাপত্তা ও জোয়ার-ভাটা তথ্য',
       'fsh_sea_guide_body':
           '• লাল পতাকা ওড়ালে কোনোভাবেই সমুদ্রে নামবেন না।\n• ভাটার সময় সমুদ্রের টান (Rip Current) অত্যন্ত তীব্র থাকে, কোমর পানির বেশি নামবেন না।\n• হোটেল সি মুন ও বাস পার্কিং পয়েন্টের কম্পাস ডিরেকশন সেভ রাখুন যাতে ভিড়ের মধ্যে পথ হারিয়ে না যায়।\n• যেকোনো অনাকাঙ্ক্ষিত পরিস্থিতিতে সরাসরি ট্যুরিস্ট পুলিশ (01320-163599) বা ৯৯৯ নম্বরে ফোন দিন।',
+      // ── পরিবার গ্রুপ ───────────────────────────────────────────────────────
+      'hub_create_family': 'পরিবারের গ্রুপ তৈরি করুন',
+      'hub_family_title': 'নতুন পরিবারের গ্রুপ',
+      'hub_family_intro':
+          'আপনার পরিবারের জন্য ব্যক্তিগত গ্রুপ: ছবি ও স্মৃতি, চ্যাট, গেম, নোটিশ ও নিরাপত্তা সতর্কতা। এখানে ভ্রমণের তারিখ বা ভ্রমণের টুল নেই।',
+      'hub_family_name_hint': 'পরিবারের নাম (যেমন: রহমান পরিবার)',
+      'hub_family_create': 'গ্রুপ তৈরি করুন',
+      'hub_family_created':
+          '"{name}" পরিবার-গ্রুপ তৈরি হয়েছে। কোড দিয়ে পরিবারের সবাইকে যুক্ত করুন।',
+      'hub_family_badge': 'পরিবার',
+      'pdf_export_admin_only':
+          'শুধু মালিক বা অ্যাডমিন পুরো ট্যুরের PDF নিতে পারেন।',
+      'notice_post_failed':
+          'নোটিশ পাঠানো যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
     },
   };
 }

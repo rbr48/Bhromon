@@ -766,6 +766,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       '/chat/$chatId',
       extra: {
         'otherUid': remoteId,
+        'sharedTourId': member.tourId,
+        'otherEmail': member.email,
       },
     );
   }
@@ -789,6 +791,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       extra: {
         'localUid': myUid,
         'remoteUid': remoteId,
+        'remoteEmail': member.email,
+        'sharedTourId': member.tourId,
         'remoteUserName': member.displayName.isNotEmpty
             ? member.displayName
             : member.email.split('@').first,

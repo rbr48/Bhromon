@@ -36,8 +36,8 @@ import '../widgets/chat_expense_bubble.dart';
 import '../widgets/chat_emoji_picker.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/vps_chat_service.dart';
+import '../../../tour_group/data/tour_group_repository.dart';
 import '../../domain/call_log_entry.dart';
-import '../../data/travel_ai_service.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/services/media_upload_service.dart';
@@ -46,7 +46,18 @@ class ChatScreen extends StatefulWidget {
   final String chatId;
   final String? otherUid;
 
-  const ChatScreen({super.key, required this.chatId, this.otherUid});
+  /// The tour this chat is opened in, and the other person's email. A chat from a
+  /// tour passes both in; an older chat finds them in its own document.
+  final String? sharedTourId;
+  final String? otherEmail;
+
+  const ChatScreen({
+    super.key,
+    required this.chatId,
+    this.otherUid,
+    this.sharedTourId,
+    this.otherEmail,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -155,6 +166,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _sharedTourId = widget.sharedTourId;
+    _otherEmail = widget.otherEmail;
+    _loadSharedContext();
     ChatLocalCache().init();
     _checkBlockStatus();
     _startOnlinePolling();
@@ -439,6 +453,54 @@ class _ChatScreenState extends State<ChatScreen> {
     _onlinePoll = Timer.periodic(const Duration(seconds: 30), (_) => check());
   }
 
+  String? _sharedTourId;
+  String? _otherEmail;
+
+  String get _myEmail => TourGroupRepository().currentEmail;
+
+  /// Fills in the tour and the other person's email from the chat document, for a
+  /// chat that was not opened from a tour.
+  void _loadSharedContext() {
+    if (_sharedTourId != null && _otherEmail != null) return;
+    FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .get()
+        .then((snap) {
+      if (!mounted) return;
+      final data = snap.data();
+      final other = _resolveOtherUid(TourGroupRepository().currentUid);
+      final emails = data?['memberEmails'];
+      setState(() {
+        _sharedTourId ??= data?['sharedTourId'] as String?;
+        if (_otherEmail == null && other != null && emails is Map) {
+          _otherEmail = emails[other] as String?;
+        }
+      });
+    }).catchError((Object _) {});
+  }
+
+  /// Creates the chat document, or upgrades an older one, before a message is
+  /// written. The rules refuse a message in a chat that does not exist yet, and a
+  /// chat between two people must name the tour they share. The write is queued
+  /// rather than awaited; Firestore applies one client's writes in order, so the
+  /// message follows the chat.
+  void _ensureChatDocument(String currentUid) {
+    final otherUid = _resolveOtherUid(currentUid);
+    if (otherUid == null || otherUid.isEmpty) return;
+    if (_sharedTourId == null || _otherEmail == null) return;
+    final tour = {
+      'sharedTourId': _sharedTourId,
+      'memberEmails': {currentUid: _myEmail, otherUid: _otherEmail},
+    };
+    FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({
+      'participants': FieldValue.arrayUnion([currentUid, otherUid]),
+      ...tour,
+    }, SetOptions(merge: true)).catchError((Object e) {
+      logWarning('Chat document write error: $e');
+    });
+  }
+
   String? _resolveOtherUid(String currentUid) {
     if (widget.otherUid != null && widget.otherUid!.isNotEmpty) {
       return widget.otherUid;
@@ -511,6 +573,13 @@ class _ChatScreenState extends State<ChatScreen> {
     required String? resolvedOtherUid,
   }) {
     return {
+      // Chats between tour members carry their tour and both emails, which the
+      // rules check before anyone can write to them.
+      if (_sharedTourId != null) 'sharedTourId': _sharedTourId,
+      if (_sharedTourId != null &&
+          resolvedOtherUid != null &&
+          _otherEmail != null)
+        'memberEmails': {currentUid: _myEmail, resolvedOtherUid: _otherEmail},
       'lastMessage': lastMessage,
       'lastMessageType': lastMessageType,
       'lastMessageTime': FieldValue.serverTimestamp(),
@@ -541,8 +610,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }) {
     if (recipientUid != null &&
         recipientUid != 'guest' &&
-        recipientUid != currentUid &&
-        recipientUid != 'bhromon_ai_advisor') {
+        recipientUid != currentUid) {
       FirebaseFirestore.instance
           .collection('users')
           .doc(recipientUid)
@@ -568,6 +636,7 @@ class _ChatScreenState extends State<ChatScreen> {
     String currentName,
   ) async {
     setState(() => pending.isFailed = false);
+    _ensureChatDocument(currentUid);
     final msgRef = FirebaseFirestore.instance
         .collection('chats')
         .doc(widget.chatId)
@@ -793,6 +862,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _replyingMessage = null);
 
     // Reference & unique doc ID
+    _ensureChatDocument(currentUid);
     final msgRef = FirebaseFirestore.instance
         .collection('chats')
         .doc(widget.chatId)
@@ -873,10 +943,6 @@ class _ChatScreenState extends State<ChatScreen> {
         currentName: currentName,
         body: text,
       );
-
-      if (resolvedOtherUid == 'bhromon_ai_advisor') {
-        _processAiResponse(currentUid, text);
-      }
     } catch (e) {
       logWarning('Firestore message write error (delivered via VPS): $e');
       // If Firestore failed due to quota or network, clear pending message since VPS delivered it
@@ -885,51 +951,6 @@ class _ChatScreenState extends State<ChatScreen> {
           _pendingTextMessages.removeWhere((p) => p.id == msgId);
         });
       }
-    }
-  }
-
-  void _processAiResponse(String currentUid, String userText) async {
-    _updateTypingStatus('bhromon_ai_advisor', true);
-
-    try {
-      final responseText = await TravelAiService().getTravelAdvice(userText);
-
-      final replyRef = FirebaseFirestore.instance
-          .collection('chats')
-          .doc(widget.chatId)
-          .collection('messages')
-          .doc();
-
-      await replyRef.set({
-        'senderId': 'bhromon_ai_advisor',
-        'type': 'text',
-        'text': responseText,
-        'seen': false,
-        'status': 'read',
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      await FirebaseFirestore.instance
-          .collection('chats')
-          .doc(widget.chatId)
-          .set({
-        'lastMessage': responseText,
-        'lastMessageType': 'text',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'lastMessageSenderId': 'bhromon_ai_advisor',
-        'unreadCounts': {
-          currentUid: FieldValue.increment(1),
-        },
-        'participantProfiles': {
-          'bhromon_ai_advisor': {
-            'displayName': 'Bhromon AI Guide',
-          },
-        },
-      }, SetOptions(merge: true));
-    } catch (e) {
-      logError('Error in TravelAiService: $e');
-    } finally {
-      _updateTypingStatus('bhromon_ai_advisor', false);
     }
   }
 
@@ -1021,6 +1042,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1144,6 +1166,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1255,6 +1278,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1336,6 +1360,7 @@ class _ChatScreenState extends State<ChatScreen> {
   ) async {
     try {
       final resolvedOtherUid = _resolveOtherUid(currentUid);
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1423,6 +1448,7 @@ class _ChatScreenState extends State<ChatScreen> {
   ) async {
     try {
       final resolvedOtherUid = _resolveOtherUid(currentUid);
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1917,6 +1943,7 @@ class _ChatScreenState extends State<ChatScreen> {
       String? mediaUrl, String currentUid) async {
     setState(() => _selectedMessageIds.clear());
     try {
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(targetChatId)
@@ -2022,11 +2049,10 @@ class _ChatScreenState extends State<ChatScreen> {
     String? localUserName,
     String? localAvatarUrl,
   }) {
-    if (otherUid == 'bhromon_ai_advisor') {
+    if (_sharedTourId == null || _otherEmail == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-              'Voice and Video calls with the AI Guide are coming soon! Chat with text anytime.'),
+          content: Text('You can only call members of a tour you share.'),
           backgroundColor: Color(0xFF1F2C34),
         ),
       );
@@ -2039,6 +2065,8 @@ class _ChatScreenState extends State<ChatScreen> {
       extra: {
         'localUid': currentUid,
         'remoteUid': otherUid,
+        'remoteEmail': _otherEmail,
+        'sharedTourId': _sharedTourId,
         'remoteUserName': otherName,
         'remoteAvatarUrl': avatarUrl,
         'isCaller': true,
@@ -2224,18 +2252,12 @@ class _ChatScreenState extends State<ChatScreen> {
       stream: profileStream,
       builder: (context, profileSnap) {
         final profileData = profileSnap.data?.data() as Map<String, dynamic>?;
-        final String otherName = resolvedOtherUid == 'bhromon_ai_advisor'
-            ? 'Bhromon AI Guide'
-            : (profileData?['displayName'] as String? ??
-                'Traveler ${resolvedOtherUid.substring(0, math.min(resolvedOtherUid.length, 6))}');
-        final String? avatarUrl = resolvedOtherUid == 'bhromon_ai_advisor'
-            ? null
-            : (profileData?['avatarUrl'] as String?);
-        final initials = resolvedOtherUid == 'bhromon_ai_advisor'
-            ? 'AI'
-            : (otherName.length > 2
-                ? otherName.substring(0, 2).toUpperCase()
-                : 'TR');
+        final String otherName = profileData?['displayName'] as String? ??
+            'Traveler ${resolvedOtherUid.substring(0, math.min(resolvedOtherUid.length, 6))}';
+        final String? avatarUrl = profileData?['avatarUrl'] as String?;
+        final initials = otherName.length > 2
+            ? otherName.substring(0, 2).toUpperCase()
+            : 'TR';
 
         final bool hasSubState = _showEmojiPicker ||
             _selectedMessageIds.isNotEmpty ||

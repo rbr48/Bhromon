@@ -99,6 +99,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       '/chat/$chatId',
       extra: {
         'otherUid': remoteId,
+        'sharedTourId': member.tourId,
+        'otherEmail': member.email,
       },
     );
   }
@@ -123,6 +125,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       extra: {
         'localUid': myUid,
         'remoteUid': remoteId,
+        'remoteEmail': member.email,
+        'sharedTourId': member.tourId,
         'remoteUserName': member.displayName.isNotEmpty
             ? member.displayName
             : member.email.split('@').first,
@@ -424,6 +428,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       case 'copy_code':
         _copyInviteCode(group.inviteCode);
       case 'export_pdf':
+        // The whole tour holds every member's photos, so its owner or an admin exports it.
+        final role = await _repository.myRole(group.id);
+        if (role == null || !role.isAdminOrOwner) {
+          _snack(l10n.translate('pdf_export_admin_only'), error: true);
+          return;
+        }
+        if (!context.mounted) return;
         await exportTourPdf(context, group: group, repository: _repository);
       case 'add_member':
         _showAddMemberDialog(context, group.id);
@@ -563,6 +574,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     color: AppColors.midGreen),
                 tooltip: context.l10n.translate('hub_create_new_tour'),
                 onPressed: () => _showCreateGroupDialog(context),
+              ),
+              IconButton(
+                icon: const Icon(Icons.family_restroom_rounded,
+                    color: AppColors.mintGreen),
+                tooltip: context.l10n.translate('hub_create_family'),
+                onPressed: () => _showCreateFamilyDialog(context),
               ),
             ],
           ),
@@ -727,7 +744,15 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 6),
+            TextButton.icon(
+              onPressed: () => _showCreateFamilyDialog(context),
+              icon: const Icon(Icons.family_restroom_rounded,
+                  color: AppColors.mintGreen),
+              label: Text(context.l10n.translate('hub_create_family'),
+                  style: const TextStyle(color: AppColors.mintGreen)),
+            ),
+            const SizedBox(height: 12),
             if (!_repository.isSignedIn)
               TextButton.icon(
                 onPressed: () => context.push('/login'),
@@ -795,7 +820,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '${group.tourType.labelBn.split(' ').first} ${group.destination}',
+                        group.isFamily
+                            ? context.l10n.translate('hub_family_badge')
+                            : '${group.tourType.labelBn.split(' ').first} ${group.destination}',
                         style: const TextStyle(
                           color: AppColors.mintGreen,
                           fontSize: 12,
@@ -803,22 +830,23 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '⏱️ ${group.durationText}',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                    if (!group.isFamily)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '⏱️ ${group.durationText}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -884,13 +912,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                 style: const TextStyle(color: Colors.white))),
                     ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_calendar_rounded,
-                        size: 20, color: AppColors.mintGreen),
-                    tooltip: context.l10n.translate('hub_settings_dates'),
-                    padding: EdgeInsets.zero,
-                    onPressed: () => _showEditGroupDialog(context, group),
-                  ),
+                  if (!group.isFamily)
+                    IconButton(
+                      icon: const Icon(Icons.edit_calendar_rounded,
+                          size: 20, color: AppColors.mintGreen),
+                      tooltip: context.l10n.translate('hub_settings_dates'),
+                      padding: EdgeInsets.zero,
+                      onPressed: () => _showEditGroupDialog(context, group),
+                    ),
                   if (allGroups.length > 1) ...[
                     const SizedBox(width: 8),
                     DropdownButton<String>(
@@ -928,26 +957,27 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(Icons.calendar_today_rounded,
-                  size: 12, color: Colors.white60),
-              const SizedBox(width: 5),
-              Text(
-                '${localizedDateFormat('d MMM yyyy').format(group.startDate)} – ${localizedDateFormat('d MMM yyyy').format(group.endDate)}',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-              const SizedBox(width: 12),
-              const Icon(Icons.near_me_rounded,
-                  size: 12, color: Colors.white60),
-              const SizedBox(width: 4),
-              Text(
-                context.l10n.translate('hub_origin_line',
-                    args: {'origin': group.originCity}),
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
+          if (!group.isFamily)
+            Row(
+              children: [
+                const Icon(Icons.calendar_today_rounded,
+                    size: 12, color: Colors.white60),
+                const SizedBox(width: 5),
+                Text(
+                  '${localizedDateFormat('d MMM yyyy').format(group.startDate)} – ${localizedDateFormat('d MMM yyyy').format(group.endDate)}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                const SizedBox(width: 12),
+                const Icon(Icons.near_me_rounded,
+                    size: 12, color: Colors.white60),
+                const SizedBox(width: 4),
+                Text(
+                  context.l10n.translate('hub_origin_line',
+                      args: {'origin': group.originCity}),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            ),
           if (group.description.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
@@ -956,6 +986,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             ),
           ],
           () {
+            if (group.isFamily) return const SizedBox.shrink();
             final now = DateTime.now();
             final today = DateTime(now.year, now.month, now.day);
             final startDay = DateTime(group.startDate.year,
@@ -1280,6 +1311,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   Widget _buildModulesGrid(BuildContext context, TourGroup group) {
+    // Family circles have no trip, so the trip-only tiles stay hidden.
+    final isTrip = !group.isFamily;
     final modules = [
       _ModuleItem(
         title: context.l10n.translate('hub_module_feed'),
@@ -1295,7 +1328,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         color: const Color(0xFF52B788),
         onTap: () => context.push('/group/${group.id}/ledger'),
       ),
-      if (group.modules.seatsRooms)
+      if (isTrip && group.modules.seatsRooms)
         _ModuleItem(
           title: context.l10n.translate('hub_module_seats'),
           subtitle: context.l10n.translate('hub_module_seats_sub'),
@@ -1310,7 +1343,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         color: const Color(0xFF84CC16),
         onTap: () => context.push('/group/${group.id}/calendar'),
       ),
-      if (group.modules.tideSafety)
+      if (isTrip && group.modules.tideSafety)
         _ModuleItem(
           title: group.tourType == TourType.beach
               ? context.l10n.translate('hub_module_tide')
@@ -1331,16 +1364,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         color: const Color(0xFFEAB308),
         onTap: () => context.push('/group/${group.id}/notices'),
       ),
-      _ModuleItem(
-        title: context.l10n.translate('hub_module_journey'),
-        subtitle: context.l10n.translate('hub_journey_sub', args: {
-          'origin': group.originCity,
-          'destination': group.destination
-        }),
-        icon: Icons.alt_route_rounded,
-        color: const Color(0xFF10B981),
-        onTap: () => context.push('/group/${group.id}/journey'),
-      ),
+      if (isTrip)
+        _ModuleItem(
+          title: context.l10n.translate('hub_module_journey'),
+          subtitle: context.l10n.translate('hub_journey_sub', args: {
+            'origin': group.originCity,
+            'destination': group.destination
+          }),
+          icon: Icons.alt_route_rounded,
+          color: const Color(0xFF10B981),
+          onTap: () => context.push('/group/${group.id}/journey'),
+        ),
       _ModuleItem(
         title: context.l10n.translate('hub_module_safety'),
         subtitle: context.l10n.translate('hub_module_safety_sub'),
@@ -1356,28 +1390,31 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           color: const Color(0xFFF59E0B),
           onTap: () => context.push('/game-zone'),
         ),
-      _ModuleItem(
-        title: context.l10n.translate('hub_module_quiz'),
-        subtitle: context.l10n.translate('hub_quiz_sub',
-            args: {'destination': group.destination}),
-        icon: Icons.quiz_rounded,
-        color: const Color(0xFF8B5CF6),
-        onTap: () => context.push('/group/${group.id}/quiz'),
-      ),
-      _ModuleItem(
-        title: context.l10n.translate('hub_module_scrapbook'),
-        subtitle: context.l10n.translate('hub_module_scrapbook_sub'),
-        icon: Icons.auto_stories_rounded,
-        color: const Color(0xFFD97706),
-        onTap: () => context.push('/group/${group.id}/scrapbook'),
-      ),
-      _ModuleItem(
-        title: context.l10n.translate('hub_module_checklist'),
-        subtitle: context.l10n.translate('hub_module_checklist_sub'),
-        icon: Icons.checklist_rtl_rounded,
-        color: const Color(0xFF14B8A6),
-        onTap: () => context.push('/group/${group.id}/checklist'),
-      ),
+      if (isTrip)
+        _ModuleItem(
+          title: context.l10n.translate('hub_module_quiz'),
+          subtitle: context.l10n.translate('hub_quiz_sub',
+              args: {'destination': group.destination}),
+          icon: Icons.quiz_rounded,
+          color: const Color(0xFF8B5CF6),
+          onTap: () => context.push('/group/${group.id}/quiz'),
+        ),
+      if (isTrip)
+        _ModuleItem(
+          title: context.l10n.translate('hub_module_scrapbook'),
+          subtitle: context.l10n.translate('hub_module_scrapbook_sub'),
+          icon: Icons.auto_stories_rounded,
+          color: const Color(0xFFD97706),
+          onTap: () => context.push('/group/${group.id}/scrapbook'),
+        ),
+      if (isTrip)
+        _ModuleItem(
+          title: context.l10n.translate('hub_module_checklist'),
+          subtitle: context.l10n.translate('hub_module_checklist_sub'),
+          icon: Icons.checklist_rtl_rounded,
+          color: const Color(0xFF14B8A6),
+          onTap: () => context.push('/group/${group.id}/checklist'),
+        ),
       if (group.modules.chat)
         _ModuleItem(
           title: context.l10n.translate('hub_module_channels'),
@@ -1612,6 +1649,159 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 ),
               ),
           ],
+        );
+      },
+    );
+  }
+
+  /// A family circle: a name and a description. It has no trip, so no dates,
+  /// destination or travel modules are asked for.
+  void _showCreateFamilyDialog(BuildContext context) {
+    final l10n = context.l10n;
+    final nameCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    bool isCreating = false;
+
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.75),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF14241B),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18)),
+              title: Text(l10n.translate('hub_family_title'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17)),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.translate('hub_family_intro'),
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 12)),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: nameCtrl,
+                        autofocus: true,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: l10n.translate('hub_family_name_hint'),
+                          labelStyle: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: descCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: l10n.translate('hub_description_optional'),
+                          labelStyle: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isCreating ? null : () => Navigator.pop(ctx),
+                  child: Text(l10n.translate('tour_cancel'),
+                      style: const TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.midGreen),
+                  onPressed: isCreating
+                      ? null
+                      : () async {
+                          final name = nameCtrl.text.trim();
+                          if (name.isEmpty) {
+                            _snack(l10n.translate('hub_name_hint'),
+                                error: true);
+                            return;
+                          }
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(ctx);
+                          setDialogState(() => isCreating = true);
+                          try {
+                            final today = DateTime.now();
+                            final newGroup = await _repository.createGroup(
+                              name: name,
+                              description: descCtrl.text.trim(),
+                              destination: '',
+                              tourType: TourType.custom,
+                              startDate: today,
+                              endDate: today,
+                              modules: const TourModules(
+                                seatsRooms: false,
+                                tideSafety: false,
+                                games: true,
+                                chat: true,
+                              ),
+                              kind: GroupKind.family,
+                            );
+                            if (mounted) {
+                              _selectTour(newGroup);
+                              setState(() {
+                                _groupsStream = _repository.watchMyGroups();
+                              });
+                              navigator.pop();
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.translate(
+                                      'hub_family_created',
+                                      args: {'name': newGroup.name})),
+                                  backgroundColor: AppColors.midGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() => isCreating = false);
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.translate(
+                                      'hub_create_failed',
+                                      args: {'error': e})),
+                                  backgroundColor: Colors.redAccent,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: isCreating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : Text(l10n.translate('hub_family_create'),
+                          style: const TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
         );
       },
     );

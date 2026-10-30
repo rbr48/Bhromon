@@ -31,6 +31,17 @@ def fake_firebase(monkeypatch):
     monkeypatch.setattr(chat, "verify_firebase_uid", verify)
     monkeypatch.setattr(chat, "call_offer_limiter", CallOfferLimiter())
 
+    # The ring push runs in the background after each offer. These socket tests
+    # check the exchange, not the push, so the push is a no-op here.
+    monkeypatch.setattr(chat.push_dispatcher, "send_call_push_to_uid", lambda **kwargs: 0)
+
+    async def inline(func, *args, **kwargs):
+        # Each TestClient socket runs on an event loop of its own, and a worker thread
+        # hop between two of them can stall an exchange. Production keeps the hop.
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(chat, "run_in_threadpool", inline)
+
 
 def _signed_in(client, token):
     """A WebSocket session for `token`. Use it as a context manager."""
