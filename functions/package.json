@@ -11,7 +11,7 @@
     "backfill:geohashes": "npm run build && node lib/scripts/backfillGeohashes.js"
   },
   "engines": {
-    "node": "20"
+    "node": ">=20"
   },
   "main": "lib/index.js",
   "dependencies": {
