@@ -1230,6 +1230,15 @@ class _ChatScreenState extends State<ChatScreen> {
       } else if (!kIsWeb && pFile.path != null && pFile.path!.isNotEmpty) {
         docBytes = await File(pFile.path!).readAsBytes();
       } else {
+        logError('Could not read the picked file: ${pFile.name}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not read this file. Please try again.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
         return;
       }
 
