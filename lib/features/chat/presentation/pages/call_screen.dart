@@ -6,6 +6,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
@@ -95,6 +96,10 @@ class _CallScreenState extends State<CallScreen> {
   void initState() {
     super.initState();
     _isSpeakerOn = widget.isVideoCall;
+    // A video call keeps the screen on, or the phone sleeps in the middle of it.
+    if (widget.isVideoCall && !kIsWeb) {
+      unawaited(WakelockPlus.enable());
+    }
     if (!kIsWeb) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
@@ -319,6 +324,9 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void dispose() {
     _stopRingback();
+    if (widget.isVideoCall && !kIsWeb) {
+      unawaited(WakelockPlus.disable());
+    }
     if (!kIsWeb) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
