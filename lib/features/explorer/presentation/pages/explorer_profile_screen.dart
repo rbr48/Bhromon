@@ -22,6 +22,8 @@ import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/models/tour_group.dart';
+import '../../../tour_group/domain/services/tour_choice.dart';
+import '../../../tour_group/presentation/tour_routes.dart';
 import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
 import '../../domain/usecases/get_explorer_profile_usecase.dart';
 import '../../../game_zone/presentation/widgets/game_analytics_view.dart';
@@ -32,7 +34,11 @@ import '../../../game_zone/presentation/widgets/game_analytics_view.dart';
 class ExplorerProfileScreen extends StatefulWidget {
   final String uid;
 
-  const ExplorerProfileScreen({super.key, required this.uid});
+  /// The tour the visitor came from, so the tour tabs and cards open it. Null
+  /// when the profile is opened outside a tour.
+  final String? tourId;
+
+  const ExplorerProfileScreen({super.key, required this.uid, this.tourId});
 
   @override
   State<ExplorerProfileScreen> createState() => _ExplorerProfileScreenState();
@@ -54,10 +60,14 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   String _activeTab = 'tours';
   bool _isGuest = false;
 
+  // The tour the tabs and cards open. Creating or joining a tour changes it.
+  String? _tourId;
+
   @override
   void initState() {
     super.initState();
     _getExplorerProfile = getIt<GetExplorerProfileUseCase>();
+    _tourId = widget.tourId;
     _loadProfile();
   }
 
@@ -336,7 +346,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        context.go('/group-hub');
+        context.go(tourHubPath(_tourId));
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF0D1A12),
@@ -360,7 +370,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               if (context.canPop()) {
                 context.pop();
               } else {
-                context.go('/group-hub');
+                context.go(tourHubPath(_tourId));
               }
             },
           ),
@@ -411,7 +421,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ),
         bottomNavigationBar: BhromonBottomNav(
           selectedIndex: 4,
-          tourId: TourGroupRepository.lastActiveTourId,
+          tourId: _tourId,
         ),
       ),
     );
@@ -1649,8 +1659,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       // Go to Hub / Open Tour
                       ElevatedButton.icon(
                         onPressed: () {
-                          TourGroupRepository.lastActiveTourId = group.id;
-                          context.go('/group-hub');
+                          context.go(tourHubPath(group.id));
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.midGreen,
@@ -1710,10 +1719,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           icon: Icons.auto_stories_rounded,
           color: AppColors.mintGreen,
           onTap: () {
-            if (groups.isNotEmpty) {
-              final activeId =
-                  TourGroupRepository.lastActiveTourId ?? groups.first.id;
-              context.push('/group/$activeId/scrapbook');
+            final tour = pickTour(groups, [_tourId]);
+            if (tour != null) {
+              context.push('/group/${tour.id}/scrapbook');
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -1751,10 +1759,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           icon: Icons.shield_rounded,
           color: Colors.redAccent,
           onTap: () {
-            if (groups.isNotEmpty) {
-              final activeId =
-                  TourGroupRepository.lastActiveTourId ?? groups.first.id;
-              context.push('/group/$activeId/safety');
+            final tour = pickTour(groups, [_tourId]);
+            if (tour != null) {
+              context.push('/group/${tour.id}/safety');
             } else {
               context.go('/group-hub');
             }
@@ -2237,8 +2244,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               endDate: endDate,
                             );
                             if (mounted) {
-                              TourGroupRepository.lastActiveTourId =
-                                  newGroup.id;
+                              setState(() => _tourId = newGroup.id);
                               nav.pop();
                               messenger.showSnackBar(
                                 SnackBar(
@@ -2252,7 +2258,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 ),
                               );
                               if (context.mounted) {
-                                context.go('/group-hub');
+                                context.go(tourHubPath(newGroup.id));
                               }
                             }
                           } catch (e) {
@@ -2367,8 +2373,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             final joinedGroup =
                                 await _tourRepo.joinGroupWithCode(code);
                             if (mounted) {
-                              TourGroupRepository.lastActiveTourId =
-                                  joinedGroup.id;
+                              setState(() => _tourId = joinedGroup.id);
                               nav.pop();
                               messenger.showSnackBar(
                                 SnackBar(
@@ -2382,7 +2387,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 ),
                               );
                               if (context.mounted) {
-                                context.go('/group-hub');
+                                context.go(tourHubPath(joinedGroup.id));
                               }
                             }
                           } catch (e) {

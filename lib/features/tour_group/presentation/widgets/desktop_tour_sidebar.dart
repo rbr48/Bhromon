@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/tour_group.dart';
+import '../tour_routes.dart';
 import 'command_palette_dialog.dart';
 
 class DesktopTourSidebar extends StatelessWidget {
@@ -194,7 +195,7 @@ class DesktopTourSidebar extends StatelessWidget {
                       title: 'ড্যাশবোর্ড',
                       icon: Icons.dashboard_outlined,
                       activeIcon: Icons.dashboard_rounded,
-                      route: '/group-hub',
+                      route: tourHubPath(tourId),
                       isActive: _isActive('/group-hub'),
                     ),
                     _buildNavItem(
@@ -337,7 +338,6 @@ class DesktopTourSidebar extends StatelessWidget {
   }) {
     return InkWell(
       onTap: () {
-        TourGroupRepository.lastActiveTourId = tourId;
         context.go(route);
       },
       borderRadius: BorderRadius.circular(8),
@@ -389,7 +389,6 @@ class DesktopTourSidebar extends StatelessWidget {
   }) {
     return InkWell(
       onTap: () {
-        TourGroupRepository.lastActiveTourId = tourId;
         context.go(route);
       },
       borderRadius: BorderRadius.circular(8),

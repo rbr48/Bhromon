@@ -24,6 +24,7 @@ import '../../domain/models/tour_group.dart';
 import '../../domain/services/chat_commands.dart';
 import '../../domain/services/chat_mentions.dart';
 import '../../domain/services/media_rules.dart';
+import '../tour_routes.dart';
 import '../../domain/services/presence_rules.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/channel_composer.dart';
@@ -359,7 +360,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 if (context.canPop()) {
                   context.pop();
                 } else {
-                  context.go('/group-hub');
+                  context.go(tourHubPath(widget.tourId));
                 }
               },
             ),

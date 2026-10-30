@@ -129,62 +129,6 @@ class TourGroupRepository {
     return null;
   }
 
-  static String? _cachedActiveTourId;
-
-  /// The most recent or currently active tour ID across the application.
-  static String? get lastActiveTourId {
-    if (_cachedActiveTourId != null && _cachedActiveTourId!.isNotEmpty) {
-      return _cachedActiveTourId;
-    }
-    try {
-      if (Hive.isBoxOpen('tour_groups_box')) {
-        final saved =
-            Hive.box<dynamic>('tour_groups_box').get('last_active_tour_id');
-        if (saved is String && saved.isNotEmpty) {
-          _cachedActiveTourId = saved;
-          return saved;
-        }
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  static set lastActiveTourId(String? id) {
-    if (id == null || id.isEmpty) return;
-    _cachedActiveTourId = id;
-    try {
-      if (Hive.isBoxOpen('tour_groups_box')) {
-        Hive.box<dynamic>('tour_groups_box').put('last_active_tour_id', id);
-      } else {
-        // Best effort: a failed open must not surface as an uncaught error.
-        Hive.openBox<dynamic>('tour_groups_box').then((box) {
-          box.put('last_active_tour_id', id);
-        }).catchError((_) {});
-      }
-    } catch (_) {}
-  }
-
-  /// Asynchronously retrieves the last active tour ID from memory, Hive, or cached groups.
-  Future<String?> getActiveTourId() async {
-    if (_cachedActiveTourId != null && _cachedActiveTourId!.isNotEmpty) {
-      return _cachedActiveTourId;
-    }
-    try {
-      final box = await _openBox();
-      final saved = box.get('last_active_tour_id');
-      if (saved is String && saved.isNotEmpty) {
-        _cachedActiveTourId = saved;
-        return saved;
-      }
-      final local = await getLocalGroups();
-      if (local.isNotEmpty) {
-        _cachedActiveTourId = local.first.id;
-        return _cachedActiveTourId;
-      }
-    } catch (_) {}
-    return null;
-  }
-
   String _requireEmail() {
     if (!isSignedIn || currentEmail.isEmpty) {
       throw const TourAccessException(
@@ -423,12 +367,6 @@ class TourGroupRepository {
       if (controller.isClosed) return;
       final groups = tours.values.toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      if (groups.isNotEmpty) {
-        final currentId = lastActiveTourId;
-        if (currentId == null || !groups.any((g) => g.id == currentId)) {
-          lastActiveTourId = groups.first.id;
-        }
-      }
       controller.add(groups);
     }
 
@@ -506,7 +444,6 @@ class TourGroupRepository {
       listedIds.clear();
       rolesByTour.clear();
       heardFromServer = false;
-      _cachedActiveTourId = null;
       boundUserId = null;
     }
 
@@ -827,7 +764,6 @@ class TourGroupRepository {
       throw const TourAccessException('ট্যুরটি এখন আর পাওয়া যাচ্ছে না।');
     }
     await _cacheLocalGroup(group);
-    lastActiveTourId = group.id;
 
     // Eagerly prefetch and cache the group's members and key subcollections
     // into Firestore cache so all tabs load with 0ms delay.
@@ -1175,9 +1111,6 @@ class TourGroupRepository {
     }
     await _memberships.doc(_membershipId(tourId, email)).delete();
     await _removeLocalGroup(tourId);
-    if (lastActiveTourId == tourId) {
-      lastActiveTourId = null;
-    }
   }
 
   /// Owner deletes the tour. Other members' rows and the invite go first, the
@@ -1201,9 +1134,6 @@ class TourGroupRepository {
     await _tour(tourId).delete();
     await _memberships.doc(_membershipId(tourId, actor)).delete();
     await _removeLocalGroup(tourId);
-    if (lastActiveTourId == tourId) {
-      lastActiveTourId = null;
-    }
   }
 
   // ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/tour_group_repository.dart';
+import '../tour_routes.dart';
 import 'bhromon_bottom_nav.dart';
 import 'command_palette_dialog.dart';
 import 'desktop_tour_sidebar.dart';
@@ -40,7 +41,6 @@ class TripShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    TourGroupRepository.lastActiveTourId = tourId;
     final index = tripTabFor(location);
 
     void select(int i) {
@@ -56,7 +56,7 @@ class TripShell extends StatelessWidget {
       canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        context.go('/group-hub');
+        context.go(tourHubPath(tourId));
       },
       child: child,
     );
