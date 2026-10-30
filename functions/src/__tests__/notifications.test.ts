@@ -212,6 +212,22 @@ describe('Push Notifications Cloud Functions', () => {
         }),
       }));
     });
+    it('does not notify anyone about a call log', async () => {
+      const snap = {
+        data: () => ({
+          senderId: 'sender_789',
+          type: 'call',
+          callStatus: 'ended',
+          durationSeconds: 192,
+        }),
+        exists: true,
+      };
+
+      await sendChatNotification.run(snap as any, { params: { chatId: 'chat_123', messageId: 'msg_1000' } } as any);
+
+      expect(sentMessages).toHaveLength(0);
+      expect(dbWrites['users/recipient_123/notifications']).toBeUndefined();
+    });
   });
 
   describe('sendBroadcastNotification', () => {

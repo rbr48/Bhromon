@@ -36,6 +36,7 @@ import '../widgets/chat_expense_bubble.dart';
 import '../widgets/chat_emoji_picker.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/vps_chat_service.dart';
+import '../../domain/call_log_entry.dart';
 import '../../data/travel_ai_service.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/services/media_upload_service.dart';
@@ -603,6 +604,77 @@ class _ChatScreenState extends State<ChatScreen> {
           () => _pendingTextMessages.removeWhere((p) => p.id == pending.id));
     }
   }
+
+  /// A finished call, centred in the conversation: the direction or outcome,
+  /// and the length when the call connected.
+  Widget _buildCallLogEntry(Map<String, dynamic> data, String currentUid) {
+    final l10n = context.l10n;
+    final entry = CallLogEntry.fromData(data);
+    final kind = entry.kindFor(currentUid);
+    final isProblem = kind == CallLogKind.missed ||
+        kind == CallLogKind.noAnswer ||
+        kind == CallLogKind.declined;
+    final label = l10n.translate(_callLogLabelKey(kind));
+    final seconds = entry.durationSeconds;
+    final String text;
+    if (entry.connected && seconds != null) {
+      final parts = callDurationParts(seconds);
+      final length = l10n.translate('chat_call_duration', args: {
+        'count': parts.minutes,
+        'n': parts.seconds,
+      });
+      text = '$label · $length';
+    } else {
+      text = label;
+    }
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F2C34),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _callLogIcon(kind),
+              size: 16,
+              color: isProblem ? Colors.redAccent : const Color(0xFF00A884),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                text,
+                style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _callLogLabelKey(CallLogKind kind) => switch (kind) {
+        CallLogKind.outgoing => 'chat_call_outgoing',
+        CallLogKind.incoming => 'chat_call_incoming',
+        CallLogKind.outgoingVideo => 'chat_call_outgoing_video',
+        CallLogKind.incomingVideo => 'chat_call_incoming_video',
+        CallLogKind.missed => 'chat_call_missed',
+        CallLogKind.noAnswer => 'chat_call_no_answer',
+        CallLogKind.declined => 'chat_call_declined',
+      };
+
+  static IconData _callLogIcon(CallLogKind kind) => switch (kind) {
+        CallLogKind.outgoing => Icons.call_made_rounded,
+        CallLogKind.incoming => Icons.call_received_rounded,
+        CallLogKind.outgoingVideo ||
+        CallLogKind.incomingVideo =>
+          Icons.videocam_rounded,
+        CallLogKind.missed || CallLogKind.noAnswer => Icons.call_missed_rounded,
+        CallLogKind.declined => Icons.call_end_rounded,
+      };
 
   Widget _buildPendingTextMessageBubble(_PendingTextMessage pending) {
     final timeStr = _formatTime(pending.createdAt);
@@ -2717,6 +2789,11 @@ class _ChatScreenState extends State<ChatScreen> {
                             final data = doc.data() as Map<String, dynamic>;
                             final String msgType =
                                 (data['type'] as String?) ?? 'text';
+                            // A call log is a record, not a message: it sits
+                            // centred in the conversation.
+                            if (msgType == 'call') {
+                              return _buildCallLogEntry(data, currentUid);
+                            }
                             final String text = (data['text'] as String?) ?? '';
                             final String mediaUrl =
                                 (data['mediaUrl'] as String?) ?? '';
