@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
+import '../../../chat/presentation/widgets/voice_message_recorder.dart';
 
 /// A photo or video picked for the next message, not yet uploaded.
 class PendingAttachment {
@@ -45,6 +46,10 @@ class ChannelComposer extends StatelessWidget {
   final VoidCallback onCancelContext;
   final VoidCallback onCancelUpload;
   final ValueChanged<int> onRemovePending;
+  final bool recordingVoice;
+  final VoidCallback onStartVoice;
+  final void Function(String path, Duration duration) onVoiceSent;
+  final VoidCallback onVoiceCancel;
 
   const ChannelComposer({
     super.key,
@@ -65,6 +70,10 @@ class ChannelComposer extends StatelessWidget {
     required this.onCancelContext,
     required this.onCancelUpload,
     required this.onRemovePending,
+    required this.recordingVoice,
+    required this.onStartVoice,
+    required this.onVoiceSent,
+    required this.onVoiceCancel,
   });
 
   @override
@@ -121,59 +130,85 @@ class ChannelComposer extends StatelessWidget {
             ),
           if (mentionChoices.isNotEmpty)
             _MentionList(choices: mentionChoices, onPick: onPickMention),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-            child: Row(
-              children: [
-                IconButton(
-                  tooltip: l10n.translate('chan_attach_tooltip'),
-                  icon: const Icon(Icons.attach_file, color: Colors.white70),
-                  onPressed: sending ? null : onAttach,
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    maxLength: kChannelMessageMaxLength,
-                    minLines: 1,
-                    maxLines: 4,
-                    textInputAction: TextInputAction.send,
-                    onChanged: onChanged,
-                    onSubmitted: (_) => onSend(),
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      counterText: '',
-                      hintText: hint,
-                      hintStyle:
-                          const TextStyle(color: Colors.white54, fontSize: 13),
-                      filled: true,
-                      fillColor: Colors.black26,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
+          if (recordingVoice)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              child: VoiceMessageRecorder(
+                onVoiceSent: onVoiceSent,
+                onCancel: onVoiceCancel,
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: l10n.translate('chan_attach_tooltip'),
+                    icon: const Icon(Icons.attach_file, color: Colors.white70),
+                    onPressed: sending ? null : onAttach,
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      maxLength: kChannelMessageMaxLength,
+                      minLines: 1,
+                      maxLines: 4,
+                      textInputAction: TextInputAction.send,
+                      onChanged: onChanged,
+                      onSubmitted: (_) => onSend(),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        counterText: '',
+                        hintText: hint,
+                        hintStyle: const TextStyle(
+                            color: Colors.white54, fontSize: 13),
+                        filled: true,
+                        fillColor: Colors.black26,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
                     ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  tooltip: l10n.translate('tour_send'),
-                  icon: sending
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              color: AppColors.mintGreen, strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send_rounded,
-                          color: AppColors.mintGreen),
-                  onPressed: sending ? null : onSend,
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: controller,
+                    builder: (context, value, _) {
+                      final canRecord = !sending &&
+                          !editing &&
+                          pending.isEmpty &&
+                          value.text.trim().isEmpty;
+                      if (canRecord) {
+                        return IconButton(
+                          tooltip: l10n.translate('chan_voice_tooltip'),
+                          icon: const Icon(Icons.mic_rounded,
+                              color: AppColors.mintGreen),
+                          onPressed: onStartVoice,
+                        );
+                      }
+                      return IconButton(
+                        tooltip: l10n.translate('tour_send'),
+                        icon: sending
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    color: AppColors.mintGreen, strokeWidth: 2),
+                              )
+                            : const Icon(Icons.send_rounded,
+                                color: AppColors.mintGreen),
+                        onPressed: sending ? null : onSend,
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

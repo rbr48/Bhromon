@@ -193,9 +193,11 @@ void main() {
       ValueChanged<MentionChoice>? onPick,
       List<MentionChoice> mentions = const [],
       ChannelReply? replyTo,
+      String text = '',
+      VoidCallback? onStart,
     }) {
       return ChannelComposer(
-        controller: TextEditingController(),
+        controller: TextEditingController(text: text),
         focusNode: FocusNode(),
         hint: 'Write',
         sending: false,
@@ -212,14 +214,29 @@ void main() {
         onCancelContext: () {},
         onCancelUpload: () {},
         onRemovePending: (_) {},
+        recordingVoice: false,
+        onStartVoice: onStart ?? () {},
+        onVoiceSent: (_, __) {},
+        onVoiceCancel: () {},
       );
     }
 
     testWidgets('the send button sends', (tester) async {
       var sent = false;
-      await _pump(tester, composer(onSend: () => sent = true));
+      await _pump(tester, composer(onSend: () => sent = true, text: 'hi'));
       await tester.tap(find.byIcon(Icons.send_rounded));
       expect(sent, isTrue);
+    });
+
+    testWidgets('an empty box shows the mic, which starts a voice note',
+        (tester) async {
+      var started = false;
+      await _pump(
+        tester,
+        composer(onSend: () {}, onStart: () => started = true),
+      );
+      await tester.tap(find.byIcon(Icons.mic_rounded));
+      expect(started, isTrue);
     });
 
     testWidgets('a reply shows whom it answers and can be cancelled',

@@ -4,6 +4,7 @@ const int kMaxImageBytes = 10 * 1024 * 1024; // 10 MB
 const int kMaxVideoBytes = 100 * 1024 * 1024; // 100 MB
 const int kMaxReelSeconds = 180; // 3 minutes
 const int kMaxPhotosPerPost = 10;
+const int kMaxAudioBytes = 25 * 1024 * 1024; // 25 MB, as the media server
 
 const Map<String, String> _imageTypes = {
   'jpg': 'image/jpeg',
@@ -24,6 +25,15 @@ const Map<String, String> _videoTypes = {
   'mkv': 'video/x-matroska',
 };
 
+const Map<String, String> _audioTypes = {
+  'm4a': 'audio/mp4',
+  'mp3': 'audio/mpeg',
+  'aac': 'audio/aac',
+  'wav': 'audio/wav',
+  'ogg': 'audio/ogg',
+  'opus': 'audio/opus',
+};
+
 String _extension(String fileName) {
   final dot = fileName.lastIndexOf('.');
   if (dot < 0 || dot == fileName.length - 1) return '';
@@ -36,6 +46,9 @@ String? imageContentType(String fileName) => _imageTypes[_extension(fileName)];
 
 /// The content type to upload a video with, or null when not allowed.
 String? videoContentType(String fileName) => _videoTypes[_extension(fileName)];
+
+/// The content type to upload a voice note with, or null when not allowed.
+String? audioContentType(String fileName) => _audioTypes[_extension(fileName)];
 
 /// Extension to store a file under. Falls back to [fallback] when the name has none.
 String storedExtension(String fileName, String fallback) {
