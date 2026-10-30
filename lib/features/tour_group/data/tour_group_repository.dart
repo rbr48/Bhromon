@@ -2565,4 +2565,37 @@ class TourGroupRepository {
       'stories': await collect('stories'),
     };
   }
+
+  /// Every post in the tour, oldest first, read in pages of 200. The PDF export
+  /// reads the whole record this way; the feed only shows the newest page.
+  Future<List<TourPostItem>> fetchAllPostsForExport(String tourId) async {
+    _requireEmail();
+    const pageSize = 200;
+    final posts = <TourPostItem>[];
+    DocumentSnapshot<Map<String, dynamic>>? last;
+    while (true) {
+      var query = _sub(tourId, 'posts').orderBy('createdAt').limit(pageSize);
+      if (last != null) query = query.startAfterDocument(last);
+      final snap = await query.get();
+      posts.addAll(snap.docs.map((d) => TourPostItem.fromMap(d.id, d.data())));
+      if (snap.docs.length < pageSize) return posts;
+      last = snap.docs.last;
+    }
+  }
+
+  /// Every comment on a post, oldest first, for the PDF export.
+  Future<List<TourCommentItem>> fetchCommentsForExport(
+    String tourId,
+    String postId,
+  ) async {
+    _requireEmail();
+    final snap = await _sub(tourId, 'posts')
+        .doc(postId)
+        .collection('comments')
+        .orderBy('createdAt')
+        .get();
+    return snap.docs
+        .map((d) => TourCommentItem.fromMap(d.id, d.data()))
+        .toList();
+  }
 }
