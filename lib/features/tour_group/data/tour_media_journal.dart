@@ -262,10 +262,9 @@ class TourMediaJournal {
   Future<void> markDelete(TourMediaRef ref) {
     return _serial(() async {
       final entries = await _load();
-      final existing = entries[ref.url];
-      entries[ref.url] =
-          (existing ?? JournalEntry.forRef(ref, JournalKind.delete, _clock()))
-              .asKind(JournalKind.delete);
+      // The grace period starts now, not when the upload began: the upload may
+      // still be running when it is discarded.
+      entries[ref.url] = JournalEntry.forRef(ref, JournalKind.delete, _clock());
       await _save();
     });
   }

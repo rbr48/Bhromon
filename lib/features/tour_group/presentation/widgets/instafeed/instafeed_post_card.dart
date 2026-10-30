@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
+import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_carousel.dart';
+import 'instafeed_day_label.dart';
 import 'instafeed_image_viewer_modal.dart';
 import 'instafeed_zoomable_media.dart';
 import 'reel_thumbnail_preview.dart';
@@ -43,6 +45,9 @@ class InstafeedPostCard extends StatefulWidget {
   /// Selects this card's video, from its play button.
   final VoidCallback? onVideoTap;
 
+  /// The tour's days, for the edit dialog's day picker.
+  final List<TourDayInfo> tourDays;
+
   const InstafeedPostCard({
     super.key,
     required this.repository,
@@ -59,6 +64,7 @@ class InstafeedPostCard extends StatefulWidget {
     required this.onBookmarkToggle,
     this.onSaveToCollection,
     this.onPostChanged,
+    this.tourDays = const [],
     this.seatNumber,
     this.roomNumber,
     this.videoPlaying = false,
@@ -100,7 +106,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('মন্তব্য পাঠানো সম্ভব হয়নি: $e'),
+            content: Text(context.l10n
+                .translate('ig_comment_failed', args: {'error': e})),
             backgroundColor: Colors.redAccent,
             behavior: SnackBarBehavior.floating,
           ),
@@ -115,6 +122,13 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   void initState() {
     super.initState();
     _checkAndInitVideo();
+    _recordViewIfNew();
+  }
+
+  /// Records this member's view unless the post already shows it as seen.
+  void _recordViewIfNew() {
+    final email = widget.repository.currentEmail;
+    if (email.isEmpty || widget.post.isViewedBy(email)) return;
     widget.repository
         .recordPostView(tourId: widget.tourId, postId: widget.post.id);
   }
@@ -165,11 +179,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   void didUpdateWidget(InstafeedPostCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.post.id != widget.post.id) {
-      final email = widget.repository.currentEmail;
-      if (email.isNotEmpty && !widget.post.isViewedBy(email)) {
-        widget.repository
-            .recordPostView(tourId: widget.tourId, postId: widget.post.id);
-      }
+      _recordViewIfNew();
     }
     if (oldWidget.post.id != widget.post.id ||
         oldWidget.post.likes.length != widget.post.likes.length) {
@@ -361,6 +371,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     final captionCtrl = TextEditingController(text: widget.post.caption);
     final locationCtrl = TextEditingController(text: widget.post.location);
     String selectedDay = widget.post.tourDay;
+    final dayNumbers = instafeedDayNumbers(widget.tourDays, selectedDay);
 
     final updated = await showDialog<bool>(
       context: context,
@@ -429,21 +440,11 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                         borderSide: BorderSide.none),
                   ),
                   items: [
-                    DropdownMenuItem(
-                        value: 'day1',
-                        child: Text(context.l10n.translate('ig_day_one'))),
-                    DropdownMenuItem(
-                        value: 'day2',
-                        child: Text(context.l10n.translate('ig_day_two'))),
-                    DropdownMenuItem(
-                        value: 'day3',
-                        child: Text(context.l10n.translate('ig_day_three'))),
-                    DropdownMenuItem(
-                        value: 'day4',
-                        child: Text(context.l10n.translate('ig_day_four'))),
-                    DropdownMenuItem(
-                        value: 'day5',
-                        child: Text(context.l10n.translate('ig_day_five'))),
+                    for (final n in dayNumbers)
+                      DropdownMenuItem(
+                        value: instafeedDayId(n),
+                        child: Text(instafeedDayLabel(context, n)),
+                      ),
                   ],
                   onChanged: (val) {
                     if (val != null) setDlgState(() => selectedDay = val);
@@ -496,6 +497,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
         }
       }
     }
+    captionCtrl.dispose();
+    locationCtrl.dispose();
   }
 
   Future<void> _toggleArchive() async {
@@ -1029,9 +1032,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
             border: Border.all(
                 color: Colors.pinkAccent.withValues(alpha: 0.4), width: 0.6),
           ),
-          child: const Text(
-            '🎬 রিলস',
-            style: TextStyle(
+          child: Text(
+            '🎬 ${context.l10n.translate('ig_reels_title')}',
+            style: const TextStyle(
               color: Colors.pinkAccent,
               fontSize: 9.5,
               fontWeight: FontWeight.bold,
@@ -1044,25 +1047,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   }
 
   String _formatDayBadge(String tourDay) {
-    final numStr = tourDay.replaceAll(RegExp(r'[^0-9]'), '');
-    final n = int.tryParse(numStr);
-    if (n == null) return '';
-    switch (n) {
-      case 1:
-        return '১ম দিন';
-      case 2:
-        return '২য় দিন';
-      case 3:
-        return '৩য় দিন';
-      case 4:
-        return '৪র্থ দিন';
-      case 5:
-        return '৫ম দিন';
-      case 6:
-        return '৬ষ্ঠ দিন';
-      default:
-        return '$nম দিন';
-    }
+    final n = int.tryParse(tourDay.replaceAll(RegExp(r'[^0-9]'), ''));
+    return n == null ? '' : instafeedDayLabel(context, n);
   }
 
   @override
@@ -1206,7 +1192,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
-                                  'সাথে: ${widget.post.tags.join(', ')}',
+                                  context.l10n.translate('ig_with_tags', args: {
+                                    'names': widget.post.tags.join(', ')
+                                  }),
                                   style: const TextStyle(
                                     color: AppColors.mintGreen,
                                     fontSize: 10.5,
@@ -1581,7 +1569,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                         style: const TextStyle(
                             color: Colors.white, fontSize: 12.5),
                         decoration: InputDecoration(
-                          hintText: 'একটি মন্তব্য লিখুন...',
+                          hintText: context.l10n.translate('ig_write_comment'),
                           hintStyle: const TextStyle(
                               color: Colors.white38, fontSize: 11.5),
                           filled: true,

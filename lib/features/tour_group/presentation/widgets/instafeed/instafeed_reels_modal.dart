@@ -40,6 +40,9 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
   late final PageController _pageCtrl;
   int _currentIndex = 0;
   bool _isGlobalMuted = false;
+  // When on, a reel that reaches its end moves to the next one.
+  bool _autoAdvance = true;
+  int? _advancingFrom;
 
   // Video controller pool for instant zero-lag playback: index -> controller
   final Map<int, VideoPlayerController> _controllerPool = {};
@@ -94,10 +97,11 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
 
     final controller = VideoPlayerController.networkUrl(Uri.parse(url));
     _controllerPool[index] = controller;
+    controller.addListener(() => _onVideoTick(index, controller));
 
     controller.initialize().then((_) {
       if (!mounted) return;
-      controller.setLooping(true);
+      controller.setLooping(!_autoAdvance);
       controller.setVolume(_isGlobalMuted ? 0.0 : 1.0);
       if (index == _currentIndex) {
         controller.play();
@@ -130,6 +134,7 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
   }
 
   void _onPageChanged(int newIndex) {
+    _advancingFrom = null;
     // Pause previous
     _controllerPool[_currentIndex]?.pause();
 
@@ -155,6 +160,46 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
     for (final k in keysToRemove) {
       _controllerPool[k]?.dispose();
       _controllerPool.remove(k);
+    }
+  }
+
+  static bool _hasEnded(VideoPlayerValue value) =>
+      value.isInitialized &&
+      value.duration > Duration.zero &&
+      value.position >= value.duration;
+
+  void _onVideoTick(int index, VideoPlayerController controller) {
+    if (!_autoAdvance || index != _currentIndex) return;
+    final value = controller.value;
+    // A scroll that was dragged back never changes the page, so the reel is
+    // free to advance again once it is played from before its end.
+    if (!_hasEnded(value)) {
+      _advancingFrom = null;
+      return;
+    }
+    if (_advancingFrom == index || value.isPlaying) return;
+    _advanceFrom(index);
+  }
+
+  /// Scrolls to the reel after [index]. The last reel stays on its last frame.
+  void _advanceFrom(int index) {
+    if (index + 1 >= widget.reels.length) return;
+    _advancingFrom = index;
+    _pageCtrl.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _toggleAutoAdvance() {
+    setState(() => _autoAdvance = !_autoAdvance);
+    for (final c in _controllerPool.values) {
+      c.setLooping(!_autoAdvance);
+    }
+    // Turning it on at the end of a reel moves on straight away.
+    final current = _controllerPool[_currentIndex];
+    if (_autoAdvance && current != null && _hasEnded(current.value)) {
+      _advanceFrom(_currentIndex);
     }
   }
 
@@ -198,6 +243,8 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
             isActive: index == _currentIndex,
             isMuted: _isGlobalMuted,
             onToggleMute: _toggleMute,
+            autoAdvance: _autoAdvance,
+            onToggleAutoAdvance: _toggleAutoAdvance,
             onOpenComments: () => widget.onOpenComments?.call(post),
             onShare: () => widget.onShare?.call(post),
             onAddToLedger: () => widget.onAddToLedger?.call(post),
@@ -216,6 +263,8 @@ class _ReelPageItem extends StatefulWidget {
   final bool isActive;
   final bool isMuted;
   final VoidCallback onToggleMute;
+  final bool autoAdvance;
+  final VoidCallback onToggleAutoAdvance;
   final VoidCallback onOpenComments;
   final VoidCallback onShare;
   final VoidCallback onAddToLedger;
@@ -228,6 +277,8 @@ class _ReelPageItem extends StatefulWidget {
     required this.isActive,
     required this.isMuted,
     required this.onToggleMute,
+    required this.autoAdvance,
+    required this.onToggleAutoAdvance,
     required this.onOpenComments,
     required this.onShare,
     required this.onAddToLedger,
@@ -392,6 +443,18 @@ class _ReelPageItemState extends State<_ReelPageItem>
                       ),
                     ),
                     const Spacer(),
+                    IconButton(
+                      tooltip: widget.autoAdvance
+                          ? context.l10n.translate('ig_auto_next_on')
+                          : context.l10n.translate('ig_auto_next_off'),
+                      icon: Icon(
+                        widget.autoAdvance
+                            ? Icons.playlist_play_rounded
+                            : Icons.repeat_one_rounded,
+                        color: Colors.white,
+                      ),
+                      onPressed: widget.onToggleAutoAdvance,
+                    ),
                     IconButton(
                       tooltip: widget.isMuted
                           ? context.l10n.translate('ig_unmute')

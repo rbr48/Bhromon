@@ -75,6 +75,8 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
         reaction: reaction,
         parentId: _replyingTo?.id,
       );
+      // The sheet may have been closed while the comment was sending.
+      if (!mounted) return;
 
       if (_replyingTo != null) {
         _expandedParentIds.add(_replyingTo!.id);
@@ -88,14 +90,13 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
       });
       _focusNode.unfocus();
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isSubmitting = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(context.l10n
-                  .translate('ig_comment_failed', args: {'error': e}))),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(context.l10n
+                .translate('ig_comment_failed', args: {'error': e}))),
+      );
     }
   }
 

@@ -14,6 +14,7 @@ import 'package:bhromon/features/tour_group/domain/services/tour_video_compresso
 import 'package:video_compress/video_compress.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
+import 'instafeed_day_label.dart';
 
 /// Creation Studio bottom sheet supporting multi-image posts and reels with
 /// draft auto-recovery, manual photo tuning (brightness, contrast, saturation),
@@ -412,6 +413,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   }
 
   Future<void> _publish() async {
+    if (_isPublishing) return;
     final l10n = context.l10n;
     if (_photos.isEmpty && _selectedVideo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -428,7 +430,8 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
 
     final uploads = <TourMediaUpload>[];
     final uploadedUrls = <String>[];
-    var postSaved = false;
+    // Once the feed post or the story is saved, the files it uses are kept.
+    var keepFiles = false;
     String? coverUrl;
     try {
       if (_isReel && _selectedVideo != null) {
@@ -566,42 +569,52 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         }
       }
 
-      // If share to story is enabled, create the story!
-      if (_shareToStory && uploadedUrls.isNotEmpty) {
-        final mediaUrl =
-            _isReel ? (coverUrl ?? uploadedUrls.first) : uploadedUrls.first;
-        final poll = (_includePoll && _pollQuestionCtrl.text.trim().isNotEmpty)
-            ? TourStoryPoll(
-                question: _pollQuestionCtrl.text.trim(),
-                options: [
-                  _pollOpt1Ctrl.text.trim().isNotEmpty
-                      ? _pollOpt1Ctrl.text.trim()
-                      : l10n.translate('ig_yes'),
-                  _pollOpt2Ctrl.text.trim().isNotEmpty
-                      ? _pollOpt2Ctrl.text.trim()
-                      : l10n.translate('ig_no'),
-                ],
-              )
-            : null;
-
-        await widget.repository.addStory(
-          tourId: widget.tourId,
-          mediaUrl: mediaUrl,
-          caption: _captionCtrl.text.trim().isNotEmpty
-              ? _captionCtrl.text.trim()
-              : (_includePoll && _pollQuestionCtrl.text.trim().isNotEmpty
-                  ? _pollQuestionCtrl.text.trim()
-                  : null),
-          isVideo: _isReel,
-          videoUrl: _isReel ? uploadedUrls.first : null,
-          poll: poll,
-        );
+      // The feed post (if any) is saved, so its files are in use and are kept.
+      if (_shareToFeed) {
+        keepFiles = true;
+        await _commitUploads(uploads);
       }
 
-      // The post/story is saved, so its files are no longer orphans.
-      postSaved = true;
-      for (final upload in uploads) {
-        await upload.commit();
+      // If share to story is enabled, create the story. A failure here does not
+      // undo a post that was already shared: the error is shown instead.
+      Object? storyError;
+      if (_shareToStory && uploadedUrls.isNotEmpty) {
+        try {
+          final mediaUrl =
+              _isReel ? (coverUrl ?? uploadedUrls.first) : uploadedUrls.first;
+          final poll =
+              (_includePoll && _pollQuestionCtrl.text.trim().isNotEmpty)
+                  ? TourStoryPoll(
+                      question: _pollQuestionCtrl.text.trim(),
+                      options: [
+                        _pollOpt1Ctrl.text.trim().isNotEmpty
+                            ? _pollOpt1Ctrl.text.trim()
+                            : l10n.translate('ig_yes'),
+                        _pollOpt2Ctrl.text.trim().isNotEmpty
+                            ? _pollOpt2Ctrl.text.trim()
+                            : l10n.translate('ig_no'),
+                      ],
+                    )
+                  : null;
+
+          await widget.repository.addStory(
+            tourId: widget.tourId,
+            mediaUrl: mediaUrl,
+            caption: _captionCtrl.text.trim().isNotEmpty
+                ? _captionCtrl.text.trim()
+                : (_includePoll && _pollQuestionCtrl.text.trim().isNotEmpty
+                    ? _pollQuestionCtrl.text.trim()
+                    : null),
+            isVideo: _isReel,
+            videoUrl: _isReel ? uploadedUrls.first : null,
+            poll: poll,
+          );
+          keepFiles = true;
+          await _commitUploads(uploads);
+        } catch (e) {
+          if (!keepFiles) rethrow;
+          storyError = e;
+        }
       }
 
       // Clear draft upon success
@@ -614,19 +627,23 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       if (mounted) {
         Navigator.pop(context);
         widget.onPostCreated?.call();
-        final successMsg = _shareToStory && !_shareToFeed
-            ? context.l10n.translate('ig_shared_to_story')
-            : context.l10n.translate('ig_post_published');
+        final successMsg = storyError != null
+            ? context.l10n
+                .translate('ig_story_share_failed', args: {'error': storyError})
+            : _shareToStory && !_shareToFeed
+                ? context.l10n.translate('ig_shared_to_story')
+                : context.l10n.translate('ig_post_published');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(successMsg),
-            backgroundColor: AppColors.mintGreen,
+            backgroundColor:
+                storyError != null ? Colors.redAccent : AppColors.mintGreen,
           ),
         );
       }
     } catch (e) {
-      // The post is not saved, so the files it would have used are removed.
-      if (!postSaved) {
+      // Nothing that uses these files was saved, so they are removed.
+      if (!keepFiles) {
         for (final upload in uploads) {
           await upload.discard();
         }
@@ -640,6 +657,13 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   .translate('ig_publish_failed', args: {'error': e}))),
         );
       }
+    }
+  }
+
+  /// Keeps the journal from removing files that a saved post or story uses.
+  Future<void> _commitUploads(List<TourMediaUpload> uploads) async {
+    for (final upload in uploads) {
+      await upload.commit();
     }
   }
 
@@ -1026,26 +1050,13 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                                 borderSide: BorderSide.none),
                           ),
                           items: [
-                            DropdownMenuItem(
-                                value: 'day1',
-                                child:
-                                    Text(context.l10n.translate('ig_day_one'))),
-                            DropdownMenuItem(
-                                value: 'day2',
-                                child:
-                                    Text(context.l10n.translate('ig_day_two'))),
-                            DropdownMenuItem(
-                                value: 'day3',
-                                child: Text(
-                                    context.l10n.translate('ig_day_three'))),
-                            DropdownMenuItem(
-                                value: 'day4',
-                                child: Text(
-                                    context.l10n.translate('ig_day_four'))),
-                            DropdownMenuItem(
-                                value: 'day5',
-                                child: Text(
-                                    context.l10n.translate('ig_day_five'))),
+                            for (final n in instafeedDayNumbers(
+                                widget.group?.daysList ?? const [],
+                                _selectedDay))
+                              DropdownMenuItem(
+                                value: instafeedDayId(n),
+                                child: Text(instafeedDayLabel(context, n)),
+                              ),
                           ],
                           onChanged: (val) {
                             if (val != null) {

@@ -2013,16 +2013,18 @@ class TourGroupRepository {
   Future<List<TourPostItem>> getPostsByIds(
       String tourId, Iterable<String> ids) async {
     final unique = ids.toSet().toList();
-    final posts = <TourPostItem>[];
     // Each `in` query takes at most 10 ids, a limit every Firestore version accepts.
-    for (var i = 0; i < unique.length; i += 10) {
-      final chunk = unique.skip(i).take(10).toList();
-      final snap = await _sub(tourId, 'posts')
-          .where(FieldPath.documentId, whereIn: chunk)
-          .get();
-      posts.addAll(snap.docs.map((d) => TourPostItem.fromMap(d.id, d.data())));
-    }
-    return posts;
+    final snaps = await Future.wait([
+      for (var i = 0; i < unique.length; i += 10)
+        _sub(tourId, 'posts')
+            .where(FieldPath.documentId,
+                whereIn: unique.skip(i).take(10).toList())
+            .get(),
+    ]);
+    return [
+      for (final snap in snaps)
+        for (final d in snap.docs) TourPostItem.fromMap(d.id, d.data()),
+    ];
   }
 
   Stream<TourPostItem?> watchPost(String tourId, String postId) {
@@ -2143,7 +2145,8 @@ class TourGroupRepository {
     });
   }
 
-  /// Records a view on a post once per member.
+  /// Records a member's view on a post. A member counts once: the count moves
+  /// only the first time this member's email is added to the viewers.
   Future<void> recordPostView({
     required String tourId,
     required String postId,
@@ -2152,9 +2155,16 @@ class TourGroupRepository {
       final email = currentEmail;
       if (email.isEmpty) return;
       final postRef = _sub(tourId, 'posts').doc(postId);
-      await postRef.update({
-        'viewers': FieldValue.arrayUnion([email]),
-        'viewCount': FieldValue.increment(1),
+      await _firestore.runTransaction((tx) async {
+        final snap = await tx.get(postRef);
+        final data = snap.data();
+        if (data == null) return;
+        final viewers = (data['viewers'] as List?)?.cast<Object?>() ?? const [];
+        if (viewers.contains(email)) return;
+        tx.update(postRef, {
+          'viewers': FieldValue.arrayUnion([email]),
+          'viewCount': FieldValue.increment(1),
+        });
       });
     } catch (e) {
       debugPrint('[recordPostView] Failed to record view on $postId: $e');
