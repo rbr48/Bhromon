@@ -17,6 +17,7 @@ import logging
 import re
 import secrets
 import shutil
+import time
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+import chat
 from chat import chat_db, chat_router
 from news import router as news_router
 from notifications import FirestoreNotificationWatcher, NotificationEngine
@@ -76,6 +78,10 @@ MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
 MAX_VIDEO_BYTES = 100 * 1024 * 1024  # 100 MB
 MAX_AUDIO_BYTES = 25 * 1024 * 1024  # 25 MB
 MAX_DOC_BYTES = 50 * 1024 * 1024  # 50 MB
+
+# All of a tour's files together may use this many bytes. 0 turns the limit off.
+# It is a soft limit: two uploads that start at the same moment can overshoot by one file.
+TOUR_QUOTA_BYTES = int(os.getenv("MEDIA_TOUR_QUOTA_BYTES", str(10 * 1024 * 1024 * 1024)))
 
 TOUR_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,64}")
 OBJECT_ID_PATTERN = re.compile(r"[0-9a-f]{32}")
@@ -153,11 +159,19 @@ class Caller:
     uid: str = ""
 
 
+# How long a uid's email, and a person's tours, are remembered. A person who leaves
+# a tour can still be reached for at most this long.
+EMAIL_CACHE_SECONDS = 600
+TOURS_CACHE_SECONDS = 15
+
+
 class FirebaseBackend:
     """Checks ID tokens and tour memberships with the Firebase Admin SDK."""
 
     def __init__(self) -> None:
         self._db = None
+        self._email_cache: Dict[str, Tuple[float, str]] = {}
+        self._tours_cache: Dict[str, Tuple[float, frozenset]] = {}
 
     def _ensure_app(self) -> None:
         init_firebase_admin()
@@ -202,6 +216,51 @@ class FirebaseBackend:
             return None
         return str((profile.to_dict() or {}).get("tier") or "") or None
 
+    def email_for_uid(self, uid: str) -> str:
+        """The email Firebase Auth holds for a uid, or "" when there is no such account."""
+        if not uid:
+            return ""
+        now = time.monotonic()
+        cached = self._email_cache.get(uid)
+        if cached and now - cached[0] < EMAIL_CACHE_SECONDS:
+            return cached[1]
+        self._ensure_app()
+        from firebase_admin import auth
+
+        try:
+            email = (auth.get_user(uid).email or "").strip().lower()
+        except Exception as e:  # No such account, or the lookup failed.
+            logger.info("No email for uid %s: %s", uid, e)
+            return ""
+        self._email_cache[uid] = (now, email)
+        return email
+
+    def active_tours_for_email(self, email: str) -> frozenset:
+        """The tours the email is an active member of, owned tours included."""
+        if not email:
+            return frozenset()
+        now = time.monotonic()
+        cached = self._tours_cache.get(email)
+        if cached and now - cached[0] < TOURS_CACHE_SECONDS:
+            return cached[1]
+        db = self._client()
+        rows = db.collection("memberships").where("email", "==", email).where("status", "==", "active").stream()
+        tours = {str((row.to_dict() or {}).get("tourId") or "") for row in rows}
+        tours |= {doc.id for doc in db.collection("tours").where("ownerEmail", "==", email).stream()}
+        tours.discard("")
+        result = frozenset(tours)
+        self._tours_cache[email] = (now, result)
+        return result
+
+    def shares_group(self, uid_a: str, uid_b: str) -> bool:
+        """Whether two people are active members of one tour together."""
+        if not uid_a or not uid_b or uid_a == uid_b:
+            return False
+        tours_a = self.active_tours_for_email(self.email_for_uid(uid_a))
+        if not tours_a:
+            return False
+        return not tours_a.isdisjoint(self.active_tours_for_email(self.email_for_uid(uid_b)))
+
     def role_for(self, tour_id: str, email: str) -> Optional[str]:
         """The caller's role in the tour, or None when they are not an active member."""
         db = self._client()
@@ -219,6 +278,10 @@ class FirebaseBackend:
 
 
 backend = FirebaseBackend()
+
+# Chat and call routes ask this before they reach another person. The lookup goes
+# through `backend` at call time, so tests that swap the backend swap this too.
+chat.shares_group = lambda uid_a, uid_b: backend.shares_group(uid_a, uid_b)
 
 
 def authenticate(
@@ -365,17 +428,34 @@ async def health():
     }
 
 
-async def store_stream(file: UploadFile, dest: Path, max_allowed: int) -> int:
-    """Writes the upload to [dest] and returns its size. Stops at [max_allowed]."""
+def tour_bytes_used(tour_id: str) -> int:
+    """Bytes stored for a tour, counting uploads still in progress.
+
+    A hard link is one file under two names while an upload is being linked into
+    place, so each file is counted once by its inode.
+    """
+    seen: set = set()
+    total = 0
+    for dirpath, _dirnames, filenames in os.walk(MEDIA_ROOT / tour_id):
+        for name in filenames:
+            try:
+                info = os.stat(os.path.join(dirpath, name))
+            except FileNotFoundError:
+                continue  # Removed while the tour was being counted.
+            if (info.st_dev, info.st_ino) not in seen:
+                seen.add((info.st_dev, info.st_ino))
+                total += info.st_size
+    return total
+
+
+async def store_stream(file: UploadFile, dest: Path, max_allowed: int, too_big: object) -> int:
+    """Writes the upload to [dest] and returns its size. Stops at [max_allowed] with [too_big]."""
     total = 0
     async with aiofiles.open(dest, "xb") as out_file:
         while chunk := await file.read(1024 * 1024):
             total += len(chunk)
             if total > max_allowed:
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"File exceeds maximum allowed size ({max_allowed // (1024 * 1024)} MB)",
-                )
+                raise HTTPException(status_code=413, detail=too_big)
             await out_file.write(chunk)
     return total
 
@@ -434,6 +514,15 @@ async def upload_media(
         max_allowed = MAX_DOC_BYTES
     else:
         max_allowed = MAX_IMAGE_BYTES
+    limit = max_allowed
+    too_big = f"File exceeds maximum allowed size ({max_allowed // (1024 * 1024)} MB)"
+
+    # The tour's files share one quota. The upload is cut off at whatever room is left.
+    if TOUR_QUOTA_BYTES:
+        room = TOUR_QUOTA_BYTES - await run_in_threadpool(tour_bytes_used, tourId)
+        if room < limit:
+            limit = max(room, 0)
+            too_big = {"error": "quota_exceeded", "limitBytes": TOUR_QUOTA_BYTES}
 
     target_dir = MEDIA_ROOT / tourId / folder
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -443,7 +532,7 @@ async def upload_media(
     part = target_dir / f".{filename}.{uuid.uuid4().hex}.part"
 
     try:
-        total_bytes = await store_stream(file, part, max_allowed)
+        total_bytes = await store_stream(file, part, limit, too_big)
         try:
             # A hard link fails when the target exists, which keeps uploads from
             # overwriting a file.

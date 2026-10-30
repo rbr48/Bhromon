@@ -36,6 +36,7 @@ import '../widgets/chat_expense_bubble.dart';
 import '../widgets/chat_emoji_picker.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/vps_chat_service.dart';
+import '../../../tour_group/data/tour_group_repository.dart';
 import '../../domain/call_log_entry.dart';
 import '../../data/travel_ai_service.dart';
 import '../../../../core/utils/image_sizing.dart';
@@ -46,7 +47,18 @@ class ChatScreen extends StatefulWidget {
   final String chatId;
   final String? otherUid;
 
-  const ChatScreen({super.key, required this.chatId, this.otherUid});
+  /// The tour this chat is opened in, and the other person's email. A chat from a
+  /// tour passes both in; an older chat finds them in its own document.
+  final String? sharedTourId;
+  final String? otherEmail;
+
+  const ChatScreen({
+    super.key,
+    required this.chatId,
+    this.otherUid,
+    this.sharedTourId,
+    this.otherEmail,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -155,6 +167,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _sharedTourId = widget.sharedTourId;
+    _otherEmail = widget.otherEmail;
+    _loadSharedContext();
     ChatLocalCache().init();
     _checkBlockStatus();
     _startOnlinePolling();
@@ -439,6 +454,33 @@ class _ChatScreenState extends State<ChatScreen> {
     _onlinePoll = Timer.periodic(const Duration(seconds: 30), (_) => check());
   }
 
+  String? _sharedTourId;
+  String? _otherEmail;
+
+  String get _myEmail => TourGroupRepository().currentEmail;
+
+  /// Fills in the tour and the other person's email from the chat document, for a
+  /// chat that was not opened from a tour.
+  void _loadSharedContext() {
+    if (_sharedTourId != null && _otherEmail != null) return;
+    FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .get()
+        .then((snap) {
+      if (!mounted) return;
+      final data = snap.data();
+      final other = _resolveOtherUid(TourGroupRepository().currentUid);
+      final emails = data?['memberEmails'];
+      setState(() {
+        _sharedTourId ??= data?['sharedTourId'] as String?;
+        if (_otherEmail == null && other != null && emails is Map) {
+          _otherEmail = emails[other] as String?;
+        }
+      });
+    }).catchError((Object _) {});
+  }
+
   String? _resolveOtherUid(String currentUid) {
     if (widget.otherUid != null && widget.otherUid!.isNotEmpty) {
       return widget.otherUid;
@@ -511,6 +553,13 @@ class _ChatScreenState extends State<ChatScreen> {
     required String? resolvedOtherUid,
   }) {
     return {
+      // Chats between tour members carry their tour and both emails, which the
+      // rules check before anyone can write to them.
+      if (_sharedTourId != null) 'sharedTourId': _sharedTourId,
+      if (_sharedTourId != null &&
+          resolvedOtherUid != null &&
+          _otherEmail != null)
+        'memberEmails': {currentUid: _myEmail, resolvedOtherUid: _otherEmail},
       'lastMessage': lastMessage,
       'lastMessageType': lastMessageType,
       'lastMessageTime': FieldValue.serverTimestamp(),
@@ -2033,12 +2082,24 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
+    if (_sharedTourId == null || _otherEmail == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You can only call members of a tour you share.'),
+          backgroundColor: Color(0xFF1F2C34),
+        ),
+      );
+      return;
+    }
+
     final callId = const Uuid().v4();
     context.push(
       '/call/$callId',
       extra: {
         'localUid': currentUid,
         'remoteUid': otherUid,
+        'remoteEmail': _otherEmail,
+        'sharedTourId': _sharedTourId,
         'remoteUserName': otherName,
         'remoteAvatarUrl': avatarUrl,
         'isCaller': true,

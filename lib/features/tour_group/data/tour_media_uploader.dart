@@ -33,6 +33,15 @@ bool isRetryableUploadError(DioException e) {
   }
 }
 
+/// Whether the media server refused the upload because the tour's storage is
+/// full. Other refusals, such as a file over its size limit, are not this.
+bool isTourStorageFull(DioException e) {
+  final data = e.response?.data;
+  if (e.response?.statusCode != 413 || data is! Map) return false;
+  final detail = data['detail'];
+  return detail is Map && detail['error'] == 'quota_exceeded';
+}
+
 /// A user-facing upload failure. The message is shown as-is.
 class TourUploadException implements Exception {
   final String message;
@@ -291,6 +300,10 @@ class TourMediaUploader {
       } on DioException catch (e) {
         if (CancelToken.isCancel(e)) {
           throw const TourUploadCancelled();
+        }
+        if (isTourStorageFull(e)) {
+          throw const TourUploadException(
+              'এই ট্যুরের ছবি ও ভিডিওর জায়গা শেষ হয়ে গেছে। পুরনো মিডিয়া মুছে আবার চেষ্টা করুন।');
         }
         final msg = e.response?.data is Map
             ? (e.response!.data as Map)['detail']?.toString()

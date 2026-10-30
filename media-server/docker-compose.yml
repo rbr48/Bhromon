@@ -24,6 +24,8 @@ services:
       # and calls use STUN only.
       - SOTTO_TURN_SECRET=${SOTTO_TURN_SECRET:-}
       - PURGE_KEY=${PURGE_KEY:-}
+      # Bytes all of one tour's photos and videos may use together (10 GiB by default).
+      - MEDIA_TOUR_QUOTA_BYTES=${MEDIA_TOUR_QUOTA_BYTES:-10737418240}
       - BASE_URL=https://bhromon.fun/media
 
   bhromon-games:

@@ -93,3 +93,17 @@ leaves or is removed, and when a tour is deleted.
 
 Set `PURGE_KEY` on the server, and the same value as the Functions secret
 `MEDIA_PURGE_KEY`. Run the purge tests with `pytest tests/test_purge.py`.
+
+## Storage quota
+
+All of a tour's photos and videos share one quota, set by
+`MEDIA_TOUR_QUOTA_BYTES` (10 GiB by default; `0` turns it off). An upload is cut
+off at the room left in the tour, and the server answers `413` with
+`{"detail": {"error": "quota_exceeded", "limitBytes": ...}}`, which the app shows
+as a full tour storage message.
+
+- Usage counts every folder of the tour and uploads still in progress. Each file
+  is counted once, even while it is being linked into place.
+- It is a soft limit: two uploads that start at the same moment can overshoot by
+  one file.
+- Run the tests with `pytest tests/test_media_server.py`.

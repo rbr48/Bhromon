@@ -533,6 +533,11 @@ class TourGroupRepository {
           for (final d in snapshot.docs) {
             final data = d.data();
             final id = data['tourId'] as String? ?? '';
+            // A row an admin added has no uid, and chats and calls need one. The member
+            // writes their own, which the rules allow and nothing else on the row.
+            if ((data['uid'] as String? ?? '').isEmpty && myUid.isNotEmpty) {
+              d.reference.update({'uid': myUid}).catchError((Object _) {});
+            }
             final rawStatus = (data['status'] as String?)?.toLowerCase();
             final isActive = rawStatus == null || rawStatus == 'active';
             if (isActive && id.isNotEmpty) {
@@ -662,6 +667,7 @@ class TourGroupRepository {
     String? meetingPointTitle,
     String? meetingPointNote,
     String? meetingPointMapUrl,
+    GroupKind kind = GroupKind.tour,
   }) async {
     final email = _requireEmail();
     final uid = currentUid;
@@ -687,6 +693,7 @@ class TourGroupRepository {
       meetingPointNote: meetingPointNote,
       meetingPointMapUrl: meetingPointMapUrl,
       createdAt: now,
+      kind: kind,
     );
 
     final tourData = group.toMap()

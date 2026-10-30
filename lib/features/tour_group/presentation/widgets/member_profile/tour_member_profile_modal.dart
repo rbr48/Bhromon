@@ -133,14 +133,25 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
   Future<void> _loadExtraProfileData() async {
     if (widget.members != null) return;
     try {
-      final snap = await FirebaseFirestore.instance
-          .collection('explorer_profiles')
+      // Profiles cannot be searched by email. The member's row in this tour gives
+      // the uid, and the profile opens by that.
+      final row = await FirebaseFirestore.instance
+          .collection('memberships')
+          .where('tourId', isEqualTo: widget.tourId)
           .where('email', isEqualTo: normalizeEmail(widget.memberEmail))
           .limit(1)
           .get();
+      final uid = row.docs.isEmpty
+          ? ''
+          : (row.docs.first.data()['uid'] as String? ?? '');
+      if (uid.isEmpty) return;
+      final snap = await FirebaseFirestore.instance
+          .collection('explorer_profiles')
+          .doc(uid)
+          .get();
 
-      if (snap.docs.isNotEmpty && mounted) {
-        final data = snap.docs.first.data();
+      if (snap.exists && mounted) {
+        final data = snap.data() ?? const <String, dynamic>{};
         setState(() {
           _bloodGroup ??= data['bloodGroup'] as String?;
           _note ??= data['statusNote'] as String? ?? data['note'] as String?;
@@ -195,6 +206,8 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
       '/chat/$chatId',
       extra: {
         'otherUid': remoteId,
+        'sharedTourId': widget.tourId,
+        'otherEmail': widget.memberEmail,
       },
     );
   }

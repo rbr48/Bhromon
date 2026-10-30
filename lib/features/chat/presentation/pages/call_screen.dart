@@ -11,12 +11,18 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/call_signaling_service.dart';
+import '../../../tour_group/data/tour_group_repository.dart';
 
 /// Full-screen audio & video calling screen with WhatsApp styling.
 class CallScreen extends StatefulWidget {
   final String callId;
   final String localUid;
   final String remoteUid;
+
+  /// The other person's email and the tour they share with us. A call can only
+  /// be placed between two members of one tour.
+  final String? remoteEmail;
+  final String? sharedTourId;
   final String remoteUserName;
   final String? remoteAvatarUrl;
   final bool isCaller;
@@ -29,6 +35,8 @@ class CallScreen extends StatefulWidget {
     required this.callId,
     required this.localUid,
     required this.remoteUid,
+    this.remoteEmail,
+    this.sharedTourId,
     required this.remoteUserName,
     this.remoteAvatarUrl,
     required this.isCaller,
@@ -202,6 +210,9 @@ class _CallScreenState extends State<CallScreen> {
           videoEnabled: videoEnabled,
           callerName: widget.localUserName,
           callerAvatar: widget.localAvatarUrl,
+          sharedTourId: widget.sharedTourId,
+          localEmail: TourGroupRepository().currentEmail,
+          remoteEmail: widget.remoteEmail,
         );
       } else {
         await _signaling.answerCall(

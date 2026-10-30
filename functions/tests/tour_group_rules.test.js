@@ -254,6 +254,62 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  describe('family circles', () => {
+    const FAMILY = 'fam1';
+    const notice = (by) => ({ title: 'Dinner at 8', content: 'Home', authorEmail: by, createdAt: serverTimestamp() });
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        await setDoc(doc(f, 'tours', FAMILY), { name: 'Rahman family', kind: 'family', ownerEmail: people.owner.email, ownerUid: people.owner.uid, inviteCode: 'FAMCODE1' });
+        const membership = (email, role) =>
+          setDoc(doc(f, 'memberships', `${FAMILY}__${email}`), { tourId: FAMILY, email, role, status: 'active', displayName: email });
+        await membership(people.owner.email, 'owner');
+        await membership(people.member.email, 'member');
+      });
+    });
+
+    test('a family member posts a notice under their own name only', async () => {
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', FAMILY, 'notices'), notice(people.member.email)));
+      await assertFails(addDoc(collection(db('member'), 'tours', FAMILY, 'notices'), notice(people.owner.email)));
+      await assertFails(addDoc(collection(db('outsider'), 'tours', FAMILY, 'notices'), notice(people.outsider.email)));
+    });
+
+    test('a trip still reserves notices for admins', async () => {
+      await assertFails(addDoc(collection(db('member'), 'tours', TOUR, 'notices'), notice(people.member.email)));
+    });
+
+    test('a member deletes only their own family notice; admins delete any', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        await setDoc(doc(f, 'tours', FAMILY, 'notices', 'n1'), notice(people.owner.email));
+        await setDoc(doc(f, 'tours', FAMILY, 'notices', 'n2'), notice(people.member.email));
+      });
+      await assertFails(deleteDoc(doc(db('member'), 'tours', FAMILY, 'notices', 'n1')));
+      await assertSucceeds(deleteDoc(doc(db('member'), 'tours', FAMILY, 'notices', 'n2')));
+      await assertSucceeds(deleteDoc(doc(db('owner'), 'tours', FAMILY, 'notices', 'n1')));
+    });
+
+    test('a member edits no notice, but answers one for themselves', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', FAMILY, 'notices', 'n3'), notice(people.member.email));
+      });
+      await assertFails(updateDoc(doc(db('member'), 'tours', FAMILY, 'notices', 'n3'), { title: 'Edited' }));
+      await assertSucceeds(updateDoc(doc(db('member'), 'tours', FAMILY, 'notices', 'n3'), { ackBy: arrayUnion(people.member.email) }));
+    });
+
+    test('outsiders read nothing in a family circle', async () => {
+      await assertFails(getDocs(collection(db('outsider'), 'tours', FAMILY, 'notices')));
+      await assertFails(getDoc(doc(db('outsider'), 'tours', FAMILY)));
+    });
+
+    test('a tour is created as a trip or a family circle, and no other kind', async () => {
+      await assertSucceeds(setDoc(doc(db('outsider'), 'tours', 'new3'), { ownerEmail: people.outsider.email, ownerUid: people.outsider.uid, inviteCode: 'XXXXXXX3', kind: 'family' }));
+      await assertSucceeds(setDoc(doc(db('outsider'), 'tours', 'new4'), { ownerEmail: people.outsider.email, ownerUid: people.outsider.uid, inviteCode: 'XXXXXXX4', kind: 'tour' }));
+      await assertFails(setDoc(doc(db('outsider'), 'tours', 'new5'), { ownerEmail: people.outsider.email, ownerUid: people.outsider.uid, inviteCode: 'XXXXXXX5', kind: 'school' }));
+    });
+  });
+
   describe('feed', () => {
     const postPath = ['tours', TOUR, 'posts', 'p1'];
     const post = (author) => ({

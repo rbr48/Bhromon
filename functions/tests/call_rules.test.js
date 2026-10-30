@@ -49,6 +49,7 @@ describe('call and voice rules', () => {
         await setDoc(doc(f, 'memberships', `${TOUR}__${who.email}`), {
           tourId: TOUR,
           email: who.email,
+          uid: who.uid,
           role: 'member',
           status: 'active',
         });
@@ -81,9 +82,13 @@ describe('call and voice rules', () => {
   const callRef = (who) => doc(as(who), 'calls', CALL);
 
   describe('creating a call', () => {
+    // A call is made between two members of the tour they share.
     const newCall = (overrides = {}) => ({
       callerId: ALICE.uid,
       calleeId: BOB.uid,
+      participants: [ALICE.uid, BOB.uid],
+      sharedTourId: TOUR,
+      memberEmails: { [ALICE.uid]: ALICE.email, [BOB.uid]: BOB.email },
       isVideo: false,
       status: 'calling',
       offer: OFFER,
