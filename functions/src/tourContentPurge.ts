@@ -1,21 +1,46 @@
-import * as crypto from 'crypto';
 import * as admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
+import * as crypto from 'crypto';
 import {
+  ChatPurge,
+  Peers,
+  productionChatDeps,
+  purgeDirectChats,
+} from './directChatPurge';
+import { postToMediaPurge } from './lib/mediaPurgeClient';
+import { purgeTourStorage } from './lib/tourStorage';
+import {
+  AnonymizePlan,
+  Decide,
+  aboutPerson,
+  anonymize,
+  formerMemberId,
+  gameInvolves,
   isInTour,
+  leaveHotelRoom,
+  luggageOf,
   normalizeEmail,
+  pairWith,
+  profileOf,
   Scrub,
   scrubsFor,
+  seatHeldBy,
+  sosOf,
   updateArgs,
 } from './lib/tourContentPlan';
 
 /**
  * Permanent removal of tour content, on the server.
  *
- * - When a person leaves a tour, or the owner removes them, their own posts,
- *   stories, highlights, comments and chat messages in that tour are deleted,
- *   with their photos and videos on the media server. They are also taken out
- *   of other people's likes, viewers, reactions and votes.
+ * - When a person leaves a tour, or the owner removes them, what they put
+ *   into the tour is removed: their posts, stories, highlights, comments, chat
+ *   messages, safety alerts, locations, luggage, seats and game tables, with
+ *   their photos, videos and Storage files. They are also taken out of other
+ *   people's likes, viewers, reactions, votes, mentions and tags.
+ * - The group's shared record (the ledger, notices, route stops and the packing
+ *   list) keeps its amounts and dates. The person is replaced by a stand-in.
+ * - Their messages in one-to-one chats with the people still in the tour are
+ *   removed, along with the notification copies and call records of them.
  * - When a tour is deleted, everything in it is deleted.
  *
  * Each purge is written as a job before it starts and removed once it has
@@ -28,22 +53,38 @@ type Query = admin.firestore.Query;
 type DocRef = admin.firestore.DocumentReference;
 type DocSnap = admin.firestore.QueryDocumentSnapshot;
 
-/** Removes the media a tour, or one person's uploads in it, put on the server. */
+/**
+ * Removes a person's photos and videos on the media server (or all of the
+ * tour's, when the uploader is null). Returns the paths it removed, relative
+ * to the tour's folder, so the receipts that pointed to them can be cleared.
+ */
 export type MediaPurge = (
+  tourId: string,
+  uploaderEmail: string | null,
+) => Promise<string[]>;
+
+/** Removes a person's files from the tour's Storage folder, or all of them when the uploader is null. */
+export type StoragePurge = (
   tourId: string,
   uploaderEmail: string | null,
 ) => Promise<void>;
 
+/** The outside services a purge reaches. Tests replace them with fakes. */
+export interface PurgeDeps {
+  purgeMedia: MediaPurge;
+  purgeStorage: StoragePurge;
+  purgeChats: ChatPurge;
+  resolveUid: (email: string) => Promise<string | null>;
+}
+
 export type PurgeJob =
-  | { kind: 'member'; tourId: string; email: string }
+  | { kind: 'member'; tourId: string; email: string; uid?: string | null }
   | { kind: 'tour'; tourId: string };
 
 const JOBS = 'tour_purge_jobs';
 const NOT_FOUND = 5;
 /** Retries every 30 minutes for two days, then the job is marked failed. */
 const MAX_ATTEMPTS = 96;
-const MEDIA_PURGE_URL =
-  process.env.MEDIA_PURGE_URL ?? 'https://bhromon.fun/api/media/purge';
 const REGION = 'asia-south1';
 const RUNTIME = {
   timeoutSeconds: 540,
@@ -52,6 +93,35 @@ const RUNTIME = {
 };
 
 const everywhere = (_path: string): boolean => true;
+
+/**
+ * How the group's shared record is anonymized: the person's identity is
+ * replaced, and the amounts, counts and dates are kept.
+ */
+const LEDGER_EXPENSE: AnonymizePlan = {
+  emails: ['addedByEmail', 'paidById'],
+  names: { paidById: 'paidByName' },
+  lists: ['participantIds'],
+  maps: ['splitShares'],
+};
+const LEDGER_DEPOSIT: AnonymizePlan = {
+  emails: ['addedByEmail', 'memberId'],
+  names: { memberId: 'memberName' },
+};
+const LEDGER_TRANSFER: AnonymizePlan = {
+  emails: ['addedByEmail', 'fromId', 'toId'],
+  names: { fromId: 'fromName', toId: 'toName' },
+};
+const NOTICE: AnonymizePlan = {
+  emails: ['authorEmail'],
+  names: { authorEmail: 'author' },
+  removeFromLists: ['ackBy'],
+};
+const CHECKPOINT: AnonymizePlan = { emails: ['addedByEmail'] };
+const CHECKLIST_ITEM: AnonymizePlan = { removeFromLists: ['checkedBy'] };
+const CHANNEL: AnonymizePlan = { emails: ['createdByEmail', 'updatedByEmail'] };
+const PINNED_MESSAGE: AnonymizePlan = { emails: ['pinnedByEmail'] };
+const ITINERARY_META: AnonymizePlan = { emails: ['updatedByEmail'] };
 
 function isNotFound(error: unknown): boolean {
   return (
@@ -160,10 +230,88 @@ async function deleteRefs(db: Db, refs: DocRef[]): Promise<void> {
   await writes.done();
 }
 
+/**
+ * Applies [decide] to each document, in a transaction, so a change made in the
+ * meantime is read first. A recursive delete runs once its transaction is done.
+ */
+async function applyToDocs(
+  db: Db,
+  refs: DocRef[],
+  decide: Decide,
+): Promise<void> {
+  for (const ref of refs) {
+    const recursive = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return false;
+      const decision = decide(snap.data() ?? {}, snap.id);
+      if (decision === null) return false;
+      if (decision.kind === 'update') {
+        tx.update(ref, decision.fields);
+        return false;
+      }
+      if (decision.recursive) return true;
+      tx.delete(ref);
+      return false;
+    });
+    if (recursive) await db.recursiveDelete(ref);
+  }
+}
+
+async function applyToQuery(db: Db, query: Query, decide: Decide): Promise<void> {
+  const snapshot = await query.get();
+  await applyToDocs(
+    db,
+    snapshot.docs.map((doc) => doc.ref),
+    decide,
+  );
+}
+
 /** Whether [email] holds a membership row in the tour, active or not. */
 async function holdsMembership(db: Db, tourId: string, email: string): Promise<boolean> {
   const row = await db.collection('memberships').doc(`${tourId}__${email}`).get();
   return row.exists;
+}
+
+/**
+ * The other active members of the tour, by account id and by email. An id
+ * that is not stored on a membership is looked up from the email.
+ */
+export async function activePeers(
+  db: Db,
+  tourId: string,
+  email: string,
+  resolveUid: (email: string) => Promise<string | null>,
+): Promise<Peers> {
+  const rows = await db.collection('memberships').where('tourId', '==', tourId).get();
+  const uids = new Set<string>();
+  const emails = new Set<string>();
+  for (const row of rows.docs) {
+    const data = row.data();
+    const peer = normalizeEmail(data.email);
+    if (!peer || peer === email || data.status !== 'active') continue;
+    emails.add(peer);
+    const uid =
+      typeof data.uid === 'string' && data.uid !== ''
+        ? data.uid
+        : await resolveUid(peer);
+    if (uid) uids.add(uid);
+  }
+  return { uids: [...uids], emails: [...emails] };
+}
+
+/**
+ * Clears the receipt of each expense whose file was removed. The receipt URL
+ * ends with the tour and the file's path inside the tour.
+ */
+async function clearReceipts(db: Db, tourId: string, removed: string[]): Promise<void> {
+  if (removed.length === 0) return;
+  const endings = removed.map((path) => `/${tourId}/${path}`);
+  await applyToQuery(db, db.collection('tours').doc(tourId).collection('expenses'), (data) => {
+    const url = typeof data.receiptUrl === 'string' ? data.receiptUrl : '';
+    return endings.some((ending) => url.endsWith(ending))
+      ? { kind: 'update', fields: { receiptUrl: null } }
+      : null;
+  });
 }
 
 /**
@@ -176,14 +324,17 @@ export async function purgeMemberContent(
   db: Db,
   tourId: string,
   email: string,
-  purgeMedia: MediaPurge,
+  deps: PurgeDeps,
+  uid: string | null = null,
 ): Promise<void> {
   if (!email || (await holdsMembership(db, tourId, email))) return;
+  const memberUid = uid ?? (await deps.resolveUid(email));
   const tour = db.collection('tours').doc(tourId);
   const inTour = (path: string): boolean => isInTour(path, tourId);
   // A map keyed by email, read as one field path so the dots are not nesting.
   const keyIs = (...path: string[]) =>
     new admin.firestore.FieldPath(...path, email);
+  const standIn = formerMemberId(tourId, email);
 
   // Their own posts, with the comments under them.
   await deleteMatching(
@@ -193,13 +344,14 @@ export async function purgeMemberContent(
     true,
   );
 
-  // Other people's posts: take them out of the likes and viewers.
+  // Other people's posts: take them out of the likes, viewers and tags.
   await scrubMatching(
     db,
     email,
     [
       tour.collection('posts').where('likes', 'array-contains', email),
       tour.collection('posts').where('viewers', 'array-contains', email),
+      tour.collection('posts').where('tags', 'array-contains', email),
     ],
     everywhere,
   );
@@ -246,12 +398,42 @@ export async function purgeMemberContent(
     true,
   );
 
-  // Their live presence.
+  // Their live presence, and their location, battery telemetry and legacy row.
   await deleteRefs(db, [tour.collection('presence').doc(email)]);
+  for (const name of ['locations', 'telemetry', 'members']) {
+    await applyToQuery(db, tour.collection(name), aboutPerson(email));
+  }
 
-  // Group chat: their messages, their reactions and votes, and their typing
-  // and voice presence in each channel.
+  // Safety alerts they raised. An alert they resolved for someone else keeps the stand-in.
+  await applyToQuery(db, tour.collection('sos'), sosOf(email, standIn));
+
+  // The group's shared record keeps its amounts and dates. The person is
+  // replaced by the stand-in, so the balances and the notices still read.
+  await applyToQuery(db, tour.collection('expenses'), anonymize(LEDGER_EXPENSE, email, standIn));
+  await applyToQuery(db, tour.collection('deposits'), anonymize(LEDGER_DEPOSIT, email, standIn));
+  await applyToQuery(db, tour.collection('transfers'), anonymize(LEDGER_TRANSFER, email, standIn));
+  await applyToQuery(db, tour.collection('notices'), anonymize(NOTICE, email, standIn));
+  await applyToQuery(db, tour.collection('checkpoints'), anonymize(CHECKPOINT, email, standIn));
+  await applyToQuery(db, tour.collection('checklist'), anonymize(CHECKLIST_ITEM, email, standIn));
+  await applyToQuery(db, tour.collection('meta'), anonymize(ITINERARY_META, email, standIn));
+
+  // What only the person used goes: luggage they own, seats and rooms they hold,
+  // game tables they host or sit at, and their profile in the tour.
+  await applyToQuery(db, tour.collection('luggage'), luggageOf(email));
+  await applyToQuery(db, tour.collection('bus_seats'), seatHeldBy(email));
+  await applyToQuery(db, tour.collection('vehicle_seats'), seatHeldBy(email));
+  await applyToQuery(db, tour.collection('hotel_rooms'), leaveHotelRoom(email));
+  await applyToQuery(db, tour.collection('games'), gameInvolves(email));
+  await applyToQuery(db, tour.collection('profiles'), profileOf(email, memberUid));
+
+  // Group chat: their messages, their reactions and votes, the mentions and tags
+  // naming them, and their typing and voice presence in each channel.
   const channels = await tour.collection('channels').get();
+  await applyToDocs(
+    db,
+    channels.docs.map((channel) => channel.ref),
+    anonymize(CHANNEL, email, standIn),
+  );
   for (const channel of channels.docs) {
     const messages = channel.ref.collection('messages');
     await deleteMatching(
@@ -266,25 +448,40 @@ export async function purgeMemberContent(
       [
         messages.where(keyIs('reactions'), '!=', null),
         messages.where(keyIs('votes'), '!=', null),
+        messages.where('mentions', 'array-contains', email),
       ],
       everywhere,
+    );
+    await applyToQuery(
+      db,
+      messages.where('pinnedByEmail', '==', email),
+      anonymize(PINNED_MESSAGE, email, standIn),
     );
     await deleteRefs(db, [
       channel.ref.collection('typing').doc(email),
       channel.ref.collection('voice_participants').doc(email),
     ]);
+    // Voice signalling between the person and another member.
+    await applyToQuery(db, channel.ref.collection('voice_signals'), pairWith(email));
   }
 
-  // Their photos and videos on the media server.
-  await purgeMedia(tourId, email);
+  // Their files in the tour's Storage folder (uploads from before the media server).
+  await deps.purgeStorage(tourId, email);
+
+  // Their messages in one-to-one chats with the members still in the tour.
+  const peers = await activePeers(db, tourId, email, deps.resolveUid);
+  await deps.purgeChats(db, { uid: memberUid, email }, peers);
+
+  // Their photos and videos on the media server, and the receipts that pointed to them.
+  const removed = await deps.purgeMedia(tourId, email);
+  await clearReceipts(db, tourId, removed);
 }
 
-/** Removes a whole tour: everything under it, its memberships and invites, and its media. */
-export async function purgeTour(
-  db: Db,
-  tourId: string,
-  purgeMedia: MediaPurge,
-): Promise<void> {
+/**
+ * Removes a whole tour: everything under it, its memberships and invites, its
+ * Storage files and its media.
+ */
+export async function purgeTour(db: Db, tourId: string, deps: PurgeDeps): Promise<void> {
   await db.recursiveDelete(db.collection('tours').doc(tourId));
   await deleteMatching(
     db,
@@ -298,7 +495,8 @@ export async function purgeTour(
     everywhere,
     false,
   );
-  await purgeMedia(tourId, null);
+  await deps.purgeStorage(tourId, null);
+  await deps.purgeMedia(tourId, null);
 }
 
 function jobRef(db: Db, job: PurgeJob): DocRef {
@@ -310,11 +508,11 @@ function jobRef(db: Db, job: PurgeJob): DocRef {
   return db.collection(JOBS).doc(`${job.tourId}__${key}`);
 }
 
-function jobFields(job: PurgeJob): Record<string, string> {
+function jobFields(job: PurgeJob): Record<string, string | null> {
   // The job keeps the email while it is pending, so a retry can finish it. It
   // is deleted as soon as the purge succeeds.
   return job.kind === 'member'
-    ? { kind: 'member', tourId: job.tourId, email: job.email }
+    ? { kind: 'member', tourId: job.tourId, email: job.email, uid: job.uid ?? null }
     : { kind: 'tour', tourId: job.tourId };
 }
 
@@ -323,19 +521,15 @@ function errorText(error: unknown): string {
 }
 
 /** Runs one purge. On failure the job stays pending for retryPendingJobs. */
-export async function runPurgeJob(
-  db: Db,
-  job: PurgeJob,
-  purgeMedia: MediaPurge,
-): Promise<void> {
+export async function runPurgeJob(db: Db, job: PurgeJob, deps: PurgeDeps): Promise<void> {
   const ref = jobRef(db, job);
   const now = admin.firestore.FieldValue.serverTimestamp();
   await ref.set({ ...jobFields(job), status: 'pending', updatedAt: now }, { merge: true });
   try {
     if (job.kind === 'member') {
-      await purgeMemberContent(db, job.tourId, job.email, purgeMedia);
+      await purgeMemberContent(db, job.tourId, job.email, deps, job.uid ?? null);
     } else {
-      await purgeTour(db, job.tourId, purgeMedia);
+      await purgeTour(db, job.tourId, deps);
     }
     await ref.delete();
   } catch (error) {
@@ -356,11 +550,7 @@ export async function runPurgeJob(
 }
 
 /** Retries purges that have not finished. A job past its last attempt is marked failed. */
-export async function retryPendingJobs(
-  db: Db,
-  purgeMedia: MediaPurge,
-  limit = 50,
-): Promise<void> {
+export async function retryPendingJobs(db: Db, deps: PurgeDeps, limit = 50): Promise<void> {
   const pending = await db
     .collection(JOBS)
     .where('status', '==', 'pending')
@@ -378,28 +568,51 @@ export async function retryPendingJobs(
     }
     const tourId = typeof data.tourId === 'string' ? data.tourId : '';
     if (data.kind === 'member' && typeof data.email === 'string' && tourId) {
-      await runPurgeJob(db, { kind: 'member', tourId, email: data.email }, purgeMedia);
+      const uid = typeof data.uid === 'string' && data.uid !== '' ? data.uid : null;
+      await runPurgeJob(db, { kind: 'member', tourId, email: data.email, uid }, deps);
     } else if (data.kind === 'tour' && tourId) {
-      await runPurgeJob(db, { kind: 'tour', tourId }, purgeMedia);
+      await runPurgeJob(db, { kind: 'tour', tourId }, deps);
     }
   }
 }
 
-/** The real media call. The media server removes what the purge names. */
+/**
+ * The media server call. It removes the person's files and returns the paths
+ * it removed, relative to the tour's folder.
+ */
 export async function purgeMediaOnServer(
   tourId: string,
   uploaderEmail: string | null,
-): Promise<void> {
-  const key = process.env.MEDIA_PURGE_KEY;
-  if (!key) throw new Error('MEDIA_PURGE_KEY is not configured');
-  const response = await fetch(MEDIA_PURGE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Purge-Key': key },
-    body: JSON.stringify({ tourId, uploaderEmail }),
+): Promise<string[]> {
+  const body = await postToMediaPurge<{ paths?: unknown }>('', {
+    tourId,
+    uploaderEmail,
   });
-  if (!response.ok) {
-    throw new Error(`Media purge answered HTTP ${response.status}`);
+  return Array.isArray(body.paths)
+    ? body.paths.filter((path): path is string => typeof path === 'string')
+    : [];
+}
+
+/** The account id behind an email, or null when there is no account. */
+export async function resolveUidByEmail(email: string): Promise<string | null> {
+  try {
+    return (await admin.auth().getUserByEmail(email)).uid;
+  } catch (error) {
+    if ((error as { code?: unknown }).code === 'auth/user-not-found') return null;
+    throw error;
   }
+}
+
+/** The production wiring of every outside call a purge makes. */
+export function productionDeps(): PurgeDeps {
+  const chats = productionChatDeps();
+  return {
+    purgeMedia: purgeMediaOnServer,
+    purgeStorage: (tourId, uploaderEmail) =>
+      purgeTourStorage(admin.storage().bucket(), tourId, uploaderEmail),
+    purgeChats: (db, member, peers) => purgeDirectChats(db, member, peers, chats),
+    resolveUid: resolveUidByEmail,
+  };
 }
 
 /** A person's membership row was deleted: they left the tour, or were removed. */
@@ -411,12 +624,13 @@ export const onTourMembershipRemoved = functions
     const data = snap.data() ?? {};
     const tourId = typeof data.tourId === 'string' ? data.tourId : '';
     const email = normalizeEmail(data.email);
+    const uid = typeof data.uid === 'string' && data.uid !== '' ? data.uid : null;
     if (!tourId || !email) return;
     const db = admin.firestore();
     // A tour that is already gone is purged as a whole by onTourDeleted.
     const tour = await db.collection('tours').doc(tourId).get();
     if (!tour.exists) return;
-    await runPurgeJob(db, { kind: 'member', tourId, email }, purgeMediaOnServer);
+    await runPurgeJob(db, { kind: 'member', tourId, email, uid }, productionDeps());
   });
 
 /** A tour document was deleted: everything in it goes. */
@@ -428,7 +642,7 @@ export const onTourDeleted = functions
     runPurgeJob(
       admin.firestore(),
       { kind: 'tour', tourId: context.params.tourId },
-      purgeMediaOnServer,
+      productionDeps(),
     ),
   );
 
@@ -437,4 +651,4 @@ export const retryTourPurgeJobs = functions
   .runWith(RUNTIME)
   .region(REGION)
   .pubsub.schedule('every 30 minutes')
-  .onRun(() => retryPendingJobs(admin.firestore(), purgeMediaOnServer));
+  .onRun(() => retryPendingJobs(admin.firestore(), productionDeps()));

@@ -73,7 +73,9 @@ def test_an_uploaders_files_go_and_everyone_elses_stay(roots):
     response = purge({"tourId": "tour_one", "uploaderEmail": "Alice@X.com"})
 
     assert response.status_code == 200
-    assert response.json() == {"removed": 2}
+    body = response.json()
+    assert body["removed"] == 2
+    assert sorted(body["paths"]) == ["posts/alice1.jpg", "stories/alice2.mp4"]
     assert not (media / "tour_one" / "posts" / "alice1.jpg").exists()
     assert not (meta / "tour_one" / "posts" / "alice1.jpg.json").exists()
     assert not (media / "tour_one" / "stories" / "alice2.mp4").exists()
@@ -90,7 +92,9 @@ def test_a_whole_tour_goes_and_other_tours_stay(roots):
     response = purge({"tourId": "tour_one"})
 
     assert response.status_code == 200
-    assert response.json() == {"removed": 2}
+    body = response.json()
+    assert body["removed"] == 2
+    assert sorted(body["paths"]) == ["channels/b.jpg", "posts/a.jpg"]
     assert not (media / "tour_one").exists()
     assert not (meta / "tour_one").exists()
     assert (media / "tour_two" / "posts" / "c.jpg").exists()
@@ -100,7 +104,7 @@ def test_a_tour_with_no_files_is_not_an_error(roots):
     response = purge({"tourId": "tour_none", "uploaderEmail": "alice@x.com"})
 
     assert response.status_code == 200
-    assert response.json() == {"removed": 0}
+    assert response.json() == {"removed": 0, "paths": []}
 
 
 def test_a_tour_id_that_reaches_outside_the_media_folder_is_refused(roots):

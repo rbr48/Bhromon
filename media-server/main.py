@@ -21,7 +21,7 @@ import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import aiofiles
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile, status
@@ -505,25 +505,29 @@ class PurgeRequest(BaseModel):
     uploaderEmail: Optional[str] = None
 
 
-def purge_tour_files(tour_id: str, uploader: Optional[str]) -> int:
+def purge_tour_files(tour_id: str, uploader: Optional[str]) -> List[str]:
     """Deletes one uploader's files in a tour, or every file of the tour.
 
     An uploader is matched on the sidecar written when each file was saved.
     Files saved before sidecars existed have no uploader, so they only go with
-    the whole tour.
+    the whole tour. Returns the paths removed, relative to the tour's folder.
     """
     if uploader is None:
         tour_dir = MEDIA_ROOT / tour_id
         removed = (
-            sum(1 for path in tour_dir.rglob("*") if path.is_file())
+            sorted(
+                path.relative_to(tour_dir).as_posix()
+                for path in tour_dir.rglob("*")
+                if path.is_file()
+            )
             if tour_dir.is_dir()
-            else 0
+            else []
         )
         shutil.rmtree(tour_dir, ignore_errors=True)
         shutil.rmtree(META_ROOT / tour_id, ignore_errors=True)
         return removed
 
-    removed = 0
+    removed: List[str] = []
     for meta_file in (META_ROOT / tour_id).glob("*/*.json"):
         try:
             meta = json.loads(meta_file.read_text(encoding="utf-8"))
@@ -534,11 +538,22 @@ def purge_tour_files(tour_id: str, uploader: Optional[str]) -> int:
         saved_by = str(meta.get("uploaderEmail", "")).strip().lower()
         if saved_by != uploader:
             continue
+        folder = meta_file.parent.name
         filename = meta_file.name[: -len(".json")]
-        (MEDIA_ROOT / tour_id / meta_file.parent.name / filename).unlink(missing_ok=True)
+        (MEDIA_ROOT / tour_id / folder / filename).unlink(missing_ok=True)
         meta_file.unlink(missing_ok=True)
-        removed += 1
+        removed.append(f"{folder}/{filename}")
     return removed
+
+
+def _require_purge_key(provided: Optional[str]) -> None:
+    """Refuses a purge unless the back end sent the purge key this server was given."""
+    if not PURGE_KEY:
+        raise HTTPException(status_code=503, detail="Purging is not configured.")
+    if not provided or not secrets.compare_digest(
+        provided.encode("utf-8"), PURGE_KEY.encode("utf-8")
+    ):
+        raise HTTPException(status_code=401, detail="Wrong purge key.")
 
 
 @app.post("/purge")
@@ -549,18 +564,83 @@ async def purge_tour_content(
     """Removes a tour's files on the request of the Bhromon back end.
 
     With an uploader email, only that person's files in the tour go. Without
-    one, every file of the tour goes.
+    one, every file of the tour goes. The response lists the paths removed, so
+    the back end can clear the links that pointed to them.
     """
-    if not PURGE_KEY:
-        raise HTTPException(status_code=503, detail="Purging is not configured.")
-    if not x_purge_key or not secrets.compare_digest(
-        x_purge_key.encode("utf-8"), PURGE_KEY.encode("utf-8")
-    ):
-        raise HTTPException(status_code=401, detail="Wrong purge key.")
+    _require_purge_key(x_purge_key)
     check_tour_id(body.tourId)
     uploader = body.uploaderEmail.strip().lower() if body.uploaderEmail else None
     removed = await run_in_threadpool(purge_tour_files, body.tourId, uploader)
-    return {"removed": removed}
+    return {"removed": len(removed), "paths": removed}
+
+
+class PurgeChatRequest(BaseModel):
+    uid: Optional[str] = None
+    email: Optional[str] = None
+    peerUids: List[str] = []
+    peerEmails: List[str] = []
+    mediaUrls: List[str] = []
+
+
+def media_relative_path(reference: str) -> Optional[str]:
+    """The path under the media root that a media URL or path names, or None for anything else."""
+    value = reference.strip()
+    prefix = BASE_URL.rstrip("/") + "/"
+    if value.startswith(prefix):
+        value = value[len(prefix):]
+    elif "://" in value:
+        return None
+    value = value.split("?", 1)[0].lstrip("/")
+    if not value or ".." in Path(value).parts:
+        return None
+    return value
+
+
+def remove_media_file(reference: str) -> int:
+    """Deletes the file a message pointed to, with its sidecar. Returns 1 when a file went."""
+    relative = media_relative_path(reference)
+    if relative is None:
+        return 0
+    target = (MEDIA_ROOT / relative).resolve()
+    if not target.is_relative_to(MEDIA_ROOT.resolve()) or not target.is_file():
+        return 0
+    target.unlink(missing_ok=True)
+    (META_ROOT / f"{relative}.json").unlink(missing_ok=True)
+    return 1
+
+
+def remove_media_files(references: List[str]) -> int:
+    return sum(remove_media_file(reference) for reference in set(references))
+
+
+@app.post("/purge/chat")
+async def purge_chat_content(
+    body: PurgeChatRequest,
+    x_purge_key: Optional[str] = Header(None),
+):
+    """Removes a person's messages in the chats they share with the given peers.
+
+    Their messages leave those chats with their photos, videos and voice notes
+    on this server. The chats keep the messages of the peers.
+    """
+    _require_purge_key(x_purge_key)
+    members = {
+        value
+        for value in (body.uid, (body.email or "").strip().lower())
+        if value
+    }
+    if not members:
+        raise HTTPException(
+            status_code=400, detail="A member needs an account id or an email."
+        )
+    peers = {value for value in body.peerUids if value} | {
+        value.strip().lower() for value in body.peerEmails if value.strip()
+    }
+    messages, references = await run_in_threadpool(
+        chat_db.purge_member_messages, members, peers
+    )
+    files = await run_in_threadpool(remove_media_files, references + body.mediaUrls)
+    return {"messages": messages, "files": files}
 
 
 @app.get("/notify/status")

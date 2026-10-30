@@ -39,6 +39,29 @@ def _now_ms() -> int:
     return int(time.time() * 1000)
 
 
+# The name that stands in for a person who has left, in quotes they left behind.
+# It matches the label the Functions purge writes to the group's records.
+FORMER_MEMBER_NAME = "সাবেক সদস্য"
+
+
+def _json_list(raw: Optional[str]) -> List[Any]:
+    """A JSON list kept in a column, or an empty list when it is missing or not one."""
+    try:
+        value = json.loads(raw) if raw else []
+    except (TypeError, ValueError):
+        return []
+    return value if isinstance(value, list) else []
+
+
+def _json_dict(raw: Optional[str]) -> Dict[str, Any]:
+    """A JSON object kept in a column, or an empty one when it is missing or not one."""
+    try:
+        value = json.loads(raw) if raw else {}
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
 class ChatDatabase:
     """Thread-safe SQLite storage for chats, messages, and device push tokens."""
 
@@ -470,6 +493,135 @@ class ChatDatabase:
                         (json.dumps(deleted_for), message_id),
                     )
                 return True
+
+    def purge_member_messages(
+        self, member_ids: Set[str], peer_ids: Set[str]
+    ) -> Tuple[int, List[str]]:
+        """Removes what the people in [member_ids] sent in the conversations they share with [peer_ids].
+
+        The conversations that stay lose those people from their read receipts,
+        reactions, deleted-for lists and unread counts, and a quote of their message
+        is replaced by a neutral one. Returns the number of messages removed and the
+        media references they used, for the caller to delete from disk.
+        """
+        if not member_ids:
+            return 0, []
+        ordered = sorted(member_ids)
+        marks = ",".join("?" for _ in ordered)
+        conn = self._get_conn()
+        removed = 0
+        media_refs: List[str] = []
+        with conn:
+            conversations = conn.execute(
+                "SELECT chat_id, participants, participant_emails FROM conversations"
+            ).fetchall()
+            for conv in conversations:
+                known = {
+                    str(value)
+                    for value in _json_list(conv["participants"])
+                    + _json_list(conv["participant_emails"])
+                }
+                if not (member_ids & known) or not (peer_ids & known):
+                    continue
+                chat_id = conv["chat_id"]
+                rows = conn.execute(
+                    "SELECT media_url, media_path, thumbnail_url FROM messages "
+                    f"WHERE chat_id = ? AND sender_id IN ({marks})",
+                    (chat_id, *ordered),
+                ).fetchall()
+                for row in rows:
+                    media_refs.extend(
+                        str(value)
+                        for value in (row["media_url"], row["media_path"], row["thumbnail_url"])
+                        if value
+                    )
+                if rows:
+                    conn.execute(
+                        "DELETE FROM messages "
+                        f"WHERE chat_id = ? AND sender_id IN ({marks})",
+                        (chat_id, *ordered),
+                    )
+                    removed += len(rows)
+                self._scrub_members(conn, chat_id, member_ids)
+                self._refresh_conversation(conn, chat_id, member_ids)
+        return removed, media_refs
+
+    def _scrub_members(
+        self, conn: sqlite3.Connection, chat_id: str, member_ids: Set[str]
+    ) -> None:
+        """Takes the people in [member_ids] out of the messages that stay in a chat."""
+        rows = conn.execute(
+            "SELECT id, read_by, reactions, deleted_for, reply_to FROM messages WHERE chat_id = ?",
+            (chat_id,),
+        ).fetchall()
+        for row in rows:
+            read_by = [uid for uid in _json_list(row["read_by"]) if uid not in member_ids]
+            reactions: Dict[str, List[str]] = {}
+            for emoji, users in _json_dict(row["reactions"]).items():
+                kept = (
+                    [uid for uid in users if uid not in member_ids]
+                    if isinstance(users, list)
+                    else []
+                )
+                if kept:
+                    reactions[emoji] = kept
+            deleted_for = [
+                uid for uid in _json_list(row["deleted_for"]) if uid not in member_ids
+            ]
+            reply_to = row["reply_to"]
+            quoted = _json_dict(reply_to)
+            if quoted and str(quoted.get("senderId", "")) in member_ids:
+                reply_to = json.dumps(
+                    {
+                        "messageId": quoted.get("messageId"),
+                        "senderId": "",
+                        "senderName": FORMER_MEMBER_NAME,
+                        "text": "",
+                        "type": "text",
+                    }
+                )
+            conn.execute(
+                "UPDATE messages SET read_by = ?, reactions = ?, deleted_for = ?, reply_to = ? "
+                "WHERE id = ?",
+                (
+                    json.dumps(read_by),
+                    json.dumps(reactions),
+                    json.dumps(deleted_for),
+                    reply_to,
+                    row["id"],
+                ),
+            )
+
+    def _refresh_conversation(
+        self, conn: sqlite3.Connection, chat_id: str, member_ids: Set[str]
+    ) -> None:
+        """Brings a conversation's preview up to date with its newest message that is left."""
+        conv = conn.execute(
+            "SELECT unread_counts FROM conversations WHERE chat_id = ?", (chat_id,)
+        ).fetchone()
+        if conv is None:
+            return
+        unread = {
+            uid: count
+            for uid, count in _json_dict(conv["unread_counts"]).items()
+            if uid not in member_ids
+        }
+        newest = conn.execute(
+            "SELECT text, type, sender_id, created_at FROM messages "
+            "WHERE chat_id = ? ORDER BY created_at DESC LIMIT 1",
+            (chat_id,),
+        ).fetchone()
+        preview, when, sender = None, None, None
+        if newest is not None:
+            text = newest["text"] or ""
+            mtype = newest["type"] or "text"
+            preview = text if text else (f"[{mtype}]" if mtype != "text" else "")
+            when, sender = newest["created_at"], newest["sender_id"]
+        conn.execute(
+            "UPDATE conversations SET last_message = ?, last_message_time = ?, "
+            "last_sender_id = ?, unread_counts = ? WHERE chat_id = ?",
+            (preview, when, sender, json.dumps(unread), chat_id),
+        )
 
     def _row_to_message(self, row: sqlite3.Row) -> Dict[str, Any]:
         try:
