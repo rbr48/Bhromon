@@ -99,7 +99,7 @@ jobs:
           fi
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: flutter-coverage
           path: coverage/
@@ -208,21 +208,21 @@ jobs:
           flutter build apk --release
 
       - name: Upload AAB artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-release-aab
           path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 14
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
 
       - name: Upload debug symbols artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-debug-info
           path: build/debug-info
