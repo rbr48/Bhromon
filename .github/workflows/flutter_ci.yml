@@ -7,7 +7,9 @@ on:
     branches: [ master, main, develop ]
 
 env:
-  FLUTTER_VERSION: '3.44.4'
+  # Pinned, so a new stable Flutter release cannot change the format or analysis
+  # results on its own. 3.47.9 is the version these checks were already running.
+  FLUTTER_VERSION: '3.47.9'
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
@@ -23,6 +25,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
@@ -47,6 +50,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
@@ -72,6 +76,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
@@ -123,6 +128,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 

@@ -144,11 +144,14 @@ class Card29Api {
           }
         }
         logWarning(
-          '[Card29Api] VPS call $name failed (${e.message}). Falling back to Functions.', e);
+            '[Card29Api] VPS call $name failed (${e.message}). Falling back to Functions.',
+            e);
       } catch (e, st) {
         if (e is FirebaseFunctionsException) rethrow;
         logWarning(
-          '[Card29Api] VPS call $name error. Falling back to Functions.', e, st);
+            '[Card29Api] VPS call $name error. Falling back to Functions.',
+            e,
+            st);
       }
     }
 

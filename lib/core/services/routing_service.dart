@@ -38,7 +38,9 @@ class RoutingService {
       }
     } catch (e, st) {
       logWarning(
-          '[RoutingService] Failed to fetch road route. Falling back to straight-line path.', e, st);
+          '[RoutingService] Failed to fetch road route. Falling back to straight-line path.',
+          e,
+          st);
       return points;
     }
     logDebug(

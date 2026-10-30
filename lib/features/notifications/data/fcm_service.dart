@@ -117,7 +117,8 @@ class FcmService {
         }
       }
     } catch (e, st) {
-      logWarning('[FcmService] Local notifications initialization error', e, st);
+      logWarning(
+          '[FcmService] Local notifications initialization error', e, st);
     }
 
     // ── 2. Request FCM permissions & save device token ───────────────────────

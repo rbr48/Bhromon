@@ -52,7 +52,8 @@ class TripLogRepositoryImpl implements ITripLogRepository {
             _sanitizeTripLogData(data);
             logs.add(TripLog.fromJson(data));
           } catch (e) {
-            logWarning('[TripLogRepo] Skipped malformed trip_log ${doc.id}: $e');
+            logWarning(
+                '[TripLogRepo] Skipped malformed trip_log ${doc.id}: $e');
           }
         }
       }

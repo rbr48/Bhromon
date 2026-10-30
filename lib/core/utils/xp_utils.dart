@@ -45,7 +45,9 @@ class XpUtils {
             '[XpUtils] Recalculated explorer score successfully via Cloud Function');
       } catch (e, st) {
         logWarning(
-            '[XpUtils] Failed to invoke computeExplorerScore Callable function', e, st);
+            '[XpUtils] Failed to invoke computeExplorerScore Callable function',
+            e,
+            st);
       }
     } catch (e, st) {
       logWarning('[XpUtils] Error awarding XP', e, st);

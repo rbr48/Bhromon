@@ -249,7 +249,8 @@ class TourMediaUploader {
             rethrow;
           }
           logWarning(
-              'TourMediaUploader: attempt $attempt of $kUploadAttempts failed, retrying: ${e.type}', e);
+              'TourMediaUploader: attempt $attempt of $kUploadAttempts failed, retrying: ${e.type}',
+              e);
           await Future<void>.delayed(Duration(seconds: 2 * attempt));
           if (cancelToken.isCancelled) throw const TourUploadCancelled();
         }

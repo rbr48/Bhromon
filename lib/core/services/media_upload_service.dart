@@ -336,7 +336,9 @@ class MediaUploadService {
         );
       } catch (fbErr, st) {
         logWarning(
-            'MediaUploadService: Firebase Storage profile upload failed, falling back to VPS...', fbErr, st);
+            'MediaUploadService: Firebase Storage profile upload failed, falling back to VPS...',
+            fbErr,
+            st);
         try {
           return await _uploadFileToVps(
             file: fileToUpload,
@@ -359,7 +361,9 @@ class MediaUploadService {
       );
     } catch (vpsErr, st) {
       logWarning(
-          'MediaUploadService: VPS upload failed, falling back to Firebase Storage...', vpsErr, st);
+          'MediaUploadService: VPS upload failed, falling back to Firebase Storage...',
+          vpsErr,
+          st);
       try {
         return await _uploadFileToFirebase(
           file: fileToUpload,
@@ -367,8 +371,8 @@ class MediaUploadService {
           onProgress: onProgress,
         );
       } catch (fbErr, fst) {
-        logError(
-            'MediaUploadService: Firebase Storage fallback also failed', fbErr, fst);
+        logError('MediaUploadService: Firebase Storage fallback also failed',
+            fbErr, fst);
         rethrow;
       }
     }
@@ -392,7 +396,9 @@ class MediaUploadService {
         );
       } catch (fbErr, st) {
         logWarning(
-            'MediaUploadService: Firebase Storage profile bytes upload failed, falling back to VPS...', fbErr, st);
+            'MediaUploadService: Firebase Storage profile bytes upload failed, falling back to VPS...',
+            fbErr,
+            st);
         try {
           return await _uploadBytesToVps(
             bytes: bytes,
@@ -417,7 +423,9 @@ class MediaUploadService {
       );
     } catch (vpsErr, st) {
       logWarning(
-          'MediaUploadService: VPS bytes upload failed, falling back to Firebase Storage...', vpsErr, st);
+          'MediaUploadService: VPS bytes upload failed, falling back to Firebase Storage...',
+          vpsErr,
+          st);
       try {
         return await _uploadBytesToFirebase(
           bytes: bytes,
@@ -426,8 +434,8 @@ class MediaUploadService {
           onProgress: onProgress,
         );
       } catch (fbErr, fst) {
-        logError(
-            'MediaUploadService: Firebase Storage fallback also failed', fbErr, fst);
+        logError('MediaUploadService: Firebase Storage fallback also failed',
+            fbErr, fst);
         rethrow;
       }
     }

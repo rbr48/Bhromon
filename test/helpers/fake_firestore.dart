@@ -428,8 +428,7 @@ class _FakeWriteBatch implements WriteBatch {
       ));
 
   @override
-  void update<T>(DocumentReference<T> document, T data) =>
-      _ops.add((
+  void update<T>(DocumentReference<T> document, T data) => _ops.add((
         document as FakeDocumentReference,
         'update',
         (data as Map).map((k, v) => MapEntry(k.toString(), v)),

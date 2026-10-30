@@ -181,7 +181,9 @@ class TourGroupRepository {
       return await Hive.openBox<dynamic>('tour_groups_box');
     } catch (e, st) {
       logWarning(
-          '[TourGroupRepository] Corrupt Hive box: $e. Purging and recovering...', e, st);
+          '[TourGroupRepository] Corrupt Hive box: $e. Purging and recovering...',
+          e,
+          st);
       try {
         await Hive.deleteBoxFromDisk('tour_groups_box');
         return await Hive.openBox<dynamic>('tour_groups_box');
@@ -256,7 +258,8 @@ class TourGroupRepository {
       // tell one tour's files from another's, so the whole cache is emptied.
       await emptyImageCache();
     } catch (e, st) {
-      logWarning('[TourGroupRepository] Could not empty the image cache', e, st);
+      logWarning(
+          '[TourGroupRepository] Could not empty the image cache', e, st);
     }
   }
 
@@ -443,10 +446,13 @@ class TourGroupRepository {
               // The owner's own app repairs them here.
               if (group.ownerEmail == email &&
                   rolesByTour[tourId] != TourRole.owner.toValue()) {
-                _memberships.doc(_membershipId(tourId, email)).update({
-                  'role': TourRole.owner.toValue()
-                }).catchError((Object e, StackTrace st) => logWarning(
-                    '[TourGroupRepository] owner role repair failed', e, st));
+                _memberships
+                    .doc(_membershipId(tourId, email))
+                    .update({'role': TourRole.owner.toValue()}).catchError(
+                        (Object e, StackTrace st) => logWarning(
+                            '[TourGroupRepository] owner role repair failed',
+                            e,
+                            st));
                 rolesByTour[tourId] = TourRole.owner.toValue();
               }
             } else {
@@ -2246,7 +2252,8 @@ class TourGroupRepository {
           .get();
       return match.docs.isNotEmpty;
     } catch (e, st) {
-      logWarning('[TourGroupRepository] Could not check highlight covers', e, st);
+      logWarning(
+          '[TourGroupRepository] Could not check highlight covers', e, st);
       return true;
     }
   }
