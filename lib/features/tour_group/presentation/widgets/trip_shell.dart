@@ -10,7 +10,7 @@ import 'desktop_tour_sidebar.dart';
 import 'tour_membership_guard.dart';
 
 /// The bar a family uses across all tour screens. Every tour screen sits under
-/// the unified 5 app navigation destinations (Tours, Moments, Channels, Games, Profile).
+/// the unified 5 app navigation destinations (Tours, Channels, Moments, Chat, Profile).
 ///
 /// Below [railBreakpoint] the tabs sit in a persistent bottom bar. From it they move to a
 /// side rail on wide screens, and the tour content is capped at [contentMaxWidth].
@@ -124,14 +124,14 @@ class TripShell extends StatelessWidget {
 
 /// The index of the tab a tour route belongs to:
 /// 0 Tours (hub, journey, checklist, notices, logistics, tide, ledger, safety, etc.)
-/// 1 Moments (feed / instafeed)
-/// 2 Channels (chat channels)
-/// 3 Games (game zone)
+/// 1 Channels (chat channels)
+/// 2 Moments (feed / instafeed)
+/// 3 Chat (one-to-one chats)
 /// 4 Profile (profile)
 int tripTabFor(String location) {
-  if (location.contains('/feed')) return 1;
-  if (location.contains('/channels')) return 2;
-  if (location.contains('/game-zone')) return 3;
+  if (location.contains('/channels')) return 1;
+  if (location.contains('/feed')) return 2;
+  if (location.contains('/chats')) return 3;
   if (location.contains('/profile')) return 4;
   return 0;
 }
@@ -139,8 +139,8 @@ int tripTabFor(String location) {
 /// The routes corresponding to the five tabs, in the same order as [tripTabFor].
 List<String> tripTabPaths(String tourId) => [
       '/group-hub',
-      '/group/$tourId/feed',
       '/group/$tourId/channels',
-      '/game-zone',
+      '/group/$tourId/feed',
+      '/chats',
       '/profile/me',
     ];

@@ -8,9 +8,9 @@ import '../tour_routes.dart';
 
 /// The persistent 5 navigation destinations used across the entire application:
 /// 0: Tours (Hub)
-/// 1: Moments (Instafeed)
-/// 2: Channels (Tour group chat / channels)
-/// 3: Games (Game Zone)
+/// 1: Channels (Tour group chat / channels)
+/// 2: Moments (Instafeed)
+/// 3: Chat (one-to-one chats)
 /// 4: Profile (Explorer profile)
 class BhromonBottomNav extends StatelessWidget {
   final int selectedIndex;
@@ -33,19 +33,19 @@ class BhromonBottomNav extends StatelessWidget {
         label: context.l10n.translate('hub_nav_tours'),
       ),
       NavigationDestination(
-        icon: const Icon(Icons.photo_library_outlined),
-        selectedIcon: const Icon(Icons.photo_library),
-        label: context.l10n.translate('hub_nav_moments'),
-      ),
-      NavigationDestination(
         icon: const Icon(Icons.forum_outlined),
         selectedIcon: const Icon(Icons.forum),
         label: context.l10n.translate('hub_nav_channels'),
       ),
       NavigationDestination(
-        icon: const Icon(Icons.sports_esports_outlined),
-        selectedIcon: const Icon(Icons.sports_esports),
-        label: context.l10n.translate('hub_nav_games'),
+        icon: const Icon(Icons.photo_library_outlined),
+        selectedIcon: const Icon(Icons.photo_library),
+        label: context.l10n.translate('hub_nav_moments'),
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.chat_bubble_outline),
+        selectedIcon: const Icon(Icons.chat_bubble),
+        label: context.l10n.translate('shell_chat'),
       ),
       NavigationDestination(
         icon: const Icon(Icons.person_outline),
@@ -73,24 +73,22 @@ class BhromonBottomNav extends StatelessWidget {
         _openTourTab(
           context,
           openTourId,
-          'feed',
+          'channels',
           missingTourMessage:
-              'মোমেন্টস দেখতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।',
+              'চ্যানেল খুলতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।',
         );
         break;
       case 2:
         _openTourTab(
           context,
           openTourId,
-          'channels',
+          'feed',
           missingTourMessage:
-              'চ্যানেল খুলতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।',
+              'মোমেন্টস দেখতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।',
         );
         break;
       case 3:
-        context.push(openTourId != null
-            ? '/game-zone?tourId=${Uri.encodeQueryComponent(openTourId)}'
-            : '/game-zone');
+        context.push('/chats');
         break;
       case 4:
         final uid = FirebaseAuth.instance.currentUser?.uid;
