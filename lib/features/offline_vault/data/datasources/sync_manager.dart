@@ -273,7 +273,8 @@ class SyncManager {
 
   Future<void> _handleFailure(OutboxEntry item, Object error) async {
     logWarning(
-        '[SyncManager] Sync failed for item ${item.id} (${item.operation} -> ${item.collectionPath}/${item.documentId})', error);
+        '[SyncManager] Sync failed for item ${item.id} (${item.operation} -> ${item.collectionPath}/${item.documentId})',
+        error);
 
     final permanent = _isPermanentError(error);
     if (permanent || item.retryCount >= kOutboxMaxRetries) {

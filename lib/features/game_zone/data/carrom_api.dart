@@ -148,11 +148,14 @@ class CarromApi {
           }
         }
         logWarning(
-          '[CarromApi] VPS call $name failed (${e.message}). Falling back to Functions.', e);
+            '[CarromApi] VPS call $name failed (${e.message}). Falling back to Functions.',
+            e);
       } catch (e, st) {
         if (e is FirebaseFunctionsException) rethrow;
         logWarning(
-          '[CarromApi] VPS call $name error. Falling back to Functions.', e, st);
+            '[CarromApi] VPS call $name error. Falling back to Functions.',
+            e,
+            st);
       }
     }
 

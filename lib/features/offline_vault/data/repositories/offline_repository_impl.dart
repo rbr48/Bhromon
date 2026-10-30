@@ -89,7 +89,8 @@ class OfflineRepositoryImpl implements IOfflineRepository {
           pins.add(LocationPin.fromJson(data));
           pinIds.add(doc.id);
         } catch (e) {
-          logWarning('[OfflineRepo] Failed to parse location pin ${doc.id}: $e');
+          logWarning(
+              '[OfflineRepo] Failed to parse location pin ${doc.id}: $e');
         }
       }
 

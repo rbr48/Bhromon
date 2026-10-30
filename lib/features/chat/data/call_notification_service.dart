@@ -133,8 +133,8 @@ class CallNotificationService {
       try {
         FlutterCallkitIncoming.onBackgroundMessage(callkitBackgroundCallback);
       } catch (e, st) {
-        logWarning(
-            '[CallNotificationService] Failed to set background handler', e, st);
+        logWarning('[CallNotificationService] Failed to set background handler',
+            e, st);
       }
     }
   }

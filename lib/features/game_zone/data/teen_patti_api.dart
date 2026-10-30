@@ -145,11 +145,14 @@ class TeenPattiApi {
           }
         }
         logWarning(
-          '[TeenPattiApi] VPS call $name failed (${e.message}). Falling back to Functions.', e);
+            '[TeenPattiApi] VPS call $name failed (${e.message}). Falling back to Functions.',
+            e);
       } catch (e, st) {
         if (e is FirebaseFunctionsException) rethrow;
         logWarning(
-          '[TeenPattiApi] VPS call $name error. Falling back to Functions.', e, st);
+            '[TeenPattiApi] VPS call $name error. Falling back to Functions.',
+            e,
+            st);
       }
     }
 

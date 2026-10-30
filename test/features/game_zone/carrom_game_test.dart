@@ -235,7 +235,9 @@ void main() {
       expect(g.boardPoints, 12);
     });
 
-    test('hitting and pocketing a coin in bottom pocket is legal and not a foul', () {
+    test(
+        'hitting and pocketing a coin in bottom pocket is legal and not a foul',
+        () {
       final g = CarromGame();
       g.queenCoveredBy = 0;
       final coinNearPocket = g.coins.firstWhere((c) => c.type == g.colorOf(0));
@@ -251,7 +253,9 @@ void main() {
       expect(g.status, isNot(contains('a coin behind the baseline')));
     });
 
-    test('player colors alternate between boards (White breaks, then swaps to Black)', () {
+    test(
+        'player colors alternate between boards (White breaks, then swaps to Black)',
+        () {
       final g = CarromGame();
       expect(g.board, 1);
       expect(g.colorOf(0), CarromPieceType.white);
@@ -259,8 +263,7 @@ void main() {
       expect(g.breaker, 0);
 
       // Finish board 1 (player 0 wins)
-      final whites =
-          g.coins.where((c) => c.type == g.colorOf(0)).toList();
+      final whites = g.coins.where((c) => c.type == g.colorOf(0)).toList();
       for (final w in whites) {
         w.pocketed = true;
       }
@@ -273,8 +276,7 @@ void main() {
       expect(g.breaker, 1);
 
       // Finish board 2 (player 1 wins)
-      final p1Whites =
-          g.coins.where((c) => c.type == g.colorOf(1)).toList();
+      final p1Whites = g.coins.where((c) => c.type == g.colorOf(1)).toList();
       for (final w in p1Whites) {
         w.pocketed = true;
       }
@@ -383,8 +385,7 @@ void main() {
       final g = CarromGame(random: Random(7));
       g.board = 8;
       g.matchScore[1] = 10;
-      final ownCoins =
-          g.coins.where((c) => c.type == g.colorOf(0)).toList();
+      final ownCoins = g.coins.where((c) => c.type == g.colorOf(0)).toList();
       for (final w in ownCoins.take(8)) {
         w.pocketed = true;
       }

@@ -492,7 +492,8 @@ class VoiceRoomService {
         });
       }
     } catch (e, st) {
-      logWarning('VoiceRoomService: connectToPeer error for $remoteEmail', e, st);
+      logWarning(
+          'VoiceRoomService: connectToPeer error for $remoteEmail', e, st);
       _disconnectFromPeer(remoteEmail);
       _scheduleRetry();
     } finally {

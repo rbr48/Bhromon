@@ -51,7 +51,9 @@ class LocaleController extends ChangeNotifier {
       return await Hive.openBox<dynamic>(_boxName);
     } catch (e, st) {
       logWarning(
-          '[LocaleController] Corrupt preferences box: $e. Re-initializing...', e, st);
+          '[LocaleController] Corrupt preferences box: $e. Re-initializing...',
+          e,
+          st);
       try {
         await Hive.deleteBoxFromDisk(_boxName);
         return await Hive.openBox<dynamic>(_boxName);

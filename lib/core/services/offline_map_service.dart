@@ -176,7 +176,8 @@ class OfflineMapService {
       logInfo('[OfflineMapService] Offline region ready for $districtId');
       return true;
     } catch (e, st) {
-      logError('[OfflineMapService] Failed to download region $districtId', e, st);
+      logError(
+          '[OfflineMapService] Failed to download region $districtId', e, st);
       return false;
     }
   }
@@ -213,7 +214,8 @@ class OfflineMapService {
         }
       }
     } catch (e, st) {
-      logWarning('[OfflineMapService] Failed to delete region $districtId', e, st);
+      logWarning(
+          '[OfflineMapService] Failed to delete region $districtId', e, st);
     }
   }
 }
