@@ -170,9 +170,15 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
 
   void _onVideoTick(int index, VideoPlayerController controller) {
     if (!_autoAdvance || index != _currentIndex) return;
-    if (_advancingFrom == index) return;
     final value = controller.value;
-    if (_hasEnded(value) && !value.isPlaying) _advanceFrom(index);
+    // A scroll that was dragged back never changes the page, so the reel is
+    // free to advance again once it is played from before its end.
+    if (!_hasEnded(value)) {
+      _advancingFrom = null;
+      return;
+    }
+    if (_advancingFrom == index || value.isPlaying) return;
+    _advanceFrom(index);
   }
 
   /// Scrolls to the reel after [index]. The last reel stays on its last frame.
