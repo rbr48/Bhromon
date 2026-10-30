@@ -1,15 +1,19 @@
 import * as admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
 import * as crypto from 'crypto';
+import { leave29Table } from './card29/callables';
+import { leaveCarromTable } from './carrom/callables';
+import { leaveTeenPattiTable } from './teenPatti/callables';
 import { purgeTourStorage } from './lib/tourStorage';
 import {
   AnonymizePlan,
   Decide,
   aboutPerson,
   anonymize,
+  deleteWhen,
   formerMemberId,
-  gameInvolves,
   isInTour,
+  leaveClientTable,
   leaveHotelRoom,
   luggageOf,
   normalizeEmail,
@@ -19,6 +23,7 @@ import {
   scrubsFor,
   seatHeldBy,
   sosOf,
+  tableNames,
   updateArgs,
 } from './lib/tourContentPlan';
 
@@ -27,9 +32,11 @@ import {
  *
  * - When a person leaves a tour, or the owner removes them, what they put
  *   into the tour is removed: their posts, stories, highlights, comments, chat
- *   messages, safety alerts, locations, luggage, seats and game tables, with
- *   their photos, videos and Storage files. They are also taken out of other
- *   people's likes, viewers, reactions, votes, mentions and tags.
+ *   messages, locations, luggage and seats, with their photos, videos and
+ *   Storage files. They are also taken out of other people's likes, viewers,
+ *   reactions, votes, mentions and tags. At a game table only their seat goes,
+ *   and a seat in play passes to a bot. Their safety alerts stay as resolved
+ *   records under a stand-in.
  * - The group's shared record (the ledger, notices, route stops and the packing
  *   list) keeps its amounts and dates. The person is replaced by a stand-in.
  * - When a tour is deleted, everything in it is deleted.
@@ -262,6 +269,62 @@ async function holdsMembership(db: Db, tourId: string, email: string): Promise<b
   return row.exists;
 }
 
+/** Takes a person's seat off a table the server runs, as the app's own leave does. */
+type ServerLeave = (
+  tourId: string,
+  gameId: string,
+  email: string,
+  options: { closeLobbyOnHostLeave: boolean },
+) => Promise<void>;
+
+/** The leave routine of each table the server runs. The apps run the rest. */
+const SERVER_TABLES = new Map<string, ServerLeave>([
+  ['card29', leave29Table],
+  ['teen_patti', leaveTeenPattiTable],
+  ['carrom', leaveCarromTable],
+]);
+
+/**
+ * Takes the person's seat off each game table they host or sit at. The table
+ * keeps its other people. A table the server runs is left by the routine the
+ * app uses, so a seat in play passes to a bot. A lobby passes its host on
+ * rather than closing, so the others keep their table.
+ */
+async function leaveGameTables(db: Db, tourId: string, email: string): Promise<void> {
+  const tables = await db.collection('tours').doc(tourId).collection('games').get();
+  for (const table of tables.docs) {
+    if (!tableNames(table.data(), email)) continue;
+    const leave = SERVER_TABLES.get(String(table.data().gameType));
+    if (leave) {
+      await leave(tourId, table.id, email, { closeLobbyOnHostLeave: false });
+      await forgetSeats(db, table.ref, email);
+    } else {
+      await applyToDocs(db, [table.ref], leaveClientTable(email));
+    }
+  }
+}
+
+/**
+ * Once the person has left a server-run table, their cards are gone from it. A
+ * table that was removed takes its seats with it. A table not in play drops the
+ * seats that were theirs. A table in play keeps its seats, which the leave has
+ * already handed to a bot.
+ */
+async function forgetSeats(db: Db, table: DocRef, email: string): Promise<void> {
+  const after = await table.get();
+  if (!after.exists) {
+    await db.recursiveDelete(table);
+    return;
+  }
+  if (after.get('status') === 'inProgress') return;
+  const seats = await table.collection('private').get();
+  await applyToDocs(
+    db,
+    seats.docs.map((seat) => seat.ref),
+    deleteWhen((data) => normalizeEmail(data.owner) === email),
+  );
+}
+
 /**
  * Clears the receipt of each expense whose file was removed. The receipt URL
  * ends with the tour and the file's path inside the tour.
@@ -367,7 +430,8 @@ export async function purgeMemberContent(
     await applyToQuery(db, tour.collection(name), aboutPerson(email));
   }
 
-  // Safety alerts they raised. An alert they resolved for someone else keeps the stand-in.
+  // Safety alerts they raised stay as resolved records under the stand-in, without
+  // the location they sent. An alert they resolved for someone else keeps its resolution.
   await applyToQuery(db, tour.collection('sos'), sosOf(email, standIn));
 
   // The group's shared record keeps its amounts and dates. The person is
@@ -381,12 +445,12 @@ export async function purgeMemberContent(
   await applyToQuery(db, tour.collection('meta'), anonymize(ITINERARY_META, email, standIn));
 
   // What only the person used goes: luggage they own, seats and rooms they hold,
-  // game tables they host or sit at, and their profile in the tour.
+  // and their profile in the tour. At a game table only their seat goes.
   await applyToQuery(db, tour.collection('luggage'), luggageOf(email));
   await applyToQuery(db, tour.collection('bus_seats'), seatHeldBy(email));
   await applyToQuery(db, tour.collection('vehicle_seats'), seatHeldBy(email));
   await applyToQuery(db, tour.collection('hotel_rooms'), leaveHotelRoom(email));
-  await applyToQuery(db, tour.collection('games'), gameInvolves(email));
+  await leaveGameTables(db, tourId, email);
   await applyToQuery(db, tour.collection('profiles'), profileOf(email, memberUid));
 
   // Group chat: their messages, their reactions and votes, the mentions and tags

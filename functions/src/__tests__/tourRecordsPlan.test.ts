@@ -1,19 +1,27 @@
+import * as admin from 'firebase-admin';
 import {
   aboutPerson,
   anonymize,
+  Decision,
   FORMER_MEMBER_NAME,
   formerMemberId,
-  gameInvolves,
+  leaveClientTable,
   leaveHotelRoom,
   luggageOf,
   pairWith,
   profileOf,
   seatHeldBy,
   sosOf,
+  tableNames,
 } from '../lib/tourContentPlan';
 
 const LEAVER = 'leaver@x.com';
 const STAND_IN = formerMemberId('tour_1', LEAVER);
+
+/** The fields an update changes, or none when the decision is not an update. */
+function fieldsOf(decision: Decision | null): Record<string, unknown> {
+  return decision?.kind === 'update' ? decision.fields : {};
+}
 
 describe('formerMemberId', () => {
   it('is the same for the same person in the same tour, whatever the case', () => {
@@ -163,7 +171,7 @@ describe('leaveHotelRoom', () => {
   });
 });
 
-describe('seats, luggage and game tables', () => {
+describe('seats and luggage', () => {
   it('frees a seat the person holds, whatever the case of the address', () => {
     expect(seatHeldBy(LEAVER)({ assignedMemberEmail: 'Leaver@X.com' }, 's1')).toEqual({
       kind: 'delete',
@@ -184,29 +192,104 @@ describe('seats, luggage and game tables', () => {
     expect(luggage({ ownerEmail: 'friend@x.com' }, 'l3')).toBeNull();
   });
 
-  it('ends a game table the person hosts or sits at, with its seats', () => {
-    const game = gameInvolves(LEAVER);
-    expect(game({ hostEmail: LEAVER, players: [] }, 'g1')).toEqual({
+});
+
+describe('game tables', () => {
+  it('names a person who hosts a table or sits at it, whatever the case of the address', () => {
+    expect(tableNames({ hostEmail: LEAVER, players: [] }, LEAVER)).toBe(true);
+    expect(tableNames({ hostEmail: 'friend@x.com', players: [{ email: 'Leaver@X.com' }] }, LEAVER)).toBe(true);
+    expect(tableNames({ hostEmail: 'friend@x.com', players: [{ email: 'other@x.com' }] }, LEAVER)).toBe(false);
+  });
+
+  it('takes the leaver’s seat out of a table and keeps the others', () => {
+    expect(
+      leaveClientTable(LEAVER)({
+        hostEmail: 'friend@x.com',
+        players: [{ email: 'friend@x.com', isHost: true }, { email: LEAVER, isHost: false }],
+      }),
+    ).toEqual({
+      kind: 'update',
+      fields: { players: [{ email: 'friend@x.com', isHost: true }] },
+    });
+  });
+
+  it('passes the host to someone still at the table, and never to a bot', () => {
+    expect(
+      leaveClientTable(LEAVER)({
+        hostEmail: LEAVER,
+        players: [
+          { email: LEAVER, isHost: true },
+          { email: 'bot@x.com', isBot: true, isHost: false },
+          { email: 'friend@x.com', isBot: false, isHost: false },
+        ],
+      }),
+    ).toEqual({
+      kind: 'update',
+      fields: {
+        hostEmail: 'friend@x.com',
+        players: [
+          { email: 'bot@x.com', isBot: true, isHost: false },
+          { email: 'friend@x.com', isBot: false, isHost: true },
+        ],
+      },
+    });
+  });
+
+  it('ends a table with no people left, and leaves a table without the person alone', () => {
+    expect(leaveClientTable(LEAVER)({ hostEmail: LEAVER, players: [{ email: LEAVER }] })).toEqual({
       kind: 'delete',
       recursive: true,
     });
-    expect(game({ hostEmail: 'friend@x.com', players: [{ email: LEAVER }] }, 'g2')).toEqual({
-      kind: 'delete',
-      recursive: true,
-    });
-    expect(game({ hostEmail: 'friend@x.com', players: [{ email: 'other@x.com' }] }, 'g3')).toBeNull();
+    expect(
+      leaveClientTable(LEAVER)({
+        hostEmail: LEAVER,
+        players: [{ email: LEAVER }, { email: 'bot@x.com', isBot: true }],
+      }),
+    ).toEqual({ kind: 'delete', recursive: true });
+    expect(
+      leaveClientTable(LEAVER)({ hostEmail: 'friend@x.com', players: [{ email: 'other@x.com' }] }),
+    ).toBeNull();
   });
 });
 
 describe('safety alerts, voice pairs and profiles', () => {
-  it('removes an alert the person raised and keeps the stand-in on one they resolved', () => {
+  it('keeps an alert the person raised under the stand-in, resolved, without the location they sent', () => {
     const sos = sosOf(LEAVER, STAND_IN);
-    expect(sos({ senderEmail: LEAVER }, 'a1')).toEqual({ kind: 'delete' });
-    expect(sos({ senderEmail: 'friend@x.com', resolvedByEmail: LEAVER }, 'a2')).toEqual({
+    const raised = sos(
+      { senderEmail: 'Leaver@X.com', senderName: 'Rajib', latitude: 23.8, longitude: 90.4, resolved: false },
+      'a1',
+    );
+    expect(fieldsOf(raised)).toMatchObject({
+      senderEmail: STAND_IN,
+      senderName: FORMER_MEMBER_NAME,
+      resolved: true,
+      resolvedByEmail: STAND_IN,
+    });
+    expect(fieldsOf(raised).latitude).toEqual(admin.firestore.FieldValue.delete());
+    expect(fieldsOf(raised).longitude).toEqual(admin.firestore.FieldValue.delete());
+    expect(fieldsOf(raised)).toHaveProperty('resolvedAt');
+  });
+
+  it('keeps the resolution of an alert the person raised, with the stand-in in place of the person', () => {
+    const sos = sosOf(LEAVER, STAND_IN);
+    expect(
+      fieldsOf(sos({ senderEmail: LEAVER, resolved: true, resolvedByEmail: LEAVER }, 'a2')),
+    ).toMatchObject({ resolvedByEmail: STAND_IN });
+
+    const resolvedByAdmin = fieldsOf(
+      sos({ senderEmail: LEAVER, resolved: true, resolvedByEmail: 'admin@x.com' }, 'a3'),
+    );
+    expect(resolvedByAdmin).not.toHaveProperty('resolvedByEmail');
+    expect(resolvedByAdmin).not.toHaveProperty('resolved');
+  });
+
+  it('keeps an alert of another member, and takes the person out of who resolved it', () => {
+    const sos = sosOf(LEAVER, STAND_IN);
+    expect(sos({ senderEmail: 'friend@x.com', resolvedByEmail: LEAVER }, 'a4')).toEqual({
       kind: 'update',
       fields: { resolvedByEmail: STAND_IN },
     });
-    expect(sos({ senderEmail: 'friend@x.com' }, 'a3')).toBeNull();
+    expect(sos({ senderEmail: 'friend@x.com' }, 'a5')).toBeNull();
   });
 
   it('removes a voice pair that names the person, with its candidates', () => {
