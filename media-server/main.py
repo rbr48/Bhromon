@@ -16,6 +16,7 @@ import json
 import logging
 import re
 import secrets
+import shutil
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -26,6 +27,7 @@ import aiofiles
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from chat import chat_db, chat_router
 from news import router as news_router
@@ -39,6 +41,9 @@ META_ROOT = Path(os.getenv("MEDIA_META_ROOT", "/data/media-meta"))
 BASE_URL = os.getenv("BASE_URL", "https://bhromon.fun/media")
 FIREBASE_CREDENTIALS = os.getenv("FIREBASE_CREDENTIALS", "")
 LEGACY_UPLOAD_KEY = os.getenv("LEGACY_UPLOAD_KEY", "")
+# Held by the Bhromon back end only. It lets that back end remove a tour's
+# files when a member leaves or a tour is deleted.
+PURGE_KEY = os.getenv("PURGE_KEY", "")
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
@@ -493,6 +498,69 @@ async def delete_media(
     target.unlink()
     meta_path_for(tourId, folder, filename).unlink(missing_ok=True)
     return {"status": "deleted", "path": f"{tourId}/{folder}/{filename}"}
+
+
+class PurgeRequest(BaseModel):
+    tourId: str
+    uploaderEmail: Optional[str] = None
+
+
+def purge_tour_files(tour_id: str, uploader: Optional[str]) -> int:
+    """Deletes one uploader's files in a tour, or every file of the tour.
+
+    An uploader is matched on the sidecar written when each file was saved.
+    Files saved before sidecars existed have no uploader, so they only go with
+    the whole tour.
+    """
+    if uploader is None:
+        tour_dir = MEDIA_ROOT / tour_id
+        removed = (
+            sum(1 for path in tour_dir.rglob("*") if path.is_file())
+            if tour_dir.is_dir()
+            else 0
+        )
+        shutil.rmtree(tour_dir, ignore_errors=True)
+        shutil.rmtree(META_ROOT / tour_id, ignore_errors=True)
+        return removed
+
+    removed = 0
+    for meta_file in (META_ROOT / tour_id).glob("*/*.json"):
+        try:
+            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(meta, dict):
+            continue
+        saved_by = str(meta.get("uploaderEmail", "")).strip().lower()
+        if saved_by != uploader:
+            continue
+        filename = meta_file.name[: -len(".json")]
+        (MEDIA_ROOT / tour_id / meta_file.parent.name / filename).unlink(missing_ok=True)
+        meta_file.unlink(missing_ok=True)
+        removed += 1
+    return removed
+
+
+@app.post("/purge")
+async def purge_tour_content(
+    body: PurgeRequest,
+    x_purge_key: Optional[str] = Header(None),
+):
+    """Removes a tour's files on the request of the Bhromon back end.
+
+    With an uploader email, only that person's files in the tour go. Without
+    one, every file of the tour goes.
+    """
+    if not PURGE_KEY:
+        raise HTTPException(status_code=503, detail="Purging is not configured.")
+    if not x_purge_key or not secrets.compare_digest(
+        x_purge_key.encode("utf-8"), PURGE_KEY.encode("utf-8")
+    ):
+        raise HTTPException(status_code=401, detail="Wrong purge key.")
+    check_tour_id(body.tourId)
+    uploader = body.uploaderEmail.strip().lower() if body.uploaderEmail else None
+    removed = await run_in_threadpool(purge_tour_files, body.tourId, uploader)
+    return {"removed": removed}
 
 
 @app.get("/notify/status")
