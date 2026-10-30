@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
-import '../../data/tour_group_repository.dart';
+import '../tour_routes.dart';
 
 /// The persistent 5 navigation destinations used across the entire application:
 /// 0: Tours (Hub)
@@ -14,6 +14,9 @@ import '../../data/tour_group_repository.dart';
 /// 4: Profile (Explorer profile)
 class BhromonBottomNav extends StatelessWidget {
   final int selectedIndex;
+
+  /// The tour the current screen belongs to. The tour tabs open it. Null when
+  /// the screen has no tour, and then the hub picks one.
   final String? tourId;
 
   const BhromonBottomNav({
@@ -60,91 +63,70 @@ class BhromonBottomNav extends StatelessWidget {
   }) {
     if (currentIndex != null && index == currentIndex) return;
 
-    // The tour in the route wins. The shared last-active id can be set by a
-    // screen that is still underneath, such as the hub, so it is only the
-    // fallback for screens that have no tour of their own.
-    final effectiveTourId = (tourId != null && tourId.isNotEmpty)
-        ? tourId
-        : TourGroupRepository.lastActiveTourId;
+    final openTourId = (tourId != null && tourId.isNotEmpty) ? tourId : null;
 
     switch (index) {
       case 0:
-        context.go('/group-hub');
+        context.go(tourHubPath(openTourId));
         break;
       case 1:
-        if (effectiveTourId != null && effectiveTourId.isNotEmpty) {
-          if (context.canPop()) {
-            context.pushReplacement('/group/$effectiveTourId/feed');
-          } else {
-            context.push('/group/$effectiveTourId/feed');
-          }
-        } else {
-          TourGroupRepository().getActiveTourId().then((id) {
-            if (!context.mounted) return;
-            if (id != null && id.isNotEmpty) {
-              if (context.canPop()) {
-                context.pushReplacement('/group/$id/feed');
-              } else {
-                context.push('/group/$id/feed');
-              }
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                      'মোমেন্টস দেখতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।'),
-                  backgroundColor: AppColors.midGreen,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-              context.go('/group-hub');
-            }
-          });
-        }
+        _openTourTab(
+          context,
+          openTourId,
+          'feed',
+          missingTourMessage:
+              'মোমেন্টস দেখতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।',
+        );
         break;
       case 2:
-        if (effectiveTourId != null && effectiveTourId.isNotEmpty) {
-          if (context.canPop()) {
-            context.pushReplacement('/group/$effectiveTourId/channels');
-          } else {
-            context.push('/group/$effectiveTourId/channels');
-          }
-        } else {
-          TourGroupRepository().getActiveTourId().then((id) {
-            if (!context.mounted) return;
-            if (id != null && id.isNotEmpty) {
-              if (context.canPop()) {
-                context.pushReplacement('/group/$id/channels');
-              } else {
-                context.push('/group/$id/channels');
-              }
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                      'চ্যানেল খুলতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।'),
-                  backgroundColor: AppColors.midGreen,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-              context.go('/group-hub');
-            }
-          });
-        }
+        _openTourTab(
+          context,
+          openTourId,
+          'channels',
+          missingTourMessage:
+              'চ্যানেল খুলতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।',
+        );
         break;
       case 3:
-        final gameTourId = (tourId != null && tourId.isNotEmpty)
-            ? tourId
-            : TourGroupRepository.lastActiveTourId;
-        context.push(gameTourId != null && gameTourId.isNotEmpty
-            ? '/game-zone?tourId=$gameTourId'
+        context.push(openTourId != null
+            ? '/game-zone?tourId=${Uri.encodeQueryComponent(openTourId)}'
             : '/game-zone');
         break;
       case 4:
         final uid = FirebaseAuth.instance.currentUser?.uid;
         final targetUid =
             (uid != null && uid.isNotEmpty) ? uid : 'explorer_user';
-        context.push('/profile/$targetUid');
+        context.push(openTourId != null
+            ? '/profile/$targetUid?tourId=${Uri.encodeQueryComponent(openTourId)}'
+            : '/profile/$targetUid');
         break;
+    }
+  }
+
+  /// Opens [tab] of [tourId]. With no tour there is nothing to open, so the
+  /// hub takes over and says a tour has to be chosen first.
+  static void _openTourTab(
+    BuildContext context,
+    String? tourId,
+    String tab, {
+    required String missingTourMessage,
+  }) {
+    if (tourId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(missingTourMessage),
+          backgroundColor: AppColors.midGreen,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      context.go('/group-hub');
+      return;
+    }
+    final path = '/group/$tourId/$tab';
+    if (context.canPop()) {
+      context.pushReplacement(path);
+    } else {
+      context.push(path);
     }
   }
 

@@ -4,8 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/tour_choice.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/tour_hub_preference.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../widgets/bhromon_bottom_nav.dart';
@@ -13,7 +15,20 @@ import '../widgets/member_profile/tour_member_profile_modal.dart';
 
 class TourGroupHubScreen extends StatefulWidget {
   final TourGroupRepository? repository;
-  const TourGroupHubScreen({super.key, this.repository});
+
+  /// The tour to open on, from the address (`?tourId=`). Null opens the tour
+  /// the hub showed last, or the first tour.
+  final String? initialTourId;
+
+  /// Where the hub keeps its own pick. Tests pass a fake; the app leaves it null.
+  final TourHubPreference? preference;
+
+  const TourGroupHubScreen({
+    super.key,
+    this.repository,
+    this.initialTourId,
+    this.preference,
+  });
 
   @override
   State<TourGroupHubScreen> createState() => _TourGroupHubScreenState();
@@ -22,15 +37,22 @@ class TourGroupHubScreen extends StatefulWidget {
 class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   late final TourGroupRepository _repository =
       widget.repository ?? TourGroupRepository();
-  TourGroup? _activeGroup;
-  // The group currently shown on screen.
-  TourGroup? _displayedGroup;
+  late final TourHubPreference _preference =
+      widget.preference ?? TourHubPreference();
+  // The tour picked, created or joined during this visit. It is kept even
+  // before the membership list includes it.
+  TourGroup? _selectedGroup;
+  // The tour the hub showed last time, read once when the hub opens.
+  String? _rememberedTourId;
   late Stream<List<TourGroup>> _groupsStream;
 
   @override
   void initState() {
     super.initState();
     _groupsStream = _repository.watchMyGroups();
+    _rememberedTourId = _preference.read();
+    final routeTourId = widget.initialTourId;
+    if (routeTourId != null) unawaited(_preference.remember(routeTourId));
   }
 
   final Map<String, Stream<List<TourMember>>> _memberStreams = {};
@@ -38,13 +60,19 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   Stream<List<TourMember>> _membersOf(String tourId) => _memberStreams
       .putIfAbsent(tourId, () => _repository.watchMembers(tourId));
 
-  bool _viewerIsOwner(List<TourMember> members) =>
-      _displayedGroup?.ownerEmail == _repository.currentEmail ||
+  bool _viewerIsOwner(TourGroup group, List<TourMember> members) =>
+      group.ownerEmail == _repository.currentEmail ||
       members.any((m) =>
           m.email == _repository.currentEmail && m.role == TourRole.owner);
 
   bool _viewerIsAdmin(List<TourMember> members) => members
       .any((m) => m.email == _repository.currentEmail && m.role.isAdminOrOwner);
+
+  /// Makes [group] the tour the hub shows, and remembers it for next time.
+  void _selectTour(TourGroup group) {
+    unawaited(_preference.remember(group.id));
+    setState(() => _selectedGroup = group);
+  }
 
   void _snack(String text, {bool error = false}) {
     if (!mounted) return;
@@ -414,11 +442,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         if (!ok) return;
         try {
           await _repository.leaveTour(group.id);
-          TourGroupRepository.lastActiveTourId = null;
+          unawaited(_preference.forget(group.id));
           if (mounted) {
             setState(() {
-              _activeGroup = null;
-              _displayedGroup = null;
+              _selectedGroup = null;
               _memberStreams.remove(group.id);
               _groupsStream = _repository.watchMyGroups();
             });
@@ -436,11 +463,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         if (!ok) return;
         try {
           await _repository.deleteTour(group.id, inviteCode: group.inviteCode);
-          TourGroupRepository.lastActiveTourId = null;
+          unawaited(_preference.forget(group.id));
           if (mounted) {
             setState(() {
-              _activeGroup = null;
-              _displayedGroup = null;
+              _selectedGroup = null;
               _memberStreams.remove(group.id);
               _groupsStream = _repository.watchMyGroups();
             });
@@ -456,186 +482,186 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0D1A12),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1A12),
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFF1B4332),
-              ),
-              child: ClipOval(
-                child: Image.asset(
-                  'assets/logo.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.explore,
-                    color: AppColors.mintGreen,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return StreamBuilder<List<TourGroup>>(
+      stream: _groupsStream,
+      builder: (context, snapshot) {
+        final rawGroups = snapshot.data ?? [];
+        // A tour picked, created or joined just now can show before the
+        // membership list includes it.
+        final selected = _selectedGroup;
+        final groups =
+            (selected != null && !rawGroups.any((g) => g.id == selected.id))
+                ? [selected, ...rawGroups]
+                : rawGroups;
+        final current = pickTour(groups, [
+          selected?.id,
+          widget.initialTourId,
+          _rememberedTourId,
+        ]);
+
+        return Scaffold(
+          backgroundColor: const Color(0xFF0D1A12),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF0D1A12),
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Bhromon',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                    letterSpacing: 0.5,
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFF1B4332),
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/logo.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.explore,
+                        color: AppColors.mintGreen,
+                        size: 20,
+                      ),
+                    ),
                   ),
                 ),
-                Text(
-                  context.l10n.translate('hub_title'),
-                  style: const TextStyle(
-                    color: AppColors.mintGreen,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Bhromon',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Text(
+                      context.l10n.translate('hub_title'),
+                      style: const TextStyle(
+                        color: AppColors.mintGreen,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.group_add_outlined,
-                color: AppColors.mintGreen),
-            tooltip: context.l10n.translate('hub_join_with_code'),
-            onPressed: () => _showJoinGroupDialog(context),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.group_add_outlined,
+                    color: AppColors.mintGreen),
+                tooltip: context.l10n.translate('hub_join_with_code'),
+                onPressed: () => _showJoinGroupDialog(context),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline,
+                    color: AppColors.midGreen),
+                tooltip: context.l10n.translate('hub_create_new_tour'),
+                onPressed: () => _showCreateGroupDialog(context),
+              ),
+            ],
           ),
-          IconButton(
-            icon:
-                const Icon(Icons.add_circle_outline, color: AppColors.midGreen),
-            tooltip: context.l10n.translate('hub_create_new_tour'),
-            onPressed: () => _showCreateGroupDialog(context),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 960),
+              child: Builder(
+                builder: (context) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      !snapshot.hasData) {
+                    return const Center(
+                      child:
+                          CircularProgressIndicator(color: AppColors.midGreen),
+                    );
+                  }
+
+                  if (snapshot.hasError &&
+                      (snapshot.data == null || snapshot.data!.isEmpty)) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.cloud_off_rounded,
+                                color: Colors.redAccent, size: 54),
+                            const SizedBox(height: 16),
+                            Text(
+                              context.l10n.translate('hub_groups_load_failed'),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${snapshot.error}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 13),
+                            ),
+                            const SizedBox(height: 20),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.midGreen),
+                              onPressed: () => setState(() {
+                                _groupsStream = _repository.watchMyGroups();
+                              }),
+                              child:
+                                  Text(context.l10n.translate('hub_try_again')),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (current == null) {
+                    return _buildEmptyState(context);
+                  }
+
+                  return ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                    children: [
+                      // 1. Active Tour Card
+                      _buildActiveTourBanner(context, current, groups),
+                      const SizedBox(height: 18),
+
+                      // 2. Feature Launchpad Grid
+                      Text(
+                        context.l10n.translate('hub_modules_heading'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildModulesGrid(context, current),
+
+                      const SizedBox(height: 20),
+
+                      // 3. Tour Members List
+                      _buildMembersSection(current),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
-          child: StreamBuilder<List<TourGroup>>(
-            stream: _groupsStream,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting &&
-                  !snapshot.hasData) {
-                return const Center(
-                  child: CircularProgressIndicator(color: AppColors.midGreen),
-                );
-              }
-
-              if (snapshot.hasError &&
-                  (snapshot.data == null || snapshot.data!.isEmpty)) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.cloud_off_rounded,
-                            color: Colors.redAccent, size: 54),
-                        const SizedBox(height: 16),
-                        Text(
-                          context.l10n.translate('hub_groups_load_failed'),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${snapshot.error}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 13),
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.midGreen),
-                          onPressed: () => setState(() {
-                            _groupsStream = _repository.watchMyGroups();
-                          }),
-                          child: Text(context.l10n.translate('hub_try_again')),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
-              final rawGroups = snapshot.data ?? [];
-              final groups = (_activeGroup != null &&
-                      !rawGroups.any((g) => g.id == _activeGroup!.id))
-                  ? [_activeGroup!, ...rawGroups]
-                  : rawGroups;
-
-              if (groups.isEmpty) {
-                return _buildEmptyState(context);
-              }
-
-              final savedId = TourGroupRepository.lastActiveTourId;
-              final current = (_activeGroup != null &&
-                      groups.any((g) => g.id == _activeGroup!.id))
-                  ? groups.firstWhere((g) => g.id == _activeGroup!.id)
-                  : (savedId != null && groups.any((g) => g.id == savedId))
-                      ? groups.firstWhere((g) => g.id == savedId)
-                      : groups.first;
-
-              _displayedGroup = current;
-              _activeGroup = current;
-              TourGroupRepository.lastActiveTourId = current.id;
-
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                children: [
-                  // 1. Active Tour Card
-                  _buildActiveTourBanner(context, current, groups),
-                  const SizedBox(height: 18),
-
-                  // 2. Feature Launchpad Grid
-                  Text(
-                    context.l10n.translate('hub_modules_heading'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildModulesGrid(context, current),
-
-                  const SizedBox(height: 20),
-
-                  // 3. Tour Members List
-                  _buildMembersSection(current.id),
-                ],
-              );
-            },
+          bottomNavigationBar: BhromonBottomNav(
+            selectedIndex: 0,
+            tourId: current?.id,
           ),
-        ),
-      ),
-      bottomNavigationBar: BhromonBottomNav(
-        selectedIndex: 0,
-        tourId: _activeGroup?.id ??
-            _displayedGroup?.id ??
-            TourGroupRepository.lastActiveTourId,
-      ),
+        );
+      },
     );
   }
 
@@ -874,13 +900,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       }).toList(),
                       onChanged: (id) {
                         if (id != null) {
-                          TourGroupRepository.lastActiveTourId = id;
-                          setState(() {
-                            final picked =
-                                allGroups.firstWhere((g) => g.id == id);
-                            _activeGroup = picked;
-                            _displayedGroup = picked;
-                          });
+                          _selectTour(allGroups.firstWhere((g) => g.id == id));
                         }
                       },
                     ),
@@ -1458,7 +1478,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 
-  Widget _buildMembersSection(String tourId) {
+  Widget _buildMembersSection(TourGroup group) {
+    final tourId = group.id;
     return StreamBuilder<List<TourMember>>(
       stream: _membersOf(tourId),
       builder: (context, snapshot) {
@@ -1529,7 +1550,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           context,
                           tourId,
                           m,
-                          viewerIsOwner: _viewerIsOwner(members),
+                          viewerIsOwner: _viewerIsOwner(group, members),
                           viewerIsAdmin: _viewerIsAdmin(members),
                         ),
                         leading: CircleAvatar(
@@ -1980,11 +2001,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               ),
                             );
                             if (mounted) {
-                              TourGroupRepository.lastActiveTourId =
-                                  newGroup.id;
+                              _selectTour(newGroup);
                               setState(() {
-                                _activeGroup = newGroup;
-                                _displayedGroup = newGroup;
                                 _groupsStream = _repository.watchMyGroups();
                               });
                               navigator.pop();
@@ -2321,7 +2339,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             );
                             if (mounted) {
                               setState(() {
-                                _activeGroup = group.copyWith(
+                                _selectedGroup = group.copyWith(
                                   name: name,
                                   description: descCtrl.text.trim(),
                                   destination: dest.isNotEmpty
@@ -2453,11 +2471,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             final joinedGroup =
                                 await _repository.joinGroupWithCode(code);
                             if (mounted) {
-                              TourGroupRepository.lastActiveTourId =
-                                  joinedGroup.id;
+                              _selectTour(joinedGroup);
                               setState(() {
-                                _activeGroup = joinedGroup;
-                                _displayedGroup = joinedGroup;
                                 _memberStreams[joinedGroup.id] =
                                     _repository.watchMembers(joinedGroup.id);
                                 _groupsStream = _repository.watchMyGroups();

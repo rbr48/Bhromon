@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/colors.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
+import 'package:bhromon/features/tour_group/domain/services/tour_choice.dart';
+import 'package:bhromon/features/tour_group/presentation/tour_routes.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/bhromon_bottom_nav.dart';
 import 'data/online_game_repository.dart';
 import 'domain/models/online_game_session.dart';
@@ -73,7 +75,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
   late final TabController _tabController;
   late final Stream<List<TourGroup>> _groupsStream;
 
-  String? _cachedActiveTourId;
+  String? _gamesStreamTourId;
   Stream<List<OnlineGameSession>>? _activeGamesStream;
 
   GameCategory _selectedCategory = GameCategory.all;
@@ -182,73 +184,73 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         try {
-          context.go('/group-hub');
+          context.go(tourHubPath(widget.initialTourId));
         } catch (_) {}
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0D1711),
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white70, size: 18),
-            onPressed: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                try {
-                  context.go('/group-hub');
-                } catch (_) {}
-              }
-            },
-          ),
-          title: const Text(
-            'Travel GameZone',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          centerTitle: true,
-          backgroundColor: const Color(0xFF122218),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(48),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
-                child: TabBar(
-                  controller: _tabController,
-                  indicatorColor: AppColors.mintGreen,
-                  labelColor: AppColors.mintGreen,
-                  unselectedLabelColor: Colors.white60,
-                  indicatorWeight: 3,
-                  tabs: const [
-                    Tab(
-                      icon: Icon(Icons.offline_bolt_rounded, size: 20),
-                      text: 'Offline Arcade',
+      child: StreamBuilder<List<TourGroup>>(
+        stream: _groupsStream,
+        builder: (context, groupSnapshot) {
+          final groups = groupSnapshot.data ?? [];
+          final activeTour = pickTour(groups, [widget.initialTourId]);
+
+          return Scaffold(
+            backgroundColor: const Color(0xFF0D1711),
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white70, size: 18),
+                onPressed: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    try {
+                      context.go(tourHubPath(widget.initialTourId));
+                    } catch (_) {}
+                  }
+                },
+              ),
+              title: const Text(
+                'Travel GameZone',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              centerTitle: true,
+              backgroundColor: const Color(0xFF122218),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(48),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicatorColor: AppColors.mintGreen,
+                      labelColor: AppColors.mintGreen,
+                      unselectedLabelColor: Colors.white60,
+                      indicatorWeight: 3,
+                      tabs: const [
+                        Tab(
+                          icon: Icon(Icons.offline_bolt_rounded, size: 20),
+                          text: 'Offline Arcade',
+                        ),
+                        Tab(
+                          icon: Icon(Icons.groups_rounded, size: 20),
+                          text: 'Tour Online Tables',
+                        ),
+                        Tab(
+                          icon: Icon(Icons.insights_rounded, size: 20),
+                          text: 'Stats & Trophies',
+                        ),
+                      ],
                     ),
-                    Tab(
-                      icon: Icon(Icons.groups_rounded, size: 20),
-                      text: 'Tour Online Tables',
-                    ),
-                    Tab(
-                      icon: Icon(Icons.insights_rounded, size: 20),
-                      text: 'Stats & Trophies',
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 960),
-            child: StreamBuilder<List<TourGroup>>(
-              stream: _groupsStream,
-              builder: (context, groupSnapshot) {
-                final groups = groupSnapshot.data ?? [];
-                final activeTour = _pickActiveTour(groups);
-
-                return TabBarView(
+            body: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 960),
+                child: TabBarView(
                   controller: _tabController,
                   children: [
                     _buildOfflineArcade(context),
@@ -258,12 +260,15 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                       tourRepository: _tourRepo,
                     ),
                   ],
-                );
-              },
+                ),
+              ),
             ),
-          ),
-        ),
-        bottomNavigationBar: const BhromonBottomNav(selectedIndex: 3),
+            bottomNavigationBar: BhromonBottomNav(
+              selectedIndex: 3,
+              tourId: activeTour?.id,
+            ),
+          );
+        },
       ),
     );
   }
@@ -868,8 +873,8 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
       );
     }
 
-    if (_cachedActiveTourId != activeTour.id || _activeGamesStream == null) {
-      _cachedActiveTourId = activeTour.id;
+    if (_gamesStreamTourId != activeTour.id || _activeGamesStream == null) {
+      _gamesStreamTourId = activeTour.id;
       _activeGamesStream = _gameRepo.watchActiveGames(activeTour.id);
     }
 
@@ -1220,18 +1225,6 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
         ),
       ),
     );
-  }
-
-  /// The tour the games are about: the one the user came from, else the most
-  /// recent tour they belong to.
-  TourGroup? _pickActiveTour(List<TourGroup> groups) {
-    if (groups.isEmpty) return null;
-    final preferred =
-        widget.initialTourId ?? TourGroupRepository.lastActiveTourId;
-    for (final group in groups) {
-      if (group.id == preferred) return group;
-    }
-    return groups.first;
   }
 
   void _showJoinByCodeDialog(BuildContext context, String tourId) {

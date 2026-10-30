@@ -5,7 +5,6 @@ import 'package:bhromon/features/tour_group/domain/services/tide_schedule_engine
 import 'package:bhromon/features/tour_group/presentation/pages/family_safety_hub_screen.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
-import '../../../data/tour_group_repository.dart';
 import '../member_profile/tour_member_profile_modal.dart';
 
 /// Live Beach Tide & Ocean Safety pill banner shown at the top of InstaFeed.
@@ -189,7 +188,7 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
 
   static Future<void> show(
     BuildContext context, {
-    String? tourId,
+    required String tourId,
     required String authorName,
     required String authorEmail,
     String? authorPhoto,
@@ -197,11 +196,10 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
     String? roomNumber,
     int? familyCount,
   }) {
-    final tid = tourId ?? TourGroupRepository.lastActiveTourId ?? '';
-    if (tid.isNotEmpty) {
+    if (tourId.isNotEmpty) {
       return TourMemberProfileModal.show(
         context,
-        tourId: tid,
+        tourId: tourId,
         memberEmail: authorEmail,
         memberName: authorName,
         memberPhoto: authorPhoto,

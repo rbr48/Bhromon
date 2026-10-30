@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
-import '../../data/tour_group_repository.dart';
+import '../tour_routes.dart';
 
 class CommandPaletteItem {
   final String title;
@@ -44,11 +44,11 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
 
   List<CommandPaletteItem> _getItems(String tourId) {
     return [
-      const CommandPaletteItem(
+      CommandPaletteItem(
         title: 'ড্যাশবোর্ড (Dashboard)',
         subtitle: 'ট্যুর গ্রুপ হাব ও সারসংক্ষেপ',
         icon: Icons.dashboard_rounded,
-        route: '/group-hub',
+        route: tourHubPath(tourId),
         category: 'নেভিগেশন',
         color: AppColors.mintGreen,
       ),
@@ -276,8 +276,6 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                           return InkWell(
                             onTap: () {
                               Navigator.of(context).pop();
-                              TourGroupRepository.lastActiveTourId =
-                                  widget.tourId;
                               context.go(item.route);
                             },
                             child: Container(

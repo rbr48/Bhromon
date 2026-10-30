@@ -121,7 +121,11 @@ class AppRouter {
         path: '/profile/:uid',
         pageBuilder: (context, state) => _customPageTransition(
           state,
-          ExplorerProfileScreen(uid: state.pathParameters['uid']!),
+          ExplorerProfileScreen(
+            uid: state.pathParameters['uid']!,
+            tourId: state.uri.queryParameters['tourId'],
+          ),
+          key: pageKeyFor(state),
         ),
       ),
       GoRoute(
@@ -233,8 +237,13 @@ class AppRouter {
       ),
       GoRoute(
         path: '/group-hub',
-        pageBuilder: (context, state) =>
-            _customPageTransition(state, const TourGroupHubScreen()),
+        pageBuilder: (context, state) => _customPageTransition(
+          state,
+          TourGroupHubScreen(
+            initialTourId: state.uri.queryParameters['tourId'],
+          ),
+          key: pageKeyFor(state),
+        ),
       ),
       GoRoute(
         path: '/group/:tourId/ledger',
