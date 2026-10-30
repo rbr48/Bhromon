@@ -289,17 +289,14 @@ class _CarromScreenState extends State<CarromScreen>
         title: const Text('Carrom rules (ক্যারম)'),
         content: const SingleChildScrollView(
           child: Text(
-            'You play the white coins from the bottom baseline; your opponent plays black from the top.\n\n'
+            'On board 1 you play white from the bottom; colors and break alternate each board (White always breaks).\n\n'
             '• Slide the striker along your baseline (drag it or use the slider). It must not touch a coin.\n'
             '• Drag back anywhere on the board and release to shoot - the further you pull, the harder the shot.\n'
             '• Pocket one of your own coins and you shoot again. Coins of your opponent\'s colour that you '
             'pocket stay down and count for them.\n'
-            '• The Queen (red) can be taken once you have pocketed a coin of your own. Cover her by pocketing '
-            'one of your coins on the same or the next shot, or she goes back to the centre.\n'
-            '• Fouls (ICF rules): pocketing the striker, pocketing your last coin while the Queen is still on '
-            'the board, pocketing your opponent\'s last coin, or hitting a coin behind your own baseline '
-            'without bouncing off a cushion first. Your coins from that shot, the Queen and the opponent\'s '
-            'last coin come back, you pay one penalty coin, and your turn ends.\n'
+            '• The Queen (red) can be taken at any time. Cover her by pocketing one of your coins on the same or next shot.\n'
+            '• Fouls: pocketing the striker, pocketing your last coin while the Queen is still on '
+            'the board, or pocketing your opponent\'s last coin. On a foul, a penalty coin of your own is placed back in the centre.\n'
             '• Your last coin may cover the Queen, on the same shot or the next one - that wins the board.\n'
             '• If you have no coin to pay, the penalty is due and comes out of the next coin you pocket.\n'
             '• A coin moving very fast can rattle out of a pocket.\n'
@@ -404,8 +401,10 @@ class _CarromScreenState extends State<CarromScreen>
     Widget panel(int player) {
       final isTurn =
           _game.currentPlayer == player && _game.phase != CarromPhase.gameOver;
+      final isWhite = _game.colorOf(player) == CarromPieceType.white;
       final coinColor =
-          player == 0 ? const Color(0xFFF4EBD0) : const Color(0xFF2A2A2A);
+          isWhite ? const Color(0xFFF4EBD0) : const Color(0xFF2A2A2A);
+      final colorLabel = isWhite ? 'White' : 'Black';
       final queenNote = _game.queenCoveredBy == player
           ? ' · 👑 Queen'
           : (_game.queenPendingFor == player ? ' · 👑 cover!' : '');
@@ -438,7 +437,7 @@ class _CarromScreenState extends State<CarromScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _game.nameOf(player),
+                      '${_game.nameOf(player)} ($colorLabel)',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -491,9 +490,13 @@ class _CarromScreenState extends State<CarromScreen>
   Widget _buildBoard(double size) {
     final mine = _game.pocketed[0].length;
     final theirs = _game.pocketed[1].length;
+    final color0 =
+        _game.colorOf(0) == CarromPieceType.white ? 'White' : 'Black';
+    final color1 =
+        _game.colorOf(1) == CarromPieceType.white ? 'White' : 'Black';
     return Semantics(
       label:
-          'Carrom board. ${_game.nameOf(0)} $mine of 9 pocketed, ${_game.nameOf(1)} $theirs of 9 pocketed. '
+          'Carrom board ${_game.board}. ${_game.nameOf(0)} ($color0) $mine of 9 pocketed, ${_game.nameOf(1)} ($color1) $theirs of 9 pocketed. '
           '${_game.isHumanAiming ? 'Drag back on the board and release to shoot.' : ''}',
       child: GestureDetector(
         onPanStart: (d) => _onPanStart(d, size),

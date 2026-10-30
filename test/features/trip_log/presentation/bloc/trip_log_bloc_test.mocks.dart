@@ -487,11 +487,12 @@ class MockFirebaseAuth extends _i1.Mock implements _i5.FirebaseAuth {
 
   @override
   _i7.Future<void> setSettings({
-    bool? appVerificationDisabledForTesting = false,
+    bool appVerificationDisabledForTesting = false,
     String? userAccessGroup,
     String? phoneNumber,
     String? smsCode,
     bool? forceRecaptchaFlow,
+    bool migrateCurrentUser = false,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -504,6 +505,7 @@ class MockFirebaseAuth extends _i1.Mock implements _i5.FirebaseAuth {
             #phoneNumber: phoneNumber,
             #smsCode: smsCode,
             #forceRecaptchaFlow: forceRecaptchaFlow,
+            #migrateCurrentUser: migrateCurrentUser,
           },
         ),
         returnValue: _i7.Future<void>.value(),

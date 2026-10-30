@@ -5,7 +5,7 @@
  * aiming error keeps it beatable.
  */
 
-import type { CarromTable, Shot } from './game';
+import { type CarromTable, type Shot, colorOf } from './game';
 import {
   BASELINE_MAX,
   BASELINE_MIN,
@@ -19,7 +19,6 @@ import {
   STRIKER_MASS,
   STRIKER_RADIUS,
   baselineY,
-  isBehindBaseline,
   makePiece,
   newContact,
   shotSpeed,
@@ -50,8 +49,8 @@ export function chooseShot(
   aimNoise: number,
   random: () => number,
 ): Shot {
-  const own = player === 0 ? 'white' : 'black';
-  const opp = player === 0 ? 'black' : 'white';
+  const own = colorOf(player, table.board);
+  const opp = colorOf(1 - player, table.board);
   const baseY = baselineY(player);
   const ownPocketed = table.pocketed[player].length;
   const queenCovered = table.queenCoveredBy !== null;
@@ -181,10 +180,7 @@ export function chooseShot(
     const coversQueen = queenDown || queenPending;
     const lastCoinFoul =
       (ownDown > 0 && ownDown >= ownLeft && !queenCovered && !coversQueen) || (oppDown > 0 && oppDown >= oppLeft);
-    const hit = contact.firstCoinId;
-    const directHitFoul =
-      hit !== null && !contact.cushionFirst && active.some((c) => c.id === hit && isBehindBaseline(c, player));
-    if (strikerFoul || lastCoinFoul || directHitFoul) score -= 15 + ownDown * 10.0;
+    if (strikerFoul || lastCoinFoul) score -= 15 + ownDown * 10.0;
     score += random() * 0.5;
     if (score > bestScore) {
       bestScore = score;
