@@ -7,7 +7,9 @@ allprojects {
 
 rootProject.buildDir = '../build'
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    if (project.projectDir.toPath().getRoot() == rootProject.projectDir.toPath().getRoot()) {
+        project.buildDir = "${rootProject.buildDir}/${project.name}"
+    }
 }
 subprojects {
     project.evaluationDependsOn(':app')
@@ -29,6 +31,19 @@ subprojects { subproject ->
     tasks.withType(JavaCompile).configureEach {
         options.compilerArgs.remove("-Werror")
         options.compilerArgs.add("-Xlint:-options")
+    }
+
+    subproject.tasks.whenTaskAdded { task ->
+        if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+            if (task.name.toLowerCase().contains("artprofile") ||
+                task.name.toLowerCase().contains("nativesymboltable") ||
+                task.name.toLowerCase().contains("nativedebugmetadata") ||
+                task.name.toLowerCase().contains("cleanmergereleaseassets") ||
+                task.name.toLowerCase().contains("cleanmergereleasenativelibs") ||
+                task.name.toLowerCase().contains("cleanpackagerelease")) {
+                task.enabled = false
+            }
+        }
     }
 }
 
