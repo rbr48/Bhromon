@@ -37,6 +37,9 @@ class TourExportImages {
   /// not be made.
   TourExportPhoto? ready(String url) => _ready[url];
 
+  /// Releases the connections the downloads used. Call once the PDF is built.
+  void close() => _client.close();
+
   /// Fetches [urls], a few at a time, so the pictures are ready before the PDF
   /// is laid out. [onProgress] reports how many of the unique urls are done.
   Future<void> prefetch(

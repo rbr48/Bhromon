@@ -37,6 +37,7 @@ Future<void> exportTourPdf(
     dialogOpen = false;
   }
 
+  final images = TourExportImages();
   try {
     final data = await TourExportCollector(repository).collect(
       group,
@@ -49,7 +50,7 @@ Future<void> exportTourPdf(
     );
     final bytes = await buildTourPdf(
       data: data,
-      images: TourExportImages(),
+      images: images,
       labels: TourPdfLabels(
         text: (key, {args}) => l10n.translate(key, args: args ?? const {}),
         number: l10n.number,
@@ -82,6 +83,8 @@ Future<void> exportTourPdf(
     messenger.showSnackBar(
       SnackBar(content: Text(l10n.translate('pdf_export_failed'))),
     );
+  } finally {
+    images.close();
   }
 }
 
