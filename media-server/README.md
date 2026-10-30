@@ -72,3 +72,24 @@ npx jest tests/server.test.js
 ```bash
 flutter test test/features/game_zone/game_server_api_test.dart
 ```
+
+## Purging a tour's files
+
+`POST /purge` removes files on the request of the Bhromon back end. The Cloud
+Functions `onTourMembershipRemoved` and `onTourDeleted` call it when a member
+leaves or is removed, and when a tour is deleted.
+
+- The request must carry the header `X-Purge-Key`, which must equal the
+  `PURGE_KEY` environment variable. With no key configured the route answers
+  `503`; a wrong or missing key gets `401`.
+- Body: `{"tourId": "...", "uploaderEmail": "..."}`. With an uploader, only that
+  person's files in the tour are removed, matched on the sidecar each file was
+  saved with. Without one, every file of the tour is removed.
+- Files saved before sidecars existed have no uploader, so they only go with the
+  whole tour.
+- The response is `{"removed": n, "paths": [...]}`, where each path is relative
+  to the tour's folder. The back end uses it to clear the receipts that pointed
+  to a removed file.
+
+Set `PURGE_KEY` on the server, and the same value as the Functions secret
+`MEDIA_PURGE_KEY`. Run the purge tests with `pytest tests/test_purge.py`.

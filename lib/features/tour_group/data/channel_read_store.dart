@@ -19,6 +19,23 @@ class ChannelReadStore {
     return _box;
   }
 
+  /// Forgets the read times and mute settings of every channel in [tourId].
+  Future<void> clearTour(String tourId) async {
+    try {
+      final box = await _open();
+      if (box == null) return;
+      // The separators keep 'tour_a' from matching 'tour_ab'.
+      final prefixes = ['read|$tourId|', 'mute|$tourId|'];
+      final doomed = box.keys
+          .where((key) =>
+              key is String && prefixes.any((prefix) => key.startsWith(prefix)))
+          .toList();
+      await box.deleteAll(doomed);
+    } catch (e) {
+      debugPrint('[ChannelReadStore] could not clear $tourId: $e');
+    }
+  }
+
   String _readKey(String tourId, String channelId) => 'read|$tourId|$channelId';
 
   String _muteKey(String tourId, String channelId) => 'mute|$tourId|$channelId';

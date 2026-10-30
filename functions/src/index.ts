@@ -37,6 +37,11 @@ export { carromStart, carromShoot, carromAdvance, carromLeave } from './carrom/c
 // ── Admin & Compliance ────────────────────────────────────────────────────────
 export { promoteToRegionExpert } from './promoteToRegionExpert';
 export { gdprDeleteUser } from './gdprDeleteUser';
+export {
+  onTourMembershipRemoved,
+  onTourDeleted,
+  retryTourPurgeJobs,
+} from './tourContentPurge';
 export { retainData } from './retainData';
 export { backupFirestore } from './backupFirestore';
 

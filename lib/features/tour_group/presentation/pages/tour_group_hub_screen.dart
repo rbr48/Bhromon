@@ -485,16 +485,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     return StreamBuilder<List<TourGroup>>(
       stream: _groupsStream,
       builder: (context, snapshot) {
-        final rawGroups = snapshot.data ?? [];
-        // A tour picked, created or joined just now can show before the
-        // membership list includes it.
-        final selected = _selectedGroup;
-        final groups =
-            (selected != null && !rawGroups.any((g) => g.id == selected.id))
-                ? [selected, ...rawGroups]
-                : rawGroups;
+        // Only tours the membership list still names are shown, so a tour the
+        // user left or was removed from drops out at once.
+        final groups = snapshot.data ?? [];
         final current = pickTour(groups, [
-          selected?.id,
+          _selectedGroup?.id,
           widget.initialTourId,
           _rememberedTourId,
         ]);
