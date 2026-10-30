@@ -38,6 +38,19 @@ async function read(path) {
   return (await db.doc(path).get()).data();
 }
 
+/** A player row as the app writes it at a game table. */
+function seated(email, seatIndex, extra = {}) {
+  return {
+    email,
+    displayName: email.split('@')[0],
+    seatIndex,
+    isReady: true,
+    isHost: false,
+    isBot: false,
+    ...extra,
+  };
+}
+
 async function seed() {
   const set = (path, data) => db.doc(path).set(data);
 
@@ -130,7 +143,13 @@ async function seed() {
   await set(`tours/${TOUR}/members/m_other`, { email: OTHER, name: 'Friend' });
 
   // Safety alerts: one the leaver raised, one of another's that the leaver resolved.
-  await set(`tours/${TOUR}/sos/a_leaver`, { senderEmail: LEAVER, latitude: 23.8, resolved: false });
+  await set(`tours/${TOUR}/sos/a_leaver`, {
+    senderEmail: LEAVER,
+    senderName: 'Rajib',
+    latitude: 23.8,
+    longitude: 90.4,
+    resolved: false,
+  });
   await set(`tours/${TOUR}/sos/a_other`, {
     senderEmail: OTHER,
     resolved: true,
@@ -203,6 +222,55 @@ async function seed() {
   });
   await set(`tours/${TOUR}/games/g1/private/s1`, { owner: LEAVER, cards: ['AS'] });
   await set(`tours/${TOUR}/games/g2`, { gameType: 'ludo', hostEmail: OTHER, players: [{ email: OTHER }] });
+  // A 29 table in play, with the person as host in seat 0 and bots in the rest.
+  await set(`tours/${TOUR}/games/g3`, {
+    gameType: 'card29',
+    status: 'inProgress',
+    hostEmail: LEAVER,
+    players: [
+      seated(LEAVER, 0, { isHost: true }),
+      seated(OTHER, 1),
+      seated('bot_seat_2@bhromon.fun', 2, { isBot: true }),
+      seated('bot_seat_3@bhromon.fun', 3, { isBot: true }),
+    ],
+  });
+  await set(`tours/${TOUR}/games/g3/private/seat0`, { owner: LEAVER, cards: ['AS'] });
+  await set(`tours/${TOUR}/games/g3/private/seat1`, { owner: OTHER, cards: ['KD'] });
+  // A Teen Patti lobby the person hosts, with another member at it.
+  await set(`tours/${TOUR}/games/g4`, {
+    gameType: 'teen_patti',
+    status: 'waiting',
+    hostEmail: LEAVER,
+    players: [seated(LEAVER, 0, { isHost: true }), seated(OTHER, 1)],
+  });
+  // A Teen Patti lobby the person hosts, with only a bot left at it.
+  await set(`tours/${TOUR}/games/g8`, {
+    gameType: 'teen_patti',
+    status: 'waiting',
+    hostEmail: LEAVER,
+    players: [seated(LEAVER, 0, { isHost: true }), seated('bot_seat_1@bhromon.fun', 1, { isBot: true })],
+  });
+  // A chess table the person is alone at, and a ludo table they host with another member.
+  await set(`tours/${TOUR}/games/g5`, {
+    gameType: 'chess',
+    status: 'waiting',
+    hostEmail: LEAVER,
+    players: [seated(LEAVER, 0, { isHost: true })],
+  });
+  await set(`tours/${TOUR}/games/g6`, {
+    gameType: 'ludo',
+    status: 'waiting',
+    hostEmail: LEAVER,
+    players: [seated(LEAVER, 0, { isHost: true }), seated(OTHER, 1)],
+  });
+  // A 29 table in play that the person is alone at, with a bot in the other seat.
+  await set(`tours/${TOUR}/games/g7`, {
+    gameType: 'card29',
+    status: 'inProgress',
+    hostEmail: LEAVER,
+    players: [seated(LEAVER, 0, { isHost: true }), seated('bot_seat_1@bhromon.fun', 1, { isBot: true })],
+  });
+  await set(`tours/${TOUR}/games/g7/private/seat0`, { owner: LEAVER, cards: ['9H'] });
   await set(`tours/${TOUR}/profiles/pr_leaver`, { uid: LEAVER_UID, email: LEAVER, displayName: 'Leaver' });
   await set(`tours/${TOUR}/profiles/pr_other`, { uid: 'uid_other', email: OTHER });
 
@@ -357,7 +425,7 @@ describe('tour content purge', () => {
     expect((await read(`tours/${TOUR}/channels/general`)).updatedByEmail).toBe(OTHER);
   });
 
-  it('removes what the person alone used: luggage, seats, rooms, games and profiles', async () => {
+  it('removes what the person alone used: luggage, seats, rooms and profiles', async () => {
     await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
     const { deps } = fakes();
     await purgeMemberContent(db, TOUR, LEAVER, deps);
@@ -376,16 +444,68 @@ describe('tour content purge', () => {
       assignedMemberNames: ['Friend'],
     });
 
-    // A game table the person sits at ends with its seats; another table is kept.
-    expect(await exists(`tours/${TOUR}/games/g1`)).toBe(false);
-    expect(await exists(`tours/${TOUR}/games/g1/private/s1`)).toBe(false);
-    expect(await exists(`tours/${TOUR}/games/g2`)).toBe(true);
-
     expect(await exists(`tours/${TOUR}/profiles/pr_leaver`)).toBe(false);
     expect(await exists(`tours/${TOUR}/profiles/pr_other`)).toBe(true);
   });
 
-  it('removes the location, telemetry, legacy member row and safety alerts of the person', async () => {
+  it('at a game table only the person’s seat goes: the table keeps the others, and their cards go', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    const carrom = await read(`tours/${TOUR}/games/g1`);
+    expect(carrom.players).toEqual([{ email: OTHER }]);
+    expect(carrom.hostEmail).toBe(OTHER);
+    expect(await exists(`tours/${TOUR}/games/g1/private/s1`)).toBe(false);
+
+    // A table the person is not at is untouched.
+    expect(await read(`tours/${TOUR}/games/g2`)).toMatchObject({ hostEmail: OTHER, players: [{ email: OTHER }] });
+  });
+
+  it('a 29 table in play hands the person’s seat to a bot, and passes the host on', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    const table = await read(`tours/${TOUR}/games/g3`);
+    expect(table.hostEmail).toBe(OTHER);
+    expect(table.players).toHaveLength(4);
+    expect(table.players[0]).toMatchObject({ email: 'bot_seat_0@bhromon.fun', seatIndex: 0, isBot: true, isHost: false });
+    expect(table.players[1]).toMatchObject({ email: OTHER, isHost: true });
+    expect(table.players.some((p) => p.email === LEAVER)).toBe(false);
+    // The cards at the person's seat now belong to the bot; the other seat is untouched.
+    expect(await read(`tours/${TOUR}/games/g3/private/seat0`)).toMatchObject({ owner: 'bot_seat_0@bhromon.fun' });
+    expect(await read(`tours/${TOUR}/games/g3/private/seat1`)).toMatchObject({ owner: OTHER });
+  });
+
+  it('a lobby passes its host on rather than closing, and a lobby with only bots left ends', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    const lobby = await read(`tours/${TOUR}/games/g4`);
+    expect(lobby.hostEmail).toBe(OTHER);
+    expect(lobby.players).toHaveLength(1);
+    expect(lobby.players[0]).toMatchObject({ email: OTHER, isHost: true });
+
+    expect(await read(`tours/${TOUR}/games/g6`)).toMatchObject({
+      hostEmail: OTHER,
+      players: [{ email: OTHER, isHost: true }],
+    });
+    expect(await exists(`tours/${TOUR}/games/g8`)).toBe(false);
+  });
+
+  it('a table the person is alone at ends with its seats, whether in play or not', async () => {
+    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
+    const { deps } = fakes();
+    await purgeMemberContent(db, TOUR, LEAVER, deps);
+
+    expect(await exists(`tours/${TOUR}/games/g5`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/games/g7`)).toBe(false);
+    expect(await exists(`tours/${TOUR}/games/g7/private/seat0`)).toBe(false);
+  });
+
+  it('removes the location, telemetry and legacy member row of the person, and keeps their safety alerts', async () => {
     await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
     const { deps } = fakes();
     await purgeMemberContent(db, TOUR, LEAVER, deps);
@@ -397,8 +517,20 @@ describe('tour content purge', () => {
     expect(await exists(`tours/${TOUR}/members/m_leaver`)).toBe(false);
     expect(await exists(`tours/${TOUR}/members/m_other`)).toBe(true);
 
-    expect(await exists(`tours/${TOUR}/sos/a_leaver`)).toBe(false);
+    // The alert the person raised stays, resolved, under the stand-in, with no location.
+    const raised = await read(`tours/${TOUR}/sos/a_leaver`);
+    expect(raised).toMatchObject({
+      senderEmail: STAND_IN,
+      senderName: FORMER_MEMBER_NAME,
+      resolved: true,
+      resolvedByEmail: STAND_IN,
+    });
+    expect(raised).not.toHaveProperty('latitude');
+    expect(raised).not.toHaveProperty('longitude');
+    expect(raised.resolvedAt).toBeDefined();
+
     expect(await read(`tours/${TOUR}/sos/a_other`)).toMatchObject({
+      senderEmail: OTHER,
       resolved: true,
       resolvedByEmail: STAND_IN,
     });

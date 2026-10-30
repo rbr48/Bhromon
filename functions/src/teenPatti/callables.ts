@@ -230,73 +230,91 @@ export const teenPattiAdvance = functions
   });
 
 /**
- * Leaves a table. Before the deal, the seat is simply given up. Once a hand is
- * under way, the seat packs and passes to a bot, so the table keeps going. A
- * table with no people left at all is removed.
+ * Takes a person's seat off a Teen Patti table. A table that has not started
+ * drops the seat. A table in play passes the seat to a bot. A table with no
+ * people left is removed. [closeLobbyOnHostLeave] behaves as in leave29Table.
  */
+export async function leaveTeenPattiTable(
+  tourId: string,
+  gameId: string,
+  email: string,
+  options: { closeLobbyOnHostLeave: boolean },
+): Promise<void> {
+  const ref = gameRef(tourId, gameId);
+
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return;
+    const table = snap.data() as DocData;
+    if (table.gameType !== GAME_TYPE) throw new HttpsError('failed-precondition', 'This is not a Teen Patti table.');
+    const players = (table.players ?? []) as PlayerRow[];
+    const me = players.find((p) => !p.isBot && p.email === email);
+    if (!me) return;
+    const nowMs = Date.now();
+
+    if (table.status !== 'inProgress') {
+      const remaining = players.filter((p) => p.email !== email);
+      const people = remaining.filter((p) => !p.isBot);
+      if (people.length === 0 || (options.closeLobbyOnHostLeave && table.hostEmail === email)) {
+        tx.delete(ref);
+        return;
+      }
+      if (table.hostEmail !== email) {
+        tx.update(ref, { players: remaining, updatedAt: nowIso(nowMs) });
+        return;
+      }
+      const newHost = people[0].email;
+      tx.update(ref, {
+        players: remaining.map((p) => ({ ...p, isHost: p.email === newHost })),
+        hostEmail: newHost,
+        updatedAt: nowIso(nowMs),
+      });
+      return;
+    }
+
+    const seat = me.seatIndex;
+    const replacement: PlayerRow = {
+      email: botEmail(seat),
+      displayName: botName(seat),
+      seatIndex: seat,
+      isReady: true,
+      isHost: false,
+      isBot: true,
+    };
+    const swapped = players.map((p) => (p === me ? replacement : p));
+    const humans = swapped.filter((p) => !p.isBot);
+    if (humans.length === 0) {
+      tx.delete(ref);
+      for (let s = 0; s < SEATS; s++) tx.delete(seatRef(ref, s));
+      return;
+    }
+
+    // Reads come before writes: the hand as it stands, then the table is updated.
+    const seats = await readSeatDocs(tx, ref);
+    const state = (table.state ?? {}) as Record<string, unknown>;
+    const game = restoreGame(state, seats, botFlags(swapped));
+    game.seatLeft(seat);
+
+    const newHost = table.hostEmail === email ? humans[0].email : String(table.hostEmail ?? '');
+    tx.update(ref, {
+      players: swapped.map((p) => ({ ...p, isHost: !p.isBot && p.email === newHost })),
+      hostEmail: newHost,
+      state: publicState(game, stepOf(state) + 1, nowMs),
+      currentTurn: game.currentTurn,
+      updatedAt: nowIso(nowMs),
+      version: admin.firestore.FieldValue.increment(1),
+    });
+    // Hand the leaver's cards to the bot, so the leaver can no longer read them.
+    tx.update(seatRef(ref, seat), { owner: replacement.email });
+  });
+}
+
 export const teenPattiLeave = functions
   .region('asia-south1')
   .https.onCall(async (data, context) => {
     const { tourId, gameId } = requireIds(data);
     const email = callerEmail(context);
     await assertMember(tourId, email);
-    const ref = gameRef(tourId, gameId);
-
-    await db().runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists) return;
-      const table = snap.data() as DocData;
-      if (table.gameType !== GAME_TYPE) throw new HttpsError('failed-precondition', 'This is not a Teen Patti table.');
-      const players = (table.players ?? []) as PlayerRow[];
-      const me = players.find((p) => !p.isBot && p.email === email);
-      if (!me) return;
-      const nowMs = Date.now();
-
-      if (table.status !== 'inProgress') {
-        const remaining = players.filter((p) => p.email !== email);
-        if (remaining.length === 0 || table.hostEmail === email) {
-          tx.delete(ref);
-          return;
-        }
-        tx.update(ref, { players: remaining, updatedAt: nowIso(nowMs) });
-        return;
-      }
-
-      const seat = me.seatIndex;
-      const replacement: PlayerRow = {
-        email: botEmail(seat),
-        displayName: botName(seat),
-        seatIndex: seat,
-        isReady: true,
-        isHost: false,
-        isBot: true,
-      };
-      const swapped = players.map((p) => (p === me ? replacement : p));
-      const humans = swapped.filter((p) => !p.isBot);
-      if (humans.length === 0) {
-        tx.delete(ref);
-        for (let s = 0; s < SEATS; s++) tx.delete(seatRef(ref, s));
-        return;
-      }
-
-      // Reads come before writes: the hand as it stands, then the table is updated.
-      const seats = await readSeatDocs(tx, ref);
-      const state = (table.state ?? {}) as Record<string, unknown>;
-      const game = restoreGame(state, seats, botFlags(swapped));
-      game.seatLeft(seat);
-
-      const newHost = table.hostEmail === email ? humans[0].email : String(table.hostEmail ?? '');
-      tx.update(ref, {
-        players: swapped.map((p) => ({ ...p, isHost: !p.isBot && p.email === newHost })),
-        hostEmail: newHost,
-        state: publicState(game, stepOf(state) + 1, nowMs),
-        currentTurn: game.currentTurn,
-        updatedAt: nowIso(nowMs),
-        version: admin.firestore.FieldValue.increment(1),
-      });
-      // Hand the leaver's cards to the bot, so the leaver can no longer read them.
-      tx.update(seatRef(ref, seat), { owner: replacement.email });
-    });
-
+    await leaveTeenPattiTable(tourId, gameId, email, { closeLobbyOnHostLeave: true });
     return { ok: true };
   });

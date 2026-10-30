@@ -239,67 +239,88 @@ export const card29Advance = functions
   });
 
 /**
- * Leaves a table. Before the deal, the seat is simply given up. Once play has
- * started, the seat passes to a bot so the table keeps going. A table with no
- * people left at all is removed.
+ * Takes a person's seat off a 29 table. Before the deal the seat is given up.
+ * Once play has started, the seat passes to a bot so the table keeps going.
+ * A table with no people left at all is removed.
+ *
+ * When [closeLobbyOnHostLeave] is set, a lobby closes when its host leaves, as
+ * the app does. Otherwise the host passes on to someone still at the table.
  */
+export async function leave29Table(
+  tourId: string,
+  gameId: string,
+  email: string,
+  options: { closeLobbyOnHostLeave: boolean },
+): Promise<void> {
+  const ref = gameRef(tourId, gameId);
+
+  await db().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return;
+    const table = snap.data() as DocData;
+    if (table.gameType !== GAME_TYPE) throw new HttpsError('failed-precondition', 'This is not a 29 table.');
+    const players = (table.players ?? []) as PlayerRow[];
+    const me = players.find((p) => !p.isBot && p.email === email);
+    if (!me) return;
+    const nowMs = Date.now();
+
+    if (table.status !== 'inProgress') {
+      const remaining = players.filter((p) => p.email !== email);
+      const people = remaining.filter((p) => !p.isBot);
+      if (people.length === 0 || (options.closeLobbyOnHostLeave && table.hostEmail === email)) {
+        tx.delete(ref);
+        return;
+      }
+      if (table.hostEmail !== email) {
+        tx.update(ref, { players: remaining, updatedAt: nowIso(nowMs) });
+        return;
+      }
+      const newHost = people[0].email;
+      tx.update(ref, {
+        players: remaining.map((p) => ({ ...p, isHost: p.email === newHost })),
+        hostEmail: newHost,
+        updatedAt: nowIso(nowMs),
+      });
+      return;
+    }
+
+    const seat = me.seatIndex;
+    const replacement: PlayerRow = {
+      email: botEmail(seat),
+      displayName: botName(seat),
+      seatIndex: seat,
+      isReady: true,
+      isHost: false,
+      isBot: true,
+    };
+    const swapped = players.map((p) => (p === me ? replacement : p));
+    const humans = swapped.filter((p) => !p.isBot);
+    if (humans.length === 0) {
+      tx.delete(ref);
+      for (let s = 0; s < SEATS; s++) tx.delete(seatRef(ref, s));
+      return;
+    }
+
+    // Hand the leaver's private cards to the bot, so the leaver cannot read them.
+    const seatSnap = await tx.get(seatRef(ref, seat));
+    if (seatSnap.exists) tx.update(seatRef(ref, seat), { owner: replacement.email });
+
+    const newHost = table.hostEmail === email ? humans[0].email : String(table.hostEmail ?? '');
+    tx.update(ref, {
+      players: swapped.map((p) => ({ ...p, isHost: !p.isBot && p.email === newHost })),
+      hostEmail: newHost,
+      updatedAt: nowIso(nowMs),
+      version: admin.firestore.FieldValue.increment(1),
+    });
+  });
+}
+
 export const card29Leave = functions
   .region('asia-south1')
   .https.onCall(async (data, context) => {
     const { tourId, gameId } = requireIds(data);
     const email = callerEmail(context);
     await assertMember(tourId, email);
-    const ref = gameRef(tourId, gameId);
-
-    await db().runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists) return;
-      const table = snap.data() as DocData;
-      if (table.gameType !== GAME_TYPE) throw new HttpsError('failed-precondition', 'This is not a 29 table.');
-      const players = (table.players ?? []) as PlayerRow[];
-      const me = players.find((p) => !p.isBot && p.email === email);
-      if (!me) return;
-      const nowMs = Date.now();
-
-      if (table.status !== 'inProgress') {
-        const remaining = players.filter((p) => p.email !== email);
-        if (remaining.length === 0 || table.hostEmail === email) {
-          tx.delete(ref);
-          return;
-        }
-        tx.update(ref, { players: remaining, updatedAt: nowIso(nowMs) });
-        return;
-      }
-
-      const seat = me.seatIndex;
-      const replacement: PlayerRow = {
-        email: botEmail(seat),
-        displayName: botName(seat),
-        seatIndex: seat,
-        isReady: true,
-        isHost: false,
-        isBot: true,
-      };
-      const swapped = players.map((p) => (p === me ? replacement : p));
-      const humans = swapped.filter((p) => !p.isBot);
-      if (humans.length === 0) {
-        tx.delete(ref);
-        for (let s = 0; s < SEATS; s++) tx.delete(seatRef(ref, s));
-        return;
-      }
-
-      // Hand the leaver's private cards to the bot, so the leaver cannot read them.
-      const seatSnap = await tx.get(seatRef(ref, seat));
-      if (seatSnap.exists) tx.update(seatRef(ref, seat), { owner: replacement.email });
-
-      const newHost = table.hostEmail === email ? humans[0].email : String(table.hostEmail ?? '');
-      tx.update(ref, {
-        players: swapped.map((p) => ({ ...p, isHost: !p.isBot && p.email === newHost })),
-        hostEmail: newHost,
-        updatedAt: nowIso(nowMs),
-        version: admin.firestore.FieldValue.increment(1),
-      });
-    });
-
+    await leave29Table(tourId, gameId, email, { closeLobbyOnHostLeave: true });
     return { ok: true };
   });

@@ -207,6 +207,33 @@ export function anonymize(
   };
 }
 
+/**
+ * A safety alert the person raised stays, as a record that it happened. It now
+ * belongs to the stand-in, and the location they sent goes with them. An alert
+ * still open is marked resolved. One resolved by someone else keeps that
+ * resolution, with the stand-in in place of the person.
+ */
+export function sosOf(email: string, standIn: string): Decide {
+  const resolvedBy = anonymize({ emails: ['resolvedByEmail'] }, email, standIn);
+  return (data, id) => {
+    if (normalizeEmail(data.senderEmail) !== email) return resolvedBy(data, id);
+    const fields: Fields = {
+      senderEmail: standIn,
+      senderName: FORMER_MEMBER_NAME,
+      latitude: admin.firestore.FieldValue.delete(),
+      longitude: admin.firestore.FieldValue.delete(),
+    };
+    if (data.resolved !== true) {
+      fields.resolved = true;
+      fields.resolvedByEmail = standIn;
+      fields.resolvedAt = admin.firestore.FieldValue.serverTimestamp();
+    } else if (normalizeEmail(data.resolvedByEmail) === email) {
+      fields.resolvedByEmail = standIn;
+    }
+    return { kind: 'update', fields };
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Records that go. What the person put into the tour for themselves is
 // removed, and so is what only they can use.
@@ -236,15 +263,6 @@ export function profileOf(email: string, uid: string | null): Decide {
       normalizeEmail(data.email) === email ||
       normalizeEmail(id) === email,
   );
-}
-
-/** A safety alert the person raised goes. One they resolved keeps the stand-in. */
-export function sosOf(email: string, standIn: string): Decide {
-  const resolved = anonymize({ emails: ['resolvedByEmail'] }, email, standIn);
-  return (data, id) =>
-    normalizeEmail(data.senderEmail) === email
-      ? { kind: 'delete' }
-      : resolved(data, id);
 }
 
 /** A seat the person holds in a bus or vehicle is freed by removing the seat. */
@@ -294,17 +312,50 @@ export function leaveHotelRoom(email: string): Decide {
   };
 }
 
-/** A game table the person hosts or sits at cannot go on without them, so it goes with its seats. */
-export function gameInvolves(email: string): Decide {
-  return deleteWhen(
-    (data) =>
-      normalizeEmail(data.hostEmail) === email ||
-      (Array.isArray(data.players) &&
-        data.players.some(
-          (player) => isPlainObject(player) && normalizeEmail(player.email) === email,
-        )),
-    true,
+/** Whether a game table names the person as its host, or as one of its players. */
+export function tableNames(data: Data, email: string): boolean {
+  return (
+    normalizeEmail(data.hostEmail) === email ||
+    (Array.isArray(data.players) &&
+      data.players.some(
+        (player) => isPlainObject(player) && normalizeEmail(player.email) === email,
+      ))
   );
+}
+
+/**
+ * Takes the person's seat out of a table the apps run themselves. The table keeps
+ * its other people, and the host passes to one of them. A table with no people
+ * left goes, with whatever is under it.
+ */
+export function leaveClientTable(email: string): Decide {
+  return (data) => {
+    if (!tableNames(data, email)) return null;
+    const players: unknown[] = Array.isArray(data.players) ? data.players : [];
+    const remaining = players.filter(
+      (player) => !(isPlainObject(player) && normalizeEmail(player.email) === email),
+    );
+    const humans = remaining.filter(
+      (player): player is Data => isPlainObject(player) && player.isBot !== true,
+    );
+    if (humans.length === 0) return { kind: 'delete', recursive: true };
+
+    if (normalizeEmail(data.hostEmail) !== email) {
+      return { kind: 'update', fields: { players: remaining } };
+    }
+    const newHost = normalizeEmail(humans[0].email);
+    return {
+      kind: 'update',
+      fields: {
+        hostEmail: newHost,
+        players: remaining.map((player) =>
+          isPlainObject(player)
+            ? { ...player, isHost: normalizeEmail(player.email) === newHost }
+            : player,
+        ),
+      },
+    };
+  };
 }
 
 /** A voice signalling pair names the two members it joins, so a pair with the person goes. */
