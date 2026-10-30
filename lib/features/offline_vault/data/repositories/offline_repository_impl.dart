@@ -11,6 +11,7 @@ import '../../../../core/entities/trip_log.dart';
 import '../../../../core/entities/pro_tip.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../../../../core/services/offline_map_service.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../core/database/app_database.dart';
 import '../datasources/sync_manager.dart';
 import '../../domain/repositories/i_offline_repository.dart';
@@ -54,8 +55,7 @@ class OfflineRepositoryImpl implements IOfflineRepository {
       // the pins/logs/tips below are still valuable offline.
       final mapDownloaded = await OfflineMapService.downloadRegion(districtId);
       if (!mapDownloaded) {
-        // ignore: avoid_print
-        print(
+        logWarning(
             '[OfflineRepo] Map region download failed for $districtId; continuing with data bundle');
       }
 
@@ -89,8 +89,7 @@ class OfflineRepositoryImpl implements IOfflineRepository {
           pins.add(LocationPin.fromJson(data));
           pinIds.add(doc.id);
         } catch (e) {
-          // ignore: avoid_print
-          print('[OfflineRepo] Failed to parse location pin ${doc.id}: $e');
+          logWarning('[OfflineRepo] Failed to parse location pin ${doc.id}: $e');
         }
       }
 
@@ -116,8 +115,7 @@ class OfflineRepositoryImpl implements IOfflineRepository {
           _sanitizeTripLogData(data);
           trips.add(TripLog.fromJson(data));
         } catch (e) {
-          // ignore: avoid_print
-          print('[OfflineRepo] Failed to parse trip log ${doc.id}: $e');
+          logWarning('[OfflineRepo] Failed to parse trip log ${doc.id}: $e');
         }
       }
 
@@ -149,8 +147,7 @@ class OfflineRepositoryImpl implements IOfflineRepository {
               tips.add(tip);
             }
           } catch (e) {
-            // ignore: avoid_print
-            print('[OfflineRepo] Failed to parse pro tip ${doc.id}: $e');
+            logWarning('[OfflineRepo] Failed to parse pro tip ${doc.id}: $e');
           }
         }
       }

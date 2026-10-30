@@ -6,6 +6,7 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/entities/explorer_profile.dart';
 import '../../domain/usecases/get_top_explorers_usecase.dart';
 import '../../../../core/utils/image_sizing.dart';
+import '../../../../core/utils/logger.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -86,7 +87,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   if (result != null) {
                     result.fold(
                       (Object? failure) =>
-                          debugPrint('Error fetching leaderboard: $failure'),
+                          logError('Error fetching leaderboard: $failure'),
                       (Object? list) {
                         if (list is List<ExplorerProfile>) {
                           profiles = list;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../utils/app_logger.dart';
 
 /// The language the user picked for the whole app. Bengali stays the default,
 /// as it always was. The choice is kept on this device only.
@@ -27,8 +28,8 @@ class LocaleController extends ChangeNotifier {
         _locale = Locale(saved);
         notifyListeners();
       }
-    } catch (e) {
-      debugPrint('[LocaleController] Could not read the language: $e');
+    } catch (e, st) {
+      logWarning('[LocaleController] Could not read the language', e, st);
     }
   }
 
@@ -39,8 +40,8 @@ class LocaleController extends ChangeNotifier {
     try {
       final box = await _openBox();
       await box.put(_key, code);
-    } catch (e) {
-      debugPrint('[LocaleController] Could not save the language: $e');
+    } catch (e, st) {
+      logWarning('[LocaleController] Could not save the language', e, st);
     }
   }
 
@@ -48,9 +49,9 @@ class LocaleController extends ChangeNotifier {
     try {
       if (Hive.isBoxOpen(_boxName)) return Hive.box<dynamic>(_boxName);
       return await Hive.openBox<dynamic>(_boxName);
-    } catch (e) {
-      debugPrint(
-          '[LocaleController] Corrupt preferences box: $e. Re-initializing...');
+    } catch (e, st) {
+      logWarning(
+          '[LocaleController] Corrupt preferences box: $e. Re-initializing...', e, st);
       try {
         await Hive.deleteBoxFromDisk(_boxName);
         return await Hive.openBox<dynamic>(_boxName);

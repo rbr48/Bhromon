@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:bhromon/app/di/injection.dart';
 import 'package:bhromon/core/network/secure_network_client.dart';
+import '../utils/app_logger.dart';
 
 class RoutingService {
   /// Fetches the road route coordinates between a list of pins using OSRM.
@@ -15,7 +15,7 @@ class RoutingService {
       final url =
           'https://router.project-osrm.org/route/v1/driving/$coordinatesStr?overview=full&geometries=geojson';
 
-      debugPrint('[RoutingService] Fetching road route: $url');
+      logDebug('[RoutingService] Fetching road route: $url');
       final secureClient = getIt<SecureNetworkClient>();
       final response = await secureClient.dio
           .get<dynamic>(url)
@@ -36,12 +36,12 @@ class RoutingService {
           }
         }
       }
-    } catch (e) {
-      debugPrint(
-          '[RoutingService] Failed to fetch road route: $e. Falling back to straight-line path.');
+    } catch (e, st) {
+      logWarning(
+          '[RoutingService] Failed to fetch road route. Falling back to straight-line path.', e, st);
       return points;
     }
-    debugPrint(
+    logDebug(
         '[RoutingService] Route fetching returned empty. Falling back to straight-line path.');
     return points;
   }

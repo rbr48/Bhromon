@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/utils/app_logger.dart';
 import '../domain/models/channel_models.dart';
 import '../domain/models/date_codec.dart';
 import '../domain/services/media_rules.dart';
@@ -54,8 +54,8 @@ class TourChannelRepository {
     if (email.isEmpty) return;
     try {
       await _presence(tourId).doc(email).delete();
-    } catch (e) {
-      debugPrint('[TourChannelRepository] could not clear presence: $e');
+    } catch (e, st) {
+      logWarning('[TourChannelRepository] could not clear presence', e, st);
     }
   }
 
@@ -460,9 +460,9 @@ class TourChannelRepository {
       } else {
         await ref.delete();
       }
-    } catch (e) {
+    } catch (e, st) {
       // A missed typing signal is harmless.
-      debugPrint('[TourChannelRepository] typing signal not sent: $e');
+      logWarning('[TourChannelRepository] typing signal not sent', e, st);
     }
   }
 
@@ -558,8 +558,8 @@ class TourChannelRepository {
   Future<void> _deleteUpload(String url) async {
     try {
       await TourMediaUploader.deleteMedia(url);
-    } catch (e) {
-      debugPrint('[TourChannelRepository] could not delete $url: $e');
+    } catch (e, st) {
+      logWarning('[TourChannelRepository] could not delete $url', e, st);
     }
   }
 

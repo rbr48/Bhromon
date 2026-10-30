@@ -13,6 +13,7 @@ import 'package:bhromon/features/tour_group/domain/services/media_rules.dart';
 import 'package:bhromon/features/tour_group/domain/services/tour_video_compressor.dart';
 import 'package:video_compress/video_compress.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/utils/logger.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import 'instafeed_day_label.dart';
 
@@ -371,7 +372,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
         });
       }
     } catch (e) {
-      debugPrint('Auto-extract first frame thumbnail error: $e');
+      logWarning('Auto-extract first frame thumbnail error: $e');
     }
   }
 
@@ -467,7 +468,7 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
             );
             _coverImage = XFile(thumbFile.path, name: 'first_frame.jpg');
           } catch (e) {
-            debugPrint(
+            logWarning(
                 'Auto-extract first frame on publish fallback failed: $e');
           }
         }

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../../../core/utils/logger.dart';
 
 /// Result of a media pick operation.
 class MediaPickResult {
@@ -144,7 +145,7 @@ class _ChatMediaPickerSheet extends StatelessWidget {
         );
       }
     } catch (e) {
-      debugPrint('Media picker error: $e');
+      logError('Media picker error: $e');
     }
 
     if (!context.mounted) return;

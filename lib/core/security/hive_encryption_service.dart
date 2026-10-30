@@ -8,6 +8,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive/hive.dart';
 import 'package:injectable/injectable.dart';
 
+import '../utils/app_logger.dart';
+
 /// Opens Hive boxes encrypted with a key kept in the platform keystore.
 ///
 /// Two things this guards against:
@@ -65,17 +67,17 @@ class HiveEncryptionService {
     String? base64Key;
     try {
       base64Key = await _secureStorage.read(key: _keyName);
-    } catch (e) {
+    } catch (e, st) {
       // Can't tell whether a key exists. Generating one could orphan data
       // encrypted with the real key, so run without one this session.
-      debugPrint('[HiveEncryption] Secure storage read failed: $e');
+      logWarning('[HiveEncryption] Secure storage read failed', e, st);
       return null;
     }
     if (base64Key != null) {
       try {
         return _DeviceKey(base64Decode(base64Key));
-      } catch (e) {
-        debugPrint('[HiveEncryption] Stored key is unreadable: $e');
+      } catch (e, st) {
+        logWarning('[HiveEncryption] Stored key is unreadable', e, st);
         return null;
       }
     }
@@ -83,8 +85,8 @@ class HiveEncryptionService {
     final key = Hive.generateSecureKey();
     try {
       await _secureStorage.write(key: _keyName, value: base64Encode(key));
-    } catch (e) {
-      debugPrint('[HiveEncryption] Could not store a new key: $e');
+    } catch (e, st) {
+      logWarning('[HiveEncryption] Could not store a new key', e, st);
       return null;
     }
     return _DeviceKey(key);
@@ -145,7 +147,7 @@ class HiveEncryptionService {
       } else {
         // Unreadable with every key we know (genuinely corrupt, or encrypted
         // with a keystore key that no longer exists): let Hive recover it.
-        debugPrint('[HiveEncryption] $boxName is unreadable; recovering');
+        logWarning('[HiveEncryption] $boxName is unreadable; recovering');
         box = await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
       }
     }
@@ -221,7 +223,7 @@ class HiveEncryptionService {
     await box.putAll(entries.cast<dynamic, T>());
     // 3. ...and drop the copy.
     await Hive.deleteBoxFromDisk(temp);
-    debugPrint('[HiveEncryption] Re-encrypted $boxName with the device key');
+    logInfo('[HiveEncryption] Re-encrypted $boxName with the device key');
     return box;
   }
 
@@ -247,7 +249,7 @@ class HiveEncryptionService {
   /// A session-only box when there's no device key. Data readable with the
   /// old fixed key (or unencrypted) is loaded into it; the file isn't touched.
   Future<Box<T>> _openInMemory<T>(String boxName) async {
-    debugPrint(
+    logWarning(
         '[HiveEncryption] No device key; keeping $boxName in memory this session');
     if (kIsWeb) {
       final box = await Hive.openBox<T>(boxName);

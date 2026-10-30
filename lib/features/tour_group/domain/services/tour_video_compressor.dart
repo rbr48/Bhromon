@@ -1,8 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'package:video_compress/video_compress.dart';
+
+import '../../../../core/utils/app_logger.dart';
 
 import 'media_rules.dart';
 
@@ -49,7 +51,7 @@ class TourVideoCompressor {
       return sourceFile;
     }
 
-    debugPrint(
+    logInfo(
       'TourVideoCompressor: Compressing video (${formatMegabytes(originalSize)}) to fit under ${formatMegabytes(targetMaxBytes)}...',
     );
 
@@ -76,7 +78,7 @@ class TourVideoCompressor {
       if (medium != null && medium.existsSync()) {
         final mediumSize = await medium.length();
         if (mediumSize > targetMaxBytes) {
-          debugPrint(
+          logInfo(
             'TourVideoCompressor: Video still ${formatMegabytes(mediumSize)}, applying aggressive compression...',
           );
           // The second pass re-encodes the medium output, which is already
@@ -108,14 +110,14 @@ class TourVideoCompressor {
             'ভিডিওটি সীমার চেয়ে বড় রয়ে গেছে। ছোট ভিডিও বাছাই করুন।');
       }
 
-      debugPrint(
+      logInfo(
         'TourVideoCompressor: Compression complete: ${formatMegabytes(originalSize)} -> ${formatMegabytes(compressedSize)}',
       );
       onProgress?.call(1.0);
       return XFile(output.path);
-    } catch (e) {
+    } catch (e, st) {
       if (_cancelRequested) throw const TourVideoCompressionCancelled();
-      debugPrint('TourVideoCompressor error: $e');
+      logWarning('TourVideoCompressor error', e, st);
       rethrow;
     } finally {
       progressSub?.unsubscribe();

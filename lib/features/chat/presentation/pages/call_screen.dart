@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/utils/image_sizing.dart';
+import '../../../../core/utils/logger.dart';
 import '../../data/call_signaling_service.dart';
 
 /// Full-screen audio & video calling screen with WhatsApp styling.
@@ -179,7 +180,7 @@ class _CallScreenState extends State<CallScreen> {
       _applyAudioRouting();
     } catch (e) {
       // The signaling service has already ended the call and closed this screen.
-      debugPrint('CallScreen initialization error: $e');
+      logError('CallScreen initialization error: $e');
       messenger?.showSnackBar(
         SnackBar(
           content: Text(

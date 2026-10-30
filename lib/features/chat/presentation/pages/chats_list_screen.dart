@@ -11,6 +11,7 @@ import 'dart:math' as math;
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../../../core/utils/image_sizing.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../core/utils/doc_future_cache.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/vps_chat_service.dart';
@@ -860,7 +861,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         );
       }
     } catch (e) {
-      debugPrint('Quick camera error: $e');
+      logError('Quick camera error: $e');
     }
   }
 
@@ -1202,7 +1203,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           authenticated = true;
         }
       } catch (e) {
-        debugPrint('Biometric authentication error: $e');
+        logWarning('Biometric authentication error: $e');
         authenticated = true;
       }
     } else {

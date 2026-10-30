@@ -687,15 +687,15 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                     supportMultipleWindows: true,
                     javaScriptCanOpenWindowsAutomatically: true,
                     mixedContentMode:
-                        MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW,
-                    safeBrowsingEnabled: false,
+                        MixedContentMode.MIXED_CONTENT_COMPATIBILITY_MODE,
+                    safeBrowsingEnabled: true,
                     cacheEnabled: true,
                     clearCache: false,
                     thirdPartyCookiesEnabled: true,
-                    allowFileAccess: true,
-                    allowContentAccess: true,
-                    allowFileAccessFromFileURLs: true,
-                    allowUniversalAccessFromFileURLs: true,
+                    allowFileAccess: false,
+                    allowContentAccess: false,
+                    allowFileAccessFromFileURLs: false,
+                    allowUniversalAccessFromFileURLs: false,
                     contentBlockers: (!kIsWeb && _isAdBlockEnabled)
                         ? _contentBlockers
                         : null,
@@ -714,8 +714,9 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   },
                   onReceivedServerTrustAuthRequest:
                       (controller, challenge) async {
+                    // Reject untrusted or invalid SSL certificates to prevent MITM attacks
                     return ServerTrustAuthResponse(
-                        action: ServerTrustAuthResponseAction.PROCEED);
+                        action: ServerTrustAuthResponseAction.CANCEL);
                   },
                   shouldOverrideUrlLoading:
                       (controller, navigationAction) async {

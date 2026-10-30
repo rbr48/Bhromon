@@ -378,6 +378,11 @@
                 <p>Because Bhromon is built for travel across Bangladesh's diverse highways, hill tracts, and river ways, location services are used carefully and transparently:</p>
                 
                 <div class="policy-alert">
+                    <h4><i class="fa-solid fa-circle-check"></i> Zero Background Location Tracking</h4>
+                    <p>Bhromon operates on a strict foreground-only location model. We never request background location permissions and never track your movements when the app is minimized or closed.</p>
+                </div>
+
+                <div class="policy-alert">
                     <h4><i class="fa-solid fa-circle-check"></i> Foreground Navigation & Checkpoint Verification</h4>
                     <p>While the app is open, your location coordinates may be used to verify arrival at road checkpoints (ferries, food stops, army checkposts) and calculate live distance to your next tour destination.</p>
                 </div>
@@ -463,6 +468,7 @@
                 <h2><i class="fa-solid fa-trash-can"></i> 10. Data Retention & Permanent Deletion</h2>
                 <p>You retain full sovereignty over your data at all times:</p>
                 <ul>
+                    <li><strong>Tour Leave & Automated Member Data Purge:</strong> When you leave a tour (or are removed by an admin), your device immediately clears all local offline tour data (<code>clearLocalTourData</code>). Concurrently, an automated backend process purges personal posts, story views, votes, reactions, and calls the media microservice to erase your uploaded files from that tour.</li>
                     <li><strong>Permanent Account Deletion:</strong> You can delete your account and personal profile permanently at any time through the in-app settings or by contacting our team.</li>
                     <li><strong>Media Deletion:</strong> Deleting a photo or video from a tour post or reel immediately purges the corresponding file from our VPS media storage.</li>
                     <li><strong>Ledger Export (Data Portability):</strong> Tour admins and members can export the entire tour ledger to UTF-8 CSV at any point.</li>

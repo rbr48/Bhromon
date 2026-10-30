@@ -11,6 +11,7 @@ import '../widgets/in_app_youtube_player.dart';
 import '../widgets/trip_log_detail_sheet.dart';
 import '../widgets/full_screen_image_viewer.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../app/di/injection.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
@@ -372,7 +373,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
         transaction.update(parentLogRef, {'reactions': reactionsMap});
       });
     } catch (e) {
-      debugPrint('Error handling reaction: $e');
+      logError('Error handling reaction: $e');
       // Rollback on error
       setState(() {
         _myReactionsCache[log.tripId] = rollbackReaction;

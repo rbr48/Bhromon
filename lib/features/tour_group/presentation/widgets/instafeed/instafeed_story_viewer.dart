@@ -7,6 +7,7 @@ import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart'
 import 'instafeed_share_sheet.dart';
 import 'tour_safe_network_image.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/utils/logger.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
 /// Full-featured Story Viewer supporting both Photos and Videos, interactive
@@ -147,7 +148,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
         await controller.play();
         if (isCurrent()) _animCtrl.forward(from: 0.0);
       } catch (e) {
-        debugPrint('[StoryViewer] Error loading video: $e');
+        logWarning('[StoryViewer] Error loading video: $e');
         // A controller that failed before or while playing is not reachable
         // from _videoCtrl alone, so it is freed here.
         if (identical(_videoCtrl, controller)) _videoCtrl = null;
@@ -308,7 +309,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
         _currentAuthorStories[_storyIndex] = story.copyWith(poll: updatedPoll);
       });
     } catch (e) {
-      debugPrint('[StoryViewer] Vote error: $e');
+      logError('[StoryViewer] Vote error: $e');
     }
   }
 

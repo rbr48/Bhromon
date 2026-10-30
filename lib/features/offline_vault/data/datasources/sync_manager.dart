@@ -7,6 +7,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/entities/outbox_entry.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/network/connectivity_check.dart';
@@ -211,8 +212,8 @@ class SyncManager {
                 : i + kOutboxBatchSize);
         await _sendChunk(chunk);
       }
-    } catch (e) {
-      debugPrint('[SyncManager] Flush failed: $e');
+    } catch (e, st) {
+      logError('[SyncManager] Flush failed', e, st);
     }
 
     _isProcessing = false;
@@ -253,7 +254,7 @@ class SyncManager {
         await _handleFailure(chunk.single, e);
         return;
       }
-      debugPrint(
+      logWarning(
           '[SyncManager] Batch of ${chunk.length} rejected ($e); retrying entries individually');
     }
 
@@ -271,8 +272,8 @@ class SyncManager {
   }
 
   Future<void> _handleFailure(OutboxEntry item, Object error) async {
-    debugPrint(
-        '[SyncManager] Sync failed for item ${item.id} (${item.operation} -> ${item.collectionPath}/${item.documentId}): $error');
+    logWarning(
+        '[SyncManager] Sync failed for item ${item.id} (${item.operation} -> ${item.collectionPath}/${item.documentId})', error);
 
     final permanent = _isPermanentError(error);
     if (permanent || item.retryCount >= kOutboxMaxRetries) {

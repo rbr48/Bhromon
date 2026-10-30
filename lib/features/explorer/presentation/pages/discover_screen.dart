@@ -16,6 +16,7 @@ import '../../../../core/services/discovery_score_service.dart';
 import '../../../map/domain/usecases/get_nearby_pins_usecase.dart';
 import '../../../../core/value_objects/trust_tier.dart';
 import '../../../../core/utils/image_sizing.dart';
+import '../../../../core/utils/logger.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
@@ -131,7 +132,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         });
       }
     } catch (e) {
-      debugPrint('Error loading discover pins: $e');
+      logError('Error loading discover pins: $e');
       if (mounted) {
         setState(() {
           _loading = false;
@@ -221,7 +222,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         ),
       );
     } catch (e) {
-      debugPrint('Error adding to wishlist: $e');
+      logError('Error adding to wishlist: $e');
     }
   }
 

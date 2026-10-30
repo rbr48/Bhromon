@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../domain/models/newspaper_models.dart';
 
 /// Service for fetching live headlines, newspapers directory, and ad-free reader content.
@@ -35,8 +35,8 @@ class NewspaperService {
     try {
       _box = await Hive.openBox<dynamic>(_kPrefsBox);
       return _box!;
-    } catch (e) {
-      debugPrint('NewspaperService box warning: $e');
+    } catch (e, st) {
+      logWarning('NewspaperService box warning', e, st);
       return await Hive.openBox<dynamic>(_kPrefsBox);
     }
   }
@@ -152,8 +152,8 @@ class NewspaperService {
         await box.put(cacheKey, jsonEncode(res.data));
         return feedResult;
       }
-    } catch (e) {
-      debugPrint('NewspaperService fetchHeadlines error: $e');
+    } catch (e, st) {
+      logWarning('NewspaperService fetchHeadlines error', e, st);
     }
 
     // Offline cache fallback
@@ -226,8 +226,8 @@ class NewspaperService {
         await box.put(cacheKey, jsonEncode(res.data));
         return papers;
       }
-    } catch (e) {
-      debugPrint('NewspaperService fetchNewspapers error: $e');
+    } catch (e, st) {
+      logWarning('NewspaperService fetchNewspapers error', e, st);
     }
 
     // Cache fallback
@@ -273,8 +273,8 @@ class NewspaperService {
         await box.put(cacheKey, jsonEncode(article.toJson()));
         return article;
       }
-    } catch (e) {
-      debugPrint('NewspaperService fetchCleanArticle error: $e');
+    } catch (e, st) {
+      logError('NewspaperService fetchCleanArticle error', e, st);
       rethrow;
     }
 

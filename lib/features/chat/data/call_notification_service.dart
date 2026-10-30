@@ -9,6 +9,7 @@ import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../app/router.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/image_sizing.dart';
 import '../../../firebase_options.dart';
 import 'call_signaling_service.dart';
@@ -108,9 +109,9 @@ class CallNotificationService {
       _initCallkitEvents();
       try {
         FlutterCallkitIncoming.onBackgroundMessage(callkitBackgroundCallback);
-      } catch (e) {
-        debugPrint(
-            '[CallNotificationService] Failed to set background handler: $e');
+      } catch (e, st) {
+        logWarning(
+            '[CallNotificationService] Failed to set background handler', e, st);
       }
     }
   }
@@ -266,7 +267,7 @@ class CallNotificationService {
           .listen(
         (snap) => _handleIncomingCallSnap(snap, 'uid'),
         onError: (Object e) {
-          debugPrint('[CallNotification] Firestore call sub error: $e');
+          logWarning('[CallNotification] Firestore call sub error', e);
         },
       );
 
@@ -281,12 +282,12 @@ class CallNotificationService {
             .listen(
           (snap) => _handleIncomingCallSnap(snap, 'email'),
           onError: (Object e) {
-            debugPrint('[CallNotification] Firestore email call sub error: $e');
+            logWarning('[CallNotification] Firestore email call sub error', e);
           },
         );
       }
-    } catch (e) {
-      debugPrint('[CallNotification] Firestore listeners failed: $e');
+    } catch (e, st) {
+      logWarning('[CallNotification] Firestore listeners failed', e, st);
     }
   }
 
@@ -375,8 +376,8 @@ class CallNotificationService {
         if (name != null && name.isNotEmpty) {
           return (name, (data?['avatarUrl'] as String?) ?? fallbackAvatar);
         }
-      } catch (e) {
-        debugPrint('Error fetching caller profile: $e');
+      } catch (e, st) {
+        logWarning('Error fetching caller profile', e, st);
       }
     }
     final name = fallbackName?.trim();

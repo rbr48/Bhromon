@@ -531,9 +531,7 @@ class CallSignalingService {
         }
       },
       onError: (Object e, StackTrace st) {
-        if (kDebugMode) {
-          debugPrint('CallSignalingService: callDoc error: $e\n$st');
-        }
+        logWarning('CallSignalingService: callDoc error', e, st);
       },
     );
   }
@@ -549,9 +547,7 @@ class CallSignalingService {
         }
       },
       onError: (Object e, StackTrace st) {
-        if (kDebugMode) {
-          debugPrint('CallSignalingService: answerCandidates error: $e\n$st');
-        }
+        logWarning('CallSignalingService: answerCandidates error', e, st);
       },
     );
   }
@@ -567,9 +563,7 @@ class CallSignalingService {
         }
       },
       onError: (Object e, StackTrace st) {
-        if (kDebugMode) {
-          debugPrint('CallSignalingService: offerCandidates error: $e\n$st');
-        }
+        logWarning('CallSignalingService: offerCandidates error', e, st);
       },
     );
   }
@@ -585,12 +579,10 @@ class CallSignalingService {
       _ringTimer?.cancel();
       _ringTimer = null;
       onCallStateChange?.call('answered');
-    } catch (e) {
+    } catch (e, st) {
       // Let the other channel try again.
       _remoteAnswerApplied = false;
-      if (kDebugMode) {
-        debugPrint('CallSignalingService: setRemoteDescription error: $e');
-      }
+      logWarning('CallSignalingService: setRemoteDescription error', e, st);
     }
   }
 
@@ -696,9 +688,7 @@ class CallSignalingService {
     };
 
     _peerConnection!.onConnectionState = (RTCPeerConnectionState state) {
-      if (kDebugMode) {
-        debugPrint('CallSignalingService: connectionState → $state');
-      }
+      logDebug('CallSignalingService: connectionState → $state');
       switch (state) {
         case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
           _updateNetworkQuality(CallNetworkQuality.good);
@@ -717,9 +707,7 @@ class CallSignalingService {
     };
 
     _peerConnection!.onIceConnectionState = (RTCIceConnectionState state) {
-      if (kDebugMode) {
-        debugPrint('CallSignalingService: iceConnectionState → $state');
-      }
+      logDebug('CallSignalingService: iceConnectionState → $state');
       if (state == RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
           state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
         _updateNetworkQuality(CallNetworkQuality.poor);
@@ -752,10 +740,8 @@ class CallSignalingService {
 
     try {
       await _peerConnection!.addCandidate(candidate);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('CallSignalingService: addCandidate error: $e');
-      }
+    } catch (e, st) {
+      logWarning('CallSignalingService: addCandidate error', e, st);
     }
   }
 
@@ -768,10 +754,8 @@ class CallSignalingService {
     for (final candidate in queued) {
       try {
         await _peerConnection!.addCandidate(candidate);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('CallSignalingService: queued addCandidate error: $e');
-        }
+      } catch (e, st) {
+        logWarning('CallSignalingService: queued addCandidate error', e, st);
       }
     }
   }
@@ -783,10 +767,8 @@ class CallSignalingService {
   ) async {
     try {
       await col.add(data);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('CallSignalingService: failed to write $label: $e');
-      }
+    } catch (e, st) {
+      logWarning('CallSignalingService: failed to write $label', e, st);
     }
   }
 

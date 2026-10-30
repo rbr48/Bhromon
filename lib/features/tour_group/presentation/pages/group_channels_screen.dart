@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../data/channel_read_store.dart';
 import '../../data/tour_channel_repository.dart';
 import '../../data/tour_group_repository.dart';
@@ -154,7 +155,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     try {
       await _repo.markPresent(widget.tourId);
     } catch (e) {
-      debugPrint('[GroupChannels] presence not recorded: $e');
+      logWarning('[GroupChannels] presence not recorded: $e');
     }
   }
 

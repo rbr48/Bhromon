@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../../../core/utils/logger.dart';
 import '../../data/paged_post_feed.dart';
 import '../../data/tour_group_repository.dart';
 import '../../data/tour_media_journal.dart';
@@ -130,7 +131,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       (g) {
         if (mounted) setState(() => _tourGroup = g);
       },
-      onError: (Object e) => debugPrint('[TourInstaFeed] group watch: $e'),
+      onError: (Object e) => logWarning('[TourInstaFeed] group watch: $e'),
     );
   }
 
@@ -612,7 +613,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       final fetched = await _repository.getPostsByIds(widget.tourId, missing);
       if (mounted) setState(() => _savedOutsidePage = fetched);
     } catch (e) {
-      debugPrint('[TourInstaFeed] Could not load saved posts: $e');
+      logWarning('[TourInstaFeed] Could not load saved posts: $e');
     }
   }
 

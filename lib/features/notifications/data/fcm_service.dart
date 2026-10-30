@@ -10,6 +10,7 @@ import 'package:injectable/injectable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../../../core/utils/app_logger.dart';
 import '../../../app/router.dart';
 import '../../../core/services/push_device.dart';
 import '../../chat/data/vps_chat_service.dart';
@@ -115,8 +116,8 @@ class FcmService {
           await androidPlugin?.requestNotificationsPermission();
         }
       }
-    } catch (e) {
-      debugPrint('[FcmService] Local notifications initialization error: $e');
+    } catch (e, st) {
+      logWarning('[FcmService] Local notifications initialization error', e, st);
     }
 
     // ── 2. Request FCM permissions & save device token ───────────────────────
@@ -125,8 +126,8 @@ class FcmService {
       final token = await _messaging.getToken();
       if (token != null) await _saveToken(uid, token);
       _messaging.onTokenRefresh.listen((t) => _saveToken(uid, t));
-    } catch (e) {
-      debugPrint('[FcmService] FCM token acquisition error: $e');
+    } catch (e, st) {
+      logWarning('[FcmService] FCM token acquisition error', e, st);
     }
 
     // ── 3. Listen for foreground FCM messages ─────────────────────────────
@@ -145,8 +146,8 @@ class FcmService {
         final ctx = AppRouter.navigatorKey.currentContext;
         if (ctx != null && ctx.mounted) _handleTap(initial, ctx);
       }
-    } catch (e) {
-      debugPrint('[FcmService] FCM message listener error: $e');
+    } catch (e, st) {
+      logWarning('[FcmService] FCM message listener error', e, st);
     }
 
     // ── 4. Listen for realtime in-app notifications in Firestore ────────────
@@ -219,7 +220,7 @@ class FcmService {
         }
       },
       onError: (Object e) {
-        debugPrint('[FcmService] user notifications listener error: $e');
+        logWarning('[FcmService] user notifications listener error', e);
       },
     );
   }
@@ -351,8 +352,8 @@ class FcmService {
           ),
         );
       }
-    } catch (e) {
-      debugPrint('[FcmService] _showInAppBanner error: $e');
+    } catch (e, st) {
+      logWarning('[FcmService] _showInAppBanner error', e, st);
     }
   }
 
@@ -372,8 +373,8 @@ class FcmService {
     // 1. Immediately register with VPS for instant server-direct push notifications
     try {
       await VpsChatService().registerDeviceToken(token, platform: platform);
-    } catch (e) {
-      debugPrint('[FcmService] VPS token registration error: $e');
+    } catch (e, st) {
+      logWarning('[FcmService] VPS token registration error', e, st);
     }
 
     // 2. Best-effort registration with Firestore (silently catch quota errors)
@@ -382,7 +383,7 @@ class FcmService {
       await user.set(data);
       await user.collection('devices').doc(pushDeviceId(token)).set(data);
     } catch (e) {
-      debugPrint('[FcmService] Firestore token registration ignored/quota: $e');
+      logDebug('[FcmService] Firestore token registration ignored/quota: $e');
     }
   }
 

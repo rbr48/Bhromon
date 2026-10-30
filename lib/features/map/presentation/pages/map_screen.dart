@@ -19,6 +19,7 @@ import '../bloc/map_bloc.dart';
 import '../bloc/map_event.dart';
 import '../bloc/map_state.dart';
 import '../../../../core/value_objects/trust_tier.dart';
+import '../../../../core/utils/logger.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Map style presets
@@ -372,7 +373,7 @@ class _MapScreenState extends State<MapScreen> {
         await _mapController!.addFills(optionsList);
       }
     } catch (e) {
-      debugPrint('Error drawing offline fills: $e');
+      logError('Error drawing offline fills: $e');
     }
   }
 
@@ -513,7 +514,7 @@ class _MapScreenState extends State<MapScreen> {
         }
       }
     } catch (e) {
-      debugPrint('Error updating circles: $e');
+      logError('Error updating circles: $e');
     }
   }
 
@@ -606,7 +607,7 @@ class _MapScreenState extends State<MapScreen> {
         lineOpacity: 0.85,
       ));
     } catch (e) {
-      debugPrint('Route error: $e');
+      logError('Route error: $e');
     } finally {
       if (mounted) setState(() => _loadingRoute = false);
     }

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+import '../../../../core/utils/app_logger.dart';
 
 /// Calls the server that runs the online Teen Patti table. The server checks
 /// every action and deals the cards, so the phone only asks; it never decides
@@ -144,14 +144,12 @@ class TeenPattiApi {
             );
           }
         }
-        debugPrint(
-          '[TeenPattiApi] VPS call $name failed (${e.message}). Falling back to Functions.',
-        );
-      } catch (e) {
+        logWarning(
+          '[TeenPattiApi] VPS call $name failed (${e.message}). Falling back to Functions.', e);
+      } catch (e, st) {
         if (e is FirebaseFunctionsException) rethrow;
-        debugPrint(
-          '[TeenPattiApi] VPS call $name error ($e). Falling back to Functions.',
-        );
+        logWarning(
+          '[TeenPattiApi] VPS call $name error. Falling back to Functions.', e, st);
       }
     }
 

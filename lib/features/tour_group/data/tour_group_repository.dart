@@ -7,6 +7,7 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/utils/app_logger.dart';
 import '../domain/models/date_codec.dart';
 import '../domain/models/expense_models.dart';
 import '../domain/models/itinerary_models.dart';
@@ -178,14 +179,14 @@ class TourGroupRepository {
         return Hive.box<dynamic>('tour_groups_box');
       }
       return await Hive.openBox<dynamic>('tour_groups_box');
-    } catch (e) {
-      debugPrint(
-          '[TourGroupRepository] Corrupt Hive box: $e. Purging and recovering...');
+    } catch (e, st) {
+      logWarning(
+          '[TourGroupRepository] Corrupt Hive box: $e. Purging and recovering...', e, st);
       try {
         await Hive.deleteBoxFromDisk('tour_groups_box');
         return await Hive.openBox<dynamic>('tour_groups_box');
-      } catch (inner) {
-        debugPrint('[TourGroupRepository] Hive recovery failed: $inner');
+      } catch (inner, ist) {
+        logError('[TourGroupRepository] Hive recovery failed', inner, ist);
         rethrow;
       }
     }
@@ -215,8 +216,8 @@ class TourGroupRepository {
         myIds.add(group.id);
         await box.put('my_tour_ids', myIds);
       }
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Error caching local group: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] Error caching local group', e, st);
     }
   }
 
@@ -228,8 +229,8 @@ class TourGroupRepository {
           box.get('my_tour_ids', defaultValue: <String>[]) as List);
       myIds.remove(tourId);
       await box.put('my_tour_ids', myIds);
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Error clearing local group: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] Error clearing local group', e, st);
     }
   }
 
@@ -244,8 +245,8 @@ class TourGroupRepository {
       final box = await _openBox();
       await box.delete(_feedPrefsKey(tourId));
       await box.delete(_postDraftKey(tourId));
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Could not clear tour prefs: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] Could not clear tour prefs', e, st);
     }
     await ChannelReadStore().clearTour(tourId);
     await TourMediaJournal.instance.dropTour(tourId);
@@ -254,8 +255,8 @@ class TourGroupRepository {
       // Photos and videos the tour loaded sit in the image cache, which cannot
       // tell one tour's files from another's, so the whole cache is emptied.
       await emptyImageCache();
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Could not empty the image cache: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] Could not empty the image cache', e, st);
     }
   }
 
@@ -323,8 +324,8 @@ class TourGroupRepository {
           collections: collections,
         );
       }
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Could not read feed prefs: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] Could not read feed prefs', e, st);
     }
     return const FeedPrefs();
   }
@@ -338,8 +339,8 @@ class TourGroupRepository {
         'seenStories': prefs.seenStories.toList().reversed.take(500).toList(),
         'collections': prefs.collections,
       });
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Could not save feed prefs: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] Could not save feed prefs', e, st);
     }
   }
 
@@ -353,8 +354,8 @@ class TourGroupRepository {
       if (raw is Map) {
         return TourPostDraft.fromMap(Map<String, dynamic>.from(raw));
       }
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Could not read post draft: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] Could not read post draft', e, st);
     }
     return null;
   }
@@ -363,8 +364,8 @@ class TourGroupRepository {
     try {
       final box = await _openBox();
       await box.put(_postDraftKey(tourId), draft.toMap());
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Could not save post draft: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] Could not save post draft', e, st);
     }
   }
 
@@ -372,8 +373,8 @@ class TourGroupRepository {
     try {
       final box = await _openBox();
       await box.delete(_postDraftKey(tourId));
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Could not clear post draft: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] Could not clear post draft', e, st);
     }
   }
 
@@ -423,11 +424,11 @@ class TourGroupRepository {
             emit();
           }
         } catch (e, st) {
-          debugPrint(
-              '[TourGroupRepository] eager get tour $tourId failed: $e\n$st');
+          logWarning(
+              '[TourGroupRepository] eager get tour $tourId failed', e, st);
         }
-      }).catchError((Object e) {
-        debugPrint('[TourGroupRepository] eager get tour $tourId error: $e');
+      }).catchError((Object e, StackTrace st) {
+        logWarning('[TourGroupRepository] eager get tour $tourId error', e, st);
       });
 
       tourSubs[tourId] = _tour(tourId).snapshots().listen(
@@ -444,8 +445,8 @@ class TourGroupRepository {
                   rolesByTour[tourId] != TourRole.owner.toValue()) {
                 _memberships.doc(_membershipId(tourId, email)).update({
                   'role': TourRole.owner.toValue()
-                }).catchError((Object e) => debugPrint(
-                    '[TourGroupRepository] owner role repair failed: $e'));
+                }).catchError((Object e, StackTrace st) => logWarning(
+                    '[TourGroupRepository] owner role repair failed', e, st));
                 rolesByTour[tourId] = TourRole.owner.toValue();
               }
             } else {
@@ -458,13 +459,13 @@ class TourGroupRepository {
             }
             emit();
           } catch (e, st) {
-            debugPrint(
-                '[TourGroupRepository] parse tour $tourId failed: $e\n$st');
+            logWarning(
+                '[TourGroupRepository] parse tour $tourId failed', e, st);
           }
         },
         onError: (Object e) {
           // Losing access to a tour means the user is no longer a member.
-          debugPrint('[TourGroupRepository] tour $tourId unavailable: $e');
+          logWarning('[TourGroupRepository] tour $tourId unavailable', e);
           stopTour(tourId);
           listedIds.remove(tourId);
           unawaited(clearLocalTourData(tourId));
@@ -568,7 +569,7 @@ class TourGroupRepository {
           }
         },
         onError: (Object e) {
-          debugPrint('[TourGroupRepository] memberships error: $e');
+          logWarning('[TourGroupRepository] memberships error', e);
           if (!controller.isClosed) controller.addError(e);
         },
       );
@@ -633,7 +634,7 @@ class TourGroupRepository {
       }
       return null;
     } catch (e, st) {
-      debugPrint('[TourGroupRepository] getGroup($tourId) error: $e\n$st');
+      logWarning('[TourGroupRepository] getGroup($tourId) error', e, st);
       final local = await getLocalGroups();
       return local.where((g) => g.id == tourId).firstOrNull;
     }
@@ -731,7 +732,7 @@ class TourGroupRepository {
   }
 
   Future<void> _discardGroup(String tourId, Object error) async {
-    debugPrint('[TourGroupRepository] Group $tourId rejected: $error');
+    logWarning('[TourGroupRepository] Group $tourId rejected', error);
     await _removeLocalGroup(tourId);
   }
 
@@ -751,8 +752,8 @@ class TourGroupRepository {
       if (invite.exists) {
         tourId = invite.data()?['tourId'] as String?;
       }
-    } catch (e) {
-      debugPrint('[TourGroupRepository] invite lookup error: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] invite lookup error', e, st);
     }
 
     // Fallback: check if the input code itself is directly a tourId
@@ -791,8 +792,8 @@ class TourGroupRepository {
           throw const TourAccessException(
               'ইন্টারনেট সংযোগ নেই। সংযোগ ফিরে এলে আবার চেষ্টা করুন।');
         }
-      } on FirebaseException catch (e) {
-        debugPrint('[TourGroupRepository] join membership set failed: $e');
+      } on FirebaseException catch (e, st) {
+        logWarning('[TourGroupRepository] join membership set failed', e, st);
         throw const TourAccessException(
             'এই ট্যুরে যোগ দেওয়ার অনুমতি নেই। কোড ঠিক আছে কি না দেখুন, অথবা অ্যাডমিনের সাথে যোগাযোগ করুন।');
       }
@@ -802,9 +803,9 @@ class TourGroupRepository {
       if (status != 'active') {
         try {
           await membershipRef.update({'status': 'active'});
-        } catch (e) {
-          debugPrint(
-              '[TourGroupRepository] membership reactivation failed: $e');
+        } catch (e, st) {
+          logWarning(
+              '[TourGroupRepository] membership reactivation failed', e, st);
         }
       }
     }
@@ -861,7 +862,7 @@ class TourGroupRepository {
       rethrow;
     } on FirebaseException catch (e) {
       // Row doesn't exist yet; proceed safely with creation.
-      debugPrint(
+      logDebug(
           '[TourGroupRepository] Member row does not exist yet: ${e.code}');
     }
 
@@ -2153,8 +2154,8 @@ class TourGroupRepository {
           'viewCount': FieldValue.increment(1),
         });
       });
-    } catch (e) {
-      debugPrint('[recordPostView] Failed to record view on $postId: $e');
+    } catch (e, st) {
+      logWarning('[recordPostView] Failed to record view on $postId', e, st);
     }
   }
 
@@ -2244,8 +2245,8 @@ class TourGroupRepository {
           .limit(1)
           .get();
       return match.docs.isNotEmpty;
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Could not check highlight covers: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] Could not check highlight covers', e, st);
       return true;
     }
   }
@@ -2281,8 +2282,8 @@ class TourGroupRepository {
         used(highlights.where('coverUrl', isEqualTo: url)),
       ]);
       return results.any((r) => r);
-    } catch (e) {
-      debugPrint('[TourGroupRepository] Could not check media use: $e');
+    } catch (e, st) {
+      logWarning('[TourGroupRepository] Could not check media use', e, st);
       return null;
     }
   }
