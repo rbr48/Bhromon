@@ -144,6 +144,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   StreamSubscription<QuerySnapshot>? _messagesSub;
   StreamSubscription<Map<String, dynamic>>? _vpsTypingSub;
+  bool _otherOnline = false;
+  Timer? _onlinePoll;
   bool _vpsOtherIsTyping = false;
   int _disappearingTimerSeconds = 0;
   StreamSubscription<DocumentSnapshot>? _chatDocSub;
@@ -153,6 +155,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     ChatLocalCache().init();
     _checkBlockStatus();
+    _startOnlinePolling();
     _initVpsTypingListener();
     _messageController.addListener(_onTextChanged);
     _messageFocusNode.addListener(() {
@@ -407,11 +410,31 @@ class _ChatScreenState extends State<ChatScreen> {
     if (authState is Authenticated) {
       _updateTypingStatus(authState.profile.uid, false);
     }
+    _onlinePoll?.cancel();
     _messageController.dispose();
     _messageFocusNode.dispose();
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Asks the server whether the other person is connected, now and every 30
+  /// seconds while this chat is open. A failed check keeps the last answer.
+  void _startOnlinePolling() {
+    final authState = context.read<AuthCubit>().state;
+    final currentUid = authState is Authenticated ? authState.profile.uid : '';
+    final otherUid = _resolveOtherUid(currentUid);
+    if (currentUid.isEmpty || otherUid == null || otherUid.isEmpty) return;
+
+    Future<void> check() async {
+      final online = await VpsChatService().fetchOnlineStatus(otherUid);
+      if (mounted && online != null && online != _otherOnline) {
+        setState(() => _otherOnline = online);
+      }
+    }
+
+    unawaited(check());
+    _onlinePoll = Timer.periodic(const Duration(seconds: 30), (_) => check());
   }
 
   String? _resolveOtherUid(String currentUid) {
@@ -2383,7 +2406,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                             as bool?) ??
                                         false;
                                 return Text(
-                                  isOtherTyping ? 'typing...' : 'online',
+                                  isOtherTyping
+                                      ? context.l10n
+                                          .translate('chat_status_typing')
+                                      : context.l10n.translate(_otherOnline
+                                          ? 'chat_status_online'
+                                          : 'chat_status_offline'),
                                   style: TextStyle(
                                     color: isOtherTyping
                                         ? const Color(0xFF00A884)

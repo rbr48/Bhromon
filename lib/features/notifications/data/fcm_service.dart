@@ -82,7 +82,7 @@ class FcmService {
             if (payload != null && payload.isNotEmpty) {
               try {
                 final data = jsonDecode(payload) as Map<String, dynamic>;
-                _routeFromPayload(
+                routeFromPayload(
                   data['action'] as String?,
                   ctx,
                   uid: data['uid'] as String?,
@@ -91,7 +91,7 @@ class FcmService {
                   tourId: data['tourId'] as String?,
                 );
               } catch (_) {
-                _routeFromPayload(payload, ctx);
+                routeFromPayload(payload, ctx);
               }
             }
           },
@@ -302,7 +302,7 @@ class FcmService {
             content: InkWell(
               onTap: () {
                 scaffold.hideCurrentSnackBar();
-                _routeFromPayload(
+                routeFromPayload(
                   action,
                   ctx,
                   uid: uid,
@@ -422,7 +422,7 @@ class FcmService {
   }
 
   void _handleTap(RemoteMessage message, BuildContext context) {
-    _routeFromPayload(
+    routeFromPayload(
       message.data['action'] as String?,
       context,
       uid: message.data['uid'] as String?,
@@ -432,7 +432,8 @@ class FcmService {
     );
   }
 
-  void _routeFromPayload(
+  /// Opens the screen a notification points to.
+  static void routeFromPayload(
     String? action,
     BuildContext context, {
     String? uid,

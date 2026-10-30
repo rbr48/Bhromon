@@ -27,10 +27,10 @@ import '../../../../core/entities/pro_tip.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../../../notifications/data/fcm_service.dart';
+import '../../../notifications/data/notification_center_repository.dart';
 import '../../../../core/widgets/entry_reactions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/widgets/brand_logo_text.dart';
-import '../../../../core/theme/theme_context.dart';
 import '../../../../core/widgets/skeleton.dart';
 import '../../../../core/utils/shared_latest_stream.dart';
 import '../../../../core/utils/image_sizing.dart';
@@ -48,6 +48,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
   String _selectedTab = 'Discover';
   StreamSubscription<AuthState>? _authSubscription;
   StreamSubscription<QuerySnapshot>? _notificationsSubscription;
+  String? _unreadUid;
+  Stream<int>? _unreadStream;
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -784,10 +786,14 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                               onTap: () => context.push('/map'),
                             ),
                             const SizedBox(width: 8),
-                            _buildIconButtonWithDot(
-                              icon: Icons.notifications_none_outlined,
-                              hasNotification: true,
-                              onTap: () => _showNotificationCenter(context),
+                            StreamBuilder<int>(
+                              stream: _unreadCountStream(uid),
+                              builder: (context, snap) =>
+                                  _buildIconButtonWithDot(
+                                icon: Icons.notifications_none_outlined,
+                                hasNotification: (snap.data ?? 0) > 0,
+                                onTap: () => context.push('/notifications'),
+                              ),
                             ),
                             const SizedBox(width: 8),
                             _buildIconButton(
@@ -1182,6 +1188,20 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
         child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
+  }
+
+  /// Unread notifications for [uid], one stream per account.
+  Stream<int>? _unreadCountStream(String uid) {
+    if (uid.isEmpty) return null;
+    if (_unreadUid != uid || _unreadStream == null) {
+      _unreadUid = uid;
+      final repo = NotificationCenterRepository();
+      _unreadStream = repo.watch(uid).asyncMap((items) async {
+        final seenAt = await repo.seenAtOrSeed(uid);
+        return items.where((n) => notificationIsUnread(n, seenAt)).length;
+      });
+    }
+    return _unreadStream;
   }
 
   Widget _buildIconButtonWithDot(
@@ -5546,232 +5566,6 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
         ),
       ],
     );
-  }
-
-  void _showNotificationCenter(BuildContext context) {
-    final authState = context.read<AuthCubit>().state;
-    final uid =
-        authState is Authenticated ? authState.profile.uid : 'explorer_user';
-    final double bottomPadding = MediaQuery.of(context).padding.bottom;
-    // Newest 50 only, created once for the sheet's lifetime.
-    final notificationsStream = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('notifications')
-        .orderBy('timestamp', descending: true)
-        .limit(50)
-        .snapshots();
-
-    showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      backgroundColor: context.surfacePanel,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return Container(
-          height: 450 + bottomPadding,
-          padding: EdgeInsets.fromLTRB(24, 24, 24, 16 + bottomPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'NOTIFICATIONS',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Notifications cleared')),
-                      );
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Clear all',
-                        style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: notificationsStream,
-                  builder: (context, snapshot) {
-                    final docs = snapshot.data?.docs ?? [];
-                    if (docs.isEmpty) {
-                      return const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.notifications_off_outlined,
-                                size: 48, color: Colors.white54),
-                            SizedBox(height: 12),
-                            Text(
-                              'No notifications yet',
-                              style: TextStyle(
-                                  color: Colors.white54, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      itemCount: docs.length,
-                      itemBuilder: (context, index) {
-                        final data = docs[index].data() as Map<String, dynamic>;
-                        final String title =
-                            (data['title'] as String?) ?? 'Bhromon Alert';
-                        final String body = (data['body'] as String?) ?? '';
-                        final String action = (data['action'] as String?) ?? '';
-                        final String notifUid = (data['uid'] as String?) ?? uid;
-                        final timestamp = data['timestamp'] as Timestamp?;
-                        final timeStr = timestamp != null
-                            ? _formatTimestamp(timestamp)
-                            : 'Just now';
-
-                        IconData iconData = Icons.notifications;
-                        Color iconColor = AppColors.mintGreen;
-                        if (action == 'helpful_vote') {
-                          iconData = Icons.thumb_up;
-                          iconColor = AppColors.leafGreen;
-                        } else if (action == 'tier_upgrade') {
-                          iconData = Icons.verified_user;
-                          iconColor = AppColors.mintGreen;
-                        } else if (action == 'conflict') {
-                          iconData = Icons.warning_amber_rounded;
-                          iconColor = Colors.redAccent;
-                        } else if (action == 're_confirm_tips') {
-                          iconData = Icons.sync;
-                          iconColor = AppColors.amber;
-                        } else if (action == 'chat') {
-                          iconData = Icons.chat_bubble_outline;
-                          iconColor = AppColors.mintGreen;
-                        }
-
-                        return _buildNotificationItem(
-                          context: context,
-                          title: title,
-                          body: body,
-                          time: timeStr,
-                          icon: iconData,
-                          iconColor: iconColor,
-                          onTap: () {
-                            Navigator.pop(context);
-                            _handleNotificationAction(
-                                context, action, notifUid);
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildNotificationItem({
-    required BuildContext context,
-    required String title,
-    required String body,
-    required String time,
-    required IconData icon,
-    required Color iconColor,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: iconColor.withValues(alpha: 0.15),
-          child: Icon(icon, color: iconColor, size: 20),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13),
-              ),
-            ),
-            Text(
-              time,
-              style: const TextStyle(color: Colors.white54, fontSize: 10),
-            ),
-          ],
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4.0),
-          child: Text(
-            body,
-            style: const TextStyle(color: Colors.white70, fontSize: 11),
-          ),
-        ),
-        onTap: onTap,
-      ),
-    );
-  }
-
-  void _handleNotificationAction(
-      BuildContext context, String action, String? targetUid) {
-    switch (action) {
-      case 're_confirm_tips':
-        context.push('/vault');
-        break;
-      case 'conflict':
-        context.push('/vault');
-        break;
-      case 'tier_upgrade':
-        final uid = targetUid ?? 'explorer_user';
-        context.push('/profile/$uid');
-        break;
-      case 'chat':
-        if (targetUid != null && targetUid.isNotEmpty) {
-          final authState = context.read<AuthCubit>().state;
-          if (authState is Authenticated) {
-            final myUid = authState.profile.uid;
-            final uids = [myUid, targetUid]..sort();
-            final chatId = uids.join('_');
-            context.push('/chat/$chatId', extra: {'otherUid': targetUid});
-          }
-        }
-        break;
-      default:
-        break;
-    }
-  }
-
-  String _formatTimestamp(Timestamp timestamp) {
-    final diff = DateTime.now().difference(timestamp.toDate());
-    if (diff.inMinutes < 60) {
-      return '${diff.inMinutes}m ago';
-    } else if (diff.inHours < 24) {
-      return '${diff.inHours}h ago';
-    } else {
-      return '${diff.inDays}d ago';
-    }
   }
 }
 
