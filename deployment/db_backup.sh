@@ -54,6 +54,6 @@ else
     echo "INFO: Rclone remote not configured, keeping backups locally in $BACKUP_DIR"
 fi
 
-# 5. Clean up local backups older than 7 days
-find "$BACKUP_DIR" -type f \( -name "*.gz" -o -name "*.tar.gz" \) -mtime +7 -delete
-echo "[$(date)] Cleanup of local backups older than 7 days completed."
+# 5. Clean up local backups older than 30 days
+find "$BACKUP_DIR" -type f \( -name "*.gz" -o -name "*.tar.gz" \) -mtime +30 -delete
+echo "[$(date)] Cleanup of local backups older than 30 days completed."
