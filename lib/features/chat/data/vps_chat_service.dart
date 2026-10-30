@@ -284,6 +284,23 @@ class VpsChatService {
 
   // ── Conversations ──────────────────────────────────────────────────────────
 
+  /// Whether [uid] has a live chat connection to the server right now, or null
+  /// when the check fails.
+  Future<bool?> fetchOnlineStatus(String uid) async {
+    try {
+      final idToken = await _getIdToken();
+      if (idToken == null) return null;
+      final res = await _dio.get<Map<String, dynamic>>(
+        'online_status/$uid',
+        options: _authHeader(idToken),
+      );
+      return res.data?['isOnline'] as bool?;
+    } catch (e) {
+      debugPrint('[VpsChat] Failed to fetch online status: $e');
+      return null;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> fetchConversations() async {
     try {
       final idToken = await _getIdToken();

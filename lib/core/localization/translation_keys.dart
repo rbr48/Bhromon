@@ -3,6 +3,26 @@ class TranslationKeys {
     'en': {
       // ── App General ────────────────────────────────────────────────────────
       'app_title': 'Bhromon',
+      'notif_center_title': 'Notifications',
+      'notif_filter_all': 'All',
+      'notif_filter_unread': 'Unread',
+      'notif_mark_all_read': 'Mark all as read',
+      'notif_clear_all': 'Clear all',
+      'notif_clear_all_title': 'Clear all notifications?',
+      'notif_clear_all_body':
+          'Every notification will be removed from your list.',
+      'notif_cancel': 'Cancel',
+      'notif_empty': 'No notifications yet',
+      'notif_empty_unread': 'No unread notifications',
+      'notif_signed_out': 'Sign in to see your notifications',
+      'notif_load_failed': 'Could not load notifications',
+      'notif_action_failed': 'Could not update notifications. Try again.',
+      'notif_just_now': 'Just now',
+      'notif_minutes_ago': '{count} min ago',
+      'notif_hours_ago': '{count} h ago',
+      'chat_status_online': 'online',
+      'chat_status_offline': 'offline',
+      'chat_status_typing': 'typing...',
 
       // ── Diary Editor ───────────────────────────────────────────────────────
       'editor_title_new': 'Write New Diary',
@@ -132,6 +152,25 @@ class TranslationKeys {
     'bn': {
       // ── App General ────────────────────────────────────────────────────────
       'app_title': 'ভ্রমণ',
+      'notif_center_title': 'বিজ্ঞপ্তি',
+      'notif_filter_all': 'সব',
+      'notif_filter_unread': 'অপঠিত',
+      'notif_mark_all_read': 'সব পড়া হিসেবে চিহ্নিত করুন',
+      'notif_clear_all': 'সব মুছুন',
+      'notif_clear_all_title': 'সব বিজ্ঞপ্তি মুছবেন?',
+      'notif_clear_all_body': 'আপনার তালিকা থেকে সব বিজ্ঞপ্তি সরে যাবে।',
+      'notif_cancel': 'বাতিল',
+      'notif_empty': 'এখনও কোনো বিজ্ঞপ্তি নেই',
+      'notif_empty_unread': 'কোনো অপঠিত বিজ্ঞপ্তি নেই',
+      'notif_signed_out': 'বিজ্ঞপ্তি দেখতে সাইন ইন করুন',
+      'notif_load_failed': 'বিজ্ঞপ্তি লোড করা যায়নি',
+      'notif_action_failed': 'বিজ্ঞপ্তি আপডেট করা যায়নি। আবার চেষ্টা করুন।',
+      'notif_just_now': 'এইমাত্র',
+      'notif_minutes_ago': '{count} মিনিট আগে',
+      'notif_hours_ago': '{count} ঘণ্টা আগে',
+      'chat_status_online': 'অনলাইন',
+      'chat_status_offline': 'অফলাইন',
+      'chat_status_typing': 'টাইপ করছে...',
 
       // ── Diary Editor ───────────────────────────────────────────────────────
       'editor_title_new': 'নতুন ডায়েরি লিখুন',

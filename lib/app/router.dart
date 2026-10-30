@@ -49,6 +49,7 @@ import '../features/game_zone/chess/chess_screen.dart';
 import '../features/game_zone/ludo/ludo_screen.dart';
 import '../features/game_zone/carrom/carrom_screen.dart';
 import '../features/game_zone/online/online_game_table_screen.dart';
+import '../features/notifications/presentation/pages/notification_center_screen.dart';
 import '../features/newspaper/presentation/pages/newspaper_hub_screen.dart';
 import '../features/newspaper/presentation/pages/adfree_article_reader_screen.dart';
 import '../features/newspaper/presentation/pages/adblock_browser_screen.dart';
@@ -98,6 +99,11 @@ class AppRouter {
         path: '/feed',
         pageBuilder: (context, state) =>
             _customPageTransition(state, const HomeFeedScreen()),
+      ),
+      GoRoute(
+        path: '/notifications',
+        pageBuilder: (context, state) =>
+            _customPageTransition(state, const NotificationCenterScreen()),
       ),
       GoRoute(
         path: '/vault',
