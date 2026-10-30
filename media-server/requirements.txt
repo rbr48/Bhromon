@@ -1,5 +1,5 @@
 fastapi==0.162.0
-uvicorn[standard]==0.34.0
+uvicorn[standard]==0.54.0
 python-multipart==0.0.32
 aiofiles==25.1.0
 firebase-admin==7.7.0
