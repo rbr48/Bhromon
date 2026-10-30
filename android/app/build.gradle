@@ -99,7 +99,6 @@ dependencies {
 tasks.whenTaskAdded { task ->
     if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
         if (task.name.toLowerCase().contains("artprofile") ||
-            task.name.toLowerCase().contains("nativesymboltable") ||
             task.name.toLowerCase().contains("nativedebugmetadata") ||
             task.name.toLowerCase().contains("cleanmergereleaseassets") ||
             task.name.toLowerCase().contains("cleanmergereleasenativelibs") ||
