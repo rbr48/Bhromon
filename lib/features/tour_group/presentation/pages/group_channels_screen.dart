@@ -83,6 +83,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   ChannelMessage? _editing;
   final List<PendingAttachment> _pending = [];
   bool _sending = false;
+  bool _recordingVoice = false;
   double _uploadProgress = 0;
   int _uploadDone = 0;
   int _uploadTotal = 0;
@@ -1295,7 +1296,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               onReact: (emoji) => _react(channel, m, emoji),
               onVote: (option) => _vote(channel, m, option),
               onOpenMedia: (index) =>
-                  showChannelMediaViewer(context, m.attachments[index]),
+                  showChannelMediaViewer(context, m.visualAttachments[index]),
               onOpenLedger: () =>
                   context.push('/group/${widget.tourId}/ledger'),
             );
@@ -1521,6 +1522,11 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       onCancelContext: () => _cancelContext(channel),
       onCancelUpload: () => unawaited(_currentUpload?.cancel()),
       onRemovePending: (i) => _update(() => _pending.removeAt(i)),
+      recordingVoice: _recordingVoice,
+      onStartVoice: () => _update(() => _recordingVoice = true),
+      onVoiceSent: (path, duration) =>
+          unawaited(_sendVoice(channel, path, duration)),
+      onVoiceCancel: () => _update(() => _recordingVoice = false),
     );
   }
 
@@ -1607,6 +1613,57 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       }
     }
     await _post(channel, text);
+  }
+
+  /// Sends a voice note. It is uploaded like a photo, then posted as a text
+  /// message with one audio attachment.
+  Future<void> _sendVoice(
+      TourChannel channel, String path, Duration duration) async {
+    final l10n = context.l10n;
+    final uploads = <TourMediaUpload>[];
+    _update(() {
+      _recordingVoice = false;
+      _sending = true;
+      _uploadProgress = 0;
+      _uploadDone = 0;
+      _uploadTotal = 1;
+    });
+    try {
+      final file = XFile(path,
+          name: 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
+          mimeType: 'audio/mp4');
+      final upload = await _repo.startVoice(widget.tourId, file);
+      uploads.add(upload);
+      _currentUpload = upload;
+      final progress =
+          upload.progress.listen((v) => _update(() => _uploadProgress = v));
+      final url = await upload.finish();
+      await progress.cancel();
+      await _repo.sendMessage(
+        widget.tourId,
+        channel.id,
+        text: '',
+        attachments: [
+          ChannelAttachment(
+              url: url, isAudio: true, durationSeconds: duration.inSeconds),
+        ],
+        replyTo: _replyTo,
+      );
+      _update(() => _replyTo = null);
+    } on TourUploadCancelled {
+      await _discard(uploads);
+      _snack(l10n.translate('chan_upload_cancelled'));
+    } catch (e) {
+      await _discard(uploads);
+      _snack(l10n.translate('tour_message_send_failed', args: {'error': e}),
+          error: true);
+    } finally {
+      _currentUpload = null;
+      _update(() {
+        _sending = false;
+        _uploadTotal = 0;
+      });
+    }
   }
 
   Future<void> _post(TourChannel channel, String text) async {

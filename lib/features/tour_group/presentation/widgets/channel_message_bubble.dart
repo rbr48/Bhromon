@@ -9,6 +9,7 @@ import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
 import '../../domain/services/chat_markdown.dart';
 import '../../domain/services/trip_ledger_engine.dart';
+import '../../../chat/presentation/widgets/voice_message_bubble.dart';
 import '../../../../core/localization/localized_date.dart';
 
 /// One message in a channel: its sender, quote, media, poll or expense card,
@@ -90,10 +91,18 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
             children: [
               if (!own) _header(),
               if (m.replyTo != null) _ReplyQuote(reply: m.replyTo!),
-              if (m.attachments.isNotEmpty) ...[
+              if (m.visualAttachments.isNotEmpty) ...[
                 _AttachmentGrid(
-                  attachments: m.attachments,
+                  attachments: m.visualAttachments,
                   onTap: widget.onOpenMedia,
+                ),
+                const SizedBox(height: 6),
+              ],
+              for (final voice in m.voiceAttachments) ...[
+                VoiceMessageBubble(
+                  audioUrl: voice.url,
+                  durationSeconds: voice.durationSeconds,
+                  isMe: own,
                 ),
                 const SizedBox(height: 6),
               ],

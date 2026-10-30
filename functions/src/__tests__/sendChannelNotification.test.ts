@@ -197,6 +197,30 @@ describe('sendChannelNotification', () => {
     expect(multicasts[1].notification.body).toBe('🎬 Video');
   });
 
+  it('describes a voice note and a video stored by their kind', async () => {
+    await sendChannelNotification.run(
+      message({
+        senderEmail: 'sender@x.com',
+        text: '',
+        mentions: ['asha@x.com'],
+        attachments: [{ url: 'https://x/n.m4a', kind: 'audio', durationSeconds: 12 }],
+      }),
+      context('general'),
+    );
+    expect(multicasts[0].notification.body).toBe('🎤 Voice message');
+
+    await sendChannelNotification.run(
+      message({
+        senderEmail: 'sender@x.com',
+        text: '',
+        mentions: ['asha@x.com'],
+        attachments: [{ url: 'https://x/a.mp4', kind: 'video' }],
+      }),
+      context('general'),
+    );
+    expect(multicasts[1].notification.body).toBe('🎬 Video');
+  });
+
   it('shortens a long preview to 120 characters', async () => {
     await sendChannelNotification.run(
       message({ senderEmail: 'sender@x.com', text: 'a'.repeat(300), mentions: ['asha@x.com'] }),

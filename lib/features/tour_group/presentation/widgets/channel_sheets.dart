@@ -71,7 +71,9 @@ Future<ChannelActionChoice?> showChannelMessageActions(
             label: 'chan_action_reply',
             action: ChannelAction.reply,
           ),
-          if (message.kind == ChannelMessageKind.text && isMine)
+          if (message.kind == ChannelMessageKind.text &&
+              isMine &&
+              !message.isVoiceNote)
             const _ActionTile(
               icon: Icons.edit_outlined,
               label: 'chan_action_edit',

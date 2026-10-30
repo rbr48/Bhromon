@@ -87,13 +87,15 @@ function nonEmpty(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
 }
 
-/** The text of the message, or a label for a photo, video, poll or expense. */
+/** The text of the message, or a label for a voice note, photo, video, poll or expense. */
 function previewOf(message: admin.firestore.DocumentData): string {
   let body = nonEmpty(message.text);
   if (!body) {
     const attachments: unknown[] = Array.isArray(message.attachments) ? message.attachments : [];
-    const first = attachments[0] as { isVideo?: unknown } | undefined;
-    if (first && first.isVideo === true) body = '🎬 Video';
+    const first = attachments[0] as { kind?: unknown; isVideo?: unknown } | undefined;
+    const isVideo = first !== undefined && (first.kind === 'video' || first.isVideo === true);
+    if (first && first.kind === 'audio') body = '🎤 Voice message';
+    else if (isVideo) body = '🎬 Video';
     else if (attachments.length > 0) body = '📷 Photo';
     else if (message.kind === 'poll') body = '📊 Poll';
     else if (message.kind === 'expense') body = '💸 Expense';

@@ -123,16 +123,35 @@ class ChannelAttachment {
   final String url;
   final bool isVideo;
 
-  const ChannelAttachment({required this.url, this.isVideo = false});
+  /// A voice note. Its length is kept with it.
+  final bool isAudio;
+  final int? durationSeconds;
+
+  const ChannelAttachment({
+    required this.url,
+    this.isVideo = false,
+    this.isAudio = false,
+    this.durationSeconds,
+  });
 
   factory ChannelAttachment.fromMap(Map<String, dynamic> map) {
+    final kind = map['kind'];
     return ChannelAttachment(
       url: map['url'] as String? ?? '',
-      isVideo: map['kind'] == 'video',
+      isVideo: kind == 'video',
+      isAudio: kind == 'audio',
+      durationSeconds: (map['durationSeconds'] as num?)?.toInt(),
     );
   }
 
   Map<String, dynamic> toMap() {
+    if (isAudio) {
+      return {
+        'url': url,
+        'kind': 'audio',
+        if (durationSeconds != null) 'durationSeconds': durationSeconds,
+      };
+    }
     return {'url': url, 'kind': isVideo ? 'video' : 'image'};
   }
 }
@@ -150,9 +169,11 @@ class ChannelReply {
   });
 
   factory ChannelReply.quoting(ChannelMessage message) {
-    final clipped = message.text.length > 140
-        ? '${message.text.substring(0, 140)}…'
-        : message.text;
+    final clipped = message.text.isEmpty && message.isVoiceNote
+        ? '🎤 Voice message'
+        : message.text.length > 140
+            ? '${message.text.substring(0, 140)}…'
+            : message.text;
     return ChannelReply(
       id: message.id,
       senderName: message.senderName,
@@ -271,6 +292,21 @@ class ChannelMessage {
   }
 
   /// How many members chose each poll option, in option order.
+  /// The photos or video of the message. Voice notes are shown on their own.
+  List<ChannelAttachment> get visualAttachments => [
+        for (final a in attachments)
+          if (!a.isAudio) a
+      ];
+
+  /// The voice notes of the message.
+  List<ChannelAttachment> get voiceAttachments => [
+        for (final a in attachments)
+          if (a.isAudio) a
+      ];
+
+  /// True for a voice note, a message whose content is an audio attachment.
+  bool get isVoiceNote => voiceAttachments.isNotEmpty;
+
   List<int> get voteCounts {
     return [
       for (var i = 0; i < pollOptions.length; i++)

@@ -259,7 +259,9 @@ class TourChannelRepository {
         channelId: channelId,
         messageId: id,
         senderName: currentDisplayName,
-        text: trimmed,
+        text: trimmed.isEmpty && attachments.any((a) => a.isAudio)
+            ? '🎤 Voice message'
+            : trimmed,
         mentions: mentions.map(normalizeEmail).toList(),
         attachments: [for (final a in attachments) a.toMap()],
         kind: ChannelMessageKind.text.name,
@@ -534,6 +536,25 @@ class TourChannelRepository {
     );
   }
 
+  /// Starts uploading a voice note, recorded as m4a.
+  Future<TourMediaUpload> startVoice(String tourId, XFile file) {
+    _groups.requireEmail();
+    final name = file.name;
+    final contentType = audioContentType(name);
+    if (contentType == null) {
+      throw const TourUploadException('এই ধরনের ভয়েস নোট পাঠানো যাবে না।');
+    }
+    return TourMediaUploader.start(
+      tourId: tourId,
+      folder: 'channels',
+      file: file,
+      contentType: contentType,
+      extension: storedExtension(name, 'm4a'),
+      maxBytes: kMaxAudioBytes,
+      journal: TourMediaJournal.untracked,
+    );
+  }
+
   Future<void> _deleteUpload(String url) async {
     try {
       await TourMediaUploader.deleteMedia(url);
@@ -558,8 +579,12 @@ class TourChannelRepository {
   }
 
   void _checkedAttachments(List<ChannelAttachment> attachments) {
-    final images = attachments.where((a) => !a.isVideo).length;
-    final videos = attachments.length - images;
+    final voice = attachments.where((a) => a.isAudio).length;
+    final videos = attachments.where((a) => a.isVideo).length;
+    final images = attachments.length - voice - videos;
+    if (voice > 0 && attachments.length > 1) {
+      throw const TourAccessException('ভয়েস নোট একা পাঠাতে হয়।');
+    }
     if (images > kChannelMaxImages || (videos > 0 && attachments.length > 1)) {
       throw const TourAccessException(
           'একটি বার্তায় সর্বোচ্চ ৪টি ছবি, অথবा একটি ভিডিও পাঠানো যায়।');
