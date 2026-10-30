@@ -49,10 +49,14 @@ class GameZoneHubScreen extends StatefulWidget {
   final OnlineGameRepository? gameRepository;
   final TourGroupRepository? tourRepository;
 
+  /// The tour the user opened the games from, if any.
+  final String? initialTourId;
+
   const GameZoneHubScreen({
     super.key,
     this.gameRepository,
     this.tourRepository,
+    this.initialTourId,
   });
 
   @override
@@ -242,7 +246,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
               stream: _groupsStream,
               builder: (context, groupSnapshot) {
                 final groups = groupSnapshot.data ?? [];
-                final activeTour = groups.isNotEmpty ? groups.first : null;
+                final activeTour = _pickActiveTour(groups);
 
                 return TabBarView(
                   controller: _tabController,
@@ -1216,6 +1220,18 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
         ),
       ),
     );
+  }
+
+  /// The tour the games are about: the one the user came from, else the most
+  /// recent tour they belong to.
+  TourGroup? _pickActiveTour(List<TourGroup> groups) {
+    if (groups.isEmpty) return null;
+    final preferred =
+        widget.initialTourId ?? TourGroupRepository.lastActiveTourId;
+    for (final group in groups) {
+      if (group.id == preferred) return group;
+    }
+    return groups.first;
   }
 
   void _showJoinByCodeDialog(BuildContext context, String tourId) {

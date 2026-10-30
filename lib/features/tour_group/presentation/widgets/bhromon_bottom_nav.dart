@@ -60,11 +60,12 @@ class BhromonBottomNav extends StatelessWidget {
   }) {
     if (currentIndex != null && index == currentIndex) return;
 
-    final effectiveTourId = (currentIndex == 0)
-        ? (TourGroupRepository.lastActiveTourId ?? tourId)
-        : (tourId != null && tourId.isNotEmpty)
-            ? tourId
-            : TourGroupRepository.lastActiveTourId;
+    // The tour in the route wins. The shared last-active id can be set by a
+    // screen that is still underneath, such as the hub, so it is only the
+    // fallback for screens that have no tour of their own.
+    final effectiveTourId = (tourId != null && tourId.isNotEmpty)
+        ? tourId
+        : TourGroupRepository.lastActiveTourId;
 
     switch (index) {
       case 0:
@@ -131,7 +132,12 @@ class BhromonBottomNav extends StatelessWidget {
         }
         break;
       case 3:
-        context.push('/game-zone');
+        final gameTourId = (tourId != null && tourId.isNotEmpty)
+            ? tourId
+            : TourGroupRepository.lastActiveTourId;
+        context.push(gameTourId != null && gameTourId.isNotEmpty
+            ? '/game-zone?tourId=$gameTourId'
+            : '/game-zone');
         break;
       case 4:
         final uid = FirebaseAuth.instance.currentUser?.uid;
