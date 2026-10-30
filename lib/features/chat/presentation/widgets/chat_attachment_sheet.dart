@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:file_picker/file_picker.dart';
@@ -46,6 +47,8 @@ class ChatAttachmentSheet extends StatelessWidget {
           'zip',
           'csv'
         ],
+        // On web the picker returns no path, only bytes, so the bytes are asked for here.
+        withData: kIsWeb,
       );
       if (res != null && res.files.isNotEmpty) {
         onDocumentPicked(res.files.first);
@@ -86,7 +89,11 @@ class ChatAttachmentSheet extends StatelessWidget {
   Future<void> _pickAudio(BuildContext context) async {
     Navigator.pop(context);
     try {
-      final res = await FilePicker.pickFiles(type: FileType.audio);
+      final res = await FilePicker.pickFiles(
+        type: FileType.audio,
+        // On web the picker returns no path, only bytes, so the bytes are asked for here.
+        withData: kIsWeb,
+      );
       if (res != null && res.files.isNotEmpty) {
         onAudioPicked(res.files.first);
       }
