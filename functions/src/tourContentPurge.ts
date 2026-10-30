@@ -1,13 +1,6 @@
 import * as admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
 import * as crypto from 'crypto';
-import {
-  ChatPurge,
-  Peers,
-  productionChatDeps,
-  purgeDirectChats,
-} from './directChatPurge';
-import { postToMediaPurge } from './lib/mediaPurgeClient';
 import { purgeTourStorage } from './lib/tourStorage';
 import {
   AnonymizePlan,
@@ -39,8 +32,6 @@ import {
  *   people's likes, viewers, reactions, votes, mentions and tags.
  * - The group's shared record (the ledger, notices, route stops and the packing
  *   list) keeps its amounts and dates. The person is replaced by a stand-in.
- * - Their messages in one-to-one chats with the people still in the tour are
- *   removed, along with the notification copies and call records of them.
  * - When a tour is deleted, everything in it is deleted.
  *
  * Each purge is written as a job before it starts and removed once it has
@@ -73,7 +64,6 @@ export type StoragePurge = (
 export interface PurgeDeps {
   purgeMedia: MediaPurge;
   purgeStorage: StoragePurge;
-  purgeChats: ChatPurge;
   resolveUid: (email: string) => Promise<string | null>;
 }
 
@@ -273,33 +263,6 @@ async function holdsMembership(db: Db, tourId: string, email: string): Promise<b
 }
 
 /**
- * The other active members of the tour, by account id and by email. An id
- * that is not stored on a membership is looked up from the email.
- */
-export async function activePeers(
-  db: Db,
-  tourId: string,
-  email: string,
-  resolveUid: (email: string) => Promise<string | null>,
-): Promise<Peers> {
-  const rows = await db.collection('memberships').where('tourId', '==', tourId).get();
-  const uids = new Set<string>();
-  const emails = new Set<string>();
-  for (const row of rows.docs) {
-    const data = row.data();
-    const peer = normalizeEmail(data.email);
-    if (!peer || peer === email || data.status !== 'active') continue;
-    emails.add(peer);
-    const uid =
-      typeof data.uid === 'string' && data.uid !== ''
-        ? data.uid
-        : await resolveUid(peer);
-    if (uid) uids.add(uid);
-  }
-  return { uids: [...uids], emails: [...emails] };
-}
-
-/**
  * Clears the receipt of each expense whose file was removed. The receipt URL
  * ends with the tour and the file's path inside the tour.
  */
@@ -468,10 +431,6 @@ export async function purgeMemberContent(
   // Their files in the tour's Storage folder (uploads from before the media server).
   await deps.purgeStorage(tourId, email);
 
-  // Their messages in one-to-one chats with the members still in the tour.
-  const peers = await activePeers(db, tourId, email, deps.resolveUid);
-  await deps.purgeChats(db, { uid: memberUid, email }, peers);
-
   // Their photos and videos on the media server, and the receipts that pointed to them.
   const removed = await deps.purgeMedia(tourId, email);
   await clearReceipts(db, tourId, removed);
@@ -576,18 +535,30 @@ export async function retryPendingJobs(db: Db, deps: PurgeDeps, limit = 50): Pro
   }
 }
 
+/** The media server's purge route. The back end calls it with the purge key. */
+const MEDIA_PURGE_URL =
+  process.env.MEDIA_PURGE_URL ?? 'https://bhromon.fun/api/media/purge';
+
 /**
  * The media server call. It removes the person's files and returns the paths
- * it removed, relative to the tour's folder.
+ * it removed, relative to the tour's folder. A failed call throws, so the job
+ * stays pending and is retried.
  */
 export async function purgeMediaOnServer(
   tourId: string,
   uploaderEmail: string | null,
 ): Promise<string[]> {
-  const body = await postToMediaPurge<{ paths?: unknown }>('', {
-    tourId,
-    uploaderEmail,
+  const key = process.env.MEDIA_PURGE_KEY;
+  if (!key) throw new Error('MEDIA_PURGE_KEY is not configured');
+  const response = await fetch(MEDIA_PURGE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Purge-Key': key },
+    body: JSON.stringify({ tourId, uploaderEmail }),
   });
+  if (!response.ok) {
+    throw new Error(`Media purge answered HTTP ${response.status}`);
+  }
+  const body = (await response.json()) as { paths?: unknown };
   return Array.isArray(body.paths)
     ? body.paths.filter((path): path is string => typeof path === 'string')
     : [];
@@ -605,12 +576,10 @@ export async function resolveUidByEmail(email: string): Promise<string | null> {
 
 /** The production wiring of every outside call a purge makes. */
 export function productionDeps(): PurgeDeps {
-  const chats = productionChatDeps();
   return {
     purgeMedia: purgeMediaOnServer,
     purgeStorage: (tourId, uploaderEmail) =>
       purgeTourStorage(admin.storage().bucket(), tourId, uploaderEmail),
-    purgeChats: (db, member, peers) => purgeDirectChats(db, member, peers, chats),
     resolveUid: resolveUidByEmail,
   };
 }

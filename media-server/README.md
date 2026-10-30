@@ -91,16 +91,5 @@ leaves or is removed, and when a tour is deleted.
   to the tour's folder. The back end uses it to clear the receipts that pointed
   to a removed file.
 
-`POST /purge/chat` removes a person's messages in the one-to-one chats they share
-with the given peers (the other members of the tour). Body:
-`{"uid": "...", "email": "...", "peerUids": [...], "peerEmails": [...],
-"mediaUrls": [...]}`. Their messages leave with their photos, videos and voice
-notes on this server. The chats keep the peers' own messages, and the conversation
-previews, read receipts, reactions and unread counts are brought up to date. A
-quote of their message in someone else's reply loses its text and name. The
-response is `{"messages": n, "files": n}`. A media reference is only ever removed
-when it names a file inside the media folder; anything else is ignored.
-
 Set `PURGE_KEY` on the server, and the same value as the Functions secret
-`MEDIA_PURGE_KEY`. Run the purge tests with `pytest tests/test_purge.py
-tests/test_chat_purge.py`.
+`MEDIA_PURGE_KEY`. Run the purge tests with `pytest tests/test_purge.py`.

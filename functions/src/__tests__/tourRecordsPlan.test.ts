@@ -11,12 +11,6 @@ import {
   seatHeldBy,
   sosOf,
 } from '../lib/tourContentPlan';
-import {
-  chatIdFor,
-  isChatStoragePath,
-  isHttpUrl,
-  storagePathFromUrl,
-} from '../lib/directChatPlan';
 
 const LEAVER = 'leaver@x.com';
 const STAND_IN = formerMemberId('tour_1', LEAVER);
@@ -232,36 +226,5 @@ describe('safety alerts, voice pairs and profiles', () => {
     expect(profileOf(LEAVER, 'uid_1')({ uid: 'uid_1' }, 'p1')?.kind).toBe('delete');
     expect(profileOf(LEAVER, null)({ email: LEAVER }, 'p2')?.kind).toBe('delete');
     expect(profileOf(LEAVER, null)({ uid: 'other' }, 'other')).toBeNull();
-  });
-});
-
-describe('chat helpers', () => {
-  it('names a one-to-one chat by its two ids, sorted', () => {
-    expect(chatIdFor('uid_b', 'uid_a')).toBe('uid_a_uid_b');
-    expect(chatIdFor('uid_a', 'uid_b')).toBe('uid_a_uid_b');
-  });
-
-  it('reads the Storage path behind a Firebase download URL', () => {
-    expect(
-      storagePathFromUrl(
-        'https://firebasestorage.googleapis.com/v0/b/bhromon.appspot.com/o/chat_docs%2Fchat1%2Ffile%20one.pdf?alt=media&token=abc',
-      ),
-    ).toBe('chat_docs/chat1/file one.pdf');
-    expect(storagePathFromUrl('https://bhromon.fun/media/t1/posts/a.jpg')).toBeNull();
-    expect(storagePathFromUrl('https://firebasestorage.googleapis.com/v0/b/x/o/%E0%A4%A')).toBeNull();
-    expect(storagePathFromUrl(undefined)).toBeNull();
-  });
-
-  it('only treats chat folders as chat files', () => {
-    expect(isChatStoragePath('chat_docs/chat1/a.pdf')).toBe(true);
-    expect(isChatStoragePath('chat_media_thumbs/chat1/t.webp')).toBe(true);
-    expect(isChatStoragePath('tours/t1/posts/a.jpg')).toBe(false);
-    expect(isChatStoragePath('chat_docs/../tours/t1/a.jpg')).toBe(false);
-  });
-
-  it('recognises an http URL and nothing else', () => {
-    expect(isHttpUrl('https://bhromon.fun/media/t1/posts/a.jpg')).toBe(true);
-    expect(isHttpUrl('gs://bucket/a.jpg')).toBe(false);
-    expect(isHttpUrl(5)).toBe(false);
   });
 });

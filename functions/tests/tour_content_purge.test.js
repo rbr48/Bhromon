@@ -227,7 +227,7 @@ async function seed() {
 // Fake outside services. The media fake records what it was asked, and
 // returns the paths it removed.
 function fakes(removedPaths = []) {
-  const calls = { media: [], storage: [], chats: [] };
+  const calls = { media: [], storage: [] };
   return {
     calls,
     deps: {
@@ -237,9 +237,6 @@ function fakes(removedPaths = []) {
       },
       purgeStorage: async (tourId, email) => {
         calls.storage.push([tourId, email]);
-      },
-      purgeChats: async (_db, member, peers) => {
-        calls.chats.push({ member, peers });
       },
       resolveUid: async (email) => (email === LEAVER ? LEAVER_UID : null),
     },
@@ -435,19 +432,6 @@ describe('tour content purge', () => {
     await purgeMemberContent(db, TOUR, LEAVER, deps);
 
     expect(await exists(`tours/${TOUR}/profiles/pr_leaver`)).toBe(false);
-  });
-
-  it('hands the other active members to the chat purge, by account id and by email', async () => {
-    await db.doc(`memberships/${TOUR}__${LEAVER}`).delete();
-    const { calls, deps } = fakes();
-    await purgeMemberContent(db, TOUR, LEAVER, deps);
-
-    expect(calls.chats).toEqual([
-      {
-        member: { uid: LEAVER_UID, email: LEAVER },
-        peers: { uids: ['uid_other'], emails: [OTHER] },
-      },
-    ]);
   });
 
   it('a purge whose media step fails stays pending until a retry finishes it', async () => {
