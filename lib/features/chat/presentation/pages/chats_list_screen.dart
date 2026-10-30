@@ -117,17 +117,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       return;
     }
 
-    if (otherUid == 'bhromon_ai_advisor') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Voice and Video calls with the AI Guide are coming soon!'),
-          backgroundColor: Color(0xFF1F2C34),
-        ),
-      );
-      return;
-    }
-
     final callId = const Uuid().v4();
     context.push(
       '/call/$callId',
@@ -1076,12 +1065,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 c.tours.any((t) =>
                                     t.name.toLowerCase().contains(sheetSearch)))
                             .toList();
-                        // The AI Guide is an assistant, not a person, so it stays listed.
-                        final showGuide = sheetSearch.isEmpty ||
-                            'bhromon ai guide'.contains(sheetSearch);
-                        final guideCount = showGuide ? 1 : 0;
 
-                        if (contacts.isEmpty && !showGuide) {
+                        if (contacts.isEmpty) {
                           return const Center(
                             child: Padding(
                               padding: EdgeInsets.all(24),
@@ -1099,44 +1084,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           padding: const EdgeInsets.all(8),
                           separatorBuilder: (context, index) =>
                               const Divider(color: Colors.white10, height: 1),
-                          itemCount: guideCount + contacts.length,
+                          itemCount: contacts.length,
                           itemBuilder: (context, idx) {
-                            if (idx < guideCount) {
-                              return ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 4),
-                                leading: const CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor: Color(0xFF005C4B),
-                                  child: Text('AI',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12)),
-                                ),
-                                title: const Text('Bhromon AI Guide',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13)),
-                                subtitle: const Text('✨ AI Assistant',
-                                    style: TextStyle(
-                                        color: Colors.white54, fontSize: 11)),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  final uids = [
-                                    currentUid,
-                                    'bhromon_ai_advisor'
-                                  ]..sort();
-                                  GoRouter.of(context)
-                                      .push('/chat/${uids.join('_')}', extra: {
-                                    'otherUid': 'bhromon_ai_advisor'
-                                  });
-                                },
-                              );
-                            }
-
-                            final contact = contacts[idx - guideCount];
+                            final contact = contacts[idx];
                             final name = contact.name;
                             final avatarUrl = contact.photoUrl ?? '';
                             final initials = name.length > 2
@@ -1451,15 +1401,6 @@ class ChatTile extends StatelessWidget {
     // Tab filters
     if (activeTabFilter == 'Unread' && unreadCount == 0) {
       return const SizedBox.shrink();
-    }
-
-    if (otherUserUid == 'bhromon_ai_advisor') {
-      return _buildTile(
-        context,
-        displayName: 'Bhromon AI Guide',
-        avatarUrl: null,
-        initials: 'AI',
-      );
     }
 
     if (cachedOtherProfile != null) {

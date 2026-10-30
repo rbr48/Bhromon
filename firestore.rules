@@ -74,17 +74,6 @@ service cloud.firestore {
         && activeMemberBound(data.sharedTourId, data.participants[0], data.memberEmails)
         && activeMemberBound(data.sharedTourId, data.participants[1], data.memberEmails);
     }
-    // The AI Guide is an assistant, not a person. A chat between one user and the
-    // Guide is that user's alone, so it needs no shared tour.
-    function aiGuideChat(data) {
-      return isAuth()
-        && data.participants.size() == 2
-        && request.auth.uid in data.participants
-        && 'bhromon_ai_advisor' in data.participants;
-    }
-    function chatAllowed(data) {
-      return sharesGroup(data) || aiGuideChat(data);
-    }
     // A chat notice may reach the other person of a chat that is open between members of one tour.
     function chatNoticeAllowed(recipientUid) {
       return request.resource.data.action == 'chat'
@@ -409,16 +398,16 @@ service cloud.firestore {
       // Chat metadata. Only participants read or update it. A chat opens, and its
       // people change, only between two active members of one tour they share.
       allow read:   if isParticipant();
-      allow create: if chatAllowed(request.resource.data);
+      allow create: if sharesGroup(request.resource.data);
       allow update: if isParticipant()
                     // Metadata (lastMessage, lastMessageTime, typing_*, etc.) changes freely.
                     && (
                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['sharedTourId', 'memberEmails'])
-                      || chatAllowed(request.resource.data)
+                      || sharesGroup(request.resource.data)
                     )
                     && (
                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['participants'])
-                      || chatAllowed(request.resource.data)
+                      || sharesGroup(request.resource.data)
                     );
       allow delete: if false;
 
@@ -450,7 +439,7 @@ service cloud.firestore {
         // members of one tour.
         function parentShared() {
           return exists(/databases/$(database)/documents/chats/$(chatId)) &&
-                 chatAllowed(get(/databases/$(database)/documents/chats/$(chatId)).data);
+                 sharesGroup(get(/databases/$(database)/documents/chats/$(chatId)).data);
         }
 
         allow read:   if isParentParticipant() && parentShared();

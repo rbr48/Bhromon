@@ -832,8 +832,6 @@ def authenticate_user(
 # the Firestore check. Until it is set, nobody may be contacted.
 shares_group: Callable[[str, str], bool] = lambda uid_a, uid_b: False
 
-AI_GUIDE_UID = "bhromon_ai_advisor"
-
 
 # ── Pydantic Request Models ───────────────────────────────────────────────────
 
@@ -897,7 +895,7 @@ async def register_device_token(
 async def _may_talk_to_other(uid: str, participants: List[str]) -> bool:
     """Whether the other person in a conversation is someone uid may talk to now."""
     others = [p for p in participants if p != uid]
-    if not others or others[0] == AI_GUIDE_UID:
+    if not others:
         return True
     return await run_in_threadpool(shares_group, uid, others[0])
 
@@ -937,8 +935,7 @@ async def send_message(
     uid: str = Depends(authenticate_user),
 ):
     """Sends a message, delivers via WebSocket if recipient is online, or via FCM push."""
-    # The AI Guide is an assistant, not a person, so it can always be messaged.
-    if req.recipientId != AI_GUIDE_UID and not await run_in_threadpool(shares_group, uid, req.recipientId):
+    if not await run_in_threadpool(shares_group, uid, req.recipientId):
         raise HTTPException(status_code=403, detail="You can only message people in a tour you share.")
     participants = sorted([uid, req.recipientId])
     await run_in_threadpool(

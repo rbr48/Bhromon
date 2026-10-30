@@ -97,23 +97,6 @@ describe('contact and directory rules', () => {
     });
   });
 
-  describe('the AI Guide', () => {
-    test('a user may open a chat with the Guide, which is not a person', async () => {
-      const guide = 'bhromon_ai_advisor';
-      await assertSucceeds(setDoc(doc(as(ALICE), 'chats', `${ALICE.uid}_${guide}`), {
-        participants: [ALICE.uid, guide],
-        lastMessage: 'hello',
-      }));
-    });
-
-    test('a chat with a stranger still needs a shared tour', async () => {
-      await assertFails(setDoc(doc(as(ALICE), 'chats', `${ALICE.uid}_${EVE.uid}`), {
-        participants: [ALICE.uid, EVE.uid],
-        lastMessage: 'hello',
-      }));
-    });
-  });
-
   describe('messages', () => {
     beforeEach(async () => {
       await setDoc(doc(as(ALICE), 'chats', CHAT), sharedChat(ALICE, BOB));

@@ -79,10 +79,6 @@ MAX_VIDEO_BYTES = 100 * 1024 * 1024  # 100 MB
 MAX_AUDIO_BYTES = 25 * 1024 * 1024  # 25 MB
 MAX_DOC_BYTES = 50 * 1024 * 1024  # 50 MB
 
-# All of a tour's files together may use this many bytes. 0 turns the limit off.
-# It is a soft limit: two uploads that start at the same moment can overshoot by one file.
-TOUR_QUOTA_BYTES = int(os.getenv("MEDIA_TOUR_QUOTA_BYTES", str(10 * 1024 * 1024 * 1024)))
-
 TOUR_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,64}")
 OBJECT_ID_PATTERN = re.compile(r"[0-9a-f]{32}")
 FILENAME_PATTERN = re.compile(
@@ -428,34 +424,17 @@ async def health():
     }
 
 
-def tour_bytes_used(tour_id: str) -> int:
-    """Bytes stored for a tour, counting uploads still in progress.
-
-    A hard link is one file under two names while an upload is being linked into
-    place, so each file is counted once by its inode.
-    """
-    seen: set = set()
-    total = 0
-    for dirpath, _dirnames, filenames in os.walk(MEDIA_ROOT / tour_id):
-        for name in filenames:
-            try:
-                info = os.stat(os.path.join(dirpath, name))
-            except FileNotFoundError:
-                continue  # Removed while the tour was being counted.
-            if (info.st_dev, info.st_ino) not in seen:
-                seen.add((info.st_dev, info.st_ino))
-                total += info.st_size
-    return total
-
-
-async def store_stream(file: UploadFile, dest: Path, max_allowed: int, too_big: object) -> int:
-    """Writes the upload to [dest] and returns its size. Stops at [max_allowed] with [too_big]."""
+async def store_stream(file: UploadFile, dest: Path, max_allowed: int) -> int:
+    """Writes the upload to [dest] and returns its size. Stops at [max_allowed]."""
     total = 0
     async with aiofiles.open(dest, "xb") as out_file:
         while chunk := await file.read(1024 * 1024):
             total += len(chunk)
             if total > max_allowed:
-                raise HTTPException(status_code=413, detail=too_big)
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"File exceeds maximum allowed size ({max_allowed // (1024 * 1024)} MB)",
+                )
             await out_file.write(chunk)
     return total
 
@@ -514,16 +493,6 @@ async def upload_media(
         max_allowed = MAX_DOC_BYTES
     else:
         max_allowed = MAX_IMAGE_BYTES
-    limit = max_allowed
-    too_big = f"File exceeds maximum allowed size ({max_allowed // (1024 * 1024)} MB)"
-
-    # The tour's files share one quota. The upload is cut off at whatever room is left.
-    if TOUR_QUOTA_BYTES:
-        room = TOUR_QUOTA_BYTES - await run_in_threadpool(tour_bytes_used, tourId)
-        if room < limit:
-            limit = max(room, 0)
-            too_big = {"error": "quota_exceeded", "limitBytes": TOUR_QUOTA_BYTES}
-
     target_dir = MEDIA_ROOT / tourId / folder
     target_dir.mkdir(parents=True, exist_ok=True)
     target = target_dir / filename
@@ -532,7 +501,7 @@ async def upload_media(
     part = target_dir / f".{filename}.{uuid.uuid4().hex}.part"
 
     try:
-        total_bytes = await store_stream(file, part, limit, too_big)
+        total_bytes = await store_stream(file, part, max_allowed)
         try:
             # A hard link fails when the target exists, which keeps uploads from
             # overwriting a file.

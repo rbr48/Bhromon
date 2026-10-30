@@ -40,9 +40,6 @@ Location services power our Universal Tour Engine, multi-stop route roadmaps, an
 * **Drift (SQLite) & Hive**: Your tour itineraries, checklists, bus seat selections, hotel room assignments, and offline drafts are stored locally on your device using encrypted Drift SQLite and Hive boxes.
 * **Local Caches**: Point-of-interest details, offline maps, and language preferences (`app_prefs`) are maintained locally so the app remains fully functional in remote hill tracts or riverine areas without cell coverage.
 
-### G. Bhromon AI Guide
-* **AI Replies**: Messages you send to the Bhromon AI Guide are processed by an AI service provider to produce replies. Do not send private details to the AI Guide that you would not share with a third party.
-
 ---
 
 ## 2. How We Use Your Information

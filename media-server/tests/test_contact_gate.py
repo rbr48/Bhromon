@@ -70,11 +70,6 @@ def test_a_call_to_someone_outside_the_tour_is_refused(client, signed_in):
     assert reply == {"type": "call_signal_error", "callId": "c9", "signalType": "offer", "reason": "not_in_group"}
 
 
-def test_the_ai_guide_can_always_be_messaged(client, signed_in, pushes):
-    # The Guide is an assistant, not a person, so no shared tour is needed.
-    response = client.post("/api/chat/message", json=message("bhromon_ai_advisor"), headers=bearer("tok-eve"))
-    assert response.status_code == 200
-
 
 def test_history_with_someone_outside_the_tour_is_closed(client, signed_in):
     chat_db.get_or_create_conversation(chat_id="uid-alice_uid-eve", participants=["uid-alice", "uid-eve"])

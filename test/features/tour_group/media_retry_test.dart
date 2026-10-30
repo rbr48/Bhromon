@@ -13,42 +13,7 @@ DioException _failure(DioExceptionType type, {int? status}) {
   );
 }
 
-DioException _refusal(int status, Object body) {
-  final options = RequestOptions(path: '/upload');
-  return DioException(
-    requestOptions: options,
-    type: DioExceptionType.badResponse,
-    response: Response<Object>(
-        requestOptions: options, statusCode: status, data: body),
-  );
-}
-
 void main() {
-  group('isTourStorageFull', () {
-    test('recognises the quota refusal from the media server', () {
-      final e = _refusal(413, {
-        'detail': {'error': 'quota_exceeded', 'limitBytes': 10737418240},
-      });
-      expect(isTourStorageFull(e), isTrue);
-    });
-
-    test('is not a size refusal or a different error', () {
-      expect(
-        isTourStorageFull(_refusal(
-            413, {'detail': 'File exceeds maximum allowed size (10 MB)'})),
-        isFalse,
-      );
-      expect(
-        isTourStorageFull(_refusal(409, {
-          'detail': {'error': 'quota_exceeded'}
-        })),
-        isFalse,
-      );
-      expect(isTourStorageFull(_failure(DioExceptionType.connectionError)),
-          isFalse);
-    });
-  });
-
   group('isRetryableUploadError', () {
     test('retries dropped connections and timeouts', () {
       for (final type in [

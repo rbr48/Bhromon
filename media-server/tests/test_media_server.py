@@ -139,43 +139,6 @@ def test_an_oversized_file_is_refused_and_removed(client, monkeypatch):
     assert not list((main.MEDIA_ROOT / "t1" / "posts").glob("*.part"))
 
 
-def test_a_tour_stops_taking_files_at_its_quota(client, monkeypatch):
-    monkeypatch.setattr(main, "TOUR_QUOTA_BYTES", 15)  # "jpeg-bytes" is 10 bytes
-    assert upload(client).status_code == 200
-    second = "fedcba9876543210fedcba9876543210"
-    response = upload(client, object_id=second)
-    assert response.status_code == 413
-    assert response.json()["detail"] == {"error": "quota_exceeded", "limitBytes": 15}
-    assert not (main.MEDIA_ROOT / "t1" / "posts" / f"{second}.jpg").exists()
-    assert not list((main.MEDIA_ROOT / "t1" / "posts").glob("*.part"))
-
-
-def test_the_quota_covers_every_folder_of_the_tour(client, monkeypatch):
-    monkeypatch.setattr(main, "TOUR_QUOTA_BYTES", 15)
-    assert upload(client, folder="posts").status_code == 200
-    assert upload(client, folder="stories", object_id="fedcba9876543210fedcba9876543210").status_code == 413
-
-
-def test_each_tour_has_its_own_quota(client, monkeypatch):
-    monkeypatch.setattr(main, "TOUR_QUOTA_BYTES", 15)
-    main.backend.memberships["t2__alice@x.com"] = "member"
-    assert upload(client, tour="t1").status_code == 200
-    assert upload(client, tour="t2").status_code == 200
-
-
-def test_a_zero_quota_turns_the_limit_off(client, monkeypatch):
-    monkeypatch.setattr(main, "TOUR_QUOTA_BYTES", 0)
-    assert upload(client).status_code == 200
-    assert upload(client, object_id="fedcba9876543210fedcba9876543210").status_code == 200
-
-
-def test_tour_usage_counts_each_stored_file_once(client):
-    assert main.tour_bytes_used("t1") == 0
-    assert upload(client).status_code == 200
-    assert upload(client, object_id="fedcba9876543210fedcba9876543210").status_code == 200
-    assert main.tour_bytes_used("t1") == 20
-
-
 def test_size_limits_match_the_app():
     # lib/features/tour_group/domain/services/media_rules.dart
     assert main.MAX_IMAGE_BYTES == 10 * 1024 * 1024

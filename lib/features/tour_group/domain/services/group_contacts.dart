@@ -82,14 +82,9 @@ List<GroupContact> groupContacts({
 /// Whether a chat or call document was opened inside one of the user's tours.
 /// Documents from before tours decided who can talk have no tour, and are left out.
 bool isInMyTours(Map<String, dynamic>? data, Set<String> myTourIds) {
-  final participants = data?['participants'];
-  if (participants is List && participants.contains(aiGuideUid)) return true;
   final tourId = data?['sharedTourId'];
   return tourId is String && myTourIds.contains(tourId);
 }
-
-/// The AI Guide's user id. A chat with the Guide is the user's own, not a tour's.
-const String aiGuideUid = 'bhromon_ai_advisor';
 
 class _Draft {
   final String uid;

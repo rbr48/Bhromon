@@ -119,15 +119,5 @@ void main() {
           isFalse);
       expect(isInMyTours(null, {'sajek'}), isFalse);
     });
-
-    test('the AI Guide chat is the user\'s own, so it counts', () {
-      expect(
-          isInMyTours({
-            'participants': ['a', 'bhromon_ai_advisor']
-          }, {
-            'sajek'
-          }),
-          isTrue);
-    });
   });
 }

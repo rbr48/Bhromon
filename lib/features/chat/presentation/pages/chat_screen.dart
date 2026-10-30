@@ -38,7 +38,6 @@ import '../../data/chat_local_cache.dart';
 import '../../data/vps_chat_service.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../domain/call_log_entry.dart';
-import '../../data/travel_ai_service.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/services/media_upload_service.dart';
@@ -489,17 +488,11 @@ class _ChatScreenState extends State<ChatScreen> {
   void _ensureChatDocument(String currentUid) {
     final otherUid = _resolveOtherUid(currentUid);
     if (otherUid == null || otherUid.isEmpty) return;
-    final Map<String, dynamic> tour;
-    if (otherUid == 'bhromon_ai_advisor') {
-      tour = const {};
-    } else if (_sharedTourId != null && _otherEmail != null) {
-      tour = {
-        'sharedTourId': _sharedTourId,
-        'memberEmails': {currentUid: _myEmail, otherUid: _otherEmail},
-      };
-    } else {
-      return;
-    }
+    if (_sharedTourId == null || _otherEmail == null) return;
+    final tour = {
+      'sharedTourId': _sharedTourId,
+      'memberEmails': {currentUid: _myEmail, otherUid: _otherEmail},
+    };
     FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({
       'participants': FieldValue.arrayUnion([currentUid, otherUid]),
       ...tour,
@@ -617,8 +610,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }) {
     if (recipientUid != null &&
         recipientUid != 'guest' &&
-        recipientUid != currentUid &&
-        recipientUid != 'bhromon_ai_advisor') {
+        recipientUid != currentUid) {
       FirebaseFirestore.instance
           .collection('users')
           .doc(recipientUid)
@@ -951,10 +943,6 @@ class _ChatScreenState extends State<ChatScreen> {
         currentName: currentName,
         body: text,
       );
-
-      if (resolvedOtherUid == 'bhromon_ai_advisor') {
-        _processAiResponse(currentUid, text);
-      }
     } catch (e) {
       logWarning('Firestore message write error (delivered via VPS): $e');
       // If Firestore failed due to quota or network, clear pending message since VPS delivered it
@@ -963,51 +951,6 @@ class _ChatScreenState extends State<ChatScreen> {
           _pendingTextMessages.removeWhere((p) => p.id == msgId);
         });
       }
-    }
-  }
-
-  void _processAiResponse(String currentUid, String userText) async {
-    _updateTypingStatus('bhromon_ai_advisor', true);
-
-    try {
-      final responseText = await TravelAiService().getTravelAdvice(userText);
-
-      final replyRef = FirebaseFirestore.instance
-          .collection('chats')
-          .doc(widget.chatId)
-          .collection('messages')
-          .doc();
-
-      await replyRef.set({
-        'senderId': 'bhromon_ai_advisor',
-        'type': 'text',
-        'text': responseText,
-        'seen': false,
-        'status': 'read',
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      await FirebaseFirestore.instance
-          .collection('chats')
-          .doc(widget.chatId)
-          .set({
-        'lastMessage': responseText,
-        'lastMessageType': 'text',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'lastMessageSenderId': 'bhromon_ai_advisor',
-        'unreadCounts': {
-          currentUid: FieldValue.increment(1),
-        },
-        'participantProfiles': {
-          'bhromon_ai_advisor': {
-            'displayName': 'Bhromon AI Guide',
-          },
-        },
-      }, SetOptions(merge: true));
-    } catch (e) {
-      logError('Error in TravelAiService: $e');
-    } finally {
-      _updateTypingStatus('bhromon_ai_advisor', false);
     }
   }
 
@@ -2106,17 +2049,6 @@ class _ChatScreenState extends State<ChatScreen> {
     String? localUserName,
     String? localAvatarUrl,
   }) {
-    if (otherUid == 'bhromon_ai_advisor') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Voice and Video calls with the AI Guide are coming soon! Chat with text anytime.'),
-          backgroundColor: Color(0xFF1F2C34),
-        ),
-      );
-      return;
-    }
-
     if (_sharedTourId == null || _otherEmail == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -2320,18 +2252,12 @@ class _ChatScreenState extends State<ChatScreen> {
       stream: profileStream,
       builder: (context, profileSnap) {
         final profileData = profileSnap.data?.data() as Map<String, dynamic>?;
-        final String otherName = resolvedOtherUid == 'bhromon_ai_advisor'
-            ? 'Bhromon AI Guide'
-            : (profileData?['displayName'] as String? ??
-                'Traveler ${resolvedOtherUid.substring(0, math.min(resolvedOtherUid.length, 6))}');
-        final String? avatarUrl = resolvedOtherUid == 'bhromon_ai_advisor'
-            ? null
-            : (profileData?['avatarUrl'] as String?);
-        final initials = resolvedOtherUid == 'bhromon_ai_advisor'
-            ? 'AI'
-            : (otherName.length > 2
-                ? otherName.substring(0, 2).toUpperCase()
-                : 'TR');
+        final String otherName = profileData?['displayName'] as String? ??
+            'Traveler ${resolvedOtherUid.substring(0, math.min(resolvedOtherUid.length, 6))}';
+        final String? avatarUrl = profileData?['avatarUrl'] as String?;
+        final initials = otherName.length > 2
+            ? otherName.substring(0, 2).toUpperCase()
+            : 'TR';
 
         final bool hasSubState = _showEmojiPicker ||
             _selectedMessageIds.isNotEmpty ||
