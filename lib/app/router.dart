@@ -40,6 +40,7 @@ import '../features/tour_group/presentation/pages/family_safety_hub_screen.dart'
 import '../features/tour_group/presentation/pages/journey_tracker_screen.dart';
 import '../features/tour_group/presentation/pages/notice_board_screen.dart';
 import '../features/tour_group/presentation/pages/tour_quiz_screen.dart';
+import '../features/tour_group/presentation/widgets/tour_membership_guard.dart';
 import '../features/tour_group/presentation/pages/tour_scrapbook_screen.dart';
 import '../features/tour_group/presentation/widgets/trip_shell.dart';
 import 'tour_page_key.dart';
@@ -369,7 +370,10 @@ class AppRouter {
           final gameId = state.pathParameters['gameId']!;
           return _customPageTransition(
             state,
-            OnlineGameTableScreen(tourId: tourId, gameId: gameId),
+            TourMembershipGuard(
+              tourId: tourId,
+              child: OnlineGameTableScreen(tourId: tourId, gameId: gameId),
+            ),
           );
         },
       ),

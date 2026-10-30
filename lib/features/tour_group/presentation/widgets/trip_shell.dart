@@ -7,6 +7,7 @@ import '../tour_routes.dart';
 import 'bhromon_bottom_nav.dart';
 import 'command_palette_dialog.dart';
 import 'desktop_tour_sidebar.dart';
+import 'tour_membership_guard.dart';
 
 /// The bar a family uses across all tour screens. Every tour screen sits under
 /// the unified 5 app navigation destinations (Tours, Moments, Channels, Games, Profile).
@@ -58,7 +59,11 @@ class TripShell extends StatelessWidget {
         if (didPop) return;
         context.go(tourHubPath(tourId));
       },
-      child: child,
+      child: TourMembershipGuard(
+        tourId: tourId,
+        repository: repository,
+        child: child,
+      ),
     );
 
     final shortcuts = <ShortcutActivator, VoidCallback>{

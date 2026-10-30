@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -18,6 +19,8 @@ import '../domain/models/vehicle_models.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
 import '../domain/services/seat_planner.dart';
+import 'channel_read_store.dart';
+import 'tour_hub_preference.dart';
 import 'tour_media_journal.dart';
 import 'tour_media_uploader.dart';
 import 'vps_notification_service.dart';
@@ -230,6 +233,39 @@ class TourGroupRepository {
     }
   }
 
+  /// Removes what this device keeps about [tourId] once the user has left it or
+  /// was removed from it: the cached tour, the feed bookmarks and post draft,
+  /// the channel read and mute state, pending media journal entries, and the
+  /// hub's remembered pick. Other tours are not touched. Each step is
+  /// best-effort, so one failure does not stop the rest.
+  Future<void> clearLocalTourData(String tourId) async {
+    await _removeLocalGroup(tourId);
+    try {
+      final box = await _openBox();
+      await box.delete(_feedPrefsKey(tourId));
+      await box.delete(_postDraftKey(tourId));
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Could not clear tour prefs: $e');
+    }
+    await ChannelReadStore().clearTour(tourId);
+    await TourMediaJournal.instance.dropTour(tourId);
+    await TourHubPreference().forget(tourId);
+    try {
+      // Photos and videos the tour loaded sit in the image cache, which cannot
+      // tell one tour's files from another's, so the whole cache is emptied.
+      await emptyImageCache();
+    } catch (e) {
+      debugPrint('[TourGroupRepository] Could not empty the image cache: $e');
+    }
+  }
+
+  /// Empties the image cache on mobile. Web keeps tour images out of it, and
+  /// tests override this so they need no platform plugins.
+  Future<void> emptyImageCache() async {
+    if (kIsWeb) return;
+    await DefaultCacheManager().emptyCache();
+  }
+
   Future<List<TourGroup>> getLocalGroups() async {
     try {
       final box = await _openBox();
@@ -414,7 +450,11 @@ class TourGroupRepository {
               }
             } else {
               tours.remove(tourId);
-              _removeLocalGroup(tourId);
+              // Only the server can say the tour is gone. A cache miss while
+              // offline is not that, so the local copy stays.
+              if (!doc.metadata.isFromCache) {
+                unawaited(clearLocalTourData(tourId));
+              }
             }
             emit();
           } catch (e, st) {
@@ -427,7 +467,7 @@ class TourGroupRepository {
           debugPrint('[TourGroupRepository] tour $tourId unavailable: $e');
           stopTour(tourId);
           listedIds.remove(tourId);
-          _removeLocalGroup(tourId);
+          unawaited(clearLocalTourData(tourId));
           emit();
         },
       );
@@ -510,7 +550,11 @@ class TourGroupRepository {
           final ids = rolesByTour.keys.toSet();
           for (final id in listedIds.difference(ids)) {
             stopTour(id);
-            _removeLocalGroup(id);
+            // A cache-only answer may be incomplete, so only the server's
+            // answer clears the device.
+            if (!snapshot.metadata.isFromCache) {
+              unawaited(clearLocalTourData(id));
+            }
           }
           for (final id in ids.difference(listedIds)) {
             startTour(id, email);
@@ -565,6 +609,19 @@ class TourGroupRepository {
   }
 
   /// One-off read of a tour, falling back to the cache when offline.
+  /// Whether the signed-in user is an active member of [tourId], as the server
+  /// last answered. Answers from the local cache are skipped, so a device that
+  /// is offline never treats a tour as gone. Emits nothing until the server
+  /// answers, and errors (not signed in, no Firebase) reach the listener.
+  Stream<bool> watchIsMember(String tourId) async* {
+    final membership = _memberships.doc(_membershipId(tourId, _requireEmail()));
+    await for (final row in membership.snapshots()) {
+      if (row.metadata.isFromCache) continue;
+      final status = (row.data()?['status'] as String?)?.toLowerCase();
+      yield row.exists && (status == null || status == 'active');
+    }
+  }
+
   Future<TourGroup?> getGroup(String tourId) async {
     try {
       final doc = await _tour(tourId).get();
@@ -1110,7 +1167,7 @@ class TourGroupRepository {
           'মালিক হিসেবে আগে মালিকানা অন্য সদস্যকে হস্তান্তর করুন।');
     }
     await _memberships.doc(_membershipId(tourId, email)).delete();
-    await _removeLocalGroup(tourId);
+    await clearLocalTourData(tourId);
   }
 
   /// Owner deletes the tour. Other members' rows and the invite go first, the
@@ -1133,7 +1190,7 @@ class TourGroupRepository {
     await cleanup.commit();
     await _tour(tourId).delete();
     await _memberships.doc(_membershipId(tourId, actor)).delete();
-    await _removeLocalGroup(tourId);
+    await clearLocalTourData(tourId);
   }
 
   // ---------------------------------------------------------------------------

@@ -278,6 +278,24 @@ class TourMediaJournal {
     });
   }
 
+  /// Forgets every entry of [tourId]. Used once the user has left the tour: the
+  /// server refuses deletes from a non-member, so nothing could be swept.
+  Future<void> dropTour(String tourId) {
+    return _serial(() async {
+      final entries = await _load();
+      final urls = [
+        for (final entry in entries.values)
+          if (entry.tourId == tourId) entry.url,
+      ];
+      if (urls.isEmpty) return;
+      for (final url in urls) {
+        entries.remove(url);
+        _inFlight.remove(url);
+      }
+      await _save();
+    });
+  }
+
   int get pendingCount => _entries?.length ?? 0;
 
   /// Removes what the journal says should go, and leaves in place what is still

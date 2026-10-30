@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/data/tour_hub_preference.dart';
@@ -7,14 +9,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeTourGroupRepository extends TourGroupRepository {
-  _FakeTourGroupRepository({required this.groups});
+  _FakeTourGroupRepository({required this.groups, this.groupsStream});
   final List<TourGroup> groups;
+  final Stream<List<TourGroup>>? groupsStream;
 
   @override
   String get currentEmail => 'lead@bhromon.fun';
 
   @override
-  Stream<List<TourGroup>> watchMyGroups() => Stream.value(groups);
+  Stream<List<TourGroup>> watchMyGroups() =>
+      groupsStream ?? Stream.value(groups);
 
   @override
   Stream<List<TourMember>> watchMembers(String tourId) =>
@@ -58,6 +62,7 @@ TourGroup _tour(String id, String name) => TourGroup(
 Future<void> _pumpHub(
   WidgetTester tester, {
   required List<TourGroup> groups,
+  Stream<List<TourGroup>>? groupsStream,
   required TourHubPreference preference,
   String? initialTourId,
 }) async {
@@ -76,7 +81,10 @@ Future<void> _pumpHub(
         DefaultWidgetsLocalizations.delegate,
       ],
       home: TourGroupHubScreen(
-        repository: _FakeTourGroupRepository(groups: groups),
+        repository: _FakeTourGroupRepository(
+          groups: groups,
+          groupsStream: groupsStream,
+        ),
         preference: preference,
         initialTourId: initialTourId,
       ),
@@ -138,5 +146,27 @@ void main() {
     );
 
     expect(preference.saved, sajek.id);
+  });
+
+  testWidgets('a tour the user is removed from leaves the hub at once',
+      (tester) async {
+    final membership = StreamController<List<TourGroup>>();
+    addTearDown(membership.close);
+    // Buffered until the hub listens, so the first frame already has the tour.
+    membership.add([dhaka]);
+    await _pumpHub(
+      tester,
+      groups: const [],
+      groupsStream: membership.stream,
+      preference: _MemoryPreference(),
+      initialTourId: dhaka.id,
+    );
+    expect(find.text(dhaka.name), findsWidgets);
+
+    membership.add(const []);
+    await tester.pumpAndSettle();
+
+    expect(find.text(dhaka.name), findsNothing);
+    expect(find.text('No active tour groups'), findsOneWidget);
   });
 }
