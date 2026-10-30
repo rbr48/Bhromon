@@ -8,6 +8,7 @@ import 'package:flutter_callkit_incoming/entities/entities.dart';
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../../../app/router.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/image_sizing.dart';
@@ -94,6 +95,27 @@ class CallNotificationService {
   /// An Accept that arrived before the app's navigator was ready (a cold start).
   Timer? _pendingAcceptTimer;
 
+  AudioPlayer? _inAppRingtonePlayer;
+
+  void _startInAppRingtone() {
+    try {
+      _inAppRingtonePlayer ??= AudioPlayer();
+      _inAppRingtonePlayer?.setReleaseMode(ReleaseMode.loop);
+      _inAppRingtonePlayer?.play(AssetSource('audio/ringtone_default.mp3'));
+    } catch (e, st) {
+      logWarning(
+          '[CallNotificationService] Failed to play in-app ringtone', e, st);
+    }
+  }
+
+  void _stopInAppRingtone() {
+    try {
+      _inAppRingtonePlayer?.stop();
+      _inAppRingtonePlayer?.dispose();
+      _inAppRingtonePlayer = null;
+    } catch (_) {}
+  }
+
   void init() {
     if (Firebase.apps.isEmpty) return;
     _authSub?.cancel();
@@ -107,6 +129,7 @@ class CallNotificationService {
 
     if (!kIsWeb) {
       _initCallkitEvents();
+      unawaited(ensureFullScreenIntentPermission());
       try {
         FlutterCallkitIncoming.onBackgroundMessage(callkitBackgroundCallback);
       } catch (e, st) {
@@ -174,7 +197,7 @@ class CallNotificationService {
         android: const AndroidParams(
           isCustomNotification: true,
           isShowLogo: false,
-          ringtonePath: 'system_ringtone_default',
+          ringtonePath: 'ringtone_default',
           backgroundColor: '#075E54',
           actionColor: '#00A884',
           textColor: '#FFFFFF',
@@ -182,7 +205,7 @@ class CallNotificationService {
           missedCallNotificationChannelName: 'Bhromon Missed Calls',
           isShowFullLockedScreen: true,
           isImportant: true,
-          isFullScreen: true,
+          isFullScreen: false,
         ),
         ios: const IOSParams(
           iconName: 'AppIcon',
@@ -444,6 +467,7 @@ class CallNotificationService {
     required bool isVideo,
   }) {
     _isCallDialogShowing = true;
+    _startInAppRingtone();
     _dialogTimeout?.cancel();
     _dialogTimeout = Timer(const Duration(seconds: kCallRingSeconds), () {
       if (_activeIncomingCallId == callId) _dismissIncomingUI();
@@ -674,6 +698,7 @@ class CallNotificationService {
   }
 
   void _closeInAppDialog() {
+    _stopInAppRingtone();
     _dialogTimeout?.cancel();
     _dialogTimeout = null;
     if (_isCallDialogShowing) {
@@ -699,6 +724,7 @@ class CallNotificationService {
   }
 
   void dispose() {
+    _stopInAppRingtone();
     _authSub?.cancel();
     _callsSub?.cancel();
     _emailCallsSub?.cancel();

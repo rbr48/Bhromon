@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/utils/image_sizing.dart';
@@ -55,8 +56,29 @@ class _CallScreenState extends State<CallScreen> {
   Duration _callDuration = Duration.zero;
   Timer? _durationTimer;
   Timer? _controlsHideTimer;
+  AudioPlayer? _ringbackPlayer;
+
+  void _startRingback() {
+    if (!widget.isCaller || _ringbackPlayer != null) return;
+    try {
+      _ringbackPlayer = AudioPlayer();
+      _ringbackPlayer?.setReleaseMode(ReleaseMode.loop);
+      _ringbackPlayer?.play(AssetSource('audio/ringback.mp3'));
+    } catch (e) {
+      logWarning('Failed to start ringback tone: $e');
+    }
+  }
+
+  void _stopRingback() {
+    try {
+      _ringbackPlayer?.stop();
+      _ringbackPlayer?.dispose();
+      _ringbackPlayer = null;
+    } catch (_) {}
+  }
 
   void _safeExit() {
+    _stopRingback();
     if (!mounted || _hasExited) return;
     _hasExited = true;
     if (context.canPop()) {
@@ -122,6 +144,7 @@ class _CallScreenState extends State<CallScreen> {
     };
 
     _signaling.onRemoteStream = (stream) {
+      _stopRingback();
       if (mounted) {
         setState(() {
           _remoteRenderer.srcObject = stream;
@@ -138,7 +161,11 @@ class _CallScreenState extends State<CallScreen> {
       setState(() {
         if (state == 'calling') {
           _callStatusText = widget.isCaller ? 'Ringing...' : 'Incoming call...';
+          if (widget.isCaller) {
+            _startRingback();
+          }
         } else if (state == 'answered') {
+          _stopRingback();
           _callStatusText = 'Connected';
           _applyAudioRouting();
           _startDurationTimer();
@@ -146,6 +173,7 @@ class _CallScreenState extends State<CallScreen> {
             state == 'missed' ||
             state == 'ended' ||
             state == 'failed') {
+          _stopRingback();
           _callStatusText = switch (state) {
             'declined' => 'Call declined',
             'missed' => 'No answer',
@@ -290,6 +318,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
+    _stopRingback();
     if (!kIsWeb) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
