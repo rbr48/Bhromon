@@ -23,6 +23,14 @@ class TranslationKeys {
       'chat_status_online': 'online',
       'chat_status_offline': 'offline',
       'chat_status_typing': 'typing...',
+      'chat_call_outgoing': 'Outgoing call',
+      'chat_call_incoming': 'Incoming call',
+      'chat_call_outgoing_video': 'Outgoing video call',
+      'chat_call_incoming_video': 'Incoming video call',
+      'chat_call_missed': 'Missed call',
+      'chat_call_no_answer': 'No answer',
+      'chat_call_declined': 'Declined',
+      'chat_call_duration': '{count} min {n} sec',
 
       // ── Diary Editor ───────────────────────────────────────────────────────
       'editor_title_new': 'Write New Diary',
@@ -171,6 +179,14 @@ class TranslationKeys {
       'chat_status_online': 'অনলাইন',
       'chat_status_offline': 'অফলাইন',
       'chat_status_typing': 'টাইপ করছে...',
+      'chat_call_outgoing': 'বহির্গামী কল',
+      'chat_call_incoming': 'আগত কল',
+      'chat_call_outgoing_video': 'বহির্গামী ভিডিও কল',
+      'chat_call_incoming_video': 'আগত ভিডিও কল',
+      'chat_call_missed': 'মিসড কল',
+      'chat_call_no_answer': 'উত্তর দেওয়া হয়নি',
+      'chat_call_declined': 'প্রত্যাখ্যান করা হয়েছে',
+      'chat_call_duration': '{count} মিনিট {n} সেকেন্ড',
 
       // ── Diary Editor ───────────────────────────────────────────────────────
       'editor_title_new': 'নতুন ডায়েরি লিখুন',

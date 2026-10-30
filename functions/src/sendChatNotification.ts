@@ -23,6 +23,8 @@ export const sendChatNotification = functions
     if (!messageData) return;
 
     const { senderId, text, type } = messageData;
+    // A call log records a call. It is not a message, so nobody is notified.
+    if (type === 'call') return;
     const chatId = context.params.chatId;
 
     // Build notification body based on message type

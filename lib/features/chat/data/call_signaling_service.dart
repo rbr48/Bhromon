@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../../core/utils/app_logger.dart';
 import 'call_ice_config.dart';
+import 'call_log_repository.dart';
 import 'call_media.dart';
 import 'vps_chat_service.dart';
 
@@ -73,6 +75,8 @@ class CallSignalingService {
   MediaStream? _remoteStream;
   String? _callId;
   String? _remoteUid;
+  String? _localUid;
+  bool _callIsVideo = false;
   bool _isCaller = false;
   bool _finished = false;
   bool _remoteDescriptionSet = false;
@@ -137,6 +141,8 @@ class CallSignalingService {
     String? callerAvatar,
   }) async {
     _begin(callId, remoteUid, isCaller: true);
+    _localUid = localUid;
+    _callIsVideo = videoEnabled;
     _attachVpsSignalingListener();
     try {
       await _getUserMedia(videoEnabled);
@@ -207,6 +213,7 @@ class CallSignalingService {
     bool videoEnabled = true,
   }) async {
     _begin(callId, null, isCaller: false);
+    _localUid = localUid;
     _attachVpsSignalingListener();
     try {
       final callData =
@@ -224,6 +231,7 @@ class CallSignalingService {
       }
       final callerId = callData['callerId'] as String? ?? '';
       _remoteUid = callerId.isEmpty ? null : callerId;
+      _callIsVideo = callData['isVideo'] == true;
 
       await _getUserMedia(videoEnabled);
       await _createPeerConnection();
@@ -287,14 +295,31 @@ class CallSignalingService {
         callId: callId,
       );
     }
+    var declined = false;
     try {
       await _callDoc(callId).update({
         'status': 'declined',
         'endedAt': FieldValue.serverTimestamp(),
       }).timeout(_serverTimeout);
+      declined = true;
     } catch (e) {
       logWarning(
           'CallSignalingService: declineCall Firestore update error: $e');
+    }
+    // The callee writes the log for a call it declined.
+    final calleeId = FirebaseAuth.instance.currentUser?.uid;
+    if (declined &&
+        targetId != null &&
+        targetId.isNotEmpty &&
+        calleeId != null) {
+      unawaited(_writeCallLog(
+        writerUid: calleeId,
+        callerId: targetId,
+        calleeId: calleeId,
+        callId: callId,
+        isVideo: false,
+        status: 'declined',
+      ));
     }
   }
 
@@ -381,20 +406,63 @@ class CallSignalingService {
       );
     }
     if (callId != null && documentStatus != null) {
+      var ended = false;
       try {
         await _callDoc(callId).update({
           'status': documentStatus,
           'endedAt': FieldValue.serverTimestamp(),
           if (durationSeconds != null) 'durationSeconds': durationSeconds,
         }).timeout(_serverTimeout);
+        ended = true;
       } catch (e) {
         // The other side has usually ended it already, which the rules refuse.
         logInfo('CallSignalingService: end update skipped: $e');
+      }
+      // Only the side whose update reached the call document logs it, so each
+      // call is written into its chat once.
+      final localUid = _localUid;
+      final remoteUid = _remoteUid;
+      if (ended && localUid != null && remoteUid != null) {
+        unawaited(_writeCallLog(
+          writerUid: localUid,
+          callerId: _isCaller ? localUid : remoteUid,
+          calleeId: _isCaller ? remoteUid : localUid,
+          callId: callId,
+          isVideo: _callIsVideo,
+          status: documentStatus,
+          durationSeconds: durationSeconds,
+        ));
       }
     }
 
     onCallStateChange?.call(state);
     onCallEnded?.call();
+  }
+
+  /// Writes a finished call into its chat. A failure is logged and never shown,
+  /// since the call has already ended.
+  Future<void> _writeCallLog({
+    required String writerUid,
+    required String callerId,
+    required String calleeId,
+    required String callId,
+    required bool isVideo,
+    required String status,
+    int? durationSeconds,
+  }) async {
+    try {
+      await CallLogRepository().record(
+        writerUid: writerUid,
+        callerId: callerId,
+        calleeId: calleeId,
+        callId: callId,
+        isVideo: isVideo,
+        status: status,
+        durationSeconds: durationSeconds,
+      );
+    } catch (e) {
+      logInfo('CallSignalingService: call log skipped: $e');
+    }
   }
 
   /// Ends the call when the other side has ended it, without telling them again.
