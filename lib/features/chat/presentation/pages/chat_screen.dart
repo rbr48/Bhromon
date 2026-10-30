@@ -481,6 +481,33 @@ class _ChatScreenState extends State<ChatScreen> {
     }).catchError((Object _) {});
   }
 
+  /// Creates the chat document, or upgrades an older one, before a message is
+  /// written. The rules refuse a message in a chat that does not exist yet, and a
+  /// chat between two people must name the tour they share. The write is queued
+  /// rather than awaited; Firestore applies one client's writes in order, so the
+  /// message follows the chat.
+  void _ensureChatDocument(String currentUid) {
+    final otherUid = _resolveOtherUid(currentUid);
+    if (otherUid == null || otherUid.isEmpty) return;
+    final Map<String, dynamic> tour;
+    if (otherUid == 'bhromon_ai_advisor') {
+      tour = const {};
+    } else if (_sharedTourId != null && _otherEmail != null) {
+      tour = {
+        'sharedTourId': _sharedTourId,
+        'memberEmails': {currentUid: _myEmail, otherUid: _otherEmail},
+      };
+    } else {
+      return;
+    }
+    FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({
+      'participants': FieldValue.arrayUnion([currentUid, otherUid]),
+      ...tour,
+    }, SetOptions(merge: true)).catchError((Object e) {
+      logWarning('Chat document write error: $e');
+    });
+  }
+
   String? _resolveOtherUid(String currentUid) {
     if (widget.otherUid != null && widget.otherUid!.isNotEmpty) {
       return widget.otherUid;
@@ -617,6 +644,7 @@ class _ChatScreenState extends State<ChatScreen> {
     String currentName,
   ) async {
     setState(() => pending.isFailed = false);
+    _ensureChatDocument(currentUid);
     final msgRef = FirebaseFirestore.instance
         .collection('chats')
         .doc(widget.chatId)
@@ -842,6 +870,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _replyingMessage = null);
 
     // Reference & unique doc ID
+    _ensureChatDocument(currentUid);
     final msgRef = FirebaseFirestore.instance
         .collection('chats')
         .doc(widget.chatId)
@@ -1070,6 +1099,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1193,6 +1223,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1304,6 +1335,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       final resolvedOtherUid = _resolveOtherUid(currentUid);
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1385,6 +1417,7 @@ class _ChatScreenState extends State<ChatScreen> {
   ) async {
     try {
       final resolvedOtherUid = _resolveOtherUid(currentUid);
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1472,6 +1505,7 @@ class _ChatScreenState extends State<ChatScreen> {
   ) async {
     try {
       final resolvedOtherUid = _resolveOtherUid(currentUid);
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(widget.chatId)
@@ -1966,6 +2000,7 @@ class _ChatScreenState extends State<ChatScreen> {
       String? mediaUrl, String currentUid) async {
     setState(() => _selectedMessageIds.clear());
     try {
+      _ensureChatDocument(currentUid);
       final msgRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(targetChatId)

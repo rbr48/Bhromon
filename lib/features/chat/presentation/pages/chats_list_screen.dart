@@ -498,8 +498,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       unreadCount: unreadCount,
                                       cachedOtherProfile: cachedProfile,
                                       activeTabFilter: _activeTab,
-                                      onTap: () => context.push('/chat/$chatId',
-                                          extra: {'otherUid': otherUserUid}),
+                                      onTap: () =>
+                                          context.push('/chat/$chatId', extra: {
+                                        'otherUid': otherUserUid,
+                                        'sharedTourId': data['sharedTourId'],
+                                        'otherEmail': (data['memberEmails']
+                                            as Map?)?[otherUserUid]
+                                      }),
                                       onLongPress: () => _showChatTileOptions(
                                           context, chatId, otherUserUid),
                                     );
@@ -618,8 +623,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           unreadCount: unreadCount,
           cachedOtherProfile: cachedProfile,
           activeTabFilter: _activeTab,
-          onTap: () =>
-              context.push('/chat/$chatId', extra: {'otherUid': otherUserUid}),
+          onTap: () => context.push('/chat/$chatId', extra: {
+            'otherUid': otherUserUid,
+            'sharedTourId': data['sharedTourId'],
+            'otherEmail': (data['memberEmails'] as Map?)?[otherUserUid]
+          }),
           onLongPress: () =>
               _showChatTileOptions(context, chatId, otherUserUid),
         );
@@ -934,10 +942,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   /// outside those tours is loaded, so nobody can be found by searching the app.
   static Future<List<GroupContact>> _loadGroupContacts() async {
     final repository = TourGroupRepository();
-    final groups = await repository.watchMyGroups().first;
+    final groups = await _firstLoaded(repository.watchMyGroups());
     final tours = <({String id, String name, List<TourMember> members})>[];
     for (final group in groups) {
-      final members = await repository.watchMembers(group.id).first;
+      final members = await _firstLoaded(repository.watchMembers(group.id));
       tours.add((id: group.id, name: group.name, members: members));
     }
     return groupContacts(
@@ -945,6 +953,30 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       myEmail: repository.currentEmail,
       tours: tours,
     );
+  }
+
+  /// The first non-empty list a stream emits, or an empty list after a few seconds.
+  /// The local cache can answer first with nothing, before the server does. The
+  /// subscription is cancelled either way, so no listener is left running.
+  static Future<List<T>> _firstLoaded<T>(Stream<List<T>> stream) {
+    final completer = Completer<List<T>>();
+    StreamSubscription<List<T>>? subscription;
+    final timer = Timer(const Duration(seconds: 4), () {
+      if (!completer.isCompleted) completer.complete(<T>[]);
+      subscription?.cancel();
+    });
+    subscription = stream.listen((items) {
+      if (items.isNotEmpty && !completer.isCompleted) {
+        completer.complete(items);
+        timer.cancel();
+        subscription?.cancel();
+      }
+    }, onError: (Object error) {
+      if (!completer.isCompleted) completer.completeError(error);
+      timer.cancel();
+      subscription?.cancel();
+    });
+    return completer.future;
   }
 
   void _showSelectTravelerSheet(BuildContext context, String currentUid) {
