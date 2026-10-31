@@ -180,6 +180,7 @@ static session while the user visits other screens, and asks before discarding a
   - **Call Log Writer**: A finished call is written to the chat once, by the side whose call-document update succeeds, with the connected seconds from `CallSignalingService.connectedSeconds`. Read the peer uid before `_releaseResources()`, which clears it.
   - **Continuous Audio Sink**: Audio calls and Voice Lounge must keep an invisible 1x1 `RTCVideoView` mounted in the widget tree so WebRTC audio flows reliably on Web DOM and mobile audio sinks.
   - **Mobile Audio Routing**: Call `Helper.setSpeakerphoneOn` upon `getUserMedia`, `onRemoteStream`, `onCallStateChange == 'answered'`, and speaker toggling to lock Android `MODE_IN_COMMUNICATION` routing properly.
+  - **Calls Tab Query Rules Compatibility**: Firestore rules evaluate list queries against callerId or calleeId equality filters, which an `arrayContains` filter on `participants` cannot prove. The Calls tab reads separate caller and callee queries and merges them client-side via `mergeLatestLists` (`call_history_stream.dart`), sorted newest first.
   - **Bidirectional Negotiation**: Explicitly pass `{ 'offerToReceiveAudio': 1, 'offerToReceiveVideo': isVideo ? 1 : 0 }` to `createOffer` and `createAnswer`.
 - **Discord-Style Group Voice Lounge (`VoiceRoomService`, `voice_room_screen.dart`, `group_channels_screen.dart`)**:
   - Drop-in / drop-out group voice channels backed by WebRTC multi-peer mesh with per-peer candidate queuing.
