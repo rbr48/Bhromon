@@ -6,7 +6,8 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/tour_activity_models.dart';
-export '../../domain/models/tour_activity_models.dart' show checklistDefaultItems;
+export '../../domain/models/tour_activity_models.dart'
+    show checklistDefaultItems;
 import '../../domain/models/tour_group.dart';
 
 class TourChecklistScreen extends StatefulWidget {

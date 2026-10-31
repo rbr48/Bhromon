@@ -31,10 +31,8 @@ class TourExportCollector {
     final isBeach = tourType == TourType.beach ||
         tourType == TourType.heritage ||
         tourType == TourType.custom;
-    final isHill = tourType == TourType.hill ||
-        tourType == TourType.custom;
-    final isNature = tourType == TourType.nature ||
-        tourType == TourType.custom;
+    final isHill = tourType == TourType.hill || tourType == TourType.custom;
+    final isNature = tourType == TourType.nature || tourType == TourType.custom;
 
     final checklist = <ChecklistItem>[];
     for (var i = 0; i < checklistDefaultItems.length; i++) {
