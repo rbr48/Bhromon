@@ -24,7 +24,9 @@ void main() {
       expect(instafeedDayNumbers(days, 'day6'), [1, 2, 3, 6]);
     });
 
-    test('a tour with no days (a family circle) offers only the post\'s own day', () {
+    test(
+        'a tour with no days (a family circle) offers only the post\'s own day',
+        () {
       expect(instafeedDayNumbers(const [], 'day1'), [1]);
     });
 

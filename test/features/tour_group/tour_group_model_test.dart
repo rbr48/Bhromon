@@ -65,7 +65,9 @@ void main() {
       expect(group.daysList.first.label, contains('ডে ১'));
     });
 
-    test('a family circle has no trip days, so the feed and the calendar have none', () {
+    test(
+        'a family circle has no trip days, so the feed and the calendar have none',
+        () {
       final today = DateTime(2026, 10, 31);
       final family = TourGroup(
         id: 'family_1',
@@ -74,7 +76,8 @@ void main() {
         tourType: TourType.custom,
         startDate: today,
         endDate: today,
-        modules: const TourModules(seatsRooms: false, tideSafety: false, games: true, chat: true),
+        modules: const TourModules(
+            seatsRooms: false, tideSafety: false, games: true, chat: true),
         ownerEmail: 'owner@example.com',
         ownerUid: 'owner-uid',
         kind: GroupKind.family,
@@ -94,7 +97,8 @@ void main() {
         tourType: TourType.hill,
         startDate: DateTime(2026, 12, 1),
         endDate: DateTime(2026, 12, 3),
-        modules: const TourModules(seatsRooms: true, tideSafety: false, games: true, chat: true),
+        modules: const TourModules(
+            seatsRooms: true, tideSafety: false, games: true, chat: true),
         ownerEmail: 'owner@example.com',
         ownerUid: 'owner-uid',
         inviteCode: 'ABCDEFGH',
