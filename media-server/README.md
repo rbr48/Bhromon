@@ -26,7 +26,7 @@ Both services mount `/etc/bhromon/firebase-admin.json:ro` to authenticate reques
 
 ### B. Media & Notifications Microservice (`/api/media/`)
 - `GET /api/media/health` — Status of media and background notification engine.
-- `POST /api/media/upload` — Multipart upload with `Authorization: Bearer <token>`.
+- `POST /api/media/upload` — Multipart upload with `Authorization: Bearer <token>`. The token's email must be verified; an unverified address is refused, as the Firestore and Storage rules refuse it.
 - `DELETE /api/media/media/{tourId}/{folder}/{filename}` — File deletion by author or tour admin.
 - `POST /api/media/purge/account` — Closing an account: the back end removes that person's files and chat-service data (key-protected, see below).
 - `GET /media/{tourId}/{folder}/{filename}` — Direct Nginx byte-range streaming (`206 Partial Content`).

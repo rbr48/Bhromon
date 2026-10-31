@@ -148,6 +148,12 @@ export const verifyOtp = functions
 
     // Generate Custom Token
     try {
+      // The code went to this address and was accepted, so the address is verified now.
+      // The Firestore and Storage rules trust only verified addresses, and an account made
+      // before those rules may not be verified yet.
+      if (!userRecord.emailVerified) {
+        userRecord = await admin.auth().updateUser(userRecord.uid, { emailVerified: true });
+      }
       const auth = tokenSignerApp ? tokenSignerApp.auth() : admin.auth();
       const customToken = await auth.createCustomToken(userRecord.uid, {
         email,

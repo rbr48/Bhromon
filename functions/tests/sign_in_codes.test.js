@@ -1,7 +1,7 @@
 // Sign-in codes: no code without a mail provider, a minute between codes, a few codes an
-// hour per email, a lockout after wrong guesses, and expired codes refused. Needs the
-// Firestore emulator on port 8080:
-//   npx firebase-tools@13.35.1 emulators:exec --only firestore --project bhromon-rules-test-project "cd functions && npx jest --runInBand tests/sign_in_codes"
+// hour per email, a lockout after wrong guesses, expired codes refused, and an accepted
+// code verifies the account. Needs the Firestore and Auth emulators:
+//   npx firebase-tools@13.35.1 emulators:exec --only firestore,auth --project bhromon-rules-test-project "cd functions && npx jest --runInBand tests/sign_in_codes"
 const admin = require('firebase-admin');
 
 const PROJECT_ID = 'bhromon-rules-test-project';
@@ -108,5 +108,17 @@ describe('sign-in codes', () => {
     });
     process.env.FUNCTIONS_EMULATOR = 'true';
     expect((await rejection(send())).code).toBe('resource-exhausted');
+  });
+
+  test('an accepted code verifies an account whose address was never verified', async () => {
+    const unverified = 'unverified@x.com';
+    process.env.FUNCTIONS_EMULATOR = 'true';
+    const user = await admin.auth().createUser({ email: unverified, emailVerified: false });
+    try {
+      await expect(verify('777777', unverified)).resolves.toMatchObject({ success: true });
+      expect((await admin.auth().getUser(user.uid)).emailVerified).toBe(true);
+    } finally {
+      await admin.auth().deleteUser(user.uid);
+    }
   });
 });

@@ -178,8 +178,24 @@ class FirebaseBackend:
             self._db = firestore.client()
         return self._db
 
+    def _account_email(self, uid: str) -> str:
+        """The email Firebase Auth holds for a uid, once it is verified. "" otherwise."""
+        self._ensure_app()
+        from firebase_admin import auth
+
+        try:
+            user = auth.get_user(uid)
+        except Exception as e:  # No such account, or the lookup failed.
+            logger.info("No account for uid %s: %s", uid, e)
+            return ""
+        return (user.email or "").strip().lower() if user.email_verified else ""
+
     def identity_for_token(self, token: str) -> Tuple[str, str]:
-        """The (uid, email) a Firebase ID token belongs to. Raises when either is missing."""
+        """The (uid, email) a Firebase ID token belongs to. Raises when either is missing.
+
+        Only a verified address counts. Anyone can register an address they do not own,
+        so an unverified one must not open a person's tours.
+        """
         self._ensure_app()
         from firebase_admin import auth
 
@@ -188,14 +204,11 @@ class FirebaseBackend:
         if not uid:
             raise ValueError("The token has no uid.")
         email = (decoded.get("email") or "").strip().lower()
+        if not email or decoded.get("email_verified") is not True:
+            # A token can be older than the account, so the account decides.
+            email = self._account_email(uid)
         if not email:
-            try:
-                user = auth.get_user(uid)
-                email = (user.email or "").strip().lower()
-            except Exception as e:
-                logger.warning("Could not fetch user by uid %s: %s", uid, e)
-        if not email:
-            raise ValueError("The token has no email address.")
+            raise ValueError("The token has no verified email address.")
         return uid, email
 
     def email_for_token(self, token: str) -> str:
@@ -211,22 +224,17 @@ class FirebaseBackend:
         return str((profile.to_dict() or {}).get("tier") or "") or None
 
     def email_for_uid(self, uid: str) -> str:
-        """The email Firebase Auth holds for a uid, or "" when there is no such account."""
+        """The verified email Firebase Auth holds for a uid, or "" when there is none."""
         if not uid:
             return ""
         now = time.monotonic()
         cached = self._email_cache.get(uid)
         if cached and now - cached[0] < EMAIL_CACHE_SECONDS:
             return cached[1]
-        self._ensure_app()
-        from firebase_admin import auth
-
-        try:
-            email = (auth.get_user(uid).email or "").strip().lower()
-        except Exception as e:  # No such account, or the lookup failed.
-            logger.info("No email for uid %s: %s", uid, e)
-            return ""
-        self._email_cache[uid] = (now, email)
+        email = self._account_email(uid)
+        if email:
+            # Only a verified address is remembered, so one verified just now counts at once.
+            self._email_cache[uid] = (now, email)
         return email
 
     def active_tours_for_email(self, email: str) -> frozenset:
