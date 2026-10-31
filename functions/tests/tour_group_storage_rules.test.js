@@ -10,7 +10,7 @@ const MB = 1024 * 1024;
 
 describe('Tour Group Storage rules', () => {
   let env;
-  const who = (email) => env.authenticatedContext(email, { email }).storage();
+  const who = (email) => env.authenticatedContext(email, { email, email_verified: true }).storage();
 
   beforeAll(async () => {
     env = await initializeTestEnvironment({

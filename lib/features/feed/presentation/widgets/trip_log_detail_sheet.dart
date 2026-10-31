@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/entities/trip_log.dart';
 import '../../../../core/entities/trip_block.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/widgets/voice_note_player.dart';
 import 'in_app_youtube_player.dart';
 import 'full_screen_image_viewer.dart';
@@ -33,7 +34,9 @@ class TripLogDetailSheet extends StatefulWidget {
           .collection('trip_logs')
           .doc(log.tripId)
           .update({'views': FieldValue.increment(1)});
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
 
     // Transparent page route (not a modal sheet): Hero images fly from the
     // feed card into the sheet during this push. Drag below the min extent or
@@ -152,7 +155,9 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
         _profileCache[authorId] = profile;
         return profile;
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     final fallback = {'displayName': 'Explorer', 'avatarUrl': ''};
     _profileCache[authorId] = fallback;
     return fallback;

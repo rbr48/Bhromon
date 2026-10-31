@@ -35,5 +35,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      - name: Check for broken code and unused names
+        run: |
+          pip install pyflakes
+          python -m pyflakes .
+
       - name: Run pytest
         run: pytest tests/

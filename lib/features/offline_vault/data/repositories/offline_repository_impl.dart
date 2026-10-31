@@ -11,6 +11,7 @@ import '../../../../core/entities/trip_log.dart';
 import '../../../../core/entities/pro_tip.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../../../../core/services/offline_map_service.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/database/app_database.dart';
 import '../datasources/sync_manager.dart';
@@ -346,10 +347,14 @@ class OfflineRepositoryImpl implements IOfflineRepository {
           imageUrls.map((url) async {
             try {
               await cacheManager.downloadFile(url);
-            } catch (_) {}
+            } catch (error, stackTrace) {
+              logSkipped(error, stackTrace);
+            }
           }),
         );
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 }

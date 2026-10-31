@@ -2,7 +2,6 @@
 """Generate 200 unique questions for quiz_data_food_safety.py."""
 
 import os
-import sys
 
 QUESTIONS = []
 seen = set()

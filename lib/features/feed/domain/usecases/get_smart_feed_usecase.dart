@@ -6,6 +6,7 @@ import '../../../../core/usecase/usecase.dart';
 import '../../../../core/entities/trip_log.dart';
 import '../../../../core/entities/trip_block.dart';
 import '../../../../core/entities/explorer_profile.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/value_objects/freshness_age.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../repositories/i_feed_repository.dart';
@@ -105,7 +106,9 @@ class GetSmartFeedUseCase implements UseCase<SmartFeedPage, SmartFeedRequest> {
       final prefsBox = await _encryptionService
           .openEncryptedBox<dynamic>('user_preferences');
       preferences = Map<String, dynamic>.from(prefsBox.toMap());
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     return _RankSignals(searchHistory, preferences, viewerContext.followedUids);
   }
 

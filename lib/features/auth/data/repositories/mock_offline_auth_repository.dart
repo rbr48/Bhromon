@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/entities/explorer_profile.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/value_objects/explorer_score.dart';
 import '../../../../core/value_objects/trust_tier.dart';
 import '../../domain/repositories/i_auth_repository.dart';
@@ -20,7 +21,9 @@ class MockOfflineAuthRepository implements IAuthRepository {
         final map = jsonDecode(jsonStr) as Map<String, dynamic>;
         _cachedProfile = ExplorerProfile.fromJson(map);
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   Future<void> _updateLocalCache(ExplorerProfile profile) async {
@@ -28,14 +31,18 @@ class MockOfflineAuthRepository implements IAuthRepository {
     try {
       final jsonStr = jsonEncode(profile.toJson());
       await _database.saveProfile('current_user', jsonStr);
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   Future<void> _clearLocalCache() async {
     _cachedProfile = null;
     try {
       await _database.deleteProfile('current_user');
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   @override

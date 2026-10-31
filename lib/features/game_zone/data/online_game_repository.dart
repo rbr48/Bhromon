@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../../core/utils/app_logger.dart';
 import '../domain/models/card29_table.dart';
 import '../domain/models/online_game_session.dart';
 import '../domain/models/teen_patti_table.dart';
@@ -67,7 +68,9 @@ class OnlineGameRepository {
       if (!Hive.isBoxOpen('auth_box')) return null;
       final raw = Hive.box<dynamic>('auth_box').get('profile');
       if (raw is Map) return Map<String, dynamic>.from(raw);
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     return null;
   }
 

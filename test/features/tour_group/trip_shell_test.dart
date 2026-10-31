@@ -12,9 +12,9 @@ import 'package:bhromon/features/tour_group/presentation/widgets/trip_shell.dart
 
 void main() {
   test('each tour screen sits under the tab it belongs to', () {
-    expect(tripTabFor('/group/t1/feed'), 1);
-    expect(tripTabFor('/group/t1/channels'), 2);
-    expect(tripTabFor('/game-zone'), 3);
+    expect(tripTabFor('/group/t1/channels'), 1);
+    expect(tripTabFor('/group/t1/feed'), 2);
+    expect(tripTabFor('/chats'), 3);
     expect(tripTabFor('/profile/u1'), 4);
     for (final screen in [
       'journey',

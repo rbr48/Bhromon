@@ -1,4 +1,5 @@
 import * as functions from 'firebase-functions';
+import { noticePushBody, noticePushTitle } from './lib/noticePush';
 import {
   activeMemberEmails,
   pushTargetsForUids,
@@ -26,16 +27,8 @@ export const sendTourNoticeNotification = functions
       const members = await activeMemberEmails(tourId, authorEmail);
       if (members.length === 0) return;
 
-      const title =
-        typeof notice.title === 'string' && notice.title.trim() !== ''
-          ? `📢 ${notice.title.trim()}`
-          : '📢 New Trip Notice';
-      const body =
-        typeof notice.body === 'string' && notice.body.trim() !== ''
-          ? (notice.body.length > 120
-              ? `${notice.body.slice(0, 119)}…`
-              : notice.body.trim())
-          : 'An admin posted a new notice for your trip.';
+      const title = noticePushTitle(notice);
+      const body = noticePushBody(notice);
 
       const targets = await pushTargetsForUids(await uidsForEmails(members));
       await sendPush(

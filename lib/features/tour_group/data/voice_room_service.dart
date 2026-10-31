@@ -517,7 +517,9 @@ class VoiceRoomService {
   ) async {
     try {
       await col.add(data);
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   void _disconnectFromPeer(String remoteEmail) {
@@ -655,7 +657,9 @@ class VoiceRoomService {
     if (tourId != null && channelId != null && myEmail != null) {
       try {
         await _seats(tourId, channelId).doc(myEmail).delete();
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
 
     await _participantsSub?.cancel();

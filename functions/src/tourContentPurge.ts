@@ -5,6 +5,7 @@ import { leave29Table } from './card29/callables';
 import { leaveCarromTable } from './carrom/callables';
 import { leaveTeenPattiTable } from './teenPatti/callables';
 import { purgeTourStorage } from './lib/tourStorage';
+import { purgeCdnPaths } from './lib/cdnPurge';
 import {
   AnonymizePlan,
   Decide,
@@ -641,7 +642,16 @@ export async function resolveUidByEmail(email: string): Promise<string | null> {
 /** The production wiring of every outside call a purge makes. */
 export function productionDeps(): PurgeDeps {
   return {
-    purgeMedia: purgeMediaOnServer,
+    purgeMedia: async (tourId, uploaderEmail) => {
+      const removed = await purgeMediaOnServer(tourId, uploaderEmail);
+      // Cached copies of deleted media are cleared too, but a CDN failure must not stop the purge.
+      try {
+        await purgeCdnPaths(removed);
+      } catch (error) {
+        console.error('CDN purge after a media purge failed:', error);
+      }
+      return removed;
+    },
     purgeStorage: (tourId, uploaderEmail) =>
       purgeTourStorage(admin.storage().bucket(), tourId, uploaderEmail),
     resolveUid: resolveUidByEmail,

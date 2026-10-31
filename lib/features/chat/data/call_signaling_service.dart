@@ -139,7 +139,16 @@ class CallSignalingService {
     bool videoEnabled = true,
     String? callerName,
     String? callerAvatar,
+    required String? sharedTourId,
+    required String localEmail,
+    required String? remoteEmail,
   }) async {
+    // The rules accept a call only between two members of the tour they share.
+    if (sharedTourId == null || remoteEmail == null || remoteEmail.isEmpty) {
+      throw const CallSetupException(
+        'You can only call members of a tour you share.',
+      );
+    }
     _begin(callId, remoteUid, isCaller: true);
     _localUid = localUid;
     _callIsVideo = videoEnabled;
@@ -157,6 +166,8 @@ class CallSignalingService {
           'callerId': localUid,
           'calleeId': remoteUid,
           'participants': [localUid, remoteUid],
+          'sharedTourId': sharedTourId,
+          'memberEmails': {localUid: localEmail, remoteUid: remoteEmail},
           'isVideo': videoEnabled,
           if (callerName != null) 'callerName': callerName,
           if (callerAvatar != null) 'callerAvatar': callerAvatar,
@@ -799,7 +810,9 @@ class CallSignalingService {
             _updateNetworkQuality(CallNetworkQuality.good);
           }
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     });
   }
 

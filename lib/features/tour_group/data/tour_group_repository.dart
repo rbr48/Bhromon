@@ -88,7 +88,9 @@ class TourGroupRepository {
       if (uid != null && uid.isNotEmpty) {
         return '$uid@bhromon.app';
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     return '';
   }
 
@@ -104,7 +106,9 @@ class TourGroupRepository {
     try {
       final name = _auth.currentUser?.displayName;
       if (name != null && name.trim().isNotEmpty) return name.trim();
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     return 'Explorer';
   }
 
@@ -129,7 +133,9 @@ class TourGroupRepository {
       if (!Hive.isBoxOpen('auth_box')) return null;
       final raw = Hive.box<dynamic>('auth_box').get('profile');
       if (raw is Map) return Map<String, dynamic>.from(raw);
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     return null;
   }
 
@@ -533,6 +539,11 @@ class TourGroupRepository {
           for (final d in snapshot.docs) {
             final data = d.data();
             final id = data['tourId'] as String? ?? '';
+            // A row an admin added has no uid, and chats and calls need one. The member
+            // writes their own, which the rules allow and nothing else on the row.
+            if ((data['uid'] as String? ?? '').isEmpty && myUid.isNotEmpty) {
+              d.reference.update({'uid': myUid}).catchError((Object _) {});
+            }
             final rawStatus = (data['status'] as String?)?.toLowerCase();
             final isActive = rawStatus == null || rawStatus == 'active';
             if (isActive && id.isNotEmpty) {
@@ -662,6 +673,7 @@ class TourGroupRepository {
     String? meetingPointTitle,
     String? meetingPointNote,
     String? meetingPointMapUrl,
+    GroupKind kind = GroupKind.tour,
   }) async {
     final email = _requireEmail();
     final uid = currentUid;
@@ -687,6 +699,7 @@ class TourGroupRepository {
       meetingPointNote: meetingPointNote,
       meetingPointMapUrl: meetingPointMapUrl,
       createdAt: now,
+      kind: kind,
     );
 
     final tourData = group.toMap()
@@ -769,7 +782,9 @@ class TourGroupRepository {
         if (directDoc.exists) {
           tourId = code;
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
 
     if (tourId == null || tourId.isEmpty) {
@@ -2433,7 +2448,9 @@ class TourGroupRepository {
       await _sub(tourId, 'stories').doc(storyId).update({
         'viewers': FieldValue.arrayUnion([email]),
       });
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   // The keys are FieldPaths, not dotted strings: an email's dots would
@@ -2564,5 +2581,38 @@ class TourGroupRepository {
       'comments': comments,
       'stories': await collect('stories'),
     };
+  }
+
+  /// Every post in the tour, oldest first, read in pages of 200. The PDF export
+  /// reads the whole record this way; the feed only shows the newest page.
+  Future<List<TourPostItem>> fetchAllPostsForExport(String tourId) async {
+    _requireEmail();
+    const pageSize = 200;
+    final posts = <TourPostItem>[];
+    DocumentSnapshot<Map<String, dynamic>>? last;
+    while (true) {
+      var query = _sub(tourId, 'posts').orderBy('createdAt').limit(pageSize);
+      if (last != null) query = query.startAfterDocument(last);
+      final snap = await query.get();
+      posts.addAll(snap.docs.map((d) => TourPostItem.fromMap(d.id, d.data())));
+      if (snap.docs.length < pageSize) return posts;
+      last = snap.docs.last;
+    }
+  }
+
+  /// Every comment on a post, oldest first, for the PDF export.
+  Future<List<TourCommentItem>> fetchCommentsForExport(
+    String tourId,
+    String postId,
+  ) async {
+    _requireEmail();
+    final snap = await _sub(tourId, 'posts')
+        .doc(postId)
+        .collection('comments')
+        .orderBy('createdAt')
+        .get();
+    return snap.docs
+        .map((d) => TourCommentItem.fromMap(d.id, d.data()))
+        .toList();
   }
 }
