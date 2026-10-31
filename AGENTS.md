@@ -33,13 +33,16 @@ This document serves as the persistent system memory, architectural guidelines, 
    - Requesting an upload key reset in Google Play Console takes 48 hours to activate and only affects future `.aab` uploads. It does NOT resolve Google Sign-In for Play Store builds; copying the **App signing key SHA-1** into Firebase Console immediately resolves it without requiring a new APK build.
 5. **Windows Gradle Build Contention**:
    - Always keep `org.gradle.vfs.watch=false` in `android/gradle.properties` to avoid Windows directory locks (`AccessDeniedException` during `mergeReleaseNativeLibs` or `packageRelease`).
-   - In `android/app/build.gradle`, on Windows only, disable intermediate tasks: `artprofile`, `nativesymboltable`, `nativedebugmetadata`, `cleanmergereleaseassets`, `cleanmergereleasenativelibs`, `cleanmergereleasejnilibfolders`, and `cleanpackagerelease`. Keep `ndk { debugSymbolLevel 'SYMBOL_TABLE' }` on every platform: the release AAB fails to strip native libraries without it.
+   - In `android/app/build.gradle`, on Windows only, disable intermediate tasks: `artprofile`, `nativesymboltable`, `nativedebugmetadata`, `cleanmergereleaseassets`, `cleanmergereleasenativelibs`, `cleanmergereleasejnilibfolders`, `cleanmergereleaseresources`, and `cleanpackagerelease`. Keep `ndk { debugSymbolLevel 'SYMBOL_TABLE' }` on every platform: the release AAB fails to strip native libraries without it.
    - Deleting `linux/flutter/ephemeral` and `windows/flutter/ephemeral` resolves symlink deletion locks on Windows during `flutter pub get`.
 6. **Windows Cross-Drive Kotlin Compilation Invariant**:
    - The project repository is on drive `E:` (`E:\Projects\Bhromon`) while Flutter's Pub Cache resides on drive `C:` (`C:\Users\USER\AppData\Local\Pub\Cache`).
    - Kotlin incremental compilation can throw `IllegalArgumentException: this and base files have different roots` when computing relative paths across different Windows drive roots.
    - If incremental cache errors occur, set `kotlin.incremental=false` in `android/gradle.properties`.
    - Terminate lingering Gradle/Java daemons (`Stop-Process -Name java -Force`) if build intermediates lock up.
+7. **Google Sign-In 7.x Android Credential Manager Invariant (`serverClientId`)**:
+   - In `google_sign_in: ^7.x` on Android 14+ (Credential Manager API), calling `GoogleSignIn.instance.initialize()` without `serverClientId` triggers `GetCredentialFailureType.missingServerClientId`, throwing `GoogleSignInExceptionCode.clientConfigurationError` ("serverClientId must be provided on Android").
+   - Always supply `serverClientId` (the Web Client ID from `google-services.json`, `client_type: 3`) to `GoogleSignIn.instance.initialize(serverClientId: ...)` before calling `authenticate()`.
 
 ---
 
@@ -213,6 +216,16 @@ static session while the user visits other screens, and asks before discarding a
   - Creates consistent online backups of SQLite metadata databases (`bhromon_chat.db`, `bhromon_news.db`, `bhromon_quiz.db`) from `/var/www/bhromon-media-meta`.
   - Replicates archives to Google Drive (`rclone copy ... gdrive:Bhromon_Backups`).
   - Prunes local backup archives older than 30 days.
+
+### H. Tour Record PDF Export & Bengali Typography
+- **OpenType Shaping with `bangla_pdf` (`tour_export_pdf.dart`)**:
+  - Uses `bangla_pdf: ^1.9.2` (`import 'package:bangla_pdf/widgets.dart' as pw;`) for pure Dart OpenType GSUB/GPOS complex text shaping via `BanglaPdf.configure(shapingMode: BanglaShapingMode.unicode)`. Resolves broken Bengali ligatures, misplaced vowel signs (কার/যুক্তাক্ষর), and font tofu across both Web and native builds without requiring platform C/C++ FFI binaries.
+- **Checklist Aggregation (`tour_export_collector.dart`)**:
+  - All preset checklist items (`checklistDefaultItems`) are dynamically merged with Firestore checked states during export so default tasks (packing, medical, documentation) are fully resolved with localized Bengali labels rather than raw IDs or empty rows.
+- **Compact Multi-Image Grid & Media Filtering**:
+  - Replaced vertical image stacking with a 2-column compact grid (140pt max height per row for multi-image posts, 240pt max height for single images), drastically reducing PDF bloat from 80+ redundant pages to concise documentation.
+  - Video stories render a styled `▶ ভিডিও` pill badge instead of attempting to decode raw `.mp4` video bytes into image widgets.
+  - Section headings omit `pw.NewPage()` when the section has no entries, preventing blank pages. Unicode arrows (`→`) are converted to em-dashes (`—`) to prevent fallback glyph corruption.
 
 ---
 
