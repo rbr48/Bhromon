@@ -35,10 +35,10 @@ dependencies:
 
   cupertino_icons: ^1.0.6
   url_launcher: ^6.2.5
-  flutter_bloc: ^8.1.5
-  hydrated_bloc: ^9.1.5
+  flutter_bloc: ^9.1.1
+  hydrated_bloc: ^11.0.0
   flutter_blurhash: ^0.9.1
-  bloc: ^8.1.4
+  bloc: ^9.2.1
   get_it: ^7.7.0
   dio: ^5.4.3
   drift: ">=2.16.0 <2.20.0"
@@ -86,9 +86,9 @@ dependencies:
   package_info_plus: ^8.0.2
   crypto: ^3.0.3
   # Sprint 3 – Observability & Architecture
-  talker_flutter: ">=4.4.0 <5.0.0"
-  talker_bloc_logger: ">=4.4.0 <4.6.5"
-  talker: ">=4.4.0 <5.0.0"
+  talker_flutter: ^5.0.0
+  talker_bloc_logger: ^5.2.0
+  talker: ^5.2.0
   firebase_analytics: ^12.4.3
   firebase_performance: ^0.11.4+3
   firebase_remote_config: ^6.5.3

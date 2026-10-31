@@ -88,10 +88,13 @@ void main() {
         250 * 1024 * 1024; // 250 MB
     PaintingBinding.instance.imageCache.maximumSize = 300; // 300 images
 
+    // Same folder as before the upgrade, so states saved by hydrated_bloc 9 are still read.
     HydratedBloc.storage = await HydratedStorage.build(
       storageDirectory: kIsWeb
-          ? HydratedStorage.webStorageDirectory
-          : await getApplicationDocumentsDirectory(),
+          ? HydratedStorageDirectory.web
+          : HydratedStorageDirectory(
+              (await getApplicationDocumentsDirectory()).path,
+            ),
     );
 
     // Global Sync/Layout Error Boundaries
