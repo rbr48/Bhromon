@@ -6,6 +6,10 @@ import 'package:share_plus/share_plus.dart';
 import '../../domain/models/safety_alert_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/device_battery_reader.dart';
+import '../../domain/models/date_codec.dart';
+import '../../domain/services/family_telemetry_publisher.dart';
+import '../../../../core/utils/app_logger.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/localization/localized_date.dart';
@@ -59,6 +63,18 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       _repository.watchSafetyAlerts(widget.tourId);
   late final Stream<List<BatteryTelemetry>> _telemetry =
       _repository.watchBatteryTelemetry(widget.tourId);
+  late final Stream<List<TourMember>> _roster =
+      _repository.watchMembers(widget.tourId);
+  final DeviceBatteryReader _batteryReader = DeviceBatteryReader();
+  late final FamilyTelemetryPublisher _publisher = FamilyTelemetryPublisher(
+    sink: (write) => _repository.publishFamilyTelemetry(widget.tourId, write),
+    onError: (error, stack) =>
+        logWarning('Safety hub: family telemetry write failed', error, stack),
+  );
+  StreamSubscription<void>? _batterySub;
+  Timer? _telemetryTimer;
+  // Whether this member shares their place with the family right now.
+  bool _locationShareOn = false;
 
   List<TourLandmark> get _landmarks {
     final dest = _tourGroup?.destination.toLowerCase() ?? '';
@@ -259,6 +275,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     );
 
     _initGps();
+    _startFamilySharing();
   }
 
   void _watchGroup() {
@@ -277,51 +294,113 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   void dispose() {
     _groupSub?.cancel();
     _positionStream?.cancel();
+    _batterySub?.cancel();
+    _telemetryTimer?.cancel();
     _alertTimer?.cancel();
     _sirenAnimController.dispose();
+    // Stops sharing the place when the member leaves this screen.
+    unawaited(_publisher.stop(DateTime.now()));
     super.dispose();
   }
 
+  /// Keeps one local position for the direction cards and the SOS message. It is
+  /// not published: only a member who turns on the location switch shares it.
   Future<void> _initGps() async {
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        final pos = await Geolocator.getCurrentPosition();
-        if (mounted) {
-          setState(() => _currentPosition = pos);
-          _publishTelemetry(pos);
-        }
-
-        _positionStream = Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 10,
-          ),
-        ).listen((pos) {
-          if (mounted) {
-            setState(() => _currentPosition = pos);
-            _publishTelemetry(pos);
-          }
-        });
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        return;
       }
-    } catch (_) {
-      // Fallback gracefully if GPS permission denied or disabled
+      final pos = await Geolocator.getCurrentPosition();
+      if (mounted) setState(() => _currentPosition = pos);
+      _positionStream = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+        ),
+      ).listen(
+        (pos) {
+          if (mounted) setState(() => _currentPosition = pos);
+          if (_locationShareOn) {
+            unawaited(_publisher.onFix(
+              PositionFix(pos.latitude, pos.longitude),
+              DateTime.now(),
+            ));
+          }
+        },
+        onError: (Object error, StackTrace stack) =>
+            logWarning('Safety hub: position stream failed', error, stack),
+      );
+    } catch (error, stack) {
+      logWarning('Safety hub: location unavailable', error, stack);
     }
   }
 
-  void _publishTelemetry(Position? pos) {
-    unawaited(_repository.updateBatteryTelemetry(
-      tourId: widget.tourId,
-      batteryLevel: 85,
-      isCharging: false,
-      latitude: pos?.latitude,
-      longitude: pos?.longitude,
-    ));
+  /// Publishes this phone's battery while the hub is open. Place sharing is
+  /// separate, and starts only when the member turns the switch on.
+  void _startFamilySharing() {
+    unawaited(_resetFamilyTelemetry());
+    _batterySub = _batteryReader.changes.listen(
+      (_) => unawaited(_publishBattery()),
+      onError: (Object error, StackTrace stack) =>
+          logWarning('Safety hub: battery changes unavailable', error, stack),
+    );
+    _telemetryTimer = Timer.periodic(
+      _publisher.heartbeat,
+      (_) => unawaited(_heartbeat()),
+    );
+  }
+
+  Future<void> _resetFamilyTelemetry() async {
+    final battery = await _batteryReader.read();
+    await _publisher.reset(battery, DateTime.now());
+  }
+
+  Future<void> _publishBattery() async {
+    final battery = await _batteryReader.read();
+    await _publisher.onBattery(battery, DateTime.now());
+  }
+
+  Future<void> _heartbeat() async {
+    await _publishBattery();
+    await _publisher.tick(DateTime.now());
+  }
+
+  /// Turns place sharing on or off. Turning it on needs location permission;
+  /// without it the switch stays off and the member is told why.
+  Future<void> _setLocationSharing(bool on) async {
+    if (on && !await _hasLocationPermission()) {
+      if (mounted) {
+        _showMessage(context.l10n.translate('fsh_location_permission_needed'));
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _locationShareOn = on);
+    final now = DateTime.now();
+    await _publisher.setSharingLocation(on, now);
+    final pos = _currentPosition;
+    if (on && pos != null) {
+      await _publisher.onFix(PositionFix(pos.latitude, pos.longitude), now);
+    }
+  }
+
+  Future<bool> _hasLocationPermission() async {
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      return permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+    } catch (error, stack) {
+      logWarning('Safety hub: location permission check failed', error, stack);
+      return false;
+    }
   }
 
   Future<void> _callNumber(String number) async {
@@ -472,8 +551,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             // Alerts raised by the group, until someone resolves them.
             _buildGroupAlerts(),
 
-            // Family Battery & Location Radar
-            _buildBatteryRadar(),
+            // Place sharing is the member's choice; the family list follows.
+            _buildLocationSharingCard(),
+            _buildFamilyStatus(),
 
             // Emergency Contacts
             _buildEmergencyContactsSection(),
@@ -704,124 +784,129 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     );
   }
 
-  Widget _buildBatteryRadar() {
+  /// The member's own switch for sharing their place with the family.
+  Widget _buildLocationSharingCard() {
     final l10n = context.l10n;
-    return StreamBuilder<List<BatteryTelemetry>>(
-      stream: _telemetry,
-      builder: (context, snapshot) {
-        final list = snapshot.data ?? const [];
-        if (list.isEmpty) return const SizedBox.shrink();
-
-        final hasLowBattery = list.any((t) => t.isLowBattery);
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFF142428),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: hasLowBattery
-                  ? Colors.redAccent.withValues(alpha: 0.4)
-                  : Colors.white12,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142428),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _locationShareOn
+              ? AppColors.mintGreen.withValues(alpha: 0.5)
+              : Colors.white12,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.radar_rounded,
-                    color:
-                        hasLowBattery ? Colors.redAccent : AppColors.mintGreen,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.translate('fsh_battery_radar_title'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          l10n.translate('fsh_battery_radar_sub'),
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Icon(
+                _locationShareOn
+                    ? Icons.my_location_rounded
+                    : Icons.location_off_rounded,
+                color: _locationShareOn ? AppColors.mintGreen : Colors.white54,
+                size: 20,
               ),
-              if (hasLowBattery) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.redAccent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: Colors.redAccent.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded,
-                          size: 16, color: Colors.redAccent),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          l10n.translate('fsh_battery_low_warning'),
-                          style: const TextStyle(
-                            color: Colors.redAccent,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.translate('fsh_share_my_location'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              for (final item in list) ...[
-                Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: item.isLowBattery
-                        ? Colors.redAccent.withValues(alpha: 0.08)
-                        : Colors.white.withValues(alpha: 0.03),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: item.isLowBattery
-                          ? Colors.redAccent.withValues(alpha: 0.3)
-                          : Colors.white10,
                     ),
-                  ),
-                  child: Row(
+                    Text(
+                      l10n.translate('fsh_share_my_location_sub'),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _locationShareOn,
+                activeThumbColor: AppColors.mintGreen,
+                onChanged: (on) => unawaited(_setLocationSharing(on)),
+              ),
+            ],
+          ),
+          if (_locationShareOn) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.mintGreen.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                l10n.translate('fsh_sharing_now_banner'),
+                style: const TextStyle(
+                  color: AppColors.mintGreen,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Every active member with their battery and place, as the family can see them.
+  Widget _buildFamilyStatus() {
+    final l10n = context.l10n;
+    return StreamBuilder<List<TourMember>>(
+      stream: _roster,
+      builder: (context, rosterSnap) {
+        return StreamBuilder<List<BatteryTelemetry>>(
+          stream: _telemetry,
+          builder: (context, telemetrySnap) {
+            final members = (rosterSnap.data ?? const <TourMember>[])
+                .where((m) => m.status == TourMemberStatus.active)
+                .toList();
+            if (members.isEmpty) return const SizedBox.shrink();
+            final records = {
+              for (final t in telemetrySnap.data ?? const <BatteryTelemetry>[])
+                t.email: t,
+            };
+            final now = DateTime.now();
+            final me = normalizeEmail(_repository.currentEmail);
+            final hasLowBattery = members.any(
+                (m) => records[normalizeEmail(m.email)]?.isLowBattery ?? false);
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF142428),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: hasLowBattery
+                      ? Colors.redAccent.withValues(alpha: 0.4)
+                      : Colors.white12,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
                       Icon(
-                        item.isCriticalBattery
-                            ? Icons.battery_alert_rounded
-                            : item.isLowBattery
-                                ? Icons.battery_2_bar_rounded
-                                : Icons.battery_full_rounded,
-                        color: item.isCriticalBattery
+                        Icons.radar_rounded,
+                        color: hasLowBattery
                             ? Colors.redAccent
-                            : item.isLowBattery
-                                ? AppColors.gold
-                                : AppColors.mintGreen,
+                            : AppColors.mintGreen,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -830,66 +915,209 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              item.name,
+                              l10n.translate('fsh_battery_radar_title'),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                                fontSize: 14,
                               ),
                             ),
-                            if (item.updatedAt != null)
-                              Text(
-                                l10n.translate('fsh_battery_last_seen', args: {
-                                  'time': localizedDateFormat('h:mm a')
-                                      .format(item.updatedAt!),
-                                }),
-                                style: const TextStyle(
-                                    color: Colors.white54, fontSize: 10),
+                            Text(
+                              l10n.translate('fsh_family_status_sub'),
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 11,
                               ),
+                            ),
                           ],
                         ),
                       ),
-                      if (item.isCharging) ...[
-                        const Icon(Icons.bolt_rounded,
-                            size: 16, color: AppColors.gold),
-                        const SizedBox(width: 4),
-                      ],
-                      Text(
-                        '${l10n.number(item.batteryLevel)}%',
-                        style: TextStyle(
-                          color: item.isCriticalBattery
-                              ? Colors.redAccent
-                              : item.isLowBattery
-                                  ? AppColors.gold
-                                  : AppColors.mintGreen,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      if (item.latitude != null && item.longitude != null) ...[
-                        const SizedBox(width: 8),
-                        IconButton(
-                          tooltip: l10n.translate('fsh_battery_map_view'),
-                          icon: const Icon(Icons.map_rounded,
-                              size: 18, color: AppColors.mintGreen),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () {
-                            final uri = Uri.parse(
-                                'https://maps.google.com/?q=${item.latitude},${item.longitude}');
-                            launchUrl(uri,
-                                mode: LaunchMode.externalApplication);
-                          },
-                        ),
-                      ],
                     ],
                   ),
-                ),
-              ],
-            ],
-          ),
+                  if (hasLowBattery) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: Colors.redAccent.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded,
+                              size: 16, color: Colors.redAccent),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              l10n.translate('fsh_battery_low_warning'),
+                              style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  for (final member in members)
+                    _buildMemberStatusRow(
+                      member,
+                      records[normalizeEmail(member.email)],
+                      now,
+                      isMe: normalizeEmail(member.email) == me,
+                    ),
+                ],
+              ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildMemberStatusRow(
+    TourMember member,
+    BatteryTelemetry? record,
+    DateTime now, {
+    required bool isMe,
+  }) {
+    final l10n = context.l10n;
+    final status = record == null ? null : locationStatusAt(record, now);
+    final battery = record?.batteryLevel;
+    final low = record?.isLowBattery ?? false;
+    final critical = record?.isCriticalBattery ?? false;
+    final updated = record?.updatedAt;
+    final name = isMe
+        ? '${member.displayName} (${l10n.translate('fsh_you')})'
+        : member.displayName;
+
+    final String placeText;
+    if (record == null) {
+      placeText = l10n.translate('fsh_no_update');
+    } else if (status == LocationStatus.live) {
+      placeText = l10n.translate('fsh_location_live');
+    } else if (status == LocationStatus.lastKnown) {
+      placeText = l10n.translate('fsh_location_last_known', args: {
+        'time': localizedDateFormat('h:mm a').format(updated!),
+      });
+    } else if (record.sharing && record.latitude == null) {
+      placeText = l10n.translate('fsh_location_waiting');
+    } else {
+      placeText = l10n.translate('fsh_location_off');
+    }
+
+    final showMap = record != null &&
+        status != null &&
+        status != LocationStatus.off &&
+        record.latitude != null &&
+        record.longitude != null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: low
+            ? Colors.redAccent.withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: low ? Colors.redAccent.withValues(alpha: 0.3) : Colors.white10,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            battery == null
+                ? Icons.battery_unknown_rounded
+                : critical
+                    ? Icons.battery_alert_rounded
+                    : low
+                        ? Icons.battery_2_bar_rounded
+                        : Icons.battery_full_rounded,
+            color: battery == null
+                ? Colors.white54
+                : critical
+                    ? Colors.redAccent
+                    : low
+                        ? AppColors.gold
+                        : AppColors.mintGreen,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  placeText,
+                  style: TextStyle(
+                    color: status == LocationStatus.live
+                        ? AppColors.mintGreen
+                        : Colors.white54,
+                    fontSize: 11,
+                  ),
+                ),
+                if (updated != null)
+                  Text(
+                    l10n.translate('fsh_battery_last_seen', args: {
+                      'time': localizedDateFormat('h:mm a').format(updated),
+                    }),
+                    style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  ),
+              ],
+            ),
+          ),
+          if (record?.isCharging ?? false) ...[
+            const Icon(Icons.bolt_rounded, size: 16, color: AppColors.gold),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            battery == null
+                ? l10n.translate('fsh_battery_unknown')
+                : '${l10n.number(battery)}%',
+            style: TextStyle(
+              color: battery == null
+                  ? Colors.white54
+                  : critical
+                      ? Colors.redAccent
+                      : low
+                          ? AppColors.gold
+                          : AppColors.mintGreen,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          if (showMap) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              tooltip: l10n.translate('fsh_battery_map_view'),
+              icon: const Icon(Icons.map_rounded,
+                  size: 18, color: AppColors.mintGreen),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                final uri = Uri.parse(
+                    'https://maps.google.com/?q=${record.latitude},${record.longitude}');
+                launchUrl(uri, mode: LaunchMode.externalApplication);
+              },
+            ),
+          ],
+        ],
+      ),
     );
   }
 

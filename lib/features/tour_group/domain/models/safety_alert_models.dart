@@ -49,12 +49,17 @@ class SafetyAlert {
   }
 }
 
-/// Telemetry record of a member's battery status and location.
+/// A family member's battery and place, as last published from their phone.
 class BatteryTelemetry {
   final String email;
   final String name;
-  final int batteryLevel; // 0 to 100
+
+  /// 0 to 100, or null when the phone did not report it.
+  final int? batteryLevel;
   final bool isCharging;
+
+  /// Whether the member has chosen to share their place.
+  final bool sharing;
   final double? latitude;
   final double? longitude;
   final DateTime? updatedAt;
@@ -62,35 +67,70 @@ class BatteryTelemetry {
   const BatteryTelemetry({
     required this.email,
     required this.name,
-    required this.batteryLevel,
+    this.batteryLevel,
     this.isCharging = false,
+    this.sharing = false,
     this.latitude,
     this.longitude,
     this.updatedAt,
   });
 
-  bool get isLowBattery => batteryLevel <= 20;
-  bool get isCriticalBattery => batteryLevel <= 10;
+  bool get isLowBattery => (batteryLevel ?? 101) <= 20;
+  bool get isCriticalBattery => (batteryLevel ?? 101) <= 10;
 
   Map<String, dynamic> toMap() => {
         'email': normalizeEmail(email),
         'name': name,
         'batteryLevel': batteryLevel,
         'isCharging': isCharging,
-        if (latitude != null) 'latitude': latitude,
-        if (longitude != null) 'longitude': longitude,
+        'sharing': sharing,
+        'latitude': latitude,
+        'longitude': longitude,
         'updatedAt': writeDate(updatedAt ?? DateTime.now()),
       };
 
   factory BatteryTelemetry.fromMap(Map<String, dynamic> map) {
+    final level = (map['batteryLevel'] as num?)?.toInt();
     return BatteryTelemetry(
       email: normalizeEmail(map['email'] as String? ?? ''),
       name: map['name'] as String? ?? 'সদস্য',
-      batteryLevel: (map['batteryLevel'] as num?)?.toInt() ?? 100,
+      batteryLevel: level != null && level >= 0 && level <= 100 ? level : null,
       isCharging: map['isCharging'] as bool? ?? false,
+      sharing: map['sharing'] == true,
       latitude: (map['latitude'] as num?)?.toDouble(),
       longitude: (map['longitude'] as num?)?.toDouble(),
       updatedAt: readDate(map['updatedAt']),
     );
   }
+}
+
+/// How much of a member's place the family can see right now.
+enum LocationStatus {
+  /// Sharing, and updated within [kLiveLocationWindow].
+  live,
+
+  /// Sharing, but last updated longer ago. It is shown as the last known place.
+  lastKnown,
+
+  /// Not sharing, no place is stored, or the stored place is too old to show.
+  off,
+}
+
+/// A place updated longer ago than this is not shown as live.
+const Duration kLiveLocationWindow = Duration(minutes: 6);
+
+/// A place older than this is not shown at all.
+const Duration kLastKnownLocationWindow = Duration(hours: 12);
+
+/// The [LocationStatus] of [t] at [now]. An update from a clock slightly ahead
+/// of this device counts as live.
+LocationStatus locationStatusAt(BatteryTelemetry t, DateTime now) {
+  final at = t.updatedAt;
+  if (!t.sharing || at == null || t.latitude == null || t.longitude == null) {
+    return LocationStatus.off;
+  }
+  final age = now.difference(at);
+  if (age <= kLiveLocationWindow) return LocationStatus.live;
+  if (age <= kLastKnownLocationWindow) return LocationStatus.lastKnown;
+  return LocationStatus.off;
 }

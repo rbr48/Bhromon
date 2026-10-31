@@ -987,6 +987,46 @@ service cloud.firestore {
       // One document per member, keyed by their own email, refreshed while they
       // have the channels open. Members see each other; only the member writes
       // their own entry.
+      // Battery and place sharing for the family. A member writes only their own
+      // record, and every field is checked, so nobody can publish for someone else.
+      // The place is present only while the member is sharing it. Members read the
+      // records to see how the family is doing.
+      match /telemetry/{email} {
+        function telemetryFields() {
+          return ['email', 'name', 'batteryLevel', 'isCharging', 'sharing',
+                  'latitude', 'longitude', 'updatedAt', 'safeAt'];
+        }
+        function isOwnTelemetry() {
+          return email == tourUserEmail() && request.resource.data.email == email;
+        }
+        allow read: if isActiveMember(tourId);
+        allow create, update: if isActiveMember(tourId) && isOwnTelemetry() &&
+          request.resource.data.keys().hasOnly(telemetryFields()) &&
+          request.resource.data.name is string &&
+          request.resource.data.name.size() <= 80 &&
+          (request.resource.data.batteryLevel == null ||
+            (request.resource.data.batteryLevel is int &&
+             request.resource.data.batteryLevel >= 0 &&
+             request.resource.data.batteryLevel <= 100)) &&
+          (request.resource.data.isCharging == null ||
+            request.resource.data.isCharging is bool) &&
+          request.resource.data.sharing is bool &&
+          (request.resource.data.latitude == null ||
+            (request.resource.data.latitude is number &&
+             request.resource.data.latitude >= -90 &&
+             request.resource.data.latitude <= 90)) &&
+          (request.resource.data.longitude == null ||
+            (request.resource.data.longitude is number &&
+             request.resource.data.longitude >= -180 &&
+             request.resource.data.longitude <= 180)) &&
+          (request.resource.data.sharing == true ||
+            (request.resource.data.latitude == null &&
+             request.resource.data.longitude == null)) &&
+          request.resource.data.updatedAt == request.time;
+        // A delete has no incoming data, so only the path's email is checked.
+        allow delete: if isActiveMember(tourId) && email == tourUserEmail();
+      }
+
       match /presence/{email} {
         allow read: if isActiveMember(tourId);
         allow create, update: if isActiveMember(tourId)

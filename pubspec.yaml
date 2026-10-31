@@ -107,6 +107,7 @@ dependencies:
   wakelock_plus: ^1.3.3
   pdf: ^3.13.1
   image: ^4.12.0
+  battery_plus: ^7.1.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

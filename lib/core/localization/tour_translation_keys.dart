@@ -1259,6 +1259,22 @@ class TourTranslationKeys {
       'fsh_title': 'Family Safety Hub (safety and emergency help)',
       'fsh_battery_radar_title': 'Family Battery & Location Radar',
       'fsh_battery_radar_sub': 'Live battery levels and last-seen locations',
+      'fsh_share_my_location': 'Share my location with family',
+      'fsh_share_my_location_sub':
+          'Only while this screen is open. It stops when you leave.',
+      'fsh_sharing_now_banner':
+          'You are sharing your place with the family while this screen is open.',
+      'fsh_location_permission_needed':
+          'Allow location for Bhromon in your phone settings to share your place.',
+      'fsh_location_live': 'Place shared now',
+      'fsh_location_last_known': 'Last known place, {time}',
+      'fsh_location_waiting': 'Sharing, waiting for GPS',
+      'fsh_location_off': 'Place not shared',
+      'fsh_no_update': 'No update yet',
+      'fsh_battery_unknown': 'Battery unknown',
+      'fsh_you': 'you',
+      'fsh_family_status_sub':
+          'Battery and place, updated while this screen is open',
       'fsh_battery_low_warning': 'Low battery alert (< 20%)',
       'fsh_battery_charging': 'Charging',
       'fsh_battery_discharging': 'On Battery',
@@ -3014,6 +3030,22 @@ class TourTranslationKeys {
       'fsh_title': 'Family Safety Hub (নিরাপত্তা ও জরুরি সেবা)',
       'fsh_battery_radar_title': 'ফ্যামিলি ব্যাটারি ও লোকেশন রাডার',
       'fsh_battery_radar_sub': 'সদস্যদের লাইভ ব্যাটারি চার্জ ও সর্বশেষ অবস্থান',
+      'fsh_share_my_location': 'পরিবারের সাথে আমার অবস্থান শেয়ার করুন',
+      'fsh_share_my_location_sub':
+          'শুধু এই স্ক্রিন খোলা থাকলে। স্ক্রিন ছেড়ে গেলে বন্ধ হয়ে যাবে।',
+      'fsh_sharing_now_banner':
+          'এই স্ক্রিন খোলা থাকা অবস্থায় আপনার অবস্থান পরিবারের সাথে শেয়ার হচ্ছে।',
+      'fsh_location_permission_needed':
+          'অবস্থান শেয়ার করতে ফোনের সেটিংসে Bhromon-এর লোকেশন অনুমতি দিন।',
+      'fsh_location_live': 'এখন অবস্থান শেয়ার হচ্ছে',
+      'fsh_location_last_known': 'শেষ জানা অবস্থান, {time}',
+      'fsh_location_waiting': 'শেয়ার হচ্ছে, GPS-এর অপেক্ষায়',
+      'fsh_location_off': 'অবস্থান শেয়ার করা নেই',
+      'fsh_no_update': 'এখনও কোনো আপডেট নেই',
+      'fsh_battery_unknown': 'ব্যাটারি জানা যাচ্ছে না',
+      'fsh_you': 'আপনি',
+      'fsh_family_status_sub':
+          'ব্যাটারি ও অবস্থান, এই স্ক্রিন খোলা থাকলে হালনাগাদ হয়',
       'fsh_battery_low_warning': 'কম ব্যাটারি সতর্কতা (< ২০%)',
       'fsh_battery_charging': 'চার্জ হচ্ছে',
       'fsh_battery_discharging': 'ব্যাটারিতে চলছে',

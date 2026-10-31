@@ -18,6 +18,7 @@ import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
 import '../domain/models/vehicle_models.dart';
 import '../domain/services/call_partner.dart';
+import '../domain/services/family_telemetry_publisher.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
 import '../domain/services/seat_planner.dart';
@@ -1717,27 +1718,27 @@ class TourGroupRepository {
             s.docs.map((d) => SafetyAlert.fromMap(d.id, d.data())).toList());
   }
 
-  /// Publishes this member's battery status and coordinates.
-  Future<bool> updateBatteryTelemetry({
-    required String tourId,
-    required int batteryLevel,
-    bool isCharging = false,
-    double? latitude,
-    double? longitude,
-  }) async {
+  /// Publishes this member's battery and place sharing to the family. Only the
+  /// member's own record can be written (see the telemetry rules). A null
+  /// coordinate clears the stored place.
+  Future<void> publishFamilyTelemetry(
+    String tourId,
+    FamilyTelemetryWrite write,
+  ) async {
     final email = _requireEmail();
-    return _awaitServer(_sub(tourId, 'telemetry').doc(email).set({
+    await _sub(tourId, 'telemetry').doc(email).set({
       'email': email,
       'name': currentDisplayName,
-      'batteryLevel': batteryLevel,
-      'isCharging': isCharging,
-      if (latitude != null) 'latitude': latitude,
-      if (longitude != null) 'longitude': longitude,
+      'batteryLevel': write.battery.level,
+      'isCharging': write.battery.isCharging,
+      'sharing': write.sharing,
+      'latitude': write.latitude,
+      'longitude': write.longitude,
       'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true)));
+    }, SetOptions(merge: true));
   }
 
-  /// Live stream of members' battery and location telemetry.
+  /// Live stream of members' battery and place-sharing records.
   Stream<List<BatteryTelemetry>> watchBatteryTelemetry(String tourId) {
     return _sub(tourId, 'telemetry').snapshots().map(
         (s) => s.docs.map((d) => BatteryTelemetry.fromMap(d.data())).toList());
