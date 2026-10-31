@@ -1,11 +1,18 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { leaveAllTours } from './lib/accountTours';
+import {
+  eraseFromChats,
+  eraseOwnedDocuments,
+  eraseStorageFiles,
+  purgeAccountOnMediaServer,
+} from './lib/accountErasure';
+import { purgeCdnPaths } from './lib/cdnPurge';
 
 const db = admin.firestore();
-const storage = admin.storage();
 
 export const gdprDeleteUser = functions
+  .runWith({ secrets: ['MEDIA_PURGE_KEY'] })
   .region('asia-south1')
   .https.onCall(async (data, context) => {
     if (!context.auth) {
@@ -16,35 +23,29 @@ export const gdprDeleteUser = functions
     }
 
     const uid = context.auth.uid;
-
-    // The tours come first, so a failure leaves the account in place to retry.
-    // Each tour the person is in loses what they put into it, and a tour they own
-    // passes to another member (or is deleted when no one else is in it).
     // A person without an email is listed under the uid-based address the app uses.
-    await leaveAllTours(db, context.auth.token.email ?? `${uid}@bhromon.app`);
+    const email = context.auth.token.email ?? `${uid}@bhromon.app`;
 
-    const batch = db.batch();
+    // Every step below can run again, so a failure at any point is cleared by closing
+    // the account again. The sign-in account is deleted last, after everything else.
+    // Tours come first: a tour they own passes to another member, and what they put
+    // into each tour is purged with their membership.
+    await leaveAllTours(db, email);
+    await eraseOwnedDocuments(db, uid);
+    await eraseFromChats(db, uid);
+    const removedPaths = await purgeAccountOnMediaServer(uid, email);
+    await eraseStorageFiles(admin.storage().bucket(), uid);
 
-    // Delete all primary user documents in a single atomic batch
-    batch.delete(db.collection('explorer_profiles').doc(uid));
-    batch.delete(db.collection('users').doc(uid));
-    batch.delete(db.collection('explorer_scores').doc(uid));
-    batch.delete(db.collection('fcm_tokens').doc(uid));
-
-    await batch.commit();
-
-    // Delete user-owned storage files (best-effort; non-fatal on error)
+    // Cached copies of the deleted media are a convenience to clear, not a reason to
+    // fail the closing, so a CDN failure is logged and left for the cache to expire.
     try {
-      const bucket = storage.bucket();
-      await bucket.deleteFiles({ prefix: `users/${uid}/` });
-    } catch (e) {
-      console.error('Storage deletion error (non-fatal):', e);
+      await purgeCdnPaths(removedPaths);
+    } catch (error) {
+      console.error('CDN purge after account closing failed:', error);
     }
 
-    // Remove Firebase Auth account
     await admin.auth().deleteUser(uid);
 
-    // Write GDPR audit record
     await db.collection('admin_audit_logs').add({
       action: 'gdpr_user_deleted',
       targetUid: uid,

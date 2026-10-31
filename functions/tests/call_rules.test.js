@@ -23,7 +23,7 @@ const signalPath = (pair) => ['tours', TOUR, 'channels', CHANNEL, 'voice_signals
 
 describe('call and voice rules', () => {
   let env;
-  const as = (who) => env.authenticatedContext(who.uid, { email: who.email }).firestore();
+  const as = (who) => env.authenticatedContext(who.uid, { email: who.email, email_verified: true }).firestore();
   const anon = () => env.unauthenticatedContext().firestore();
 
   beforeAll(async () => {

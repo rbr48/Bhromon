@@ -10,8 +10,10 @@ service cloud.firestore {
     function isNotUnverified()       { return isAuth(); }
     function isVerifiedOrAbove()     { return isAuth() && profile().tier in ['verified','regionExpert','pioneer']; }
     function isRegionExpertOrAbove() { return isAuth() && profile().tier in ['regionExpert','pioneer']; }
+    // The email a person acts under. Only a verified address counts, so nobody can claim
+    // a membership, or a chat, by typing someone else's address into their account.
     function tourUserEmail() {
-      return (request.auth.token.email != null)
+      return (request.auth.token.email != null && request.auth.token.get('email_verified', false) == true)
         ? request.auth.token.email.lower()
         : (request.auth.uid + '@bhromon.app');
     }
@@ -384,7 +386,7 @@ service cloud.firestore {
           chatId.matches('.*_' + request.auth.uid + '$') ||
           chatId.matches('^' + tourUserEmail() + '_.*') ||
           chatId.matches('.*_' + tourUserEmail() + '$') ||
-          (request.auth.token.email != null && (
+          (request.auth.token.email != null && request.auth.token.get('email_verified', false) == true && (
             chatId.matches('^' + request.auth.token.email + '_.*') ||
             chatId.matches('.*_' + request.auth.token.email + '$')
           )) ||
@@ -1098,9 +1100,12 @@ service cloud.firestore {
     }
 
     // ---- Invite codes: looked up by exact code only (no listing) ----
+    // Codes are 8 characters. The six-character codes from before are retired, and their
+    // tours get new codes (functions/scripts/upgradeLegacyInviteCodes.js). A six-character
+    // code is about a billion guesses, which is too few to leave open to lookup.
     match /invites/{code} {
-      allow get: if isAuth();
-      allow create: if isAuth() && isOwnerOfTour(request.resource.data.tourId) &&
+      allow get: if isAuth() && code.size() == 8;
+      allow create: if isAuth() && code.size() == 8 && isOwnerOfTour(request.resource.data.tourId) &&
                        request.resource.data.code == code;
       allow update, delete: if isAuth() && isOwnerOfTour(resource.data.tourId);
     }
@@ -1163,5 +1168,10 @@ service cloud.firestore {
                      );
     }
 
+    // Anything not matched above is denied. Rules grant only what a match allows, so this
+    // changes nothing today; it keeps a new collection closed until it is written for.
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }

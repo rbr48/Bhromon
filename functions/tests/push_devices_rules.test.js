@@ -9,7 +9,7 @@ const PROJECT_ID = 'bhromon-rules-test-project';
 
 describe('fcm_tokens/{uid}/devices rules', () => {
   let env;
-  const db = (uid) => env.authenticatedContext(uid, { email: `${uid}@x.com` }).firestore();
+  const db = (uid) => env.authenticatedContext(uid, { email: `${uid}@x.com`, email_verified: true }).firestore();
   const guestDb = () => env.unauthenticatedContext().firestore();
 
   beforeAll(async () => {
