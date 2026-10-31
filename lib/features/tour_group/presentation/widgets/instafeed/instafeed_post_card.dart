@@ -10,8 +10,8 @@ import 'instafeed_carousel.dart';
 import 'instafeed_day_label.dart';
 import 'instafeed_image_viewer_modal.dart';
 import 'instafeed_zoomable_media.dart';
+import 'reel_picture.dart';
 import 'reel_thumbnail_preview.dart';
-import 'tour_safe_network_image.dart';
 import '../member_profile/tour_member_profile_modal.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/utils/logger.dart';
@@ -763,12 +763,16 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
           fit: StackFit.expand,
           clipBehavior: Clip.hardEdge,
           children: [
+            // A landscape reel is letterboxed on black, not cut.
+            const ColoredBox(color: Colors.black),
+
             // 1. Poster background / Cover / Placeholder
             if (widget.post.coverUrl != null &&
                 isRemoteMediaUrl(widget.post.coverUrl!))
-              TourSafeNetworkImage(
+              ReelPoster(
                 imageUrl: widget.post.coverUrl!,
-                fit: BoxFit.cover,
+                pictureAspect: widget.post.aspectRatio,
+                wholePicture: widget.post.isReel,
                 placeholder: Container(color: const Color(0xFF1B1B1B)),
                 errorWidget: Container(
                   color: const Color(0xFF1B1B1B),
@@ -780,7 +784,10 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               )
             else if (widget.post.videoUrl != null &&
                 isRemoteMediaUrl(widget.post.videoUrl!))
-              ReelThumbnailPreview(videoUrl: widget.post.videoUrl!)
+              ReelThumbnailPreview(
+                videoUrl: widget.post.videoUrl!,
+                wholePicture: widget.post.isReel,
+              )
             else
               Container(
                 decoration: const BoxDecoration(
@@ -801,20 +808,10 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
               GestureDetector(
                 onTap: _toggleVideoPlayback,
                 onDoubleTap: _onDoubleTap,
-                child: SizedBox.expand(
-                  child: FittedBox(
-                    fit: BoxFit.cover,
-                    clipBehavior: Clip.hardEdge,
-                    child: SizedBox(
-                      width: _videoCtrl!.value.size.width > 0
-                          ? _videoCtrl!.value.size.width
-                          : 360,
-                      height: _videoCtrl!.value.size.height > 0
-                          ? _videoCtrl!.value.size.height
-                          : 640,
-                      child: VideoPlayer(_videoCtrl!),
-                    ),
-                  ),
+                child: ReelFittedVideo(
+                  pictureSize: _videoCtrl!.value.size,
+                  wholePicture: widget.post.isReel,
+                  child: VideoPlayer(_videoCtrl!),
                 ),
               )
             else if (widget.videoPlaying)

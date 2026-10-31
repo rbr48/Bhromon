@@ -2,19 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../../../core/theme/colors.dart';
+import 'reel_picture.dart';
 
 /// Renders the first frame of a remote video URL as an instant thumbnail poster.
 /// Used for reels and videos that do not yet have a dedicated static cover image URL.
+///
+/// With [wholePicture] set, a landscape frame is shown whole instead of cut to fill
+/// the space. Grid tiles leave it off, so they keep filling their squares.
 class ReelThumbnailPreview extends StatefulWidget {
   final String videoUrl;
   final BoxFit fit;
   final Widget? placeholder;
+  final bool wholePicture;
 
   const ReelThumbnailPreview({
     super.key,
     required this.videoUrl,
     this.fit = BoxFit.cover,
     this.placeholder,
+    this.wholePicture = false,
   });
 
   @override
@@ -79,6 +85,16 @@ class _ReelThumbnailPreviewState extends State<ReelThumbnailPreview> {
         _controller != null &&
         _controller!.value.isInitialized) {
       final size = _controller!.value.size;
+      if (widget.wholePicture) {
+        return ColoredBox(
+          color: Colors.black,
+          child: ReelFittedVideo(
+            pictureSize: size,
+            wholePicture: true,
+            child: VideoPlayer(_controller!),
+          ),
+        );
+      }
       return ClipRect(
         child: SizedBox.expand(
           child: FittedBox(

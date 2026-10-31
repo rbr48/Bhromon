@@ -5,7 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_zoomable_media.dart';
-import 'tour_safe_network_image.dart';
+import 'reel_picture.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/utils/logger.dart';
 import '../../../../../core/localization/app_localizations.dart';
@@ -370,31 +370,20 @@ class _ReelPageItemState extends State<_ReelPageItem>
           child: Container(
             color: Colors.black,
             child: isReady
-                ? ClipRect(
-                    child: SizedBox.expand(
-                      child: FittedBox(
-                        fit: BoxFit.cover,
-                        clipBehavior: Clip.hardEdge,
-                        child: SizedBox(
-                          width: ctrl.value.size.width > 0
-                              ? ctrl.value.size.width
-                              : 360,
-                          height: ctrl.value.size.height > 0
-                              ? ctrl.value.size.height
-                              : 640,
-                          child: VideoPlayer(ctrl),
-                        ),
-                      ),
-                    ),
+                ? ReelFittedVideo(
+                    pictureSize: ctrl.value.size,
+                    wholePicture: true,
+                    child: VideoPlayer(ctrl),
                   )
                 : Stack(
                     fit: StackFit.expand,
                     children: [
                       if (widget.post.coverUrl != null &&
                           isRemoteMediaUrl(widget.post.coverUrl!))
-                        TourSafeNetworkImage(
+                        ReelPoster(
                           imageUrl: widget.post.coverUrl!,
-                          fit: BoxFit.cover,
+                          pictureAspect: widget.post.aspectRatio,
+                          wholePicture: true,
                           errorWidget: Container(color: Colors.black),
                         ),
                       const Center(
