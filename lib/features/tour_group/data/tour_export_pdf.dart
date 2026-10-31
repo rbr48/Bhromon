@@ -48,8 +48,7 @@ Future<Uint8List> buildTourPdf({
 }) async {
   final regularBytes =
       await rootBundle.load('assets/fonts/HindSiliguri-Regular.ttf');
-  final boldBytes =
-      await rootBundle.load('assets/fonts/HindSiliguri-Bold.ttf');
+  final boldBytes = await rootBundle.load('assets/fonts/HindSiliguri-Bold.ttf');
   final bengaliBytes =
       await rootBundle.load('assets/fonts/NotoSansBengali.ttf');
 

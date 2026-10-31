@@ -108,8 +108,8 @@ void main() {
       highlights: const [],
     );
 
-    final images =
-        TourExportImages(client: MockClient((_) async => http.Response('', 404)));
+    final images = TourExportImages(
+        client: MockClient((_) async => http.Response('', 404)));
 
     final bytes = await buildTourPdf(
       data: data,
@@ -170,8 +170,8 @@ void main() {
       highlights: const [],
     );
 
-    final images =
-        TourExportImages(client: MockClient((_) async => http.Response('', 404)));
+    final images = TourExportImages(
+        client: MockClient((_) async => http.Response('', 404)));
 
     final bytes = await buildTourPdf(
       data: data,
@@ -245,8 +245,8 @@ void main() {
       highlights: const [],
     );
 
-    final images =
-        TourExportImages(client: MockClient((_) async => http.Response('', 404)));
+    final images = TourExportImages(
+        client: MockClient((_) async => http.Response('', 404)));
 
     final bytes = await buildTourPdf(
       data: data,
