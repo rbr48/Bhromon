@@ -1,5 +1,6 @@
 import 'package:bhromon/features/tour_group/domain/models/safety_alert_models.dart';
 import 'package:bhromon/features/tour_group/domain/services/family_telemetry_publisher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -171,6 +172,33 @@ void main() {
     });
   });
 
+  group('FamilyTelemetryPublisher check-in', () {
+    final t0 = DateTime(2026, 10, 31, 10);
+
+    test('"I\'m safe" is written at once, once, and reports success', () async {
+      final writes = <FamilyTelemetryWrite>[];
+      final publisher = FamilyTelemetryPublisher(
+        sink: (write) async => writes.add(write),
+      );
+
+      expect(await publisher.markSafe(t0), isTrue);
+      expect(writes.single.checkedIn, isTrue);
+
+      await publisher.tick(t0.add(const Duration(minutes: 2)));
+      expect(writes.last.checkedIn, isFalse,
+          reason: 'a heartbeat is not another check-in');
+    });
+
+    test('a failed check-in reports failure, so the member can try again',
+        () async {
+      final publisher = FamilyTelemetryPublisher(
+        sink: (write) async => throw StateError('offline'),
+        onError: (_, __) {},
+      );
+      expect(await publisher.markSafe(t0), isFalse);
+    });
+  });
+
   group('locationStatusAt', () {
     final now = DateTime(2026, 10, 31, 12);
 
@@ -231,6 +259,17 @@ void main() {
   });
 
   group('BatteryTelemetry.fromMap for the family record', () {
+    test('the last check-in time is read, and is null when there was none', () {
+      expect(BatteryTelemetry.fromMap({'email': 'a@x.com', 'name': 'A'}).safeAt,
+          isNull);
+      final t = BatteryTelemetry.fromMap({
+        'email': 'a@x.com',
+        'name': 'A',
+        'safeAt': Timestamp.fromDate(DateTime(2026, 10, 31, 9, 30)),
+      });
+      expect(t.safeAt, DateTime(2026, 10, 31, 9, 30));
+    });
+
     test(
         'an unknown battery is null, not a default, and an out-of-range one too',
         () {

@@ -796,6 +796,12 @@ describe('Tour Group Firestore rules', () => {
       await assertFails(setDoc(ref('member'), record('member', { updatedAt: new Date(0) })));
     });
 
+    test('the check-in time must be a time, not a word', async () => {
+      await assertFails(setDoc(ref('member'), record('member', { safeAt: 'yes' })));
+      await assertSucceeds(setDoc(ref('member'), record('member', { safeAt: serverTimestamp() })));
+      await assertSucceeds(setDoc(ref('member'), record('member', { safeAt: null })));
+    });
+
     test('a member can clear their own record, and cannot clear someone else\'s', async () => {
       await assertSucceeds(setDoc(ref('member'), record('member')));
       await assertSucceeds(deleteDoc(ref('member')));

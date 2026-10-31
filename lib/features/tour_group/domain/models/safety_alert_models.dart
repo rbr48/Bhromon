@@ -64,6 +64,9 @@ class BatteryTelemetry {
   final double? longitude;
   final DateTime? updatedAt;
 
+  /// When this member last checked in as safe, or null if they never have.
+  final DateTime? safeAt;
+
   const BatteryTelemetry({
     required this.email,
     required this.name,
@@ -73,6 +76,7 @@ class BatteryTelemetry {
     this.latitude,
     this.longitude,
     this.updatedAt,
+    this.safeAt,
   });
 
   bool get isLowBattery => (batteryLevel ?? 101) <= 20;
@@ -100,6 +104,7 @@ class BatteryTelemetry {
       latitude: (map['latitude'] as num?)?.toDouble(),
       longitude: (map['longitude'] as num?)?.toDouble(),
       updatedAt: readDate(map['updatedAt']),
+      safeAt: readDate(map['safeAt']),
     );
   }
 }

@@ -1022,7 +1022,10 @@ service cloud.firestore {
           (request.resource.data.sharing == true ||
             (request.resource.data.latitude == null &&
              request.resource.data.longitude == null)) &&
-          request.resource.data.updatedAt == request.time;
+          request.resource.data.updatedAt == request.time &&
+          (!('safeAt' in request.resource.data) ||
+            request.resource.data.safeAt == null ||
+            request.resource.data.safeAt is timestamp);
         // A delete has no incoming data, so only the path's email is checked.
         allow delete: if isActiveMember(tourId) && email == tourUserEmail();
       }

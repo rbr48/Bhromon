@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:share_plus/share_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -70,9 +71,86 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       .any((m) => m.email == _repository.currentEmail && m.role.isAdminOrOwner);
 
   /// Makes [group] the tour the hub shows, and remembers it for next time.
+  /// Shares the group's invite code through the phone's share sheet.
+  Future<void> _shareInvite(TourGroup group) async {
+    final text = context.l10n.translate('hub_invite_share_text', args: {
+      'name': group.name,
+      'code': group.inviteCode,
+    });
+    await SharePlus.instance
+        .share(ShareParams(text: text, subject: group.name));
+  }
+
   void _selectTour(TourGroup group) {
     unawaited(_preference.remember(group.id));
     setState(() => _selectedGroup = group);
+  }
+
+  /// Lists the family circles and the trips the person belongs to, in two sections.
+  void _showCircleSwitcher(
+    BuildContext context,
+    List<TourGroup> allGroups,
+    TourGroup current,
+  ) {
+    final families = [
+      for (final g in allGroups)
+        if (g.isFamily) g
+    ];
+    final trips = [
+      for (final g in allGroups)
+        if (!g.isFamily) g
+    ];
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF14241B),
+      builder: (sheetContext) {
+        final l10n = context.l10n;
+        Widget header(String text) => Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(text,
+                  style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+            );
+        Widget tile(TourGroup g) {
+          final selected = g.id == current.id;
+          return ListTile(
+            leading: Icon(
+                g.isFamily
+                    ? Icons.family_restroom_rounded
+                    : Icons.card_travel_rounded,
+                color: selected ? AppColors.mintGreen : Colors.white54),
+            title: Text(g.name,
+                style: TextStyle(
+                    color: selected ? AppColors.mintGreen : Colors.white,
+                    fontWeight:
+                        selected ? FontWeight.bold : FontWeight.normal)),
+            onTap: () {
+              Navigator.pop(sheetContext);
+              _selectTour(g);
+            },
+          );
+        }
+
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(bottom: 12),
+            children: [
+              if (families.isNotEmpty) ...[
+                header(l10n.translate('hub_section_family')),
+                for (final g in families) tile(g),
+              ],
+              if (trips.isNotEmpty) ...[
+                header(l10n.translate('hub_section_trips')),
+                for (final g in trips) tile(g),
+              ],
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _snack(String text, {bool error = false}) {
@@ -577,23 +655,38 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               ],
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.group_add_outlined,
-                    color: AppColors.mintGreen),
-                tooltip: context.l10n.translate('hub_join_with_code'),
-                onPressed: () => _showJoinGroupDialog(context),
-              ),
-              IconButton(
+              PopupMenuButton<String>(
+                tooltip: context.l10n.translate('hub_add_menu'),
                 icon: const Icon(Icons.add_circle_outline,
                     color: AppColors.midGreen),
-                tooltip: context.l10n.translate('hub_create_new_tour'),
-                onPressed: () => _showCreateGroupDialog(context),
-              ),
-              IconButton(
-                icon: const Icon(Icons.family_restroom_rounded,
-                    color: AppColors.mintGreen),
-                tooltip: context.l10n.translate('hub_create_family'),
-                onPressed: () => _showCreateFamilyDialog(context),
+                color: const Color(0xFF1B4332),
+                onSelected: (choice) {
+                  switch (choice) {
+                    case 'family':
+                      _showCreateFamilyDialog(context);
+                    case 'trip':
+                      _showCreateGroupDialog(context);
+                    case 'join':
+                      _showJoinGroupDialog(context);
+                  }
+                },
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'family',
+                    child: _menuRow(Icons.family_restroom_rounded,
+                        context.l10n.translate('hub_create_family')),
+                  ),
+                  PopupMenuItem(
+                    value: 'trip',
+                    child: _menuRow(Icons.card_travel_rounded,
+                        context.l10n.translate('hub_create_new_tour')),
+                  ),
+                  PopupMenuItem(
+                    value: 'join',
+                    child: _menuRow(Icons.group_add_outlined,
+                        context.l10n.translate('hub_join_with_code')),
+                  ),
+                ],
               ),
             ],
           ),
@@ -875,65 +968,49 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     onSelected: (v) => _onGroupMenu(context, group, v),
                     itemBuilder: (_) => [
                       PopupMenuItem(
-                          value: 'copy_code',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.copy_rounded,
-                                  size: 16, color: AppColors.mintGreen),
-                              const SizedBox(width: 8),
-                              Text(
-                                  context.l10n
-                                      .translate('hub_copy_invite_code'),
-                                  style: const TextStyle(color: Colors.white)),
-                            ],
-                          )),
+                        value: 'copy_code',
+                        child: _menuRow(Icons.copy_rounded,
+                            context.l10n.translate('hub_copy_invite_code')),
+                      ),
                       PopupMenuItem(
-                          value: 'export_pdf',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.picture_as_pdf_rounded,
-                                  size: 16, color: AppColors.mintGreen),
-                              const SizedBox(width: 8),
-                              Text(context.l10n.translate('pdf_export_menu'),
-                                  style: const TextStyle(color: Colors.white)),
-                            ],
-                          )),
+                        value: 'export_pdf',
+                        child: _menuRow(Icons.picture_as_pdf_rounded,
+                            context.l10n.translate('pdf_export_menu')),
+                      ),
                       if (group.ownerEmail == _repository.currentEmail) ...[
                         PopupMenuItem(
-                            value: 'add_member',
-                            child: Row(
-                              children: [
-                                const Icon(Icons.person_add_alt_1,
-                                    size: 16, color: AppColors.mintGreen),
-                                const SizedBox(width: 8),
-                                Text(
-                                    context.l10n
-                                        .translate('hub_add_member_by_email'),
-                                    style:
-                                        const TextStyle(color: Colors.white)),
-                              ],
-                            )),
+                          value: 'add_member',
+                          child: _menuRow(
+                              Icons.person_add_alt_1,
+                              context.l10n
+                                  .translate('hub_add_member_by_email')),
+                        ),
                         PopupMenuItem(
-                            value: 'code',
-                            child: Text(
-                                context.l10n.translate('hub_renew_code'),
-                                style: const TextStyle(color: Colors.white))),
+                          value: 'code',
+                          child: _menuRow(Icons.key_rounded,
+                              context.l10n.translate('hub_renew_code'),
+                              iconColor: Colors.white70),
+                        ),
                         PopupMenuItem(
-                            value: 'delete',
-                            child: Text(
-                                context.l10n.translate(group.isFamily
-                                    ? 'hub_delete_family'
-                                    : 'hub_delete_tour'),
-                                style:
-                                    const TextStyle(color: Colors.redAccent))),
+                          value: 'delete',
+                          child: _menuRow(
+                              Icons.delete_outline_rounded,
+                              context.l10n.translate(group.isFamily
+                                  ? 'hub_delete_family'
+                                  : 'hub_delete_tour'),
+                              color: Colors.redAccent,
+                              iconColor: Colors.redAccent),
+                        ),
                       ] else
                         PopupMenuItem(
-                            value: 'leave',
-                            child: Text(
-                                context.l10n.translate(group.isFamily
-                                    ? 'hub_leave_family'
-                                    : 'hub_leave_tour'),
-                                style: const TextStyle(color: Colors.white))),
+                          value: 'leave',
+                          child: _menuRow(
+                              Icons.logout_rounded,
+                              context.l10n.translate(group.isFamily
+                                  ? 'hub_leave_family'
+                                  : 'hub_leave_tour'),
+                              iconColor: Colors.white70),
+                        ),
                     ],
                   ),
                   if (!group.isFamily)
@@ -946,25 +1023,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     ),
                   if (allGroups.length > 1) ...[
                     const SizedBox(width: 8),
-                    DropdownButton<String>(
-                      value: group.id,
-                      dropdownColor: const Color(0xFF1B4332),
-                      icon: const Icon(Icons.arrow_drop_down,
-                          color: Colors.white70),
-                      underline: const SizedBox(),
-                      items: allGroups.map((g) {
-                        return DropdownMenuItem(
-                          value: g.id,
-                          child: Text(g.name,
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 13)),
-                        );
-                      }).toList(),
-                      onChanged: (id) {
-                        if (id != null) {
-                          _selectTour(allGroups.firstWhere((g) => g.id == id));
-                        }
-                      },
+                    IconButton(
+                      tooltip: context.l10n.translate('hub_switch_circle'),
+                      icon: const Icon(Icons.swap_horiz_rounded,
+                          color: AppColors.mintGreen),
+                      onPressed: () =>
+                          _showCircleSwitcher(context, allGroups, group),
                     ),
                   ],
                 ],
@@ -1327,6 +1391,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       borderRadius: BorderRadius.circular(8)),
                 ),
               ),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: context.l10n.translate('hub_share_invite'),
+                icon:
+                    const Icon(Icons.share_rounded, color: AppColors.mintGreen),
+                onPressed: () => _shareInvite(group),
+              ),
             ],
           ),
         ],
@@ -1337,61 +1408,62 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   Widget _buildModulesGrid(BuildContext context, TourGroup group) {
     // Family circles have no trip, so the trip-only tiles stay hidden.
     final isTrip = !group.isFamily;
-    final modules = [
-      _ModuleItem(
-        title: context.l10n.translate('hub_module_feed'),
-        subtitle: context.l10n.translate('hub_module_feed_sub'),
+    final l10n = context.l10n;
+    final entries = <String, _ModuleItem>{
+      'feed': _ModuleItem(
+        title: l10n.translate('hub_module_feed'),
+        subtitle: l10n.translate('hub_module_feed_sub'),
         icon: Icons.camera_alt_rounded,
         color: const Color(0xFFF43F5E),
         onTap: () => context.push('/group/${group.id}/feed'),
       ),
-      _ModuleItem(
-        title: context.l10n.translate('hub_module_ledger'),
-        subtitle: context.l10n.translate('hub_module_ledger_sub'),
+      'ledger': _ModuleItem(
+        title: l10n.translate('hub_module_ledger'),
+        subtitle: l10n.translate('hub_module_ledger_sub'),
         icon: Icons.account_balance_wallet_rounded,
         color: const Color(0xFF52B788),
         onTap: () => context.push('/group/${group.id}/ledger'),
       ),
       if (isTrip && group.modules.seatsRooms)
-        _ModuleItem(
-          title: context.l10n.translate('hub_module_seats'),
-          subtitle: context.l10n.translate('hub_module_seats_sub'),
+        'seats': _ModuleItem(
+          title: l10n.translate('hub_module_seats'),
+          subtitle: l10n.translate('hub_module_seats_sub'),
           icon: Icons.airline_seat_recline_extra_rounded,
           color: const Color(0xFF6366F1),
           onTap: () => context.push('/group/${group.id}/logistics'),
         ),
-      _ModuleItem(
-        title: context.l10n.translate('hub_module_calendar'),
-        subtitle: context.l10n.translate('hub_module_calendar_sub'),
+      'calendar': _ModuleItem(
+        title: l10n.translate('hub_module_calendar'),
+        subtitle: l10n.translate('hub_module_calendar_sub'),
         icon: Icons.calendar_month_rounded,
         color: const Color(0xFF84CC16),
         onTap: () => context.push('/group/${group.id}/calendar'),
       ),
       if (isTrip && group.modules.tideSafety)
-        _ModuleItem(
+        'tide': _ModuleItem(
           title: group.tourType == TourType.beach
-              ? context.l10n.translate('hub_module_tide')
-              : context.l10n.translate('hub_module_weather'),
+              ? l10n.translate('hub_module_tide')
+              : l10n.translate('hub_module_weather'),
           subtitle: group.tourType == TourType.beach
-              ? context.l10n.translate('hub_module_tide_sub')
-              : context.l10n.translate('hub_module_weather_sub'),
+              ? l10n.translate('hub_module_tide_sub')
+              : l10n.translate('hub_module_weather_sub'),
           icon: group.tourType == TourType.beach
               ? Icons.waves_rounded
               : Icons.wb_sunny_rounded,
           color: const Color(0xFF38BDF8),
           onTap: () => context.push('/group/${group.id}/tide'),
         ),
-      _ModuleItem(
-        title: context.l10n.translate('hub_module_notices'),
-        subtitle: context.l10n.translate('hub_module_notices_sub'),
+      'notices': _ModuleItem(
+        title: l10n.translate('hub_module_notices'),
+        subtitle: l10n.translate('hub_module_notices_sub'),
         icon: Icons.campaign_rounded,
         color: const Color(0xFFEAB308),
         onTap: () => context.push('/group/${group.id}/notices'),
       ),
       if (isTrip)
-        _ModuleItem(
-          title: context.l10n.translate('hub_module_journey'),
-          subtitle: context.l10n.translate('hub_journey_sub', args: {
+        'journey': _ModuleItem(
+          title: l10n.translate('hub_module_journey'),
+          subtitle: l10n.translate('hub_journey_sub', args: {
             'origin': group.originCity,
             'destination': group.destination
           }),
@@ -1399,61 +1471,70 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           color: const Color(0xFF10B981),
           onTap: () => context.push('/group/${group.id}/journey'),
         ),
-      _ModuleItem(
-        title: context.l10n.translate('hub_module_safety'),
-        subtitle: context.l10n.translate('hub_module_safety_sub'),
+      'safety': _ModuleItem(
+        title: l10n.translate('hub_module_safety'),
+        subtitle: l10n.translate('hub_module_safety_sub'),
         icon: Icons.shield_rounded,
         color: const Color(0xFFEF4444),
         onTap: () => context.push('/group/${group.id}/safety'),
       ),
       if (group.modules.games)
-        _ModuleItem(
-          title: context.l10n.translate('hub_module_games'),
-          subtitle: context.l10n.translate('hub_module_games_sub'),
+        'games': _ModuleItem(
+          title: l10n.translate('hub_module_games'),
+          subtitle: l10n.translate('hub_module_games_sub'),
           icon: Icons.sports_esports_rounded,
           color: const Color(0xFFF59E0B),
           onTap: () => context.push('/game-zone'),
         ),
       if (isTrip)
-        _ModuleItem(
-          title: context.l10n.translate('hub_module_quiz'),
-          subtitle: context.l10n.translate('hub_quiz_sub',
+        'quiz': _ModuleItem(
+          title: l10n.translate('hub_module_quiz'),
+          subtitle: l10n.translate('hub_quiz_sub',
               args: {'destination': group.destination}),
           icon: Icons.quiz_rounded,
           color: const Color(0xFF8B5CF6),
           onTap: () => context.push('/group/${group.id}/quiz'),
         ),
       if (isTrip)
-        _ModuleItem(
-          title: context.l10n.translate('hub_module_scrapbook'),
-          subtitle: context.l10n.translate('hub_module_scrapbook_sub'),
+        'scrapbook': _ModuleItem(
+          title: l10n.translate('hub_module_scrapbook'),
+          subtitle: l10n.translate('hub_module_scrapbook_sub'),
           icon: Icons.auto_stories_rounded,
           color: const Color(0xFFD97706),
           onTap: () => context.push('/group/${group.id}/scrapbook'),
         ),
       if (isTrip)
-        _ModuleItem(
-          title: context.l10n.translate('hub_module_checklist'),
-          subtitle: context.l10n.translate('hub_module_checklist_sub'),
+        'checklist': _ModuleItem(
+          title: l10n.translate('hub_module_checklist'),
+          subtitle: l10n.translate('hub_module_checklist_sub'),
           icon: Icons.checklist_rtl_rounded,
           color: const Color(0xFF14B8A6),
           onTap: () => context.push('/group/${group.id}/checklist'),
         ),
       if (group.modules.chat)
-        _ModuleItem(
-          title: context.l10n.translate('hub_module_channels'),
-          subtitle: context.l10n.translate('hub_module_channels_sub'),
+        'channels': _ModuleItem(
+          title: l10n.translate('hub_module_channels'),
+          subtitle: l10n.translate('hub_module_channels_sub'),
           icon: Icons.forum_rounded,
           color: const Color(0xFFEC4899),
           onTap: () => context.push('/group/${group.id}/channels'),
         ),
-      _ModuleItem(
-        title: context.l10n.translate('hub_module_news'),
-        subtitle: context.l10n.translate('hub_module_news_sub'),
+      'news': _ModuleItem(
+        title: l10n.translate('hub_module_news'),
+        subtitle: l10n.translate('hub_module_news_sub'),
         icon: Icons.article_rounded,
         color: const Color(0xFF0EA5E9),
         onTap: () => context.push('/newspaper-hub'),
       ),
+    };
+    // Trips keep the trip order. A family circle leads with what the family uses
+    // every day. Any tile missing from the order is still shown, at the end.
+    final order = isTrip ? _tripModuleOrder : _familyModuleOrder;
+    final modules = [
+      for (final id in order)
+        if (entries.containsKey(id)) entries[id]!,
+      for (final entry in entries.entries)
+        if (!order.contains(entry.key)) entry.value,
     ];
 
     return LayoutBuilder(
@@ -1685,6 +1766,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     bool isCreating = false;
+    int familyCount = 1;
 
     showDialog<void>(
       context: context,
@@ -1740,6 +1822,35 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int>(
+                        initialValue: familyCount,
+                        dropdownColor: const Color(0xFF1B4332),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: l10n.translate('hub_family_count_label'),
+                          helperText: l10n.translate('hub_family_count_hint'),
+                          helperStyle: const TextStyle(
+                              color: Colors.white54, fontSize: 11),
+                          labelStyle: const TextStyle(
+                              color: Colors.white70, fontSize: 13),
+                          filled: true,
+                          fillColor: Colors.black26,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        items: [
+                          for (var n = 1; n <= 20; n++)
+                            DropdownMenuItem(
+                              value: n,
+                              child: Text(l10n.translate('hub_people_count',
+                                  args: {'count': n})),
+                            ),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) setDialogState(() => familyCount = v);
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -1781,6 +1892,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                 chat: true,
                               ),
                               kind: GroupKind.family,
+                              ownerFamilyCount: familyCount,
                             );
                             if (mounted) {
                               _selectTour(newGroup);
@@ -3099,6 +3211,54 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     );
   }
 }
+
+/// A row for a popup menu: an icon, then a label that wraps rather than overflows.
+Widget _menuRow(
+  IconData icon,
+  String label, {
+  Color color = Colors.white,
+  Color iconColor = AppColors.mintGreen,
+}) {
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 18, color: iconColor),
+      const SizedBox(width: 10),
+      Flexible(child: Text(label, style: TextStyle(color: color))),
+    ],
+  );
+}
+
+/// The order of the hub's tiles for a trip.
+const List<String> _tripModuleOrder = [
+  'feed',
+  'ledger',
+  'seats',
+  'calendar',
+  'tide',
+  'notices',
+  'journey',
+  'safety',
+  'games',
+  'quiz',
+  'scrapbook',
+  'checklist',
+  'channels',
+  'news',
+];
+
+/// The order of the hub's tiles for a family circle: the day-to-day tools first,
+/// and the shared news last.
+const List<String> _familyModuleOrder = [
+  'channels',
+  'notices',
+  'calendar',
+  'safety',
+  'feed',
+  'ledger',
+  'games',
+  'news',
+];
 
 class _ModuleItem {
   final String title;

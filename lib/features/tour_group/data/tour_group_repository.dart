@@ -676,6 +676,7 @@ class TourGroupRepository {
     String? meetingPointNote,
     String? meetingPointMapUrl,
     GroupKind kind = GroupKind.tour,
+    int ownerFamilyCount = 1,
   }) async {
     final email = _requireEmail();
     final uid = currentUid;
@@ -728,6 +729,7 @@ class TourGroupRepository {
           role: TourRole.owner,
           status: TourMemberStatus.active,
           joinedAt: now,
+          familyCount: ownerFamilyCount.clamp(1, 20),
           uid: currentUid,
         ).toMap(),
       );
@@ -1735,6 +1737,7 @@ class TourGroupRepository {
       'latitude': write.latitude,
       'longitude': write.longitude,
       'updatedAt': FieldValue.serverTimestamp(),
+      if (write.checkedIn) 'safeAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
 

@@ -551,7 +551,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             // Alerts raised by the group, until someone resolves them.
             _buildGroupAlerts(),
 
-            // Place sharing is the member's choice; the family list follows.
+            // Everyone can say they are safe. Place sharing is the member's choice.
+            _buildCheckInCard(),
             _buildLocationSharingCard(),
             _buildFamilyStatus(),
 
@@ -784,6 +785,63 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     );
   }
 
+  /// The member's "I'm safe" check-in. It reaches the family at once.
+  Widget _buildCheckInCard() {
+    final l10n = context.l10n;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142428),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.favorite_rounded,
+              color: AppColors.mintGreen, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.translate('fsh_im_safe_title'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
+                ),
+                Text(
+                  l10n.translate('fsh_im_safe_sub'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
+            onPressed: () => unawaited(_checkInSafe()),
+            child: Text(
+              l10n.translate('fsh_im_safe'),
+              style: const TextStyle(
+                  color: AppColors.darkGreen, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Sends the member's check-in and tells them whether it went through.
+  Future<void> _checkInSafe() async {
+    final sent = await _publisher.markSafe(DateTime.now());
+    if (!mounted) return;
+    _showMessage(
+        context.l10n.translate(sent ? 'fsh_checked_in' : 'fsh_checkin_failed'));
+  }
+
   /// The member's own switch for sharing their place with the family.
   Widget _buildLocationSharingCard() {
     final l10n = context.l10n;
@@ -993,6 +1051,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     final low = record?.isLowBattery ?? false;
     final critical = record?.isCriticalBattery ?? false;
     final updated = record?.updatedAt;
+    final safeAt = record?.safeAt;
     final name = isMe
         ? '${member.displayName} (${l10n.translate('fsh_you')})'
         : member.displayName;
@@ -1077,6 +1136,16 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                       'time': localizedDateFormat('h:mm a').format(updated),
                     }),
                     style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  ),
+                if (safeAt != null)
+                  Text(
+                    l10n.translate('fsh_checked_in_at', args: {
+                      'time': localizedDateFormat('h:mm a').format(safeAt),
+                    }),
+                    style: const TextStyle(
+                        color: AppColors.mintGreen,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600),
                   ),
               ],
             ),

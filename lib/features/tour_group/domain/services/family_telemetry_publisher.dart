@@ -48,12 +48,16 @@ class FamilyTelemetryWrite {
     required this.sharing,
     this.latitude,
     this.longitude,
+    this.checkedIn = false,
   });
 
   final DeviceBattery battery;
   final bool sharing;
   final double? latitude;
   final double? longitude;
+
+  /// True when this write is the member's "I'm safe" check-in.
+  final bool checkedIn;
 }
 
 typedef FamilyTelemetrySink = Future<void> Function(FamilyTelemetryWrite write);
@@ -89,6 +93,7 @@ class FamilyTelemetryPublisher {
   bool _fixUnwritten = false;
   DeviceBattery? _battery;
   DateTime? _lastWriteAt;
+  bool _checkInPending = false;
 
   /// Whether this device is sharing its place right now.
   bool get isSharingLocation => _sharing;
@@ -146,25 +151,38 @@ class FamilyTelemetryPublisher {
     }
   }
 
+  /// Records that the member is safe now. It is written at once, even when the
+  /// battery and place have not changed. Returns false when the write failed, so
+  /// the member is told the check-in did not go through.
+  Future<bool> markSafe(DateTime now) async {
+    _checkInPending = true;
+    return _write(now);
+  }
+
   /// Called when the Safety Hub closes. Stops sharing the place. The battery
   /// stays as the last reading.
   Future<void> stop(DateTime now) => setSharingLocation(false, now);
 
-  Future<void> _write(DateTime now) async {
+  Future<bool> _write(DateTime now) async {
     final fix = _sharing ? _fix : null;
+    final checkedIn = _checkInPending;
+    _checkInPending = false;
     final write = FamilyTelemetryWrite(
       battery: _battery ?? DeviceBattery.unknown,
       sharing: _sharing,
       latitude: fix?.latitude,
       longitude: fix?.longitude,
+      checkedIn: checkedIn,
     );
     _lastWriteAt = now;
     _fixUnwritten = false;
     try {
       await _sink(write);
+      return true;
     } catch (error, stack) {
       // The next heartbeat writes again, so a failed write is reported, not kept.
       _onError?.call(error, stack);
+      return false;
     }
   }
 }
