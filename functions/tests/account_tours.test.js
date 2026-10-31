@@ -1,7 +1,8 @@
 // Closing an account takes the person out of their tours. Needs the Firestore
 // emulator on port 8080:
 //   npx firebase-tools@13.35.1 emulators:exec --only firestore --project bhromon-rules-test-project "cd functions && npx jest --runInBand tests/account_tours"
-const admin = require('firebase-admin');
+const { getApps, initializeApp } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 const { leaveAllTours } = require('../src/lib/accountTours');
 
 const PROJECT_ID = 'bhromon-rules-test-project';
@@ -10,8 +11,8 @@ describe('closing an account leaves its tours', () => {
   let db;
 
   beforeAll(() => {
-    if (!admin.apps.length) admin.initializeApp({ projectId: PROJECT_ID });
-    db = admin.firestore();
+    if (!getApps().length) initializeApp({ projectId: PROJECT_ID });
+    db = getFirestore();
   });
 
   beforeEach(async () => {

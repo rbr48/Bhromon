@@ -1,12 +1,13 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 import sharp from 'sharp';
 
-const storage = admin.storage();
-const db = admin.firestore();
+const storage = getStorage();
+const db = getFirestore();
 
 /**
  * generateChatThumbnail

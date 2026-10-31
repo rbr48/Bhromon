@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 export const computeExplorerScore = functions
   .region('asia-south1')
@@ -59,7 +59,7 @@ export const computeExplorerScore = functions
       { 
         score, 
         tier, 
-        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        lastUpdated: FieldValue.serverTimestamp(),
         breakdown: { helpfulVotes, tripsPublished, endorsements, spamFlags, safetyFlags } 
       },
       { merge: true }

@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 export const promoteToRegionExpert = functions
   .region('asia-south1')
@@ -42,7 +42,7 @@ export const promoteToRegionExpert = functions
     await db.collection('explorer_profiles').doc(targetUid).update({
       tier: newTier,
       promotedBy: context.auth.uid,
-      promotedAt: admin.firestore.FieldValue.serverTimestamp(),
+      promotedAt: FieldValue.serverTimestamp(),
     });
 
     // Write audit log
@@ -51,7 +51,7 @@ export const promoteToRegionExpert = functions
       targetUid,
       newTier,
       performedBy: context.auth.uid,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     return { success: true, targetUid, newTier };

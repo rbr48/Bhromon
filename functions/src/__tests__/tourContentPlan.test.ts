@@ -1,4 +1,4 @@
-import * as admin from 'firebase-admin';
+import { FieldPath, FieldValue } from 'firebase-admin/firestore';
 import {
   isInTour,
   normalizeEmail,
@@ -79,8 +79,8 @@ describe('updateArgs', () => {
     ]);
     expect(args).toHaveLength(4);
     expect(args[0]).toBe('likes');
-    expect(args[1]).toEqual(admin.firestore.FieldValue.arrayRemove(LEAVER));
-    expect(args[2]).toBeInstanceOf(admin.firestore.FieldPath);
-    expect(args[3]).toEqual(admin.firestore.FieldValue.delete());
+    expect(args[1]).toEqual(FieldValue.arrayRemove(LEAVER));
+    expect(args[2]).toBeInstanceOf(FieldPath);
+    expect(args[3]).toEqual(FieldValue.delete());
   });
 });

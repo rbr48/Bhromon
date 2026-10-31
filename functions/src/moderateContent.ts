@@ -1,8 +1,9 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
 import { chunk, getAllInChunks, MAX_FCM_BATCH } from './lib/batching';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 async function _notifyFounders(targetId: string, targetType: string) {
   const pioneers = await db.collection('explorer_profiles')
@@ -37,7 +38,7 @@ async function _notifyFounders(targetId: string, targetType: string) {
   try {
     let sent = 0;
     for (const part of chunk(tokens, MAX_FCM_BATCH)) {
-      const response = await admin.messaging().sendEachForMulticast({
+      const response = await getMessaging().sendEachForMulticast({
         tokens: part,
         ...payload
       });
@@ -84,7 +85,7 @@ export const moderateContent = functions
         type: penaltyType,
         targetUid: authorId,
         actorId: actorId || 'system',
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        timestamp: FieldValue.serverTimestamp(),
         weight: penaltyWeight,
         targetId: targetId,
         targetType: targetType

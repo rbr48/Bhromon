@@ -4,7 +4,7 @@
  * keeps its own rules and its own seat documents.
  */
 
-import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
 
 export const SEATS = 4;
@@ -26,7 +26,7 @@ export type DocRef = FirebaseFirestore.DocumentReference;
 
 export const HttpsError = functions.https.HttpsError;
 
-export const db = (): FirebaseFirestore.Firestore => admin.firestore();
+export const db = (): FirebaseFirestore.Firestore => getFirestore();
 
 export function botEmail(seat: number): string {
   return `bot_seat_${seat}@bhromon.fun`;

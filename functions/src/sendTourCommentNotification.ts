@@ -1,10 +1,11 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+
 import {
   pushTargetsForUids,
   sendPush,
   uidsForEmails,
 } from './lib/tourPush';
+import { getFirestore } from 'firebase-admin/firestore';
 
 /**
  * sendTourCommentNotification
@@ -25,8 +26,7 @@ export const sendTourCommentNotification = functions
     if (!commenterEmail) return;
 
     try {
-      const postSnap = await admin
-        .firestore()
+      const postSnap = await getFirestore()
         .collection('tours')
         .doc(tourId)
         .collection('posts')

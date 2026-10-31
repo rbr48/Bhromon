@@ -1,8 +1,8 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { pushTargetsForUids, sendPush, uidsForEmails } from './lib/tourPush';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 /**
  * sendChatNotification
@@ -79,7 +79,7 @@ export const sendChatNotification = functions
           uid: senderId,
           chatId: chatId,
           messageType: type || 'text',
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          timestamp: FieldValue.serverTimestamp(),
         });
     } catch (e) {
       console.error('[sendChatNotification] Error writing in-app notification:', e);
@@ -140,7 +140,7 @@ export const sendChatNotification = functions
       // 5. Update message status to 'delivered'
       await snap.ref.update({
         status: 'delivered',
-        deliveredAt: admin.firestore.FieldValue.serverTimestamp(),
+        deliveredAt: FieldValue.serverTimestamp(),
       });
     } catch (e) {
       console.error('[sendChatNotification] Error sending push notification:', e);

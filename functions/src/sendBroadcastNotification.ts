@@ -1,8 +1,9 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { FieldPath, getFirestore } from 'firebase-admin/firestore';
+import { MulticastMessage, Notification, getMessaging } from 'firebase-admin/messaging';
 
-const db = admin.firestore();
-const messaging = admin.messaging();
+const db = getFirestore();
+const messaging = getMessaging();
 
 /**
  * Triggered whenever the admin dashboard creates a document in the top-level
@@ -55,7 +56,7 @@ export const sendBroadcastNotification = functions
           const batch = uids.slice(i, i + 30);
           const tokenSnap = await db
             .collection('fcm_tokens')
-            .where(admin.firestore.FieldPath.documentId(), 'in', batch)
+            .where(FieldPath.documentId(), 'in', batch)
             .get();
           tokenSnap.forEach((doc) => {
             const t = doc.data()?.token as string | undefined;
@@ -70,7 +71,7 @@ export const sendBroadcastNotification = functions
       }
 
       // ── 2. Build FCM notification payload ─────────────────────────────────
-      const notification: admin.messaging.Notification = {
+      const notification: Notification = {
         title,
         body,
         ...(imageUrl ? { imageUrl } : {}),
@@ -90,7 +91,7 @@ export const sendBroadcastNotification = functions
       for (let i = 0; i < tokens.length; i += chunkSize) {
         const chunk = tokens.slice(i, i + chunkSize);
 
-        const multicastMessage: admin.messaging.MulticastMessage = {
+        const multicastMessage: MulticastMessage = {
           notification,
           data: dataPayload,
           tokens: chunk,

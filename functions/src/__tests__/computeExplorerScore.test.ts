@@ -1,8 +1,10 @@
-import * as admin from 'firebase-admin';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+jest.mock('firebase-admin/firestore', () => ({ ...jest.requireActual<object>('firebase-admin/firestore'), getFirestore: jest.fn() }));
+import { getApps, initializeApp } from 'firebase-admin/app';
 
 // Initialize mock app for tests
-if (admin.apps.length === 0) {
-  admin.initializeApp();
+if (getApps().length === 0) {
+  initializeApp();
 }
 
 // ─── Shared Mock State ──────────────────────────────────────────────────────
@@ -34,10 +36,8 @@ const mockDb = {
 };
 
 // Global mock of firestore BEFORE importing the module under test
-jest.spyOn(admin, 'firestore' as any).mockReturnValue(mockDb as any);
-(admin.firestore as any).FieldValue = {
-  serverTimestamp: () => 'mock-server-timestamp',
-};
+jest.mocked(getFirestore).mockReturnValue(mockDb as any);
+jest.spyOn(FieldValue, 'serverTimestamp').mockReturnValue('mock-server-timestamp' as any);
 
 const { computeExplorerScore } = require('../computeExplorerScore');
 

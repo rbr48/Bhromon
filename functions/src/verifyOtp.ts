@@ -1,23 +1,25 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { App, cert, getApp, initializeApp } from 'firebase-admin/app';
+import { UserRecord, getAuth } from 'firebase-admin/auth';
+import { Timestamp, getFirestore } from 'firebase-admin/firestore';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomBytes } from 'crypto';
 import { OTP_LOCK_MS, OTP_MAX_ATTEMPTS, digestsMatch, otpDigest, toMs } from './lib/otp';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 // Initialize secondary Firebase App instance for cryptographic custom token signing
-let tokenSignerApp: admin.app.App | null = null;
+let tokenSignerApp: App | null = null;
 const serviceAccountPath = path.join(__dirname, '..', 'service-account.json');
 if (fs.existsSync(serviceAccountPath)) {
   try {
-    tokenSignerApp = admin.app('tokenSigner');
+    tokenSignerApp = getApp('tokenSigner');
   } catch (e) {
     try {
       const serviceAccount = require(serviceAccountPath);
-      tokenSignerApp = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+      tokenSignerApp = initializeApp({
+        credential: cert(serviceAccount),
       }, 'tokenSigner');
     } catch (initErr) {
       console.error('Failed to initialize tokenSignerApp:', initErr);
@@ -61,7 +63,7 @@ async function useCode(email: string, code: string): Promise<void> {
     if (attempts >= OTP_MAX_ATTEMPTS) {
       tx.update(ref, {
         attempts,
-        lockedUntil: admin.firestore.Timestamp.fromMillis(nowMs + OTP_LOCK_MS),
+        lockedUntil: Timestamp.fromMillis(nowMs + OTP_LOCK_MS),
       });
       return 'wrong-locks';
     }
@@ -129,13 +131,13 @@ export const verifyOtp = functions
     if (!accepted) await useCode(email, code);
 
     // Get or Create Firebase Auth User
-    let userRecord: admin.auth.UserRecord;
+    let userRecord: UserRecord;
     try {
-      userRecord = await admin.auth().getUserByEmail(email);
+      userRecord = await getAuth().getUserByEmail(email);
     } catch (e: any) {
       if (e.code === 'auth/user-not-found') {
         // Create new user
-        userRecord = await admin.auth().createUser({
+        userRecord = await getAuth().createUser({
           email,
           emailVerified: true,
         });
@@ -156,13 +158,13 @@ export const verifyOtp = functions
         // A password account for this address may have been made by someone who does not
         // own it. Its password is replaced and its sessions end, so only a code opens it.
         const hasPassword = userRecord.providerData.some((p) => p.providerId === 'password');
-        userRecord = await admin.auth().updateUser(userRecord.uid, {
+        userRecord = await getAuth().updateUser(userRecord.uid, {
           emailVerified: true,
           ...(hasPassword ? { password: randomBytes(32).toString('hex') } : {}),
         });
-        if (hasPassword) await admin.auth().revokeRefreshTokens(userRecord.uid);
+        if (hasPassword) await getAuth().revokeRefreshTokens(userRecord.uid);
       }
-      const auth = tokenSignerApp ? tokenSignerApp.auth() : admin.auth();
+      const auth = tokenSignerApp ? getAuth(tokenSignerApp) : getAuth();
       const customToken = await auth.createCustomToken(userRecord.uid, {
         email,
       });

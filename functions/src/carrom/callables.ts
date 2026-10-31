@@ -9,7 +9,7 @@
  * the bot's choice.
  */
 
-import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
 import { CarromTable, publicState, restoreTable } from './game';
 import { BOT_AIM_NOISE, chooseShot } from './bot';
@@ -100,7 +100,7 @@ function writeBoard(
     state: publicState(board, step, turnDeadlineFor(board, players, nowMs)),
     currentTurn: board.currentPlayer,
     updatedAt: nowIso(nowMs),
-    version: admin.firestore.FieldValue.increment(1),
+    version: FieldValue.increment(1),
   };
   if (board.phase === 'gameOver') {
     update.status = 'finished';
@@ -138,7 +138,7 @@ export const carromStart = functions
         currentTurn: board.currentPlayer,
         state: publicState(board, 1, turnDeadlineFor(board, players, nowMs)),
         updatedAt: nowIso(nowMs),
-        version: admin.firestore.FieldValue.increment(1),
+        version: FieldValue.increment(1),
       });
     });
 
@@ -285,7 +285,7 @@ export async function leaveCarromTable(
       players: swapped.map((p) => ({ ...p, isHost: !p.isBot && p.email === newHost })),
       hostEmail: newHost,
       updatedAt: nowIso(nowMs),
-      version: admin.firestore.FieldValue.increment(1),
+      version: FieldValue.increment(1),
     });
   });
 }

@@ -1,7 +1,8 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
+import { Message, getMessaging } from 'firebase-admin/messaging';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 export const sendGeneralNotification = functions
   .region('asia-south1')
@@ -23,7 +24,7 @@ export const sendGeneralNotification = functions
       const token = tokenDoc.data()?.token;
       if (!token) return;
 
-      const message: admin.messaging.Message = {
+      const message: Message = {
         notification: {
           title: title || 'New Notification',
           body: body || '',
@@ -48,7 +49,7 @@ export const sendGeneralNotification = functions
         token: token,
       };
 
-      await admin.messaging().send(message);
+      await getMessaging().send(message);
       console.log(`Successfully sent general push notification to user ${userId} for action: ${action}`);
     } catch (e) {
       console.error('Error sending general FCM push notification:', e);

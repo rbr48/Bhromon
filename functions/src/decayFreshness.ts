@@ -1,8 +1,9 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
+import { Message, getMessaging } from 'firebase-admin/messaging';
 import { chunk, drainQuery, getAllInChunks, MAX_FCM_BATCH } from './lib/batching';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 /** Pages per run; with 400 tips a page that is 20,000 tips a night. */
 const MAX_PAGES = 50;
@@ -13,7 +14,7 @@ export async function notifyStaleAuthors(authorIds: string[]): Promise<number> {
     db,
     authorIds.map((uid) => db.collection('fcm_tokens').doc(uid)),
   );
-  const messages: admin.messaging.Message[] = [];
+  const messages: Message[] = [];
   tokenDocs.forEach((tokenDoc, i) => {
     const token = tokenDoc.exists ? tokenDoc.data()?.token : undefined;
     if (!token) return;
@@ -33,7 +34,7 @@ export async function notifyStaleAuthors(authorIds: string[]): Promise<number> {
   let sent = 0;
   for (const part of chunk(messages, MAX_FCM_BATCH)) {
     try {
-      const response = await admin.messaging().sendEach(part);
+      const response = await getMessaging().sendEach(part);
       sent += response.successCount;
     } catch (e) {
       console.error('Error sending FCM:', e);

@@ -1,4 +1,6 @@
-import * as admin from 'firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import { DocumentReference, getFirestore } from 'firebase-admin/firestore';
+import { MulticastMessage, getMessaging } from 'firebase-admin/messaging';
 
 /** Firebase Auth accepts up to 100 identifiers per lookup. */
 const AUTH_LOOKUP_LIMIT = 100;
@@ -14,13 +16,12 @@ const DEAD_TOKEN_CODES = new Set([
 /** One device to push to, and the document holding its token. */
 export interface PushTarget {
   token: string;
-  ref: admin.firestore.DocumentReference;
+  ref: DocumentReference;
 }
 
 /** Emails of the tour's active members, except [exceptEmail], lower-cased. */
 export async function activeMemberEmails(tourId: string, exceptEmail: string): Promise<string[]> {
-  const rows = await admin
-    .firestore()
+  const rows = await getFirestore()
     .collection('memberships')
     .where('tourId', '==', tourId)
     .where('status', '==', 'active')
@@ -38,7 +39,7 @@ export async function activeMemberEmails(tourId: string, exceptEmail: string): P
 export async function uidsForEmails(emails: string[]): Promise<string[]> {
   const uids: string[] = [];
   for (let i = 0; i < emails.length; i += AUTH_LOOKUP_LIMIT) {
-    const result = await admin.auth().getUsers(
+    const result = await getAuth().getUsers(
       emails.slice(i, i + AUTH_LOOKUP_LIMIT).map((email) => ({ email })),
     );
     for (const user of result.users) uids.push(user.uid);
@@ -53,7 +54,7 @@ export async function uidsForEmails(emails: string[]): Promise<string[]> {
  * A token that appears twice is sent once.
  */
 export async function pushTargetsForUids(uids: string[]): Promise<PushTarget[]> {
-  const db = admin.firestore();
+  const db = getFirestore();
   const perUser = await Promise.all(
     uids.map(async (uid) => {
       const userRef = db.collection('fcm_tokens').doc(uid);
@@ -93,12 +94,12 @@ export async function pushTargetsForUids(uids: string[]): Promise<PushTarget[]> 
  */
 export async function sendPush(
   targets: PushTarget[],
-  message: Omit<admin.messaging.MulticastMessage, 'tokens'>,
+  message: Omit<MulticastMessage, 'tokens'>,
   label: string,
 ): Promise<void> {
   for (let i = 0; i < targets.length; i += FCM_BATCH_LIMIT) {
     const batch = targets.slice(i, i + FCM_BATCH_LIMIT);
-    const response = await admin.messaging().sendEachForMulticast({
+    const response = await getMessaging().sendEachForMulticast({
       ...message,
       tokens: batch.map((t) => t.token),
     });

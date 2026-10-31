@@ -1,5 +1,5 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { Timestamp, getFirestore } from 'firebase-admin/firestore';
 import * as https from 'https';
 import {
   OTP_CODES_PER_HOUR_OVERALL,
@@ -11,7 +11,7 @@ import {
   toMs,
 } from './lib/otp';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 type IssueOutcome = 'ok' | 'locked' | 'resend' | 'hourly' | 'overall';
 
@@ -77,13 +77,13 @@ export const sendOtpEmail = functions
 
       tx.set(otpRef, {
         digest: otpDigest(email, code),
-        expiresAt: admin.firestore.Timestamp.fromMillis(nowMs + OTP_TTL_MS),
+        expiresAt: Timestamp.fromMillis(nowMs + OTP_TTL_MS),
         attempts: 0,
-        windowStart: admin.firestore.Timestamp.fromMillis(decision.window.windowStartMs),
+        windowStart: Timestamp.fromMillis(decision.window.windowStartMs),
         codesInWindow: decision.window.count,
       });
       tx.set(overallRef, {
-        windowStart: admin.firestore.Timestamp.fromMillis(slot.next.windowStartMs),
+        windowStart: Timestamp.fromMillis(slot.next.windowStartMs),
         count: slot.next.count,
       });
       return 'ok';

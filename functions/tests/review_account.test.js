@@ -1,10 +1,11 @@
 // The Play review account keeps only a digest of its code. The script and the sign-in
 // function must agree on that digest. Needs the Firestore emulator on port 8080:
 //   npx firebase-tools@13.35.1 emulators:exec --only firestore --project bhromon-rules-test-project "cd functions && npx jest --runInBand tests/review_account"
-const admin = require('firebase-admin');
+const { getApps, initializeApp } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 
 const PROJECT_ID = 'bhromon-rules-test-project';
-if (!admin.apps.length) admin.initializeApp({ projectId: PROJECT_ID });
+if (!getApps().length) initializeApp({ projectId: PROJECT_ID });
 
 const { otpDigest } = require('../src/lib/otp');
 const { reviewDigest, setReviewAccount } = require('../scripts/setReviewAccount');
@@ -15,7 +16,7 @@ describe('the Play review account', () => {
   let db;
 
   beforeAll(() => {
-    db = admin.firestore();
+    db = getFirestore();
   });
 
   beforeEach(async () => {

@@ -1,13 +1,13 @@
-import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
+jest.mock('firebase-admin/firestore', () => ({ ...jest.requireActual<object>('firebase-admin/firestore'), getFirestore: jest.fn() }));
+import { getApps, initializeApp } from 'firebase-admin/app';
 import { encodeGeohash } from '../lib/geohash';
 import { FakeFirestore } from './helpers/fakeFirestore';
 
-if (admin.apps.length === 0) admin.initializeApp();
+if (getApps().length === 0) initializeApp();
 
 const db = new FakeFirestore();
-const { FieldPath } = admin.firestore;
-jest.spyOn(admin, 'firestore' as any).mockReturnValue(db as any);
-(admin.firestore as any).FieldPath = FieldPath;
+jest.mocked(getFirestore).mockReturnValue(db as any);
 
 const { expectedGeohash, maintainPinGeohash, runBackfill } = require('../maintainPinGeohash');
 

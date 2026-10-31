@@ -7,7 +7,8 @@
  */
 
 import * as fs from 'fs';
-import * as admin from 'firebase-admin';
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { DecodedIdToken, getAuth } from 'firebase-admin/auth';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { card29Start, card29Act, card29Advance, card29Leave } from './card29/callables';
@@ -15,14 +16,14 @@ import { teenPattiStart, teenPattiAct, teenPattiAdvance, teenPattiLeave } from '
 import { carromStart, carromShoot, carromAdvance, carromLeave } from './carrom/callables';
 
 // Initialize Firebase Admin SDK if not already initialized
-if (!admin.apps.length) {
+if (!getApps().length) {
   const credPath = process.env.FIREBASE_CREDENTIALS || '/run/secrets/firebase-admin.json';
   if (fs.existsSync(credPath)) {
-    admin.initializeApp({
-      credential: admin.credential.cert(credPath),
+    initializeApp({
+      credential: cert(credPath),
     });
   } else {
-    admin.initializeApp();
+    initializeApp();
   }
 }
 
@@ -95,9 +96,9 @@ app.post('/:name', async (req: Request, res: Response) => {
   }
 
   const idToken = authHeader.slice(7).trim();
-  let decoded: admin.auth.DecodedIdToken;
+  let decoded: DecodedIdToken;
   try {
-    decoded = await admin.auth().verifyIdToken(idToken);
+    decoded = await getAuth().verifyIdToken(idToken);
   } catch (err: any) {
     res.status(401).json({ error: { message: 'Invalid or expired authentication token.', status: 'UNAUTHENTICATED' } });
     return;
@@ -106,7 +107,7 @@ app.post('/:name', async (req: Request, res: Response) => {
   let email = (decoded.email || '').trim().toLowerCase();
   if (!email && decoded.uid) {
     try {
-      const userRecord = await admin.auth().getUser(decoded.uid);
+      const userRecord = await getAuth().getUser(decoded.uid);
       email = (userRecord.email || '').trim().toLowerCase();
     } catch (e) {
       console.warn('Could not fetch user record for uid:', decoded.uid, e);
