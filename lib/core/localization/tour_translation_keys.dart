@@ -177,6 +177,11 @@ class TourTranslationKeys {
       'hub_people_count': '{count} people',
       'hub_new_code': 'New invite code: {code}',
       'hub_leave_body': 'You will be removed from {name}.',
+      'family_channel_food': 'Kitchen & meals',
+      'family_channel_sightseeing': 'Outings & places',
+      'family_channel_home': 'Home',
+      'family_channel_kids': 'Kids & school',
+      'family_channel_shopping': 'Shopping list',
       'fsh_family_numbers': 'Family numbers',
       'fsh_family_numbers_empty':
           'No family numbers yet. An admin can add them, so everyone can call or text in an emergency.',
@@ -1834,6 +1839,39 @@ class TourTranslationKeys {
           'Only the owner or an admin can export the whole tour.',
       'notice_post_failed':
           'Could not post the notice. Check your connection and try again.',
+      'fund_cat_groceries': 'Groceries',
+      'fund_cat_utilities': 'Utilities',
+      'fund_cat_rent': 'Rent',
+      'fund_cat_school': 'School',
+      'fund_cat_dining': 'Dining out',
+      'fund_cat_gifts': 'Gifts',
+      'fund_budget_cta_family': 'Set a household budget',
+      'fund_budget_cta_help_family':
+          'Track spending by category against what you planned.',
+      'notice_tpl_family_dinner_title': 'Family dinner',
+      'notice_tpl_family_dinner_body':
+          'Dinner is at home at the time shown. Tell the family if you will be late.',
+      'notice_tpl_family_meeting_title': 'Family meeting',
+      'notice_tpl_family_meeting_body':
+          'We sit down together to plan the week and settle anything that needs a decision. Tap "Got it" if you can come.',
+      'notice_tpl_school_pickup_title': 'School pick-up',
+      'notice_tpl_school_pickup_body':
+          'Pick the children up from school at the gate. Message the family when you leave.',
+      'notice_tpl_medicine_time_title': 'Medicine time',
+      'notice_tpl_medicine_time_body':
+          'Take your medicine as prescribed. Tap "Got it" once it is done.',
+      'notice_tpl_bills_due_title': 'Bills due this week',
+      'notice_tpl_bills_due_body':
+          'Electricity, gas, water, internet or rent may be due. Check the shared fund & ledger and pay your share before the date.',
+      'notice_tpl_shopping_list_title': 'Shopping list',
+      'notice_tpl_shopping_list_body':
+          'Add what the house needs to the Shopping list channel before you go to the bazar.',
+      'notice_tpl_home_check_title': 'Home for the night',
+      'notice_tpl_home_check_body':
+          'Tap "I\'m here" once you are home for the night, so everyone knows you are safe.',
+      'notice_tpl_safety_check_title': 'Safety check',
+      'notice_tpl_safety_check_body':
+          'Storm or flood warning. Tap "Got it" once you are safe, then tap "I\'m safe" in the Safety hub.',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -2009,6 +2047,11 @@ class TourTranslationKeys {
       'hub_people_count': '{count} জন',
       'hub_new_code': 'নতুন আমন্ত্রণ কোড: {code}',
       'hub_leave_body': '{name} থেকে আপনি বাদ পড়বেন।',
+      'family_channel_food': 'রান্নাঘর ও খাবার',
+      'family_channel_sightseeing': 'বাইরে ঘোরা',
+      'family_channel_home': 'বাড়ি',
+      'family_channel_kids': 'শিশু ও পড়াশোনা',
+      'family_channel_shopping': 'বাজার তালিকা',
       'fsh_family_numbers': 'পরিবারের নম্বর',
       'fsh_family_numbers_empty':
           'এখনও পরিবারের নম্বর নেই। অ্যাডমিন যোগ করতে পারেন, যাতে জরুরি অবস্থায় সবাই ফোন বা মেসেজ করতে পারে।',
@@ -3663,6 +3706,38 @@ class TourTranslationKeys {
           'শুধু মালিক বা অ্যাডমিন পুরো ট্যুরের PDF নিতে পারেন।',
       'notice_post_failed':
           'নোটিশ পাঠানো যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
+      'fund_cat_groceries': 'বাজার',
+      'fund_cat_utilities': 'ইউটিলিটি বিল',
+      'fund_cat_rent': 'বাসা ভাড়া',
+      'fund_cat_school': 'স্কুল ও পড়াশোনা',
+      'fund_cat_dining': 'বাইরে খাওয়া',
+      'fund_cat_gifts': 'উপহার',
+      'fund_budget_cta_family': 'সংসারের বাজেট ঠিক করুন',
+      'fund_budget_cta_help_family': 'পরিকল্পনার তুলনায় খাতভিত্তিক খরচ দেখুন।',
+      'notice_tpl_family_dinner_title': 'একসাথে রাতের খাবার',
+      'notice_tpl_family_dinner_body':
+          'খাবার বাড়িতে, দেওয়া সময়ে। দেরি হলে পরিবারকে জানাবেন।',
+      'notice_tpl_family_meeting_title': 'পারিবারিক বৈঠক',
+      'notice_tpl_family_meeting_body':
+          'এই সপ্তাহের পরিকল্পনা আর সিদ্ধান্তের বিষয় নিয়ে সবাই মিলে বসব। আসতে পারলে "বুঝেছি" চাপুন।',
+      'notice_tpl_school_pickup_title': 'স্কুল থেকে আনা',
+      'notice_tpl_school_pickup_body':
+          'স্কুলের গেট থেকে বাচ্চাদের আনুন। বের হওয়ার সময় পরিবারের গ্রুপে জানান।',
+      'notice_tpl_medicine_time_title': 'ওষুধ খাওয়ার সময়',
+      'notice_tpl_medicine_time_body':
+          'নির্দেশ অনুযায়ী ওষুধ খান। হয়ে গেলে "বুঝেছি" চাপুন।',
+      'notice_tpl_bills_due_title': 'এই সপ্তাহে বিল দেওয়ার তারিখ',
+      'notice_tpl_bills_due_body':
+          'বিদ্যুৎ, গ্যাস, পানি, ইন্টারনেট বা বাসা ভাড়ার বিল বাকি থাকতে পারে। শেয়ার্ড ফান্ড ও হিসাব দেখে তারিখের আগে নিজের ভাগ দিন।',
+      'notice_tpl_shopping_list_title': 'বাজারের তালিকা',
+      'notice_tpl_shopping_list_body':
+          'বাজারে যাওয়ার আগে বাড়ির কী লাগবে তা বাজার তালিকা চ্যানেলে লিখে রাখুন।',
+      'notice_tpl_home_check_title': 'রাতে সবাই বাড়িতে',
+      'notice_tpl_home_check_body':
+          'রাতে বাড়ি ফিরলে "আমি এসেছি" চাপুন, যাতে সবাই জানে আপনি নিরাপদ।',
+      'notice_tpl_safety_check_title': 'নিরাপত্তা যাচাই',
+      'notice_tpl_safety_check_body':
+          'ঝড় বা বন্যার সতর্কতা। নিরাপদ থাকলে "বুঝেছি" চাপুন, তারপর নিরাপত্তা কেন্দ্রে "আমি নিরাপদ" চাপুন।',
     },
   };
 }

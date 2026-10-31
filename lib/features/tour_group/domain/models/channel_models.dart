@@ -51,6 +51,34 @@ const List<String> kBuiltInChannelIds = [
   kBuiltInVoiceChannelId,
 ];
 
+/// The text channels a family circle starts with. The kitchen and the outings
+/// keep the ids of the trip's food and sightseeing channels, so their messages stay
+/// visible; the rest are for home life.
+const List<String> kFamilyTextChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'home',
+  'kids',
+  'shopping',
+  'emergency',
+];
+
+const List<String> kFamilyChannelIds = [
+  ...kFamilyTextChannelIds,
+  kBuiltInVoiceChannelId,
+];
+
+/// Every channel a circle can start with, for a trip or a family circle.
+final Set<String> kAllBuiltInChannelIds = {
+  ...kBuiltInChannelIds,
+  ...kFamilyChannelIds,
+};
+
+/// The built-in channels a circle starts with, in the order they are listed.
+List<String> builtInChannelIdsFor({required bool family}) =>
+    family ? kFamilyChannelIds : kBuiltInChannelIds;
+
 /// The kind of channel: text messaging or voice lounge.
 enum ChannelKind { text, voice }
 
@@ -91,7 +119,7 @@ class TourChannel {
     this.kind = ChannelKind.text,
   });
 
-  bool get isBuiltIn => kBuiltInChannelIds.contains(id);
+  bool get isBuiltIn => kAllBuiltInChannelIds.contains(id);
   bool get isVoice => kind == ChannelKind.voice || id == kBuiltInVoiceChannelId;
 
   factory TourChannel.fromMap(String id, Map<String, dynamic> map) {

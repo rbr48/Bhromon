@@ -443,9 +443,15 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             contentPadding: EdgeInsets.zero,
             leading:
                 const Icon(Icons.savings_outlined, color: AppColors.mintGreen),
-            title: Text(l10n.translate('fund_budget_cta'),
+            title: Text(
+                l10n.translate(group.isFamily
+                    ? 'fund_budget_cta_family'
+                    : 'fund_budget_cta'),
                 style: const TextStyle(color: Colors.white)),
-            subtitle: Text(l10n.translate('fund_budget_cta_help'),
+            subtitle: Text(
+                l10n.translate(group.isFamily
+                    ? 'fund_budget_cta_help_family'
+                    : 'fund_budget_cta_help'),
                 style: const TextStyle(color: Colors.white54, fontSize: 12)),
             onTap: () => _editBudget(group),
           ),
@@ -747,10 +753,11 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           (e.paidByName ?? '').toLowerCase().contains(q);
     }).toList();
     final total = filtered.fold<int>(0, (n, e) => n + e.amountPaisa);
+    final offered = expenseCategoriesFor(family: _group?.isFamily ?? false);
     final categories = {for (final e in _expenses) e.category}.toList()
       ..sort((a, b) {
-        final ia = kExpenseCategories.indexOf(a);
-        final ib = kExpenseCategories.indexOf(b);
+        final ia = offered.indexOf(a);
+        final ib = offered.indexOf(b);
         return (ia < 0 ? 99 : ia).compareTo(ib < 0 ? 99 : ib);
       });
 
@@ -1697,6 +1704,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       budget: group.fundBudget,
       headcount: _headcount,
       totalDays: group.totalDays,
+      family: group.isFamily,
     );
     if (budget == null || !mounted) return;
     await _run(() => _repository.saveFundBudget(widget.tourId, budget),

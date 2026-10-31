@@ -13,7 +13,9 @@ import '../../domain/models/safety_alert_models.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/models/tour_post_models.dart';
+import '../../domain/services/fund_analytics.dart';
 import '../../domain/services/trip_ledger_engine.dart';
+import '../widgets/fund/expense_editor.dart';
 import '../widgets/instafeed/instafeed_create_studio.dart';
 import '../widgets/instafeed/instafeed_comments_sheet.dart';
 import '../widgets/instafeed/instafeed_day_filter_bar.dart';
@@ -734,7 +736,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           : context.l10n
               .translate('ig_trip_expense', args: {'name': post.authorName}),
     );
-    String selectedCategory = post.expenseCategory ?? 'Food';
+    // The same categories the ledger offers, so the budget lines pick it up.
+    final offered = expenseCategoriesFor(family: _tourGroup?.isFamily ?? false);
+    String selectedCategory = post.expenseCategory ?? offered.first;
 
     final result = await showDialog<bool>(
       context: context,
@@ -782,21 +786,15 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 labelStyle: const TextStyle(color: Colors.white70),
               ),
               items: [
-                DropdownMenuItem(
-                    value: 'Food',
-                    child: Text(context.l10n.translate('ig_cat_food'))),
-                DropdownMenuItem(
-                    value: 'Transport',
-                    child: Text(context.l10n.translate('ig_cat_transport'))),
-                DropdownMenuItem(
-                    value: 'Hotel',
-                    child: Text(context.l10n.translate('ig_cat_hotel'))),
-                DropdownMenuItem(
-                    value: 'Activity',
-                    child: Text(context.l10n.translate('ig_cat_activity'))),
-                DropdownMenuItem(
-                    value: 'Other',
-                    child: Text(context.l10n.translate('ig_cat_other'))),
+                // An older post's category stays selectable even if it is not
+                // on the list now.
+                for (final c in [
+                  ...offered,
+                  if (!offered.contains(selectedCategory)) selectedCategory,
+                ])
+                  DropdownMenuItem(
+                      value: c,
+                      child: Text(fundCategoryLabel(context.l10n, c))),
               ],
               onChanged: (v) {
                 if (v != null) selectedCategory = v;

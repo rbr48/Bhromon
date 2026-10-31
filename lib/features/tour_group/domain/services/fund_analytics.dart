@@ -2,7 +2,7 @@ import '../models/expense_models.dart';
 import '../models/tour_group.dart';
 import 'trip_ledger_engine.dart';
 
-/// The expense categories the fund offers, in display order. Older expenses
+/// The expense categories a trip's fund offers, in display order. Older expenses
 /// with other names keep them and show as typed.
 const List<String> kExpenseCategories = [
   'Food',
@@ -16,6 +16,32 @@ const List<String> kExpenseCategories = [
   'Tips',
   'Others',
 ];
+
+/// The categories a family circle's ledger offers: the household's bills and
+/// everyday spending, not a trip's hotels and guides.
+const List<String> kFamilyExpenseCategories = [
+  'Groceries',
+  'Utilities',
+  'Rent',
+  'School',
+  'Medical',
+  'Transport',
+  'Dining',
+  'Shopping',
+  'Gifts',
+  'Others',
+];
+
+/// The categories offered for a circle: family or trip.
+List<String> expenseCategoriesFor({required bool family}) =>
+    family ? kFamilyExpenseCategories : kExpenseCategories;
+
+/// The category a chat `/split` books its expense under. Dinner in the kitchen
+/// channel is food; anything else is "Others", which the owner can change.
+String splitCategoryFor({required bool family, required String channelId}) {
+  if (channelId != 'food') return 'Others';
+  return family ? 'Groceries' : 'Food';
+}
 
 /// A currency an expense may be paid in.
 class FundCurrency {
@@ -151,6 +177,7 @@ class FundReport {
   }) {
     final today = now ?? DateTime.now();
     final budget = group.fundBudget;
+    final categories = expenseCategoriesFor(family: group.isFamily);
 
     final spentByCat = <String, int>{};
     final byDayMap = <DateTime, int>{};
@@ -168,7 +195,7 @@ class FundReport {
     }
 
     final lines = <BudgetLine>[
-      for (final c in kExpenseCategories)
+      for (final c in categories)
         if ((budget.categoryPaisa[c] ?? 0) > 0 || (spentByCat[c] ?? 0) > 0)
           BudgetLine(
             category: c,
@@ -176,7 +203,7 @@ class FundReport {
             spentPaisa: spentByCat[c] ?? 0,
           ),
       for (final c in {...budget.categoryPaisa.keys, ...spentByCat.keys})
-        if (!kExpenseCategories.contains(c))
+        if (!categories.contains(c))
           BudgetLine(
             category: c,
             budgetPaisa: budget.categoryPaisa[c] ?? 0,

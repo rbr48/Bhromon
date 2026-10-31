@@ -25,6 +25,7 @@ import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/chat_commands.dart';
 import '../../domain/services/chat_mentions.dart';
+import '../../domain/services/fund_analytics.dart';
 import '../../domain/services/media_rules.dart';
 import '../tour_routes.dart';
 import '../../domain/services/presence_rules.dart';
@@ -53,6 +54,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   final VoiceRoomService _voiceService = VoiceRoomService();
 
   final List<StreamSubscription<dynamic>> _subs = [];
+  // Whether the circle is a family circle, which has its own built-in channels.
+  bool _isFamily = false;
 
   /// Last-seen time of each member, keyed by email. Drives the online count.
   Map<String, DateTime?> _presence = const {};
@@ -140,9 +143,13 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           .watchPresence(widget.tourId)
           .listen((p) => _update(() => _presence = p), onError: (_) {}),
     ]);
-    for (final id in kBuiltInChannelIds) {
+    for (final id in kAllBuiltInChannelIds) {
       unawaited(_ensurePrefs(id));
     }
+    _subs.add(_groups.watchGroup(widget.tourId).listen(
+        (TourGroup? group) =>
+            _update(() => _isFamily = group?.isFamily ?? false),
+        onError: (_) {}));
     unawaited(_markHere());
     _presenceBeat = Timer.periodic(kPresenceHeartbeat, (_) => _markHere());
     // Recounts the online members, so someone who has gone quiet drops out
@@ -194,7 +201,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   List<TourChannel> get _channels {
     final byId = {for (final c in _channelDocs) c.id: c};
     final builtIns = [
-      for (final id in kBuiltInChannelIds) byId[id] ?? TourChannel(id: id),
+      for (final id in builtInChannelIdsFor(family: _isFamily))
+        byId[id] ?? TourChannel(id: id),
     ];
     final custom = _channelDocs.where((c) => !c.isBuiltIn).toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -258,9 +266,17 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       case 'general':
         return l10n.translate('tour_channel_general');
       case 'food':
-        return l10n.translate('tour_channel_food');
+        return l10n
+            .translate(_isFamily ? 'family_channel_food' : 'tour_channel_food');
       case 'sightseeing':
-        return l10n.translate('tour_channel_places');
+        return l10n.translate(
+            _isFamily ? 'family_channel_sightseeing' : 'tour_channel_places');
+      case 'home':
+        return l10n.translate('family_channel_home');
+      case 'kids':
+        return l10n.translate('family_channel_kids');
+      case 'shopping':
+        return l10n.translate('family_channel_shopping');
       case 'emergency':
         return l10n.translate('tour_channel_safety');
       default:
@@ -1783,7 +1799,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
             channel.id,
             title: title,
             amountPaisa: amountPaisa,
-            category: channel.id == 'food' ? 'Food' : 'Others',
+            category:
+                splitCategoryFor(family: _isFamily, channelId: channel.id),
           );
           draft.clear();
           _snack(l10n.translate('chan_split_done', args: {
