@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../../core/services/offline_map_service.dart';
 import '../../../../core/services/routing_service.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../widgets/sos_hub_dialog.dart';
 import '../widgets/pin_detail_sheet.dart';
 import '../../../../core/theme/colors.dart';
@@ -166,7 +167,9 @@ class _MapScreenState extends State<MapScreen> {
           _adaptLocationTrackingSettings(pos);
         }
       });
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   void _adaptLocationTrackingSettings(Position pos) {
@@ -204,7 +207,9 @@ class _MapScreenState extends State<MapScreen> {
             _adaptLocationTrackingSettings(newPos);
           }
         });
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
   }
 
@@ -223,7 +228,9 @@ class _MapScreenState extends State<MapScreen> {
       _applyConnectivity(connectivity);
       _connectivitySubscription =
           Connectivity().onConnectivityChanged.listen(_applyConnectivity);
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   void _applyConnectivity(List<ConnectivityResult> results) {

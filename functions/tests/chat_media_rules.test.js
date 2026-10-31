@@ -9,7 +9,7 @@ const MB = 1024 * 1024;
 
 describe('Legacy chat media Storage rules', () => {
   let env;
-  const who = (uid) => env.authenticatedContext(uid, { email: `${uid}@x.com` }).storage();
+  const who = (uid) => env.authenticatedContext(uid, { email: `${uid}@x.com`, email_verified: true }).storage();
 
   beforeAll(async () => {
     env = await initializeTestEnvironment({

@@ -1,6 +1,6 @@
 # Privacy Policy for Bhromon
 
-**Last Updated: October 30, 2026**
+**Last Updated: October 31, 2026**
 
 Welcome to **Bhromon** (the "App" and "Platform"). Bhromon is an all-in-one universal travel companion, group tour ledger, and community platform owned and operated by **Bhromon Technologies Ltd.** ("we," "our," or "us"). 
 
@@ -90,7 +90,7 @@ You control your data:
 * **Leaving a tour**: When you leave a tour, or an admin removes you, your posts, stories, highlights, comments, chat messages, live locations, luggage, and seat selections are permanently deleted, together with your photos and videos on our media server. You are also taken out of other members' likes, votes, reactions, and mentions. Shared records such as the ledger and notices keep their amounts and dates, and your name is replaced with a stand-in name.
 * **Tours you own**: When you close your account, ownership of each tour you own passes to an admin, or else to the longest-standing member. If no one else is in a tour, the tour and everything in it is deleted.
 * **Deleting a tour**: The owner can delete a tour. Everything in it is deleted, including its photos and videos.
-* **Closing your account**: You can permanently delete your account from App Settings, or by emailing us. This removes your profile, your sign-in account, your device notification tokens, your files in our storage, and your content in every tour as described above. Two kinds of record are kept: an audit record that an account was deleted, which includes the account's ID (kept for up to two years), and anti-abuse trust records (kept for up to one year).
+* **Closing your account**: You can permanently delete your account from App Settings, or by emailing us. This removes your profile, your sign-in account, your device notification tokens, your trip logs, pins, follows, likes and visits, your files in our storage and on our media server (including photos and voice notes you sent in chats), your calls, your content in every tour as described above, and the messages you sent in direct chats. Those messages are removed from the conversation on our servers. A copy a recipient already saved on their own device is outside our control. Two kinds of record are kept: an audit record that an account was deleted, which includes the account's ID (kept for up to two years), and anti-abuse trust records (kept for up to one year).
 * **Media removal**: Deleted photos and videos are removed from our media server. Copies held by our content-delivery network may remain for a short time until they expire.
 * **Unfinished uploads**: Uploads that were never attached to a post or story are removed automatically after 30 minutes.
 * **Data portability**: A tour's full record can be exported as a PDF by its owner or an admin. Ledger reports can be exported as CSV.

@@ -46,7 +46,9 @@ Future<void> callkitBackgroundCallback(CallEvent event) async {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
   switch (event) {
     case CallEventActionCallDecline(:final callKitParams):
@@ -113,7 +115,9 @@ class CallNotificationService {
       _inAppRingtonePlayer?.stop();
       _inAppRingtonePlayer?.dispose();
       _inAppRingtonePlayer = null;
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   void init() {

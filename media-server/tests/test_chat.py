@@ -1,11 +1,10 @@
 """Tests for Bhromon VPS Chat & Notification Engine."""
 
 import asyncio
-import os
 import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from chat import ChatDatabase, ChatWebSocketManager, PushNotificationDispatcher

@@ -4,10 +4,11 @@ import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import '../utils/app_logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:uuid/uuid.dart';
+
+import '../utils/app_logger.dart';
 
 /// Central media and file upload service for Bhromon.
 ///
@@ -17,8 +18,6 @@ class MediaUploadService {
   static const String baseUrl = 'https://bhromon.fun';
   static const String uploadUrl = '$baseUrl/api/media/upload';
   static const String deleteBaseUrl = '$baseUrl/api/media/media';
-  static const String legacyUploadKey =
-      String.fromEnvironment('MEDIA_UPLOAD_KEY', defaultValue: '');
 
   static final Dio _dio = Dio(
     BaseOptions(
@@ -32,9 +31,6 @@ class MediaUploadService {
     final user = FirebaseAuth.instance.currentUser;
     final token = await user?.getIdToken();
     final headers = <String, String>{};
-    if (legacyUploadKey.isNotEmpty) {
-      headers['X-Upload-Key'] = legacyUploadKey;
-    }
     if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }
@@ -138,7 +134,8 @@ class MediaUploadService {
       if (candidate.length <= 64) {
         return candidate;
       }
-      return 'chat_direct';
+      // A shared fallback space would let any signed-in person into this chat's files.
+      throw ArgumentError.value(id, 'id', 'Too long to store as a chat space');
     }
     return id;
   }
@@ -323,7 +320,9 @@ class MediaUploadService {
             fileToUpload = xfile;
           }
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
 
     // Prioritize Firebase Storage for profile and personal media paths

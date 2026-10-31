@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/shared_latest_stream.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -202,9 +203,13 @@ class _ChatScreenState extends State<ChatScreen> {
       Future.delayed(const Duration(seconds: 30), () async {
         try {
           await trace.stop();
-        } catch (_) {}
+        } catch (error, stackTrace) {
+          logSkipped(error, stackTrace);
+        }
       });
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   /// Subscribes to the latest [_pageSize] messages in real-time.
@@ -264,7 +269,9 @@ class _ChatScreenState extends State<ChatScreen> {
         if (currentUid.isNotEmpty) {
           _markMessagesAsSeen(incoming, currentUid);
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     });
   }
 
@@ -349,7 +356,9 @@ class _ChatScreenState extends State<ChatScreen> {
       FirebaseFirestore.instance.collection('chats').doc(widget.chatId).set({
         'typing_$uid': typing,
       }, SetOptions(merge: true)).catchError((_) {});
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   void _checkBlockStatus() async {
@@ -667,7 +676,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       await msgRef.set(msgData);
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
 
     if (mounted) {
       setState(
@@ -993,7 +1004,9 @@ class _ChatScreenState extends State<ChatScreen> {
         uploadTrace = FirebasePerformance.instance.newTrace('media_upload');
         await uploadTrace.start();
         uploadTrace.putAttribute('mediaType', type);
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
 
     try {
@@ -1129,7 +1142,9 @@ class _ChatScreenState extends State<ChatScreen> {
     } finally {
       try {
         await uploadTrace?.stop();
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
       if (mounted) {
         setState(() => _pendingUploads.removeWhere((p) => p.id == uploadId));
       }
@@ -1869,7 +1884,9 @@ class _ChatScreenState extends State<ChatScreen> {
         final data = doc.data() as Map<String, dynamic>?;
         final text = data?['text'] as String? ?? '';
         if (text.isNotEmpty) texts.add(text);
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
     if (texts.isNotEmpty) {
       Clipboard.setData(ClipboardData(text: texts.join('\n\n')));

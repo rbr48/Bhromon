@@ -8,6 +8,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/call_signaling_service.dart';
@@ -83,7 +84,9 @@ class _CallScreenState extends State<CallScreen> {
       _ringbackPlayer?.stop();
       _ringbackPlayer?.dispose();
       _ringbackPlayer = null;
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   void _safeExit() {
@@ -366,7 +369,9 @@ class _CallScreenState extends State<CallScreen> {
         if (!didPop) {
           try {
             context.go('/chats');
-          } catch (_) {}
+          } catch (error, stackTrace) {
+            logSkipped(error, stackTrace);
+          }
         }
       },
       child: Scaffold(

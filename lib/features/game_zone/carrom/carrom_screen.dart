@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/utils/app_logger.dart';
 import '../common/game_zone_portrait_lock.dart';
 import '../data/game_analytics_service.dart';
 import '../domain/models/game_analytics_models.dart';
@@ -324,7 +325,9 @@ class _CarromScreenState extends State<CarromScreen>
           if (didPop) return;
           try {
             context.go('/game-zone');
-          } catch (_) {}
+          } catch (error, stackTrace) {
+            logSkipped(error, stackTrace);
+          }
         },
         child: Scaffold(
           backgroundColor: const Color(0xFF241812),
@@ -338,7 +341,9 @@ class _CarromScreenState extends State<CarromScreen>
                 } else {
                   try {
                     context.go('/game-zone');
-                  } catch (_) {}
+                  } catch (error, stackTrace) {
+                    logSkipped(error, stackTrace);
+                  }
                 }
               },
             ),

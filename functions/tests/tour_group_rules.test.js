@@ -23,7 +23,7 @@ const people = {
 
 describe('Tour Group Firestore rules', () => {
   let env;
-  const db = (who) => env.authenticatedContext(people[who].uid, { email: people[who].email }).firestore();
+  const db = (who) => env.authenticatedContext(people[who].uid, { email: people[who].email, email_verified: true }).firestore();
   const anon = () => env.unauthenticatedContext().firestore();
 
   beforeAll(async () => {
@@ -169,7 +169,23 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  test('an address the sign-in did not verify does not act as that person', async () => {
+    const unverified = env.authenticatedContext(people.member.uid, {
+      email: people.member.email,
+      email_verified: false,
+    }).firestore();
+    await assertFails(getDoc(doc(unverified, 'tours', TOUR)));
+    await assertFails(getDocs(query(collection(unverified, 'memberships'), where('tourId', '==', TOUR))));
+  });
+
   describe('invites', () => {
+    test('a six-character code from before is no longer looked up', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'invites', 'OLD666'), { tourId: TOUR, code: 'OLD666' });
+      });
+      await assertFails(getDoc(doc(db('outsider'), 'invites', 'OLD666')));
+    });
+
     test('anyone signed in can fetch an invite by exact code, but not list them', async () => {
       await assertSucceeds(getDoc(doc(db('outsider'), 'invites', CODE)));
       await assertFails(getDocs(collection(db('outsider'), 'invites')));

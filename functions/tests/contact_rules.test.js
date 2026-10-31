@@ -19,7 +19,7 @@ const CHAT = `${ALICE.uid}_${BOB.uid}`;
 
 describe('contact and directory rules', () => {
   let env;
-  const as = (who) => env.authenticatedContext(who.uid, { email: who.email }).firestore();
+  const as = (who) => env.authenticatedContext(who.uid, { email: who.email, email_verified: true }).firestore();
   const anon = () => env.unauthenticatedContext().firestore();
 
   // A chat or call between two people, bound to the tour they share.

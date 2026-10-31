@@ -11,9 +11,9 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../../../../core/services/push_device.dart';
 import '../../../../core/entities/explorer_profile.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/value_objects/explorer_score.dart';
 import '../../../../core/value_objects/trust_tier.dart';
-import '../../../../core/utils/app_logger.dart';
 import '../../domain/repositories/i_auth_repository.dart';
 
 @LazySingleton(as: IAuthRepository)
@@ -225,7 +225,9 @@ class AuthRepositoryImpl implements IAuthRepository {
   Future<void> _signOutRemotely() async {
     try {
       await _removeThisDeviceToken().timeout(const Duration(seconds: 2));
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
 
     try {
       await _auth.signOut();

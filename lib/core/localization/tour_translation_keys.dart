@@ -1669,6 +1669,12 @@ class TourTranslationKeys {
       'ig_video_pick_failed': 'Video selection error: {error}',
       'ig_cover_pick_failed': 'Cover photo selection error: {error}',
       'ig_pick_one_media': 'Choose at least one photo or video.',
+      'ig_video_format_unsupported':
+          'This video format cannot be uploaded. Choose an MP4 or MOV video.',
+      'ig_video_too_large_web':
+          'On the web a video can be at most {max}. Choose a smaller video, or use the Android app.',
+      'ig_upload_sign_in_again':
+          'Your sign-in needs confirming again. Sign out, then sign in with the code we email you.',
       'ig_upload_starting': 'Starting upload...',
       'ig_uploading_video': 'Uploading video...',
       'ig_uploading_cover': 'Uploading cover thumbnail...',
@@ -3420,6 +3426,12 @@ class TourTranslationKeys {
       'ig_video_pick_failed': 'ভিডিও নির্বাচন ত্রুটি: {error}',
       'ig_cover_pick_failed': 'কভার ছবি বাছাই ত্রুটি: {error}',
       'ig_pick_one_media': 'অন্তত একটি ছবি বা ভিডিও বাছাই করুন।',
+      'ig_video_format_unsupported':
+          'এই ভিডিও ফরম্যাটটি আপলোড করা যাবে না। MP4 বা MOV ভিডিও বেছে নিন।',
+      'ig_video_too_large_web':
+          'ওয়েবে ভিডিও সর্বোচ্চ {max} হতে পারে। ছোট ভিডিও বেছে নিন, নয়তো অ্যান্ড্রয়েড অ্যাপ ব্যবহার করুন।',
+      'ig_upload_sign_in_again':
+          'আপনার সাইন-ইন আবার নিশ্চিত করা দরকার। সাইন আউট করে ইমেইলে পাঠানো কোড দিয়ে আবার সাইন ইন করুন।',
       'ig_upload_starting': 'আপলোড শুরু হচ্ছে...',
       'ig_uploading_video': 'ভিডিও আপলোড হচ্ছে...',
       'ig_uploading_cover': 'কভার থাম্বনেইল আপলোড হচ্ছে...',

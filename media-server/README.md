@@ -26,8 +26,9 @@ Both services mount `/etc/bhromon/firebase-admin.json:ro` to authenticate reques
 
 ### B. Media & Notifications Microservice (`/api/media/`)
 - `GET /api/media/health` — Status of media and background notification engine.
-- `POST /api/media/upload` — Multipart upload with `Authorization: Bearer <token>`.
+- `POST /api/media/upload` — Multipart upload with `Authorization: Bearer <token>`. The token's email must be verified; an unverified address is refused, as the Firestore and Storage rules refuse it.
 - `DELETE /api/media/media/{tourId}/{folder}/{filename}` — File deletion by author or tour admin.
+- `POST /api/media/purge/account` — Closing an account: the back end removes that person's files and chat-service data (key-protected, see below).
 - `GET /media/{tourId}/{folder}/{filename}` — Direct Nginx byte-range streaming (`206 Partial Content`).
 - `POST /api/media/notify/sos` — Direct emergency SOS multicast trigger.
 - `POST /api/media/notify/channel` — Channel message and mention push notifications.
@@ -91,5 +92,46 @@ leaves or is removed, and when a tour is deleted.
   to the tour's folder. The back end uses it to clear the receipts that pointed
   to a removed file.
 
+## Closing an account
+
+`POST /purge/account` takes `{"uid": "...", "email": "..."}` with the same
+`X-Purge-Key`. It removes every file the email uploaded, in any space, and the
+chat service's data for the uid: device tokens, the messages it sent, and its
+place in other people's messages and conversations. The other person's messages
+stay. It answers with the file count, the paths and the chat counts. Repeating
+the call is harmless, so a closing that failed part way can be retried.
+
 Set `PURGE_KEY` on the server, and the same value as the Functions secret
-`MEDIA_PURGE_KEY`. Run the purge tests with `pytest tests/test_purge.py`.
+`MEDIA_PURGE_KEY`. Run the purge tests with `pytest tests/test_purge.py tests/test_account_purge.py`.
+
+## Upload spaces
+
+- A chat space, `chat_{uidA}_{uidB}`, takes media only from the two people in it,
+  and only while they share a tour. The old shared fallback space is refused.
+- A user space, `user_{uid}`, takes media only from its owner.
+- The public spaces (`profiles`, `users`, `general`, `explorer`, `trip_logs`) take
+  media from any signed-in person, as they always have.
+- There is no shared upload key. An old app build that still sends one is refused.
+
+## Backups
+
+`backup_store.py` writes one folder per run: a consistent copy of each SQLite
+database under the metadata root (taken with SQLite's online backup, so it is
+safe while the server runs), a tar of the metadata, and with `--include-media` a
+tar of the uploaded files. The newest `--keep` runs are kept.
+
+```
+python3 backup_store.py --dest /var/backups/bhromon --keep 14 --include-media
+```
+
+Run it daily from cron, and copy the destination off the server. A copy beside
+the data does not survive the loss of its disk. Run the tests with
+`pytest tests/test_backup_store.py`.
+
+## News fetching
+
+The reader and the web proxy fetch pages only from the newspapers in the catalog
+(`ALLOWED_FETCH_DOMAINS` in `news.py`), and every redirect is checked against that
+list. `POST /api/news/sync` needs a platform admin. A `refresh=true` on the headlines
+runs a sync at most every 10 minutes. Run the guard tests with
+`pytest tests/test_news_fetch_guard.py`.

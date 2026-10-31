@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../domain/models/newspaper_models.dart';
 
 /// Ad-Free and Ad-Blocker Enabled In-App Web Browser for reading newspapers
@@ -98,7 +99,9 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
               el.remove();
               count++;
             });
-          } catch(e) {}
+          } catch (error, stackTrace) {
+            logSkipped(error, stackTrace);
+          }
         });
 
         if (window.flutter_inappwebview && count > 0) {
@@ -157,7 +160,9 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
           await _webViewController!.goBack();
           return;
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
 
     // 2. Fall back to internal history stack (web + mobile fallback)
@@ -686,12 +691,14 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                     mediaPlaybackRequiresUserGesture: false,
                     supportMultipleWindows: true,
                     javaScriptCanOpenWindowsAutomatically: true,
+                    // An HTTPS page never loads plain-HTTP parts, which a network in
+                    // the middle could change.
                     mixedContentMode:
-                        MixedContentMode.MIXED_CONTENT_COMPATIBILITY_MODE,
+                        MixedContentMode.MIXED_CONTENT_NEVER_ALLOW,
                     safeBrowsingEnabled: true,
                     cacheEnabled: true,
                     clearCache: false,
-                    thirdPartyCookiesEnabled: true,
+                    thirdPartyCookiesEnabled: false,
                     allowFileAccess: false,
                     allowContentAccess: false,
                     allowFileAccessFromFileURLs: false,
@@ -731,7 +738,9 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                         try {
                           await launchUrl(Uri.parse(uri.toString()),
                               mode: LaunchMode.externalApplication);
-                        } catch (_) {}
+                        } catch (error, stackTrace) {
+                          logSkipped(error, stackTrace);
+                        }
                         return NavigationActionPolicy.CANCEL;
                       }
                     }

@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:video_compress/video_compress.dart';
 
 import '../../../../core/utils/app_logger.dart';
-
 import 'media_rules.dart';
 
 /// A compression the user stopped. It is not an error to show.
@@ -132,7 +131,9 @@ class TourVideoCompressor {
     _cancelRequested = true;
     try {
       await VideoCompress.cancelCompression();
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   /// Deletes cached video compression artifacts to free disk space.
@@ -140,7 +141,9 @@ class TourVideoCompressor {
     if (!kIsWeb) {
       try {
         await VideoCompress.deleteAllCache();
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
   }
 }

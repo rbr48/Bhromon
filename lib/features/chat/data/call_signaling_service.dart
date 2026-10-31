@@ -810,7 +810,9 @@ class CallSignalingService {
             _updateNetworkQuality(CallNetworkQuality.good);
           }
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     });
   }
 

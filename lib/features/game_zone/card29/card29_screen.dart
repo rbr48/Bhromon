@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/utils/app_logger.dart';
 import '../common/game_zone_portrait_lock.dart';
 import '../common/playing_card_view.dart';
 import '../data/game_analytics_service.dart';
@@ -136,7 +137,9 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
           if (didPop) return;
           try {
             context.go('/game-zone');
-          } catch (_) {}
+          } catch (error, stackTrace) {
+            logSkipped(error, stackTrace);
+          }
         },
         child: Scaffold(
           backgroundColor: const Color(0xFF0F381E),
@@ -150,7 +153,9 @@ class _Card29ScreenState extends State<Card29Screen> with GameZonePortraitLock {
                 } else {
                   try {
                     context.go('/game-zone');
-                  } catch (_) {}
+                  } catch (error, stackTrace) {
+                    logSkipped(error, stackTrace);
+                  }
                 }
               },
             ),

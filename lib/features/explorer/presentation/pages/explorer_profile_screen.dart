@@ -16,6 +16,7 @@ import '../../../../core/localization/locale_controller.dart';
 import '../../../../core/services/media_upload_service.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/theme_context.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/widgets/skeleton.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
@@ -214,7 +215,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               .collection('explorer_profiles')
               .doc(uid)
               .set({'statusNote': result}, SetOptions(merge: true));
-        } catch (_) {}
+        } catch (error, stackTrace) {
+          logSkipped(error, stackTrace);
+        }
       }
     }
   }
@@ -289,7 +292,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               .collection('explorer_profiles')
               .doc(uid)
               .set({'bloodGroup': result}, SetOptions(merge: true));
-        } catch (_) {}
+        } catch (error, stackTrace) {
+          logSkipped(error, stackTrace);
+        }
       }
     }
   }

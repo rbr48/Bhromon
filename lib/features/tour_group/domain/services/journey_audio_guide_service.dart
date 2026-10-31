@@ -125,7 +125,9 @@ class JourneyAudioGuideService {
       if (_flutterTts != null) {
         await _flutterTts!.stop();
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     isSpeaking.value = false;
     currentCheckpointId.value = null;
   }

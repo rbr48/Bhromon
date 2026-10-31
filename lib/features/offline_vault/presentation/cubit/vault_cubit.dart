@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../domain/usecases/download_vault_usecase.dart';
 import '../../domain/usecases/delete_vault_usecase.dart';
 import '../../domain/usecases/sync_outbox_usecase.dart';
@@ -49,7 +50,9 @@ class VaultCubit extends Cubit<VaultState> {
         final map = jsonDecode(jsonStr) as Map<String, dynamic>;
         return OutboxEntry.fromJson(map);
       }).toList();
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
 
     final result = await _getVaultStatus();
     result.fold(

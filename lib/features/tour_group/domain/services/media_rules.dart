@@ -47,6 +47,14 @@ String? imageContentType(String fileName) => _imageTypes[_extension(fileName)];
 /// The content type to upload a video with, or null when not allowed.
 String? videoContentType(String fileName) => _videoTypes[_extension(fileName)];
 
+/// Whether a video named [fileName] can be stored. These are the containers the
+/// media server keeps (VIDEO_EXTENSIONS in media-server/main.py). A name with no
+/// extension is allowed, as it always was, and is stored as an mp4.
+bool isSupportedVideoName(String fileName) {
+  final ext = _extension(fileName);
+  return ext.isEmpty || _videoTypes.containsKey(ext);
+}
+
 /// The content type to upload a voice note with, or null when not allowed.
 String? audioContentType(String fileName) => _audioTypes[_extension(fileName)];
 
