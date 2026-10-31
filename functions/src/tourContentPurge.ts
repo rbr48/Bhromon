@@ -1,5 +1,5 @@
 import * as admin from 'firebase-admin';
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as crypto from 'crypto';
 import { leave29Table } from './card29/callables';
 import { leaveCarromTable } from './carrom/callables';
