@@ -1,7 +1,7 @@
 // A date a family keeps: a birthday, an anniversary, a bill, a school day or a
 // medicine time. Stored under `tours/{id}/family_dates`. The reminder job
-// (`sendFamilyDateReminders`) moves its next day on; the app computes the same
-// rules in `family_date_rules.dart`.
+// (`media-server/family_dates.py`) moves its next day on; the app computes the
+// same rules in `family_date_rules.dart`.
 
 // What a family date is about. Each kind has its own emoji.
 enum FamilyDateKind {

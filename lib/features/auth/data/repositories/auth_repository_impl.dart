@@ -15,6 +15,7 @@ import '../../../../core/utils/app_logger.dart';
 import '../../../../core/value_objects/explorer_score.dart';
 import '../../../../core/value_objects/trust_tier.dart';
 import '../../domain/repositories/i_auth_repository.dart';
+import '../google_sign_in_failure.dart';
 
 @LazySingleton(as: IAuthRepository)
 class AuthRepositoryImpl implements IAuthRepository {
@@ -176,8 +177,9 @@ class AuthRepositoryImpl implements IAuthRepository {
         try {
           googleUser = await _googleSignIn.authenticate();
         } on GoogleSignInException catch (e) {
-          if (e.code == GoogleSignInExceptionCode.canceled) {
-            return const Left(AuthFailure('Google Sign-In aborted.'));
+          final message = googleSignInFailureMessage(e);
+          if (message != null) {
+            return Left(AuthFailure(message));
           }
           rethrow;
         }
