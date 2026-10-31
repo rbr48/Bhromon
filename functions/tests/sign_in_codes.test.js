@@ -121,4 +121,26 @@ describe('sign-in codes', () => {
       await admin.auth().deleteUser(user.uid);
     }
   });
+
+  test('an accepted code takes away the password an unverified account was made with', async () => {
+    const squatted = 'squatted@x.com';
+    process.env.FUNCTIONS_EMULATOR = 'true';
+    const user = await admin.auth().createUser({ email: squatted, emailVerified: false, password: 'letmein-123' });
+    const passwordSignIn = () => fetch(
+      'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: squatted, password: 'letmein-123', returnSecureToken: true }),
+      },
+    );
+    try {
+      // The password works first, so the refusal below is caused by the code.
+      expect((await passwordSignIn()).status).toBe(200);
+      await verify('777777', squatted);
+      expect((await (await passwordSignIn()).json()).error.message).toBe('INVALID_PASSWORD');
+    } finally {
+      await admin.auth().deleteUser(user.uid);
+    }
+  });
 });

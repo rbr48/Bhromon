@@ -2,6 +2,7 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as fs from 'fs';
 import * as path from 'path';
+import { randomBytes } from 'crypto';
 import { OTP_LOCK_MS, OTP_MAX_ATTEMPTS, digestsMatch, otpDigest, toMs } from './lib/otp';
 
 const db = admin.firestore();
@@ -152,7 +153,14 @@ export const verifyOtp = functions
       // The Firestore and Storage rules trust only verified addresses, and an account made
       // before those rules may not be verified yet.
       if (!userRecord.emailVerified) {
-        userRecord = await admin.auth().updateUser(userRecord.uid, { emailVerified: true });
+        // A password account for this address may have been made by someone who does not
+        // own it. Its password is replaced and its sessions end, so only a code opens it.
+        const hasPassword = userRecord.providerData.some((p) => p.providerId === 'password');
+        userRecord = await admin.auth().updateUser(userRecord.uid, {
+          emailVerified: true,
+          ...(hasPassword ? { password: randomBytes(32).toString('hex') } : {}),
+        });
+        if (hasPassword) await admin.auth().revokeRefreshTokens(userRecord.uid);
       }
       const auth = tokenSignerApp ? tokenSignerApp.auth() : admin.auth();
       const customToken = await auth.createCustomToken(userRecord.uid, {
