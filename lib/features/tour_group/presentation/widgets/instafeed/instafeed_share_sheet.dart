@@ -120,14 +120,18 @@ class InstafeedShareSheet extends StatelessWidget {
     try {
       // The story gets its own copy of the media. Sharing the post's file would
       // tie the story to the post, so deleting either one would break the other.
+      // Read before the awaits below, so the context is not used across them.
+      final caption = context.l10n.translate(
+        'ig_reshare_label',
+        args: {'name': post.authorName},
+      );
       final mediaCopy = await _ownCopy(media);
       final videoCopy =
           post.videoUrl == null ? null : await _ownCopy(post.videoUrl!);
       await repository.addStory(
         tourId: tourId,
         mediaUrl: mediaCopy,
-        caption: context.l10n
-            .translate('ig_reshare_label', args: {'name': post.authorName}),
+        caption: caption,
         isVideo: post.isReel || post.videoUrl != null,
         videoUrl: videoCopy,
       );
