@@ -6,6 +6,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/tour_activity_models.dart';
+export '../../domain/models/tour_activity_models.dart' show checklistDefaultItems;
 import '../../domain/models/tour_group.dart';
 
 class TourChecklistScreen extends StatefulWidget {
@@ -394,27 +395,3 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
 
   static const _defaultItems = checklistDefaultItems;
 }
-
-/// The default checklist items, in a fixed order: each one's index is its
-/// saved id (`default_0`, `default_1`, ...), so new items go at the end.
-/// Titles and categories are translation keys.
-const List<({String title, String category})> checklistDefaultItems = [
-  (title: 'check_item_id_copy', category: 'check_cat_documents'),
-  (title: 'check_item_tickets', category: 'check_cat_documents'),
-  (title: 'check_item_basic_medicine', category: 'check_cat_medicines'),
-  (title: 'check_item_first_aid', category: 'check_cat_medicines'),
-  (title: 'check_item_charger', category: 'check_cat_electronics'),
-  (title: 'check_item_plug_pouch', category: 'check_cat_electronics'),
-  (title: 'check_item_cotton_clothes', category: 'check_cat_clothing'),
-  (title: 'check_item_swimwear', category: 'check_cat_clothing'),
-  (title: 'check_item_sunscreen', category: 'check_cat_beach'),
-  (title: 'check_item_sandals', category: 'check_cat_beach'),
-  (title: 'check_item_trekking_shoes', category: 'check_cat_hill'),
-  (title: 'check_item_raincoat', category: 'check_cat_hill'),
-  (title: 'check_item_torch', category: 'check_cat_hill'),
-  (title: 'check_item_mosquito_spray', category: 'check_cat_nature'),
-  (title: 'check_item_dry_bag', category: 'check_cat_nature'),
-  (title: 'check_item_walking_shoes', category: 'check_cat_clothing'),
-  (title: 'check_item_power_bank', category: 'check_cat_electronics'),
-  (title: 'check_item_umbrella_hat', category: 'check_cat_clothing'),
-];

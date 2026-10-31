@@ -148,9 +148,17 @@ class AuthRepositoryImpl implements IAuthRepository {
   }
 
   // google_sign_in 7 needs one initialize() before any other call. Every caller awaits
-  // the same run. The Android client reads its web client ID from google-services.json.
-  Future<void> _initGoogleSignIn() =>
-      _googleInit ??= _googleSignIn.initialize();
+  // the same run. On Android, serverClientId (Web Client ID from google-services.json)
+  // is required by Credential Manager to request a Google ID token.
+  static const String _defaultServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue:
+        '919602851188-19utalf8ermkjdfog5r605s3stc98sfr.apps.googleusercontent.com',
+  );
+
+  Future<void> _initGoogleSignIn() => _googleInit ??= _googleSignIn.initialize(
+        serverClientId: _defaultServerClientId,
+      );
 
   @override
   Future<Either<Failure, ExplorerProfile>> signInWithGoogle() async {
