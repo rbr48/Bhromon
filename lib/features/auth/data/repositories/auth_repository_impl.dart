@@ -208,12 +208,14 @@ class AuthRepositoryImpl implements IAuthRepository {
     if (uid == null) return;
     try {
       final messaging = FirebaseMessaging.instance;
+      // ignore: deprecated_member_use
       final token = await messaging.getToken();
       if (token != null) {
         final user = _firestore.collection('fcm_tokens').doc(uid);
         await user.collection('devices').doc(pushDeviceId(token)).delete();
         final legacy = await user.get();
         if (legacy.data()?['token'] == token) await user.delete();
+        // ignore: deprecated_member_use
         await messaging.deleteToken();
       }
     } catch (e, stack) {

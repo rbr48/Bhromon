@@ -56,6 +56,9 @@ class FcmService {
     await _userNotificationsSub?.cancel();
     _userNotificationsSub = null;
     try {
+      // Push targets are still FCM tokens, and the functions send to them. FID mode
+      // needs the server to send FID messages first, so the token calls stay for now.
+      // ignore: deprecated_member_use
       await _messaging.deleteToken();
     } catch (error, stackTrace) {
       logSkipped(error, stackTrace);
@@ -126,8 +129,10 @@ class FcmService {
     // ── 2. Request FCM permissions & save device token ───────────────────────
     try {
       await _messaging.requestPermission(alert: true, badge: true, sound: true);
+      // ignore: deprecated_member_use
       final token = await _messaging.getToken();
       if (token != null) await _saveToken(uid, token);
+      // ignore: deprecated_member_use
       _messaging.onTokenRefresh.listen((t) => _saveToken(uid, t));
     } catch (e, st) {
       logWarning('[FcmService] FCM token acquisition error', e, st);
