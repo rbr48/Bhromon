@@ -1990,6 +1990,13 @@ class TourTranslationKeys {
       'dp_save_failed': 'Could not save. Check your connection and try again.',
       'dp_remove_failed': 'Could not remove. Try again.',
       'dp_load_failed': 'Could not load the list. Check your connection.',
+      'hub_module_album': 'Family album',
+      'hub_module_album_sub': 'Photos from Moments, month by month',
+      'album_title': 'Family album',
+      'album_count': '{count} photos',
+      'album_empty':
+          'No photos yet. Photos posted in Moments appear here, month by month.',
+      'album_load_failed': 'Could not load the photos. Check your connection.',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -3972,6 +3979,13 @@ class TourTranslationKeys {
       'dp_save_failed': 'সেভ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।',
       'dp_remove_failed': 'সরানো যায়নি। আবার চেষ্টা করুন।',
       'dp_load_failed': 'তালিকা আনা যায়নি। ইন্টারনেট সংযোগ দেখুন।',
+      'hub_module_album': 'পারিবারিক অ্যালবাম',
+      'hub_module_album_sub': 'মোমেন্টসের ছবি, মাস অনুযায়ী',
+      'album_title': 'পারিবারিক অ্যালবাম',
+      'album_count': '{count}টি ছবি',
+      'album_empty':
+          'এখনও কোনো ছবি নেই। মোমেন্টসে পোস্ট করা ছবি এখানে মাস অনুযায়ী দেখা যাবে।',
+      'album_load_failed': 'ছবি আনা যায়নি। ইন্টারনেট সংযোগ দেখুন।',
     },
   };
 }
