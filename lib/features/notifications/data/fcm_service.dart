@@ -487,6 +487,11 @@ class FcmService {
       case 'notice':
         if (tourId != null) GoRouter.of(context).go('/group/$tourId/notices');
         break;
+      case 'family_date':
+        if (tourId != null) {
+          GoRouter.of(context).go('/group/$tourId/family-dates');
+        }
+        break;
       case 'ledger':
       case 'expense':
         if (tourId != null) GoRouter.of(context).go('/group/$tourId/ledger');

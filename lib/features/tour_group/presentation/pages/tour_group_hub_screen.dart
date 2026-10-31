@@ -1432,13 +1432,21 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           color: const Color(0xFF6366F1),
           onTap: () => context.push('/group/${group.id}/logistics'),
         ),
-      'calendar': _ModuleItem(
-        title: l10n.translate('hub_module_calendar'),
-        subtitle: l10n.translate('hub_module_calendar_sub'),
-        icon: Icons.calendar_month_rounded,
-        color: const Color(0xFF84CC16),
-        onTap: () => context.push('/group/${group.id}/calendar'),
-      ),
+      'calendar': group.isFamily
+          ? _ModuleItem(
+              title: l10n.translate('hub_module_family_dates'),
+              subtitle: l10n.translate('hub_module_family_dates_sub'),
+              icon: Icons.event_repeat_rounded,
+              color: const Color(0xFF84CC16),
+              onTap: () => context.push('/group/${group.id}/family-dates'),
+            )
+          : _ModuleItem(
+              title: l10n.translate('hub_module_calendar'),
+              subtitle: l10n.translate('hub_module_calendar_sub'),
+              icon: Icons.calendar_month_rounded,
+              color: const Color(0xFF84CC16),
+              onTap: () => context.push('/group/${group.id}/calendar'),
+            ),
       if (isTrip && group.modules.tideSafety)
         'tide': _ModuleItem(
           title: group.tourType == TourType.beach

@@ -107,6 +107,15 @@ describe('anonymize', () => {
     });
   });
 
+  it('keeps a family date for the circle, with its author replaced', () => {
+    const date = anonymize({ emails: ['createdByEmail'] }, LEAVER, STAND_IN);
+    expect(date({ createdByEmail: LEAVER, title: "Asha's birthday", nextOn: '2026-11-03' }, 'd1')).toEqual({
+      kind: 'update',
+      fields: { createdByEmail: STAND_IN },
+    });
+    expect(date({ createdByEmail: 'other@x.com', title: 'Bill' }, 'd2')).toBeNull();
+  });
+
   it('keeps a deposit or transfer amount, with the names of both sides replaced', () => {
     const deposit = anonymize(
       { emails: ['addedByEmail', 'memberId'], names: { memberId: 'memberName' } },

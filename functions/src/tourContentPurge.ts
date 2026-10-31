@@ -116,6 +116,8 @@ const NOTICE: AnonymizePlan = {
   names: { authorEmail: 'author' },
   removeFromLists: ['ackBy'],
 };
+// A family date belongs to the circle, so it stays; only its author is replaced.
+const FAMILY_DATE: AnonymizePlan = { emails: ['createdByEmail'] };
 const CHECKPOINT: AnonymizePlan = { emails: ['addedByEmail'] };
 const CHECKLIST_ITEM: AnonymizePlan = { removeFromLists: ['checkedBy'] };
 const CHANNEL: AnonymizePlan = { emails: ['createdByEmail', 'updatedByEmail'] };
@@ -442,6 +444,7 @@ export async function purgeMemberContent(
   await applyToQuery(db, tour.collection('deposits'), anonymize(LEDGER_DEPOSIT, email, standIn));
   await applyToQuery(db, tour.collection('transfers'), anonymize(LEDGER_TRANSFER, email, standIn));
   await applyToQuery(db, tour.collection('notices'), anonymize(NOTICE, email, standIn));
+  await applyToQuery(db, tour.collection('family_dates'), anonymize(FAMILY_DATE, email, standIn));
   await applyToQuery(db, tour.collection('checkpoints'), anonymize(CHECKPOINT, email, standIn));
   await applyToQuery(db, tour.collection('checklist'), anonymize(CHECKLIST_ITEM, email, standIn));
   await applyToQuery(db, tour.collection('meta'), anonymize(ITINERARY_META, email, standIn));

@@ -14,6 +14,8 @@ import '../domain/models/itinerary_models.dart';
 import '../domain/models/logistics_models.dart';
 import '../domain/models/safety_alert_models.dart';
 import '../domain/models/tour_activity_models.dart';
+import '../domain/models/family_date_models.dart';
+import '../domain/services/family_date_rules.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
 import '../domain/models/vehicle_models.dart';
@@ -1568,6 +1570,65 @@ class TourGroupRepository {
   Future<void> deleteNotice(String tourId, String noticeId) async {
     _requireEmail();
     await _sub(tourId, 'notices').doc(noticeId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Family dates
+  // ---------------------------------------------------------------------------
+
+  /// The circle's dates. A stored date that does not read is left out.
+  Stream<List<FamilyDate>> watchFamilyDates(String tourId) {
+    return _sub(tourId, 'family_dates').limit(200).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (FamilyDate.fromMap(d.id, d.data()) case final date?) date,
+        ]);
+  }
+
+  /// Adds a family date, or saves changes to one. The reminder days are worked
+  /// out from the start day and today, the way the reminder job works them out.
+  /// A new date is stamped with the signed-in member; an edit keeps its creator.
+  Future<void> saveFamilyDate(
+    String tourId, {
+    String? id,
+    required String title,
+    required FamilyDateKind kind,
+    required FamilyRecurrence recurrence,
+    required DateTime startOn,
+    required int remindDays,
+    String note = '',
+    DateTime? now,
+  }) async {
+    final email = _requireEmail();
+    final schedule = FamilyDateRules.scheduleFor(
+      startOn: startOn,
+      recurrence: recurrence,
+      remindDays: remindDays,
+      today: now ?? DateTime.now(),
+    );
+    final fields = {
+      'title': title.trim(),
+      'kind': kind.name,
+      'recurrence': recurrence.name,
+      'startOn': FamilyDateRules.dayKey(startOn),
+      'nextOn': schedule.nextOn,
+      'remindDays': remindDays,
+      'remindOn': schedule.remindOn,
+      'note': note.trim(),
+    };
+    if (id == null) {
+      await _sub(tourId, 'family_dates').add({
+        ...fields,
+        'createdByEmail': email,
+      });
+    } else {
+      await _sub(tourId, 'family_dates').doc(id).update(fields);
+    }
+  }
+
+  /// Removes a family date. Its creator or an admin may do it; the rules decide.
+  Future<void> deleteFamilyDate(String tourId, String dateId) async {
+    _requireEmail();
+    await _sub(tourId, 'family_dates').doc(dateId).delete();
   }
 
   // ---------------------------------------------------------------------------

@@ -617,6 +617,23 @@ service cloud.firestore {
              get(/databases/$(database)/documents/tours/$(tId)).data.get('kind', 'tour') == 'family';
     }
 
+    // A family date: a birthday, bill, school or medicine time. Days are YYYY-MM-DD
+    // strings, and the reminder days are 0 to 30 (the app offers a few of them).
+    function isDayKey(v) {
+      return v is string && v.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
+    }
+    function validFamilyDate(d) {
+      return d.keys().hasOnly(['title', 'kind', 'recurrence', 'startOn', 'nextOn', 'remindDays', 'remindOn', 'note', 'createdByEmail']) &&
+             d.title is string && d.title.size() >= 1 && d.title.size() <= 80 &&
+             d.kind in ['birthday', 'anniversary', 'bill', 'school', 'medicine', 'custom'] &&
+             d.recurrence in ['once', 'monthly', 'yearly'] &&
+             isDayKey(d.startOn) && isDayKey(d.nextOn) &&
+             d.remindDays is int && d.remindDays >= 0 && d.remindDays <= 30 &&
+             (d.get('remindOn', null) == null || isDayKey(d.remindOn)) &&
+             d.get('note', '') is string && d.get('note', '').size() <= 500 &&
+             d.createdByEmail is string;
+    }
+
     // A list of member emails (likes, viewers) changes by one entry: the caller's
     // own. Either nothing changes, the caller is added, or the caller is removed.
     function ownEntryOnly(before, after) {
@@ -722,6 +739,22 @@ service cloud.firestore {
                          request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['ackBy']) &&
                          ownEntryOnly(resource.data.get('ackBy', []), request.resource.data.get('ackBy', []));
+      }
+
+      // Family dates. Any member of a family circle adds one under their own email.
+      // Its creator or an admin changes or removes it. The daily reminder job moves
+      // nextOn and remindOn on with admin rights, so they can change under the rules.
+      match /family_dates/{dateId} {
+        allow read: if isActiveMember(tourId);
+        allow create: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+                         request.resource.data.createdByEmail == tourUserEmail() &&
+                         validFamilyDate(request.resource.data);
+        allow update: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+                         (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail()) &&
+                         request.resource.data.createdByEmail == resource.data.createdByEmail &&
+                         validFamilyDate(request.resource.data);
+        allow delete: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+                         (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
       }
 
       // Packing checklist: members tick items; admins remove them.
