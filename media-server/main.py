@@ -6,8 +6,7 @@ active member of the tour. A delete is allowed for the file's uploader, or for
 a tour owner or admin. Ownership is recorded in a metadata file kept outside the
 public tree.
 
-LEGACY_UPLOAD_KEY is a transition aid for app builds that predate token auth.
-It is unset by default and should be removed once those builds are gone.
+There is no shared upload key. An old app build that still sends one is refused.
 """
 
 import hashlib
@@ -31,6 +30,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 import chat
+import news
 from chat import chat_db, chat_router
 from news import router as news_router
 from notifications import FirestoreNotificationWatcher, NotificationEngine
@@ -42,7 +42,6 @@ MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", "/data/media"))
 META_ROOT = Path(os.getenv("MEDIA_META_ROOT", "/data/media-meta"))
 BASE_URL = os.getenv("BASE_URL", "https://bhromon.fun/media")
 FIREBASE_CREDENTIALS = os.getenv("FIREBASE_CREDENTIALS", "")
-LEGACY_UPLOAD_KEY = os.getenv("LEGACY_UPLOAD_KEY", "")
 # Held by the Bhromon back end only. It lets that back end remove a tour's
 # files when a member leaves or a tour is deleted.
 PURGE_KEY = os.getenv("PURGE_KEY", "")
@@ -142,17 +141,16 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-Upload-Key"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
 @dataclass(frozen=True)
 class Caller:
-    """Who is calling. The legacy key has no identity, so its uid and email are empty."""
+    """Who is calling, from a verified Firebase ID token."""
 
     email: str
-    legacy: bool = False
-    uid: str = ""
+    uid: str
 
 
 # How long a uid's email, and a person's tours, are remembered. A person who leaves
@@ -279,18 +277,12 @@ backend = FirebaseBackend()
 # through `backend` at call time, so tests that swap the backend swap this too.
 chat.shares_group = lambda uid_a, uid_b: backend.shares_group(uid_a, uid_b)
 
+# Only a platform admin may start a news sync.
+news.sync_guard = lambda authorization: require_platform_admin(authenticate(authorization))
 
-def authenticate(
-    authorization: Optional[str],
-    legacy_key: Optional[str],
-    allow_legacy: bool = False,
-) -> Caller:
-    """Identifies the caller from a Firebase ID token.
 
-    The legacy upload key is accepted only where `allow_legacy` is set (media
-    uploads and deletes). Old app builds ship that key, so it must not reach the
-    call, notification or admin routes.
-    """
+def authenticate(authorization: Optional[str]) -> Caller:
+    """Identifies the caller from a Firebase ID token. Anything else is refused."""
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization[7:].strip()
         try:
@@ -302,8 +294,6 @@ def authenticate(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Sign in again to upload or delete media.",
             )
-    if allow_legacy and LEGACY_UPLOAD_KEY and legacy_key and secrets.compare_digest(legacy_key, LEGACY_UPLOAD_KEY):
-        return Caller(email="", legacy=True)
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Missing or invalid authorization.",
@@ -315,8 +305,8 @@ PLATFORM_ADMIN_TIERS = frozenset({"regionExpert", "pioneer"})
 
 
 def require_platform_admin(caller: Caller) -> None:
-    """Raises 403 unless the caller is a platform admin. Legacy keys carry no identity."""
-    if caller.legacy or not caller.uid or backend.tier_for_uid(caller.uid) not in PLATFORM_ADMIN_TIERS:
+    """Raises 403 unless the caller is a platform admin."""
+    if not caller.uid or backend.tier_for_uid(caller.uid) not in PLATFORM_ADMIN_TIERS:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only platform admins can do this.",
@@ -328,13 +318,43 @@ PUBLIC_OR_USER_SPACES = frozenset({
 })
 
 
+def chat_partner_of(space: str, uid: str) -> Optional[str]:
+    """The other person in a chat space (`chat_{uidA}_{uidB}`), or None when `uid` is not one of them."""
+    if not uid or not space.startswith("chat_"):
+        return None
+    rest = space[len("chat_"):]
+    if rest.startswith(uid + "_"):
+        other = rest[len(uid) + 1:]
+    elif rest.endswith("_" + uid):
+        other = rest[: -(len(uid) + 1)]
+    else:
+        return None
+    return other if other and other != uid else None
+
+
 def require_member(tour_id: str, caller: Caller) -> str:
-    """The caller's role in the tour. Raises 403 when they are not an active member."""
-    if caller.legacy:
-        return "legacy"
-    if tour_id in PUBLIC_OR_USER_SPACES or tour_id.startswith("chat_") or tour_id.startswith("user_"):
+    """The caller's role in the tour. Raises 403 when they are not allowed in it.
+
+    A chat space is open only to the two people in it, and only while they share a
+    tour. A user space is open only to its owner. The public spaces are open to any
+    signed-in person, as they always were.
+    """
+    if tour_id.startswith("chat_"):
+        other = chat_partner_of(tour_id, caller.uid)
+        if other is None or not backend.shares_group(caller.uid, other):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only use media in a chat with someone you share a tour with.",
+            )
+        return "member"
+    if tour_id.startswith("user_"):
+        if caller.uid and tour_id == f"user_{caller.uid}":
+            return "owner"
+        raise HTTPException(status_code=403, detail="That space belongs to someone else.")
+    if tour_id in PUBLIC_OR_USER_SPACES:
         if caller.email:
             return "member"
+        raise HTTPException(status_code=403, detail="Sign in to use this space.")
     role = backend.role_for(tour_id, caller.email)
     if role is None:
         raise HTTPException(
@@ -387,7 +407,7 @@ def write_meta(tour_id: str, folder: str, filename: str, caller: Caller) -> None
     path = meta_path_for(tour_id, folder, filename)
     path.parent.mkdir(parents=True, exist_ok=True)
     record = {
-        "uploaderEmail": "legacy" if caller.legacy else caller.email,
+        "uploaderEmail": caller.email,
         "tourId": tour_id,
         "folder": folder,
     }
@@ -405,8 +425,6 @@ def read_meta(tour_id: str, folder: str, filename: str) -> Optional[dict]:
 
 
 def may_delete(caller: Caller, role: str, meta: Optional[dict]) -> bool:
-    if caller.legacy:
-        return True
     if role in {"owner", "admin"}:
         return True
     return meta is not None and meta.get("uploaderEmail") == caller.email
@@ -461,8 +479,6 @@ def is_retry_of(
     tell whether it got through, so it sends again. The repeat gets the existing
     URL back instead of a conflict. Anything else with the same name is refused.
     """
-    if caller.legacy:
-        return False
     meta = read_meta(tourId, folder, filename)
     if meta is None or meta.get("uploaderEmail") != caller.email:
         return False
@@ -476,9 +492,8 @@ async def upload_media(
     folder: str = Form(...),
     objectId: Optional[str] = Form(None),
     authorization: Optional[str] = Header(None),
-    x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
 ):
-    caller = await run_in_threadpool(authenticate, authorization, x_upload_key, True)
+    caller = await run_in_threadpool(authenticate, authorization)
     check_tour_id(tourId)
     check_folder(folder)
     await run_in_threadpool(require_member, tourId, caller)
@@ -533,9 +548,8 @@ async def delete_media(
     folder: str,
     filename: str,
     authorization: Optional[str] = Header(None),
-    x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
 ):
-    caller = await run_in_threadpool(authenticate, authorization, x_upload_key, True)
+    caller = await run_in_threadpool(authenticate, authorization)
     check_tour_id(tourId)
     check_folder(folder)
     if not FILENAME_PATTERN.fullmatch(filename):
@@ -632,9 +646,56 @@ async def purge_tour_content(
     return {"removed": len(removed), "paths": removed}
 
 
+def purge_user_files(email: str) -> List[str]:
+    """Deletes every file `email` uploaded, in every tour and space. Returns the paths removed."""
+    removed: List[str] = []
+    if not META_ROOT.is_dir():
+        return removed
+    for meta_file in META_ROOT.glob("*/*/*.json"):
+        try:
+            meta = json.loads(meta_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(meta, dict) or str(meta.get("uploaderEmail", "")).strip().lower() != email:
+            continue
+        tour_id = meta_file.parent.parent.name
+        folder = meta_file.parent.name
+        filename = meta_file.name[: -len(".json")]
+        (MEDIA_ROOT / tour_id / folder / filename).unlink(missing_ok=True)
+        meta_file.unlink(missing_ok=True)
+        removed.append(f"{tour_id}/{folder}/{filename}")
+    return removed
+
+
+class AccountPurgeRequest(BaseModel):
+    uid: str
+    email: str
+
+
+@app.post("/purge/account")
+async def purge_account_content(
+    body: AccountPurgeRequest,
+    x_purge_key: Optional[str] = Header(None),
+):
+    """Removes what one person left here when their account is closed.
+
+    That is every file they uploaded, in any space, and their part in the chat
+    service. The back end calls this before it deletes the sign-in account, so a
+    failure can be retried. Repeating the call is harmless.
+    """
+    _require_purge_key(x_purge_key)
+    uid = body.uid.strip()
+    email = body.email.strip().lower()
+    if not TOUR_ID_PATTERN.fullmatch(uid) or "@" not in email:
+        raise HTTPException(status_code=400, detail="A uid and an email are required.")
+    files = await run_in_threadpool(purge_user_files, email)
+    chat_counts = await run_in_threadpool(chat_db.erase_user, uid, email)
+    return {"files": len(files), "paths": files, "chat": chat_counts}
+
+
 @app.get("/notify/status")
 async def notification_status(authorization: Optional[str] = Header(None)):
-    caller = await run_in_threadpool(authenticate, authorization, None)
+    caller = await run_in_threadpool(authenticate, authorization)
     await run_in_threadpool(require_platform_admin, caller)
     return {
         "watcher_running": notification_watcher._is_running,
@@ -647,9 +708,8 @@ async def notification_status(authorization: Optional[str] = Header(None)):
 async def trigger_sos_notification(
     payload: Dict[str, Any],
     authorization: Optional[str] = Header(None),
-    x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
 ):
-    caller = await run_in_threadpool(authenticate, authorization, x_upload_key)
+    caller = await run_in_threadpool(authenticate, authorization)
     tour_id = payload.get("tourId", "")
     alert_id = payload.get("alertId", "")
     sender_name = payload.get("senderName", "A member")
@@ -670,9 +730,8 @@ async def trigger_sos_notification(
 async def trigger_channel_notification(
     payload: Dict[str, Any],
     authorization: Optional[str] = Header(None),
-    x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
 ):
-    caller = await run_in_threadpool(authenticate, authorization, x_upload_key)
+    caller = await run_in_threadpool(authenticate, authorization)
     tour_id = payload.get("tourId", "")
     channel_id = payload.get("channelId", "")
     message_id = payload.get("messageId", "")
@@ -703,9 +762,8 @@ async def trigger_channel_notification(
 async def trigger_chat_notification(
     payload: Dict[str, Any],
     authorization: Optional[str] = Header(None),
-    x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
 ):
-    caller = await run_in_threadpool(authenticate, authorization, x_upload_key)
+    caller = await run_in_threadpool(authenticate, authorization)
     chat_id = payload.get("chatId", "")
     sender_id = payload.get("senderId", "")
     text = payload.get("text", "")
@@ -732,9 +790,8 @@ async def trigger_chat_notification(
 @app.post("/admin/maintenance")
 async def trigger_maintenance(
     authorization: Optional[str] = Header(None),
-    x_upload_key: Optional[str] = Header(None, alias="X-Upload-Key"),
 ):
-    caller = await run_in_threadpool(authenticate, authorization, x_upload_key)
+    caller = await run_in_threadpool(authenticate, authorization)
     await run_in_threadpool(require_platform_admin, caller)
     res = await run_in_threadpool(notification_engine.run_retention_sweep)
     return res

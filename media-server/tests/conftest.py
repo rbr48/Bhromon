@@ -75,7 +75,6 @@ def client(tmp_path, monkeypatch):
 
     monkeypatch.setattr(main, "MEDIA_ROOT", tmp_path / "media")
     monkeypatch.setattr(main, "META_ROOT", tmp_path / "meta")
-    monkeypatch.setattr(main, "LEGACY_UPLOAD_KEY", "")
     monkeypatch.setattr(main, "backend", FakeBackend())
     return TestClient(main.app)
 

@@ -57,7 +57,8 @@ def test_online_status_says_nothing_about_someone_outside_the_tour(client, signe
 
 
 def test_a_call_to_someone_outside_the_tour_is_refused(client, signed_in):
-    with client.websocket_connect("/api/chat/ws?token=tok-alice") as alice:
+    with client.websocket_connect("/api/chat/ws") as alice:
+        alice.send_json({"type": "auth", "token": "tok-alice"})
         assert alice.receive_json()["type"] == "authenticated"
         alice.send_json({
             "type": "call_signal",
