@@ -32,6 +32,7 @@ from pydantic import BaseModel
 import chat
 import news
 from chat import chat_db, chat_router
+from family_dates import FamilyDateReminderScheduler
 from news import router as news_router
 from notifications import FirestoreNotificationWatcher, NotificationEngine
 from quiz import quiz_router
@@ -86,6 +87,7 @@ FILENAME_PATTERN = re.compile(
 
 notification_engine = NotificationEngine()
 notification_watcher = FirestoreNotificationWatcher(notification_engine)
+family_date_scheduler = FamilyDateReminderScheduler(notification_engine)
 
 
 def init_firebase_admin() -> None:
@@ -115,11 +117,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("Failed to initialize Firebase Admin SDK: %s", e)
 
-    # Start watcher on startup if Firebase credentials exist
+    # Start the watcher and the family-date reminders if Firebase credentials exist
     if FIREBASE_CREDENTIALS or os.path.exists("/run/secrets/firebase-admin.json"):
         notification_watcher.start()
+        family_date_scheduler.start()
     yield
-    # Stop watcher on shutdown
+    # Stop both on shutdown
+    family_date_scheduler.stop()
     notification_watcher.stop()
 
 

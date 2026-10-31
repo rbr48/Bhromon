@@ -3,7 +3,7 @@ import 'dart:math' show min;
 import '../models/family_date_models.dart';
 
 /// Day arithmetic and reminder rules for family dates. The reminder job applies
-/// the same rules on the server (`functions/src/lib/familyDates.ts`), and both
+/// the same rules on the media server (`media-server/family_dates.py`), and both
 /// test the same examples, so the list and the reminders agree.
 ///
 /// Every calculation uses calendar days only: no times, no time zones, and no

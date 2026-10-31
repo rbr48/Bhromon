@@ -2,7 +2,7 @@ import 'package:bhromon/features/tour_group/domain/models/family_date_models.dar
 import 'package:bhromon/features/tour_group/domain/services/family_date_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// The same examples as functions/src/__tests__/familyDates.test.ts, so the app and
+// The same examples as media-server/tests/test_family_dates.py, so the app and
 // the reminder job agree on every date.
 
 DateTime day(String key) => parseFamilyDay(key)!;
