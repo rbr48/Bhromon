@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { chunk, getAllInChunks, MAX_FCM_BATCH } from './lib/batching';
 

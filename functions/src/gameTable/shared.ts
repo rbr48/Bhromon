@@ -5,7 +5,7 @@
  */
 
 import * as admin from 'firebase-admin';
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 
 export const SEATS = 4;
 const BOT_NAMES = ['Tour Guide Bot', 'Highway Ace Bot', 'Dhaka Champ Bot'];
