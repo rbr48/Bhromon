@@ -731,6 +731,103 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  describe('family telemetry', () => {
+    // A battery and place record. Only the owner writes it, every field is checked,
+    // and a place is stored only while the member is sharing it.
+    const record = (who = 'member', extra = {}) => ({
+      name: 'Member',
+      email: people[who].email,
+      batteryLevel: 64,
+      isCharging: false,
+      sharing: false,
+      latitude: null,
+      longitude: null,
+      updatedAt: serverTimestamp(),
+      ...extra,
+    });
+    const ref = (who, recordOf = who) => doc(db(who), 'tours', TOUR, 'telemetry', people[recordOf].email);
+
+    test('a member writes their own record', async () => {
+      await assertSucceeds(setDoc(ref('member'), record('member')));
+    });
+
+    test('a member cannot write another member\'s record', async () => {
+      await assertFails(setDoc(ref('member', 'other'), record('other')));
+    });
+
+    test('a record must name the writer as its email', async () => {
+      await assertFails(setDoc(ref('member'), record('member', { email: people.other.email })));
+    });
+
+    test('an outsider cannot write a record, and cannot read the family\'s', async () => {
+      await assertFails(setDoc(ref('outsider'), record('outsider')));
+      await assertSucceeds(setDoc(ref('member'), record('member')));
+      await assertFails(getDoc(ref('outsider', 'member')));
+    });
+
+    test('members read each other\'s records', async () => {
+      await assertSucceeds(setDoc(ref('member'), record('member')));
+      await assertSucceeds(getDoc(ref('admin', 'member')));
+    });
+
+    test('a battery must be a whole number from 0 to 100, or unknown', async () => {
+      await assertFails(setDoc(ref('member'), record('member', { batteryLevel: 150 })));
+      await assertFails(setDoc(ref('member'), record('member', { batteryLevel: -1 })));
+      await assertFails(setDoc(ref('member'), record('member', { batteryLevel: 50.5 })));
+      await assertSucceeds(setDoc(ref('member'), record('member', { batteryLevel: null })));
+    });
+
+    test('a place is stored only while it is shared', async () => {
+      await assertFails(setDoc(ref('member'), record('member', { latitude: 23.8, longitude: 90.4, sharing: false })));
+      await assertSucceeds(setDoc(ref('member'), record('member', { latitude: 23.8, longitude: 90.4, sharing: true })));
+    });
+
+    test('coordinates must be on the map', async () => {
+      await assertFails(setDoc(ref('member'), record('member', { sharing: true, latitude: 123, longitude: 90 })));
+      await assertFails(setDoc(ref('member'), record('member', { sharing: true, latitude: 23, longitude: 200 })));
+    });
+
+    test('only the fixed fields are accepted, and the name is bounded', async () => {
+      await assertFails(setDoc(ref('member'), record('member', { role: 'admin' })));
+      await assertFails(setDoc(ref('member'), record('member', { name: 'x'.repeat(81) })));
+    });
+
+    test('the update time must be the server time', async () => {
+      await assertFails(setDoc(ref('member'), record('member', { updatedAt: new Date(0) })));
+    });
+
+    test('the check-in time must be a time, not a word', async () => {
+      await assertFails(setDoc(ref('member'), record('member', { safeAt: 'yes' })));
+      await assertSucceeds(setDoc(ref('member'), record('member', { safeAt: serverTimestamp() })));
+      await assertSucceeds(setDoc(ref('member'), record('member', { safeAt: null })));
+    });
+
+    test('a member can clear their own record, and cannot clear someone else\'s', async () => {
+      await assertSucceeds(setDoc(ref('member'), record('member')));
+      await assertSucceeds(deleteDoc(ref('member')));
+      await assertSucceeds(setDoc(ref('member'), record('member')));
+      await assertFails(deleteDoc(ref('admin', 'member')));
+    });
+  });
+
+  describe('family emergency numbers', () => {
+    const contact = (i) => ({ name: `N${i}`, phone: `01710000${String(i).padStart(2, '0')}` });
+    const tourRef = (who) => doc(db(who), 'tours', TOUR);
+
+    test('the owner and admins keep up to ten numbers', async () => {
+      await assertSucceeds(updateDoc(tourRef('admin'), { emergencyContacts: Array.from({ length: 10 }, (_, i) => contact(i)) }));
+      await assertSucceeds(updateDoc(tourRef('owner'), { emergencyContacts: [contact(1)] }));
+    });
+
+    test('more than ten numbers are refused', async () => {
+      await assertFails(updateDoc(tourRef('admin'), { emergencyContacts: Array.from({ length: 11 }, (_, i) => contact(i)) }));
+    });
+
+    test('a plain member cannot change the family numbers', async () => {
+      await assertFails(updateDoc(tourRef('member'), { emergencyContacts: [contact(1)] }));
+    });
+  });
+
   test('unauthenticated users can read nothing in the tour group', async () => {
     await assertFails(getDoc(doc(anon(), 'memberships', `${TOUR}__${people.member.email}`)));
     await assertFails(getDoc(doc(anon(), 'invites', CODE)));

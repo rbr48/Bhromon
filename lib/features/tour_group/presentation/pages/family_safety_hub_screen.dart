@@ -1,11 +1,17 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../domain/models/safety_alert_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../data/tour_group_repository.dart';
+import '../../data/device_battery_reader.dart';
+import '../../domain/models/date_codec.dart';
+import '../../domain/services/family_telemetry_publisher.dart';
+import '../../domain/services/emergency_numbers.dart';
+import '../../../../core/utils/app_logger.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/localization/localized_date.dart';
@@ -59,6 +65,18 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       _repository.watchSafetyAlerts(widget.tourId);
   late final Stream<List<BatteryTelemetry>> _telemetry =
       _repository.watchBatteryTelemetry(widget.tourId);
+  late final Stream<List<TourMember>> _roster =
+      _repository.watchMembers(widget.tourId);
+  final DeviceBatteryReader _batteryReader = DeviceBatteryReader();
+  late final FamilyTelemetryPublisher _publisher = FamilyTelemetryPublisher(
+    sink: (write) => _repository.publishFamilyTelemetry(widget.tourId, write),
+    onError: (error, stack) =>
+        logWarning('Safety hub: family telemetry write failed', error, stack),
+  );
+  StreamSubscription<void>? _batterySub;
+  Timer? _telemetryTimer;
+  // Whether this member shares their place with the family right now.
+  bool _locationShareOn = false;
 
   List<TourLandmark> get _landmarks {
     final dest = _tourGroup?.destination.toLowerCase() ?? '';
@@ -259,6 +277,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     );
 
     _initGps();
+    _startFamilySharing();
   }
 
   void _watchGroup() {
@@ -277,51 +296,113 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   void dispose() {
     _groupSub?.cancel();
     _positionStream?.cancel();
+    _batterySub?.cancel();
+    _telemetryTimer?.cancel();
     _alertTimer?.cancel();
     _sirenAnimController.dispose();
+    // Stops sharing the place when the member leaves this screen.
+    unawaited(_publisher.stop(DateTime.now()));
     super.dispose();
   }
 
+  /// Keeps one local position for the direction cards and the SOS message. It is
+  /// not published: only a member who turns on the location switch shares it.
   Future<void> _initGps() async {
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        final pos = await Geolocator.getCurrentPosition();
-        if (mounted) {
-          setState(() => _currentPosition = pos);
-          _publishTelemetry(pos);
-        }
-
-        _positionStream = Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 10,
-          ),
-        ).listen((pos) {
-          if (mounted) {
-            setState(() => _currentPosition = pos);
-            _publishTelemetry(pos);
-          }
-        });
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        return;
       }
-    } catch (_) {
-      // Fallback gracefully if GPS permission denied or disabled
+      final pos = await Geolocator.getCurrentPosition();
+      if (mounted) setState(() => _currentPosition = pos);
+      _positionStream = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+        ),
+      ).listen(
+        (pos) {
+          if (mounted) setState(() => _currentPosition = pos);
+          if (_locationShareOn) {
+            unawaited(_publisher.onFix(
+              PositionFix(pos.latitude, pos.longitude),
+              DateTime.now(),
+            ));
+          }
+        },
+        onError: (Object error, StackTrace stack) =>
+            logWarning('Safety hub: position stream failed', error, stack),
+      );
+    } catch (error, stack) {
+      logWarning('Safety hub: location unavailable', error, stack);
     }
   }
 
-  void _publishTelemetry(Position? pos) {
-    unawaited(_repository.updateBatteryTelemetry(
-      tourId: widget.tourId,
-      batteryLevel: 85,
-      isCharging: false,
-      latitude: pos?.latitude,
-      longitude: pos?.longitude,
-    ));
+  /// Publishes this phone's battery while the hub is open. Place sharing is
+  /// separate, and starts only when the member turns the switch on.
+  void _startFamilySharing() {
+    unawaited(_resetFamilyTelemetry());
+    _batterySub = _batteryReader.changes.listen(
+      (_) => unawaited(_publishBattery()),
+      onError: (Object error, StackTrace stack) =>
+          logWarning('Safety hub: battery changes unavailable', error, stack),
+    );
+    _telemetryTimer = Timer.periodic(
+      _publisher.heartbeat,
+      (_) => unawaited(_heartbeat()),
+    );
+  }
+
+  Future<void> _resetFamilyTelemetry() async {
+    final battery = await _batteryReader.read();
+    await _publisher.reset(battery, DateTime.now());
+  }
+
+  Future<void> _publishBattery() async {
+    final battery = await _batteryReader.read();
+    await _publisher.onBattery(battery, DateTime.now());
+  }
+
+  Future<void> _heartbeat() async {
+    await _publishBattery();
+    await _publisher.tick(DateTime.now());
+  }
+
+  /// Turns place sharing on or off. Turning it on needs location permission;
+  /// without it the switch stays off and the member is told why.
+  Future<void> _setLocationSharing(bool on) async {
+    if (on && !await _hasLocationPermission()) {
+      if (mounted) {
+        _showMessage(context.l10n.translate('fsh_location_permission_needed'));
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _locationShareOn = on);
+    final now = DateTime.now();
+    await _publisher.setSharingLocation(on, now);
+    final pos = _currentPosition;
+    if (on && pos != null) {
+      await _publisher.onFix(PositionFix(pos.latitude, pos.longitude), now);
+    }
+  }
+
+  Future<bool> _hasLocationPermission() async {
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      return permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+    } catch (error, stack) {
+      logWarning('Safety hub: location permission check failed', error, stack);
+      return false;
+    }
   }
 
   Future<void> _callNumber(String number) async {
@@ -472,10 +553,13 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             // Alerts raised by the group, until someone resolves them.
             _buildGroupAlerts(),
 
-            // Family Battery & Location Radar
-            _buildBatteryRadar(),
+            // Everyone can say they are safe. Place sharing is the member's choice.
+            _buildCheckInCard(),
+            _buildLocationSharingCard(),
+            _buildFamilyStatus(),
 
-            // Emergency Contacts
+            // The family's own numbers, then the national helplines.
+            _buildFamilyNumbersSection(),
             _buildEmergencyContactsSection(),
 
             const SizedBox(height: 20),
@@ -704,124 +788,409 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     );
   }
 
-  Widget _buildBatteryRadar() {
+  /// The member's "I'm safe" check-in. It reaches the family at once.
+  Widget _buildCheckInCard() {
     final l10n = context.l10n;
-    return StreamBuilder<List<BatteryTelemetry>>(
-      stream: _telemetry,
-      builder: (context, snapshot) {
-        final list = snapshot.data ?? const [];
-        if (list.isEmpty) return const SizedBox.shrink();
-
-        final hasLowBattery = list.any((t) => t.isLowBattery);
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFF142428),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: hasLowBattery
-                  ? Colors.redAccent.withValues(alpha: 0.4)
-                  : Colors.white12,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.radar_rounded,
-                    color:
-                        hasLowBattery ? Colors.redAccent : AppColors.mintGreen,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.translate('fsh_battery_radar_title'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          l10n.translate('fsh_battery_radar_sub'),
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (hasLowBattery) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.redAccent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: Colors.redAccent.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded,
-                          size: 16, color: Colors.redAccent),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          l10n.translate('fsh_battery_low_warning'),
-                          style: const TextStyle(
-                            color: Colors.redAccent,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142428),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.favorite_rounded,
+              color: AppColors.mintGreen, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.translate('fsh_im_safe_title'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
+                ),
+                Text(
+                  l10n.translate('fsh_im_safe_sub'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ],
-              const SizedBox(height: 12),
-              for (final item in list) ...[
-                Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: item.isLowBattery
-                        ? Colors.redAccent.withValues(alpha: 0.08)
-                        : Colors.white.withValues(alpha: 0.03),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: item.isLowBattery
-                          ? Colors.redAccent.withValues(alpha: 0.3)
-                          : Colors.white10,
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
+            onPressed: () => unawaited(_checkInSafe()),
+            child: Text(
+              l10n.translate('fsh_im_safe'),
+              style: const TextStyle(
+                  color: AppColors.darkGreen, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The family's emergency numbers: call or text any of them. Admins add and
+  /// remove them.
+  Widget _buildFamilyNumbersSection() {
+    final l10n = context.l10n;
+    final contacts =
+        _tourGroup?.emergencyContacts ?? const <EmergencyContact>[];
+    final isAdmin = _myRole == TourRole.owner || _myRole == TourRole.admin;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142428),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.contact_phone_rounded,
+                  color: AppColors.mintGreen, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.translate('fsh_family_numbers'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
+                ),
+              ),
+              if (isAdmin && contacts.length < kMaxEmergencyContacts)
+                IconButton(
+                  tooltip: l10n.translate('fsh_add_family_number'),
+                  icon:
+                      const Icon(Icons.add_rounded, color: AppColors.mintGreen),
+                  onPressed: () => unawaited(_addFamilyNumber()),
+                ),
+            ],
+          ),
+          if (contacts.isEmpty)
+            Text(
+              l10n.translate('fsh_family_numbers_empty'),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
+            )
+          else
+            for (final contact in contacts)
+              _buildFamilyNumberRow(contact, isAdmin: isAdmin),
+          if (!kIsWeb && contacts.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.sms_rounded, size: 18),
+                label: Text(l10n.translate('fsh_text_family')),
+                onPressed: () => unawaited(
+                    _textNumbers([for (final c in contacts) c.phone])),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFamilyNumberRow(EmergencyContact contact,
+      {required bool isAdmin}) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(contact.name,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13)),
+                Text(contact.phone,
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 11)),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: l10n.translate('fsh_call'),
+            icon: const Icon(Icons.call_rounded, color: AppColors.mintGreen),
+            onPressed: () => unawaited(_callNumber(contact.phone)),
+          ),
+          if (!kIsWeb)
+            IconButton(
+              tooltip: l10n.translate('fsh_text'),
+              icon: const Icon(Icons.sms_rounded, color: AppColors.mintGreen),
+              onPressed: () => unawaited(_textNumbers([contact.phone])),
+            ),
+          if (isAdmin)
+            IconButton(
+              tooltip: l10n.translate('fsh_remove_family_number'),
+              icon: const Icon(Icons.delete_outline_rounded,
+                  color: Colors.white54),
+              onPressed: () => unawaited(_removeFamilyNumber(contact)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Opens the messages app addressed to [numbers]. The message gives this
+  /// phone's place as a map link when it knows it.
+  Future<void> _textNumbers(List<String> numbers) async {
+    final l10n = context.l10n;
+    final pos = _currentPosition;
+    final body = pos == null
+        ? l10n.translate('fsh_sms_sos_text_no_place')
+        : l10n.translate('fsh_sms_sos_text', args: {
+            'place':
+                'https://maps.google.com/?q=${pos.latitude.toStringAsFixed(6)},${pos.longitude.toStringAsFixed(6)}',
+          });
+    try {
+      final opened = await launchUrl(
+        emergencySmsUri(numbers, body),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) _showMessage(l10n.translate('fsh_sms_failed'));
+    } catch (error, stack) {
+      logWarning('Safety hub: could not open the messages app', error, stack);
+      _showMessage(l10n.translate('fsh_sms_failed'));
+    }
+  }
+
+  /// Asks for a name and a number, checks the number, and saves it to the circle.
+  Future<void> _addFamilyNumber() async {
+    final group = _tourGroup;
+    if (group == null) return;
+    final l10n = context.l10n;
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    String? error;
+    final contact = await showDialog<EmergencyContact>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF14241B),
+          title: Text(l10n.translate('fsh_add_number_title'),
+              style: const TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                    labelText: l10n.translate('fsh_number_name_label')),
+              ),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                    labelText: l10n.translate('fsh_number_phone_label'),
+                    errorText: error),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.translate('tour_cancel')),
+            ),
+            FilledButton(
+              style:
+                  FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
+              onPressed: () {
+                final phone = normalizeEmergencyPhone(phoneCtrl.text);
+                if (phone == null) {
+                  setDialogState(
+                      () => error = l10n.translate('fsh_invalid_phone'));
+                  return;
+                }
+                final name = nameCtrl.text.trim();
+                Navigator.pop(
+                  dialogContext,
+                  EmergencyContact(
+                      name: name.isEmpty ? phone : name, phone: phone),
+                );
+              },
+              child: Text(l10n.translate('fsh_save'),
+                  style: const TextStyle(color: AppColors.darkGreen)),
+            ),
+          ],
+        ),
+      ),
+    );
+    nameCtrl.dispose();
+    phoneCtrl.dispose();
+    if (contact == null) return;
+    await _saveFamilyNumbers([...group.emergencyContacts, contact]);
+  }
+
+  Future<void> _removeFamilyNumber(EmergencyContact contact) async {
+    final group = _tourGroup;
+    if (group == null) return;
+    await _saveFamilyNumbers([
+      for (final c in group.emergencyContacts)
+        if (c != contact) c
+    ]);
+  }
+
+  Future<void> _saveFamilyNumbers(List<EmergencyContact> contacts) async {
+    try {
+      await _repository.setEmergencyContacts(widget.tourId, contacts);
+    } catch (error, stack) {
+      logWarning('Safety hub: could not save family numbers', error, stack);
+      if (mounted) {
+        _showMessage(context.l10n.translate('fsh_numbers_save_failed'));
+      }
+    }
+  }
+
+  /// Sends the member's check-in and tells them whether it went through.
+  Future<void> _checkInSafe() async {
+    final sent = await _publisher.markSafe(DateTime.now());
+    if (!mounted) return;
+    _showMessage(
+        context.l10n.translate(sent ? 'fsh_checked_in' : 'fsh_checkin_failed'));
+  }
+
+  /// The member's own switch for sharing their place with the family.
+  Widget _buildLocationSharingCard() {
+    final l10n = context.l10n;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142428),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: _locationShareOn
+              ? AppColors.mintGreen.withValues(alpha: 0.5)
+              : Colors.white12,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _locationShareOn
+                    ? Icons.my_location_rounded
+                    : Icons.location_off_rounded,
+                color: _locationShareOn ? AppColors.mintGreen : Colors.white54,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.translate('fsh_share_my_location'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
-                  child: Row(
+                    Text(
+                      l10n.translate('fsh_share_my_location_sub'),
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _locationShareOn,
+                activeThumbColor: AppColors.mintGreen,
+                onChanged: (on) => unawaited(_setLocationSharing(on)),
+              ),
+            ],
+          ),
+          if (_locationShareOn) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.mintGreen.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                l10n.translate('fsh_sharing_now_banner'),
+                style: const TextStyle(
+                  color: AppColors.mintGreen,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Every active member with their battery and place, as the family can see them.
+  Widget _buildFamilyStatus() {
+    final l10n = context.l10n;
+    return StreamBuilder<List<TourMember>>(
+      stream: _roster,
+      builder: (context, rosterSnap) {
+        return StreamBuilder<List<BatteryTelemetry>>(
+          stream: _telemetry,
+          builder: (context, telemetrySnap) {
+            final members = (rosterSnap.data ?? const <TourMember>[])
+                .where((m) => m.status == TourMemberStatus.active)
+                .toList();
+            if (members.isEmpty) return const SizedBox.shrink();
+            final records = {
+              for (final t in telemetrySnap.data ?? const <BatteryTelemetry>[])
+                t.email: t,
+            };
+            final now = DateTime.now();
+            final me = normalizeEmail(_repository.currentEmail);
+            final hasLowBattery = members.any(
+                (m) => records[normalizeEmail(m.email)]?.isLowBattery ?? false);
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF142428),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: hasLowBattery
+                      ? Colors.redAccent.withValues(alpha: 0.4)
+                      : Colors.white12,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
                       Icon(
-                        item.isCriticalBattery
-                            ? Icons.battery_alert_rounded
-                            : item.isLowBattery
-                                ? Icons.battery_2_bar_rounded
-                                : Icons.battery_full_rounded,
-                        color: item.isCriticalBattery
+                        Icons.radar_rounded,
+                        color: hasLowBattery
                             ? Colors.redAccent
-                            : item.isLowBattery
-                                ? AppColors.gold
-                                : AppColors.mintGreen,
+                            : AppColors.mintGreen,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -830,66 +1199,220 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              item.name,
+                              l10n.translate('fsh_battery_radar_title'),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                                fontSize: 14,
                               ),
                             ),
-                            if (item.updatedAt != null)
-                              Text(
-                                l10n.translate('fsh_battery_last_seen', args: {
-                                  'time': localizedDateFormat('h:mm a')
-                                      .format(item.updatedAt!),
-                                }),
-                                style: const TextStyle(
-                                    color: Colors.white54, fontSize: 10),
+                            Text(
+                              l10n.translate('fsh_family_status_sub'),
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 11,
                               ),
+                            ),
                           ],
                         ),
                       ),
-                      if (item.isCharging) ...[
-                        const Icon(Icons.bolt_rounded,
-                            size: 16, color: AppColors.gold),
-                        const SizedBox(width: 4),
-                      ],
-                      Text(
-                        '${l10n.number(item.batteryLevel)}%',
-                        style: TextStyle(
-                          color: item.isCriticalBattery
-                              ? Colors.redAccent
-                              : item.isLowBattery
-                                  ? AppColors.gold
-                                  : AppColors.mintGreen,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      if (item.latitude != null && item.longitude != null) ...[
-                        const SizedBox(width: 8),
-                        IconButton(
-                          tooltip: l10n.translate('fsh_battery_map_view'),
-                          icon: const Icon(Icons.map_rounded,
-                              size: 18, color: AppColors.mintGreen),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () {
-                            final uri = Uri.parse(
-                                'https://maps.google.com/?q=${item.latitude},${item.longitude}');
-                            launchUrl(uri,
-                                mode: LaunchMode.externalApplication);
-                          },
-                        ),
-                      ],
                     ],
                   ),
-                ),
-              ],
-            ],
-          ),
+                  if (hasLowBattery) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: Colors.redAccent.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded,
+                              size: 16, color: Colors.redAccent),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              l10n.translate('fsh_battery_low_warning'),
+                              style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  for (final member in members)
+                    _buildMemberStatusRow(
+                      member,
+                      records[normalizeEmail(member.email)],
+                      now,
+                      isMe: normalizeEmail(member.email) == me,
+                    ),
+                ],
+              ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildMemberStatusRow(
+    TourMember member,
+    BatteryTelemetry? record,
+    DateTime now, {
+    required bool isMe,
+  }) {
+    final l10n = context.l10n;
+    final status = record == null ? null : locationStatusAt(record, now);
+    final battery = record?.batteryLevel;
+    final low = record?.isLowBattery ?? false;
+    final critical = record?.isCriticalBattery ?? false;
+    final updated = record?.updatedAt;
+    final safeAt = record?.safeAt;
+    final name = isMe
+        ? '${member.displayName} (${l10n.translate('fsh_you')})'
+        : member.displayName;
+
+    final String placeText;
+    if (record == null) {
+      placeText = l10n.translate('fsh_no_update');
+    } else if (status == LocationStatus.live) {
+      placeText = l10n.translate('fsh_location_live');
+    } else if (status == LocationStatus.lastKnown) {
+      placeText = l10n.translate('fsh_location_last_known', args: {
+        'time': localizedDateFormat('h:mm a').format(updated!),
+      });
+    } else if (record.sharing && record.latitude == null) {
+      placeText = l10n.translate('fsh_location_waiting');
+    } else {
+      placeText = l10n.translate('fsh_location_off');
+    }
+
+    final showMap = record != null &&
+        status != null &&
+        status != LocationStatus.off &&
+        record.latitude != null &&
+        record.longitude != null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: low
+            ? Colors.redAccent.withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: low ? Colors.redAccent.withValues(alpha: 0.3) : Colors.white10,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            battery == null
+                ? Icons.battery_unknown_rounded
+                : critical
+                    ? Icons.battery_alert_rounded
+                    : low
+                        ? Icons.battery_2_bar_rounded
+                        : Icons.battery_full_rounded,
+            color: battery == null
+                ? Colors.white54
+                : critical
+                    ? Colors.redAccent
+                    : low
+                        ? AppColors.gold
+                        : AppColors.mintGreen,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  placeText,
+                  style: TextStyle(
+                    color: status == LocationStatus.live
+                        ? AppColors.mintGreen
+                        : Colors.white54,
+                    fontSize: 11,
+                  ),
+                ),
+                if (updated != null)
+                  Text(
+                    l10n.translate('fsh_battery_last_seen', args: {
+                      'time': localizedDateFormat('h:mm a').format(updated),
+                    }),
+                    style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  ),
+                if (safeAt != null)
+                  Text(
+                    l10n.translate('fsh_checked_in_at', args: {
+                      'time': localizedDateFormat('h:mm a').format(safeAt),
+                    }),
+                    style: const TextStyle(
+                        color: AppColors.mintGreen,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600),
+                  ),
+              ],
+            ),
+          ),
+          if (record?.isCharging ?? false) ...[
+            const Icon(Icons.bolt_rounded, size: 16, color: AppColors.gold),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            battery == null
+                ? l10n.translate('fsh_battery_unknown')
+                : '${l10n.number(battery)}%',
+            style: TextStyle(
+              color: battery == null
+                  ? Colors.white54
+                  : critical
+                      ? Colors.redAccent
+                      : low
+                          ? AppColors.gold
+                          : AppColors.mintGreen,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          if (showMap) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              tooltip: l10n.translate('fsh_battery_map_view'),
+              icon: const Icon(Icons.map_rounded,
+                  size: 18, color: AppColors.mintGreen),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                final uri = Uri.parse(
+                    'https://maps.google.com/?q=${record.latitude},${record.longitude}');
+                launchUrl(uri, mode: LaunchMode.externalApplication);
+              },
+            ),
+          ],
+        ],
+      ),
     );
   }
 

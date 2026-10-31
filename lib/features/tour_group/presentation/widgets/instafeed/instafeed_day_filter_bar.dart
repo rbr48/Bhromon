@@ -53,71 +53,61 @@ class InstafeedDayFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveDays = days.isNotEmpty
-        ? days
-        : List.generate(
-            5,
-            (i) => TourDayInfo(
-              id: 'day${i + 1}',
-              dayNumber: i + 1,
-              date: DateTime.now().add(Duration(days: i)),
-              label: 'Day ${i + 1}',
-            ),
-          );
-
     return Container(
       margin: const EdgeInsets.only(top: 4, bottom: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Horizontal circular day selector
-          SizedBox(
-            height: 84,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              itemCount: effectiveDays.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  final isSelected = selectedDay == 'all';
-                  final count = _countFor('all');
-                  return _buildCircleItem(
-                    label: context.l10n.translate('ig_all_days'),
-                    topWidget: Text(
-                      context.l10n.translate('ig_all_short'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+          // 1. Horizontal circular day selector. A tour with no days (a family
+          // circle) has no circles to choose from.
+          if (days.isNotEmpty)
+            SizedBox(
+              height: 84,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                itemCount: days.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    final isSelected = selectedDay == 'all';
+                    final count = _countFor('all');
+                    return _buildCircleItem(
+                      label: context.l10n.translate('ig_all_days'),
+                      topWidget: Text(
+                        context.l10n.translate('ig_all_short'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
+                      count: count,
+                      isSelected: isSelected,
+                      onTap: () => onDaySelected('all'),
+                    );
+                  }
+
+                  final d = days[index - 1];
+                  final isSelected = selectedDay == d.id;
+                  final count = _countFor(d.id);
+                  final emoji = _dayEmoji(d.dayNumber);
+                  final label = instafeedDayLabel(context, d.dayNumber);
+
+                  return _buildCircleItem(
+                    label: label,
+                    topWidget: Text(
+                      emoji,
+                      style: const TextStyle(fontSize: 20),
                     ),
                     count: count,
                     isSelected: isSelected,
-                    onTap: () => onDaySelected('all'),
+                    onTap: () => onDaySelected(d.id),
                   );
-                }
-
-                final d = effectiveDays[index - 1];
-                final isSelected = selectedDay == d.id;
-                final count = _countFor(d.id);
-                final emoji = _dayEmoji(d.dayNumber);
-                final label = instafeedDayLabel(context, d.dayNumber);
-
-                return _buildCircleItem(
-                  label: label,
-                  topWidget: Text(
-                    emoji,
-                    style: const TextStyle(fontSize: 20),
-                  ),
-                  count: count,
-                  isSelected: isSelected,
-                  onTap: () => onDaySelected(d.id),
-                );
-              },
+                },
+              ),
             ),
-          ),
 
-          const SizedBox(height: 4),
+          if (days.isNotEmpty) const SizedBox(height: 4),
 
           // 2. Sub-header bar: Post count + View mode toggle + Filter button
           Padding(

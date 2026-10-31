@@ -230,7 +230,8 @@ class _ComposerState extends State<_Composer> {
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    for (final t in kNoticeTemplates)
+                    for (final t in noticeTemplatesFor(
+                        family: widget.group?.isFamily ?? false))
                       Padding(
                         padding: const EdgeInsets.only(right: 6),
                         child: ActionChip(

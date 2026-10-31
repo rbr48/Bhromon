@@ -6,11 +6,13 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../data/notice_read_aloud.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/itinerary_models.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/notice_engine.dart';
+import '../../domain/services/notice_speech.dart';
 import '../widgets/notice/notice_composer.dart';
 import '../../../../core/localization/localized_date.dart';
 
@@ -95,6 +97,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       s.cancel();
     }
     _clock?.cancel();
+    if (NoticeReadAloud.instance.playingId.value != null) {
+      unawaited(NoticeReadAloud.instance.stop());
+    }
     super.dispose();
   }
 
@@ -822,6 +827,48 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     );
   }
 
+  /// Reads the notice aloud, or stops it when it is the one being read.
+  Widget _readAloudButton(AppLocalizations l10n, TourNotice n) {
+    return ValueListenableBuilder<String?>(
+      valueListenable: NoticeReadAloud.instance.playingId,
+      builder: (context, playing, _) {
+        final reading = playing == n.id;
+        return IconButton(
+          visualDensity: VisualDensity.compact,
+          tooltip: l10n.translate(
+              reading ? 'notice_read_aloud_stop' : 'notice_read_aloud'),
+          icon: Icon(
+            reading ? Icons.stop_circle_rounded : Icons.volume_up_rounded,
+            color: reading ? AppColors.mintGreen : Colors.white54,
+            size: 20,
+          ),
+          onPressed: () => _readAloud(l10n, n),
+        );
+      },
+    );
+  }
+
+  void _readAloud(AppLocalizations l10n, TourNotice n) {
+    final bengali = l10n.locale.languageCode == 'bn';
+    final at = n.eventAt;
+    final place = n.place?.trim() ?? '';
+    final text = noticeSpeechText(
+      title: n.title,
+      content: n.content,
+      timeSentence: at == null
+          ? null
+          : l10n.translate('notice_speech_at', args: {
+              'time': localizedDateFormat('EEE, d MMM, h:mm a').format(at),
+            }),
+      placeSentence: place.isEmpty
+          ? null
+          : l10n.translate('notice_speech_place', args: {'place': place}),
+      bengali: bengali,
+    );
+    unawaited(
+        NoticeReadAloud.instance.speak(id: n.id, text: text, bengali: bengali));
+  }
+
   Widget _noticeCard(AppLocalizations l10n, TourNotice n) {
     final color = noticeKindColor(n.kind);
     final archived = NoticeEngine.isArchived(n, _now);
@@ -957,14 +1004,19 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                   ]),
                 ],
                 const SizedBox(height: 8),
-                Text(
-                    l10n.translate('tour_notice_sender', args: {
-                      'author': n.author,
-                      'date': localizedDateFormat('dd MMM, hh:mm a')
-                          .format(n.createdAt),
-                    }),
-                    style:
-                        const TextStyle(color: Colors.white38, fontSize: 11)),
+                Row(children: [
+                  Expanded(
+                    child: Text(
+                        l10n.translate('tour_notice_sender', args: {
+                          'author': n.author,
+                          'date': localizedDateFormat('dd MMM, hh:mm a')
+                              .format(n.createdAt),
+                        }),
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 11)),
+                  ),
+                  _readAloudButton(l10n, n),
+                ]),
               ],
             ),
           ),

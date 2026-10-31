@@ -29,6 +29,12 @@ IconData fundCategoryIcon(String category) => switch (category) {
       'Shopping' => Icons.shopping_bag_rounded,
       'Medical' => Icons.medical_services_rounded,
       'Tips' => Icons.volunteer_activism_rounded,
+      'Groceries' => Icons.local_grocery_store_rounded,
+      'Utilities' => Icons.bolt_rounded,
+      'Rent' => Icons.home_rounded,
+      'School' => Icons.school_rounded,
+      'Dining' => Icons.restaurant_menu_rounded,
+      'Gifts' => Icons.card_giftcard_rounded,
       _ => Icons.receipt_long_rounded,
     };
 
@@ -120,7 +126,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
   XFile? _pickedReceipt;
   Uint8List? _pickedReceiptBytes;
   late String _currency = e?.isForeign == true ? e!.currency! : 'BDT';
-  late String _category = e?.category ?? 'Food';
+  late String _category = e?.category ??
+      expenseCategoriesFor(family: widget.group?.isFamily ?? false).first;
   late DateTime _date = e?.date ?? DateTime.now();
   late String? _stopId = e?.stopId ?? widget.group?.stopOn(_date)?.id;
   late bool _fromFund = e == null || e!.paidById == null;
@@ -304,9 +311,11 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
     final l10n = context.l10n;
     final stops = widget.group?.effectiveStops ?? const <TourStop>[];
     final bdt = _bdtPaisa;
+    final offered =
+        expenseCategoriesFor(family: widget.group?.isFamily ?? false);
     final categories = [
-      ...kExpenseCategories,
-      if (!kExpenseCategories.contains(_category)) _category,
+      ...offered,
+      if (!offered.contains(_category)) _category,
     ];
 
     return DraggableScrollableSheet(

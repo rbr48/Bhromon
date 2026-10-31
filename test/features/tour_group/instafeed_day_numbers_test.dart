@@ -24,8 +24,14 @@ void main() {
       expect(instafeedDayNumbers(days, 'day6'), [1, 2, 3, 6]);
     });
 
-    test('falls back to five days when the tour has no days yet', () {
-      expect(instafeedDayNumbers(const [], 'day1'), [1, 2, 3, 4, 5]);
+    test(
+        'a tour with no days (a family circle) offers only the post\'s own day',
+        () {
+      expect(instafeedDayNumbers(const [], 'day1'), [1]);
+    });
+
+    test('a tour with no days never invents days for the "all" filter', () {
+      expect(instafeedDayNumbers(const [], 'all'), isEmpty);
     });
 
     test('day ids match the stored values', () {

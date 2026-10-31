@@ -133,6 +133,42 @@ describe('call and voice rules', () => {
       await assertFails(setDoc(doc(as(ALICE), 'calls', 'new-10'), newCall({ calleeId: 'x'.repeat(129) })));
       await assertFails(setDoc(doc(as(ALICE), 'calls', 'new-11'), newCall({ isVideo: 'yes' })));
     });
+
+    // The client checks these states on the server before it rings, and says why.
+    test('a call is refused once the callee has left the tour', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'memberships', `${TOUR}__${BOB.email}`), {
+          tourId: TOUR, email: BOB.email, uid: BOB.uid, role: 'member', status: 'removed',
+        });
+      });
+      await assertFails(setDoc(doc(as(ALICE), 'calls', 'new-12'), newCall()));
+    });
+
+    test('a call is refused until the callee row is linked to their uid', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'memberships', `${TOUR}__${BOB.email}`), {
+          tourId: TOUR, email: BOB.email, role: 'member', status: 'active',
+        });
+      });
+      await assertFails(setDoc(doc(as(ALICE), 'calls', 'new-13'), newCall()));
+    });
+
+    test('a call is refused when the caller row has no uid', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'memberships', `${TOUR}__${ALICE.email}`), {
+          tourId: TOUR, email: ALICE.email, role: 'member', status: 'active',
+        });
+      });
+      await assertFails(setDoc(doc(as(ALICE), 'calls', 'new-14'), newCall()));
+    });
+
+    test('a name of up to 80 characters and an avatar of up to 512 are accepted', async () => {
+      await assertSucceeds(
+        setDoc(doc(as(ALICE), 'calls', 'new-15'), newCall({ callerName: 'x'.repeat(80), callerAvatar: 'y'.repeat(512) })),
+      );
+      await assertFails(setDoc(doc(as(ALICE), 'calls', 'new-16'), newCall({ callerName: 'x'.repeat(81) })));
+      await assertFails(setDoc(doc(as(ALICE), 'calls', 'new-17'), newCall({ callerAvatar: 'y'.repeat(513) })));
+    });
   });
 
   describe('reading a call', () => {

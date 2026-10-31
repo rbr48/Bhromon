@@ -51,6 +51,24 @@ const _offerSignals = {'offer', 'reoffer', 'renegotiate'};
 String candidateKey(String candidate, String? sdpMid, int? sdpMLineIndex) =>
     '${sdpMid ?? ''}|${sdpMLineIndex ?? ''}|$candidate';
 
+/// What the caller is told when the server cannot be reached to ring the callee.
+const String kCallUnreachableMessage =
+    'Could not reach the call server. Check your connection and try again.';
+
+/// The first [count] characters of [text]. Runes are counted, so an emoji is never split.
+String _firstCharacters(String text, int count) =>
+    String.fromCharCodes(text.runes.take(count));
+
+/// What the caller is told when the call document cannot be written. The rules
+/// refuse a call that is not between two active members of the tour, and they do
+/// so with a permission error. Any other failure means the server did not answer.
+String _callWriteFailure(Object error) {
+  if (error is FirebaseException && error.code == 'permission-denied') {
+    return 'This call was refused. Check that you are both still members of this tour, then try again.';
+  }
+  return kCallUnreachableMessage;
+}
+
 /// A call that cannot start or be answered. [message] can be shown to the user.
 class CallSetupException implements Exception {
   const CallSetupException(this.message);
@@ -267,6 +285,13 @@ class CallSignalingService {
         'offerToReceiveVideo': videoEnabled ? 1 : 0,
       });
 
+      // The rules refuse a name over 80 characters or an avatar link over 512, so
+      // an over-long value is cut or left out instead of refusing the whole call.
+      final sentName =
+          callerName == null ? null : _firstCharacters(callerName, 80);
+      final sentAvatar = callerAvatar != null && callerAvatar.length <= 512
+          ? callerAvatar
+          : null;
       try {
         await _callDocRef(callId).set({
           'callerId': localUid,
@@ -275,16 +300,15 @@ class CallSignalingService {
           'sharedTourId': sharedTourId,
           'memberEmails': {localUid: localEmail, remoteUid: remoteEmail},
           'isVideo': videoEnabled,
-          if (callerName != null) 'callerName': callerName,
-          if (callerAvatar != null) 'callerAvatar': callerAvatar,
+          if (sentName != null) 'callerName': sentName,
+          if (sentAvatar != null) 'callerAvatar': sentAvatar,
           'offer': {'type': offer.type, 'sdp': offer.sdp},
           'status': 'calling',
           'createdAt': FieldValue.serverTimestamp(),
         }).timeout(_serverTimeout);
-      } catch (e) {
-        throw const CallSetupException(
-          'Could not reach the call server. Check your connection and try again.',
-        );
+      } catch (e, st) {
+        logWarning('CallSignalingService: call document write failed', e, st);
+        throw CallSetupException(_callWriteFailure(e));
       }
 
       await _peerConnection!.setLocalDescription(offer);

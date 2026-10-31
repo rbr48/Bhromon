@@ -41,6 +41,25 @@ const List<NoticeTemplate> kNoticeTemplates = [
   NoticeTemplate('lost_found', NoticeKind.announcement),
 ];
 
+/// The ready-made notices for a family circle: home life, not trip logistics.
+const List<NoticeTemplate> kFamilyNoticeTemplates = [
+  NoticeTemplate('family_dinner', NoticeKind.meetup, leadMinutes: 30),
+  NoticeTemplate('family_meeting', NoticeKind.meetup,
+      leadMinutes: 60, requireAck: true),
+  NoticeTemplate('school_pickup', NoticeKind.reminder, leadMinutes: 30),
+  NoticeTemplate('medicine_time', NoticeKind.reminder,
+      leadMinutes: 0, requireAck: true),
+  NoticeTemplate('bills_due', NoticeKind.reminder),
+  NoticeTemplate('shopping_list', NoticeKind.announcement),
+  NoticeTemplate('home_check', NoticeKind.rollcall, leadMinutes: 60),
+  NoticeTemplate('safety_check', NoticeKind.emergency,
+      requireAck: true, urgent: true),
+];
+
+/// The templates offered for a circle: family or trip.
+List<NoticeTemplate> noticeTemplatesFor({required bool family}) =>
+    family ? kFamilyNoticeTemplates : kNoticeTemplates;
+
 /// Who answered a notice, among the tour's members.
 class NoticeAnswers {
   const NoticeAnswers(this.answered, this.waiting);

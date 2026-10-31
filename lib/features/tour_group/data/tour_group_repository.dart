@@ -14,9 +14,17 @@ import '../domain/models/itinerary_models.dart';
 import '../domain/models/logistics_models.dart';
 import '../domain/models/safety_alert_models.dart';
 import '../domain/models/tour_activity_models.dart';
+import '../domain/models/family_date_models.dart';
+import '../domain/models/dependent_models.dart';
+import '../domain/models/family_task_models.dart';
+import '../domain/services/dependent_rules.dart';
+import '../domain/services/family_date_rules.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
 import '../domain/models/vehicle_models.dart';
+import '../domain/services/call_partner.dart';
+import '../domain/services/emergency_numbers.dart';
+import '../domain/services/family_telemetry_publisher.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
 import '../domain/services/seat_planner.dart';
@@ -674,6 +682,7 @@ class TourGroupRepository {
     String? meetingPointNote,
     String? meetingPointMapUrl,
     GroupKind kind = GroupKind.tour,
+    int ownerFamilyCount = 1,
   }) async {
     final email = _requireEmail();
     final uid = currentUid;
@@ -726,6 +735,7 @@ class TourGroupRepository {
           role: TourRole.owner,
           status: TourMemberStatus.active,
           joinedAt: now,
+          familyCount: ownerFamilyCount.clamp(1, 20),
           uid: currentUid,
         ).toMap(),
       );
@@ -1108,6 +1118,115 @@ class TourGroupRepository {
     });
   }
 
+  /// The tours the signed-in person is an active member of, read from the server.
+  /// Unlike [watchMyGroups] this never answers from the local cache, so a tour the
+  /// person has left, or was removed from, is not returned. Throws when offline.
+  Future<List<TourGroup>> fetchMyGroupsFromServer() async {
+    const server = GetOptions(source: Source.server);
+    final groups = <TourGroup>[];
+    for (final tourId in await _activeTourIdsFromServer()) {
+      final doc = await _tour(tourId).get(server);
+      final data = doc.data();
+      if (doc.exists && data != null) {
+        groups.add(TourGroup.fromMap(doc.id, data));
+      }
+    }
+    groups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return groups;
+  }
+
+  /// The ids of the tours the signed-in person is an active member of, read from the
+  /// server.
+  Future<Set<String>> _activeTourIdsFromServer() async {
+    final email = currentEmail;
+    if (email.isEmpty) return <String>{};
+    final rows = await _memberships
+        .where('email', isEqualTo: email)
+        .get(const GetOptions(source: Source.server));
+    final tourIds = <String>{};
+    for (final row in rows.docs) {
+      final data = row.data();
+      final status = (data['status'] as String?)?.toLowerCase();
+      final tourId = data['tourId'] as String? ?? '';
+      if (tourId.isNotEmpty && (status == null || status == 'active')) {
+        tourIds.add(tourId);
+      }
+    }
+    return tourIds;
+  }
+
+  /// The tour a call between the signed-in person and [partnerUid] is rung through.
+  /// It is [preferredTourId], the tour the chat names, when both are still active in
+  /// it. Otherwise it is another tour they both belong to. When there is none, the
+  /// status says why: the status for the preferred tour, or
+  /// [CallPartnerStatus.noSharedTour] when there is no preferred tour.
+  Future<({String? tourId, CallPartnerStatus status})> resolveCallTour({
+    required String? preferredTourId,
+    required String partnerUid,
+    required String partnerEmail,
+  }) async {
+    final myTourIds = await _activeTourIdsFromServer();
+    final ordered = [
+      if (preferredTourId != null) preferredTourId,
+      for (final tourId in myTourIds)
+        if (tourId != preferredTourId) tourId,
+    ];
+    var status = CallPartnerStatus.noSharedTour;
+    for (final tourId in ordered) {
+      final tourStatus = await callPartnerStatus(
+        tourId: tourId,
+        partnerUid: partnerUid,
+        partnerEmail: partnerEmail,
+      );
+      if (tourStatus == CallPartnerStatus.ready) {
+        return (tourId: tourId, status: tourStatus);
+      }
+      if (tourId == preferredTourId) status = tourStatus;
+    }
+    return (tourId: null, status: status);
+  }
+
+  /// Active members of [tourId], read from the server (see [fetchMyGroupsFromServer]).
+  Future<List<TourMember>> fetchMembersFromServer(String tourId) async {
+    final rows = await _memberships
+        .where('tourId', isEqualTo: tourId)
+        .where('status', isEqualTo: 'active')
+        .get(const GetOptions(source: Source.server));
+    return [for (final row in rows.docs) TourMember.fromMap(row.data())];
+  }
+
+  /// Whether the signed-in person and [partnerUid] (at [partnerEmail]) can call each
+  /// other inside [tourId], as the call rules judge it. Reads the server, never the
+  /// cache. When the signed-in person's own row has no uid, it is filled in first,
+  /// which the membership rules allow.
+  Future<CallPartnerStatus> callPartnerStatus({
+    required String tourId,
+    required String partnerUid,
+    required String partnerEmail,
+  }) async {
+    const server = GetOptions(source: Source.server);
+    final myEmail = currentEmail;
+    final myUid = currentUid;
+    if (myEmail.isEmpty || myUid.isEmpty) return CallPartnerStatus.youLeft;
+    final myRef = _memberships.doc(_membershipId(tourId, myEmail));
+    var myRow = (await myRef.get(server)).data();
+    if (myRow != null &&
+        myRow['status'] == 'active' &&
+        (myRow['uid'] as String? ?? '').isEmpty) {
+      await myRef.update({'uid': myUid});
+      myRow = {...myRow, 'uid': myUid};
+    }
+    final partnerRow = (await _memberships
+            .doc(_membershipId(tourId, normalizeEmail(partnerEmail)))
+            .get(server))
+        .data();
+    return callPartnerStatusFor(
+      myRow: myRow,
+      partnerRow: partnerRow,
+      partnerUid: partnerUid,
+    );
+  }
+
   static int _roleRank(TourRole role) => switch (role) {
         TourRole.owner => 0,
         TourRole.admin => 1,
@@ -1125,6 +1244,21 @@ class TourGroupRepository {
     await _memberships
         .doc(_membershipId(tourId, normalizeEmail(email)))
         .update({'role': newRole.toValue()});
+  }
+
+  /// Replaces the family's emergency numbers. Only the owner and admins can do
+  /// this, and the tour rules check the length of the list.
+  Future<void> setEmergencyContacts(
+    String tourId,
+    List<EmergencyContact> contacts,
+  ) {
+    if (contacts.length > kMaxEmergencyContacts) {
+      throw ArgumentError.value(contacts.length, 'contacts',
+          'at most $kMaxEmergencyContacts numbers');
+    }
+    return _tour(tourId).update({
+      'emergencyContacts': [for (final c in contacts) c.toMap()],
+    });
   }
 
   /// Sets how many people the signed-in member's family counts as (1 to 20).
@@ -1442,6 +1576,195 @@ class TourGroupRepository {
   }
 
   // ---------------------------------------------------------------------------
+  // Family dates
+  // ---------------------------------------------------------------------------
+
+  /// The circle's dates. A stored date that does not read is left out.
+  Stream<List<FamilyDate>> watchFamilyDates(String tourId) {
+    return _sub(tourId, 'family_dates').limit(200).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (FamilyDate.fromMap(d.id, d.data()) case final date?) date,
+        ]);
+  }
+
+  /// Adds a family date, or saves changes to one. The reminder days are worked
+  /// out from the start day and today, the way the reminder job works them out.
+  /// A new date is stamped with the signed-in member; an edit keeps its creator.
+  Future<void> saveFamilyDate(
+    String tourId, {
+    String? id,
+    required String title,
+    required FamilyDateKind kind,
+    required FamilyRecurrence recurrence,
+    required DateTime startOn,
+    required int remindDays,
+    String note = '',
+    DateTime? now,
+  }) async {
+    final email = _requireEmail();
+    final schedule = FamilyDateRules.scheduleFor(
+      startOn: startOn,
+      recurrence: recurrence,
+      remindDays: remindDays,
+      today: now ?? DateTime.now(),
+    );
+    final fields = {
+      'title': title.trim(),
+      'kind': kind.name,
+      'recurrence': recurrence.name,
+      'startOn': FamilyDateRules.dayKey(startOn),
+      'nextOn': schedule.nextOn,
+      'remindDays': remindDays,
+      'remindOn': schedule.remindOn,
+      'note': note.trim(),
+    };
+    if (id == null) {
+      await _sub(tourId, 'family_dates').add({
+        ...fields,
+        'createdByEmail': email,
+      });
+    } else {
+      await _sub(tourId, 'family_dates').doc(id).update(fields);
+    }
+  }
+
+  /// Removes a family date. Its creator or an admin may do it; the rules decide.
+  Future<void> deleteFamilyDate(String tourId, String dateId) async {
+    _requireEmail();
+    await _sub(tourId, 'family_dates').doc(dateId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Family shopping and to-do
+  // ---------------------------------------------------------------------------
+
+  /// The circle's shared items. A stored item that does not read is left out.
+  Stream<List<FamilyTask>> watchFamilyTasks(String tourId) {
+    return _sub(tourId, 'family_tasks').limit(300).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (FamilyTask.fromMap(d.id, d.data()) case final task?) task,
+        ]);
+  }
+
+  /// Adds an item for the whole circle, or for one member when [assigneeEmail] is
+  /// given. The signed-in member is recorded as its creator.
+  Future<void> addFamilyTask(
+    String tourId, {
+    required String title,
+    required FamilyTaskKind kind,
+    String? assigneeEmail,
+  }) async {
+    final email = _requireEmail();
+    final assignee = assigneeEmail == null || assigneeEmail.trim().isEmpty
+        ? null
+        : normalizeEmail(assigneeEmail);
+    final task = FamilyTask(
+      id: '',
+      title: title.trim(),
+      kind: kind,
+      assigneeEmail: assignee,
+      createdByEmail: email,
+    );
+    await _sub(tourId, 'family_tasks').add(task.toFields());
+  }
+
+  /// Ticks an item off, or takes the tick back. The tick is recorded as the
+  /// signed-in member's; taking it back clears the name.
+  Future<void> setFamilyTaskDone(
+      String tourId, String taskId, bool done) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'family_tasks').doc(taskId).update({
+      'done': done,
+      'doneByEmail': done ? email : null,
+    });
+  }
+
+  /// Changes an item's text, kind or assignee. Its creator or an admin does this.
+  /// The tick is not written here, so an edit cannot undo someone else's tick.
+  Future<void> editFamilyTask(
+    String tourId,
+    String taskId, {
+    required String title,
+    required FamilyTaskKind kind,
+    String? assigneeEmail,
+  }) async {
+    _requireEmail();
+    final assignee = assigneeEmail == null || assigneeEmail.trim().isEmpty
+        ? null
+        : normalizeEmail(assigneeEmail);
+    await _sub(tourId, 'family_tasks').doc(taskId).update({
+      'title': title.trim(),
+      'kind': kind.name,
+      'assigneeEmail': assignee,
+    });
+  }
+
+  Future<void> deleteFamilyTask(String tourId, String taskId) async {
+    _requireEmail();
+    await _sub(tourId, 'family_tasks').doc(taskId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dependents: people in the family who have no account
+  // ---------------------------------------------------------------------------
+
+  /// The circle's dependents. A stored entry that does not read is left out.
+  Stream<List<Dependent>> watchDependents(String tourId) {
+    return _sub(tourId, 'dependents').limit(200).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (Dependent.fromMap(d.id, d.data()) case final dependent?)
+              dependent,
+        ]);
+  }
+
+  /// Lists a person under the signed-in member. The member's family size goes up
+  /// by one unless it is already at the largest size. Both writes happen in one
+  /// transaction, so the list and the size never disagree.
+  Future<void> addDependent(
+    String tourId, {
+    required String name,
+    String relation = '',
+  }) async {
+    final email = _requireEmail();
+    final dependentRef = _sub(tourId, 'dependents').doc();
+    final memberRef = _memberships.doc(_membershipId(tourId, email));
+    await _firestore.runTransaction((tx) async {
+      final member = await tx.get(memberRef);
+      final current = (member.data()?['familyCount'] as num?)?.toInt() ?? 1;
+      final change = familySizeWithDependent(current);
+      final dependent = Dependent(
+        id: dependentRef.id,
+        name: name.trim(),
+        parentEmail: email,
+        relation: relation.trim(),
+        countedInFamily: change.counted,
+      );
+      tx.set(dependentRef, dependent.toFields());
+      if (member.exists && change.counted) {
+        tx.update(memberRef, {'familyCount': change.size});
+      }
+    });
+  }
+
+  /// Removes a person the signed-in member listed. If they were counted in the
+  /// family size when added, the size goes back down, in the same transaction.
+  Future<void> removeDependent(String tourId, Dependent dependent) async {
+    final email = _requireEmail();
+    final dependentRef = _sub(tourId, 'dependents').doc(dependent.id);
+    final memberRef = _memberships.doc(_membershipId(tourId, email));
+    await _firestore.runTransaction((tx) async {
+      final member = await tx.get(memberRef);
+      if (member.exists && dependent.countedInFamily) {
+        final current = (member.data()?['familyCount'] as num?)?.toInt() ?? 1;
+        tx.update(memberRef, {
+          'familyCount': familySizeWithoutDependent(current, counted: true),
+        });
+      }
+      tx.delete(dependentRef);
+    });
+  }
+
+  // ---------------------------------------------------------------------------
   // Packing checklist
   // ---------------------------------------------------------------------------
 
@@ -1607,27 +1930,28 @@ class TourGroupRepository {
             s.docs.map((d) => SafetyAlert.fromMap(d.id, d.data())).toList());
   }
 
-  /// Publishes this member's battery status and coordinates.
-  Future<bool> updateBatteryTelemetry({
-    required String tourId,
-    required int batteryLevel,
-    bool isCharging = false,
-    double? latitude,
-    double? longitude,
-  }) async {
+  /// Publishes this member's battery and place sharing to the family. Only the
+  /// member's own record can be written (see the telemetry rules). A null
+  /// coordinate clears the stored place.
+  Future<void> publishFamilyTelemetry(
+    String tourId,
+    FamilyTelemetryWrite write,
+  ) async {
     final email = _requireEmail();
-    return _awaitServer(_sub(tourId, 'telemetry').doc(email).set({
+    await _sub(tourId, 'telemetry').doc(email).set({
       'email': email,
       'name': currentDisplayName,
-      'batteryLevel': batteryLevel,
-      'isCharging': isCharging,
-      if (latitude != null) 'latitude': latitude,
-      if (longitude != null) 'longitude': longitude,
+      'batteryLevel': write.battery.level,
+      'isCharging': write.battery.isCharging,
+      'sharing': write.sharing,
+      'latitude': write.latitude,
+      'longitude': write.longitude,
       'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true)));
+      if (write.checkedIn) 'safeAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
-  /// Live stream of members' battery and location telemetry.
+  /// Live stream of members' battery and place-sharing records.
   Stream<List<BatteryTelemetry>> watchBatteryTelemetry(String tourId) {
     return _sub(tourId, 'telemetry').snapshots().map(
         (s) => s.docs.map((d) => BatteryTelemetry.fromMap(d.data())).toList());

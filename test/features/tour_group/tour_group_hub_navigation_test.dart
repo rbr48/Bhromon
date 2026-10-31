@@ -74,9 +74,9 @@ void main() {
     expect(find.text('Bhromon'), findsOneWidget);
     expect(find.text('Family & tour groups'), findsOneWidget);
 
-    // Verify Action Bar buttons (Join with code, Create tour)
+    // The action bar has one labelled menu for creating and joining.
     expect(find.byIcon(Icons.backup_rounded), findsNothing);
-    expect(find.byIcon(Icons.group_add_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.group_add_outlined), findsNothing);
     expect(find.byIcon(Icons.add_circle_outline), findsOneWidget);
 
     // Verify Tour OS Bottom Navigation Bar with 5 tabs
@@ -91,6 +91,16 @@ void main() {
     expect(find.text('No active tour groups'), findsOneWidget);
     expect(find.text('Create tour'), findsOneWidget);
     expect(find.text('Enter code'), findsOneWidget);
+
+    // The menu lists each way to start, with its label.
+    await tester.tap(find.byIcon(Icons.add_circle_outline));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(PopupMenuItem<String>, 'Create a family circle'),
+        findsOneWidget);
+    expect(find.widgetWithText(PopupMenuItem<String>, 'Create a new tour'),
+        findsOneWidget);
+    expect(find.widgetWithText(PopupMenuItem<String>, 'Join with a code'),
+        findsOneWidget);
   });
 
   testWidgets(
@@ -141,7 +151,7 @@ void main() {
 
     // Verify Tour Modules Grid
     expect(find.text('Tour modules & operations'), findsOneWidget);
-    expect(find.text('Tour InstaFeed 📸'), findsOneWidget);
+    expect(find.text('Moments 📸'), findsOneWidget);
     expect(find.text('Shared fund & ledger'), findsOneWidget);
     expect(find.text('Highway roadmap 🛣️'), findsOneWidget);
     expect(find.text('Safety hub & SOS 🚨'), findsOneWidget);

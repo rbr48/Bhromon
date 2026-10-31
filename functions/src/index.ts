@@ -23,6 +23,7 @@ export { sendTourCommentNotification } from './sendTourCommentNotification';
 export { sendTourReactionNotification } from './sendTourReactionNotification';
 export { sendTourNoticeNotification } from './sendTourNoticeNotification';
 export { sendTourNoticeReminders } from './sendTourNoticeReminders';
+export { sendFamilyDateReminders } from './sendFamilyDateReminders';
 export { sendTourLedgerNotification } from './sendTourLedgerNotification';
 export { sendCallPushNotification } from './sendCallPushNotification';
 

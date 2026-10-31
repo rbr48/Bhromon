@@ -56,6 +56,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   final _search = TextEditingController();
   String? _catFilter;
   String? _stopFilter;
+  // A family looks at one month of spending at a time; a trip shows everything.
+  DateTime _month = monthOf(DateTime.now());
+  bool _allMonths = false;
   bool _simplifyDebts = false;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
@@ -443,9 +446,15 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             contentPadding: EdgeInsets.zero,
             leading:
                 const Icon(Icons.savings_outlined, color: AppColors.mintGreen),
-            title: Text(l10n.translate('fund_budget_cta'),
+            title: Text(
+                l10n.translate(group.isFamily
+                    ? 'fund_budget_cta_family'
+                    : 'fund_budget_cta'),
                 style: const TextStyle(color: Colors.white)),
-            subtitle: Text(l10n.translate('fund_budget_cta_help'),
+            subtitle: Text(
+                l10n.translate(group.isFamily
+                    ? 'fund_budget_cta_help_family'
+                    : 'fund_budget_cta_help'),
                 style: const TextStyle(color: Colors.white54, fontSize: 12)),
             onTap: () => _editBudget(group),
           ),
@@ -491,7 +500,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               ),
               const SizedBox(height: 12),
             ],
-            if (r.daysElapsed > 0) ...[
+            // A family circle has no trip days, so it has no daily burn or projection.
+            if (!(group?.isFamily ?? false) && r.daysElapsed > 0) ...[
               Row(children: [
                 const Icon(Icons.speed_rounded, size: 18, color: _fundBlue),
                 const SizedBox(width: 8),
@@ -730,11 +740,72 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   // Expenses
   // ---------------------------------------------------------------------------
 
+  /// Steps through the months of a family's spending, or shows every month.
+  Widget _monthBar(AppLocalizations l10n, List<ExpenseItem> inMonth) {
+    final thisMonth = monthOf(DateTime.now());
+    final nextMonth = DateTime(_month.year, _month.month + 1);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              tooltip: l10n.translate('fund_month_prev'),
+              icon:
+                  const Icon(Icons.chevron_left_rounded, color: Colors.white70),
+              onPressed: _allMonths
+                  ? null
+                  : () => setState(
+                      () => _month = DateTime(_month.year, _month.month - 1)),
+            ),
+            Expanded(
+              child: Text(
+                _allMonths
+                    ? l10n.translate('fund_month_all_label')
+                    : localizedDateFormat('MMMM yyyy').format(_month),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+            IconButton(
+              tooltip: l10n.translate('fund_month_next'),
+              icon: const Icon(Icons.chevron_right_rounded,
+                  color: Colors.white70),
+              // No month after the current one.
+              onPressed: _allMonths || nextMonth.isAfter(thisMonth)
+                  ? null
+                  : () => setState(() => _month = nextMonth),
+            ),
+          ],
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () => setState(() => _allMonths = !_allMonths),
+            child: Text(l10n
+                .translate(_allMonths ? 'fund_month_one' : 'fund_month_all')),
+          ),
+        ),
+        if (!_allMonths && inMonth.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Text(l10n.translate('fund_month_empty'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white54, fontSize: 13)),
+          ),
+      ],
+    );
+  }
+
   Widget _expensesTab(AppLocalizations l10n) {
     if (_expenses.isEmpty) return _empty(l10n.translate('fund_empty_expenses'));
     final q = _search.text.trim().toLowerCase();
     final stops = _group?.effectiveStops ?? const <TourStop>[];
-    final filtered = _expenses.where((e) {
+    final family = _group?.isFamily ?? false;
+    final inMonth =
+        family && !_allMonths ? expensesInMonth(_expenses, _month) : _expenses;
+    final filtered = inMonth.where((e) {
       if (_catFilter != null && e.category != _catFilter) return false;
       if (_stopFilter != null &&
           (e.stopId ?? _group?.stopOn(e.date)?.id) != _stopFilter) {
@@ -746,10 +817,11 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           (e.paidByName ?? '').toLowerCase().contains(q);
     }).toList();
     final total = filtered.fold<int>(0, (n, e) => n + e.amountPaisa);
+    final offered = expenseCategoriesFor(family: _group?.isFamily ?? false);
     final categories = {for (final e in _expenses) e.category}.toList()
       ..sort((a, b) {
-        final ia = kExpenseCategories.indexOf(a);
-        final ib = kExpenseCategories.indexOf(b);
+        final ia = offered.indexOf(a);
+        final ib = offered.indexOf(b);
         return (ia < 0 ? 99 : ia).compareTo(ib < 0 ? 99 : ib);
       });
 
@@ -765,6 +837,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 96),
       children: [
+        if (family) _monthBar(l10n, inMonth),
+        if (family) const SizedBox(height: 4),
         TextField(
           controller: _search,
           onChanged: (_) => setState(() {}),
@@ -1696,6 +1770,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       budget: group.fundBudget,
       headcount: _headcount,
       totalDays: group.totalDays,
+      family: group.isFamily,
     );
     if (budget == null || !mounted) return;
     await _run(() => _repository.saveFundBudget(widget.tourId, budget),
@@ -1996,9 +2071,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                               color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
-                        const Text('রসিদের ছবি লোড করা যায়নি',
-                            style:
-                                TextStyle(color: Colors.white54, fontSize: 12)),
+                        Text(context.l10n.translate('fund_receipt_load_failed'),
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 12)),
                       ],
                     ),
                   ),

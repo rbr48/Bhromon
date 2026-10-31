@@ -424,33 +424,35 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                         borderSide: BorderSide.none),
                   ),
                 ),
-                const SizedBox(height: 14),
-                Text(context.l10n.translate('ig_tour_day'),
-                    style:
-                        const TextStyle(color: Colors.white70, fontSize: 12)),
-                const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedDay,
-                  dropdownColor: const Color(0xFF2A2A2A),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFF2A2A2A),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none),
+                if (widget.tourDays.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(context.l10n.translate('ig_tour_day'),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedDay,
+                    dropdownColor: const Color(0xFF2A2A2A),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFF2A2A2A),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none),
+                    ),
+                    items: [
+                      for (final n in dayNumbers)
+                        DropdownMenuItem(
+                          value: instafeedDayId(n),
+                          child: Text(instafeedDayLabel(context, n)),
+                        ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setDlgState(() => selectedDay = val);
+                    },
                   ),
-                  items: [
-                    for (final n in dayNumbers)
-                      DropdownMenuItem(
-                        value: instafeedDayId(n),
-                        child: Text(instafeedDayLabel(context, n)),
-                      ),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setDlgState(() => selectedDay = val);
-                  },
-                ),
+                ],
               ],
             ),
           ),
@@ -995,7 +997,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
 
   List<Widget> _buildPostHeaderBadges() {
     final widgets = <Widget>[];
-    final dayBadge = _formatDayBadge(widget.post.tourDay);
+    // A tour with no days (a family circle) shows no day badge.
+    final dayBadge =
+        widget.tourDays.isEmpty ? '' : _formatDayBadge(widget.post.tourDay);
     if (dayBadge.isNotEmpty) {
       widgets.add(const SizedBox(width: 6));
       widgets.add(
