@@ -13,16 +13,13 @@ import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../core/utils/doc_future_cache.dart';
+import '../../data/call_history_stream.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/vps_chat_service.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/models/tour_group.dart';
 import '../../../tour_group/domain/services/group_contacts.dart';
 import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
-
-/// How many of the newest calls the Calls tab reads. The query is ordered by
-/// time, so this is the most recent window, not a random one.
-const int _kRecentCallsLimit = 200;
 
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
@@ -43,7 +40,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   String? _streamsUid;
   late Stream<QuerySnapshot> _blockedStream;
   late Stream<QuerySnapshot> _chatsStream;
-  late Stream<QuerySnapshot> _callsStream;
+  late Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _callsStream;
   // The tours this user belongs to. Chats and calls outside them are not shown.
   Set<String> _myTourIds = const {};
   StreamSubscription<List<TourGroup>>? _myToursSub;
@@ -156,17 +153,26 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     });
   }
 
-  /// The newest calls this user took part in. The order is part of the query,
-  /// so the newest calls are the ones kept. Without it the server returned an
-  /// arbitrary set of 50 calls, and older calls dropped out of the list as new
-  /// ones were made.
-  Stream<QuerySnapshot> _recentCallsStream(String uid) {
-    return FirebaseFirestore.instance
-        .collection('calls')
-        .where('participants', arrayContains: uid)
-        .orderBy('createdAt', descending: true)
-        .limit(_kRecentCallsLimit)
-        .snapshots();
+  /// The calls this user made or received. The rules let a list query filter on
+  /// the caller or the callee field, but not on `participants`, so the list is
+  /// built from those queries and merged here. Calls stored with an email address
+  /// instead of a uid are included too. The list is sorted where it is shown.
+  Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _recentCallsStream(
+      String uid) {
+    final email = TourGroupRepository().currentEmail;
+    final calls = FirebaseFirestore.instance.collection('calls');
+    final queries = <Query<Map<String, dynamic>>>[
+      calls.where('callerId', isEqualTo: uid),
+      calls.where('calleeId', isEqualTo: uid),
+      if (email.isNotEmpty && email != uid) ...[
+        calls.where('callerId', isEqualTo: email),
+        calls.where('calleeId', isEqualTo: email),
+      ],
+    ];
+    return mergeLatestLists<QueryDocumentSnapshot<Map<String, dynamic>>>(
+      [for (final query in queries) query.snapshots().map((s) => s.docs)],
+      idOf: (doc) => doc.id,
+    );
   }
 
   /// Loads the calls and the tours again after a failed load.
@@ -749,7 +755,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         child: CircularProgressIndicator(color: Color(0xFF00A884)),
       );
     }
-    return StreamBuilder<QuerySnapshot>(
+    return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
       stream: _callsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -761,16 +767,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           return _callsError('Your calls could not be loaded.', _retryCalls);
         }
 
-        // Sort client-side by createdAt descending to avoid requiring composite Firestore index
-        final docs = (snapshot.data?.docs ?? [])
-            .where((doc) =>
-                isInMyTours(doc.data() as Map<String, dynamic>?, _myTourIds))
+        // Sorted here, newest first. The list is merged from several queries.
+        final docs = (snapshot.data ??
+                const <QueryDocumentSnapshot<Map<String, dynamic>>>[])
+            .where((doc) => isInMyTours(doc.data(), _myTourIds))
             .toList()
           ..sort((a, b) {
-            final aData = a.data() as Map<String, dynamic>?;
-            final bData = b.data() as Map<String, dynamic>?;
-            final aDate = _parseCallDate(aData?['createdAt']);
-            final bDate = _parseCallDate(bData?['createdAt']);
+            final aDate = _parseCallDate(a.data()['createdAt']);
+            final bDate = _parseCallDate(b.data()['createdAt']);
             if (aDate == null && bDate == null) return 0;
             if (aDate == null) return 1;
             if (bDate == null) return -1;
@@ -810,7 +814,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           ),
           itemBuilder: (context, index) {
             final doc = docs[index];
-            final data = (doc.data() as Map<String, dynamic>?) ?? {};
+            final data = doc.data();
             final callerId = data['callerId'] as String? ?? '';
             final calleeId = data['calleeId'] as String? ?? '';
             final isCaller = callerId == currentUid;
