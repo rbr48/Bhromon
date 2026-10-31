@@ -13,6 +13,7 @@ import 'package:bhromon/features/auth/presentation/cubit/auth_state.dart';
 import 'package:bhromon/features/map/presentation/widgets/pin_detail_sheet.dart';
 import '../../../../app/di/injection.dart';
 import '../../../../core/services/discovery_score_service.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../map/domain/usecases/get_nearby_pins_usecase.dart';
 import '../../../../core/value_objects/trust_tier.dart';
 import '../../../../core/utils/image_sizing.dart';
@@ -57,7 +58,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         lat = pos.latitude;
         lng = pos.longitude;
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
 
     final result = await getIt<GetNearbyPinsUseCase>()(
         GetNearbyPinsParams(lat: lat, lng: lng, radiusKm: 500));
@@ -188,7 +191,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           _wishlist.addAll(list);
         });
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   Future<void> _addToWishlist(LocationPin pin) async {

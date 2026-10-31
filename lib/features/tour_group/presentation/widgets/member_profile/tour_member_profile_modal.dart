@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
+import '../../../../../core/utils/app_logger.dart';
 import '../../../data/tour_group_repository.dart';
 import '../../../domain/models/date_codec.dart';
 import '../../../domain/models/expense_models.dart';
@@ -158,7 +159,9 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
           _phone ??= data['phone'] as String?;
         });
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   bool get _isMe {
@@ -174,7 +177,9 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
       try {
         _audioPlayer ??= AudioPlayer();
         _audioPlayer?.setVolume(0.5);
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
   }
 
@@ -271,7 +276,9 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
               .doc(user.uid)
               .set({'statusNote': result}, SetOptions(merge: true));
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
   }
 
@@ -341,7 +348,9 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
               .doc(user.uid)
               .set({'bloodGroup': result}, SetOptions(merge: true));
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
   }
 

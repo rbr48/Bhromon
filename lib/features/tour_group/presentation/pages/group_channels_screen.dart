@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/channel_read_store.dart';
 import '../../data/tour_channel_repository.dart';
@@ -1955,7 +1956,9 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                   if (nameCtrl.text.trim().isEmpty) {
                     nameCtrl.text = l10n.translate('chan_my_location');
                   }
-                } catch (_) {}
+                } catch (error, stackTrace) {
+                  logSkipped(error, stackTrace);
+                }
               },
               icon: const Icon(Icons.my_location_rounded, size: 16),
               label: Text(

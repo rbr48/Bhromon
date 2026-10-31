@@ -165,7 +165,9 @@ class VpsChatService {
     _wsSubscription = null;
     try {
       _wsChannel?.sink.close();
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     _wsChannel = null;
     _isConnecting = false;
   }

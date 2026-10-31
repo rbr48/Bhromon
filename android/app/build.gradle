@@ -22,6 +22,15 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// A release build is never signed with the debug key. Without key.properties, stop when
+// a release variant is requested, instead of signing it with the debug key.
+gradle.taskGraph.whenReady { graph ->
+    def releaseRequested = graph.allTasks.any { it.name.contains('Release') }
+    if (releaseRequested && !keystorePropertiesFile.exists()) {
+        throw new GradleException('Release builds need android/key.properties. Refusing to sign with the debug key.')
+    }
+}
+
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
 if (flutterVersionCode == null) {
     flutterVersionCode = '1'
@@ -74,8 +83,6 @@ android {
         release {
             if (keystorePropertiesFile.exists()) {
                 signingConfig signingConfigs.release
-            } else {
-                signingConfig signingConfigs.debug
             }
             minifyEnabled true
             shrinkResources true

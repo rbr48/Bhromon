@@ -11,6 +11,8 @@ import 'package:bhromon/features/map/presentation/widgets/pin_detail_sheet.dart'
 import 'package:bhromon/core/entities/location_pin.dart';
 import 'package:bhromon/core/theme/colors.dart';
 
+import '../../core/utils/app_logger.dart';
+
 /// Background task name for geo-fence checking
 const String kGeoFenceTask = 'bhromon_geofence_check';
 
@@ -124,7 +126,9 @@ Future<void> _checkGeoFences() async {
       'triggeredAt': FieldValue.serverTimestamp(),
     });
     await box?.put(hit.pin.pinId, now.millisecondsSinceEpoch);
-  } catch (_) {}
+  } catch (error, stackTrace) {
+    logSkipped(error, stackTrace);
+  }
 }
 
 /// Pin id -> last trigger time (epoch ms) on this device.

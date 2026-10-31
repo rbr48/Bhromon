@@ -10,9 +10,9 @@ import 'package:injectable/injectable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import '../../../core/utils/app_logger.dart';
 import '../../../app/router.dart';
 import '../../../core/services/push_device.dart';
+import '../../../core/utils/app_logger.dart';
 import '../../chat/data/vps_chat_service.dart';
 
 /// Channel used for all general Bhromon notifications.
@@ -57,7 +57,9 @@ class FcmService {
     _userNotificationsSub = null;
     try {
       await _messaging.deleteToken();
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   Future<void> init(String uid, [BuildContext? context]) async {

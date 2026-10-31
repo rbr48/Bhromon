@@ -88,7 +88,9 @@ class TourGroupRepository {
       if (uid != null && uid.isNotEmpty) {
         return '$uid@bhromon.app';
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     return '';
   }
 
@@ -104,7 +106,9 @@ class TourGroupRepository {
     try {
       final name = _auth.currentUser?.displayName;
       if (name != null && name.trim().isNotEmpty) return name.trim();
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     return 'Explorer';
   }
 
@@ -129,7 +133,9 @@ class TourGroupRepository {
       if (!Hive.isBoxOpen('auth_box')) return null;
       final raw = Hive.box<dynamic>('auth_box').get('profile');
       if (raw is Map) return Map<String, dynamic>.from(raw);
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     return null;
   }
 
@@ -776,7 +782,9 @@ class TourGroupRepository {
         if (directDoc.exists) {
           tourId = code;
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
 
     if (tourId == null || tourId.isEmpty) {
@@ -2440,7 +2448,9 @@ class TourGroupRepository {
       await _sub(tourId, 'stories').doc(storyId).update({
         'viewers': FieldValue.arrayUnion([email]),
       });
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   // The keys are FieldPaths, not dotted strings: an email's dots would
