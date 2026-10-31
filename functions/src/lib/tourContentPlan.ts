@@ -1,4 +1,4 @@
-import * as admin from 'firebase-admin';
+import { DocumentData, FieldPath, FieldValue } from 'firebase-admin/firestore';
 import * as crypto from 'crypto';
 
 /** An email as the app stores it: trimmed and lower case. */
@@ -85,12 +85,12 @@ export function updateArgs(scrubs: Scrub[]): unknown[] {
     if (scrub.kind === 'arrayRemove') {
       args.push(
         scrub.field,
-        admin.firestore.FieldValue.arrayRemove(scrub.value),
+        FieldValue.arrayRemove(scrub.value),
       );
     } else {
       args.push(
-        new admin.firestore.FieldPath(...scrub.path),
-        admin.firestore.FieldValue.delete(),
+        new FieldPath(...scrub.path),
+        FieldValue.delete(),
       );
     }
   }
@@ -120,7 +120,7 @@ export function formerMemberId(tourId: string, email: string): string {
 }
 
 /** The fields one update writes, as Firestore's update takes them. */
-export type Fields = admin.firestore.DocumentData;
+export type Fields = DocumentData;
 
 /** What a document needs: removing it, or changing some of its fields. */
 export type Decision =
@@ -220,13 +220,13 @@ export function sosOf(email: string, standIn: string): Decide {
     const fields: Fields = {
       senderEmail: standIn,
       senderName: FORMER_MEMBER_NAME,
-      latitude: admin.firestore.FieldValue.delete(),
-      longitude: admin.firestore.FieldValue.delete(),
+      latitude: FieldValue.delete(),
+      longitude: FieldValue.delete(),
     };
     if (data.resolved !== true) {
       fields.resolved = true;
       fields.resolvedByEmail = standIn;
-      fields.resolvedAt = admin.firestore.FieldValue.serverTimestamp();
+      fields.resolvedAt = FieldValue.serverTimestamp();
     } else if (normalizeEmail(data.resolvedByEmail) === email) {
       fields.resolvedByEmail = standIn;
     }

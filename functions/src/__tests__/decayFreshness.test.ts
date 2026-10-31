@@ -1,15 +1,19 @@
-import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
+jest.mock('firebase-admin/firestore', () => ({ ...jest.requireActual<object>('firebase-admin/firestore'), getFirestore: jest.fn() }));
+jest.mock('firebase-admin/messaging', () => ({ ...jest.requireActual<object>('firebase-admin/messaging'), getMessaging: jest.fn() }));
+import { getApps, initializeApp } from 'firebase-admin/app';
 import { FakeFirestore } from './helpers/fakeFirestore';
 
-if (admin.apps.length === 0) admin.initializeApp();
+if (getApps().length === 0) initializeApp();
 
 const db = new FakeFirestore();
 const sendEach = jest.fn(async (messages: any[]) => ({
   successCount: messages.length,
   failureCount: 0,
 }));
-jest.spyOn(admin, 'firestore' as any).mockReturnValue(db as any);
-jest.spyOn(admin, 'messaging' as any).mockReturnValue({ sendEach } as any);
+jest.mocked(getFirestore).mockReturnValue(db as any);
+jest.mocked(getMessaging).mockReturnValue({ sendEach } as any);
 
 const { runDecayFreshness } = require('../decayFreshness');
 

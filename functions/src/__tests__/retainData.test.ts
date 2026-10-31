@@ -1,13 +1,12 @@
-import * as admin from 'firebase-admin';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+jest.mock('firebase-admin/firestore', () => ({ ...jest.requireActual<object>('firebase-admin/firestore'), getFirestore: jest.fn() }));
+import { getApps, initializeApp } from 'firebase-admin/app';
 import { FakeFirestore } from './helpers/fakeFirestore';
 
-if (admin.apps.length === 0) admin.initializeApp();
+if (getApps().length === 0) initializeApp();
 
-// spyOn replaces admin.firestore (and its statics), so keep Timestamp.
-const { Timestamp } = admin.firestore;
 const db = new FakeFirestore();
-jest.spyOn(admin, 'firestore' as any).mockReturnValue(db as any);
-(admin.firestore as any).Timestamp = Timestamp;
+jest.mocked(getFirestore).mockReturnValue(db as any);
 
 const { runRetention } = require('../retainData');
 

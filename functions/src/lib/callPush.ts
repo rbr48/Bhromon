@@ -1,4 +1,5 @@
-import * as admin from 'firebase-admin';
+import { Firestore, Timestamp } from 'firebase-admin/firestore';
+import { MulticastMessage } from 'firebase-admin/messaging';
 
 /** How long a call rings before it is dead. The app's ring timeout matches this. */
 export const CALL_RING_SECONDS = 45;
@@ -30,7 +31,7 @@ export interface CallPushInput {
 export function buildCallPushMessage(
   input: CallPushInput,
   nowMs: number,
-): Omit<admin.messaging.MulticastMessage, 'tokens'> {
+): Omit<MulticastMessage, 'tokens'> {
   const kind = input.isVideo ? 'Video' : 'Voice';
   return {
     data: {
@@ -80,14 +81,14 @@ export function isOverCallLimit(recentCount: number): boolean {
 
 /** How many calls this caller started since `sinceMs`, counting at most one more than the limit. */
 export async function recentCallCount(
-  db: admin.firestore.Firestore,
+  db: Firestore,
   callerId: string,
   sinceMs: number,
 ): Promise<number> {
   const snap = await db
     .collection('calls')
     .where('callerId', '==', callerId)
-    .where('createdAt', '>=', admin.firestore.Timestamp.fromMillis(sinceMs))
+    .where('createdAt', '>=', Timestamp.fromMillis(sinceMs))
     .limit(CALLS_PER_WINDOW + 1)
     .get();
   return snap.size;

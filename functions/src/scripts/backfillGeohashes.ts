@@ -8,10 +8,10 @@
  * Safe to re-run: pins already carrying the right geohash aren't written.
  * New and edited pins are kept current by the maintainPinGeohash trigger.
  */
-import * as admin from 'firebase-admin';
+import { getApps, initializeApp } from 'firebase-admin/app';
 
 async function main() {
-  if (admin.apps.length === 0) admin.initializeApp();
+  if (getApps().length === 0) initializeApp();
   // Loaded after initializeApp: the module reads Firestore at import time.
   const { runBackfill } = await import('../maintainPinGeohash');
   let next: string | null = null;

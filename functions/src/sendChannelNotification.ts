@@ -1,11 +1,12 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { DocumentData } from 'firebase-admin/firestore';
 import {
   activeMemberEmails,
   pushTargetsForUids,
   sendPush,
   uidsForEmails,
 } from './lib/tourPush';
+import { getFirestore } from 'firebase-admin/firestore';
 
 /**
  * The channel that pings everyone. Other channels ping only the members a
@@ -45,8 +46,7 @@ export const sendChannelNotification = functions
           : members.filter((email) => mentions.has(email));
       if (recipients.length === 0) return;
 
-      const channelSnap = await admin
-        .firestore()
+      const channelSnap = await getFirestore()
         .collection('tours')
         .doc(tourId)
         .collection('channels')
@@ -78,7 +78,7 @@ export const sendChannelNotification = functions
     }
   });
 
-function mentionsOf(message: admin.firestore.DocumentData): Set<string> {
+function mentionsOf(message: DocumentData): Set<string> {
   const list: unknown[] = Array.isArray(message.mentions) ? message.mentions : [];
   return new Set(list.map((m) => String(m).trim().toLowerCase()));
 }
@@ -88,7 +88,7 @@ function nonEmpty(value: unknown): string | undefined {
 }
 
 /** The text of the message, or a label for a voice note, photo, video, poll or expense. */
-function previewOf(message: admin.firestore.DocumentData): string {
+function previewOf(message: DocumentData): string {
   let body = nonEmpty(message.text);
   if (!body) {
     const attachments: unknown[] = Array.isArray(message.attachments) ? message.attachments : [];

@@ -10,7 +10,8 @@
 //
 // Give the same email and code to Play Console as the reviewer's sign-in.
 const crypto = require('crypto');
-const admin = require('firebase-admin');
+const { initializeApp } = require('firebase-admin/app');
+const { FieldValue, getFirestore } = require('firebase-admin/firestore');
 
 /** The digest verifyOtp compares against. Same formula as functions/src/lib/otp.ts. */
 function reviewDigest(email, code) {
@@ -21,7 +22,7 @@ function reviewDigest(email, code) {
 async function setReviewAccount(db, { email, code }) {
   const ref = db.collection('config').doc('auth');
   if (!email) {
-    await ref.set({ reviewEmail: admin.firestore.FieldValue.delete(), reviewDigest: admin.firestore.FieldValue.delete() }, { merge: true });
+    await ref.set({ reviewEmail: FieldValue.delete(), reviewDigest: FieldValue.delete() }, { merge: true });
     return { cleared: true };
   }
   const normalized = email.trim().toLowerCase();
@@ -48,8 +49,8 @@ if (require.main === module) {
     console.error('Pass --email for the review account, or --clear to remove it.');
     process.exit(1);
   }
-  admin.initializeApp({ projectId });
-  setReviewAccount(admin.firestore(), { email: clear ? undefined : email, code: process.env.REVIEW_CODE })
+  initializeApp({ projectId });
+  setReviewAccount(getFirestore(), { email: clear ? undefined : email, code: process.env.REVIEW_CODE })
     .then((result) => {
       console.log(result.cleared ? 'Review account removed.' : `Review account set for ${result.email}.`);
     })

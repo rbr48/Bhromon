@@ -1,4 +1,4 @@
-import * as admin from 'firebase-admin';
+import { Firestore, Timestamp } from 'firebase-admin/firestore';
 import { normalizeEmail } from './tourContentPlan';
 
 /** A member row of a tour, as closing an account reads it. */
@@ -39,7 +39,7 @@ function adminRank(member: MemberRow): number {
  * tour they own passes to its next owner; a tour with nobody else in it is
  * deleted, and onTourDeleted purges everything in it.
  */
-export async function leaveAllTours(db: admin.firestore.Firestore, rawEmail: string): Promise<void> {
+export async function leaveAllTours(db: Firestore, rawEmail: string): Promise<void> {
   const email = normalizeEmail(rawEmail);
   if (email === '') return;
 
@@ -58,7 +58,7 @@ export async function leaveAllTours(db: admin.firestore.Firestore, rawEmail: str
   }
 }
 
-async function leaveTour(db: admin.firestore.Firestore, tourId: string, email: string): Promise<void> {
+async function leaveTour(db: Firestore, tourId: string, email: string): Promise<void> {
   const tourRef = db.collection('tours').doc(tourId);
   const ownRowRef = db.collection('memberships').doc(`${tourId}__${email}`);
   const tour = await tourRef.get();
@@ -90,7 +90,7 @@ async function leaveTour(db: admin.firestore.Firestore, tourId: string, email: s
 }
 
 function toMillis(value: unknown): number {
-  if (value instanceof admin.firestore.Timestamp) return value.toMillis();
+  if (value instanceof Timestamp) return value.toMillis();
   if (value instanceof Date) return value.getTime();
   return Number.MAX_SAFE_INTEGER;
 }

@@ -1,6 +1,7 @@
 // A person's content leaves a tour with them, and a deleted tour leaves nothing:
 //   firebase emulators:exec --only firestore --project bhromon-rules-test-project "cd functions && npx jest --runInBand tests/tour_content_purge"
-const admin = require('firebase-admin');
+const { getApps, initializeApp } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 const {
   purgeMemberContent,
   purgeTour,
@@ -312,8 +313,8 @@ function fakes(removedPaths = []) {
 }
 
 beforeAll(() => {
-  if (!admin.apps.length) admin.initializeApp({ projectId: PROJECT_ID });
-  db = admin.firestore();
+  if (!getApps().length) initializeApp({ projectId: PROJECT_ID });
+  db = getFirestore();
 });
 
 beforeEach(async () => {

@@ -1,8 +1,14 @@
-import * as admin from 'firebase-admin';
+import { getMessaging } from 'firebase-admin/messaging';
+import { getAuth } from 'firebase-admin/auth';
+jest.mock('firebase-admin/firestore', () => ({ ...jest.requireActual<object>('firebase-admin/firestore'), getFirestore: jest.fn() }));
+jest.mock('firebase-admin/messaging', () => ({ ...jest.requireActual<object>('firebase-admin/messaging'), getMessaging: jest.fn() }));
+jest.mock('firebase-admin/auth', () => ({ ...jest.requireActual<object>('firebase-admin/auth'), getAuth: jest.fn() }));
+import { getApps, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // Initialize mock app for tests
-if (admin.apps.length === 0) {
-  admin.initializeApp();
+if (getApps().length === 0) {
+  initializeApp();
 }
 
 // ─── Shared Mock State ──────────────────────────────────────────────────────
@@ -84,10 +90,10 @@ const mockMessaging = {
   }),
 };
 
-// Install the mocks before the module reads admin.firestore() at load time.
-jest.spyOn(admin, 'firestore' as any).mockReturnValue(mockDb as any);
-jest.spyOn(admin, 'auth' as any).mockReturnValue(mockAuth as any);
-jest.spyOn(admin, 'messaging' as any).mockReturnValue(mockMessaging as any);
+// Install the mocks before the module reads getFirestore() at load time.
+jest.mocked(getFirestore).mockReturnValue(mockDb as any);
+jest.mocked(getAuth).mockReturnValue(mockAuth as any);
+jest.mocked(getMessaging).mockReturnValue(mockMessaging as any);
 
 const { sendSosAlert } = require('../sendSosAlert');
 

@@ -9,7 +9,7 @@
  * only by that seat's owner. The seat documents change only when a hand is dealt.
  */
 
-import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
 import { SeatDoc, TeenPattiAction, TeenPattiGame, TeenPattiRuleError, publicState, restoreGame, seatDoc } from './game';
 import { shuffledDeck } from './cards';
@@ -109,7 +109,7 @@ function writeState(tx: Transaction, ref: DocRef, game: TeenPattiGame, nowMs: nu
     state: publicState(game, step, nowMs),
     currentTurn: game.currentTurn,
     updatedAt: nowIso(nowMs),
-    version: admin.firestore.FieldValue.increment(1),
+    version: FieldValue.increment(1),
   });
 }
 
@@ -151,7 +151,7 @@ export const teenPattiStart = functions
         currentTurn: game.currentTurn,
         state: publicState(game, 1, nowMs),
         updatedAt: nowIso(nowMs),
-        version: admin.firestore.FieldValue.increment(1),
+        version: FieldValue.increment(1),
       });
       writeDeal(tx, ref, game, players);
     });
@@ -302,7 +302,7 @@ export async function leaveTeenPattiTable(
       state: publicState(game, stepOf(state) + 1, nowMs),
       currentTurn: game.currentTurn,
       updatedAt: nowIso(nowMs),
-      version: admin.firestore.FieldValue.increment(1),
+      version: FieldValue.increment(1),
     });
     // Hand the leaver's cards to the bot, so the leaver can no longer read them.
     tx.update(seatRef(ref, seat), { owner: replacement.email });

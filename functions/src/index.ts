@@ -1,6 +1,6 @@
-import * as admin from 'firebase-admin';
+import { initializeApp } from 'firebase-admin/app';
 
-admin.initializeApp();
+initializeApp();
 
 // ── Core scoring & content lifecycle ──────────────────────────────────────────
 export { computeExplorerScore } from './computeExplorerScore';

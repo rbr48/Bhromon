@@ -1,6 +1,5 @@
-import * as admin from 'firebase-admin';
+import { DocumentData, FieldValue, Firestore, Query, UpdateData } from 'firebase-admin/firestore';
 
-type Firestore = admin.firestore.Firestore;
 
 /** Documents that belong to one person, with the field that names them. */
 export const OWNED_DOCUMENTS: ReadonlyArray<readonly [string, string]> = [
@@ -31,7 +30,7 @@ const PAGE_SIZE = 200;
  * under each one. A failed delete throws, so the closing is retried rather than
  * leaving a partial record behind. Returns how many were deleted.
  */
-async function deleteAll(db: Firestore, query: admin.firestore.Query): Promise<number> {
+async function deleteAll(db: Firestore, query: Query): Promise<number> {
   let deleted = 0;
   for (;;) {
     const page = await query.limit(PAGE_SIZE).get();
@@ -68,9 +67,9 @@ export async function eraseFromChats(
   let messages = 0;
   for (const chat of chats.docs) {
     messages += await deleteAll(db, chat.ref.collection('messages').where('senderId', '==', uid));
-    const update: admin.firestore.UpdateData<admin.firestore.DocumentData> = {
-      participants: admin.firestore.FieldValue.arrayRemove(uid),
-      [`memberEmails.${uid}`]: admin.firestore.FieldValue.delete(),
+    const update: UpdateData<DocumentData> = {
+      participants: FieldValue.arrayRemove(uid),
+      [`memberEmails.${uid}`]: FieldValue.delete(),
     };
     if (chat.get('lastSenderId') === uid) {
       update.lastSenderId = '';

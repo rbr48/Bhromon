@@ -1,8 +1,12 @@
-import * as admin from 'firebase-admin';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
+jest.mock('firebase-admin/firestore', () => ({ ...jest.requireActual<object>('firebase-admin/firestore'), getFirestore: jest.fn() }));
+jest.mock('firebase-admin/messaging', () => ({ ...jest.requireActual<object>('firebase-admin/messaging'), getMessaging: jest.fn() }));
+import { getApps, initializeApp } from 'firebase-admin/app';
 
 // Initialize mock app for tests
-if (admin.apps.length === 0) {
-  admin.initializeApp();
+if (getApps().length === 0) {
+  initializeApp();
 }
 
 // ─── Shared Mock State ──────────────────────────────────────────────────────
@@ -81,11 +85,9 @@ const mockDb = {
 };
 
 // Global mock of firestore and messaging BEFORE importing the module under test
-jest.spyOn(admin, 'firestore' as any).mockReturnValue(mockDb as any);
-(admin.firestore as any).FieldValue = {
-  serverTimestamp: () => 'mock-server-timestamp',
-};
-jest.spyOn(admin, 'messaging' as any).mockReturnValue({
+jest.mocked(getFirestore).mockReturnValue(mockDb as any);
+jest.spyOn(FieldValue, 'serverTimestamp').mockReturnValue('mock-server-timestamp' as any);
+jest.mocked(getMessaging).mockReturnValue({
   sendEachForMulticast: jest.fn().mockResolvedValue({ successCount: 1, failureCount: 0 }),
 } as any);
 
@@ -118,7 +120,7 @@ describe('moderateContent', () => {
 
     expect(tokenDocGets).toBe(0);
     expect(tokenGetAllCalls).toBe(3); // 250 refs in chunks of 100
-    const messaging = (admin.messaging as any)();
+    const messaging = getMessaging() as any;
     const lastCall = messaging.sendEachForMulticast.mock.calls.at(-1)[0];
     expect(lastCall.tokens).toHaveLength(250);
   });

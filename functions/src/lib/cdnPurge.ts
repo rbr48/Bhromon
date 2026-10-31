@@ -1,4 +1,4 @@
-import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const CLOUDFLARE_API = 'https://api.cloudflare.com/client/v4';
 /** Cloudflare accepts this many file URLs in one purge request. */
@@ -24,7 +24,7 @@ export function chunkUrls(urls: string[], size = MAX_FILES_PER_REQUEST): string[
  */
 export async function purgeCdnPaths(paths: string[]): Promise<number> {
   if (paths.length === 0) return 0;
-  const config = (await admin.firestore().collection('config').doc('cdn').get()).data() ?? {};
+  const config = (await getFirestore().collection('config').doc('cdn').get()).data() ?? {};
   const zone = typeof config.zoneId === 'string' ? config.zoneId : '';
   const token = typeof config.apiToken === 'string' ? config.apiToken : '';
   if (!zone || !token) return 0;

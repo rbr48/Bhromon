@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 /**
  * chatRateLimiter
@@ -31,7 +31,7 @@ export const chatRateLimiter = functions
     const maxMessages = 30;
 
     // Count messages from this sender in the last 1 minute
-    const windowStart = admin.firestore.Timestamp.fromMillis(now - windowMs);
+    const windowStart = Timestamp.fromMillis(now - windowMs);
     const recentSnap = await db
       .collection('chats')
       .doc(chatId)
@@ -60,8 +60,8 @@ export const chatRateLimiter = functions
       await violationRef.set(
         {
           uid: senderId,
-          lastViolationAt: admin.firestore.FieldValue.serverTimestamp(),
-          violationCount: admin.firestore.FieldValue.increment(1),
+          lastViolationAt: FieldValue.serverTimestamp(),
+          violationCount: FieldValue.increment(1),
           lastChatId: chatId,
         },
         { merge: true }
@@ -82,7 +82,7 @@ export const chatRateLimiter = functions
             body:
               'You are sending messages too quickly. Repeated violations may result in a temporary messaging restriction.',
             action: 'rate_limit_warning',
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            timestamp: FieldValue.serverTimestamp(),
           });
         console.warn(
           `[chatRateLimiter] Warning notification sent to uid=${senderId} (violations: ${violationCount})`

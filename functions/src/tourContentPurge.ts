@@ -1,4 +1,6 @@
-import * as admin from 'firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import { BulkWriter, DocumentReference, FieldPath, FieldValue, Firestore, Query, QueryDocumentSnapshot, getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import * as functions from 'firebase-functions/v1';
 import * as crypto from 'crypto';
 import { leave29Table } from './card29/callables';
@@ -47,10 +49,9 @@ import {
  * retried by retryTourPurgeJobs until it succeeds or gives up after two days.
  */
 
-type Db = admin.firestore.Firestore;
-type Query = admin.firestore.Query;
-type DocRef = admin.firestore.DocumentReference;
-type DocSnap = admin.firestore.QueryDocumentSnapshot;
+type Db = Firestore;
+type DocRef = DocumentReference;
+type DocSnap = QueryDocumentSnapshot;
 
 /**
  * Removes a person's photos and videos on the media server (or all of the
@@ -134,7 +135,7 @@ function isNotFound(error: unknown): boolean {
  * is not a failure. Any other failure is raised by done().
  */
 class Writes {
-  private readonly writer: admin.firestore.BulkWriter;
+  private readonly writer: BulkWriter;
   private readonly writes: Promise<void>[] = [];
 
   constructor(db: Db) {
@@ -154,7 +155,7 @@ class Writes {
     this.track(
       this.writer.update(
         ref,
-        args[0] as string | admin.firestore.FieldPath,
+        args[0] as string | FieldPath,
         args[1],
         ...args.slice(2),
       ),
@@ -360,7 +361,7 @@ export async function purgeMemberContent(
   const inTour = (path: string): boolean => isInTour(path, tourId);
   // A map keyed by email, read as one field path so the dots are not nesting.
   const keyIs = (...path: string[]) =>
-    new admin.firestore.FieldPath(...path, email);
+    new FieldPath(...path, email);
   const standIn = formerMemberId(tourId, email);
 
   // Their own posts, with the comments under them.
@@ -547,7 +548,7 @@ function errorText(error: unknown): string {
 /** Runs one purge. On failure the job stays pending for retryPendingJobs. */
 export async function runPurgeJob(db: Db, job: PurgeJob, deps: PurgeDeps): Promise<void> {
   const ref = jobRef(db, job);
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   await ref.set({ ...jobFields(job), status: 'pending', updatedAt: now }, { merge: true });
   try {
     if (job.kind === 'member') {
@@ -560,7 +561,7 @@ export async function runPurgeJob(db: Db, job: PurgeJob, deps: PurgeDeps): Promi
     await ref.set(
       {
         status: 'pending',
-        attempts: admin.firestore.FieldValue.increment(1),
+        attempts: FieldValue.increment(1),
         lastError: errorText(error),
         updatedAt: now,
       },
@@ -585,7 +586,7 @@ export async function retryPendingJobs(db: Db, deps: PurgeDeps, limit = 50): Pro
     const attempts = typeof data.attempts === 'number' ? data.attempts : 0;
     if (attempts >= MAX_ATTEMPTS) {
       await doc.ref.set(
-        { status: 'failed', updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+        { status: 'failed', updatedAt: FieldValue.serverTimestamp() },
         { merge: true },
       );
       continue;
@@ -632,7 +633,7 @@ export async function purgeMediaOnServer(
 /** The account id behind an email, or null when there is no account. */
 export async function resolveUidByEmail(email: string): Promise<string | null> {
   try {
-    return (await admin.auth().getUserByEmail(email)).uid;
+    return (await getAuth().getUserByEmail(email)).uid;
   } catch (error) {
     if ((error as { code?: unknown }).code === 'auth/user-not-found') return null;
     throw error;
@@ -653,7 +654,7 @@ export function productionDeps(): PurgeDeps {
       return removed;
     },
     purgeStorage: (tourId, uploaderEmail) =>
-      purgeTourStorage(admin.storage().bucket(), tourId, uploaderEmail),
+      purgeTourStorage(getStorage().bucket(), tourId, uploaderEmail),
     resolveUid: resolveUidByEmail,
   };
 }
@@ -669,7 +670,7 @@ export const onTourMembershipRemoved = functions
     const email = normalizeEmail(data.email);
     const uid = typeof data.uid === 'string' && data.uid !== '' ? data.uid : null;
     if (!tourId || !email) return;
-    const db = admin.firestore();
+    const db = getFirestore();
     // A tour that is already gone is purged as a whole by onTourDeleted.
     const tour = await db.collection('tours').doc(tourId).get();
     if (!tour.exists) return;
@@ -683,7 +684,7 @@ export const onTourDeleted = functions
   .firestore.document('tours/{tourId}')
   .onDelete((_snap, context) =>
     runPurgeJob(
-      admin.firestore(),
+      getFirestore(),
       { kind: 'tour', tourId: context.params.tourId },
       productionDeps(),
     ),
@@ -694,4 +695,4 @@ export const retryTourPurgeJobs = functions
   .runWith(RUNTIME)
   .region(REGION)
   .pubsub.schedule('every 30 minutes')
-  .onRun(() => retryPendingJobs(admin.firestore(), productionDeps()));
+  .onRun(() => retryPendingJobs(getFirestore(), productionDeps()));

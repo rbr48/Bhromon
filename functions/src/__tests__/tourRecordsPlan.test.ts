@@ -1,4 +1,4 @@
-import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import {
   aboutPerson,
   anonymize,
@@ -265,8 +265,8 @@ describe('safety alerts, voice pairs and profiles', () => {
       resolved: true,
       resolvedByEmail: STAND_IN,
     });
-    expect(fieldsOf(raised).latitude).toEqual(admin.firestore.FieldValue.delete());
-    expect(fieldsOf(raised).longitude).toEqual(admin.firestore.FieldValue.delete());
+    expect(fieldsOf(raised).latitude).toEqual(FieldValue.delete());
+    expect(fieldsOf(raised).longitude).toEqual(FieldValue.delete());
     expect(fieldsOf(raised)).toHaveProperty('resolvedAt');
   });
 

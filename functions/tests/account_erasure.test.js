@@ -1,10 +1,11 @@
 // Closing an account removes what the person owns, takes them out of their chats, and
 // asks the media server to remove their files. Needs the Firestore emulator on port 8080:
 //   npx firebase-tools@13.35.1 emulators:exec --only firestore --project bhromon-rules-test-project "cd functions && npx jest --runInBand tests/account_erasure"
-const admin = require('firebase-admin');
+const { getApps, initializeApp } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 
 const PROJECT_ID = 'bhromon-rules-test-project';
-if (!admin.apps.length) admin.initializeApp({ projectId: PROJECT_ID });
+if (!getApps().length) initializeApp({ projectId: PROJECT_ID });
 
 const {
   eraseFromChats,
@@ -17,7 +18,7 @@ describe('closing an account erases what the person owns', () => {
   let db;
 
   beforeAll(() => {
-    db = admin.firestore();
+    db = getFirestore();
   });
 
   beforeEach(async () => {

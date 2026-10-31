@@ -1,8 +1,12 @@
-import * as admin from 'firebase-admin';
+import { getFirestore, FieldValue, FieldPath } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
+jest.mock('firebase-admin/firestore', () => ({ ...jest.requireActual<object>('firebase-admin/firestore'), getFirestore: jest.fn() }));
+jest.mock('firebase-admin/messaging', () => ({ ...jest.requireActual<object>('firebase-admin/messaging'), getMessaging: jest.fn() }));
+import { getApps, initializeApp } from 'firebase-admin/app';
 
 // Initialize mock app for tests
-if (admin.apps.length === 0) {
-  admin.initializeApp();
+if (getApps().length === 0) {
+  initializeApp();
 }
 
 // ─── Shared Mock State ──────────────────────────────────────────────────────
@@ -100,16 +104,10 @@ const mockDb = {
 };
 
 // Global mock of firestore and messaging BEFORE importing modules
-jest.spyOn(admin, 'firestore' as any).mockReturnValue(mockDb as any);
-(admin.firestore as any).FieldValue = {
-  serverTimestamp: () => 'mock-server-timestamp',
-};
-(admin.firestore as any).FieldPath = {
-  documentId: () => ({
-    toString: () => '__name__'
-  })
-};
-jest.spyOn(admin, 'messaging' as any).mockReturnValue({
+jest.mocked(getFirestore).mockReturnValue(mockDb as any);
+jest.spyOn(FieldValue, 'serverTimestamp').mockReturnValue('mock-server-timestamp' as any);
+jest.spyOn(FieldPath, 'documentId').mockReturnValue({ toString: () => '__name__' } as any);
+jest.mocked(getMessaging).mockReturnValue({
   send: jest.fn().mockImplementation(async (msg) => {
     sentMessages.push(msg);
     return 'mock_message_id';

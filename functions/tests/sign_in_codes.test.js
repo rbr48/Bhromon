@@ -2,10 +2,12 @@
 // hour per email, a lockout after wrong guesses, expired codes refused, and an accepted
 // code verifies the account. Needs the Firestore and Auth emulators:
 //   npx firebase-tools@13.35.1 emulators:exec --only firestore,auth --project bhromon-rules-test-project "cd functions && npx jest --runInBand tests/sign_in_codes"
-const admin = require('firebase-admin');
+const { getApps, initializeApp } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
+const { Timestamp, getFirestore } = require('firebase-admin/firestore');
 
 const PROJECT_ID = 'bhromon-rules-test-project';
-if (!admin.apps.length) admin.initializeApp({ projectId: PROJECT_ID });
+if (!getApps().length) initializeApp({ projectId: PROJECT_ID });
 
 const otp = require('../src/lib/otp');
 const { sendOtpEmail } = require('../src/sendOtpEmail');
@@ -18,7 +20,7 @@ describe('sign-in codes', () => {
   let db;
 
   beforeAll(() => {
-    db = admin.firestore();
+    db = getFirestore();
   });
 
   beforeEach(async () => {
@@ -77,7 +79,7 @@ describe('sign-in codes', () => {
   test('an expired code is refused and removed', async () => {
     await db.doc(`otps/${EMAIL}`).set({
       digest: otp.otpDigest(EMAIL, CODE),
-      expiresAt: admin.firestore.Timestamp.fromMillis(Date.now() - 1000),
+      expiresAt: Timestamp.fromMillis(Date.now() - 1000),
       attempts: 0,
     });
     expect((await rejection(verify(CODE))).code).toBe('failed-precondition');
@@ -92,9 +94,9 @@ describe('sign-in codes', () => {
     const now = Date.now();
     await db.doc(`otps/${EMAIL}`).set({
       digest: otp.otpDigest(EMAIL, CODE),
-      expiresAt: admin.firestore.Timestamp.fromMillis(now - 1000),
+      expiresAt: Timestamp.fromMillis(now - 1000),
       attempts: 0,
-      windowStart: admin.firestore.Timestamp.fromMillis(now - 60 * 1000),
+      windowStart: Timestamp.fromMillis(now - 60 * 1000),
       codesInWindow: otp.OTP_CODES_PER_EMAIL_PER_HOUR,
     });
     process.env.FUNCTIONS_EMULATOR = 'true';
@@ -103,7 +105,7 @@ describe('sign-in codes', () => {
 
   test('the whole service has a cost brake on codes in an hour', async () => {
     await db.doc('otp_limits/overall').set({
-      windowStart: admin.firestore.Timestamp.fromMillis(Date.now() - 60 * 1000),
+      windowStart: Timestamp.fromMillis(Date.now() - 60 * 1000),
       count: otp.OTP_CODES_PER_HOUR_OVERALL,
     });
     process.env.FUNCTIONS_EMULATOR = 'true';
@@ -113,19 +115,19 @@ describe('sign-in codes', () => {
   test('an accepted code verifies an account whose address was never verified', async () => {
     const unverified = 'unverified@x.com';
     process.env.FUNCTIONS_EMULATOR = 'true';
-    const user = await admin.auth().createUser({ email: unverified, emailVerified: false });
+    const user = await getAuth().createUser({ email: unverified, emailVerified: false });
     try {
       await expect(verify('777777', unverified)).resolves.toMatchObject({ success: true });
-      expect((await admin.auth().getUser(user.uid)).emailVerified).toBe(true);
+      expect((await getAuth().getUser(user.uid)).emailVerified).toBe(true);
     } finally {
-      await admin.auth().deleteUser(user.uid);
+      await getAuth().deleteUser(user.uid);
     }
   });
 
   test('an accepted code takes away the password an unverified account was made with', async () => {
     const squatted = 'squatted@x.com';
     process.env.FUNCTIONS_EMULATOR = 'true';
-    const user = await admin.auth().createUser({ email: squatted, emailVerified: false, password: 'letmein-123' });
+    const user = await getAuth().createUser({ email: squatted, emailVerified: false, password: 'letmein-123' });
     const passwordSignIn = () => fetch(
       'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key',
       {
@@ -140,7 +142,7 @@ describe('sign-in codes', () => {
       await verify('777777', squatted);
       expect((await (await passwordSignIn()).json()).error.message).toBe('INVALID_PASSWORD');
     } finally {
-      await admin.auth().deleteUser(user.uid);
+      await getAuth().deleteUser(user.uid);
     }
   });
 });

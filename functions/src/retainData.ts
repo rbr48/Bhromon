@@ -1,15 +1,15 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { drainQuery } from './lib/batching';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 /** Pages per collection per run (400 docs each): up to 20,000 deletions. */
 const MAX_PAGES = 50;
 
 async function purgeOlderThan(
   collection: string,
-  before: admin.firestore.Timestamp,
+  before: Timestamp,
 ): Promise<{ handled: number; exhausted: boolean }> {
   return drainQuery(
     db.collection(collection).where('timestamp', '<', before),
@@ -29,9 +29,9 @@ async function purgeOlderThan(
  * Deletes in batches until nothing old is left (bounded per run). It used to
  * delete only 100 of each per day, so any backlog above that kept growing.
  */
-export async function runRetention(nowSeconds = admin.firestore.Timestamp.now().seconds) {
-  const oneYearAgo = new admin.firestore.Timestamp(nowSeconds - 365 * 24 * 3600, 0);
-  const twoYearsAgo = new admin.firestore.Timestamp(nowSeconds - 730 * 24 * 3600, 0);
+export async function runRetention(nowSeconds = Timestamp.now().seconds) {
+  const oneYearAgo = new Timestamp(nowSeconds - 365 * 24 * 3600, 0);
+  const twoYearsAgo = new Timestamp(nowSeconds - 730 * 24 * 3600, 0);
 
   const trust = await purgeOlderThan('trust_events', oneYearAgo);
   const audit = await purgeOlderThan('admin_audit_logs', twoYearsAgo);

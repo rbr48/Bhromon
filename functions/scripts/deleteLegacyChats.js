@@ -8,7 +8,8 @@
 //   GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json \
 //     node functions/scripts/deleteLegacyChats.js --project bhromon-ff801
 //   ...then add --apply to delete.
-const admin = require('firebase-admin');
+const { initializeApp } = require('firebase-admin/app');
+const { FieldPath, getFirestore } = require('firebase-admin/firestore');
 
 const PAGE_SIZE = 300;
 
@@ -19,7 +20,7 @@ async function findLegacyChats(db) {
   for (;;) {
     let query = db
       .collection('chats')
-      .orderBy(admin.firestore.FieldPath.documentId())
+      .orderBy(FieldPath.documentId())
       .limit(PAGE_SIZE);
     if (last) query = query.startAfter(last);
     const page = await query.get();
@@ -57,8 +58,8 @@ if (require.main === module) {
     console.error('Pass the Firebase project id with --project.');
     process.exit(1);
   }
-  admin.initializeApp({ projectId });
-  deleteLegacyChats(admin.firestore(), { apply })
+  initializeApp({ projectId });
+  deleteLegacyChats(getFirestore(), { apply })
     .then(({ found, deleted }) => {
       console.log(
         apply

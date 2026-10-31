@@ -8,7 +8,7 @@
  * the seat's owner.
  */
 
-import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
 import {
   Card29Game,
@@ -118,7 +118,7 @@ function writeTable(
     state: publicState(game, step, nowMs),
     currentTurn: game.currentTurn,
     updatedAt: nowIso(nowMs),
-    version: admin.firestore.FieldValue.increment(1),
+    version: FieldValue.increment(1),
   });
   for (let seat = 0; seat < SEATS; seat++) {
     const after = seatDoc(game, seat, ownerOf(table.players, seat));
@@ -159,7 +159,7 @@ export const card29Start = functions
         currentTurn: game.currentTurn,
         state: publicState(game, 1, nowMs),
         updatedAt: nowIso(nowMs),
-        version: admin.firestore.FieldValue.increment(1),
+        version: FieldValue.increment(1),
       });
       for (let seat = 0; seat < SEATS; seat++) {
         tx.set(seatRef(ref, seat), seatDoc(game, seat, ownerOf(players, seat)));
@@ -310,7 +310,7 @@ export async function leave29Table(
       players: swapped.map((p) => ({ ...p, isHost: !p.isBot && p.email === newHost })),
       hostEmail: newHost,
       updatedAt: nowIso(nowMs),
-      version: admin.firestore.FieldValue.increment(1),
+      version: FieldValue.increment(1),
     });
   });
 }

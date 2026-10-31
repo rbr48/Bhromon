@@ -1,4 +1,4 @@
-import * as admin from 'firebase-admin';
+import { FieldValue, QueryDocumentSnapshot, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
 import { minutesUntil, reminderText, reminderWindow } from './lib/noticeReminders';
 import {
@@ -21,11 +21,10 @@ export const sendTourNoticeReminders = functions
   .pubsub.schedule('every 5 minutes')
   .onRun(async () => {
     const { fromMs, toMs } = reminderWindow(Date.now());
-    const due = await admin
-      .firestore()
+    const due = await getFirestore()
       .collectionGroup('notices')
-      .where('eventAt', '>=', admin.firestore.Timestamp.fromMillis(fromMs))
-      .where('eventAt', '<=', admin.firestore.Timestamp.fromMillis(toMs))
+      .where('eventAt', '>=', Timestamp.fromMillis(fromMs))
+      .where('eventAt', '<=', Timestamp.fromMillis(toMs))
       .get();
 
     for (const doc of due.docs) {
@@ -37,21 +36,21 @@ export const sendTourNoticeReminders = functions
     }
   });
 
-async function sendReminder(doc: admin.firestore.QueryDocumentSnapshot): Promise<void> {
+async function sendReminder(doc: QueryDocumentSnapshot): Promise<void> {
   const tourId = doc.ref.parent.parent?.id;
   if (!tourId) return;
 
-  const notice = await admin.firestore().runTransaction(async (tx) => {
+  const notice = await getFirestore().runTransaction(async (tx) => {
     const fresh = await tx.get(doc.ref);
     if (!fresh.exists || fresh.get('reminderSentAt')) return null;
     tx.update(doc.ref, {
-      reminderSentAt: admin.firestore.FieldValue.serverTimestamp(),
+      reminderSentAt: FieldValue.serverTimestamp(),
     });
     return fresh.data() ?? null;
   });
   if (notice === null) return;
 
-  const eventAt = notice.eventAt as admin.firestore.Timestamp | undefined;
+  const eventAt = notice.eventAt as Timestamp | undefined;
   if (!eventAt) return;
   const { title, body } = reminderText(
     notice,

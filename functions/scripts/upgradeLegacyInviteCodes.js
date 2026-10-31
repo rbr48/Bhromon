@@ -9,7 +9,8 @@
 //     node functions/scripts/upgradeLegacyInviteCodes.js --project bhromon-ff801
 //   ...then add --apply to change it.
 const crypto = require('crypto');
-const admin = require('firebase-admin');
+const { initializeApp } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 
 // The same alphabet and length as lib/features/tour_group/domain/services/invite_code.dart.
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -67,8 +68,8 @@ if (require.main === module) {
     console.error('Pass the Firebase project id with --project.');
     process.exit(1);
   }
-  admin.initializeApp({ projectId });
-  upgradeLegacyInviteCodes(admin.firestore(), { apply })
+  initializeApp({ projectId });
+  upgradeLegacyInviteCodes(getFirestore(), { apply })
     .then(({ found, moved }) => {
       console.log(
         apply

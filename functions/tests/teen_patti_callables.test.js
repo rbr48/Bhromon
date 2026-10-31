@@ -1,6 +1,7 @@
 // Online Teen Patti table, server side. Runs the callable functions against the Firestore emulator:
 //   firebase emulators:exec --only firestore --project bhromon-rules-test-project "cd functions && npx jest --runInBand tests/teen_patti_callables"
-const admin = require('firebase-admin');
+const { getApps, initializeApp } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 const { teenPattiStart, teenPattiAct, teenPattiAdvance, teenPattiLeave } = require('../src/teenPatti/callables');
 
 // Each test clears the emulator project first, which can take a few seconds on its own.
@@ -14,10 +15,10 @@ const ASHA = 'asha@x.com';
 const BABU = 'babu@x.com';
 const OUTSIDER = 'eve@x.com';
 
-if (admin.apps.length === 0) {
-  admin.initializeApp({ projectId: PROJECT_ID });
+if (getApps().length === 0) {
+  initializeApp({ projectId: PROJECT_ID });
 }
-const db = admin.firestore();
+const db = getFirestore();
 
 const ctx = (email) => ({ auth: { uid: email.split('@')[0], token: { email } } });
 const gameRef = () => db.collection('tours').doc(TOUR).collection('games').doc(GAME);

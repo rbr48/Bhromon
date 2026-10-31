@@ -1,5 +1,7 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { getAuth } from 'firebase-admin/auth';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import { leaveAllTours } from './lib/accountTours';
 import {
   eraseFromChats,
@@ -9,7 +11,7 @@ import {
 } from './lib/accountErasure';
 import { purgeCdnPaths } from './lib/cdnPurge';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 export const gdprDeleteUser = functions
   .runWith({ secrets: ['MEDIA_PURGE_KEY'] })
@@ -34,7 +36,7 @@ export const gdprDeleteUser = functions
     await eraseOwnedDocuments(db, uid);
     await eraseFromChats(db, uid);
     const removedPaths = await purgeAccountOnMediaServer(uid, email);
-    await eraseStorageFiles(admin.storage().bucket(), uid);
+    await eraseStorageFiles(getStorage().bucket(), uid);
 
     // Cached copies of the deleted media are a convenience to clear, not a reason to
     // fail the closing, so a CDN failure is logged and left for the cache to expire.
@@ -44,12 +46,12 @@ export const gdprDeleteUser = functions
       console.error('CDN purge after account closing failed:', error);
     }
 
-    await admin.auth().deleteUser(uid);
+    await getAuth().deleteUser(uid);
 
     await db.collection('admin_audit_logs').add({
       action: 'gdpr_user_deleted',
       targetUid: uid,
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     return { success: true };

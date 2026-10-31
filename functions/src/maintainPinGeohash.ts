@@ -1,14 +1,14 @@
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
+import { DocumentData, FieldPath, getFirestore } from 'firebase-admin/firestore';
 import { encodeGeohash } from './lib/geohash';
 
-const db = admin.firestore();
+const db = getFirestore();
 
 /**
  * The geohash a pin document should carry, or null when it has no valid
  * coordinates.
  */
-export function expectedGeohash(data: admin.firestore.DocumentData | undefined): string | null {
+export function expectedGeohash(data: DocumentData | undefined): string | null {
   const lat = data?.lat;
   const lng = data?.lng;
   if (typeof lat !== 'number' || typeof lng !== 'number') return null;
@@ -51,7 +51,7 @@ export async function runBackfill(startAfter: string | null) {
   let updated = 0;
   for (let page = 0; page < MAX_PAGES; page++) {
     let query = db.collection('location_pins')
-      .orderBy(admin.firestore.FieldPath.documentId())
+      .orderBy(FieldPath.documentId())
       .limit(PAGE_SIZE);
     if (cursor) query = query.startAfter(cursor);
     const snap = await query.get();

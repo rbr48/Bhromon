@@ -1,4 +1,4 @@
-import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
 import {
   buildCallPushMessage,
@@ -43,7 +43,7 @@ export const sendCallPushNotification = functions
     if (isStaleCall(createdAtMs, Date.now())) return;
 
     try {
-      const db = admin.firestore();
+      const db = getFirestore();
       const recent = await recentCallCount(db, callerId, Date.now() - CALL_WINDOW_MS);
       if (isOverCallLimit(recent)) {
         console.warn(`[sendCallPushNotification] ${callerId} started too many calls; ending ${callId}`);

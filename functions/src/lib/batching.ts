@@ -1,4 +1,4 @@
-import * as admin from 'firebase-admin';
+import { DocumentReference, DocumentSnapshot, Firestore, Query, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 /** Firestore commits at most 500 writes per batch. */
 export const MAX_BATCH_WRITES = 500;
@@ -21,10 +21,10 @@ export function chunk<T>(items: readonly T[], size: number): T[][] {
  * instead of one sequential `get()` per document.
  */
 export async function getAllInChunks(
-  db: admin.firestore.Firestore,
-  refs: admin.firestore.DocumentReference[],
+  db: Firestore,
+  refs: DocumentReference[],
   size = 100,
-): Promise<admin.firestore.DocumentSnapshot[]> {
+): Promise<DocumentSnapshot[]> {
   if (refs.length === 0) return [];
   const parts = await Promise.all(chunk(refs, size).map((part) => db.getAll(...part)));
   return parts.flat();
@@ -39,8 +39,8 @@ export async function getAllInChunks(
  * so no single commit exceeds Firestore's write limit.
  */
 export async function drainQuery(
-  query: admin.firestore.Query,
-  apply: (docs: admin.firestore.QueryDocumentSnapshot[]) => Promise<void>,
+  query: Query,
+  apply: (docs: QueryDocumentSnapshot[]) => Promise<void>,
   { pageSize = 400, maxPages = 50 }: { pageSize?: number; maxPages?: number } = {},
 ): Promise<{ handled: number; exhausted: boolean }> {
   let handled = 0;
