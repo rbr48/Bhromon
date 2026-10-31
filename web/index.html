@@ -48,6 +48,30 @@
     }
   </style>
 
+  <script>
+    // Guard against rogue browser extension errors (e.g. Urban VPN / 200.js injecting buggy fetch wrappers)
+    window.addEventListener('unhandledrejection', function(event) {
+      var reason = event && event.reason;
+      if (reason) {
+        var str = (reason.stack || '') + ' ' + (reason.message || '') + ' ' + reason;
+        if (str.indexOf('200.js') !== -1 || str.indexOf('chrome-extension://') !== -1 || str.indexOf("reading 'M_ID'") !== -1) {
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+          if (event.preventDefault) event.preventDefault();
+        }
+      }
+    });
+
+    window.addEventListener('error', function(event) {
+      var filename = (event && event.filename) || '';
+      var message = (event && event.message) || '';
+      if (filename.indexOf('200.js') !== -1 || filename.indexOf('chrome-extension://') !== -1 || message.indexOf("reading 'M_ID'") !== -1) {
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+        if (event.preventDefault) event.preventDefault();
+        return true;
+      }
+    });
+  </script>
+
   <!-- MapLibre GL JS & CSS -->
   <script src="https://unpkg.com/maplibre-gl@^4.1/dist/maplibre-gl.js"></script>
   <link href="https://unpkg.com/maplibre-gl@^4.1/dist/maplibre-gl.css" rel="stylesheet" />
