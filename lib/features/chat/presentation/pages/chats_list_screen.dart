@@ -929,12 +929,16 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
   /// The people this user can chat or call: members of their own tours. Nothing
   /// outside those tours is loaded, so nobody can be found by searching the app.
+  /// Reads the tours and their members from the server, not the local cache. A
+  /// cached answer can still list a tour the person has left, or a member who has
+  /// since been removed, so the list is only built from server answers. Throws when
+  /// the server cannot be reached.
   static Future<List<GroupContact>> _loadGroupContacts() async {
     final repository = TourGroupRepository();
-    final groups = await _firstLoaded(repository.watchMyGroups());
+    final groups = await repository.fetchMyGroupsFromServer();
     final tours = <({String id, String name, List<TourMember> members})>[];
     for (final group in groups) {
-      final members = await _firstLoaded(repository.watchMembers(group.id));
+      final members = await repository.fetchMembersFromServer(group.id);
       tours.add((id: group.id, name: group.name, members: members));
     }
     return groupContacts(
@@ -942,30 +946,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       myEmail: repository.currentEmail,
       tours: tours,
     );
-  }
-
-  /// The first non-empty list a stream emits, or an empty list after a few seconds.
-  /// The local cache can answer first with nothing, before the server does. The
-  /// subscription is cancelled either way, so no listener is left running.
-  static Future<List<T>> _firstLoaded<T>(Stream<List<T>> stream) {
-    final completer = Completer<List<T>>();
-    StreamSubscription<List<T>>? subscription;
-    final timer = Timer(const Duration(seconds: 4), () {
-      if (!completer.isCompleted) completer.complete(<T>[]);
-      subscription?.cancel();
-    });
-    subscription = stream.listen((items) {
-      if (items.isNotEmpty && !completer.isCompleted) {
-        completer.complete(items);
-        timer.cancel();
-        subscription?.cancel();
-      }
-    }, onError: (Object error) {
-      if (!completer.isCompleted) completer.completeError(error);
-      timer.cancel();
-      subscription?.cancel();
-    });
-    return completer.future;
   }
 
   void _showSelectTravelerSheet(BuildContext context, String currentUid) {
@@ -1057,6 +1037,19 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           return const Center(
                               child: CircularProgressIndicator(
                                   color: Color(0xFF00A884)));
+                        }
+                        if (snap.hasError) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Text(
+                                'Could not load your travel companions. Check your connection and try again.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: Colors.white54, fontSize: 12),
+                              ),
+                            ),
+                          );
                         }
                         final contacts = (snap.data ?? const <GroupContact>[])
                             .where((c) =>

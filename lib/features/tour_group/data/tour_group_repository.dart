@@ -17,6 +17,7 @@ import '../domain/models/tour_activity_models.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
 import '../domain/models/vehicle_models.dart';
+import '../domain/services/call_partner.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
 import '../domain/services/seat_planner.dart';
@@ -1106,6 +1107,115 @@ class TourGroupRepository {
       });
       return members;
     });
+  }
+
+  /// The tours the signed-in person is an active member of, read from the server.
+  /// Unlike [watchMyGroups] this never answers from the local cache, so a tour the
+  /// person has left, or was removed from, is not returned. Throws when offline.
+  Future<List<TourGroup>> fetchMyGroupsFromServer() async {
+    const server = GetOptions(source: Source.server);
+    final groups = <TourGroup>[];
+    for (final tourId in await _activeTourIdsFromServer()) {
+      final doc = await _tour(tourId).get(server);
+      final data = doc.data();
+      if (doc.exists && data != null) {
+        groups.add(TourGroup.fromMap(doc.id, data));
+      }
+    }
+    groups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return groups;
+  }
+
+  /// The ids of the tours the signed-in person is an active member of, read from the
+  /// server.
+  Future<Set<String>> _activeTourIdsFromServer() async {
+    final email = currentEmail;
+    if (email.isEmpty) return <String>{};
+    final rows = await _memberships
+        .where('email', isEqualTo: email)
+        .get(const GetOptions(source: Source.server));
+    final tourIds = <String>{};
+    for (final row in rows.docs) {
+      final data = row.data();
+      final status = (data['status'] as String?)?.toLowerCase();
+      final tourId = data['tourId'] as String? ?? '';
+      if (tourId.isNotEmpty && (status == null || status == 'active')) {
+        tourIds.add(tourId);
+      }
+    }
+    return tourIds;
+  }
+
+  /// The tour a call between the signed-in person and [partnerUid] is rung through.
+  /// It is [preferredTourId], the tour the chat names, when both are still active in
+  /// it. Otherwise it is another tour they both belong to. When there is none, the
+  /// status says why: the status for the preferred tour, or
+  /// [CallPartnerStatus.noSharedTour] when there is no preferred tour.
+  Future<({String? tourId, CallPartnerStatus status})> resolveCallTour({
+    required String? preferredTourId,
+    required String partnerUid,
+    required String partnerEmail,
+  }) async {
+    final myTourIds = await _activeTourIdsFromServer();
+    final ordered = [
+      if (preferredTourId != null) preferredTourId,
+      for (final tourId in myTourIds)
+        if (tourId != preferredTourId) tourId,
+    ];
+    var status = CallPartnerStatus.noSharedTour;
+    for (final tourId in ordered) {
+      final tourStatus = await callPartnerStatus(
+        tourId: tourId,
+        partnerUid: partnerUid,
+        partnerEmail: partnerEmail,
+      );
+      if (tourStatus == CallPartnerStatus.ready) {
+        return (tourId: tourId, status: tourStatus);
+      }
+      if (tourId == preferredTourId) status = tourStatus;
+    }
+    return (tourId: null, status: status);
+  }
+
+  /// Active members of [tourId], read from the server (see [fetchMyGroupsFromServer]).
+  Future<List<TourMember>> fetchMembersFromServer(String tourId) async {
+    final rows = await _memberships
+        .where('tourId', isEqualTo: tourId)
+        .where('status', isEqualTo: 'active')
+        .get(const GetOptions(source: Source.server));
+    return [for (final row in rows.docs) TourMember.fromMap(row.data())];
+  }
+
+  /// Whether the signed-in person and [partnerUid] (at [partnerEmail]) can call each
+  /// other inside [tourId], as the call rules judge it. Reads the server, never the
+  /// cache. When the signed-in person's own row has no uid, it is filled in first,
+  /// which the membership rules allow.
+  Future<CallPartnerStatus> callPartnerStatus({
+    required String tourId,
+    required String partnerUid,
+    required String partnerEmail,
+  }) async {
+    const server = GetOptions(source: Source.server);
+    final myEmail = currentEmail;
+    final myUid = currentUid;
+    if (myEmail.isEmpty || myUid.isEmpty) return CallPartnerStatus.youLeft;
+    final myRef = _memberships.doc(_membershipId(tourId, myEmail));
+    var myRow = (await myRef.get(server)).data();
+    if (myRow != null &&
+        myRow['status'] == 'active' &&
+        (myRow['uid'] as String? ?? '').isEmpty) {
+      await myRef.update({'uid': myUid});
+      myRow = {...myRow, 'uid': myUid};
+    }
+    final partnerRow = (await _memberships
+            .doc(_membershipId(tourId, normalizeEmail(partnerEmail)))
+            .get(server))
+        .data();
+    return callPartnerStatusFor(
+      myRow: myRow,
+      partnerRow: partnerRow,
+      partnerUid: partnerUid,
+    );
   }
 
   static int _roleRank(TourRole role) => switch (role) {

@@ -8,11 +8,13 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/audio/call_audio_session.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/call_signaling_service.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
+import '../../../tour_group/domain/services/call_partner.dart';
 
 /// Full-screen audio & video calling screen with WhatsApp styling.
 class CallScreen extends StatefulWidget {
@@ -221,6 +223,7 @@ class _CallScreenState extends State<CallScreen> {
 
     try {
       if (widget.isCaller) {
+        final tourId = await _confirmCanCall();
         await _signaling.startCall(
           widget.callId,
           widget.localUid,
@@ -228,7 +231,7 @@ class _CallScreenState extends State<CallScreen> {
           videoEnabled: videoEnabled,
           callerName: widget.localUserName,
           callerAvatar: widget.localAvatarUrl,
-          sharedTourId: widget.sharedTourId,
+          sharedTourId: tourId ?? widget.sharedTourId,
           localEmail: TourGroupRepository().currentEmail,
           remoteEmail: widget.remoteEmail,
         );
@@ -241,8 +244,11 @@ class _CallScreenState extends State<CallScreen> {
       }
       _applyAudioRouting();
     } catch (e) {
-      // The signaling service has already ended the call and closed this screen.
+      // A call that started has already been ended by the signaling service. A setup
+      // that failed before any connection may still hold the audio mode, so the
+      // session is handed back here as well.
       logError('CallScreen initialization error: $e');
+      await CallAudioSession.release();
       messenger?.showSnackBar(
         SnackBar(
           content: Text(
@@ -255,6 +261,42 @@ class _CallScreenState extends State<CallScreen> {
       );
       _safeExit();
     }
+  }
+
+  /// Finds a tour that both people are still active in, and returns it for the call.
+  /// The tour the chat names is tried first, then any other tour they share. When
+  /// there is none, the call says why instead of failing with a generic message.
+  /// Returns null when there is no partner email, which startCall refuses on its own.
+  Future<String?> _confirmCanCall() async {
+    final remoteEmail = widget.remoteEmail;
+    if (remoteEmail == null || remoteEmail.isEmpty) return null;
+    final ({String? tourId, CallPartnerStatus status}) resolved;
+    try {
+      resolved = await TourGroupRepository().resolveCallTour(
+        preferredTourId: widget.sharedTourId,
+        partnerUid: widget.remoteUid,
+        partnerEmail: remoteEmail,
+      );
+    } catch (error, stack) {
+      logWarning('CallScreen: membership check failed', error, stack);
+      throw const CallSetupException(kCallUnreachableMessage);
+    }
+    final tourId = resolved.tourId;
+    if (tourId != null) return tourId;
+    final typedName = widget.remoteUserName.trim();
+    final name = typedName.isEmpty ? 'This person' : typedName;
+    final problem = switch (resolved.status) {
+      CallPartnerStatus.ready => null,
+      CallPartnerStatus.youLeft =>
+        'You are no longer a member of this tour, so you cannot call from it.',
+      CallPartnerStatus.partnerLeft =>
+        '$name is no longer a member of this tour, so you cannot call them.',
+      CallPartnerStatus.partnerNotLinked =>
+        '$name needs to open Bhromon once before you can call them.',
+      CallPartnerStatus.noSharedTour =>
+        'You do not share a tour with $name, so you cannot call them.',
+    };
+    throw CallSetupException(problem ?? kCallUnreachableMessage);
   }
 
   /// Ends the call from this side, says why, and leaves the screen. A callee
