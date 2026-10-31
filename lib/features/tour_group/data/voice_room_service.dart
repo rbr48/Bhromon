@@ -6,6 +6,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/audio/call_audio_session.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../chat/data/call_ice_config.dart';
 import '../../chat/data/call_media.dart';
@@ -538,6 +539,9 @@ class VoiceRoomService {
     await sigSub?.cancel();
     await candSub?.cancel();
     await pc?.close();
+    // Closing alone leaves the plugin's audio session on. Disposing the last
+    // connection is what hands the audio back to the system.
+    await pc?.dispose();
     await renderer?.dispose();
   }
 
@@ -666,8 +670,13 @@ class VoiceRoomService {
     _participantsSub = null;
     _lastSeats = null;
 
-    for (final email in _peerConnections.keys.toList()) {
+    final openPeers = _peerConnections.keys.toList();
+    for (final email in openPeers) {
       await _closePeer(email);
+    }
+    if (openPeers.isEmpty) {
+      // No connection was made, so the plugin never switches the audio session off.
+      await CallAudioSession.release();
     }
     _peerSessions.clear();
     _videoSenders.clear();

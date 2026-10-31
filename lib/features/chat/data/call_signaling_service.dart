@@ -4,11 +4,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import '../../../core/audio/call_audio_session.dart';
 import '../../../core/utils/app_logger.dart';
+import '../domain/call_quality.dart';
 import 'call_ice_config.dart';
 import 'call_log_repository.dart';
 import 'call_media.dart';
 import 'vps_chat_service.dart';
+
+export '../domain/call_quality.dart' show CallLinkSample, CallNetworkQuality;
 
 /// How long an incoming call rings before it counts as missed. The native ring
 /// screen, the in-app dialog and the caller's timer all use this.
@@ -17,11 +21,35 @@ const int kCallRingSeconds = 45;
 /// How long a call waits on the call server before it gives up.
 const Duration _serverTimeout = Duration(seconds: 8);
 
-enum CallNetworkQuality {
-  good,
-  fair,
-  poor,
-}
+/// How long an answered call may take to connect its media before it fails.
+const Duration _connectTimeout = Duration(seconds: 30);
+
+/// How long a dropped link may stay down before the call starts to rebuild it.
+/// A link that recovers inside this time needs no rebuild.
+const Duration _reconnectGrace = Duration(seconds: 4);
+
+/// How long one rebuild may wait for the other side before the call ends.
+const Duration _reconnectTimeout = Duration(seconds: 15);
+
+/// How often a rebuild request is sent again until the other side answers. The
+/// relay drops what is sent while a socket is down, so one request is not enough.
+const Duration _reconnectResend = Duration(seconds: 3);
+
+/// How long after a rebuild's answer the connection state is checked. A link
+/// that stayed up may raise no event, so this check is what finishes the rebuild.
+const Duration _settleDelay = Duration(seconds: 2);
+
+/// How often the link is measured while the call is up.
+const Duration _statsInterval = Duration(seconds: 4);
+
+/// The signals that offer something the other side must act on. If the relay
+/// refuses one, the call cannot go on.
+const _offerSignals = {'offer', 'reoffer', 'renegotiate'};
+
+/// The key that identifies an ICE candidate. The same candidate arrives over
+/// the relay and over Firestore, and it is kept once.
+String candidateKey(String candidate, String? sdpMid, int? sdpMLineIndex) =>
+    '${sdpMid ?? ''}|${sdpMLineIndex ?? ''}|$candidate';
 
 /// A call that cannot start or be answered. [message] can be shown to the user.
 class CallSetupException implements Exception {
@@ -33,17 +61,19 @@ class CallSetupException implements Exception {
   String toString() => message;
 }
 
-/// The key that identifies an ICE candidate. The same candidate arrives over
-/// the relay and over Firestore, and it is kept once.
-String candidateKey(String candidate, String? sdpMid, int? sdpMLineIndex) =>
-    '${sdpMid ?? ''}|${sdpMLineIndex ?? ''}|$candidate';
-
 /// WebRTC signaling for a 1:1 audio or video call.
 ///
 /// The fast path is the chat server's WebSocket relay. The durable path is the
 /// Firestore call document, which also rings the callee's phone through
 /// sendCallPushNotification. The caller writes that document before anything
 /// else, so the callee can always find the offer and the candidates.
+///
+/// Rebuilding a dropped link. Only the caller makes offers, so the two sides
+/// never offer at once. When the link drops, the caller sends a new offer with
+/// an ICE restart over the relay, and the callee answers it. A callee that
+/// notices the drop asks the caller to offer ('renegotiate'). The new SDP
+/// never touches the call document, whose offer and answer are fixed once
+/// written. The candidates still go to the subcollections as before.
 ///
 /// Firestore schema
 /// ────────────────
@@ -68,6 +98,37 @@ class CallSignalingService {
 
   static bool get isInCall => _activeCallId != null;
 
+  /// Declines a call that is still ringing. It needs no call screen or relay,
+  /// so the native ring screen can decline from a background isolate. The call
+  /// document is updated first, and the decline is logged only when that
+  /// update goes through, so the call is never logged twice.
+  static Future<void> declineRingingCall({
+    required String callId,
+    required String calleeUid,
+    required String callerId,
+    required bool isVideo,
+  }) async {
+    var declined = false;
+    try {
+      await _callDocRef(callId).update({
+        'status': 'declined',
+        'endedAt': FieldValue.serverTimestamp(),
+      }).timeout(_serverTimeout);
+      declined = true;
+    } catch (e) {
+      logWarning('CallSignalingService: decline update error: $e');
+    }
+    if (!declined || callerId.isEmpty) return;
+    await _writeCallLog(
+      writerUid: calleeUid,
+      callerId: callerId,
+      calleeId: calleeUid,
+      callId: callId,
+      isVideo: isVideo,
+      status: 'declined',
+    );
+  }
+
   // ── Internal state ─────────────────────────────────────────────────────────
 
   RTCPeerConnection? _peerConnection;
@@ -88,10 +149,34 @@ class CallSignalingService {
   final Set<String> _seenCandidates = {};
   Timer? _statsTimer;
   Timer? _ringTimer;
+  Timer? _connectTimer;
+  Timer? _reconnectGraceTimer;
+  Timer? _reconnectTimer;
+  Timer? _settleTimer;
+  Timer? _rebuildResendTimer;
   StreamSubscription<Map<String, dynamic>>? _vpsSignalingSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _offerCandidatesSub;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _answerCandidatesSub;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _callDocSub;
+
+  /// When the media first connected. Null until then, and reset when the call ends.
+  DateTime? _connectedAt;
+  bool _reconnecting = false;
+  final CallReconnectPolicy _reconnectPolicy = CallReconnectPolicy();
+
+  /// The caller's offer for a rebuild, kept until the callee answers it.
+  Map<String, dynamic>? _rebuildOffer;
+
+  /// The callee's last answered rebuild offer. A repeated offer is not applied again.
+  String? _lastRebuildOfferSdp;
+
+  /// The answer sent for [_lastRebuildOfferSdp], sent again if the offer repeats.
+  Map<String, dynamic>? _lastRebuildAnswer;
+
+  double _remoteGain = 1.0;
+  int? _appliedVideoBitrateCap;
+  CallLinkSample? _linkSample;
+  final OutboundBitrateMeter _bitrateMeter = OutboundBitrateMeter();
 
   final ValueNotifier<CallNetworkQuality> networkQuality =
       ValueNotifier(CallNetworkQuality.good);
@@ -104,8 +189,9 @@ class CallSignalingService {
   /// Fired when the remote peer's track arrives.
   void Function(MediaStream)? onRemoteStream;
 
-  /// Fired on each call-state change: `'calling'`, `'answered'`, `'ended'`,
-  /// `'declined'`, `'missed'`, or `'failed'` when setup did not succeed.
+  /// Fired on each call-state change: `'calling'`, `'answered'` (accepted, media
+  /// still connecting), `'connected'`, `'reconnecting'`, `'ended'`, `'declined'`,
+  /// `'missed'`, or `'failed'` when setup or the connection did not succeed.
   void Function(String)? onCallStateChange;
 
   /// Fired once when the call has ended and its resources are released.
@@ -113,18 +199,38 @@ class CallSignalingService {
 
   // ── Firestore shorthand ────────────────────────────────────────────────────
 
-  FirebaseFirestore get _db => FirebaseFirestore.instance;
-
-  DocumentReference<Map<String, dynamic>> _callDoc(String callId) =>
-      _db.collection('calls').doc(callId);
+  static DocumentReference<Map<String, dynamic>> _callDocRef(String callId) =>
+      FirebaseFirestore.instance.collection('calls').doc(callId);
 
   CollectionReference<Map<String, dynamic>> _offerCandidates(String callId) =>
-      _callDoc(callId).collection('offerCandidates');
+      _callDocRef(callId).collection('offerCandidates');
 
   CollectionReference<Map<String, dynamic>> _answerCandidates(String callId) =>
-      _callDoc(callId).collection('answerCandidates');
+      _callDocRef(callId).collection('answerCandidates');
 
   // ── Public API ─────────────────────────────────────────────────────────────
+
+  /// Whole seconds the media has been connected. Zero before it connects.
+  int get connectedSeconds => callConnectedSeconds(
+        connectedAt: _connectedAt,
+        now: DateTime.now(),
+      );
+
+  /// The latest link figures, or null before the first poll that had media.
+  CallLinkSample? get linkSample => _linkSample;
+
+  /// The remote audio multiplier. 1 is normal.
+  double get remoteGain => _remoteGain;
+
+  /// Makes the other side louder or quieter. 1 is normal and up to 10 is the
+  /// loudest the platform allows. Applied now and to a stream that arrives later.
+  Future<void> setRemoteGain(double gain) async {
+    _remoteGain = gain.clamp(0.0, 10.0).toDouble();
+    for (final track
+        in _remoteStream?.getAudioTracks() ?? const <MediaStreamTrack>[]) {
+      await _applyRemoteGain(track);
+    }
+  }
 
   /// Starts an outgoing call from [localUid] to [remoteUid].
   ///
@@ -162,7 +268,7 @@ class CallSignalingService {
       });
 
       try {
-        await _callDoc(callId).set({
+        await _callDocRef(callId).set({
           'callerId': localUid,
           'calleeId': remoteUid,
           'participants': [localUid, remoteUid],
@@ -228,7 +334,7 @@ class CallSignalingService {
     _attachVpsSignalingListener();
     try {
       final callData =
-          (await _callDoc(callId).get().timeout(_serverTimeout)).data();
+          (await _callDocRef(callId).get().timeout(_serverTimeout)).data();
       if (callData == null) {
         throw const CallSetupException('This call is no longer available.');
       }
@@ -273,6 +379,7 @@ class CallSignalingService {
       }
 
       onCallStateChange?.call('answered');
+      _startConnectTimer();
       _watchCallDocument(callId);
       _watchCallerCandidates(callId);
     } catch (e) {
@@ -287,16 +394,20 @@ class CallSignalingService {
     }
   }
 
-  /// Hangs up and tells the other side. Safe to call more than once.
-  Future<void> endCall({int? durationSeconds}) => _end(
+  /// Hangs up and tells the other side. Safe to call more than once. The
+  /// connected time is recorded here, so every way of ending a call logs it.
+  Future<void> endCall() => _end(
         state: 'ended',
         remoteSignal: 'end',
         documentStatus: 'ended',
-        durationSeconds: durationSeconds,
       );
 
   /// Declines an incoming call before it is answered. The caller's phone stops ringing.
-  Future<void> declineCall(String callId, {String? callerId}) async {
+  Future<void> declineCall(
+    String callId, {
+    String? callerId,
+    bool isVideo = false,
+  }) async {
     final targetId = callerId ?? _remoteUid;
     if (targetId != null && targetId.isNotEmpty) {
       VpsChatService().sendCallSignal(
@@ -306,32 +417,14 @@ class CallSignalingService {
         callId: callId,
       );
     }
-    var declined = false;
-    try {
-      await _callDoc(callId).update({
-        'status': 'declined',
-        'endedAt': FieldValue.serverTimestamp(),
-      }).timeout(_serverTimeout);
-      declined = true;
-    } catch (e) {
-      logWarning(
-          'CallSignalingService: declineCall Firestore update error: $e');
-    }
-    // The callee writes the log for a call it declined.
     final calleeId = FirebaseAuth.instance.currentUser?.uid;
-    if (declined &&
-        targetId != null &&
-        targetId.isNotEmpty &&
-        calleeId != null) {
-      unawaited(_writeCallLog(
-        writerUid: calleeId,
-        callerId: targetId,
-        calleeId: calleeId,
-        callId: callId,
-        isVideo: false,
-        status: 'declined',
-      ));
-    }
+    if (calleeId == null) return;
+    await declineRingingCall(
+      callId: callId,
+      calleeUid: calleeId,
+      callerId: targetId ?? '',
+      isVideo: isVideo,
+    );
   }
 
   /// Turns the microphone on or off. Applies to the stream now, or when it starts.
@@ -388,38 +481,44 @@ class CallSignalingService {
     _remoteAnswerApplied = false;
     _pendingIceCandidates.clear();
     _seenCandidates.clear();
+    _connectedAt = null;
+    _reconnecting = false;
     _activeCallId = callId;
   }
 
   /// Ends this call once. Later calls do nothing. [remoteSignal] goes to the
   /// other side over the relay, [documentStatus] is written to the call
-  /// document, and [state] is reported to the UI.
+  /// document, and [state] is reported to the UI. The call is logged in the
+  /// chat by the side whose update reaches the call document.
   Future<void> _end({
     required String state,
     String? remoteSignal,
     String? documentStatus,
-    int? durationSeconds,
   }) async {
     if (_finished) return;
     _finished = true;
     final callId = _callId;
     final remoteUid = _remoteUid;
+    final localUid = _localUid;
+    final isCaller = _isCaller;
+    final isVideo = _callIsVideo;
+    // Read before the release clears the connection time.
+    final seconds = connectedSeconds;
+    final durationSeconds = seconds > 0 ? seconds : null;
     await _releaseResources();
 
     if (callId != null && remoteUid != null && remoteSignal != null) {
       VpsChatService().sendCallSignal(
         recipientId: remoteUid,
         signalType: remoteSignal,
-        payload: {
-          if (durationSeconds != null) 'durationSeconds': durationSeconds
-        },
+        payload: <String, dynamic>{},
         callId: callId,
       );
     }
     if (callId != null && documentStatus != null) {
       var ended = false;
       try {
-        await _callDoc(callId).update({
+        await _callDocRef(callId).update({
           'status': documentStatus,
           'endedAt': FieldValue.serverTimestamp(),
           if (durationSeconds != null) 'durationSeconds': durationSeconds,
@@ -429,17 +528,13 @@ class CallSignalingService {
         // The other side has usually ended it already, which the rules refuse.
         logInfo('CallSignalingService: end update skipped: $e');
       }
-      // Only the side whose update reached the call document logs it, so each
-      // call is written into its chat once.
-      final localUid = _localUid;
-      final remoteUid = _remoteUid;
       if (ended && localUid != null && remoteUid != null) {
         unawaited(_writeCallLog(
           writerUid: localUid,
-          callerId: _isCaller ? localUid : remoteUid,
-          calleeId: _isCaller ? remoteUid : localUid,
+          callerId: isCaller ? localUid : remoteUid,
+          calleeId: isCaller ? remoteUid : localUid,
           callId: callId,
-          isVideo: _callIsVideo,
+          isVideo: isVideo,
           status: documentStatus,
           durationSeconds: durationSeconds,
         ));
@@ -450,35 +545,249 @@ class CallSignalingService {
     onCallEnded?.call();
   }
 
-  /// Writes a finished call into its chat. A failure is logged and never shown,
-  /// since the call has already ended.
-  Future<void> _writeCallLog({
-    required String writerUid,
-    required String callerId,
-    required String calleeId,
-    required String callId,
-    required bool isVideo,
-    required String status,
-    int? durationSeconds,
-  }) async {
-    try {
-      await CallLogRepository().record(
-        writerUid: writerUid,
-        callerId: callerId,
-        calleeId: calleeId,
-        callId: callId,
-        isVideo: isVideo,
-        status: status,
-        durationSeconds: durationSeconds,
-      );
-    } catch (e) {
-      logInfo('CallSignalingService: call log skipped: $e');
-    }
-  }
-
   /// Ends the call when the other side has ended it, without telling them again.
   void _endFromRemote(String state) {
     unawaited(_end(state: state));
+  }
+
+  // ── Connection health ──────────────────────────────────────────────────────
+
+  /// Ends the call if the media never connects after the answer.
+  void _startConnectTimer() {
+    _connectTimer?.cancel();
+    _connectTimer = Timer(_connectTimeout, () {
+      if (_connectedAt != null || _finished) return;
+      unawaited(_end(
+        state: 'failed',
+        remoteSignal: 'end',
+        documentStatus: 'ended',
+      ));
+    });
+  }
+
+  /// The link dropped. Before the first connection, the connect timer decides.
+  /// A plain disconnect waits a short grace period, since links often recover on
+  /// their own. A failed link is rebuilt at once.
+  void _linkDropped({required bool immediate}) {
+    if (_finished || _connectedAt == null) return;
+    _updateNetworkQuality(CallNetworkQuality.poor);
+    if (immediate) {
+      _startRebuild();
+      return;
+    }
+    _reconnectGraceTimer ??= Timer(_reconnectGrace, _startRebuild);
+  }
+
+  void _onLinkConnected() {
+    _connectTimer?.cancel();
+    _connectTimer = null;
+    _reconnectGraceTimer?.cancel();
+    _reconnectGraceTimer = null;
+    _settleTimer?.cancel();
+    _settleTimer = null;
+    _reconnecting = false;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    // A rebuild offer still waiting for its answer keeps being sent, so both
+    // sides end on the same description.
+    if (_rebuildOffer == null) _stopRebuildResend();
+    // A connected link has a remote description, so candidates held during a
+    // rebuild can now be applied.
+    unawaited(_drainPendingIceCandidates());
+    _connectedAt ??= DateTime.now();
+    _startStatsMonitoring();
+    _updateNetworkQuality(CallNetworkQuality.good);
+    onCallStateChange?.call('connected');
+  }
+
+  /// Starts a rebuild of a dropped link. The caller offers. The callee asks.
+  void _startRebuild() {
+    _reconnectGraceTimer?.cancel();
+    _reconnectGraceTimer = null;
+    if (_finished || _callId == null || _reconnecting || _connectedAt == null) {
+      return;
+    }
+    if (_isCaller && !_reconnectPolicy.startAttempt()) {
+      unawaited(_end(
+        state: 'failed',
+        remoteSignal: 'end',
+        documentStatus: 'ended',
+      ));
+      return;
+    }
+    _enterRebuild();
+    if (_isCaller) {
+      unawaited(_sendRebuildOffer());
+    } else {
+      _startRebuildResend();
+    }
+  }
+
+  /// Holds incoming candidates until the new description is in, so none of them
+  /// are applied to the old session. Ends the call if the rebuild never finishes.
+  void _enterRebuild() {
+    _reconnecting = true;
+    _remoteDescriptionSet = false;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(_reconnectTimeout, () {
+      if (!_reconnecting || _finished) return;
+      // The link may have come back without an event saying so. Only a link
+      // that is still down ends the call.
+      if (_isLinkUp) {
+        _onLinkConnected();
+        return;
+      }
+      unawaited(_end(
+        state: 'failed',
+        remoteSignal: 'end',
+        documentStatus: 'ended',
+      ));
+    });
+    _updateNetworkQuality(CallNetworkQuality.poor);
+    onCallStateChange?.call('reconnecting');
+  }
+
+  bool get _isLinkUp =>
+      _peerConnection?.connectionState ==
+      RTCPeerConnectionState.RTCPeerConnectionStateConnected;
+
+  /// Once an answer is in, a link that is up may not raise any event. This
+  /// checks the connection state a moment later and finishes the rebuild if it is up.
+  void _scheduleSettle() {
+    _settleTimer?.cancel();
+    _settleTimer = Timer(_settleDelay, () {
+      _settleTimer = null;
+      if (_reconnecting && !_finished && _isLinkUp) _onLinkConnected();
+    });
+  }
+
+  void _stopRebuildResend() {
+    _rebuildResendTimer?.cancel();
+    _rebuildResendTimer = null;
+  }
+
+  void _cancelRebuild() {
+    _reconnecting = false;
+    _rebuildOffer = null;
+    _lastRebuildAnswer = null;
+    _settleTimer?.cancel();
+    _settleTimer = null;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _stopRebuildResend();
+  }
+
+  Future<void> _sendRebuildOffer() async {
+    final pc = _peerConnection;
+    if (pc == null || _callId == null) return;
+    try {
+      final offer = await pc.createOffer({
+        'iceRestart': true,
+        'offerToReceiveAudio': 1,
+        'offerToReceiveVideo': _callIsVideo ? 1 : 0,
+      });
+      await pc.setLocalDescription(offer);
+      // Sent even if the link has come back in the meantime, so the connection
+      // is never left waiting on an answer nobody asked for.
+      if (_finished) return;
+      _rebuildOffer = {'type': offer.type, 'sdp': offer.sdp};
+      _startRebuildResend();
+    } catch (e, st) {
+      logWarning('CallSignalingService: rebuild offer error', e, st);
+      unawaited(_end(
+        state: 'failed',
+        remoteSignal: 'end',
+        documentStatus: 'ended',
+      ));
+    }
+  }
+
+  /// Sends the rebuild request now, and again until the other side answers.
+  void _startRebuildResend() {
+    _rebuildResendTimer?.cancel();
+    _sendRebuildRequest();
+    _rebuildResendTimer = Timer.periodic(
+      _reconnectResend,
+      (_) => _sendRebuildRequest(),
+    );
+  }
+
+  void _sendRebuildRequest() {
+    if (_isCaller) {
+      final offer = _rebuildOffer;
+      if (offer != null) _relay('reoffer', payload: offer);
+    } else if (_reconnecting) {
+      _relay('renegotiate');
+    }
+  }
+
+  void _relay(String signalType, {Map<String, dynamic>? payload}) {
+    final callId = _callId;
+    final remoteUid = _remoteUid;
+    if (callId == null || remoteUid == null || remoteUid.isEmpty) return;
+    VpsChatService().sendCallSignal(
+      recipientId: remoteUid,
+      signalType: signalType,
+      payload: payload ?? <String, dynamic>{},
+      callId: callId,
+    );
+  }
+
+  /// The callee's side of a rebuild: apply the caller's new offer, answer it.
+  Future<void> _answerRebuildOffer(String sdp, String type) async {
+    final pc = _peerConnection;
+    if (pc == null || _finished || sdp.isEmpty) return;
+    if (sdp == _lastRebuildOfferSdp) {
+      // The caller repeats its offer until it hears back, so the answer is
+      // repeated too, in case the first one was lost.
+      final answer = _lastRebuildAnswer;
+      if (answer != null) _relay('reanswer', payload: answer);
+      return;
+    }
+    _lastRebuildOfferSdp = sdp;
+    _enterRebuild();
+    _stopRebuildResend();
+    try {
+      await pc.setRemoteDescription(RTCSessionDescription(sdp, type));
+      await _drainPendingIceCandidates();
+      final answer = await pc.createAnswer({
+        'offerToReceiveAudio': 1,
+        'offerToReceiveVideo': _callIsVideo ? 1 : 0,
+      });
+      await pc.setLocalDescription(answer);
+      _lastRebuildAnswer = {'type': answer.type, 'sdp': answer.sdp};
+      _relay('reanswer', payload: _lastRebuildAnswer);
+      _scheduleSettle();
+    } catch (e, st) {
+      logWarning('CallSignalingService: rebuild answer error', e, st);
+      unawaited(_end(
+        state: 'failed',
+        remoteSignal: 'end',
+        documentStatus: 'ended',
+      ));
+    }
+  }
+
+  /// The caller's side of a rebuild: apply the callee's answer to its offer.
+  Future<void> _applyRebuildAnswer(String sdp, String type) async {
+    final pc = _peerConnection;
+    if (pc == null || _finished || _rebuildOffer == null || sdp.isEmpty) {
+      return;
+    }
+    _rebuildOffer = null;
+    _stopRebuildResend();
+    try {
+      await pc.setRemoteDescription(RTCSessionDescription(sdp, type));
+      await _drainPendingIceCandidates();
+      _scheduleSettle();
+    } catch (e, st) {
+      logWarning('CallSignalingService: rebuild answer apply error', e, st);
+      unawaited(_end(
+        state: 'failed',
+        remoteSignal: 'end',
+        documentStatus: 'ended',
+      ));
+    }
   }
 
   // ── Signal and document watchers ───────────────────────────────────────────
@@ -502,14 +811,30 @@ class CallSignalingService {
           if (payload is Map) {
             unawaited(_addIceCandidate(Map<String, dynamic>.from(payload)));
           }
+        case 'reoffer':
+          if (!_isCaller && payload is Map) {
+            unawaited(_answerRebuildOffer(
+              payload['sdp'] as String? ?? '',
+              payload['type'] as String? ?? 'offer',
+            ));
+          }
+        case 'reanswer':
+          if (_isCaller && payload is Map) {
+            unawaited(_applyRebuildAnswer(
+              payload['sdp'] as String? ?? '',
+              payload['type'] as String? ?? 'answer',
+            ));
+          }
+        case 'renegotiate':
+          if (_isCaller) _startRebuild();
         case 'end':
           _endFromRemote('ended');
         case 'declined':
           _endFromRemote('declined');
         case 'refused':
-          // The relay refused our offer. The call document still exists, so
-          // end it there as well, or the callee would keep ringing.
-          if (event['refusedSignal'] == 'offer') {
+          // The relay refused one of our signals. An offer that did not reach
+          // the callee must end the call, or the callee would keep ringing.
+          if (_offerSignals.contains(event['refusedSignal'])) {
             unawaited(_end(
               state: 'failed',
               documentStatus: 'ended',
@@ -522,7 +847,7 @@ class CallSignalingService {
   /// The caller watches the document for the callee's answer and for an end.
   void _watchCallDocument(String callId) {
     _callDocSub?.cancel();
-    _callDocSub = _callDoc(callId).snapshots().listen(
+    _callDocSub = _callDocRef(callId).snapshots().listen(
       (snapshot) {
         final data = snapshot.data();
         if (data == null || _finished) return;
@@ -589,6 +914,7 @@ class CallSignalingService {
       await _drainPendingIceCandidates();
       _ringTimer?.cancel();
       _ringTimer = null;
+      _startConnectTimer();
       onCallStateChange?.call('answered');
     } catch (e, st) {
       // Let the other channel try again.
@@ -601,7 +927,7 @@ class CallSignalingService {
   /// call has already ended. Other failures return true, and the relay carries the answer.
   Future<bool> _writeAnswer(String callId, RTCSessionDescription answer) async {
     try {
-      await _callDoc(callId).update({
+      await _callDocRef(callId).update({
         'answer': {'type': answer.type, 'sdp': answer.sdp},
         'status': 'answered',
       }).timeout(_serverTimeout);
@@ -695,6 +1021,9 @@ class CallSignalingService {
         track.enabled = true;
       }
       _remoteStream = stream;
+      if (event.track.kind == 'audio') {
+        unawaited(_applyRemoteGain(event.track));
+      }
       onRemoteStream?.call(stream);
     };
 
@@ -702,15 +1031,18 @@ class CallSignalingService {
       logDebug('CallSignalingService: connectionState → $state');
       switch (state) {
         case RTCPeerConnectionState.RTCPeerConnectionStateConnected:
-          _updateNetworkQuality(CallNetworkQuality.good);
-          _startStatsMonitoring();
+          _onLinkConnected();
           break;
         case RTCPeerConnectionState.RTCPeerConnectionStateConnecting:
-          _updateNetworkQuality(CallNetworkQuality.fair);
+          if (_connectedAt == null) {
+            _updateNetworkQuality(CallNetworkQuality.fair);
+          }
           break;
         case RTCPeerConnectionState.RTCPeerConnectionStateDisconnected:
+          _linkDropped(immediate: false);
+          break;
         case RTCPeerConnectionState.RTCPeerConnectionStateFailed:
-          _updateNetworkQuality(CallNetworkQuality.poor);
+          _linkDropped(immediate: true);
           break;
         default:
           break;
@@ -719,11 +1051,15 @@ class CallSignalingService {
 
     _peerConnection!.onIceConnectionState = (RTCIceConnectionState state) {
       logDebug('CallSignalingService: iceConnectionState → $state');
-      if (state == RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
-          state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
-        _updateNetworkQuality(CallNetworkQuality.poor);
-      }
     };
+  }
+
+  Future<void> _applyRemoteGain(MediaStreamTrack track) async {
+    try {
+      await Helper.setVolume(_remoteGain, track);
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   /// Parses a candidate and adds it to the peer connection, or queues it until
@@ -783,37 +1119,64 @@ class CallSignalingService {
     }
   }
 
+  // ── Link quality ───────────────────────────────────────────────────────────
+
   void _startStatsMonitoring() {
     _statsTimer?.cancel();
-    _statsTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
-      final pc = _peerConnection;
-      if (pc == null) return;
-      try {
-        final stats = await pc.getStats();
-        int packetsLost = 0;
-        int packetsReceived = 0;
-        for (final report in stats) {
-          if (report.values['type'] == 'inbound-rtp') {
-            packetsLost += (report.values['packetsLost'] as num?)?.toInt() ?? 0;
-            packetsReceived +=
-                (report.values['packetsReceived'] as num?)?.toInt() ?? 0;
-          }
+    _statsTimer = Timer.periodic(_statsInterval, (_) => _measureLink());
+  }
+
+  /// Reads the link and updates the quality and the video bitrate cap. While a
+  /// rebuild is running the old figures say nothing about the new link, so they are skipped.
+  Future<void> _measureLink() async {
+    final pc = _peerConnection;
+    if (pc == null || _finished || _reconnecting) return;
+    try {
+      final reports = await pc.getStats();
+      final raw = callLinkSampleFromStats(
+        reports.map((report) => <String, dynamic>{
+              for (final entry in report.values.entries)
+                entry.key.toString(): entry.value,
+              'type': report.type,
+            }),
+      );
+      final sentBytes = raw.sentBytes;
+      final sample = raw.withOutboundKbps(
+        sentBytes == null
+            ? null
+            : _bitrateMeter.kbpsAt(sentBytes, DateTime.now()),
+      );
+      if (!sample.hasIncomingMedia) return;
+      _linkSample = sample;
+      final quality = classifyCallLink(sample);
+      _updateNetworkQuality(quality);
+      await _applyVideoBitrateCap(quality);
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
+  }
+
+  /// Caps the video this device sends for the link's quality, so a weak link
+  /// gets a smaller picture rather than a frozen one.
+  Future<void> _applyVideoBitrateCap(CallNetworkQuality quality) async {
+    final pc = _peerConnection;
+    final cap = videoBitrateCapFor(quality);
+    if (pc == null || cap == _appliedVideoBitrateCap) return;
+    _appliedVideoBitrateCap = cap;
+    try {
+      for (final sender in await pc.getSenders()) {
+        if (sender.track?.kind != 'video') continue;
+        final parameters = sender.parameters;
+        final encodings = parameters.encodings;
+        if (encodings == null || encodings.isEmpty) continue;
+        for (final encoding in encodings) {
+          encoding.maxBitrate = cap;
         }
-        if (packetsReceived > 0) {
-          final total = packetsLost + packetsReceived;
-          final lossRatio = packetsLost / total;
-          if (lossRatio > 0.15) {
-            _updateNetworkQuality(CallNetworkQuality.poor);
-          } else if (lossRatio > 0.05) {
-            _updateNetworkQuality(CallNetworkQuality.fair);
-          } else {
-            _updateNetworkQuality(CallNetworkQuality.good);
-          }
-        }
-      } catch (error, stackTrace) {
-        logSkipped(error, stackTrace);
+        await sender.setParameters(parameters);
       }
-    });
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   void _updateNetworkQuality(CallNetworkQuality q) {
@@ -821,6 +1184,8 @@ class CallSignalingService {
       networkQuality.value = q;
     }
   }
+
+  // ── Teardown ───────────────────────────────────────────────────────────────
 
   /// Cancels everything this call started. Idempotent.
   Future<void> _releaseResources() async {
@@ -831,8 +1196,17 @@ class CallSignalingService {
 
     _ringTimer?.cancel();
     _ringTimer = null;
+    _connectTimer?.cancel();
+    _connectTimer = null;
     _statsTimer?.cancel();
     _statsTimer = null;
+    _reconnectGraceTimer?.cancel();
+    _reconnectGraceTimer = null;
+    _cancelRebuild();
+    _connectedAt = null;
+    _lastRebuildOfferSdp = null;
+    _linkSample = null;
+    _appliedVideoBitrateCap = null;
     networkQuality.value = CallNetworkQuality.good;
 
     await _offerCandidatesSub?.cancel();
@@ -848,8 +1222,25 @@ class CallSignalingService {
     _remoteDescriptionSet = false;
     _remoteAnswerApplied = false;
 
-    await _peerConnection?.close();
+    final peer = _peerConnection;
     _peerConnection = null;
+    if (peer != null) {
+      // Closing alone leaves the plugin's audio session on. Disposing the last
+      // connection is what hands the audio back to the system.
+      try {
+        await peer.close();
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
+      try {
+        await peer.dispose();
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
+    } else {
+      // Audio may have been opened before any connection existed.
+      await CallAudioSession.release();
+    }
 
     _localStream?.getTracks().forEach((track) => track.stop());
     await _localStream?.dispose();
@@ -861,5 +1252,31 @@ class CallSignalingService {
     _callId = null;
     _remoteUid = null;
     _isCaller = false;
+  }
+}
+
+/// Writes a finished call into its chat. A failure is logged and never shown,
+/// since the call has already ended.
+Future<void> _writeCallLog({
+  required String writerUid,
+  required String callerId,
+  required String calleeId,
+  required String callId,
+  required bool isVideo,
+  required String status,
+  int? durationSeconds,
+}) async {
+  try {
+    await CallLogRepository().record(
+      writerUid: writerUid,
+      callerId: callerId,
+      calleeId: calleeId,
+      callId: callId,
+      isVideo: isVideo,
+      status: status,
+      durationSeconds: durationSeconds,
+    );
+  } catch (e) {
+    logInfo('CallSignalingService: call log skipped: $e');
   }
 }

@@ -56,10 +56,37 @@ Future<void> callkitBackgroundCallback(CallEvent event) async {
       final callId = extra['callId']?.toString() ?? callKitParams.id;
       if (callId.isNotEmpty) {
         await FlutterCallkitIncoming.endCall(callId);
+        // Declined here, not just dismissed, so the caller stops ringing now.
+        final calleeUid = await _signedInUid();
+        if (calleeUid != null) {
+          await CallSignalingService.declineRingingCall(
+            callId: callId,
+            calleeUid: calleeUid,
+            callerId: extra['callerId']?.toString() ?? '',
+            isVideo: extra['isVideo'] == true,
+          );
+        }
       }
       break;
     default:
       break;
+  }
+}
+
+/// The signed-in uid. A background isolate may need a moment for the session to
+/// come back from storage, so it waits briefly.
+Future<String?> _signedInUid() async {
+  final current = FirebaseAuth.instance.currentUser?.uid;
+  if (current != null) return current;
+  try {
+    final user = await FirebaseAuth.instance
+        .authStateChanges()
+        .first
+        .timeout(const Duration(seconds: 3));
+    return user?.uid;
+  } catch (error, stackTrace) {
+    logSkipped(error, stackTrace);
+    return null;
   }
 }
 
@@ -99,6 +126,34 @@ class CallNotificationService {
 
   AudioPlayer? _inAppRingtonePlayer;
 
+  /// The call the in-app dialog is ringing for, so the native screen can take
+  /// over if the app leaves the foreground while it rings.
+  ({
+    String callId,
+    String callerId,
+    String callerName,
+    String? avatarUrl,
+    bool isVideo,
+  })? _inAppCall;
+
+  AppLifecycleListener? _lifecycleListener;
+
+  void _onAppLifecycleChanged(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed || kIsWeb) return;
+    final pending = _inAppCall;
+    if (pending == null || !_isCallDialogShowing) return;
+    // The native screen rings from here on, so the in-app ringtone stops to
+    // keep the phone from ringing twice.
+    _stopInAppRingtone();
+    unawaited(showNativeIncomingCall(
+      callId: pending.callId,
+      callerId: pending.callerId,
+      callerName: pending.callerName,
+      callerAvatar: pending.avatarUrl,
+      isVideo: pending.isVideo,
+    ));
+  }
+
   void _startInAppRingtone() {
     try {
       _inAppRingtonePlayer ??= AudioPlayer();
@@ -121,6 +176,8 @@ class CallNotificationService {
   }
 
   void init() {
+    _lifecycleListener ??=
+        AppLifecycleListener(onStateChange: _onAppLifecycleChanged);
     if (Firebase.apps.isEmpty) return;
     _authSub?.cancel();
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
@@ -246,7 +303,11 @@ class CallNotificationService {
           final extra = callKitParams.extra ?? {};
           final callId = extra['callId']?.toString() ?? callKitParams.id;
           if (callId.isNotEmpty) {
-            await _declineCall(callId, callerId: extra['callerId']?.toString());
+            await _declineCall(
+              callId,
+              callerId: extra['callerId']?.toString(),
+              isVideo: extra['isVideo'] == true,
+            );
           }
           break;
 
@@ -338,19 +399,23 @@ class CallNotificationService {
     final callId = callDoc.id;
     final data = callDoc.data();
 
-    final createdAt = data['createdAt'] as Timestamp?;
-    if (createdAt != null &&
-        DateTime.now().difference(createdAt.toDate()) > _staleCallAge) {
-      unawaited(_declineCall(callId, callerId: data['callerId'] as String?));
-      return;
-    }
-
     final callerId = data['callerId'] as String? ?? '';
     final sdp =
         (data['offer'] as Map<String, dynamic>?)?['sdp'] as String? ?? '';
     final isVideo = data['isVideo'] is bool
         ? data['isVideo'] as bool
         : sdp.contains('m=video');
+
+    final createdAt = data['createdAt'] as Timestamp?;
+    if (createdAt != null &&
+        DateTime.now().difference(createdAt.toDate()) > _staleCallAge) {
+      unawaited(_declineCall(
+        callId,
+        callerId: data['callerId'] as String?,
+        isVideo: isVideo,
+      ));
+      return;
+    }
     final (callerName, callerAvatar) = await _resolveCaller(
       callerId,
       fallbackName: data['callerName'] as String?,
@@ -425,12 +490,21 @@ class CallNotificationService {
     if (CallSignalingService.isInCall &&
         CallSignalingService.activeCallId != callId) {
       // Already on a call: refuse this one so the caller is not left ringing.
-      await CallSignalingService().declineCall(callId, callerId: callerId);
+      await CallSignalingService().declineCall(
+        callId,
+        callerId: callerId,
+        isVideo: isVideo,
+      );
       return;
     }
 
     _activeIncomingCallId = callId;
-    if (!kIsWeb) {
+    // One ring per call. While the app is on screen, the in-app dialog rings and
+    // the native screen stays away, so the phone does not ring twice. In the
+    // background the native screen rings. The web has no native screen.
+    final showsInApp =
+        _canShowInAppDialog() && (kIsWeb || _isAppInForeground());
+    if (!kIsWeb && !showsInApp) {
       await showNativeIncomingCall(
         callId: callId,
         callerId: callerId,
@@ -440,12 +514,8 @@ class CallNotificationService {
       );
     }
 
-    final showsInApp = _canShowInAppDialog();
     final context = AppRouter.navigatorKey.currentContext;
-    if (showsInApp &&
-        context != null &&
-        context.mounted &&
-        !_isCallDialogShowing) {
+    if (showsInApp && context != null && context.mounted) {
       _showInAppCallDialog(
         context: context,
         callId: callId,
@@ -462,6 +532,13 @@ class CallNotificationService {
     return context != null && context.mounted && !_isCallDialogShowing;
   }
 
+  /// Whether the app is on screen. A null state means no lifecycle change has
+  /// arrived yet, which happens only while the app is starting, so it counts as on screen.
+  static bool _isAppInForeground() {
+    final state = WidgetsBinding.instance.lifecycleState;
+    return state == null || state == AppLifecycleState.resumed;
+  }
+
   void _showInAppCallDialog({
     required BuildContext context,
     required String callId,
@@ -471,6 +548,13 @@ class CallNotificationService {
     required bool isVideo,
   }) {
     _isCallDialogShowing = true;
+    _inAppCall = (
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      avatarUrl: avatarUrl,
+      isVideo: isVideo,
+    );
     _startInAppRingtone();
     _dialogTimeout?.cancel();
     _dialogTimeout = Timer(const Duration(seconds: kCallRingSeconds), () {
@@ -540,7 +624,11 @@ class CallNotificationService {
                   onTap: () async {
                     Navigator.of(ctx).pop();
                     _isCallDialogShowing = false;
-                    await _declineCall(callId, callerId: callerId);
+                    await _declineCall(
+                      callId,
+                      callerId: callerId,
+                      isVideo: isVideo,
+                    );
                   },
                   child: Column(
                     children: [
@@ -600,6 +688,7 @@ class CallNotificationService {
       ),
     ).then((_) {
       _isCallDialogShowing = false;
+      _inAppCall = null;
       _dialogTimeout?.cancel();
     });
   }
@@ -673,18 +762,26 @@ class CallNotificationService {
       } else if (attempts >= 60) {
         // The app never came up. Decline so the caller is not left ringing.
         timer.cancel();
-        unawaited(_declineCall(callId, callerId: callerId));
+        unawaited(_declineCall(callId, callerId: callerId, isVideo: isVideo));
       }
     });
   }
 
-  Future<void> _declineCall(String callId, {String? callerId}) async {
+  Future<void> _declineCall(
+    String callId, {
+    String? callerId,
+    bool isVideo = false,
+  }) async {
     if (!_settled.claim('decline:$callId', DateTime.now())) return;
     if (_activeIncomingCallId == callId) _activeIncomingCallId = null;
     if (!kIsWeb) {
       await FlutterCallkitIncoming.endCall(callId);
     }
-    await CallSignalingService().declineCall(callId, callerId: callerId);
+    await CallSignalingService().declineCall(
+      callId,
+      callerId: callerId,
+      isVideo: isVideo,
+    );
   }
 
   // ── Dismissing ─────────────────────────────────────────────────────────────
@@ -703,6 +800,7 @@ class CallNotificationService {
 
   void _closeInAppDialog() {
     _stopInAppRingtone();
+    _inAppCall = null;
     _dialogTimeout?.cancel();
     _dialogTimeout = null;
     if (_isCallDialogShowing) {
@@ -729,6 +827,8 @@ class CallNotificationService {
 
   void dispose() {
     _stopInAppRingtone();
+    _lifecycleListener?.dispose();
+    _lifecycleListener = null;
     _authSub?.cancel();
     _callsSub?.cancel();
     _emailCallsSub?.cancel();

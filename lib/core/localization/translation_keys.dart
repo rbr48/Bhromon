@@ -31,6 +31,7 @@ class TranslationKeys {
       'chat_call_no_answer': 'No answer',
       'chat_call_declined': 'Declined',
       'chat_call_duration': '{count} min {n} sec',
+      'chat_call_back': 'Tap to call back',
 
       // ── Diary Editor ───────────────────────────────────────────────────────
       'editor_title_new': 'Write New Diary',
@@ -187,6 +188,7 @@ class TranslationKeys {
       'chat_call_no_answer': 'উত্তর দেওয়া হয়নি',
       'chat_call_declined': 'প্রত্যাখ্যান করা হয়েছে',
       'chat_call_duration': '{count} মিনিট {n} সেকেন্ড',
+      'chat_call_back': 'ফিরতি কল করতে ট্যাপ করুন',
 
       // ── Diary Editor ───────────────────────────────────────────────────────
       'editor_title_new': 'নতুন ডায়েরি লিখুন',

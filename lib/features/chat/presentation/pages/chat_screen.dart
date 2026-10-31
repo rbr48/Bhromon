@@ -688,7 +688,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
   /// A finished call, centred in the conversation: the direction or outcome,
   /// and the length when the call connected.
-  Widget _buildCallLogEntry(Map<String, dynamic> data, String currentUid) {
+  Widget _buildCallLogEntry(
+    Map<String, dynamic> data,
+    String currentUid, {
+    required VoidCallback onCallBack,
+  }) {
     final l10n = context.l10n;
     final entry = CallLogEntry.fromData(data);
     final kind = entry.kindFor(currentUid);
@@ -709,29 +713,43 @@ class _ChatScreenState extends State<ChatScreen> {
       text = label;
     }
     return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1F2C34),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _callLogIcon(kind),
-              size: 16,
-              color: isProblem ? Colors.redAccent : const Color(0xFF00A884),
+      child: Tooltip(
+        message: l10n.translate('chat_call_back'),
+        child: GestureDetector(
+          onTap: onCallBack,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1F2C34),
+              borderRadius: BorderRadius.circular(14),
             ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                text,
-                style: const TextStyle(color: Colors.white70, fontSize: 12.5),
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _callLogIcon(kind),
+                  size: 16,
+                  color: isProblem ? Colors.redAccent : const Color(0xFF00A884),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    text,
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 12.5),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Tapping the entry calls back with the same kind of call.
+                Icon(
+                  entry.isVideo ? Icons.videocam_rounded : Icons.call_rounded,
+                  size: 16,
+                  color: const Color(0xFF00A884),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -2841,7 +2859,19 @@ class _ChatScreenState extends State<ChatScreen> {
                             // A call log is a record, not a message: it sits
                             // centred in the conversation.
                             if (msgType == 'call') {
-                              return _buildCallLogEntry(data, currentUid);
+                              return _buildCallLogEntry(
+                                data,
+                                currentUid,
+                                onCallBack: () => _initiateCall(
+                                  isVideo: CallLogEntry.fromData(data).isVideo,
+                                  currentUid: currentUid,
+                                  otherUid: resolvedOtherUid,
+                                  otherName: otherName,
+                                  avatarUrl: avatarUrl,
+                                  localUserName: currentName,
+                                  localAvatarUrl: currentAvatarUrl,
+                                ),
+                              );
                             }
                             final String text = (data['text'] as String?) ?? '';
                             final String mediaUrl =

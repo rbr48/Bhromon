@@ -2,6 +2,7 @@ package com.bhromon.app
 
 import android.os.Build
 import android.provider.Settings
+import com.cloudwebrtc.webrtc.audio.AudioSwitchManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -9,6 +10,7 @@ import java.io.File
 
 class MainActivity: FlutterFragmentActivity() {
     private val CHANNEL = "com.bhromon.app/integrity"
+    private val CALL_AUDIO_CHANNEL = "com.bhromon.app/call_audio"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -16,6 +18,17 @@ class MainActivity: FlutterFragmentActivity() {
             when (call.method) {
                 "isRooted" -> result.success(checkRooted())
                 "isDeveloperMode" -> result.success(checkDeveloperMode())
+                else -> result.notImplemented()
+            }
+        }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CALL_AUDIO_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "release" -> {
+                    // Ends the plugin's audio session: the phone goes back to its normal
+                    // audio mode and the audio focus is given up.
+                    AudioSwitchManager.instance?.stop()
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }
