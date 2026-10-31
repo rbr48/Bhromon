@@ -18,6 +18,11 @@ import '../../data/vps_chat_service.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/models/tour_group.dart';
 import '../../../tour_group/domain/services/group_contacts.dart';
+import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
+
+/// How many of the newest calls the Calls tab reads. The query is ordered by
+/// time, so this is the most recent window, not a random one.
+const int _kRecentCallsLimit = 200;
 
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
@@ -42,6 +47,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   // The tours this user belongs to. Chats and calls outside them are not shown.
   Set<String> _myTourIds = const {};
   StreamSubscription<List<TourGroup>>? _myToursSub;
+  bool _toursLoaded = false;
+  bool _toursFailed = false;
 
   StreamSubscription<List<Map<String, dynamic>>>? _vpsConvSub;
 
@@ -133,14 +140,50 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     );
   }
 
-  void _ensureStreams(String uid) {
-    if (_streamsUid == uid) return;
-    _streamsUid = uid;
+  /// Follows the tours this user is in. Calls are shown only for those tours.
+  void _listenToTours() {
     _myToursSub?.cancel();
     _myToursSub = TourGroupRepository().watchMyGroups().listen((groups) {
       if (!mounted) return;
-      setState(() => _myTourIds = {for (final group in groups) group.id});
-    }, onError: (Object _) {});
+      setState(() {
+        _myTourIds = {for (final group in groups) group.id};
+        _toursLoaded = true;
+        _toursFailed = false;
+      });
+    }, onError: (Object _) {
+      if (!mounted) return;
+      setState(() => _toursFailed = true);
+    });
+  }
+
+  /// The newest calls this user took part in. The order is part of the query,
+  /// so the newest calls are the ones kept. Without it the server returned an
+  /// arbitrary set of 50 calls, and older calls dropped out of the list as new
+  /// ones were made.
+  Stream<QuerySnapshot> _recentCallsStream(String uid) {
+    return FirebaseFirestore.instance
+        .collection('calls')
+        .where('participants', arrayContains: uid)
+        .orderBy('createdAt', descending: true)
+        .limit(_kRecentCallsLimit)
+        .snapshots();
+  }
+
+  /// Loads the calls and the tours again after a failed load.
+  void _retryCalls() {
+    final uid = _streamsUid;
+    if (uid == null) return;
+    if (_toursFailed) _listenToTours();
+    setState(() {
+      _toursFailed = false;
+      _callsStream = _recentCallsStream(uid);
+    });
+  }
+
+  void _ensureStreams(String uid) {
+    if (_streamsUid == uid) return;
+    _streamsUid = uid;
+    _listenToTours();
     _blockedStream = FirebaseFirestore.instance
         .collection('explorer_profiles')
         .doc(uid)
@@ -150,11 +193,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         .collection('chats')
         .where('participants', arrayContains: uid)
         .snapshots();
-    _callsStream = FirebaseFirestore.instance
-        .collection('calls')
-        .where('participants', arrayContains: uid)
-        .limit(50)
-        .snapshots();
+    _callsStream = _recentCallsStream(uid);
   }
 
   @override
@@ -245,6 +284,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               ],
             ),
           ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(44),
+            child: Row(
+              children: [
+                Expanded(child: _buildSectionTab('Chats', 0)),
+                Expanded(child: _buildSectionTab('Calls', 1)),
+              ],
+            ),
+          ),
         ),
         body: Center(
           child: ConstrainedBox(
@@ -509,26 +557,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 : _buildCallsView(currentUid),
           ),
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _bottomNavIndex,
-          onTap: (index) => setState(() => _bottomNavIndex = index),
-          backgroundColor: const Color(0xFF1F2C34),
-          selectedItemColor: const Color(0xFF00A884),
-          unselectedItemColor: Colors.white54,
-          selectedFontSize: 12,
-          unselectedFontSize: 12,
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.chat),
-              label: 'Chats',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.call),
-              label: 'Calls',
-            ),
-          ],
-        ),
+        bottomNavigationBar: const BhromonBottomNav(selectedIndex: 3),
         // WhatsApp style floating action button (FAB)
         floatingActionButton: FloatingActionButton(
           backgroundColor: const Color(0xFF00A884), // WhatsApp green
@@ -709,6 +738,17 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   }
 
   Widget _buildCallsView(String currentUid) {
+    if (_toursFailed) {
+      return _callsError(
+          'Your tours could not be checked, so calls cannot be shown.',
+          _retryCalls);
+    }
+    if (!_toursLoaded) {
+      // Calls are filtered by tour, so wait for the tours before showing any.
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF00A884)),
+      );
+    }
     return StreamBuilder<QuerySnapshot>(
       stream: _callsStream,
       builder: (context, snapshot) {
@@ -718,23 +758,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           );
         }
         if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline,
-                      size: 48, color: Colors.white.withValues(alpha: 0.15)),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'No recent calls.',
-                    style: TextStyle(color: Colors.white54, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-          );
+          return _callsError('Your calls could not be loaded.', _retryCalls);
         }
 
         // Sort client-side by createdAt descending to avoid requiring composite Firestore index
@@ -897,6 +921,62 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     } catch (e) {
       logError('Quick camera error: $e');
     }
+  }
+
+  /// One of the two sections at the top: Chats or Calls.
+  Widget _buildSectionTab(String label, int index) {
+    final selected = _bottomNavIndex == index;
+    final color = selected ? const Color(0xFF00A884) : Colors.white60;
+    return InkWell(
+      onTap: () => setState(() => _bottomNavIndex = index),
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: selected ? const Color(0xFF00A884) : Colors.transparent,
+              width: 3,
+            ),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A message with a button that loads the list again.
+  Widget _callsError(String message, VoidCallback onRetry) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_outlined,
+                size: 48, color: Colors.white.withValues(alpha: 0.15)),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: onRetry,
+              child: const Text('Try again',
+                  style: TextStyle(color: Color(0xFF00A884))),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildTabButton(String label) {
