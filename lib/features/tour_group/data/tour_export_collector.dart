@@ -1,4 +1,5 @@
 import '../domain/models/logistics_models.dart';
+import '../domain/models/tour_activity_models.dart';
 import '../domain/models/tour_export_data.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
@@ -24,7 +25,37 @@ class TourExportCollector {
     final members = await _repository.watchMembers(id).first;
     final notices = await _repository.watchNotices(id).first;
     final checkpoints = await _repository.watchCheckpoints(id).first;
-    final checklist = await _repository.watchChecklist(id).first;
+    final savedChecklist = await _repository.watchChecklist(id).first;
+    final byId = {for (final item in savedChecklist) item.id: item};
+    final tourType = latest.tourType;
+    final isBeach = tourType == TourType.beach ||
+        tourType == TourType.heritage ||
+        tourType == TourType.custom;
+    final isHill = tourType == TourType.hill ||
+        tourType == TourType.custom;
+    final isNature = tourType == TourType.nature ||
+        tourType == TourType.custom;
+
+    final checklist = <ChecklistItem>[];
+    for (var i = 0; i < checklistDefaultItems.length; i++) {
+      final def = checklistDefaultItems[i];
+      if (!isBeach && def.category == 'check_cat_beach') continue;
+      if (!isHill && def.category == 'check_cat_hill') continue;
+      if (!isNature && def.category == 'check_cat_nature') continue;
+      final defId = 'default_$i';
+      final existing = byId[defId];
+      checklist.add(ChecklistItem(
+        id: defId,
+        title: def.title,
+        category: def.category,
+        checkedBy: existing?.checkedBy ?? const [],
+      ));
+    }
+    for (final item in savedChecklist) {
+      if (!item.id.startsWith('default_')) {
+        checklist.add(item);
+      }
+    }
     final expenses = await _repository.watchExpenses(id).first;
     final deposits = await _repository.watchDeposits(id).first;
     final transfers = await _repository.watchTransfers(id).first;

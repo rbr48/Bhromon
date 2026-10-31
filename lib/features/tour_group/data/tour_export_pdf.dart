@@ -1,10 +1,13 @@
 import 'dart:typed_data';
 
+import 'package:bangla_pdf/bangla_pdf.dart'
+    show BanglaFontManager, BanglaPdf, BanglaShapingMode;
+import 'package:bangla_pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
 
 import '../domain/models/logistics_models.dart';
+import '../domain/models/tour_activity_models.dart';
 import '../domain/models/tour_export_data.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
@@ -43,15 +46,23 @@ Future<Uint8List> buildTourPdf({
   void Function(int done, int total)? onImages,
   bool compress = true,
 }) async {
-  final regular = pw.Font.ttf(
-    await rootBundle.load('assets/fonts/HindSiliguri-Regular.ttf'),
+  final regularBytes =
+      await rootBundle.load('assets/fonts/HindSiliguri-Regular.ttf');
+  final boldBytes =
+      await rootBundle.load('assets/fonts/HindSiliguri-Bold.ttf');
+  final bengaliBytes =
+      await rootBundle.load('assets/fonts/NotoSansBengali.ttf');
+
+  final regular = pw.Font.ttf(regularBytes);
+  final bold = pw.Font.ttf(boldBytes);
+  final bengali = pw.Font.ttf(bengaliBytes);
+
+  BanglaPdf.configure(
+    shapingMode: BanglaShapingMode.unicode,
+    defaultFont: regular,
+    fallbackFonts: [bengali, BanglaFontManager().defaultFont],
   );
-  final bold = pw.Font.ttf(
-    await rootBundle.load('assets/fonts/HindSiliguri-Bold.ttf'),
-  );
-  final bengali = pw.Font.ttf(
-    await rootBundle.load('assets/fonts/NotoSansBengali.ttf'),
-  );
+
   await images.prefetch(_pictureUrls(data), onProgress: onImages);
 
   final writer = _TourPdfWriter(data: data, images: images, labels: labels);
@@ -64,7 +75,7 @@ Future<Uint8List> buildTourPdf({
       bold: bold,
       italic: regular,
       boldItalic: bold,
-      fontFallback: [bengali],
+      fontFallback: [bengali, BanglaFontManager().defaultFont],
     ),
     title: data.group.name,
     author: 'Bhromon',
@@ -82,10 +93,14 @@ Iterable<String> _pictureUrls(TourExportData data) sync* {
     yield* _postPictures(post);
   }
   for (final story in data.stories) {
-    yield story.mediaUrl;
+    if (!story.isVideo && story.mediaUrl.isNotEmpty) {
+      yield story.mediaUrl;
+    }
   }
   for (final highlight in data.highlights) {
-    yield highlight.coverUrl;
+    if (highlight.coverUrl.isNotEmpty) {
+      yield highlight.coverUrl;
+    }
   }
 }
 
@@ -241,15 +256,21 @@ class _TourPdfWriter {
     );
   }
 
+  int get _vehicleCount {
+    if (data.vehicles.isNotEmpty) return data.vehicles.length;
+    return data.coachSeats.isNotEmpty ? 1 : 0;
+  }
+
   /// A section title, optionally with its count. A new page starts the section
-  /// unless it is the first one after the cover.
+  /// only when requested and when the section has content.
   List<pw.Widget> _heading(
     String title, {
     int? count,
     bool newPage = true,
   }) {
+    final shouldBreak = newPage && (count == null || count > 0);
     return [
-      if (newPage) pw.NewPage(),
+      if (shouldBreak) pw.NewPage(),
       pw.Text(
         count == null ? title : '$title  ·  ${labels.number(count)}',
         style: _style(size: 18, bold: true, color: _green),
@@ -275,10 +296,13 @@ class _TourPdfWriter {
   }
 
   /// Fits a picture of the given pixel size into the page, keeping its shape.
-  ({double width, double height}) _fit(int pixelWidth, int pixelHeight) {
-    const maxHeight = 380.0;
+  ({double width, double height}) _fit(
+    int pixelWidth,
+    int pixelHeight, {
+    double maxHeight = 240.0,
+  }) {
     if (pixelWidth <= 0 || pixelHeight <= 0) {
-      return (width: _contentWidth, height: 200);
+      return (width: _contentWidth, height: 160);
     }
     var width = _contentWidth;
     var height = width * pixelHeight / pixelWidth;
@@ -289,7 +313,7 @@ class _TourPdfWriter {
     return (width: width, height: height);
   }
 
-  pw.Widget _photo(String url) {
+  pw.Widget _photo(String url, {double maxHeight = 240.0}) {
     final photo = images.ready(url);
     if (photo == null) {
       return pw.Container(
@@ -303,12 +327,83 @@ class _TourPdfWriter {
         ),
       );
     }
-    final size = _fit(photo.width, photo.height);
+    final size = _fit(photo.width, photo.height, maxHeight: maxHeight);
     return pw.Image(
       photo.image,
       width: size.width,
       height: size.height,
       fit: pw.BoxFit.contain,
+    );
+  }
+
+  pw.Widget _photoThumbnail(String url) {
+    final photo = images.ready(url);
+    if (photo == null) {
+      return pw.Container(
+        height: 140,
+        color: _tint,
+        alignment: pw.Alignment.center,
+        child: pw.Text(
+          labels.text('pdf_photo_missing'),
+          style: _style(size: 8, color: _muted, italic: true),
+        ),
+      );
+    }
+    return pw.Container(
+      height: 140,
+      color: _tint,
+      child: pw.Image(
+        photo.image,
+        height: 140,
+        fit: pw.BoxFit.cover,
+      ),
+    );
+  }
+
+  pw.Widget _buildPostPictures(List<String> urls) {
+    if (urls.isEmpty) return pw.SizedBox();
+
+    if (urls.length == 1) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(vertical: 4),
+        child: _photo(urls.first, maxHeight: 240),
+      );
+    }
+
+    final rows = <pw.Widget>[];
+    for (var i = 0; i < urls.length; i += 2) {
+      final pair = urls.skip(i).take(2).toList();
+      if (pair.length == 2) {
+        rows.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 6),
+            child: pw.Row(
+              children: [
+                pw.Expanded(child: _photoThumbnail(pair[0])),
+                pw.SizedBox(width: 6),
+                pw.Expanded(child: _photoThumbnail(pair[1])),
+              ],
+            ),
+          ),
+        );
+      } else {
+        rows.add(
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 6),
+            child: pw.Row(
+              children: [
+                pw.Expanded(child: _photoThumbnail(pair[0])),
+                pw.SizedBox(width: 6),
+                pw.Expanded(child: pw.SizedBox()),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 4),
+      child: pw.Column(children: rows),
     );
   }
 
@@ -456,7 +551,7 @@ class _TourPdfWriter {
       (labels.text('pdf_section_notices'), data.notices.length),
       (labels.text('pdf_section_money'), data.expenses.length),
       (labels.text('pdf_section_checklist'), data.checklist.length),
-      (labels.text('pdf_section_transport'), data.vehicles.length),
+      (labels.text('pdf_section_transport'), _vehicleCount),
       (labels.text('pdf_section_rooms'), data.hotelRooms.length),
       (labels.text('pdf_section_safety'), data.safetyAlerts.length),
       (labels.text('pdf_section_feed'), data.posts.length),
@@ -665,7 +760,7 @@ class _TourPdfWriter {
               [
                 labels.date(expense.date),
                 _clean(expense.title, max: 120),
-                _clean(expense.category, max: 60),
+                _categoryLabel(expense.category),
                 _amount(expense.amountPaisa),
                 _clean(expense.paidByName, max: 80),
               ],
@@ -707,14 +802,88 @@ class _TourPdfWriter {
             for (final transfer in data.transfers)
               [
                 labels.date(transfer.date),
-                '${_clean(transfer.fromName, max: 80)} → '
+                '${_clean(transfer.fromName, max: 80)} — '
                     '${_clean(transfer.toName, max: 80)}',
                 _amount(transfer.amountPaisa),
                 _clean(transfer.notes, max: 200),
               ],
           ],
         ),
+      pw.SizedBox(height: 16),
     ];
+  }
+
+  String _categoryLabel(String raw) {
+    final clean = raw.trim().toLowerCase();
+    switch (clean) {
+      case 'food':
+        return labels.text('fund_cat_food');
+      case 'transport':
+        return labels.text('fund_cat_transport');
+      case 'hotel':
+        return labels.text('fund_cat_hotel');
+      case 'tickets':
+      case 'ticket':
+        return labels.text('fund_cat_tickets');
+      case 'guide':
+        return labels.text('fund_cat_guide');
+      case 'activities':
+      case 'activity':
+        return labels.text('fund_cat_activities');
+      case 'shopping':
+        return labels.text('fund_cat_shopping');
+      case 'medical':
+      case 'medicine':
+      case 'medicines':
+        return labels.text('fund_cat_medical');
+      case 'tips':
+      case 'tip':
+        return labels.text('fund_cat_tips');
+      case 'groceries':
+      case 'grocery':
+        return labels.text('fund_cat_groceries');
+      case 'utilities':
+      case 'utility':
+        return labels.text('fund_cat_utilities');
+      case 'rent':
+        return labels.text('fund_cat_rent');
+      case 'school':
+        return labels.text('fund_cat_school');
+      case 'dining':
+        return labels.text('fund_cat_dining');
+      case 'gifts':
+      case 'gift':
+        return labels.text('fund_cat_gifts');
+      case 'others':
+      case 'other':
+        return labels.text('fund_cat_others');
+      default:
+        return _clean(raw, max: 60);
+    }
+  }
+
+  (String title, String category) _formatChecklistItem(ChecklistItem item) {
+    String title = item.title;
+    String category = item.category;
+
+    if (item.id.startsWith('default_')) {
+      final index = int.tryParse(item.id.substring(8));
+      if (index != null && index >= 0 && index < checklistDefaultItems.length) {
+        final def = checklistDefaultItems[index];
+        title = labels.text(def.title);
+        category = labels.text(def.category);
+      }
+    } else {
+      if (title.startsWith('check_item_')) {
+        title = labels.text(title);
+      }
+      if (category.startsWith('check_cat_')) {
+        category = labels.text(category);
+      } else if (category == 'Others' || category.isEmpty) {
+        category = labels.text('check_cat_custom');
+      }
+    }
+    return (_clean(title, max: 160), _clean(category, max: 60));
   }
 
   List<pw.Widget> _checklist() {
@@ -734,24 +903,29 @@ class _TourPdfWriter {
           ],
           [
             for (final item in data.checklist)
-              [
-                _clean(item.title, max: 160),
-                _clean(item.category, max: 60),
-                item.checkedBy.isEmpty
-                    ? labels.text('pdf_open')
-                    : labels.text('pdf_done'),
-              ],
+              () {
+                final (title, category) = _formatChecklistItem(item);
+                return [
+                  title,
+                  category,
+                  item.checkedBy.isEmpty
+                      ? labels.text('pdf_open')
+                      : labels.text('pdf_done'),
+                ];
+              }(),
           ],
         ),
+      pw.SizedBox(height: 16),
     ];
   }
 
   List<pw.Widget> _transport() {
     final hasCoach = data.coachSeats.isNotEmpty;
+    final vehicleCount = _vehicleCount;
     return [
       ..._heading(
         labels.text('pdf_section_transport'),
-        count: data.vehicles.length + (hasCoach ? 1 : 0),
+        count: vehicleCount,
       ),
       if (data.vehicles.isEmpty && !hasCoach) _empty(),
       if (data.vehicles.isNotEmpty)
@@ -907,7 +1081,7 @@ class _TourPdfWriter {
       ),
       if (post.location.trim().isNotEmpty) _meta(post.location),
       if (tags.isNotEmpty) _meta(tags.join(' · ')),
-      for (final url in _postPictures(post)) _photo(url),
+      _buildPostPictures(_postPictures(post)),
       if (post.caption.trim().isNotEmpty) _para(post.caption),
       pw.SizedBox(height: 3),
       _meta(
@@ -968,13 +1142,31 @@ class _TourPdfWriter {
             ),
           ],
         ),
-        if (story.isVideo) _meta(labels.text('pdf_video')),
-        if (story.mediaUrl.isNotEmpty) _photo(story.mediaUrl),
+        if (story.isVideo) ...[
+          pw.SizedBox(height: 4),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: pw.BoxDecoration(
+              color: _tint,
+              border: pw.Border.all(color: _line, width: 0.5),
+            ),
+            child: pw.Text(
+              '▶  ${labels.text('pdf_video')}',
+              style: _style(size: 9, bold: true, color: _green),
+            ),
+          ),
+          pw.SizedBox(height: 6),
+        ] else if (story.mediaUrl.isNotEmpty) ...[
+          pw.SizedBox(height: 4),
+          _photo(story.mediaUrl, maxHeight: 220),
+          pw.SizedBox(height: 6),
+        ],
         if ((story.caption ?? '').trim().isNotEmpty) _para(story.caption!),
         pw.SizedBox(height: 10),
         pw.Divider(color: _line, thickness: 0.6),
         pw.SizedBox(height: 10),
       ],
+      pw.SizedBox(height: 16),
     ];
   }
 

@@ -150,10 +150,22 @@ class ChecklistItem {
   bool isCheckedBy(String email) => checkedBy.contains(normalizeEmail(email));
 
   factory ChecklistItem.fromMap(String id, Map<String, dynamic> map) {
+    var title = map['title'] as String? ?? '';
+    var category = map['category'] as String? ?? '';
+    if (id.startsWith('default_')) {
+      final index = int.tryParse(id.substring(8));
+      if (index != null && index >= 0 && index < checklistDefaultItems.length) {
+        if (title.isEmpty) title = checklistDefaultItems[index].title;
+        if (category.isEmpty || category == 'Others') {
+          category = checklistDefaultItems[index].category;
+        }
+      }
+    }
+    if (category.isEmpty) category = 'Others';
     return ChecklistItem(
       id: id,
-      title: map['title'] as String? ?? '',
-      category: map['category'] as String? ?? 'Others',
+      title: title,
+      category: category,
       checkedBy: (map['checkedBy'] as List<dynamic>?)
               ?.map((e) => normalizeEmail(e.toString()))
               .toList() ??
@@ -161,6 +173,30 @@ class ChecklistItem {
     );
   }
 }
+
+/// The default checklist items, in a fixed order: each one's index is its
+/// saved id (`default_0`, `default_1`, ...), so new items go at the end.
+/// Titles and categories are translation keys.
+const List<({String title, String category})> checklistDefaultItems = [
+  (title: 'check_item_id_copy', category: 'check_cat_documents'),
+  (title: 'check_item_tickets', category: 'check_cat_documents'),
+  (title: 'check_item_basic_medicine', category: 'check_cat_medicines'),
+  (title: 'check_item_first_aid', category: 'check_cat_medicines'),
+  (title: 'check_item_charger', category: 'check_cat_electronics'),
+  (title: 'check_item_plug_pouch', category: 'check_cat_electronics'),
+  (title: 'check_item_cotton_clothes', category: 'check_cat_clothing'),
+  (title: 'check_item_swimwear', category: 'check_cat_clothing'),
+  (title: 'check_item_sunscreen', category: 'check_cat_beach'),
+  (title: 'check_item_sandals', category: 'check_cat_beach'),
+  (title: 'check_item_trekking_shoes', category: 'check_cat_hill'),
+  (title: 'check_item_raincoat', category: 'check_cat_hill'),
+  (title: 'check_item_torch', category: 'check_cat_hill'),
+  (title: 'check_item_mosquito_spray', category: 'check_cat_nature'),
+  (title: 'check_item_dry_bag', category: 'check_cat_nature'),
+  (title: 'check_item_walking_shoes', category: 'check_cat_clothing'),
+  (title: 'check_item_power_bank', category: 'check_cat_electronics'),
+  (title: 'check_item_umbrella_hat', category: 'check_cat_clothing'),
+];
 
 /// What a stop along the way is for.
 enum CheckpointKind {
