@@ -318,6 +318,38 @@ class TourMediaUploader {
     );
   }
 
+  /// Asks the media server for the caller's own name for a file of [tourId] (a
+  /// reshare) and returns its URL. The copy shares the original's bytes, so
+  /// removing either one leaves the other intact.
+  static Future<String> copyMedia({
+    required String tourId,
+    required String sourceUrl,
+    required String folder,
+  }) async {
+    final options = await _authorized();
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '$baseUrl/api/media/copy',
+        data: {'tourId': tourId, 'folder': folder, 'sourceUrl': sourceUrl},
+        options: options,
+      );
+      final url = response.data?['url'];
+      if (url is! String || url.isEmpty) {
+        throw const TourUploadException(
+            'সার্ভার থেকে সঠিক ইউআরএল পাওয়া যায়নি।');
+      }
+      return url;
+    } on DioException catch (e) {
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['detail']?.toString()
+          : e.message;
+      throw TourUploadException(
+        'কপি করা যায়নি: ${msg ?? "নেটওয়ার্ক সমস্যা"}',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
   /// Removes a file from the media server, or from legacy Firebase Storage.
   /// Returns true when the file is gone, including when it was never there.
   static Future<bool> deleteMedia(String url) async {

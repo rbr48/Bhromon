@@ -24,6 +24,7 @@ import '../domain/models/tour_post_models.dart';
 import '../domain/models/vehicle_models.dart';
 import '../domain/services/call_partner.dart';
 import '../domain/services/emergency_numbers.dart';
+import '../domain/services/media_references.dart';
 import '../domain/services/family_telemetry_publisher.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
@@ -2540,32 +2541,44 @@ class TourGroupRepository {
     }
 
     await postRef.delete();
-    await _deleteMediaFiles([
+    await _deleteMediaFiles(post.tourId, [
       ...post.images,
       post.videoUrl,
       post.coverUrl,
+      post.audioUrl,
     ]);
   }
 
-  /// Deletes a story, and the files it uploaded unless a highlight still shows
-  /// its image as the cover.
+  /// Deletes a story and the files it uses. A file that a post, story or
+  /// highlight still uses stays (see [_deleteMediaFiles]).
   Future<void> deleteStory(String tourId, TourStoryItem story) async {
     _requireEmail();
     await _sub(tourId, 'stories').doc(story.id).delete();
 
-    final coverInUse = await _isHighlightCover(tourId, story.mediaUrl);
-    await _deleteMediaFiles([
-      if (!coverInUse) story.mediaUrl,
-      story.videoUrl,
-    ]);
+    await _deleteMediaFiles(tourId, [story.mediaUrl, story.videoUrl]);
   }
 
-  /// Journals each remote media file in [urls] and removes it from the server.
-  /// A file the server refuses to remove stays journaled for the sweep.
-  Future<void> _deleteMediaFiles(Iterable<String?> urls) async {
+  /// Removes the remote files in [urls] that no post, story or highlight of
+  /// [tourId] still uses. A file another item shares stays, so deleting one
+  /// post or story never breaks another. A file whose use cannot be checked
+  /// stays too. Each removed file is journaled before its delete is sent, and a
+  /// file the server refuses to remove stays journaled for the sweep.
+  Future<void> _deleteMediaFiles(String tourId, Iterable<String?> urls) async {
+    final candidates = [
+      for (final url in urls)
+        if (url != null && isRemoteMediaUrl(url)) url,
+    ];
+    final stillInUse = <String>{};
+    for (final url in candidates) {
+      try {
+        if (await _isMediaUrlInUse(tourId, url)) stillInUse.add(url);
+      } catch (e, st) {
+        logWarning('[TourGroupRepository] Could not check media use', e, st);
+        stillInUse.add(url); // Unknown counts as in use: the file is kept.
+      }
+    }
     final refs = <TourMediaRef>[];
-    for (final url in urls) {
-      if (url == null || !isRemoteMediaUrl(url)) continue;
+    for (final url in mediaUrlsSafeToRemove(candidates, stillInUse)) {
       final ref = TourMediaRef.tryParse(url);
       if (ref != null) refs.add(ref);
     }
@@ -2581,20 +2594,26 @@ class TourGroupRepository {
     }
   }
 
-  /// Whether a highlight uses [url] as its cover. Unknown counts as in use, so
-  /// the file is kept.
-  Future<bool> _isHighlightCover(String tourId, String url) async {
-    try {
-      final match = await _sub(tourId, 'highlights')
-          .where('coverUrl', isEqualTo: url)
-          .limit(1)
-          .get();
-      return match.docs.isNotEmpty;
-    } catch (e, st) {
-      logWarning(
-          '[TourGroupRepository] Could not check highlight covers', e, st);
-      return true;
+  /// Whether a post, story or highlight of [tourId] uses [url] in any field that
+  /// holds a media file. Throws when the check cannot be made.
+  Future<bool> _isMediaUrlInUse(String tourId, String url) async {
+    final posts = _sub(tourId, 'posts');
+    final stories = _sub(tourId, 'stories');
+    final highlights = _sub(tourId, 'highlights');
+    Future<bool> used(Query<Map<String, dynamic>> query) async {
+      return (await query.limit(1).get()).docs.isNotEmpty;
     }
+
+    final results = await Future.wait<bool>([
+      used(posts.where('images', arrayContains: url)),
+      used(posts.where('videoUrl', isEqualTo: url)),
+      used(posts.where('coverUrl', isEqualTo: url)),
+      used(posts.where('audioUrl', isEqualTo: url)),
+      used(stories.where('mediaUrl', isEqualTo: url)),
+      used(stories.where('videoUrl', isEqualTo: url)),
+      used(highlights.where('coverUrl', isEqualTo: url)),
+    ]);
+    return results.any((r) => r);
   }
 
   /// Folders the sweep may clean up. Every URL field that can hold one of
@@ -2610,24 +2629,8 @@ class TourGroupRepository {
   /// cannot be decided, which keeps the file.
   Future<bool?> isMediaReferenced(JournalEntry entry) async {
     if (!_sweptFolders.contains(entry.folder)) return null;
-    final url = entry.url;
-    final posts = _sub(entry.tourId, 'posts');
-    final stories = _sub(entry.tourId, 'stories');
-    final highlights = _sub(entry.tourId, 'highlights');
-    Future<bool> used(Query<Map<String, dynamic>> query) async {
-      return (await query.limit(1).get()).docs.isNotEmpty;
-    }
-
     try {
-      final results = await Future.wait<bool>([
-        used(posts.where('images', arrayContains: url)),
-        used(posts.where('videoUrl', isEqualTo: url)),
-        used(posts.where('coverUrl', isEqualTo: url)),
-        used(stories.where('mediaUrl', isEqualTo: url)),
-        used(stories.where('videoUrl', isEqualTo: url)),
-        used(highlights.where('coverUrl', isEqualTo: url)),
-      ]);
-      return results.any((r) => r);
+      return await _isMediaUrlInUse(entry.tourId, entry.url);
     } catch (e, st) {
       logWarning('[TourGroupRepository] Could not check media use', e, st);
       return null;
