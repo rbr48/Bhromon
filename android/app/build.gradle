@@ -109,6 +109,7 @@ tasks.whenTaskAdded { task ->
             task.name.toLowerCase().contains("nativedebugmetadata") ||
             task.name.toLowerCase().contains("cleanmergereleaseassets") ||
             task.name.toLowerCase().contains("cleanmergereleasenativelibs") ||
+            task.name.toLowerCase().contains("cleanmergereleasejnilibfolders") ||
             task.name.toLowerCase().contains("cleanpackagerelease")) {
             task.enabled = false
         }

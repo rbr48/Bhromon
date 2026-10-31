@@ -26,10 +26,16 @@ This document serves as the persistent system memory, architectural guidelines, 
    - Use the Android system Photo Picker via `image_picker` / system pickers.
 3. **Version Numbering**:
    - In `pubspec.yaml`, increment version and version code monotonically on each release (e.g., `1.8.4+58`).
-4. **Windows Gradle Build Contention**:
+4. **Google Play App Signing vs Upload Key (Google Sign-In Error 10 / DEVELOPER_ERROR)**:
+   - When Google Play App Signing is enabled, Google Play strips the developer's upload signature and re-signs distributed APKs with Google's managed **App signing key**.
+   - Builds installed from Google Play (Production, Open, Closed, or Internal Testing tracks) carry Google's **App signing key** signature, NOT the **Upload key** (`upload_certificate.pem`).
+   - If Google Play's **App signing key SHA-1 (and SHA-256) certificate fingerprint** is not registered in Firebase Console (`Project Settings -> General -> Your apps -> com.bhromon.app`) and Google Cloud Console OAuth 2.0 Client IDs, Google Sign-In throws `PlatformException(sign_in_failed, com.google.android.gms.common.api.h: 10: , null, null)` (`CommonStatusCodes.DEVELOPER_ERROR`).
+   - Requesting an upload key reset in Google Play Console takes 48 hours to activate and only affects future `.aab` uploads. It does NOT resolve Google Sign-In for Play Store builds; copying the **App signing key SHA-1** into Firebase Console immediately resolves it without requiring a new APK build.
+5. **Windows Gradle Build Contention**:
    - Always keep `org.gradle.vfs.watch=false` in `android/gradle.properties` to avoid Windows directory locks (`AccessDeniedException` during `mergeReleaseNativeLibs` or `packageRelease`).
-   - In `android/app/build.gradle`, on Windows only, disable intermediate tasks: `artprofile`, `nativesymboltable`, `nativedebugmetadata`, `cleanmergereleaseassets`, `cleanmergereleasenativelibs`, and `cleanpackagerelease`. Keep `ndk { debugSymbolLevel 'SYMBOL_TABLE' }` on every platform: the release AAB fails to strip native libraries without it.
-5. **Windows Cross-Drive Kotlin Compilation Invariant**:
+   - In `android/app/build.gradle`, on Windows only, disable intermediate tasks: `artprofile`, `nativesymboltable`, `nativedebugmetadata`, `cleanmergereleaseassets`, `cleanmergereleasenativelibs`, `cleanmergereleasejnilibfolders`, and `cleanpackagerelease`. Keep `ndk { debugSymbolLevel 'SYMBOL_TABLE' }` on every platform: the release AAB fails to strip native libraries without it.
+   - Deleting `linux/flutter/ephemeral` and `windows/flutter/ephemeral` resolves symlink deletion locks on Windows during `flutter pub get`.
+6. **Windows Cross-Drive Kotlin Compilation Invariant**:
    - The project repository is on drive `E:` (`E:\Projects\Bhromon`) while Flutter's Pub Cache resides on drive `C:` (`C:\Users\USER\AppData\Local\Pub\Cache`).
    - Kotlin incremental compilation can throw `IllegalArgumentException: this and base files have different roots` when computing relative paths across different Windows drive roots.
    - If incremental cache errors occur, set `kotlin.incremental=false` in `android/gradle.properties`.
@@ -184,18 +190,28 @@ static session while the user visits other screens, and asks before discarding a
 
 ### G. Hostinger VPS Infrastructure & Microservices Architecture
 - **Server**: Hostinger VPS (`148.135.137.245`), SSH port `2222`, user `root`, key `~/.ssh/id_rsa_dbm`.
-- **Containers**:
-  - `bhromon-media-app` (`127.0.0.1:8210` -> FastAPI/Uvicorn): Handles token-authenticated media uploads, deletions, and news proxy (`/api/news/`). **Note:** Python files deployed to container must be UTF-8 without BOM (`\ufeff`) to prevent Uvicorn restart crash loop.
+- **Firebase Spark Plan Invariant**:
+  - The Firebase project `bhromon-ff801` is strictly on the free Spark plan without billing. Google Secret Manager (`secrets: [...]`) and Cloud Functions Gen 2 / Extensions fail with 403 `BILLING_DISABLED`.
+  - All heavy server compute (multiplayer games, push notification listeners, news proxy, and media storage) is hosted on the VPS so that the platform remains 100% free with zero infrastructure charges.
+- **Containers & Services**:
+  - `bhromon-media-app` (`127.0.0.1:8210` -> FastAPI/Uvicorn, Python 3.11): Token-authenticated media uploads/deletes, news proxy (`/api/news/`), 1-on-1 WebSocket chat (`/api/chat/ws`), and the `FirestoreNotificationWatcher` daemon (`notifications.py`) which listens to Firestore real-time streams (SOS alerts, channel messages, chat messages, and WebRTC calls) and sends FCM pushes via the Admin SDK (`/run/secrets/firebase-admin.json`). **Note:** Python files deployed to container must be UTF-8 without BOM (`\ufeff`) to prevent Uvicorn restart crash loop.
+  - `bhromon-games-app` (`127.0.0.1:8220` -> Node 22-alpine): Independent game engine running Card 29, Teen Patti, and Carrom callables (`/api/games/`), replacing Cloud Functions callables. Built via `functions/Dockerfile` using `FROM node:22-alpine` to satisfy Node >= 22 dependency constraints.
   - `bhromon-web-app` (`127.0.0.1:8085` -> Nginx container): Local web preview container.
-  - `bhromon-games-app` (`127.0.0.1:8220`): Multiplayer game server.
   - `sotto-coturn-1`: Coturn WebRTC STUN/TURN server.
   - `smart-utilities-web` (`127.0.0.1:8094`): Reference utility web services.
 - **Nginx Configuration (`/etc/nginx/sites-available/bhromon.fun`)**:
-  - Serves `https://bhromon.fun` with Let's Encrypt SSL.
-  - `/api/media/` -> reverse proxies to `http://127.0.0.1:8210/api/media/`.
-  - `/api/news/` -> reverse proxies to `http://127.0.0.1:8210/api/news/`.
-  - `/media/` -> directly serves `/var/www/bhromon-media/` with `http_mp4_module`, `accept-ranges: bytes`, Cloudflare cache headers, and CORS `*`.
-  - `/media/apk/` -> serves release APKs directly (`bhromon-release.apk`).
+  - Serves `https://bhromon.fun` with Let's Encrypt SSL and HTTP-to-HTTPS redirect.
+  - `/api/media/` -> reverse proxies to `http://127.0.0.1:8210/` (`client_max_body_size 120m;`, `proxy_request_buffering off;`).
+  - `/api/chat/` -> reverse proxies to `http://127.0.0.1:8210/api/chat/` with WebSocket upgrade (`Upgrade $http_upgrade`, timeout 86400s).
+  - `/api/news/` -> reverse proxies to `http://127.0.0.1:8210/api/news/` with custom CSP `frame-ancestors` allowing Flutter Web iframes.
+  - `/api/games/` -> reverse proxies to `http://127.0.0.1:8220/`.
+  - `/media/` -> directly serves `/var/www/bhromon-media/` with `http_mp4_module`, `accept-ranges: bytes`, Cloudflare edge caching, and CORS `*`.
+  - `/media/apk/` and `/downloads/` -> serves release APKs and downloads directly with sendfile.
+- **Disaster Recovery & Off-Site Backups**:
+  - Nightly automated cron job at 02:30 UTC (`/root/Bhromon/deployment/db_backup.sh`).
+  - Creates consistent online backups of SQLite metadata databases (`bhromon_chat.db`, `bhromon_news.db`, `bhromon_quiz.db`) from `/var/www/bhromon-media-meta`.
+  - Replicates archives to Google Drive (`rclone copy ... gdrive:Bhromon_Backups`).
+  - Prunes local backup archives older than 30 days.
 
 ---
 
