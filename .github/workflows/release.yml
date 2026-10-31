@@ -143,21 +143,21 @@ jobs:
             --build-number=${{ github.run_number }}
 
       - name: Upload release AAB artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bhromon-release-v${{ steps.version.outputs.VERSION }}-aab
           path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 90
 
       - name: Upload release APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bhromon-release-v${{ steps.version.outputs.VERSION }}-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 90
 
       - name: Upload debug symbols artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bhromon-debug-symbols-v${{ steps.version.outputs.VERSION }}
           path: build/debug-info
