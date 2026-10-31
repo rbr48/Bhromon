@@ -18,6 +18,7 @@ import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
 import '../domain/models/vehicle_models.dart';
 import '../domain/services/call_partner.dart';
+import '../domain/services/emergency_numbers.dart';
 import '../domain/services/family_telemetry_publisher.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
@@ -1238,6 +1239,21 @@ class TourGroupRepository {
     await _memberships
         .doc(_membershipId(tourId, normalizeEmail(email)))
         .update({'role': newRole.toValue()});
+  }
+
+  /// Replaces the family's emergency numbers. Only the owner and admins can do
+  /// this, and the tour rules check the length of the list.
+  Future<void> setEmergencyContacts(
+    String tourId,
+    List<EmergencyContact> contacts,
+  ) {
+    if (contacts.length > kMaxEmergencyContacts) {
+      throw ArgumentError.value(contacts.length, 'contacts',
+          'at most $kMaxEmergencyContacts numbers');
+    }
+    return _tour(tourId).update({
+      'emergencyContacts': [for (final c in contacts) c.toMap()],
+    });
   }
 
   /// Sets how many people the signed-in member's family counts as (1 to 20).

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -9,6 +10,7 @@ import '../../data/tour_group_repository.dart';
 import '../../data/device_battery_reader.dart';
 import '../../domain/models/date_codec.dart';
 import '../../domain/services/family_telemetry_publisher.dart';
+import '../../domain/services/emergency_numbers.dart';
 import '../../../../core/utils/app_logger.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -556,7 +558,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             _buildLocationSharingCard(),
             _buildFamilyStatus(),
 
-            // Emergency Contacts
+            // The family's own numbers, then the national helplines.
+            _buildFamilyNumbersSection(),
             _buildEmergencyContactsSection(),
 
             const SizedBox(height: 20),
@@ -832,6 +835,229 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         ],
       ),
     );
+  }
+
+  /// The family's emergency numbers: call or text any of them. Admins add and
+  /// remove them.
+  Widget _buildFamilyNumbersSection() {
+    final l10n = context.l10n;
+    final contacts =
+        _tourGroup?.emergencyContacts ?? const <EmergencyContact>[];
+    final isAdmin = _myRole == TourRole.owner || _myRole == TourRole.admin;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF142428),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.contact_phone_rounded,
+                  color: AppColors.mintGreen, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.translate('fsh_family_numbers'),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14),
+                ),
+              ),
+              if (isAdmin && contacts.length < kMaxEmergencyContacts)
+                IconButton(
+                  tooltip: l10n.translate('fsh_add_family_number'),
+                  icon:
+                      const Icon(Icons.add_rounded, color: AppColors.mintGreen),
+                  onPressed: () => unawaited(_addFamilyNumber()),
+                ),
+            ],
+          ),
+          if (contacts.isEmpty)
+            Text(
+              l10n.translate('fsh_family_numbers_empty'),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
+            )
+          else
+            for (final contact in contacts)
+              _buildFamilyNumberRow(contact, isAdmin: isAdmin),
+          if (!kIsWeb && contacts.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.sms_rounded, size: 18),
+                label: Text(l10n.translate('fsh_text_family')),
+                onPressed: () => unawaited(
+                    _textNumbers([for (final c in contacts) c.phone])),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFamilyNumberRow(EmergencyContact contact,
+      {required bool isAdmin}) {
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(contact.name,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13)),
+                Text(contact.phone,
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 11)),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: l10n.translate('fsh_call'),
+            icon: const Icon(Icons.call_rounded, color: AppColors.mintGreen),
+            onPressed: () => unawaited(_callNumber(contact.phone)),
+          ),
+          if (!kIsWeb)
+            IconButton(
+              tooltip: l10n.translate('fsh_text'),
+              icon: const Icon(Icons.sms_rounded, color: AppColors.mintGreen),
+              onPressed: () => unawaited(_textNumbers([contact.phone])),
+            ),
+          if (isAdmin)
+            IconButton(
+              tooltip: l10n.translate('fsh_remove_family_number'),
+              icon: const Icon(Icons.delete_outline_rounded,
+                  color: Colors.white54),
+              onPressed: () => unawaited(_removeFamilyNumber(contact)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Opens the messages app addressed to [numbers]. The message gives this
+  /// phone's place as a map link when it knows it.
+  Future<void> _textNumbers(List<String> numbers) async {
+    final l10n = context.l10n;
+    final pos = _currentPosition;
+    final body = pos == null
+        ? l10n.translate('fsh_sms_sos_text_no_place')
+        : l10n.translate('fsh_sms_sos_text', args: {
+            'place':
+                'https://maps.google.com/?q=${pos.latitude.toStringAsFixed(6)},${pos.longitude.toStringAsFixed(6)}',
+          });
+    try {
+      final opened = await launchUrl(
+        emergencySmsUri(numbers, body),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) _showMessage(l10n.translate('fsh_sms_failed'));
+    } catch (error, stack) {
+      logWarning('Safety hub: could not open the messages app', error, stack);
+      _showMessage(l10n.translate('fsh_sms_failed'));
+    }
+  }
+
+  /// Asks for a name and a number, checks the number, and saves it to the circle.
+  Future<void> _addFamilyNumber() async {
+    final group = _tourGroup;
+    if (group == null) return;
+    final l10n = context.l10n;
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    String? error;
+    final contact = await showDialog<EmergencyContact>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF14241B),
+          title: Text(l10n.translate('fsh_add_number_title'),
+              style: const TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                    labelText: l10n.translate('fsh_number_name_label')),
+              ),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                    labelText: l10n.translate('fsh_number_phone_label'),
+                    errorText: error),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.translate('tour_cancel')),
+            ),
+            FilledButton(
+              style:
+                  FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
+              onPressed: () {
+                final phone = normalizeEmergencyPhone(phoneCtrl.text);
+                if (phone == null) {
+                  setDialogState(
+                      () => error = l10n.translate('fsh_invalid_phone'));
+                  return;
+                }
+                final name = nameCtrl.text.trim();
+                Navigator.pop(
+                  dialogContext,
+                  EmergencyContact(
+                      name: name.isEmpty ? phone : name, phone: phone),
+                );
+              },
+              child: Text(l10n.translate('fsh_save'),
+                  style: const TextStyle(color: AppColors.darkGreen)),
+            ),
+          ],
+        ),
+      ),
+    );
+    nameCtrl.dispose();
+    phoneCtrl.dispose();
+    if (contact == null) return;
+    await _saveFamilyNumbers([...group.emergencyContacts, contact]);
+  }
+
+  Future<void> _removeFamilyNumber(EmergencyContact contact) async {
+    final group = _tourGroup;
+    if (group == null) return;
+    await _saveFamilyNumbers([
+      for (final c in group.emergencyContacts)
+        if (c != contact) c
+    ]);
+  }
+
+  Future<void> _saveFamilyNumbers(List<EmergencyContact> contacts) async {
+    try {
+      await _repository.setEmergencyContacts(widget.tourId, contacts);
+    } catch (error, stack) {
+      logWarning('Safety hub: could not save family numbers', error, stack);
+      if (mounted) {
+        _showMessage(context.l10n.translate('fsh_numbers_save_failed'));
+      }
+    }
   }
 
   /// Sends the member's check-in and tells them whether it went through.

@@ -3,6 +3,7 @@
 import 'expense_models.dart';
 import 'itinerary_models.dart';
 import 'date_codec.dart';
+import '../services/emergency_numbers.dart';
 
 /// Used by copyWith to tell "not passed" apart from an explicit null.
 const Object _keep = Object();
@@ -262,6 +263,9 @@ class TourGroup {
   /// Whether this group plans a trip or is a family circle.
   final GroupKind kind;
 
+  /// Numbers every member can call or text in an emergency (at most ten).
+  final List<EmergencyContact> emergencyContacts;
+
   const TourGroup({
     required this.id,
     required this.name,
@@ -285,6 +289,7 @@ class TourGroup {
     this.returnHome = true,
     this.fundBudget = const FundBudget(),
     this.kind = GroupKind.tour,
+    this.emergencyContacts = const [],
   });
 
   /// A family circle rather than a trip.
@@ -532,6 +537,7 @@ class TourGroup {
     bool? returnHome,
     FundBudget? fundBudget,
     GroupKind? kind,
+    List<EmergencyContact>? emergencyContacts,
   }) {
     return TourGroup(
       id: id ?? this.id,
@@ -563,6 +569,7 @@ class TourGroup {
       returnHome: returnHome ?? this.returnHome,
       fundBudget: fundBudget ?? this.fundBudget,
       kind: kind ?? this.kind,
+      emergencyContacts: emergencyContacts ?? this.emergencyContacts,
     );
   }
 
@@ -586,6 +593,7 @@ class TourGroup {
       'legPlans': {for (final e in legPlans.entries) e.key: e.value.toMap()},
       'returnHome': returnHome,
       'kind': kind.name,
+      'emergencyContacts': [for (final c in emergencyContacts) c.toMap()],
       if (!fundBudget.isEmpty) 'fundBudget': fundBudget.toMap(),
       'schemaVersion': 4,
     };
@@ -625,6 +633,7 @@ class TourGroup {
       legPlans: readLegPlans(map['legPlans']),
       returnHome: map['returnHome'] as bool? ?? true,
       kind: GroupKind.fromString(map['kind']?.toString()),
+      emergencyContacts: parseEmergencyContacts(map['emergencyContacts']),
       fundBudget: FundBudget.fromMap(map['fundBudget']),
     );
   }

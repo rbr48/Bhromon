@@ -810,6 +810,24 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  describe('family emergency numbers', () => {
+    const contact = (i) => ({ name: `N${i}`, phone: `01710000${String(i).padStart(2, '0')}` });
+    const tourRef = (who) => doc(db(who), 'tours', TOUR);
+
+    test('the owner and admins keep up to ten numbers', async () => {
+      await assertSucceeds(updateDoc(tourRef('admin'), { emergencyContacts: Array.from({ length: 10 }, (_, i) => contact(i)) }));
+      await assertSucceeds(updateDoc(tourRef('owner'), { emergencyContacts: [contact(1)] }));
+    });
+
+    test('more than ten numbers are refused', async () => {
+      await assertFails(updateDoc(tourRef('admin'), { emergencyContacts: Array.from({ length: 11 }, (_, i) => contact(i)) }));
+    });
+
+    test('a plain member cannot change the family numbers', async () => {
+      await assertFails(updateDoc(tourRef('member'), { emergencyContacts: [contact(1)] }));
+    });
+  });
+
   test('unauthenticated users can read nothing in the tour group', async () => {
     await assertFails(getDoc(doc(anon(), 'memberships', `${TOUR}__${people.member.email}`)));
     await assertFails(getDoc(doc(anon(), 'invites', CODE)));

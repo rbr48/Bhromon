@@ -647,10 +647,14 @@ service cloud.firestore {
                     && request.resource.data.inviteCode.size() >= 6
                     && request.resource.data.get('kind', 'tour') in ['tour', 'family'];
       // Admins edit trip details; only the owner changes ownership or the invite code.
-      allow update: if isOwnerOfTour(tourId) ||
+      // The family's emergency numbers are a list of at most ten entries.
+      allow update: if (isOwnerOfTour(tourId) ||
                     (isTourAdmin(tourId) &&
                      !request.resource.data.diff(resource.data).affectedKeys()
-                       .hasAny(['ownerEmail', 'ownerUid', 'inviteCode']));
+                       .hasAny(['ownerEmail', 'ownerUid', 'inviteCode']))) &&
+                    (!('emergencyContacts' in request.resource.data) ||
+                     (request.resource.data.emergencyContacts is list &&
+                      request.resource.data.emergencyContacts.size() <= 10));
       allow delete: if isOwnerOfTour(tourId);
 
       match /private/{docId} {
