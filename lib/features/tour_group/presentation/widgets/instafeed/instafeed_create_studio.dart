@@ -250,8 +250,27 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       );
       if (picked == null || !mounted) return;
 
+      if (!isSupportedVideoName(picked.name)) {
+        final message = context.l10n.translate('ig_video_format_unsupported');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        return;
+      }
+
       XFile fileToUse = picked;
       final originalSize = await picked.length();
+      if (!mounted) return;
+      if (kIsWeb && originalSize > kMaxVideoBytes) {
+        final message = context.l10n.translate(
+          'ig_video_too_large_web',
+          args: {'max': formatMegabytes(kMaxVideoBytes)},
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        return;
+      }
 
       if (originalSize > kMaxVideoBytes && !kIsWeb) {
         setState(() {
@@ -652,10 +671,11 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
 
       if (mounted) {
         setState(() => _isPublishing = false);
+        final message = e is TourUploadException && e.statusCode == 401
+            ? context.l10n.translate('ig_upload_sign_in_again')
+            : context.l10n.translate('ig_publish_failed', args: {'error': e});
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(context.l10n
-                  .translate('ig_publish_failed', args: {'error': e}))),
+          SnackBar(content: Text(message)),
         );
       }
     }

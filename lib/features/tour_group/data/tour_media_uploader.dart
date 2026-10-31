@@ -33,10 +33,12 @@ bool isRetryableUploadError(DioException e) {
   }
 }
 
-/// A user-facing upload failure. The message is shown as-is.
+/// A user-facing upload failure. The message is shown as-is. [statusCode] is the
+/// server's answer when it refused the upload, so the caller can say why.
 class TourUploadException implements Exception {
   final String message;
-  const TourUploadException(this.message);
+  final int? statusCode;
+  const TourUploadException(this.message, {this.statusCode});
 
   @override
   String toString() => message;
@@ -296,7 +298,9 @@ class TourMediaUploader {
             ? (e.response!.data as Map)['detail']?.toString()
             : e.message;
         throw TourUploadException(
-            'আপলোড ব্যর্থ হয়েছে: ${msg ?? "নেটওয়ার্ক সমস্যা"}');
+          'আপলোড ব্যর্থ হয়েছে: ${msg ?? "নেটওয়ার্ক সমস্যা"}',
+          statusCode: e.response?.statusCode,
+        );
       } finally {
         if (!progressController!.isClosed) {
           await progressController.close();
