@@ -35,22 +35,22 @@ dependencies:
 
   cupertino_icons: ^1.0.6
   url_launcher: ^6.2.5
-  flutter_bloc: ^8.1.5
-  hydrated_bloc: ^9.1.5
+  flutter_bloc: ^9.1.1
+  hydrated_bloc: ^11.0.0
   flutter_blurhash: ^0.9.1
-  bloc: ^8.1.4
+  bloc: ^9.2.1
   get_it: ^7.7.0
   dio: ^5.4.3
   drift: ">=2.16.0 <2.20.0"
   sqlite3_flutter_libs: ^0.5.20
   injectable: ^2.3.5
   go_router: ^13.2.1
-  firebase_core: ^4.11.0
-  firebase_auth: ^6.5.4
-  cloud_firestore: ^6.6.0
-  firebase_storage: ^13.4.3
-  cloud_functions: ^6.3.3
-  firebase_messaging: ^16.4.1
+  firebase_core: ^5.1.0
+  firebase_auth: ^7.0.1
+  cloud_firestore: ^7.1.0
+  firebase_storage: ^14.0.1
+  cloud_functions: ^7.0.1
+  firebase_messaging: ^17.0.1
   flutter_local_notifications: ^17.2.3
   hive_flutter: ^1.1.0
   flutter_secure_storage: ^9.2.2
@@ -68,7 +68,7 @@ dependencies:
   hive: ^2.2.3
   json_annotation: ^4.9.0
   workmanager: ^0.7.0
-  google_sign_in: ^6.2.2
+  google_sign_in: ^7.2.0
   geolocator: ^12.0.0
   http: ^1.2.1
   record: ^7.1.1
@@ -86,15 +86,15 @@ dependencies:
   package_info_plus: ^8.0.2
   crypto: ^3.0.3
   # Sprint 3 – Observability & Architecture
-  talker_flutter: ">=4.4.0 <5.0.0"
-  talker_bloc_logger: ">=4.4.0 <4.6.5"
-  talker: ">=4.4.0 <5.0.0"
-  firebase_analytics: ^12.4.3
-  firebase_performance: ^0.11.4+3
-  firebase_remote_config: ^6.5.3
+  talker_flutter: ^5.0.0
+  talker_bloc_logger: ^5.2.0
+  talker: ^5.2.0
+  firebase_analytics: ^13.0.1
+  firebase_performance: ^0.12.1
+  firebase_remote_config: ^7.0.1
   permission_handler: ^11.3.1
-  firebase_crashlytics: ^5.2.4
-  firebase_app_check: ^0.4.5
+  firebase_crashlytics: ^6.0.1
+  firebase_app_check: ^0.5.1
   local_auth: ^2.2.0
 
   path: ^1.9.0
@@ -128,7 +128,7 @@ dev_dependencies:
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
-  firebase_auth_platform_interface: ^9.0.3
+  firebase_auth_platform_interface: ^9.1.2
 flutter:
 
   # The following line ensures that the Material Icons font is

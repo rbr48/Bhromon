@@ -20,7 +20,8 @@ import '../../domain/repositories/i_auth_repository.dart';
 class AuthRepositoryImpl implements IAuthRepository {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  Future<void>? _googleInit;
   final HiveEncryptionService _encryptionService;
 
   ExplorerProfile? _cachedProfile;
@@ -146,6 +147,11 @@ class AuthRepositoryImpl implements IAuthRepository {
     }
   }
 
+  // google_sign_in 7 needs one initialize() before any other call. Every caller awaits
+  // the same run. The Android client reads its web client ID from google-services.json.
+  Future<void> _initGoogleSignIn() =>
+      _googleInit ??= _googleSignIn.initialize();
+
   @override
   Future<Either<Failure, ExplorerProfile>> signInWithGoogle() async {
     try {
@@ -157,14 +163,18 @@ class AuthRepositoryImpl implements IAuthRepository {
         googleProvider.setCustomParameters({'prompt': 'select_account'});
         userCredential = await _auth.signInWithPopup(googleProvider);
       } else {
-        final googleUser = await _googleSignIn.signIn();
-        if (googleUser == null) {
-          return const Left(AuthFailure('Google Sign-In aborted.'));
+        await _initGoogleSignIn();
+        final GoogleSignInAccount googleUser;
+        try {
+          googleUser = await _googleSignIn.authenticate();
+        } on GoogleSignInException catch (e) {
+          if (e.code == GoogleSignInExceptionCode.canceled) {
+            return const Left(AuthFailure('Google Sign-In aborted.'));
+          }
+          rethrow;
         }
-        final googleAuth = await googleUser.authentication;
         final credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
+          idToken: googleUser.authentication.idToken,
         );
         userCredential = await _auth.signInWithCredential(credential);
       }
@@ -208,12 +218,14 @@ class AuthRepositoryImpl implements IAuthRepository {
     if (uid == null) return;
     try {
       final messaging = FirebaseMessaging.instance;
+      // ignore: deprecated_member_use
       final token = await messaging.getToken();
       if (token != null) {
         final user = _firestore.collection('fcm_tokens').doc(uid);
         await user.collection('devices').doc(pushDeviceId(token)).delete();
         final legacy = await user.get();
         if (legacy.data()?['token'] == token) await user.delete();
+        // ignore: deprecated_member_use
         await messaging.deleteToken();
       }
     } catch (e, stack) {
@@ -235,11 +247,15 @@ class AuthRepositoryImpl implements IAuthRepository {
       logWarning(
           'AuthRepository: failed to sign out from Firebase Auth', e, stack);
     }
-    try {
-      await _googleSignIn.signOut();
-    } catch (e, stack) {
-      logWarning(
-          'AuthRepository: failed to sign out from GoogleSignIn', e, stack);
+    // Web signs in through Firebase's popup, so Google Sign-In is only set up on mobile.
+    if (!kIsWeb) {
+      try {
+        await _initGoogleSignIn();
+        await _googleSignIn.signOut();
+      } catch (e, stack) {
+        logWarning(
+            'AuthRepository: failed to sign out from GoogleSignIn', e, stack);
+      }
     }
   }
 

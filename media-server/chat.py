@@ -1208,7 +1208,11 @@ async def get_ice_servers(uid: str = Depends(authenticate_user)):
 # ── Call Signaling Relay ──────────────────────────────────────────────────────
 
 # The signals the app sends (call_signaling_service.dart). Anything else is refused.
-CALL_SIGNAL_TYPES = frozenset({"offer", "answer", "candidate", "end", "declined"})
+# "reoffer" and "reanswer" carry a new SDP for a call that is already up, which
+# is how a dropped link is rebuilt. "renegotiate" asks the caller for a new offer.
+# None of the three rings a phone, so they are relayed without a push, an ack or
+# the offer limit.
+CALL_SIGNAL_TYPES = frozenset({"offer", "answer", "candidate", "end", "declined", "reoffer", "reanswer", "renegotiate"})
 MAX_CALL_SIGNAL_BYTES = 64 * 1024
 CALL_OFFERS_PER_WINDOW = 6
 CALL_OFFER_WINDOW_SECONDS = 600.0

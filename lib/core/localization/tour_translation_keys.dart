@@ -1672,7 +1672,7 @@ class TourTranslationKeys {
       'ig_video_format_unsupported':
           'This video format cannot be uploaded. Choose an MP4 or MOV video.',
       'ig_video_too_large_web':
-          'On the web a video can be at most {max}. Choose a smaller video, or use the Android app.',
+          'This video is too large to shrink in the browser. Choose a smaller video, or use the Android app.',
       'ig_upload_sign_in_again':
           'Your sign-in needs confirming again. Sign out, then sign in with the code we email you.',
       'ig_upload_starting': 'Starting upload...',
@@ -3429,7 +3429,7 @@ class TourTranslationKeys {
       'ig_video_format_unsupported':
           'এই ভিডিও ফরম্যাটটি আপলোড করা যাবে না। MP4 বা MOV ভিডিও বেছে নিন।',
       'ig_video_too_large_web':
-          'ওয়েবে ভিডিও সর্বোচ্চ {max} হতে পারে। ছোট ভিডিও বেছে নিন, নয়তো অ্যান্ড্রয়েড অ্যাপ ব্যবহার করুন।',
+          'এই ভিডিওটি ব্রাউজারে ছোট করার জন্য অনেক বড়। ছোট ভিডিও বেছে নিন, নয়তো অ্যান্ড্রয়েড অ্যাপ ব্যবহার করুন।',
       'ig_upload_sign_in_again':
           'আপনার সাইন-ইন আবার নিশ্চিত করা দরকার। সাইন আউট করে ইমেইলে পাঠানো কোড দিয়ে আবার সাইন ইন করুন।',
       'ig_upload_starting': 'আপলোড শুরু হচ্ছে...',

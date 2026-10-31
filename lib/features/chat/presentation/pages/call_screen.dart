@@ -63,6 +63,12 @@ class _CallScreenState extends State<CallScreen> {
   bool _hasExited = false;
   String _callStatusText = 'Calling...';
 
+  /// True while the media is up. The clock and the link badge show only then.
+  bool _isConnected = false;
+
+  /// The remote volume steps the louder button cycles through.
+  static const List<double> _gainSteps = [1.0, 2.0, 3.0];
+
   Duration _callDuration = Duration.zero;
   Timer? _durationTimer;
   Timer? _controlsHideTimer;
@@ -106,7 +112,9 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
-    _isSpeakerOn = widget.isVideoCall;
+    // Calls start on the loudspeaker. The earpiece is much quieter, and a phone
+    // lying on a table is the common case. The speaker button switches back.
+    _isSpeakerOn = true;
     // A video call keeps the screen on, or the phone sleeps in the middle of it.
     if (widget.isVideoCall && !kIsWeb) {
       unawaited(WakelockPlus.enable());
@@ -165,37 +173,44 @@ class _CallScreenState extends State<CallScreen> {
         setState(() {
           _remoteRenderer.srcObject = stream;
           _remoteVideoConnected = true;
-          _callStatusText = 'Connected';
         });
         _applyAudioRouting();
-        _startDurationTimer();
       }
     };
 
     _signaling.onCallStateChange = (state) {
       if (!mounted) return;
       setState(() {
-        if (state == 'calling') {
-          _callStatusText = widget.isCaller ? 'Ringing...' : 'Incoming call...';
-          if (widget.isCaller) {
-            _startRingback();
-          }
-        } else if (state == 'answered') {
-          _stopRingback();
-          _callStatusText = 'Connected';
-          _applyAudioRouting();
-          _startDurationTimer();
-        } else if (state == 'declined' ||
-            state == 'missed' ||
-            state == 'ended' ||
-            state == 'failed') {
-          _stopRingback();
-          _callStatusText = switch (state) {
-            'declined' => 'Call declined',
-            'missed' => 'No answer',
-            _ => 'Call ended',
-          };
-          Future.delayed(const Duration(milliseconds: 300), _safeExit);
+        switch (state) {
+          case 'calling':
+            _callStatusText =
+                widget.isCaller ? 'Ringing...' : 'Incoming call...';
+            if (widget.isCaller) {
+              _startRingback();
+            }
+          case 'answered':
+            // Accepted, but the media has not connected yet.
+            _stopRingback();
+            _callStatusText = 'Connecting...';
+            _applyAudioRouting();
+          case 'connected':
+            _stopRingback();
+            _isConnected = true;
+            _callStatusText = 'Connected';
+            _applyAudioRouting();
+            _startDurationTimer();
+          case 'reconnecting':
+            _isConnected = false;
+            _callStatusText = 'Reconnecting...';
+          case 'declined' || 'missed' || 'ended' || 'failed':
+            _stopRingback();
+            _callStatusText = switch (state) {
+              'declined' => 'Call declined',
+              'missed' => 'No answer',
+              'failed' => 'Could not connect',
+              _ => 'Call ended',
+            };
+            Future.delayed(const Duration(milliseconds: 300), _safeExit);
         }
       });
     };
@@ -251,7 +266,11 @@ class _CallScreenState extends State<CallScreen> {
     if (widget.isCaller) {
       await _signaling.endCall();
     } else {
-      await _signaling.declineCall(widget.callId, callerId: widget.remoteUid);
+      await _signaling.declineCall(
+        widget.callId,
+        callerId: widget.remoteUid,
+        isVideo: widget.isVideoCall,
+      );
     }
     messenger?.showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
@@ -259,16 +278,89 @@ class _CallScreenState extends State<CallScreen> {
     _safeExit();
   }
 
+  /// Ticks the clock from the service's connected time, so the length shown is the
+  /// length that is logged, and it keeps counting through a reconnect.
   void _startDurationTimer() {
     if (_durationTimer != null) return;
     _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         setState(() {
-          _callDuration += const Duration(seconds: 1);
+          _callDuration = Duration(seconds: _signaling.connectedSeconds);
         });
       }
     });
   }
+
+  void _cycleRemoteGain() {
+    final current = _signaling.remoteGain;
+    final index = _gainSteps.indexWhere((step) => step > current);
+    final next = index == -1 ? _gainSteps.first : _gainSteps[index];
+    unawaited(_signaling.setRemoteGain(next));
+    setState(() {});
+  }
+
+  /// The link figures behind the quality badge, for anyone who wants the numbers.
+  void _showLinkDetails() {
+    final sample = _signaling.linkSample;
+    String figure(double? value, String unit, {int digits = 0}) => value == null
+        ? 'No data yet'
+        : '${value.toStringAsFixed(digits)} $unit';
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1F2C34),
+        title:
+            const Text('Call quality', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _detailRow(
+                'Link',
+                switch (_signaling.networkQuality.value) {
+                  CallNetworkQuality.good => 'Good',
+                  CallNetworkQuality.fair => 'Fair',
+                  CallNetworkQuality.poor => 'Weak',
+                }),
+            _detailRow('Round trip', figure(sample?.roundTripMs, 'ms')),
+            _detailRow('Jitter', figure(sample?.jitterMs, 'ms')),
+            _detailRow(
+              'Packets lost',
+              sample?.lossRatio == null
+                  ? 'No data yet'
+                  : '${(sample!.lossRatio! * 100).toStringAsFixed(1)} %',
+            ),
+            _detailRow(
+              'Sending',
+              figure(sample?.outboundKbps, 'kbps'),
+            ),
+            _detailRow(
+                'Loudness', '${_signaling.remoteGain.toStringAsFixed(0)}x'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 110,
+              child: Text(label, style: const TextStyle(color: Colors.white70)),
+            ),
+            Text(value, style: const TextStyle(color: Colors.white)),
+          ],
+        ),
+      );
 
   void _toggleAudio() {
     setState(() {
@@ -305,7 +397,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _endCall() {
-    _signaling.endCall(durationSeconds: _callDuration.inSeconds);
+    _signaling.endCall();
     _safeExit();
   }
 
@@ -365,7 +457,7 @@ class _CallScreenState extends State<CallScreen> {
       canPop: canPop,
       onPopInvokedWithResult: (didPop, result) {
         _hasExited = true;
-        _signaling.endCall(durationSeconds: _callDuration.inSeconds);
+        _signaling.endCall();
         if (!didPop) {
           try {
             context.go('/chats');
@@ -451,11 +543,11 @@ class _CallScreenState extends State<CallScreen> {
                                   Row(
                                     children: [
                                       Text(
-                                        _callDuration > Duration.zero
+                                        _isConnected
                                             ? _formatDuration(_callDuration)
                                             : _callStatusText,
                                         style: TextStyle(
-                                          color: _callDuration > Duration.zero
+                                          color: _isConnected
                                               ? const Color(0xFF00A884)
                                               : Colors.white70,
                                           fontSize: 13,
@@ -468,7 +560,7 @@ class _CallScreenState extends State<CallScreen> {
                                           ],
                                         ),
                                       ),
-                                      if (_callDuration > Duration.zero) ...[
+                                      if (_isConnected) ...[
                                         const SizedBox(width: 8),
                                         ValueListenableBuilder<
                                             CallNetworkQuality>(
@@ -494,43 +586,48 @@ class _CallScreenState extends State<CallScreen> {
                                                 label = 'Weak';
                                                 break;
                                             }
-                                            return Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 1),
-                                              decoration: BoxDecoration(
-                                                color: dotColor.withValues(
-                                                    alpha: 0.15),
-                                                borderRadius:
-                                                    BorderRadius.circular(4),
-                                                border: Border.all(
-                                                    color: dotColor.withValues(
-                                                        alpha: 0.4),
-                                                    width: 0.8),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Container(
-                                                    width: 6,
-                                                    height: 6,
-                                                    decoration: BoxDecoration(
-                                                      color: dotColor,
-                                                      shape: BoxShape.circle,
+                                            return GestureDetector(
+                                              onTap: _showLinkDetails,
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 1),
+                                                decoration: BoxDecoration(
+                                                  color: dotColor.withValues(
+                                                      alpha: 0.15),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                  border: Border.all(
+                                                      color:
+                                                          dotColor.withValues(
+                                                              alpha: 0.4),
+                                                      width: 0.8),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Container(
+                                                      width: 6,
+                                                      height: 6,
+                                                      decoration: BoxDecoration(
+                                                        color: dotColor,
+                                                        shape: BoxShape.circle,
+                                                      ),
                                                     ),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    label,
-                                                    style: TextStyle(
-                                                      color: dotColor,
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.bold,
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      label,
+                                                      style: TextStyle(
+                                                        color: dotColor,
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
                                                     ),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
                                             );
                                           },
@@ -649,6 +746,20 @@ class _CallScreenState extends State<CallScreen> {
                                 : const Color(0xFF2A3942),
                             tooltip: _isAudioMuted ? 'Unmute' : 'Mute',
                             onTap: _toggleAudio,
+                          ),
+
+                          // Louder: steps the other side's volume up to 3x.
+                          _buildCallActionBtn(
+                            icon: Icons.campaign_rounded,
+                            color: _signaling.remoteGain > 1
+                                ? const Color(0xFF00A884)
+                                : Colors.white,
+                            bgColor: _signaling.remoteGain > 1
+                                ? Colors.white.withValues(alpha: 0.15)
+                                : const Color(0xFF2A3942),
+                            tooltip:
+                                'Louder (${_signaling.remoteGain.toStringAsFixed(0)}x)',
+                            onTap: _cycleRemoteGain,
                           ),
 
                           // Video Toggle (only for video calls)
@@ -778,13 +889,9 @@ class _CallScreenState extends State<CallScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _callDuration > Duration.zero
-                  ? _formatDuration(_callDuration)
-                  : _callStatusText,
+              _isConnected ? _formatDuration(_callDuration) : _callStatusText,
               style: TextStyle(
-                color: _callDuration > Duration.zero
-                    ? const Color(0xFF00A884)
-                    : Colors.white60,
+                color: _isConnected ? const Color(0xFF00A884) : Colors.white60,
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),

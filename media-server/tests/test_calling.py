@@ -235,6 +235,60 @@ def test_only_an_offer_sends_a_call_push(client, fake_firebase, monkeypatch):
     push.assert_not_called()
 
 
+def test_renegotiation_is_relayed_without_ringing_or_an_ack(client, fake_firebase, monkeypatch):
+    push = MagicMock(return_value=1)
+    monkeypatch.setattr(chat.push_dispatcher, "send_call_push_to_uid", push)
+    with _signed_in(client, "tok-alice") as alice, _signed_in(client, "tok-bob") as bob:
+        alice.receive_json()
+        bob.receive_json()
+        alice.send_json({
+            "type": "call_signal",
+            "callId": "c1",
+            "recipientId": "uid-bob",
+            "signalType": "reoffer",
+            "payload": {"type": "offer", "sdp": "v=0"},
+        })
+        relayed = bob.receive_json()
+        assert relayed["type"] == "call_signal"
+        assert relayed["signalType"] == "reoffer"
+        assert relayed["callerId"] == "uid-alice"
+        assert relayed["payload"] == {"type": "offer", "sdp": "v=0"}
+
+        # No ack is sent for a renegotiation, so the next reply on alice's socket is the pong.
+        alice.send_json({"type": "ping"})
+        assert alice.receive_json() == {"type": "pong"}
+    push.assert_not_called()
+
+
+def test_renegotiation_requests_are_not_limited_like_offers(client, fake_firebase, monkeypatch):
+    monkeypatch.setattr(chat, "call_offer_limiter", CallOfferLimiter(limit=1, window_seconds=600))
+    with _signed_in(client, "tok-alice") as alice, _signed_in(client, "tok-bob") as bob:
+        alice.receive_json()
+        bob.receive_json()
+        for index in range(3):
+            bob.send_json({
+                "type": "call_signal",
+                "callId": "c1",
+                "recipientId": "uid-alice",
+                "signalType": "renegotiate",
+                "payload": {"attempt": index},
+            })
+        relayed = [alice.receive_json() for _ in range(3)]
+        assert [item["type"] for item in relayed] == ["call_signal"] * 3
+        assert [item["payload"]["attempt"] for item in relayed] == [0, 1, 2]
+
+        # The offer allowance is untouched, so the callee's first offer still gets its ack.
+        bob.send_json({
+            "type": "call_signal",
+            "callId": "c1",
+            "recipientId": "uid-alice",
+            "signalType": "offer",
+            "payload": {},
+        })
+        assert alice.receive_json()["type"] == "call_signal"
+        assert bob.receive_json() == {"type": "call_signal_ack", "callId": "c1", "delivered": True}
+
+
 def test_a_call_push_is_data_only_on_android(monkeypatch, tmp_path):
     db = chat.ChatDatabase(tmp_path / "chat.db")
     db.register_device_token("uid-bob", "android-token", device_id="d1", platform="android")
