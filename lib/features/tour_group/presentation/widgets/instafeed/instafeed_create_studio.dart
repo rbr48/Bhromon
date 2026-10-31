@@ -11,6 +11,7 @@ import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'package:bhromon/features/tour_group/domain/services/media_rules.dart';
 import 'package:bhromon/features/tour_group/domain/services/tour_video_compressor.dart';
+import 'package:bhromon/features/tour_group/domain/services/web_video_transcoder.dart';
 import 'package:video_compress/video_compress.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/utils/logger.dart';
@@ -261,18 +262,20 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       XFile fileToUse = picked;
       final originalSize = await picked.length();
       if (!mounted) return;
-      if (kIsWeb && originalSize > kMaxVideoBytes) {
-        final message = context.l10n.translate(
-          'ig_video_too_large_web',
-          args: {'max': formatMegabytes(kMaxVideoBytes)},
-        );
+      // On the web the browser shrinks a large video. It refuses only when it
+      // cannot: an older browser, or a file too big to hold in browser memory.
+      final browserCannotShrink = kIsWeb &&
+          (originalSize > kMaxWebVideoSourceBytes ||
+              !WebVideoTranscoder.isSupported);
+      if (browserCannotShrink && originalSize > kMaxVideoBytes) {
+        final message = context.l10n.translate('ig_video_too_large_web');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message)),
         );
         return;
       }
 
-      if (originalSize > kMaxVideoBytes && !kIsWeb) {
+      if (originalSize > kMaxVideoBytes) {
         setState(() {
           _isCompressing = true;
           _compressionProgress = 0.0;

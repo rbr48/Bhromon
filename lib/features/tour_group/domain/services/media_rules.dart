@@ -2,6 +2,9 @@
 
 const int kMaxImageBytes = 10 * 1024 * 1024; // 10 MB
 const int kMaxVideoBytes = 100 * 1024 * 1024; // 100 MB
+// The largest video the browser tries to shrink. A bigger file cannot be held in
+// browser memory, so it is refused on the web.
+const int kMaxWebVideoSourceBytes = 250 * 1024 * 1024; // 250 MB
 const int kMaxReelSeconds = 180; // 3 minutes
 const int kMaxPhotosPerPost = 10;
 const int kMaxAudioBytes = 25 * 1024 * 1024; // 25 MB, as the media server
