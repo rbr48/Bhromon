@@ -622,6 +622,16 @@ service cloud.firestore {
     function isDayKey(v) {
       return v is string && v.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
     }
+    // A shared shopping or to-do item in a family circle.
+    function validFamilyTask(d) {
+      return d.keys().hasOnly(['title', 'kind', 'done', 'assigneeEmail', 'doneByEmail', 'createdByEmail']) &&
+             d.title is string && d.title.size() >= 1 && d.title.size() <= 120 &&
+             d.kind in ['shopping', 'todo'] &&
+             d.done is bool &&
+             (d.get('assigneeEmail', null) == null || (d.assigneeEmail is string && d.assigneeEmail.size() <= 254)) &&
+             (d.get('doneByEmail', null) == null || (d.doneByEmail is string && d.doneByEmail.size() <= 254)) &&
+             d.createdByEmail is string;
+    }
     function validFamilyDate(d) {
       return d.keys().hasOnly(['title', 'kind', 'recurrence', 'startOn', 'nextOn', 'remindDays', 'remindOn', 'note', 'createdByEmail']) &&
              d.title is string && d.title.size() >= 1 && d.title.size() <= 80 &&
@@ -739,6 +749,30 @@ service cloud.firestore {
                          request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['ackBy']) &&
                          ownEntryOnly(resource.data.get('ackBy', []), request.resource.data.get('ackBy', []));
+      }
+
+      // Shared shopping and to-do items. Any member of a family circle adds one under
+      // their own email and ticks items off; the member who ticked it is recorded.
+      // Editing and removing are for the creator or an admin.
+      match /family_tasks/{taskId} {
+        allow read: if isActiveMember(tourId);
+        allow create: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+                         request.resource.data.createdByEmail == tourUserEmail() &&
+                         validFamilyTask(request.resource.data);
+        allow update: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['done', 'doneByEmail']) &&
+                         request.resource.data.createdByEmail == resource.data.createdByEmail &&
+                         (request.resource.data.done
+                            ? request.resource.data.get('doneByEmail', null) == tourUserEmail()
+                            : request.resource.data.get('doneByEmail', null) == null) &&
+                         validFamilyTask(request.resource.data);
+        allow update: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+                         (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail()) &&
+                         request.resource.data.createdByEmail == resource.data.createdByEmail &&
+                         validFamilyTask(request.resource.data);
+        allow delete: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+                         (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
       }
 
       // Family dates. Any member of a family circle adds one under their own email.

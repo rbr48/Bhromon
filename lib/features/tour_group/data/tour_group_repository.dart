@@ -15,6 +15,7 @@ import '../domain/models/logistics_models.dart';
 import '../domain/models/safety_alert_models.dart';
 import '../domain/models/tour_activity_models.dart';
 import '../domain/models/family_date_models.dart';
+import '../domain/models/family_task_models.dart';
 import '../domain/services/family_date_rules.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
@@ -1629,6 +1630,76 @@ class TourGroupRepository {
   Future<void> deleteFamilyDate(String tourId, String dateId) async {
     _requireEmail();
     await _sub(tourId, 'family_dates').doc(dateId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Family shopping and to-do
+  // ---------------------------------------------------------------------------
+
+  /// The circle's shared items. A stored item that does not read is left out.
+  Stream<List<FamilyTask>> watchFamilyTasks(String tourId) {
+    return _sub(tourId, 'family_tasks').limit(300).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (FamilyTask.fromMap(d.id, d.data()) case final task?) task,
+        ]);
+  }
+
+  /// Adds an item for the whole circle, or for one member when [assigneeEmail] is
+  /// given. The signed-in member is recorded as its creator.
+  Future<void> addFamilyTask(
+    String tourId, {
+    required String title,
+    required FamilyTaskKind kind,
+    String? assigneeEmail,
+  }) async {
+    final email = _requireEmail();
+    final assignee = assigneeEmail == null || assigneeEmail.trim().isEmpty
+        ? null
+        : normalizeEmail(assigneeEmail);
+    final task = FamilyTask(
+      id: '',
+      title: title.trim(),
+      kind: kind,
+      assigneeEmail: assignee,
+      createdByEmail: email,
+    );
+    await _sub(tourId, 'family_tasks').add(task.toFields());
+  }
+
+  /// Ticks an item off, or takes the tick back. The tick is recorded as the
+  /// signed-in member's; taking it back clears the name.
+  Future<void> setFamilyTaskDone(
+      String tourId, String taskId, bool done) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'family_tasks').doc(taskId).update({
+      'done': done,
+      'doneByEmail': done ? email : null,
+    });
+  }
+
+  /// Changes an item's text, kind or assignee. Its creator or an admin does this.
+  /// The tick is not written here, so an edit cannot undo someone else's tick.
+  Future<void> editFamilyTask(
+    String tourId,
+    String taskId, {
+    required String title,
+    required FamilyTaskKind kind,
+    String? assigneeEmail,
+  }) async {
+    _requireEmail();
+    final assignee = assigneeEmail == null || assigneeEmail.trim().isEmpty
+        ? null
+        : normalizeEmail(assigneeEmail);
+    await _sub(tourId, 'family_tasks').doc(taskId).update({
+      'title': title.trim(),
+      'kind': kind.name,
+      'assigneeEmail': assignee,
+    });
+  }
+
+  Future<void> deleteFamilyTask(String tourId, String taskId) async {
+    _requireEmail();
+    await _sub(tourId, 'family_tasks').doc(taskId).delete();
   }
 
   // ---------------------------------------------------------------------------

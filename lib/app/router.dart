@@ -22,6 +22,7 @@ import '../features/tour_group/presentation/pages/expense_ledger_screen.dart';
 import '../features/tour_group/presentation/pages/tour_logistics_hub_screen.dart';
 import '../features/tour_group/presentation/pages/holiday_calendar_screen.dart';
 import '../features/tour_group/presentation/pages/family_dates_screen.dart';
+import '../features/tour_group/presentation/pages/family_tasks_screen.dart';
 import '../features/tour_group/presentation/pages/tide_beach_guide_screen.dart';
 import '../features/tour_group/presentation/pages/group_channels_screen.dart';
 import '../features/tour_group/presentation/pages/tour_checklist_screen.dart';
@@ -207,6 +208,13 @@ class AppRouter {
         pageBuilder: (context, state) => _tripPage(
           state,
           FamilyDatesScreen(tourId: state.pathParameters['tourId']!),
+        ),
+      ),
+      GoRoute(
+        path: '/group/:tourId/family-tasks',
+        pageBuilder: (context, state) => _tripPage(
+          state,
+          FamilyTasksScreen(tourId: state.pathParameters['tourId']!),
         ),
       ),
       GoRoute(

@@ -1865,7 +1865,7 @@ class TourTranslationKeys {
           'Electricity, gas, water, internet or rent may be due. Check the shared fund & ledger and pay your share before the date.',
       'notice_tpl_shopping_list_title': 'Shopping list',
       'notice_tpl_shopping_list_body':
-          'Add what the house needs to the Shopping list channel before you go to the bazar.',
+          'Add what the house needs to the shopping list before you go to the bazar.',
       'notice_tpl_home_check_title': 'Home for the night',
       'notice_tpl_home_check_body':
           'Tap "I\'m here" once you are home for the night, so everyone knows you are safe.',
@@ -1927,6 +1927,32 @@ class TourTranslationKeys {
       'fd_holiday_title': 'Pick a holiday',
       'fd_holiday_help':
           'It is added as a one-time family date, with a reminder a day before.',
+      'notice_read_aloud': 'Read aloud',
+      'notice_read_aloud_stop': 'Stop reading',
+      'notice_speech_at': 'At {time}',
+      'notice_speech_place': 'Place: {place}',
+      'hub_module_family_tasks': 'Shopping & to-do',
+      'hub_module_family_tasks_sub': 'One shared list for the house',
+      'ft_title': 'Shopping & to-do',
+      'ft_add_hint': 'Add an item or a job',
+      'ft_kind_shopping': 'To buy',
+      'ft_kind_todo': 'To do',
+      'ft_for_label': 'For',
+      'ft_anyone': 'Anyone',
+      'ft_for': 'For {name}',
+      'ft_ticked_by': 'Ticked by {name}',
+      'ft_section_shopping': 'To buy',
+      'ft_section_todo': 'To do',
+      'ft_section_done': 'Done',
+      'ft_empty':
+          'The list is empty. Add what the house needs, or a job to do.',
+      'ft_rename_title': 'Change the item',
+      'ft_edit': 'Change',
+      'ft_remove': 'Remove',
+      'ft_delete_title': 'Remove this item?',
+      'ft_delete_body': 'It is removed from the list for everyone.',
+      'ft_save_failed': 'Could not save. Check your connection and try again.',
+      'ft_load_failed': 'Could not load the list. Check your connection.',
     },
     'bn': {
       // ── Shared actions ─────────────────────────────────────────────────────
@@ -3786,7 +3812,7 @@ class TourTranslationKeys {
           'বিদ্যুৎ, গ্যাস, পানি, ইন্টারনেট বা বাসা ভাড়ার বিল বাকি থাকতে পারে। শেয়ার্ড ফান্ড ও হিসাব দেখে তারিখের আগে নিজের ভাগ দিন।',
       'notice_tpl_shopping_list_title': 'বাজারের তালিকা',
       'notice_tpl_shopping_list_body':
-          'বাজারে যাওয়ার আগে বাড়ির কী লাগবে তা বাজার তালিকা চ্যানেলে লিখে রাখুন।',
+          'বাজারে যাওয়ার আগে বাড়ির কী লাগবে তা বাজার ও করণীয় তালিকায় লিখে রাখুন।',
       'notice_tpl_home_check_title': 'রাতে সবাই বাড়িতে',
       'notice_tpl_home_check_body':
           'রাতে বাড়ি ফিরলে "আমি এসেছি" চাপুন, যাতে সবাই জানে আপনি নিরাপদ।',
@@ -3847,6 +3873,32 @@ class TourTranslationKeys {
       'fd_holiday_title': 'একটি ছুটি বেছে নিন',
       'fd_holiday_help':
           'এটি একবারের পারিবারিক তারিখ হিসেবে যোগ হবে, একদিন আগে মনে করিয়ে দেওয়া হবে।',
+      'notice_read_aloud': 'জোরে পড়ে শোনান',
+      'notice_read_aloud_stop': 'পড়া থামান',
+      'notice_speech_at': 'সময় {time}',
+      'notice_speech_place': 'স্থান: {place}',
+      'hub_module_family_tasks': 'বাজার ও করণীয়',
+      'hub_module_family_tasks_sub': 'বাড়ির সবার জন্য একটাই তালিকা',
+      'ft_title': 'বাজার ও করণীয়',
+      'ft_add_hint': 'একটি জিনিস বা কাজ লিখুন',
+      'ft_kind_shopping': 'কিনতে হবে',
+      'ft_kind_todo': 'করতে হবে',
+      'ft_for_label': 'কার জন্য',
+      'ft_anyone': 'যে কেউ',
+      'ft_for': '{name}-এর জন্য',
+      'ft_ticked_by': '{name} টিক দিয়েছেন',
+      'ft_section_shopping': 'কিনতে হবে',
+      'ft_section_todo': 'করতে হবে',
+      'ft_section_done': 'হয়ে গেছে',
+      'ft_empty':
+          'তালিকা খালি। বাড়ির যা লাগবে, বা যে কাজ করতে হবে তা যোগ করুন।',
+      'ft_rename_title': 'জিনিসটি বদলান',
+      'ft_edit': 'বদলান',
+      'ft_remove': 'সরান',
+      'ft_delete_title': 'এই জিনিসটি সরাবেন?',
+      'ft_delete_body': 'সবার তালিকা থেকে এটি সরে যাবে।',
+      'ft_save_failed': 'সেভ করা যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।',
+      'ft_load_failed': 'তালিকা আনা যায়নি। ইন্টারনেট সংযোগ দেখুন।',
     },
   };
 }
