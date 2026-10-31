@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/itinerary_models.dart';
 import '../../domain/models/tour_activity_models.dart';
@@ -100,7 +101,9 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
       }
       final pos = await Geolocator.getCurrentPosition();
       if (mounted) setState(() => _position = pos);
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   void _snack(String text, {bool error = false}) {

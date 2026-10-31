@@ -53,6 +53,6 @@ View high-resolution travel photos with pinch-to-zoom and pan interactions. Rest
 ## 6. App Access / Test Credentials (For Google Play Reviewers)
 If sections of your app are restricted (e.g., requires login), provide the following details to the Google Play review team:
 
-* **Access Instructions**: Enter the tester email under the "EMAIL ADDRESS (TESTER ACCESS)" input field on the login screen, click "Send Verification Code", and then use the static OTP bypass code below.
-* **Email / Username**: tester@bhromon.fun
-* **Verification Code (OTP) / Password**: 777777
+* **Access Instructions**: Enter the review account email on the login screen, click "Send Verification Code", then enter the review code.
+* **Email / Username**: the review account email, supplied in Play Console only.
+* **Verification Code (OTP) / Password**: the review code, supplied in Play Console only. It is set on the server with `functions/scripts/setReviewAccount.js` and is not stored in this repository.

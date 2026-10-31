@@ -1,84 +1,132 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as https from 'https';
+import {
+  OTP_CODES_PER_HOUR_OVERALL,
+  OTP_TTL_MS,
+  decideIssue,
+  generateOtpCode,
+  otpDigest,
+  takeWindowSlot,
+  toMs,
+} from './lib/otp';
 
 const db = admin.firestore();
 
+type IssueOutcome = 'ok' | 'locked' | 'resend' | 'hourly' | 'overall';
+
+interface AuthConfig {
+  provider: string;
+  resendApiKey: string;
+  fromEmail: string;
+}
+
+async function readAuthConfig(): Promise<AuthConfig> {
+  const data = (await db.collection('config').doc('auth').get()).data() ?? {};
+  return {
+    provider: typeof data.provider === 'string' ? data.provider : 'none',
+    resendApiKey: typeof data.resendApiKey === 'string' ? data.resendApiKey : '',
+    fromEmail:
+      typeof data.fromEmail === 'string' ? data.fromEmail : 'Bhromon Auth <noreply@bhromon.fun>',
+  };
+}
+
 export const sendOtpEmail = functions
   .region('asia-south1')
-  .https.onCall(async (data, context) => {
-    const { email } = data;
-    if (!email || typeof email !== 'string' || !email.includes('@')) {
+  .https.onCall(async (data) => {
+    const email = typeof data?.email === 'string' ? data.email.trim().toLowerCase() : '';
+    if (!email || !email.includes('@')) {
+      throw new functions.https.HttpsError('invalid-argument', 'Valid email address is required');
+    }
+
+    // Without a mail provider, a code could only be read from the logs. Production refuses
+    // instead. The emulator has no mail, so it stores the code and carries on.
+    const config = await readAuthConfig();
+    const emulator = process.env.FUNCTIONS_EMULATOR === 'true';
+    const configured = config.provider === 'resend' && config.resendApiKey !== '';
+    if (!configured && !emulator) {
+      throw new functions.https.HttpsError('failed-precondition', 'Email sign-in is not set up yet.');
+    }
+
+    const code = generateOtpCode();
+    const nowMs = Date.now();
+    const outcome = await db.runTransaction<IssueOutcome>(async (tx) => {
+      const otpRef = db.collection('otps').doc(email);
+      const overallRef = db.collection('otp_limits').doc('overall');
+      const [otpSnap, overallSnap] = await Promise.all([tx.get(otpRef), tx.get(overallRef)]);
+
+      const existing = otpSnap.data() ?? {};
+      const decision = decideIssue(
+        {
+          expiresAtMs: toMs(existing.expiresAt),
+          lockedUntilMs: toMs(existing.lockedUntil),
+          windowStartMs: toMs(existing.windowStart),
+          count: typeof existing.codesInWindow === 'number' ? existing.codesInWindow : 0,
+        },
+        nowMs,
+      );
+      if (!decision.ok) return decision.reason;
+
+      const overall = overallSnap.data() ?? {};
+      const slot = takeWindowSlot(
+        { windowStartMs: toMs(overall.windowStart), count: overall.count },
+        nowMs,
+        OTP_CODES_PER_HOUR_OVERALL,
+      );
+      if (!slot.ok) return 'overall';
+
+      tx.set(otpRef, {
+        digest: otpDigest(email, code),
+        expiresAt: admin.firestore.Timestamp.fromMillis(nowMs + OTP_TTL_MS),
+        attempts: 0,
+        windowStart: admin.firestore.Timestamp.fromMillis(decision.window.windowStartMs),
+        codesInWindow: decision.window.count,
+      });
+      tx.set(overallRef, {
+        windowStart: admin.firestore.Timestamp.fromMillis(slot.next.windowStartMs),
+        count: slot.next.count,
+      });
+      return 'ok';
+    });
+
+    if (outcome === 'locked') {
       throw new functions.https.HttpsError(
-        'invalid-argument',
-        'Valid email address is required',
+        'resource-exhausted',
+        'Too many wrong codes. Wait 15 minutes, then ask for a new code.',
+      );
+    }
+    if (outcome === 'resend') {
+      throw new functions.https.HttpsError(
+        'resource-exhausted',
+        'Please wait 60 seconds before requesting a new verification code.',
+      );
+    }
+    if (outcome === 'hourly') {
+      throw new functions.https.HttpsError(
+        'resource-exhausted',
+        'Too many codes were sent to this address this hour. Try again later.',
+      );
+    }
+    if (outcome === 'overall') {
+      throw new functions.https.HttpsError(
+        'resource-exhausted',
+        'Sign-in codes are busy right now. Try again in a few minutes.',
       );
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    
-    // Rate limit: check if an OTP was recently generated (within the last 60 seconds)
-    const existingOtpDoc = await db.collection('otps').doc(normalizedEmail).get();
-    if (existingOtpDoc.exists) {
-      const existingOtpData = existingOtpDoc.data();
-      const existingExpiresAt = existingOtpData?.expiresAt?.toDate();
-      if (existingExpiresAt) {
-        const timeRemainingMs = existingExpiresAt.getTime() - Date.now();
-        const fourMinutesMs = 4 * 60 * 1000;
-        if (timeRemainingMs > fourMinutesMs) {
-          throw new functions.https.HttpsError(
-            'resource-exhausted',
-            'Please wait 60 seconds before requesting a new verification code.',
-          );
-        }
-      }
-    }
-
-    // Generate a 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
-    // Save to Firestore /otps/{email}
-    await db.collection('otps').doc(normalizedEmail).set({
-      otp: otp,
-      expiresAt: admin.firestore.Timestamp.fromDate(expiresAt),
-      attempts: 0,
-    });
-
-    console.log(`[Bhromon Auth] Generated OTP ${otp} for ${normalizedEmail}`);
-
-
-
-    // Read config
-    let provider = 'none';
-    let resendApiKey = '';
-    let fromEmail = 'Bhromon Auth <noreply@bhromon.fun>';
-
-    try {
-      const configDoc = await db.collection('config').doc('auth').get();
-      if (configDoc.exists) {
-        const configData = configDoc.data();
-        provider = configData?.provider || 'none';
-        resendApiKey = configData?.resendApiKey || '';
-        fromEmail = configData?.fromEmail || fromEmail;
-      }
-    } catch (e) {
-      console.warn('Could not read auth config, defaulting to sandbox mode:', e);
-    }
-
-    if (provider === 'resend' && resendApiKey) {
+    if (configured) {
       try {
-        await sendViaResend(resendApiKey, fromEmail, normalizedEmail, otp);
-        console.log(`Successfully sent Resend email to ${normalizedEmail}`);
-      } catch (err: any) {
-        console.error('Error sending via Resend API:', err);
+        await sendViaResend(config.resendApiKey, config.fromEmail, email, code);
+      } catch (error) {
+        // The provider's answer is logged without the code.
+        console.error('Error sending the sign-in code via Resend:', (error as Error).message);
         throw new functions.https.HttpsError(
           'internal',
-          `Failed to deliver email: ${err.message || err}`,
+          'Could not send the verification code. Please try again.',
         );
       }
     } else {
-      console.log(`[SANDBOX MODE] OTP is ${otp}. No email sent since provider is 'none' or unconfigured.`);
+      console.log('[Bhromon Auth] Emulator: no email sent. Use the emulator sign-in code.');
     }
 
     return { success: true, message: 'Verification code sent.' };

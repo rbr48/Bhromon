@@ -16,9 +16,6 @@ services:
       - MEDIA_ROOT=/data/media
       - MEDIA_META_ROOT=/data/media-meta
       - FIREBASE_CREDENTIALS=/run/secrets/firebase-admin.json
-      # Transition only: set to the old key while app builds without token auth
-      # are still in use. Leave empty once they are gone.
-      - LEGACY_UPLOAD_KEY=${LEGACY_UPLOAD_KEY:-}
       # Must equal coturn's static-auth-secret. It is read from the host
       # environment, never from git. Without it /api/chat/ice_servers answers 503
       # and calls use STUN only.

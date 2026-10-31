@@ -162,7 +162,9 @@ class NewspaperService {
       try {
         final decoded = jsonDecode(cachedStr) as Map<String, dynamic>;
         return NewsFeedResult.fromJson(decoded);
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
 
     return const NewsFeedResult(
@@ -204,7 +206,9 @@ class NewspaperService {
               }
               return cachedPapers;
             }
-          } catch (_) {}
+          } catch (error, stackTrace) {
+            logSkipped(error, stackTrace);
+          }
         }
       }
     }
@@ -242,7 +246,9 @@ class NewspaperService {
             .whereType<Map<String, dynamic>>()
             .map((m) => Newspaper.fromJson(m))
             .toList();
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
 
     return [];
@@ -259,7 +265,9 @@ class NewspaperService {
       try {
         final decoded = jsonDecode(cachedStr) as Map<String, dynamic>;
         return CleanArticle.fromJson(decoded);
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
 
     try {

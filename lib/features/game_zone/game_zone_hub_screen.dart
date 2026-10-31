@@ -7,7 +7,7 @@ import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/services/tour_choice.dart';
 import 'package:bhromon/features/tour_group/presentation/tour_routes.dart';
-import 'package:bhromon/features/tour_group/presentation/widgets/bhromon_bottom_nav.dart';
+import '../../core/utils/app_logger.dart';
 import 'data/online_game_repository.dart';
 import 'domain/models/online_game_session.dart';
 import 'online/online_game_create_dialog.dart';
@@ -185,7 +185,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
         if (didPop) return;
         try {
           context.go(tourHubPath(widget.initialTourId));
-        } catch (_) {}
+        } catch (error, stackTrace) {
+          logSkipped(error, stackTrace);
+        }
       },
       child: StreamBuilder<List<TourGroup>>(
         stream: _groupsStream,
@@ -205,7 +207,9 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                   } else {
                     try {
                       context.go(tourHubPath(widget.initialTourId));
-                    } catch (_) {}
+                    } catch (error, stackTrace) {
+                      logSkipped(error, stackTrace);
+                    }
                   }
                 },
               ),
@@ -262,10 +266,6 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                   ],
                 ),
               ),
-            ),
-            bottomNavigationBar: BhromonBottomNav(
-              selectedIndex: 3,
-              tourId: activeTour?.id,
             ),
           );
         },

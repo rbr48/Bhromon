@@ -20,14 +20,13 @@ import threading
 import time
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from types import SimpleNamespace
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import HTMLResponse, Response
-from pydantic import BaseModel, Field
 
 logger = logging.getLogger("bhromon-news")
 
@@ -389,6 +388,59 @@ NEWSPAPER_CATALOG: List[Dict[str, Any]] = [
 
 # Quick map by id
 NEWSPAPER_MAP = {p["id"]: p for p in NEWSPAPER_CATALOG}
+
+# The reader and the web proxy fetch pages only from the newspapers in the catalog.
+# Any other address would let a visitor make this server read its own network.
+_EXTRA_FETCH_DOMAINS = frozenset({"bbc.co.uk", "bbci.co.uk"})
+ALLOWED_FETCH_DOMAINS: frozenset = frozenset(
+    {p["domain"].split("/", 1)[0].lower() for p in NEWSPAPER_CATALOG} | _EXTRA_FETCH_DOMAINS
+)
+MAX_PAGE_BYTES = 5 * 1024 * 1024
+
+
+class UnsafeUrl(Exception):
+    """A link the reader and the proxy refuse to fetch."""
+
+
+def check_fetch_url(url: str) -> urllib.parse.ParseResult:
+    """The parsed URL when it is a plain http(s) link on a catalog domain. Raises UnsafeUrl otherwise."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise UnsafeUrl("Only http and https pages can be read.")
+    if parsed.username is not None or parsed.password is not None:
+        raise UnsafeUrl("Links with a user name or password are refused.")
+    try:
+        port = parsed.port
+    except ValueError as e:
+        raise UnsafeUrl("The link has an invalid port.") from e
+    if port not in (None, 80, 443):
+        raise UnsafeUrl("Only the standard web ports are read.")
+    host = (parsed.hostname or "").lower().rstrip(".")
+    if not any(host == domain or host.endswith("." + domain) for domain in ALLOWED_FETCH_DOMAINS):
+        raise UnsafeUrl("That site is not one of the newspapers Bhromon reads.")
+    return parsed
+
+
+class _CheckedRedirects(urllib.request.HTTPRedirectHandler):
+    """Checks each hop of a redirect, so a catalog site cannot send the fetch elsewhere."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        check_fetch_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_fetch_opener = urllib.request.build_opener(_CheckedRedirects)
+
+
+def fetch_page(url: str, headers: Dict[str, str], timeout: float):
+    """Downloads a page the reader may read. Returns its response headers and body bytes."""
+    check_fetch_url(url)
+    request = urllib.request.Request(url, headers=headers)
+    with _fetch_opener.open(request, timeout=timeout) as response:
+        body = response.read(MAX_PAGE_BYTES + 1)
+        if len(body) > MAX_PAGE_BYTES:
+            raise UnsafeUrl("The page is too large to read.")
+        return response.headers, body
 
 
 # ---------------------------------------------------------------------------
@@ -768,7 +820,6 @@ def fetch_newspaper_feed(paper: Dict[str, Any]) -> List[Dict[str, Any]]:
     if not raw_items:
         raw_items = root.findall(".//entry")
 
-    now_ms = _now_ms()
     for node in raw_items[:40]:  # Up to top 40 items per paper
         title_el = find_first_tag(node, ["title", "{http://www.w3.org/2005/Atom}title"])
         if title_el is None:
@@ -1067,26 +1118,29 @@ class ReadabilityExtractor(HTMLParser):
 
 def extract_adfree_article(url: str) -> Dict[str, Any]:
     """Fetches article URL and extracts ad-free readable typography."""
+    try:
+        check_fetch_url(url)
+    except UnsafeUrl as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
     # Check cache first
     cached = db.get_cached_article(url)
     if cached:
         return cached
 
-    req = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 BhromonNewsReader/2.0",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "bn,en-US,en;q=0.9",
-        },
-    )
-
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            # Handle encoding
-            charset = resp.headers.get_content_charset() or "utf-8"
-            raw_bytes = resp.read()
-            html_text = raw_bytes.decode(charset, errors="replace")
+        headers, raw_bytes = fetch_page(
+            url,
+            {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 BhromonNewsReader/2.0",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "bn,en-US,en;q=0.9",
+            },
+            timeout=10,
+        )
+        # Handle encoding
+        charset = headers.get_content_charset() or "utf-8"
+        html_text = raw_bytes.decode(charset, errors="replace")
     except Exception as e:
         logger.error("Failed fetching article for reader %s: %s", url, e)
         raise HTTPException(status_code=502, detail=f"Failed to fetch article: {str(e)}")
@@ -1110,7 +1164,7 @@ def extract_adfree_article(url: str) -> Dict[str, Any]:
 
     # Construct clean sanitized HTML
     clean_html_parts = [
-        f"<article class='bhromon-clean-reader'>",
+        "<article class='bhromon-clean-reader'>",
         f"<h1 class='reader-title'>{html.escape(title)}</h1>",
         f"<div class='reader-meta'><span>{html.escape(source_name)}</span>",
     ]
@@ -1154,6 +1208,11 @@ def extract_adfree_article(url: str) -> Dict[str, Any]:
 # API Endpoints
 # ---------------------------------------------------------------------------
 
+def _extract_clean_article(url: str) -> SimpleNamespace:
+    """The extracted article with attribute access, as the reader page uses it."""
+    return SimpleNamespace(**extract_adfree_article(url))
+
+
 @router.get("/papers")
 def get_newspaper_directory(category: Optional[str] = None):
     """Returns the full categorized directory of newspapers."""
@@ -1164,6 +1223,14 @@ def get_newspaper_directory(category: Optional[str] = None):
         "total": len(papers),
         "papers": papers,
     }
+
+
+# A refresh request starts a sync of every newspaper, so one may run at most this often.
+REFRESH_COOLDOWN_MS = 10 * 60 * 1000
+
+
+def _refresh_allowed() -> bool:
+    return _now_ms() - news_aggregator.last_sync_ms >= REFRESH_COOLDOWN_MS
 
 
 @router.get("/headlines")
@@ -1177,7 +1244,7 @@ def get_headlines(
 ):
     """Returns live headlines, category filters, and 'Same story, different papers' topic clusters."""
     # If database is empty or refresh requested, trigger background aggregation
-    if refresh or news_aggregator.last_sync_ms == 0:
+    if (refresh and _refresh_allowed()) or news_aggregator.last_sync_ms == 0:
         news_aggregator.sync_all(background=True)
 
     items = db.get_headlines(
@@ -1210,9 +1277,18 @@ def get_reader_article(url: str = Query(..., description="The original article U
     return extract_adfree_article(url)
 
 
+def _refuse_sync(authorization: Optional[str]) -> None:
+    raise HTTPException(status_code=403, detail="Only platform admins can start a sync.")
+
+
+# main.py replaces this with the platform-admin check. Until then, nobody may start a sync.
+sync_guard: Callable[[Optional[str]], None] = _refuse_sync
+
+
 @router.post("/sync")
-def trigger_news_sync():
-    """Manually triggers headline synchronization across all newspapers."""
+def trigger_news_sync(authorization: Optional[str] = Header(None)):
+    """Manually triggers headline synchronization across all newspapers. Platform admins only."""
+    sync_guard(authorization)
     news_aggregator.sync_all(background=True)
     return {"status": "sync_triggered", "timestamp": _now_ms()}
 
@@ -1296,45 +1372,35 @@ def proxy_newspaper(
 ):
     """Fetches a newspaper webpage, strips ad scripts, popups, and banners,
     removes X-Frame-Options/CSP restrictions, and returns embeddable ad-free HTML."""
-    if not url or not (url.startswith("http://") or url.startswith("https://")):
-        raise HTTPException(status_code=400, detail="Invalid URL: Scheme must be http or https")
-
-    parsed = urllib.parse.urlparse(url)
-    hostname = (parsed.hostname or "").lower()
-    if (
-        hostname in ("localhost", "127.0.0.1", "0.0.0.0", "::1")
-        or hostname.startswith("192.168.")
-        or hostname.startswith("10.")
-        or hostname.endswith(".internal")
-    ):
-        raise HTTPException(status_code=403, detail="Prohibited private network host")
-
-    req = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 BhromonAdBlockBrowser/2.0"
-            ),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "bn,en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, identity",
-            "Referer": f"{parsed.scheme}://{parsed.netloc}/",
-        },
-    )
+    try:
+        parsed = check_fetch_url(url)
+    except UnsafeUrl as e:
+        raise HTTPException(status_code=403, detail=str(e))
 
     try:
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            content_encoding = resp.headers.get("Content-Encoding", "").lower()
-            raw_bytes = resp.read()
-            if "gzip" in content_encoding:
-                try:
-                    raw_bytes = gzip.decompress(raw_bytes)
-                except Exception as gz_err:
-                    logger.warning("Gzip decompress fallback for %s: %s", url, gz_err)
+        headers, raw_bytes = fetch_page(
+            url,
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 BhromonAdBlockBrowser/2.0"
+                ),
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Language": "bn,en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, identity",
+                "Referer": f"{parsed.scheme}://{parsed.netloc}/",
+            },
+            timeout=12,
+        )
+        content_encoding = headers.get("Content-Encoding", "").lower()
+        if "gzip" in content_encoding:
+            try:
+                raw_bytes = gzip.decompress(raw_bytes)
+            except Exception as gz_err:
+                logger.warning("Gzip decompress fallback for %s: %s", url, gz_err)
 
-            charset = resp.headers.get_content_charset() or "utf-8"
-            html_text = raw_bytes.decode(charset, errors="replace")
+        charset = headers.get_content_charset() or "utf-8"
+        html_text = raw_bytes.decode(charset, errors="replace")
     except Exception as e:
         logger.warning("Failed proxying newspaper URL %s: %s", url, e)
         # Return a responsive embeddable fallback card matching Smart Utilities theme

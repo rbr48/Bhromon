@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/utils/app_logger.dart';
 
 class SosHubDialog extends StatefulWidget {
   final Position? currentPosition;
@@ -49,7 +50,9 @@ class _SosHubDialogState extends State<SosHubDialog> {
           _position = pos;
         });
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     setState(() {
       _loadingGPS = false;
     });

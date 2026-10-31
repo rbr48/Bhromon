@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../utils/app_logger.dart';
+
 class DeviceIntegrityService {
   static const MethodChannel _channel =
       MethodChannel('com.bhromon.app/integrity');
@@ -59,7 +61,9 @@ class DeviceIntegrityService {
     try {
       final bool? isRooted = await _channel.invokeMethod<bool>('isRooted');
       if (isRooted == true) return true;
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
 
     return false;
   }

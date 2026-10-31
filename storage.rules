@@ -27,8 +27,9 @@ service firebase.storage {
     // Only active members of the tour can read or upload its media. Uploads
     // must carry uploadedByEmail metadata, which lets the uploader (or an
     // admin) delete their own files later.
+    // Only a verified address counts, as in firestore.rules.
     function tourEmail() {
-      return request.auth.token.email != null
+      return (request.auth.token.email != null && request.auth.token.get('email_verified', false) == true)
         ? request.auth.token.email.lower()
         : (request.auth.uid + '@bhromon.app');
     }
@@ -95,14 +96,34 @@ service firebase.storage {
       allow write: if false;
     }
 
-    match /chat_docs/{allPaths=**} {
-      allow read: if isAuth();
-      allow write: if isAuth();
+    // Chat documents and voice notes belong to the two people in the chat, and only while
+    // they share a tour. The chat document must name that tour, so chats from before the
+    // tour rule (which the closing scripts remove) have no files open to anyone.
+    function chatDoc(chatId) {
+      return firestore.get(/databases/(default)/documents/chats/$(chatId));
+    }
+    function inChat(chatId) {
+      return isAuth() &&
+             firestore.exists(/databases/(default)/documents/chats/$(chatId)) &&
+             chatDoc(chatId).data.participants.hasAny([request.auth.uid]) &&
+             firestore.exists(/databases/(default)/documents/memberships/$(chatDoc(chatId).data.sharedTourId + '__' + tourEmail())) &&
+             firestore.get(/databases/(default)/documents/memberships/$(chatDoc(chatId).data.sharedTourId + '__' + tourEmail())).data.status == 'active';
     }
 
-    match /chat_voice/{allPaths=**} {
-      allow read: if isAuth();
-      allow write: if isAuth();
+    match /chat_docs/{chatId}/{allPaths=**} {
+      allow read: if inChat(chatId);
+      // Documents only, up to 50 MB. Web and script types are refused, so a file cannot
+      // be served from this origin as a page.
+      allow create: if inChat(chatId) &&
+                       request.resource.size < 50 * 1024 * 1024 &&
+                       request.resource.contentType.matches('(application/(pdf|msword|vnd\\..*|zip|x-zip-compressed|octet-stream)|text/(plain|csv))');
+    }
+
+    match /chat_voice/{chatId}/{allPaths=**} {
+      allow read: if inChat(chatId);
+      allow create: if inChat(chatId) &&
+                       request.resource.size < 25 * 1024 * 1024 &&
+                       request.resource.contentType.matches('audio/.*');
     }
 
     // ── Chat media thumbnails (written by Cloud Functions service account) ──

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/image_sizing.dart';
 
 // ─────────────────────────────────────────────────────────────
@@ -22,7 +23,9 @@ String? extractYouTubeId(String url) {
       final uri = Uri.parse(url);
       final v = uri.queryParameters['v'];
       if (v != null && v.isNotEmpty) return v;
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
   // youtube.com/shorts/<id>
   if (url.contains('/shorts/')) {

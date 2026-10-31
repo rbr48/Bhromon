@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/logger.dart';
 
 typedef VoiceRecordCallback = void Function(String filePath, Duration duration);
@@ -125,7 +126,9 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
       if (finalPath != null) {
         _cleanupFile(finalPath);
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     widget.onCancel();
   }
 
@@ -136,7 +139,9 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
         if (file.existsSync()) {
           file.deleteSync();
         }
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
   }
 

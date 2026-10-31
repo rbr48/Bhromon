@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/utils/app_logger.dart';
 import '../common/game_zone_portrait_lock.dart';
 import '../common/playing_card_view.dart';
 import '../common/poker_chip_view.dart';
@@ -279,7 +280,9 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
           if (didPop) return;
           try {
             context.go('/game-zone');
-          } catch (_) {}
+          } catch (error, stackTrace) {
+            logSkipped(error, stackTrace);
+          }
         },
         child: Scaffold(
           backgroundColor: const Color(0xFF0F381E),
@@ -293,7 +296,9 @@ class _TeenPattiScreenState extends State<TeenPattiScreen>
                 } else {
                   try {
                     context.go('/game-zone');
-                  } catch (_) {}
+                  } catch (error, stackTrace) {
+                    logSkipped(error, stackTrace);
+                  }
                 }
               },
             ),

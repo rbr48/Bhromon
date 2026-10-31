@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/widgets/blurhash_image.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -237,7 +238,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
           }
         }
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   Future<void> _toggleSaveLog(String tripId) async {
@@ -296,7 +299,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
           }
         }
       });
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   Future<void> _handleReaction(TripLog log, String key) async {
@@ -397,7 +402,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
       for (int i = 0; i < history.length; i++) {
         await box.put(i, history[i]);
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   @override
@@ -1611,7 +1618,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
         _profileCache[authorId] = profile;
         return profile;
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     final fallback = {'displayName': 'Explorer', 'avatarUrl': ''};
     _profileCache[authorId] = fallback;
     return fallback;
@@ -1700,7 +1709,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
         _myReactionsCache[tripId] = reaction;
         return reaction;
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     _myReactionsCache[tripId] = null;
     return null;
   }
@@ -2824,7 +2835,9 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
       final authorKey = 'interest_author_${log.authorId}';
       final currentAuthorInterest = box.get(authorKey, defaultValue: 0) as int;
       await box.put(authorKey, currentAuthorInterest + 1);
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   void _showPersonalizeFeedBottomSheet(BuildContext context) {

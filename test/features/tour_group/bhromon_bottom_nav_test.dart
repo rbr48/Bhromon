@@ -40,9 +40,8 @@ GoRouter _router(String location) => GoRouter(
               Text('channels of ${state.pathParameters['tourId']}'),
         ),
         GoRoute(
-          path: '/game-zone',
-          builder: (context, state) =>
-              Text('games of ${state.uri.queryParameters['tourId']}'),
+          path: '/chats',
+          builder: (context, state) => const Text('chats list'),
         ),
       ],
     );
@@ -77,6 +76,20 @@ void main() {
     await Hive.close();
   });
 
+  testWidgets('the tabs run Tours, Channels, Moments, Chat, Profile',
+      (tester) async {
+    await _pumpAt(tester, '/start?tourId=tour_a');
+
+    final labels = tester
+        .widget<NavigationBar>(find.byType(NavigationBar))
+        .destinations
+        .cast<NavigationDestination>()
+        .map((destination) => destination.label)
+        .toList();
+
+    expect(labels, ['Tours', 'Channels', 'Moments', 'Chat', 'Profile']);
+  });
+
   group('a tour tab opens the tour the screen belongs to', () {
     testWidgets('Moments opens the feed of that tour', (tester) async {
       await _pumpAt(tester, '/start?tourId=tour_a');
@@ -96,13 +109,13 @@ void main() {
       expect(find.text('channels of tour_a'), findsOneWidget);
     });
 
-    testWidgets('Game Zone carries that tour in its address', (tester) async {
+    testWidgets('Chat opens the one-to-one chats', (tester) async {
       await _pumpAt(tester, '/start?tourId=tour_a');
 
-      await tester.tap(find.text('Game Zone'));
+      await tester.tap(find.text('Chat'));
       await tester.pumpAndSettle();
 
-      expect(find.text('games of tour_a'), findsOneWidget);
+      expect(find.text('chats list'), findsOneWidget);
     });
 
     testWidgets('Tours opens the hub on that tour', (tester) async {
