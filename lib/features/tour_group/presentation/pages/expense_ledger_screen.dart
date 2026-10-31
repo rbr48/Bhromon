@@ -56,6 +56,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   final _search = TextEditingController();
   String? _catFilter;
   String? _stopFilter;
+  // A family looks at one month of spending at a time; a trip shows everything.
+  DateTime _month = monthOf(DateTime.now());
+  bool _allMonths = false;
   bool _simplifyDebts = false;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
@@ -737,11 +740,72 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   // Expenses
   // ---------------------------------------------------------------------------
 
+  /// Steps through the months of a family's spending, or shows every month.
+  Widget _monthBar(AppLocalizations l10n, List<ExpenseItem> inMonth) {
+    final thisMonth = monthOf(DateTime.now());
+    final nextMonth = DateTime(_month.year, _month.month + 1);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              tooltip: l10n.translate('fund_month_prev'),
+              icon:
+                  const Icon(Icons.chevron_left_rounded, color: Colors.white70),
+              onPressed: _allMonths
+                  ? null
+                  : () => setState(
+                      () => _month = DateTime(_month.year, _month.month - 1)),
+            ),
+            Expanded(
+              child: Text(
+                _allMonths
+                    ? l10n.translate('fund_month_all_label')
+                    : localizedDateFormat('MMMM yyyy').format(_month),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+            IconButton(
+              tooltip: l10n.translate('fund_month_next'),
+              icon: const Icon(Icons.chevron_right_rounded,
+                  color: Colors.white70),
+              // No month after the current one.
+              onPressed: _allMonths || nextMonth.isAfter(thisMonth)
+                  ? null
+                  : () => setState(() => _month = nextMonth),
+            ),
+          ],
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () => setState(() => _allMonths = !_allMonths),
+            child: Text(l10n
+                .translate(_allMonths ? 'fund_month_one' : 'fund_month_all')),
+          ),
+        ),
+        if (!_allMonths && inMonth.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Text(l10n.translate('fund_month_empty'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white54, fontSize: 13)),
+          ),
+      ],
+    );
+  }
+
   Widget _expensesTab(AppLocalizations l10n) {
     if (_expenses.isEmpty) return _empty(l10n.translate('fund_empty_expenses'));
     final q = _search.text.trim().toLowerCase();
     final stops = _group?.effectiveStops ?? const <TourStop>[];
-    final filtered = _expenses.where((e) {
+    final family = _group?.isFamily ?? false;
+    final inMonth =
+        family && !_allMonths ? expensesInMonth(_expenses, _month) : _expenses;
+    final filtered = inMonth.where((e) {
       if (_catFilter != null && e.category != _catFilter) return false;
       if (_stopFilter != null &&
           (e.stopId ?? _group?.stopOn(e.date)?.id) != _stopFilter) {
@@ -773,6 +837,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 96),
       children: [
+        if (family) _monthBar(l10n, inMonth),
+        if (family) const SizedBox(height: 4),
         TextField(
           controller: _search,
           onChanged: (_) => setState(() {}),

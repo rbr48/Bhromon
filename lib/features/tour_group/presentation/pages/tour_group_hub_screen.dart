@@ -1460,6 +1460,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           color: const Color(0xFF22D3EE),
           onTap: () => context.push('/group/${group.id}/family-tasks'),
         ),
+      if (group.isFamily)
+        'dependents': _ModuleItem(
+          title: l10n.translate('hub_module_dependents'),
+          subtitle: l10n.translate('hub_module_dependents_sub'),
+          icon: Icons.family_restroom_rounded,
+          color: const Color(0xFFF472B6),
+          onTap: () => context.push('/group/${group.id}/dependents'),
+        ),
       if (isTrip && group.modules.tideSafety)
         'tide': _ModuleItem(
           title: group.tourType == TourType.beach
@@ -3274,6 +3282,7 @@ const List<String> _familyModuleOrder = [
   'channels',
   'notices',
   'family_tasks',
+  'dependents',
   'calendar',
   'safety',
   'feed',

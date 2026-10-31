@@ -15,7 +15,9 @@ import '../domain/models/logistics_models.dart';
 import '../domain/models/safety_alert_models.dart';
 import '../domain/models/tour_activity_models.dart';
 import '../domain/models/family_date_models.dart';
+import '../domain/models/dependent_models.dart';
 import '../domain/models/family_task_models.dart';
+import '../domain/services/dependent_rules.dart';
 import '../domain/services/family_date_rules.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
@@ -1700,6 +1702,66 @@ class TourGroupRepository {
   Future<void> deleteFamilyTask(String tourId, String taskId) async {
     _requireEmail();
     await _sub(tourId, 'family_tasks').doc(taskId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dependents: people in the family who have no account
+  // ---------------------------------------------------------------------------
+
+  /// The circle's dependents. A stored entry that does not read is left out.
+  Stream<List<Dependent>> watchDependents(String tourId) {
+    return _sub(tourId, 'dependents').limit(200).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (Dependent.fromMap(d.id, d.data()) case final dependent?)
+              dependent,
+        ]);
+  }
+
+  /// Lists a person under the signed-in member. The member's family size goes up
+  /// by one unless it is already at the largest size. Both writes happen in one
+  /// transaction, so the list and the size never disagree.
+  Future<void> addDependent(
+    String tourId, {
+    required String name,
+    String relation = '',
+  }) async {
+    final email = _requireEmail();
+    final dependentRef = _sub(tourId, 'dependents').doc();
+    final memberRef = _memberships.doc(_membershipId(tourId, email));
+    await _firestore.runTransaction((tx) async {
+      final member = await tx.get(memberRef);
+      final current = (member.data()?['familyCount'] as num?)?.toInt() ?? 1;
+      final change = familySizeWithDependent(current);
+      final dependent = Dependent(
+        id: dependentRef.id,
+        name: name.trim(),
+        parentEmail: email,
+        relation: relation.trim(),
+        countedInFamily: change.counted,
+      );
+      tx.set(dependentRef, dependent.toFields());
+      if (member.exists && change.counted) {
+        tx.update(memberRef, {'familyCount': change.size});
+      }
+    });
+  }
+
+  /// Removes a person the signed-in member listed. If they were counted in the
+  /// family size when added, the size goes back down, in the same transaction.
+  Future<void> removeDependent(String tourId, Dependent dependent) async {
+    final email = _requireEmail();
+    final dependentRef = _sub(tourId, 'dependents').doc(dependent.id);
+    final memberRef = _memberships.doc(_membershipId(tourId, email));
+    await _firestore.runTransaction((tx) async {
+      final member = await tx.get(memberRef);
+      if (member.exists && dependent.countedInFamily) {
+        final current = (member.data()?['familyCount'] as num?)?.toInt() ?? 1;
+        tx.update(memberRef, {
+          'familyCount': familySizeWithoutDependent(current, counted: true),
+        });
+      }
+      tx.delete(dependentRef);
+    });
   }
 
   // ---------------------------------------------------------------------------

@@ -632,6 +632,14 @@ service cloud.firestore {
              (d.get('doneByEmail', null) == null || (d.doneByEmail is string && d.doneByEmail.size() <= 254)) &&
              d.createdByEmail is string;
     }
+    // A person without an account, listed under the member who added them.
+    function validDependent(d) {
+      return d.keys().hasOnly(['name', 'relation', 'parentEmail', 'countedInFamily']) &&
+             d.name is string && d.name.size() >= 1 && d.name.size() <= 60 &&
+             d.relation is string && d.relation.size() <= 30 &&
+             d.parentEmail is string && d.parentEmail.size() <= 254 &&
+             d.countedInFamily is bool;
+    }
     function validFamilyDate(d) {
       return d.keys().hasOnly(['title', 'kind', 'recurrence', 'startOn', 'nextOn', 'remindDays', 'remindOn', 'note', 'createdByEmail']) &&
              d.title is string && d.title.size() >= 1 && d.title.size() <= 80 &&
@@ -749,6 +757,22 @@ service cloud.firestore {
                          request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['ackBy']) &&
                          ownEntryOnly(resource.data.get('ackBy', []), request.resource.data.get('ackBy', []));
+      }
+
+      // People in a family who have no account, such as a child or a grandparent. A
+      // member lists them under their own email, and only that member changes or
+      // removes them.
+      match /dependents/{dependentId} {
+        allow read: if isActiveMember(tourId);
+        allow create: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+                         request.resource.data.parentEmail == tourUserEmail() &&
+                         validDependent(request.resource.data);
+        allow update: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+                         resource.data.parentEmail == tourUserEmail() &&
+                         request.resource.data.parentEmail == resource.data.parentEmail &&
+                         validDependent(request.resource.data);
+        allow delete: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+                         resource.data.parentEmail == tourUserEmail();
       }
 
       // Shared shopping and to-do items. Any member of a family circle adds one under

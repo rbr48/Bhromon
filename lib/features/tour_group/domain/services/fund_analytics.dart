@@ -36,6 +36,19 @@ const List<String> kFamilyExpenseCategories = [
 List<String> expenseCategoriesFor({required bool family}) =>
     family ? kFamilyExpenseCategories : kExpenseCategories;
 
+/// The first day of the month that [day] falls in. A family's spending view
+/// opens on the current month, and steps from month to month.
+DateTime monthOf(DateTime day) => DateTime(day.year, day.month);
+
+/// The expenses dated in [month]: the same year and month, whatever the day.
+List<ExpenseItem> expensesInMonth(
+    Iterable<ExpenseItem> expenses, DateTime month) {
+  return [
+    for (final e in expenses)
+      if (e.date.year == month.year && e.date.month == month.month) e,
+  ];
+}
+
 /// The category a chat `/split` books its expense under. Dinner in the kitchen
 /// channel is food; anything else is "Others", which the owner can change.
 String splitCategoryFor({required bool family, required String channelId}) {
