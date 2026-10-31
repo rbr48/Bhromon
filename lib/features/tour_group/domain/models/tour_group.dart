@@ -217,6 +217,16 @@ class TourModules {
   }
 }
 
+/// Whether a group plans a trip, or is a private family circle that starts
+/// without a trip (no dates, destination or travel modules to fill in).
+enum GroupKind {
+  tour,
+  family;
+
+  static GroupKind fromString(String? value) =>
+      value == 'family' ? GroupKind.family : GroupKind.tour;
+}
+
 class TourGroup {
   final String id;
   final String name;
@@ -249,6 +259,9 @@ class TourGroup {
   /// The fund's budget and collection target.
   final FundBudget fundBudget;
 
+  /// Whether this group plans a trip or is a family circle.
+  final GroupKind kind;
+
   const TourGroup({
     required this.id,
     required this.name,
@@ -271,7 +284,11 @@ class TourGroup {
     this.legPlans = const {},
     this.returnHome = true,
     this.fundBudget = const FundBudget(),
+    this.kind = GroupKind.tour,
   });
+
+  /// A family circle rather than a trip.
+  bool get isFamily => kind == GroupKind.family;
 
   /// The id the origin city has in leg keys.
   static const String originId = 'origin';
@@ -511,6 +528,7 @@ class TourGroup {
     Map<String, LegPlan>? legPlans,
     bool? returnHome,
     FundBudget? fundBudget,
+    GroupKind? kind,
   }) {
     return TourGroup(
       id: id ?? this.id,
@@ -541,6 +559,7 @@ class TourGroup {
       legPlans: legPlans ?? this.legPlans,
       returnHome: returnHome ?? this.returnHome,
       fundBudget: fundBudget ?? this.fundBudget,
+      kind: kind ?? this.kind,
     );
   }
 
@@ -563,6 +582,7 @@ class TourGroup {
       'stops': [for (final st in stops) st.toMap()],
       'legPlans': {for (final e in legPlans.entries) e.key: e.value.toMap()},
       'returnHome': returnHome,
+      'kind': kind.name,
       if (!fundBudget.isEmpty) 'fundBudget': fundBudget.toMap(),
       'schemaVersion': 4,
     };
@@ -601,6 +621,7 @@ class TourGroup {
       stops: readStops(map['stops']),
       legPlans: readLegPlans(map['legPlans']),
       returnHome: map['returnHome'] as bool? ?? true,
+      kind: GroupKind.fromString(map['kind']?.toString()),
       fundBudget: FundBudget.fromMap(map['fundBudget']),
     );
   }

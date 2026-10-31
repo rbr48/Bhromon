@@ -111,7 +111,9 @@ class GameAnalyticsService {
                 }
               }
             }
-          } catch (_) {}
+          } catch (error, stackTrace) {
+            logSkipped(error, stackTrace);
+          }
 
           await FirebaseFirestore.instance
               .collection('users')
@@ -194,6 +196,8 @@ class GameAnalyticsService {
         final box = Hive.box<dynamic>(boxName);
         await box.delete(statsKey);
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 }

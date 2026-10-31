@@ -184,7 +184,9 @@ def test_delete_refuses_names_outside_the_upload_pattern(client, name):
     assert response.status_code in (400, 404)
 
 
-def test_the_legacy_key_is_off_by_default(client):
+def test_the_shared_upload_key_is_gone(client):
+    # Old app builds that still send it are refused, whatever the server is configured with.
+    assert not hasattr(main, "LEGACY_UPLOAD_KEY")
     response = client.post(
         "/upload",
         files=PHOTO,
@@ -194,22 +196,14 @@ def test_the_legacy_key_is_off_by_default(client):
     assert response.status_code == 401
 
 
-def test_the_legacy_key_works_only_when_configured(client, monkeypatch):
-    monkeypatch.setattr(main, "LEGACY_UPLOAD_KEY", "transition-key")
-    ok = client.post(
-        "/upload",
-        files=PHOTO,
-        data={"tourId": "t1", "folder": "posts"},
-        headers={"X-Upload-Key": "transition-key"},
+def test_the_shared_upload_key_cannot_delete_anyones_file(client):
+    upload(client)
+    response = client.delete(
+        f"/media/t1/posts/{OBJECT}.jpg",
+        headers={"X-Upload-Key": "anything"},
     )
-    assert ok.status_code == 200
-    wrong = client.post(
-        "/upload",
-        files=PHOTO,
-        data={"tourId": "t1", "folder": "posts"},
-        headers={"X-Upload-Key": "nope"},
-    )
-    assert wrong.status_code == 401
+    assert response.status_code == 401
+    assert (main.MEDIA_ROOT / "t1" / "posts" / f"{OBJECT}.jpg").exists()
 
 
 def test_no_shared_secret_is_written_into_the_source():

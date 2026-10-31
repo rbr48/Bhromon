@@ -10,7 +10,7 @@ const TOUR = 't1';
 
 describe('tours/{tourId}/presence rules', () => {
   let env;
-  const db = (email) => env.authenticatedContext(email.split('@')[0], { email }).firestore();
+  const db = (email) => env.authenticatedContext(email.split('@')[0], { email, email_verified: true }).firestore();
   const guestDb = () => env.unauthenticatedContext().firestore();
   const presence = (firestore, email) =>
     doc(firestore, 'tours', TOUR, 'presence', email);

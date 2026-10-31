@@ -6,6 +6,11 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    }
+  },
   "functions": [
     {
       "source": "functions",
@@ -49,6 +54,18 @@
           {
             "key": "Cross-Origin-Opener-Policy",
             "value": "same-origin-allow-popups"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "SAMEORIGIN"
           }
         ]
       }

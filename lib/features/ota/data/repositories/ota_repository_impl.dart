@@ -30,9 +30,23 @@ class OtaRepositoryImpl implements IOtaRepository {
         }
 
         if (version != null) {
+          // The APK's address and checksum come from the same file as the version. An
+          // update with no checksum, or an address off the app's own host, is not offered.
+          final Map<dynamic, dynamic> map = data is Map
+              ? data
+              : jsonDecode(data as String) as Map<dynamic, dynamic>;
+          final Object? apkUrl = map['apkUrl'];
+          final Object? apkSha256 = map['apkSha256'];
+          if (apkUrl is! String ||
+              !apkUrl.startsWith('https://app.bhromon.fun/') ||
+              apkSha256 is! String ||
+              !RegExp(r'^[0-9a-f]{64}$').hasMatch(apkSha256)) {
+            return const Left(ServerFailure('No usable checksum'));
+          }
           return Right(AppVersionInfo(
             latestVersion: version,
-            downloadUrl: 'https://app.bhromon.fun/downloads/bhromon-latest.apk',
+            downloadUrl: apkUrl,
+            apkSha256: apkSha256,
             isMandatory: false,
           ));
         }

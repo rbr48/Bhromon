@@ -51,8 +51,15 @@ void logWarning(String message, [Object? error, StackTrace? stack]) {
         reason: safe,
         fatal: false,
       );
-    } catch (_) {}
+    } catch (_) {
+      // Reporting must not fail the caller, and there is nowhere else to record this.
+    }
   }
+}
+
+/// Records a failure that the caller recovered from and carried on past.
+void logSkipped(Object error, StackTrace stackTrace) {
+  logWarning('A step was skipped after an error', error, stackTrace);
 }
 
 void logError(String message, [Object? error, StackTrace? stack]) {
@@ -67,7 +74,9 @@ void logError(String message, [Object? error, StackTrace? stack]) {
         reason: safe,
         fatal: false,
       );
-    } catch (_) {}
+    } catch (_) {
+      // Reporting must not fail the caller, and there is nowhere else to record this.
+    }
   }
 }
 

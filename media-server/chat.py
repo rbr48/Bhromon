@@ -19,7 +19,7 @@ import threading
 import time
 from collections import deque
 from pathlib import Path
-from typing import Any, Deque, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Deque, Dict, List, Optional, Set, Tuple
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from fastapi.concurrency import run_in_threadpool
@@ -37,6 +37,24 @@ DEAD_TOKEN_CODES = {
 
 def _now_ms() -> int:
     return int(time.time() * 1000)
+
+
+def _json_list(raw: Optional[str]) -> List[Any]:
+    """A JSON list stored in a column, or [] when it is empty or not a list."""
+    try:
+        value = json.loads(raw) if raw else []
+    except (TypeError, ValueError):
+        return []
+    return value if isinstance(value, list) else []
+
+
+def _json_dict(raw: Optional[str]) -> Dict[str, Any]:
+    """A JSON object stored in a column, or {} when it is empty or not an object."""
+    try:
+        value = json.loads(raw) if raw else {}
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
 
 
 class ChatDatabase:
@@ -156,6 +174,62 @@ class ChatDatabase:
         conn = self._get_conn()
         with conn:
             conn.execute("DELETE FROM device_tokens WHERE token = ?", (token.strip(),))
+
+    def erase_user(self, uid: str, email: str = "") -> Dict[str, int]:
+        """Removes one person from the chat service: their device tokens, the messages
+        they sent, and their place in every message and conversation they touched.
+
+        The other person's messages stay with the conversation. Repeating the call is
+        harmless.
+        """
+        uid = uid.strip()
+        email = email.strip().lower()
+        counts = {"deviceTokens": 0, "messages": 0, "conversations": 0}
+        conn = self._get_conn()
+        with conn:
+            counts["deviceTokens"] = conn.execute(
+                "DELETE FROM device_tokens WHERE uid = ? OR (email != '' AND email = ?)",
+                (uid, email),
+            ).rowcount
+            counts["messages"] = conn.execute("DELETE FROM messages WHERE sender_id = ?", (uid,)).rowcount
+
+            needle = f'%"{uid}"%'
+            for row in conn.execute(
+                "SELECT id, read_by, reactions, deleted_for FROM messages "
+                "WHERE read_by LIKE ? OR reactions LIKE ? OR deleted_for LIKE ?",
+                (needle, needle, needle),
+            ).fetchall():
+                read_by = [p for p in _json_list(row["read_by"]) if p != uid]
+                deleted_for = [p for p in _json_list(row["deleted_for"]) if p != uid]
+                reactions = {}
+                for emoji, reactors in _json_dict(row["reactions"]).items():
+                    kept = [p for p in (reactors or []) if p != uid]
+                    if kept:
+                        reactions[emoji] = kept
+                conn.execute(
+                    "UPDATE messages SET read_by = ?, deleted_for = ?, reactions = ? WHERE id = ?",
+                    (json.dumps(read_by), json.dumps(deleted_for), json.dumps(reactions), row["id"]),
+                )
+
+            for row in conn.execute(
+                "SELECT chat_id, participants, participant_emails, unread_counts, last_sender_id "
+                "FROM conversations WHERE participants LIKE ?",
+                (needle,),
+            ).fetchall():
+                participants = [p for p in _json_list(row["participants"]) if p != uid]
+                emails = [e for e in _json_list(row["participant_emails"]) if str(e).lower() != email]
+                unread = {k: v for k, v in _json_dict(row["unread_counts"]).items() if k != uid}
+                conn.execute(
+                    """
+                    UPDATE conversations SET participants = ?, participant_emails = ?, unread_counts = ?,
+                        last_sender_id = CASE WHEN last_sender_id = ? THEN '' ELSE last_sender_id END,
+                        last_message = CASE WHEN last_sender_id = ? THEN '' ELSE last_message END
+                    WHERE chat_id = ?
+                    """,
+                    (json.dumps(participants), json.dumps(emails), json.dumps(unread), uid, uid, row["chat_id"]),
+                )
+                counts["conversations"] += 1
+        return counts
 
     # ── Conversations ─────────────────────────────────────────────────────────
 
@@ -828,6 +902,11 @@ def authenticate_user(
         raise HTTPException(status_code=401, detail="Invalid authentication token.")
 
 
+# Whether two people are active members of one tour together. main.py sets this to
+# the Firestore check. Until it is set, nobody may be contacted.
+shares_group: Callable[[str, str], bool] = lambda uid_a, uid_b: False
+
+
 # ── Pydantic Request Models ───────────────────────────────────────────────────
 
 class TokenRegistrationRequest(BaseModel):
@@ -887,11 +966,20 @@ async def register_device_token(
     return {"status": "success"}
 
 
+async def _may_talk_to_other(uid: str, participants: List[str]) -> bool:
+    """Whether the other person in a conversation is someone uid may talk to now."""
+    others = [p for p in participants if p != uid]
+    if not others:
+        return True
+    return await run_in_threadpool(shares_group, uid, others[0])
+
+
 @chat_router.get("/conversations")
 async def list_conversations(uid: str = Depends(authenticate_user)):
-    """Returns all conversations for the authenticated user."""
+    """Returns the conversations with people uid shares a tour with, or the Guide."""
     convs = await run_in_threadpool(chat_db.list_conversations, uid=uid)
-    return {"conversations": convs}
+    visible = [c for c in convs if await _may_talk_to_other(uid, c.get("participants") or [])]
+    return {"conversations": visible}
 
 
 @chat_router.get("/messages/{chat_id}")
@@ -901,7 +989,10 @@ async def get_messages(
     limit: int = Query(50, ge=1, le=100),
     uid: str = Depends(authenticate_user),
 ):
-    """Returns paginated messages for a conversation."""
+    """Returns paginated messages for a conversation, while its other person is still reachable."""
+    participants = await run_in_threadpool(chat_db.participants_of, chat_id)
+    if participants and uid in participants and not await _may_talk_to_other(uid, participants):
+        raise HTTPException(status_code=403, detail="You can only read chats with people in a tour you share.")
     msgs = await run_in_threadpool(
         chat_db.get_messages,
         chat_id=chat_id,
@@ -918,6 +1009,8 @@ async def send_message(
     uid: str = Depends(authenticate_user),
 ):
     """Sends a message, delivers via WebSocket if recipient is online, or via FCM push."""
+    if not await run_in_threadpool(shares_group, uid, req.recipientId):
+        raise HTTPException(status_code=403, detail="You can only message people in a tour you share.")
     participants = sorted([uid, req.recipientId])
     await run_in_threadpool(
         chat_db.get_or_create_conversation,
@@ -1064,7 +1157,8 @@ async def get_online_status(
     target_uid: str,
     uid: str = Depends(authenticate_user),
 ):
-    return {"uid": target_uid, "isOnline": ws_manager.is_online(target_uid)}
+    online = ws_manager.is_online(target_uid) and await run_in_threadpool(shares_group, uid, target_uid)
+    return {"uid": target_uid, "isOnline": online}
 
 
 STUN_URLS = [
@@ -1193,6 +1287,8 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
         refusal = "invalid"
     elif len(json.dumps(data)) > MAX_CALL_SIGNAL_BYTES:
         refusal = "too_large"
+    elif not await run_in_threadpool(shares_group, uid, recipient_id):
+        refusal = "not_in_group"
     elif signal_type == "offer" and not call_offer_limiter.allow(uid):
         refusal = "rate_limited"
 
@@ -1256,46 +1352,30 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
 # ── Real-Time WebSocket Endpoint ──────────────────────────────────────────────
 
 @chat_router.websocket("/ws")
-async def chat_websocket(
-    websocket: WebSocket,
-    token: Optional[str] = Query(None),
-):
-    """Bidirectional WebSocket connection for instant 1-on-1 messages, typing, and WebRTC calls."""
-    # The app sends its token as the first message. The query token is still read
-    # for builds that predate that change, and it is the reason this path is
-    # deprecated: a URL token can end up in proxy and access logs.
-    authenticated_uid: Optional[str] = None
-    confirms = False
+async def chat_websocket(websocket: WebSocket):
+    """Bidirectional WebSocket connection for instant 1-on-1 messages, typing, and WebRTC calls.
 
-    if token:
-        try:
-            authenticated_uid = await run_in_threadpool(verify_firebase_uid, token)
-        except Exception as e:
-            logger.warning("WS token auth failed: %s", e)
+    The first message must sign the socket in: {"type": "auth", "token": ...}. A token
+    in the URL is not read, because URLs end up in proxy and access logs.
+    """
+    await websocket.accept()
+    try:
+        auth_msg = await asyncio.wait_for(websocket.receive_json(), timeout=WS_AUTH_TIMEOUT_SECONDS)
+        if auth_msg.get("type") != "auth" or not auth_msg.get("token"):
+            raise ValueError("The first message must sign the socket in.")
+        authenticated_uid = await run_in_threadpool(verify_firebase_uid, auth_msg["token"])
+    except Exception:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    confirms = auth_msg.get("confirms") is True
 
-    if not authenticated_uid:
-        await websocket.accept()
-        try:
-            auth_msg = await asyncio.wait_for(websocket.receive_json(), timeout=WS_AUTH_TIMEOUT_SECONDS)
-            if auth_msg.get("type") == "auth" and auth_msg.get("token"):
-                authenticated_uid = await run_in_threadpool(verify_firebase_uid, auth_msg["token"])
-                confirms = auth_msg.get("confirms") is True
-        except Exception:
-            pass
-
-        if not authenticated_uid:
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-            return
-
-        # Register connection
-        with ws_manager._lock:
-            if authenticated_uid not in ws_manager._connections:
-                ws_manager._connections[authenticated_uid] = set()
-            ws_manager._connections[authenticated_uid].add(websocket)
-        if confirms:
-            ws_manager.mark_confirming(websocket)
-    else:
-        await ws_manager.connect(authenticated_uid, websocket)
+    # Register connection
+    with ws_manager._lock:
+        if authenticated_uid not in ws_manager._connections:
+            ws_manager._connections[authenticated_uid] = set()
+        ws_manager._connections[authenticated_uid].add(websocket)
+    if confirms:
+        ws_manager.mark_confirming(websocket)
 
     uid = authenticated_uid
     try:
@@ -1317,7 +1397,7 @@ async def chat_websocket(
                 chat_id = data.get("chatId")
                 recipient_id = data.get("recipientId")
                 is_typing = bool(data.get("isTyping", False))
-                if recipient_id:
+                if recipient_id and await run_in_threadpool(shares_group, uid, recipient_id):
                     await ws_manager.send_to_user(
                         recipient_id,
                         {"type": "typing", "chatId": chat_id, "uid": uid, "isTyping": is_typing},
@@ -1329,7 +1409,7 @@ async def chat_websocket(
                 if chat_id:
                     updated = await run_in_threadpool(chat_db.mark_read, chat_id, uid, message_ids)
                     recipient_id = data.get("recipientId")
-                    if recipient_id:
+                    if recipient_id and await run_in_threadpool(shares_group, uid, recipient_id):
                         await ws_manager.send_to_user(
                             recipient_id,
                             {"type": "read", "chatId": chat_id, "readerId": uid, "messageIds": updated},

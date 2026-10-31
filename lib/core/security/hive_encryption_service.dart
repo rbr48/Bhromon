@@ -92,6 +92,31 @@ class HiveEncryptionService {
     return _DeviceKey(key);
   }
 
+  /// The boxes the app opens through this service.
+  static const List<String> encryptedBoxNames = [
+    'auth_box',
+    'offline_bundles',
+    'sync_outbox',
+    'geofence_triggers',
+    'saved_logs',
+    'user_search_history',
+    'user_preferences',
+    'triplogs_drafts',
+  ];
+
+  /// Opens each box the app uses, so one that still depends on the old fixed key is
+  /// re-encrypted at launch rather than whenever it is next used. A box that cannot be
+  /// opened is logged and left as it is.
+  Future<void> migrateEncryptedBoxes() async {
+    for (final name in encryptedBoxNames) {
+      try {
+        await openEncryptedBox<dynamic>(name);
+      } catch (error, stackTrace) {
+        logWarning('[HiveEncryption] Could not check $name', error, stackTrace);
+      }
+    }
+  }
+
   /// Opens an encrypted Hive box safely
   Future<Box<T>> openEncryptedBox<T>(String boxName) async {
     final cached = _boxes[boxName];
@@ -187,7 +212,9 @@ class HiveEncryptionService {
     final entries = await result.future;
     try {
       if (probeFile.existsSync()) probeFile.deleteSync();
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     return entries;
   }
 

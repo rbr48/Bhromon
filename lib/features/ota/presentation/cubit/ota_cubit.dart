@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import 'package:path_provider/path_provider.dart';
@@ -7,6 +8,13 @@ import 'package:bhromon/app/di/injection.dart';
 import 'package:bhromon/core/network/secure_network_client.dart';
 import '../../domain/usecases/check_for_updates_usecase.dart';
 import 'ota_state.dart';
+
+/// Whether this build may download and install an APK from outside the store. Off by
+/// default, so a store build never does it. A build that turns it on
+/// (`--dart-define=BHROMON_APK_UPDATES=true`) still keeps only a download whose checksum
+/// matches the one published with the version.
+bool apkSelfUpdateEnabled() =>
+    const bool.fromEnvironment('BHROMON_APK_UPDATES');
 
 @injectable
 class OtaCubit extends Cubit<OtaState> {
@@ -27,6 +35,7 @@ class OtaCubit extends Cubit<OtaState> {
   }
 
   Future<void> startDownload() async {
+    if (!apkSelfUpdateEnabled()) return;
     final currentState = state;
     if (currentState is! OtaUpdateAvailable) return;
 
@@ -53,6 +62,13 @@ class OtaCubit extends Cubit<OtaState> {
           }
         },
       );
+
+      final digest = await crypto.sha256.bind(tempFile.openRead()).first;
+      if (digest.toString() != currentState.info.apkSha256) {
+        await tempFile.delete();
+        emit(const OtaError('The update did not match its checksum.'));
+        return;
+      }
 
       emit(currentState.copyWith(
         isDownloading: false,

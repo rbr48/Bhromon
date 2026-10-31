@@ -27,7 +27,16 @@ if (!admin.apps.length) {
 }
 
 export const app = express();
-app.use(cors({ origin: true }));
+// Only the app's own web addresses may call the games from a browser. The app's native
+// clients send no Origin header and are not affected.
+const ALLOWED_ORIGINS = (
+  process.env.CORS_ORIGINS ??
+  'https://app.bhromon.fun,https://bhromon-ff801.web.app,https://bhromon-ff801.firebaseapp.com'
+)
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter((origin) => origin !== '');
+app.use(cors({ origin: ALLOWED_ORIGINS }));
 app.use(express.json());
 
 const callables: Record<string, any> = {

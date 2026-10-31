@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import time
 import uuid
+from contextlib import contextmanager
 from unittest.mock import MagicMock
 
 import pytest
@@ -31,10 +32,24 @@ def fake_firebase(monkeypatch):
     monkeypatch.setattr(chat, "verify_firebase_uid", verify)
     monkeypatch.setattr(chat, "call_offer_limiter", CallOfferLimiter())
 
+    # The ring push runs in the background after each offer. These socket tests
+    # check the exchange, not the push, so the push is a no-op here.
+    monkeypatch.setattr(chat.push_dispatcher, "send_call_push_to_uid", lambda **kwargs: 0)
 
+    async def inline(func, *args, **kwargs):
+        # Each TestClient socket runs on an event loop of its own, and a worker thread
+        # hop between two of them can stall an exchange. Production keeps the hop.
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(chat, "run_in_threadpool", inline)
+
+
+@contextmanager
 def _signed_in(client, token):
-    """A WebSocket session for `token`. Use it as a context manager."""
-    return client.websocket_connect(f"/api/chat/ws?token={token}")
+    """A WebSocket session for `token`, signed in the way the app does it: first message."""
+    with client.websocket_connect("/api/chat/ws") as ws:
+        ws.send_json({"type": "auth", "token": token})
+        yield ws
 
 
 # ── TURN credentials ──────────────────────────────────────────────────────────
@@ -119,6 +134,13 @@ def test_a_socket_that_does_not_sign_in_is_closed(client, fake_firebase):
     with pytest.raises(WebSocketDisconnect):
         with client.websocket_connect("/api/chat/ws") as ws:
             ws.send_json({"type": "auth", "token": "nope"})
+            ws.receive_json()
+
+
+def test_a_token_in_the_url_does_not_sign_the_socket_in(client, fake_firebase):
+    # URLs end up in proxy and access logs, so the token is read from the first message only.
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect("/api/chat/ws?token=tok-alice") as ws:
             ws.receive_json()
 
 
@@ -296,8 +318,7 @@ def test_maintenance_is_for_platform_admins_only(client, monkeypatch):
     assert sweep.call_count == 1
 
 
-def test_the_legacy_key_is_not_accepted_on_notify_routes(client, monkeypatch):
-    monkeypatch.setattr(main, "LEGACY_UPLOAD_KEY", "transition-key")
+def test_the_shared_upload_key_is_not_accepted_on_notify_routes(client):
     res = client.post(
         "/notify/sos",
         json={"tourId": "t1", "alertId": "a1"},

@@ -126,10 +126,10 @@ jobs:
       # project and clear it, and Storage rules read memberships from the
       # emulator's --project, so they cannot run in parallel. The CLI is pinned:
       # firebase-tools 15.x fails the Storage rules' firestore lookups.
-      - name: Run unit tests with coverage (under Firestore and Storage emulators)
+      - name: Run unit tests with coverage (under Firestore, Storage and Auth emulators)
         working-directory: .
         run: >
-          npx firebase-tools@13.35.1 emulators:exec --only firestore,storage
+          npx firebase-tools@13.35.1 emulators:exec --only firestore,storage,auth
           --project bhromon-rules-test-project
           "cd functions && npm test -- --coverage --runInBand"
         env:

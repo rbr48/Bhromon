@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/tour_group.dart';
 import '../tour_routes.dart';
@@ -455,7 +456,9 @@ class DesktopTourSidebar extends StatelessWidget {
       }
       email = repository.currentEmail;
       photoUrl = repository.currentPhotoUrl;
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
 
     return Container(
       padding: const EdgeInsets.all(12),

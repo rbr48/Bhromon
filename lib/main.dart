@@ -16,11 +16,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'core/utils/app_logger.dart';
 import 'firebase_options.dart';
 import 'app/di/injection.dart';
 import 'app/di/environments.dart';
 import 'core/sync/sync_worker.dart';
-import 'core/utils/app_logger.dart';
+import 'core/security/hive_encryption_service.dart';
 import 'app/router.dart';
 import 'core/theme/theme.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
@@ -193,7 +194,9 @@ void main() {
                           onPressed: () {
                             try {
                               AppRouter.router.go('/group-hub');
-                            } catch (_) {}
+                            } catch (error, stackTrace) {
+                              logSkipped(error, stackTrace);
+                            }
                           },
                           icon: const Icon(Icons.home_rounded, size: 18),
                           label: const Text('হোমে ফিরে যান'),
@@ -295,6 +298,11 @@ void main() {
       configureDependencies(environment: Env.prod);
 
       if (!kIsWeb) {
+        // Boxes still encrypted with the old fixed key move to the device key now.
+        await getIt<HiveEncryptionService>().migrateEncryptedBoxes();
+      }
+
+      if (!kIsWeb) {
         // Wire up Firebase Crashlytics error handlers
         FirebaseCrashlytics.instance
             .setCrashlyticsCollectionEnabled(!kDebugMode);
@@ -373,7 +381,9 @@ void main() {
     if (!kIsWeb) {
       try {
         FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      } catch (_) {}
+      } catch (error, stackTrace) {
+        logSkipped(error, stackTrace);
+      }
     }
   });
 }

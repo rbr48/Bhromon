@@ -2,8 +2,6 @@
 """Generate 220 unique questions for quiz_data_hills_beaches.py."""
 
 import os
-import sys
-import json
 
 QUESTIONS = []
 seen = set()
