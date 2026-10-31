@@ -189,7 +189,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'ইনভাইট কোড কপি হয়েছে: $code',
+                context.l10n
+                    .translate('hub_invite_code_copied', args: {'code': code}),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -214,14 +215,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           backgroundColor: const Color(0xFF1B4332),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.person_add_alt_1,
+              const Icon(Icons.person_add_alt_1,
                   color: AppColors.mintGreen, size: 22),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
-                'সদস্য যোগ করুন',
-                style: TextStyle(color: Colors.white, fontSize: 18),
+                context.l10n.translate('hub_add_member_title'),
+                style: const TextStyle(color: Colors.white, fontSize: 18),
               ),
             ],
           ),
@@ -230,9 +231,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'সদস্যের ইমেইল ঠিকানা দিয়ে সরাসরি এই ট্যুর গ্রুপে যুক্ত করুন। ব্যবহারকারী অ্যাপে লগইন করলেই সরাসরি গ্রুপটি দেখতে পাবেন।',
-                  style: TextStyle(
+                Text(
+                  context.l10n.translate('hub_add_member_help'),
+                  style: const TextStyle(
                       color: Colors.white70, fontSize: 13, height: 1.4),
                 ),
                 const SizedBox(height: 16),
@@ -241,7 +242,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   keyboardType: TextInputType.emailAddress,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    labelText: 'ইমেইল ঠিকানা *',
+                    labelText: context.l10n.translate('hub_member_email_label'),
                     hintText: 'example@gmail.com',
                     labelStyle: const TextStyle(color: Colors.white70),
                     hintStyle: const TextStyle(color: Colors.white38),
@@ -264,7 +265,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   controller: nameCtrl,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    labelText: 'নাম (ঐচ্ছিক)',
+                    labelText: context.l10n.translate('hub_member_name_label'),
                     labelStyle: const TextStyle(color: Colors.white70),
                     prefixIcon:
                         const Icon(Icons.badge_outlined, color: Colors.white60),
@@ -286,8 +287,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           actions: [
             TextButton(
               onPressed: isAdding ? null : () => Navigator.pop(ctx),
-              child:
-                  const Text('বাতিল', style: TextStyle(color: Colors.white70)),
+              child: Text(context.l10n.translate('tour_cancel'),
+                  style: const TextStyle(color: Colors.white70)),
             ),
             FilledButton(
               style:
@@ -296,10 +297,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   ? null
                   : () async {
                       final email = emailCtrl.text.trim().toLowerCase();
+                      final l10n = context.l10n;
                       if (email.isEmpty || !email.contains('@')) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('সঠিক ইমেইল ঠিকানা দিন')),
+                          SnackBar(
+                              content: Text(context.l10n
+                                  .translate('hub_enter_valid_email'))),
                         );
                         return;
                       }
@@ -313,10 +316,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               : null,
                         );
                         if (ctx.mounted) Navigator.pop(ctx);
-                        _snack('$email সফলভাবে গ্রুপে যুক্ত হয়েছে');
+                        _snack(l10n.translate('hub_member_added',
+                            args: {'email': email}));
                       } catch (e) {
                         setDialogState(() => isAdding = false);
-                        _snack('যোগ করা যায়নি: $e', error: true);
+                        _snack(
+                            l10n.translate('hub_member_add_failed',
+                                args: {'error': e}),
+                            error: true);
                       }
                     },
               child: isAdding
@@ -329,9 +336,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             AlwaysStoppedAnimation<Color>(AppColors.darkGreen),
                       ),
                     )
-                  : const Text(
-                      'যোগ করুন',
-                      style: TextStyle(
+                  : Text(
+                      context.l10n.translate('hub_add'),
+                      style: const TextStyle(
                           color: AppColors.darkGreen,
                           fontWeight: FontWeight.bold),
                     ),
@@ -377,7 +384,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             decoration: InputDecoration(
                 labelText: context.l10n.translate('hub_family_count_hint')),
             items: [
-              for (var n = 1; n <= 10; n++)
+              for (var n = 1; n <= 20; n++)
                 DropdownMenuItem(
                     value: n,
                     child: Text(context.l10n
@@ -451,7 +458,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         }
       case 'leave':
         final nav = Navigator.of(context);
-        final ok = await _confirm(l10n.translate('hub_leave_title'),
+        final ok = await _confirm(
+            l10n.translate(
+                group.isFamily ? 'hub_leave_family_title' : 'hub_leave_title'),
             l10n.translate('hub_leave_body', args: {'name': group.name}));
         if (!ok) return;
         try {
@@ -472,8 +481,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         }
       case 'delete':
         final nav = Navigator.of(context);
-        final ok = await _confirm(l10n.translate('hub_delete_title'),
-            l10n.translate('hub_delete_body', args: {'name': group.name}));
+        final ok = await _confirm(
+            l10n.translate(group.isFamily
+                ? 'hub_delete_family_title'
+                : 'hub_delete_title'),
+            l10n.translate(
+                group.isFamily ? 'hub_delete_family_body' : 'hub_delete_body',
+                args: {'name': group.name}));
         if (!ok) return;
         try {
           await _repository.deleteTour(group.id, inviteCode: group.inviteCode);
@@ -758,9 +772,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                 onPressed: () => context.push('/login'),
                 icon: const Icon(Icons.login,
                     color: AppColors.mintGreen, size: 18),
-                label: const Text(
-                  'লগইন বা সাইন-আপ করুন',
-                  style: TextStyle(
+                label: Text(
+                  context.l10n.translate('hub_login_or_signup'),
+                  style: const TextStyle(
                     color: AppColors.mintGreen,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -769,7 +783,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               )
             else
               Text(
-                'বর্তমান অ্যাকাউন্ট: ${_repository.currentEmail}',
+                context.l10n.translate('hub_current_account',
+                    args: {'email': _repository.currentEmail}),
                 style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
           ],
@@ -859,15 +874,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     color: const Color(0xFF1B4332),
                     onSelected: (v) => _onGroupMenu(context, group, v),
                     itemBuilder: (_) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                           value: 'copy_code',
                           child: Row(
                             children: [
-                              Icon(Icons.copy_rounded,
+                              const Icon(Icons.copy_rounded,
                                   size: 16, color: AppColors.mintGreen),
-                              SizedBox(width: 8),
-                              Text('ইনভাইট কোড কপি করুন',
-                                  style: TextStyle(color: Colors.white)),
+                              const SizedBox(width: 8),
+                              Text(
+                                  context.l10n
+                                      .translate('hub_copy_invite_code'),
+                                  style: const TextStyle(color: Colors.white)),
                             ],
                           )),
                       PopupMenuItem(
@@ -882,15 +899,18 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             ],
                           )),
                       if (group.ownerEmail == _repository.currentEmail) ...[
-                        const PopupMenuItem(
+                        PopupMenuItem(
                             value: 'add_member',
                             child: Row(
                               children: [
-                                Icon(Icons.person_add_alt_1,
+                                const Icon(Icons.person_add_alt_1,
                                     size: 16, color: AppColors.mintGreen),
-                                SizedBox(width: 8),
-                                Text('সদস্য যোগ করুন (ইমেইল)',
-                                    style: TextStyle(color: Colors.white)),
+                                const SizedBox(width: 8),
+                                Text(
+                                    context.l10n
+                                        .translate('hub_add_member_by_email'),
+                                    style:
+                                        const TextStyle(color: Colors.white)),
                               ],
                             )),
                         PopupMenuItem(
@@ -901,14 +921,18 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         PopupMenuItem(
                             value: 'delete',
                             child: Text(
-                                context.l10n.translate('hub_delete_tour'),
+                                context.l10n.translate(group.isFamily
+                                    ? 'hub_delete_family'
+                                    : 'hub_delete_tour'),
                                 style:
                                     const TextStyle(color: Colors.redAccent))),
                       ] else
                         PopupMenuItem(
                             value: 'leave',
                             child: Text(
-                                context.l10n.translate('hub_leave_tour'),
+                                context.l10n.translate(group.isFamily
+                                    ? 'hub_leave_family'
+                                    : 'hub_leave_tour'),
                                 style: const TextStyle(color: Colors.white))),
                     ],
                   ),
@@ -1245,7 +1269,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             children: [
               Expanded(
                 child: Tooltip(
-                  message: 'ট্যাপ করে ইনভাইট কোড কপি করুন',
+                  message: context.l10n.translate('hub_tap_to_copy_code'),
                   child: InkWell(
                     onTap: () => _copyInviteCode(group.inviteCode),
                     borderRadius: BorderRadius.circular(8),
@@ -1555,9 +1579,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     ),
                     icon: const Icon(Icons.person_add_alt_1,
                         size: 16, color: AppColors.mintGreen),
-                    label: const Text(
-                      'সদস্য যোগ করুন',
-                      style: TextStyle(
+                    label: Text(
+                      context.l10n.translate('hub_add_member_title'),
+                      style: const TextStyle(
                         color: AppColors.mintGreen,
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -1879,8 +1903,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               backgroundColor: const Color(0xFF14241B),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
-              title: const Text('নতুন ট্যুর গ্রুপ তৈরি করুন (Universal)',
-                  style: TextStyle(
+              title: Text(context.l10n.translate('hub_create_trip_title'),
+                  style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 17)),
@@ -1896,7 +1920,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         controller: nameCtrl,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          labelText: 'ট্যুরের নাম (যেমন: সাজেক ক্লাউড ট্যুর)',
+                          labelText:
+                              context.l10n.translate('hub_trip_name_hint'),
                           labelStyle: const TextStyle(
                               color: Colors.white70, fontSize: 13),
                           hintText: 'e.g. Sajek Tour 2026',
@@ -1911,9 +1936,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       const SizedBox(height: 12),
 
                       // 2. Destination Presets
-                      const Text(
-                        'জনপ্রিয় গন্তব্যসমূহ (Quick Select):',
-                        style: TextStyle(
+                      Text(
+                        context.l10n.translate('hub_popular_destinations'),
+                        style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 11,
                             fontWeight: FontWeight.bold),

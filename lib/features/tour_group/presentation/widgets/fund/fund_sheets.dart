@@ -621,11 +621,18 @@ class _BudgetFormState extends State<_BudgetForm> {
           ),
           if (widget.headcount > 0 && total > 0)
             Text(
-              l10n.translate('fund_budget_per_head_day', args: {
-                'head': TripLedgerEngine.formatTaka(total ~/ widget.headcount),
-                'day': TripLedgerEngine.formatTaka(
-                    total ~/ widget.totalDays.clamp(1, 365)),
-              }),
+              // A one-day tour, such as a family circle, has no per-day figure.
+              widget.totalDays > 1
+                  ? l10n.translate('fund_budget_per_head_day', args: {
+                      'head': TripLedgerEngine.formatTaka(
+                          total ~/ widget.headcount),
+                      'day': TripLedgerEngine.formatTaka(
+                          total ~/ widget.totalDays),
+                    })
+                  : l10n.translate('fund_budget_per_head', args: {
+                      'head': TripLedgerEngine.formatTaka(
+                          total ~/ widget.headcount),
+                    }),
               style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
           const SizedBox(height: 16),

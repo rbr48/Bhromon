@@ -354,7 +354,10 @@ class TourGroup {
     return '$daysBn দিন $nightsBn রাত';
   }
 
+  /// The trip's days, for the feed's day filter and the day tags on posts. A family
+  /// circle has no trip, so it has no days.
   List<TourDayInfo> get daysList {
+    if (isFamily) return const [];
     final list = <TourDayInfo>[];
     for (int i = 0; i < totalDays; i++) {
       final dayDate = startDate.add(Duration(days: i));

@@ -491,7 +491,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               ),
               const SizedBox(height: 12),
             ],
-            if (r.daysElapsed > 0) ...[
+            // A family circle has no trip days, so it has no daily burn or projection.
+            if (!(group?.isFamily ?? false) && r.daysElapsed > 0) ...[
               Row(children: [
                 const Icon(Icons.speed_rounded, size: 18, color: _fundBlue),
                 const SizedBox(width: 8),
@@ -1996,9 +1997,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                               color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
-                        const Text('রসিদের ছবি লোড করা যায়নি',
-                            style:
-                                TextStyle(color: Colors.white54, fontSize: 12)),
+                        Text(context.l10n.translate('fund_receipt_load_failed'),
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 12)),
                       ],
                     ),
                   ),

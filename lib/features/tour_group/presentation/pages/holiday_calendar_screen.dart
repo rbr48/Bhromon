@@ -57,7 +57,8 @@ class _HolidayCalendarScreenState extends State<HolidayCalendarScreen> {
       builder: (context, snap) {
         final group = snap.data;
         final calendar = HolidayCalendar(lunarShift: _lunarShift);
-        final trip = group == null
+        // A family circle has no trip, so there is no trip card for it.
+        final trip = group == null || group.isFamily
             ? null
             : calendar.tripSummary(group.startDate, group.endDate);
         return ListView(

@@ -83,6 +83,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   bool get _isCustomSpot =>
       _selectedLandmark == context.l10n.translate('ig_place_others');
 
+  /// A family circle has no trip days or spots, so its posts name a place in text.
+  bool get _isFamilyCircle => widget.group?.isFamily ?? false;
+
   final List<String> _taggedMembers = [];
   bool _hideLikeCount = false;
   bool _disableComments = false;
@@ -179,7 +182,9 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
       _contrast = d.contrast;
       _saturation = d.saturation;
       _selectedDay = d.tourDay;
-      if (d.location.isNotEmpty) {
+      if (_isFamilyCircle) {
+        _customSpotCtrl.text = d.location;
+      } else if (d.location.isNotEmpty) {
         _selectedLandmark = d.location;
       }
       _taggedMembers.addAll(d.tags);
@@ -213,10 +218,29 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
     widget.repository.savePostDraft(widget.tourId, draft);
   }
 
-  String get _spotToSave =>
-      _isCustomSpot && _customSpotCtrl.text.trim().isNotEmpty
-          ? _customSpotCtrl.text.trim()
-          : _selectedLandmark;
+  Widget _buildFamilyPlaceField() {
+    return TextField(
+      controller: _customSpotCtrl,
+      style: const TextStyle(color: Colors.white, fontSize: 13),
+      decoration: InputDecoration(
+        labelText: context.l10n.translate('ig_place_optional'),
+        labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+        filled: true,
+        fillColor: const Color(0xFF1E1E1E),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide.none),
+      ),
+      onChanged: (_) => _saveCurrentDraft(),
+    );
+  }
+
+  String get _spotToSave {
+    if (_isFamilyCircle) return _customSpotCtrl.text.trim();
+    return _isCustomSpot && _customSpotCtrl.text.trim().isNotEmpty
+        ? _customSpotCtrl.text.trim()
+        : _selectedLandmark;
+  }
 
   Future<void> _pickPhotos() async {
     final remaining = kMaxPhotosPerPost - _photos.length;
@@ -1053,79 +1077,83 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
                   ),
                   const SizedBox(height: 16),
 
-                  // Tour Day & Landmark Selector Row
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _selectedDay,
-                          dropdownColor: const Color(0xFF222222),
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 13),
-                          decoration: InputDecoration(
-                            labelText: context.l10n.translate('ig_tour_day'),
-                            labelStyle: const TextStyle(
-                                color: Colors.white70, fontSize: 12),
-                            filled: true,
-                            fillColor: const Color(0xFF1E1E1E),
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide.none),
+                  // A family circle names the place in text. A trip picks a day and a spot.
+                  if (_isFamilyCircle) ...[
+                    _buildFamilyPlaceField(),
+                    const SizedBox(height: 16),
+                  ] else
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _selectedDay,
+                            dropdownColor: const Color(0xFF222222),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 13),
+                            decoration: InputDecoration(
+                              labelText: context.l10n.translate('ig_tour_day'),
+                              labelStyle: const TextStyle(
+                                  color: Colors.white70, fontSize: 12),
+                              filled: true,
+                              fillColor: const Color(0xFF1E1E1E),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide.none),
+                            ),
+                            items: [
+                              for (final n in instafeedDayNumbers(
+                                  widget.group?.daysList ?? const [],
+                                  _selectedDay))
+                                DropdownMenuItem(
+                                  value: instafeedDayId(n),
+                                  child: Text(instafeedDayLabel(context, n)),
+                                ),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedDay = val);
+                                _saveCurrentDraft();
+                              }
+                            },
                           ),
-                          items: [
-                            for (final n in instafeedDayNumbers(
-                                widget.group?.daysList ?? const [],
-                                _selectedDay))
-                              DropdownMenuItem(
-                                value: instafeedDayId(n),
-                                child: Text(instafeedDayLabel(context, n)),
-                              ),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() => _selectedDay = val);
-                              _saveCurrentDraft();
-                            }
-                          },
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 3,
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _selectedLandmark,
-                          dropdownColor: const Color(0xFF222222),
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 13),
-                          decoration: InputDecoration(
-                            labelText:
-                                context.l10n.translate('ig_sightseeing_place'),
-                            labelStyle: const TextStyle(
-                                color: Colors.white70, fontSize: 12),
-                            filled: true,
-                            fillColor: const Color(0xFF1E1E1E),
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide.none),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 3,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _selectedLandmark,
+                            dropdownColor: const Color(0xFF222222),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 13),
+                            decoration: InputDecoration(
+                              labelText: context.l10n
+                                  .translate('ig_sightseeing_place'),
+                              labelStyle: const TextStyle(
+                                  color: Colors.white70, fontSize: 12),
+                              filled: true,
+                              fillColor: const Color(0xFF1E1E1E),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide.none),
+                            ),
+                            items: (widget.group?.allSpots ?? _kTourLandmarks)
+                                .map((spot) => DropdownMenuItem(
+                                    value: spot,
+                                    child: Text(spot,
+                                        overflow: TextOverflow.ellipsis)))
+                                .toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedLandmark = val);
+                                _saveCurrentDraft();
+                              }
+                            },
                           ),
-                          items: (widget.group?.allSpots ?? _kTourLandmarks)
-                              .map((spot) => DropdownMenuItem(
-                                  value: spot,
-                                  child: Text(spot,
-                                      overflow: TextOverflow.ellipsis)))
-                              .toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() => _selectedLandmark = val);
-                              _saveCurrentDraft();
-                            }
-                          },
                         ),
-                      ),
-                    ],
-                  ),
-                  if (_isCustomSpot) ...[
+                      ],
+                    ),
+                  if (!_isFamilyCircle && _isCustomSpot) ...[
                     const SizedBox(height: 8),
                     TextField(
                       controller: _customSpotCtrl,

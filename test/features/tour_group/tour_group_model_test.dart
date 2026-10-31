@@ -65,6 +65,45 @@ void main() {
       expect(group.daysList.first.label, contains('ডে ১'));
     });
 
+    test('a family circle has no trip days, so the feed and the calendar have none', () {
+      final today = DateTime(2026, 10, 31);
+      final family = TourGroup(
+        id: 'family_1',
+        name: 'Rahman family',
+        destination: '',
+        tourType: TourType.custom,
+        startDate: today,
+        endDate: today,
+        modules: const TourModules(seatsRooms: false, tideSafety: false, games: true, chat: true),
+        ownerEmail: 'owner@example.com',
+        ownerUid: 'owner-uid',
+        kind: GroupKind.family,
+        inviteCode: 'ABCDEFGH',
+        createdAt: today,
+      );
+
+      expect(family.isFamily, isTrue);
+      expect(family.daysList, isEmpty);
+    });
+
+    test('a trip keeps one day for each day of the trip', () {
+      final trip = TourGroup(
+        id: 'trip_day_list',
+        name: 'Sajek',
+        destination: 'Sajek',
+        tourType: TourType.hill,
+        startDate: DateTime(2026, 12, 1),
+        endDate: DateTime(2026, 12, 3),
+        modules: const TourModules(seatsRooms: true, tideSafety: false, games: true, chat: true),
+        ownerEmail: 'owner@example.com',
+        ownerUid: 'owner-uid',
+        inviteCode: 'ABCDEFGH',
+        createdAt: DateTime(2026, 10, 31),
+      );
+
+      expect(trip.daysList.map((d) => d.dayNumber), [1, 2, 3]);
+    });
+
     test('Universal Tour calculates 7-day Sajek-to-Bandarban tour accurately',
         () {
       final start = DateTime(2026, 12, 1);
