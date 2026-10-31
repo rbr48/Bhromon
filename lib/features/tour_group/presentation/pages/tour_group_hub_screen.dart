@@ -12,6 +12,7 @@ import '../../data/tour_hub_preference.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../widgets/bhromon_bottom_nav.dart';
+import '../widgets/family/family_home_card.dart';
 import '../widgets/member_profile/tour_member_profile_modal.dart';
 import '../tour_pdf_export.dart';
 
@@ -754,6 +755,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       // 1. Active Tour Card
                       _buildActiveTourBanner(context, current, groups),
                       const SizedBox(height: 18),
+                      if (current.isFamily) ...[
+                        FamilyHomeCard(tourId: current.id),
+                        const SizedBox(height: 18),
+                      ],
 
                       // 2. Feature Launchpad Grid
                       Text(

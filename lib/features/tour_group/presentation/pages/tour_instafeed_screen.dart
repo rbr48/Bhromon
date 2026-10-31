@@ -870,9 +870,9 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         elevation: 0,
         title: Row(
           children: [
-            const Text(
-              'Tour InstaFeed',
-              style: TextStyle(
+            Text(
+              context.l10n.translate('hub_nav_moments'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 19,

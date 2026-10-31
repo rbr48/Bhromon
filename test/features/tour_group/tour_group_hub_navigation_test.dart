@@ -151,7 +151,7 @@ void main() {
 
     // Verify Tour Modules Grid
     expect(find.text('Tour modules & operations'), findsOneWidget);
-    expect(find.text('Tour InstaFeed 📸'), findsOneWidget);
+    expect(find.text('Moments 📸'), findsOneWidget);
     expect(find.text('Shared fund & ledger'), findsOneWidget);
     expect(find.text('Highway roadmap 🛣️'), findsOneWidget);
     expect(find.text('Safety hub & SOS 🚨'), findsOneWidget);
