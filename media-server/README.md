@@ -113,6 +113,26 @@ Set `PURGE_KEY` on the server, and the same value as the Functions secret
   media from any signed-in person, as they always have.
 - There is no shared upload key. An old app build that still sends one is refused.
 
+## Storage limits, reshares, and the CDN
+
+- `MEDIA_TOUR_QUOTA_BYTES` (default 20 GiB) caps what one tour may store.
+- `MEDIA_UPLOADER_QUOTA_BYTES` (default 4 GiB) caps what one person may store in a tour.
+- `MEDIA_MIN_FREE_BYTES` (default 5 GiB) refuses uploads while the disk has less free space.
+- `MEDIA_UPLOADS_PER_MINUTE` (default 60) limits how fast one person may upload.
+
+Usage is read from the upload sidecars, so deletes and purges free space at once. Each limit
+is checked before a new file is kept. A retry of a file that is already stored is never refused.
+
+`bhromon.fun.conf` refuses `/api/media/upload` and `/api/media/copy` requests that have no
+`Authorization` header, before their body is read. After changing that file on the VPS, run
+`nginx -t` before reloading nginx.
+
+A reshare calls `POST /api/media/copy`. The copy is a hard link: the story gets its own name for
+the same bytes, so deleting the original post does not remove the story's file.
+
+Deleting a file also clears its cached copy on the CDN when `config/cdn` holds a zone and a
+token. A failed purge is logged and never fails the delete.
+
 ## Backups
 
 `backup_store.py` writes one folder per run: a consistent copy of each SQLite

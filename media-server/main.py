@@ -29,11 +29,14 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+import cdn
 import chat
+import limits
 import news
 from chat import chat_db, chat_router
 from family_dates import FamilyDateReminderScheduler
 from news import router as news_router
+from story_cleanup import StoryCleanupScheduler, run_story_cleanup
 from notifications import FirestoreNotificationWatcher, NotificationEngine
 from quiz import quiz_router
 
@@ -88,6 +91,16 @@ FILENAME_PATTERN = re.compile(
 notification_engine = NotificationEngine()
 notification_watcher = FirestoreNotificationWatcher(notification_engine)
 family_date_scheduler = FamilyDateReminderScheduler(notification_engine)
+story_cleanup_scheduler = StoryCleanupScheduler(
+    lambda now: run_story_cleanup(
+        backend._client(),
+        MEDIA_ROOT,
+        META_ROOT,
+        now,
+        base_url=BASE_URL,
+        purge=purge_cdn_quietly,
+    )
+)
 
 
 def init_firebase_admin() -> None:
@@ -121,8 +134,10 @@ async def lifespan(app: FastAPI):
     if FIREBASE_CREDENTIALS or os.path.exists("/run/secrets/firebase-admin.json"):
         notification_watcher.start()
         family_date_scheduler.start()
+        story_cleanup_scheduler.start()
     yield
-    # Stop both on shutdown
+    # Stop them on shutdown
+    story_cleanup_scheduler.stop()
     family_date_scheduler.stop()
     notification_watcher.stop()
 
@@ -415,15 +430,57 @@ def meta_path_for(tour_id: str, folder: str, filename: str) -> Path:
     return META_ROOT / tour_id / folder / f"{filename}.json"
 
 
-def write_meta(tour_id: str, folder: str, filename: str, caller: Caller) -> None:
+def write_meta(
+    tour_id: str,
+    folder: str,
+    filename: str,
+    caller: Caller,
+    size: Optional[int] = None,
+) -> None:
     path = meta_path_for(tour_id, folder, filename)
     path.parent.mkdir(parents=True, exist_ok=True)
-    record = {
+    record: Dict[str, Any] = {
         "uploaderEmail": caller.email,
         "tourId": tour_id,
         "folder": folder,
     }
+    if size is not None:
+        record["bytes"] = size
     path.write_text(json.dumps(record), encoding="utf-8")
+
+
+# One limiter for the whole server: the app runs as a single worker process.
+upload_limiter = limits.RateLimiter(limits.UPLOADS_PER_MINUTE)
+
+
+async def enforce_upload_budget(email: str) -> None:
+    """Refuses an upload when the disk is nearly full or the person is uploading too fast."""
+    if not upload_limiter.allow(email):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many uploads. Try again in a minute.",
+        )
+    try:
+        await run_in_threadpool(limits.check_free_disk, MEDIA_ROOT, limits.MIN_FREE_BYTES)
+    except limits.LimitExceeded as error:
+        raise HTTPException(status_code=error.status_code, detail=error.detail)
+
+
+async def enforce_storage(tour_id: str, email: str, size: int) -> None:
+    """Refuses a new file that would take the tour, or the person's share of it, past its limit."""
+    try:
+        await run_in_threadpool(
+            limits.check_storage,
+            META_ROOT,
+            MEDIA_ROOT,
+            tour_id,
+            email,
+            size,
+            tour_quota=limits.TOUR_QUOTA_BYTES,
+            uploader_quota=limits.UPLOADER_QUOTA_BYTES,
+        )
+    except limits.LimitExceeded as error:
+        raise HTTPException(status_code=error.status_code, detail=error.detail)
 
 
 def read_meta(tour_id: str, folder: str, filename: str) -> Optional[dict]:
@@ -509,6 +566,7 @@ async def upload_media(
     check_tour_id(tourId)
     check_folder(folder)
     await run_in_threadpool(require_member, tourId, caller)
+    await enforce_upload_budget(caller.email)
 
     ext = extension_of(file.filename)
     filename = f"{object_id_for(objectId)}{ext}"
@@ -538,7 +596,10 @@ async def upload_media(
                 raise HTTPException(status_code=409, detail="That file already exists.")
         else:
             try:
-                await run_in_threadpool(write_meta, tourId, folder, filename, caller)
+                await enforce_storage(tourId, caller.email, total_bytes)
+                await run_in_threadpool(
+                    write_meta, tourId, folder, filename, caller, total_bytes
+                )
             except Exception:
                 target.unlink(missing_ok=True)
                 raise
@@ -552,6 +613,21 @@ async def upload_media(
         "bytes": total_bytes,
         "contentType": file.content_type,
     }
+
+
+def read_cdn_config() -> Optional[Dict]:
+    """The CDN settings in Firestore (config/cdn), or None when none are set."""
+    snapshot = backend._client().collection("config").document("cdn").get()
+    return snapshot.to_dict() if snapshot.exists else None
+
+
+def purge_cdn_quietly(paths: List[str]) -> None:
+    """Clears the CDN's copies of `paths`. A failure is logged, not raised: the file
+    is already gone from the server, and the cached copy expires on its own."""
+    try:
+        cdn.purge_paths(paths, read_cdn_config, send=cdn.post_json)
+    except Exception as error:
+        logger.error("CDN purge failed for %s: %s", paths, error)
 
 
 @app.delete("/media/{tourId}/{folder}/{filename}")
@@ -581,7 +657,82 @@ async def delete_media(
 
     target.unlink()
     meta_path_for(tourId, folder, filename).unlink(missing_ok=True)
+    await run_in_threadpool(purge_cdn_quietly, [f"{tourId}/{folder}/{filename}"])
     return {"status": "deleted", "path": f"{tourId}/{folder}/{filename}"}
+
+
+class CopyRequest(BaseModel):
+    tourId: str
+    folder: str
+    sourceUrl: str
+
+
+def media_location_of(url: str, tour_id: str) -> Optional[Tuple[str, str]]:
+    """(folder, filename) of a media URL of `tour_id`, or None for any other URL."""
+    prefix = f"{BASE_URL.rstrip('/')}/{tour_id}/"
+    if not url.startswith(prefix):
+        return None
+    parts = url[len(prefix):].split("/")
+    if len(parts) != 2:
+        return None
+    folder, filename = parts
+    if folder not in ALLOWED_FOLDERS or not FILENAME_PATTERN.fullmatch(filename):
+        return None
+    return folder, filename
+
+
+@app.post("/copy")
+async def copy_media(
+    body: CopyRequest,
+    authorization: Optional[str] = Header(None),
+):
+    """Makes the caller's own name for a file of the same tour (a reshare).
+
+    The copy is a hard link to the original's bytes, so the two names share one
+    copy of the data: deleting either name leaves the other intact. The copy is
+    recorded as the caller's, so it is removed with their own content.
+    """
+    caller = await run_in_threadpool(authenticate, authorization)
+    check_tour_id(body.tourId)
+    check_folder(body.folder)
+    await run_in_threadpool(require_member, body.tourId, caller)
+
+    location = media_location_of(body.sourceUrl, body.tourId)
+    if location is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Only media of this tour can be copied.",
+        )
+    source_folder, source_name = location
+    source = MEDIA_ROOT / body.tourId / source_folder / source_name
+    if not source.is_file():
+        raise HTTPException(status_code=404, detail="The file to copy is gone.")
+    size = source.stat().st_size
+    await enforce_upload_budget(caller.email)
+    await enforce_storage(body.tourId, caller.email, size)
+
+    filename = f"{uuid.uuid4().hex}{Path(source_name).suffix}"
+    target_dir = MEDIA_ROOT / body.tourId / body.folder
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / filename
+    try:
+        os.link(source, target)
+    except OSError as error:
+        logger.error("Could not link %s for a copy: %s", source, error)
+        raise HTTPException(status_code=500, detail="The copy could not be made.")
+    try:
+        await run_in_threadpool(
+            write_meta, body.tourId, body.folder, filename, caller, size
+        )
+    except Exception:
+        target.unlink(missing_ok=True)
+        raise
+
+    return {
+        "status": "success",
+        "url": f"{BASE_URL.rstrip('/')}/{body.tourId}/{body.folder}/{filename}",
+        "filename": filename,
+    }
 
 
 class PurgeRequest(BaseModel):

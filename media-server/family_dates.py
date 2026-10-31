@@ -241,14 +241,20 @@ def run_family_date_reminders(
     return stats
 
 
-def is_run_due(now: datetime, last_run_day: Optional[str], retry_after: Optional[datetime]) -> bool:
+def is_run_due(
+    now: datetime,
+    last_run_day: Optional[str],
+    retry_after: Optional[datetime],
+    run_hour: int = RUN_HOUR_DHAKA,
+) -> bool:
     """Whether the daily run should happen now.
 
-    It is due from 07:00 Dhaka time, once per Dhaka day, and not before a retry is due.
+    It is due from `run_hour` (07:00 Dhaka time by default), once per Dhaka day, and
+    not before a retry is due.
     """
     if now.tzinfo is None:
         raise ValueError("is_run_due needs a timezone-aware datetime")
-    if (now.astimezone(timezone.utc) + DHAKA_OFFSET).hour < RUN_HOUR_DHAKA:
+    if (now.astimezone(timezone.utc) + DHAKA_OFFSET).hour < run_hour:
         return False
     if last_run_day == dhaka_day_key(now):
         return False

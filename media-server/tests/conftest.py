@@ -69,6 +69,23 @@ def contacts_never_reach_firebase(monkeypatch):
     monkeypatch.setattr(main.backend, "shares_group", FakeBackend().shares_group)
 
 
+@pytest.fixture(autouse=True)
+def no_cdn_settings_in_tests(monkeypatch):
+    """Tests run with no CDN configured, so no request ever leaves the test."""
+    monkeypatch.setattr(main, "read_cdn_config", lambda: None)
+
+
+@pytest.fixture(autouse=True)
+def generous_media_limits(monkeypatch):
+    """Tests start with room to spare; the limit tests lower these one at a time."""
+    import limits
+
+    monkeypatch.setattr(limits, "MIN_FREE_BYTES", 0)
+    monkeypatch.setattr(limits, "TOUR_QUOTA_BYTES", 10**12)
+    monkeypatch.setattr(limits, "UPLOADER_QUOTA_BYTES", 10**12)
+    monkeypatch.setattr(main, "upload_limiter", limits.RateLimiter(10**6))
+
+
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
