@@ -1,11 +1,10 @@
 """Tests for Bhromon Quiz Engine and REST endpoints."""
 
-import json
 from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from quiz import QuizDatabase, quiz_router
+from quiz import QuizDatabase
 from main import app
 
 

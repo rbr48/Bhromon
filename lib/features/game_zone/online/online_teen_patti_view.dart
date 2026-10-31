@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../../core/utils/app_logger.dart';
 import '../common/in_game_voice_bar.dart';
 import '../common/playing_card_view.dart';
 import '../common/poker_chip_view.dart';
@@ -812,7 +813,9 @@ class _OnlineTeenPattiViewState extends State<OnlineTeenPattiView> {
         if (seen && cards.length == 3) {
           try {
             eval = TeenPattiEngine.evaluateHand(cards);
-          } catch (_) {}
+          } catch (error, stackTrace) {
+            logSkipped(error, stackTrace);
+          }
         }
 
         return Container(

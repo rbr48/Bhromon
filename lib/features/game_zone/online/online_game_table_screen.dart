@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/colors.dart';
+import '../../../core/utils/app_logger.dart';
 import '../common/game_zone_portrait_lock.dart';
 import '../data/game_analytics_service.dart';
 import '../data/online_game_repository.dart';
@@ -78,7 +79,9 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
               if (didPop) return;
               try {
                 context.go('/game-zone');
-              } catch (_) {}
+              } catch (error, stackTrace) {
+                logSkipped(error, stackTrace);
+              }
             },
             child: Scaffold(
               backgroundColor: const Color(0xFF0F1E14),
@@ -94,7 +97,9 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
                     } else {
                       try {
                         context.go('/game-zone');
-                      } catch (_) {}
+                      } catch (error, stackTrace) {
+                        logSkipped(error, stackTrace);
+                      }
                     }
                   },
                 ),
@@ -118,7 +123,9 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
                         } else {
                           try {
                             context.go('/game-zone');
-                          } catch (_) {}
+                          } catch (error, stackTrace) {
+                            logSkipped(error, stackTrace);
+                          }
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -339,7 +346,9 @@ class _OnlineGameTableScreenState extends State<OnlineGameTableScreen>
       } else {
         try {
           context.go('/game-zone');
-        } catch (_) {}
+        } catch (error, stackTrace) {
+          logSkipped(error, stackTrace);
+        }
       }
     }
   }

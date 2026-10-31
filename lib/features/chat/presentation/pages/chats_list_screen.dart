@@ -15,6 +15,9 @@ import '../../../../core/utils/logger.dart';
 import '../../../../core/utils/doc_future_cache.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/vps_chat_service.dart';
+import '../../../tour_group/data/tour_group_repository.dart';
+import '../../../tour_group/domain/models/tour_group.dart';
+import '../../../tour_group/domain/services/group_contacts.dart';
 
 class ChatsListScreen extends StatefulWidget {
   const ChatsListScreen({super.key});
@@ -36,6 +39,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   late Stream<QuerySnapshot> _blockedStream;
   late Stream<QuerySnapshot> _chatsStream;
   late Stream<QuerySnapshot> _callsStream;
+  // The tours this user belongs to. Chats and calls outside them are not shown.
+  Set<String> _myTourIds = const {};
+  StreamSubscription<List<TourGroup>>? _myToursSub;
 
   StreamSubscription<List<Map<String, dynamic>>>? _vpsConvSub;
 
@@ -49,6 +55,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   @override
   void dispose() {
     _vpsConvSub?.cancel();
+    _myToursSub?.cancel();
     super.dispose();
   }
 
@@ -87,6 +94,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     required String otherUid,
     required String otherName,
     required String? avatarUrl,
+    required String? sharedTourId,
+    required String? remoteEmail,
   }) {
     if (otherUid.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,11 +107,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       return;
     }
 
-    if (otherUid == 'bhromon_ai_advisor') {
+    if (sharedTourId == null || remoteEmail == null || remoteEmail.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content:
-              Text('Voice and Video calls with the AI Guide are coming soon!'),
+          content: Text('You can only call members of a tour you share.'),
           backgroundColor: Color(0xFF1F2C34),
         ),
       );
@@ -115,6 +123,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       extra: {
         'localUid': currentUid,
         'remoteUid': otherUid,
+        'remoteEmail': remoteEmail,
+        'sharedTourId': sharedTourId,
         'remoteUserName': otherName,
         'remoteAvatarUrl': avatarUrl,
         'isCaller': true,
@@ -126,6 +136,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   void _ensureStreams(String uid) {
     if (_streamsUid == uid) return;
     _streamsUid = uid;
+    _myToursSub?.cancel();
+    _myToursSub = TourGroupRepository().watchMyGroups().listen((groups) {
+      if (!mounted) return;
+      setState(() => _myTourIds = {for (final group in groups) group.id});
+    }, onError: (Object _) {});
     _blockedStream = FirebaseFirestore.instance
         .collection('explorer_profiles')
         .doc(uid)
@@ -341,7 +356,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                   );
                                 }
 
-                                final allDocs = snapshot.data?.docs ?? [];
+                                final allDocs = (snapshot.data?.docs ?? [])
+                                    .where((doc) => isInMyTours(
+                                        doc.data() as Map<String, dynamic>?,
+                                        _myTourIds))
+                                    .toList();
                                 for (final doc in allDocs) {
                                   final d = doc.data() as Map<String, dynamic>;
                                   ChatLocalCache().cacheConversation(
@@ -468,8 +487,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       unreadCount: unreadCount,
                                       cachedOtherProfile: cachedProfile,
                                       activeTabFilter: _activeTab,
-                                      onTap: () => context.push('/chat/$chatId',
-                                          extra: {'otherUid': otherUserUid}),
+                                      onTap: () =>
+                                          context.push('/chat/$chatId', extra: {
+                                        'otherUid': otherUserUid,
+                                        'sharedTourId': data['sharedTourId'],
+                                        'otherEmail': (data['memberEmails']
+                                            as Map?)?[otherUserUid]
+                                      }),
                                       onLongPress: () => _showChatTileOptions(
                                           context, chatId, otherUserUid),
                                     );
@@ -522,6 +546,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   Widget _buildOfflineConversationsList(
       Set<String> blockedUids, String currentUid) {
     final filtered = _offlineConversations.where((data) {
+      if (!isInMyTours(data, _myTourIds)) return false;
       final participants =
           List<String>.from(data['participants'] as Iterable? ?? <dynamic>[]);
       final otherUser =
@@ -587,8 +612,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           unreadCount: unreadCount,
           cachedOtherProfile: cachedProfile,
           activeTabFilter: _activeTab,
-          onTap: () =>
-              context.push('/chat/$chatId', extra: {'otherUid': otherUserUid}),
+          onTap: () => context.push('/chat/$chatId', extra: {
+            'otherUid': otherUserUid,
+            'sharedTourId': data['sharedTourId'],
+            'otherEmail': (data['memberEmails'] as Map?)?[otherUserUid]
+          }),
           onLongPress: () =>
               _showChatTileOptions(context, chatId, otherUserUid),
         );
@@ -710,7 +738,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         }
 
         // Sort client-side by createdAt descending to avoid requiring composite Firestore index
-        final docs = (snapshot.data?.docs ?? []).toList()
+        final docs = (snapshot.data?.docs ?? [])
+            .where((doc) =>
+                isInMyTours(doc.data() as Map<String, dynamic>?, _myTourIds))
+            .toList()
           ..sort((a, b) {
             final aData = a.data() as Map<String, dynamic>?;
             final bData = b.data() as Map<String, dynamic>?;
@@ -838,6 +869,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     otherUid: otherUid,
                     otherName: otherName,
                     avatarUrl: avatarUrl,
+                    sharedTourId: data['sharedTourId'] as String?,
+                    remoteEmail:
+                        (data['memberEmails'] as Map?)?[otherUid] as String?,
                   ),
                 );
               },
@@ -893,35 +927,49 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     );
   }
 
-  /// How many travelers the picker loads before any search.
-  static const int _kTravelerPickerLimit = 100;
+  /// The people this user can chat or call: members of their own tours. Nothing
+  /// outside those tours is loaded, so nobody can be found by searching the app.
+  static Future<List<GroupContact>> _loadGroupContacts() async {
+    final repository = TourGroupRepository();
+    final groups = await _firstLoaded(repository.watchMyGroups());
+    final tours = <({String id, String name, List<TourMember> members})>[];
+    for (final group in groups) {
+      final members = await _firstLoaded(repository.watchMembers(group.id));
+      tours.add((id: group.id, name: group.name, members: members));
+    }
+    return groupContacts(
+      myUid: repository.currentUid,
+      myEmail: repository.currentEmail,
+      tours: tours,
+    );
+  }
 
-  /// Name-prefix lookups so travelers outside the first page can be found.
-  static Future<List<QueryDocumentSnapshot>> _searchTravelersByName(
-      String raw) async {
-    final variants = {
-      raw,
-      raw[0].toUpperCase() + raw.substring(1),
-    };
-    final profiles = FirebaseFirestore.instance.collection('explorer_profiles');
-    final snaps = await Future.wait(variants.map((prefix) => profiles
-        .where('displayName', isGreaterThanOrEqualTo: prefix)
-        .where('displayName', isLessThan: '$prefix\uf8ff')
-        .limit(20)
-        .get()));
-    return [for (final snap in snaps) ...snap.docs];
+  /// The first non-empty list a stream emits, or an empty list after a few seconds.
+  /// The local cache can answer first with nothing, before the server does. The
+  /// subscription is cancelled either way, so no listener is left running.
+  static Future<List<T>> _firstLoaded<T>(Stream<List<T>> stream) {
+    final completer = Completer<List<T>>();
+    StreamSubscription<List<T>>? subscription;
+    final timer = Timer(const Duration(seconds: 4), () {
+      if (!completer.isCompleted) completer.complete(<T>[]);
+      subscription?.cancel();
+    });
+    subscription = stream.listen((items) {
+      if (items.isNotEmpty && !completer.isCompleted) {
+        completer.complete(items);
+        timer.cancel();
+        subscription?.cancel();
+      }
+    }, onError: (Object error) {
+      if (!completer.isCompleted) completer.completeError(error);
+      timer.cancel();
+      subscription?.cancel();
+    });
+    return completer.future;
   }
 
   void _showSelectTravelerSheet(BuildContext context, String currentUid) {
-    // One bounded read when the sheet opens. This used to be a live listener
-    // on every profile in the app, re-subscribed on each keystroke.
-    final Future<List<QueryDocumentSnapshot>> baseDocs = FirebaseFirestore
-        .instance
-        .collection('explorer_profiles')
-        .orderBy('explorerScore.value', descending: true)
-        .limit(_kTravelerPickerLimit)
-        .get()
-        .then((snap) => snap.docs);
+    final Future<List<GroupContact>> contactsFuture = _loadGroupContacts();
 
     showModalBottomSheet<void>(
       context: context,
@@ -931,8 +979,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         String sheetSearch = '';
-        Future<List<QueryDocumentSnapshot>> docsFuture = baseDocs;
-        Timer? searchDebounce;
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             return Container(
@@ -968,8 +1014,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           fontWeight: FontWeight.bold),
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Only members of your tour groups',
+                      style: TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                  ),
                   const SizedBox(height: 12),
-                  // Search bar in bottom sheet
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Container(
@@ -981,7 +1034,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         style:
                             const TextStyle(color: Colors.white, fontSize: 13),
                         decoration: const InputDecoration(
-                          hintText: 'Search traveler name or division...',
+                          hintText: 'Search member name or tour...',
                           hintStyle:
                               TextStyle(color: Colors.white54, fontSize: 12),
                           prefixIcon: Icon(Icons.search,
@@ -989,91 +1042,41 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(vertical: 10),
                         ),
-                        onChanged: (val) {
-                          setSheetState(() {
-                            sheetSearch = val.trim().toLowerCase();
-                          });
-                          // Ask the server only once typing pauses.
-                          searchDebounce?.cancel();
-                          final raw = val.trim();
-                          searchDebounce =
-                              Timer(const Duration(milliseconds: 350), () {
-                            if (!ctx.mounted) return;
-                            setSheetState(() {
-                              docsFuture = raw.length < 2
-                                  ? baseDocs
-                                  : Future.wait([
-                                      baseDocs,
-                                      _searchTravelersByName(raw),
-                                    ]).then((lists) {
-                                      final seen = <String>{};
-                                      return [
-                                        for (final doc
-                                            in lists.expand((l) => l))
-                                          if (seen.add(doc.id)) doc,
-                                      ];
-                                    });
-                            });
-                          });
-                        },
+                        onChanged: (val) => setSheetState(() {
+                          sheetSearch = val.trim().toLowerCase();
+                        }),
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Expanded(
-                    child: FutureBuilder<List<QueryDocumentSnapshot>>(
-                      future: docsFuture,
+                    child: FutureBuilder<List<GroupContact>>(
+                      future: contactsFuture,
                       builder: (context, snap) {
-                        if (!snap.hasData) {
+                        if (snap.connectionState != ConnectionState.done) {
                           return const Center(
                               child: CircularProgressIndicator(
                                   color: Color(0xFF00A884)));
                         }
-                        final travelers = snap.data!.where((doc) {
-                          if (doc.id == currentUid) return false;
-                          final data = doc.data() as Map<String, dynamic>;
-                          final name = (data['displayName'] as String? ?? '')
-                              .toLowerCase();
-                          final div =
-                              (data['division'] as String? ?? '').toLowerCase();
-                          return sheetSearch.isEmpty ||
-                              name.contains(sheetSearch) ||
-                              div.contains(sheetSearch);
-                        }).toList();
+                        final contacts = (snap.data ?? const <GroupContact>[])
+                            .where((c) =>
+                                sheetSearch.isEmpty ||
+                                c.name.toLowerCase().contains(sheetSearch) ||
+                                c.tours.any((t) =>
+                                    t.name.toLowerCase().contains(sheetSearch)))
+                            .toList();
 
-                        final List<Map<String, dynamic>> travelerList =
-                            travelers.map((doc) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          return <String, dynamic>{
-                            'uid': doc.id,
-                            'displayName': (data['displayName'] as String?)
-                                        ?.trim()
-                                        .isNotEmpty ==
-                                    true
-                                ? data['displayName'] as String
-                                : 'Traveler',
-                            'avatarUrl': (data['avatarUrl'] as String?) ?? '',
-                            'division':
-                                (data['division'] as String?) ?? 'Explorer',
-                          };
-                        }).toList();
-
-                        // Add AI Companion at the top if search is empty or matches
-                        if (sheetSearch.isEmpty ||
-                            'bhromon ai guide'.contains(sheetSearch)) {
-                          travelerList.insert(0, {
-                            'uid': 'bhromon_ai_advisor',
-                            'displayName': 'Bhromon AI Guide',
-                            'avatarUrl': '',
-                            'division': '✨ AI Assistant',
-                          });
-                        }
-
-                        if (travelerList.isEmpty) {
+                        if (contacts.isEmpty) {
                           return const Center(
-                            child: Text('No other travelers registered yet.',
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: Text(
+                                'Join or create a tour group to chat with its members.',
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
-                                    color: Colors.white54, fontSize: 12)),
+                                    color: Colors.white54, fontSize: 12),
+                              ),
+                            ),
                           );
                         }
 
@@ -1081,17 +1084,11 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           padding: const EdgeInsets.all(8),
                           separatorBuilder: (context, index) =>
                               const Divider(color: Colors.white10, height: 1),
-                          itemCount: travelerList.length,
+                          itemCount: contacts.length,
                           itemBuilder: (context, idx) {
-                            final traveler = travelerList[idx];
-                            final String name =
-                                traveler['displayName'] as String;
-                            final String avatarUrl =
-                                traveler['avatarUrl'] as String;
-                            final String division =
-                                traveler['division'] as String;
-                            final String targetUid = traveler['uid'] as String;
-
+                            final contact = contacts[idx];
+                            final name = contact.name;
+                            final avatarUrl = contact.photoUrl ?? '';
                             final initials = name.length > 2
                                 ? name.substring(0, 2).toUpperCase()
                                 : 'EX';
@@ -1119,54 +1116,61 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13)),
-                              subtitle: Text(division,
-                                  style: const TextStyle(
-                                      color: Colors.white54, fontSize: 11)),
-                              trailing: targetUid == 'bhromon_ai_advisor'
-                                  ? null
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.call,
-                                              color: Color(0xFF00A884),
-                                              size: 20),
-                                          tooltip: 'Audio Call',
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            _initiateCall(
-                                              isVideo: false,
-                                              currentUid: currentUid,
-                                              otherUid: targetUid,
-                                              otherName: name,
-                                              avatarUrl: avatarUrl,
-                                            );
-                                          },
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.videocam,
-                                              color: Color(0xFF00A884),
-                                              size: 22),
-                                          tooltip: 'Video Call',
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            _initiateCall(
-                                              isVideo: true,
-                                              currentUid: currentUid,
-                                              otherUid: targetUid,
-                                              otherName: name,
-                                              avatarUrl: avatarUrl,
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ),
+                              subtitle: Text(
+                                contact.tours.map((t) => t.name).join(' · '),
+                                style: const TextStyle(
+                                    color: Colors.white54, fontSize: 11),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.call,
+                                        color: Color(0xFF00A884), size: 20),
+                                    tooltip: 'Audio Call',
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      _initiateCall(
+                                        isVideo: false,
+                                        currentUid: currentUid,
+                                        otherUid: contact.uid,
+                                        otherName: name,
+                                        avatarUrl: avatarUrl,
+                                        sharedTourId: contact.sharedTourId,
+                                        remoteEmail: contact.email,
+                                      );
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.videocam,
+                                        color: Color(0xFF00A884), size: 22),
+                                    tooltip: 'Video Call',
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      _initiateCall(
+                                        isVideo: true,
+                                        currentUid: currentUid,
+                                        otherUid: contact.uid,
+                                        otherName: name,
+                                        avatarUrl: avatarUrl,
+                                        sharedTourId: contact.sharedTourId,
+                                        remoteEmail: contact.email,
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                               onTap: () {
-                                Navigator.pop(context); // close sheet
-                                final uids = [currentUid, targetUid]..sort();
-                                final chatId = uids.join('_');
-                                GoRouter.of(context).push('/chat/$chatId',
-                                    extra: {'otherUid': targetUid});
+                                Navigator.pop(context);
+                                final uids = [currentUid, contact.uid]..sort();
+                                GoRouter.of(context).push(
+                                  '/chat/${uids.join('_')}',
+                                  extra: {
+                                    'otherUid': contact.uid,
+                                    'sharedTourId': contact.sharedTourId,
+                                    'otherEmail': contact.email,
+                                  },
+                                );
                               },
                             );
                           },
@@ -1397,15 +1401,6 @@ class ChatTile extends StatelessWidget {
     // Tab filters
     if (activeTabFilter == 'Unread' && unreadCount == 0) {
       return const SizedBox.shrink();
-    }
-
-    if (otherUserUid == 'bhromon_ai_advisor') {
-      return _buildTile(
-        context,
-        displayName: 'Bhromon AI Guide',
-        avatarUrl: null,
-        initials: 'AI',
-      );
     }
 
     if (cachedOtherProfile != null) {

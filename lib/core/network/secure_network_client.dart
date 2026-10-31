@@ -1,20 +1,22 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:crypto/crypto.dart' as crypto;
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode, kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:injectable/injectable.dart';
+
 import '../utils/app_logger.dart';
 
-/// Unified secure HTTP client (Dio-based).
+/// Unified HTTP client (Dio-based).
 ///
 /// All HTTP calls in the app should use [SecureNetworkClient.dio] directly,
 /// or the typed helpers [get], [post], [put], [delete].
 ///
 /// Features:
-/// - TLS certificate pinning (configurable per environment)
+/// - TLS certificates are checked by the platform. A certificate the platform rejects
+///   is rejected here too, except for a local development host in a debug build.
+///   No certificate pins are set; see [_allowBadCertificate].
 /// - Automatic Firebase Auth token injection on every request
 /// - Retry with exponential back-off on transient network errors
 /// - Structured request/response logging (DEBUG builds only)
@@ -22,18 +24,6 @@ import '../utils/app_logger.dart';
 @lazySingleton
 class SecureNetworkClient {
   final Dio dio;
-
-  /// SHA-256 fingerprints of the Bhromon API server certificates.
-  /// Update when the certificate is rotated.
-  ///
-  /// To obtain: `openssl s_client -connect api.bhromon.com:443 < /dev/null 2>/dev/null |
-  ///   openssl x509 -fingerprint -sha256 -noout`
-  static const List<String> _pinnedFingerprints = [
-    // Slot A — primary cert fingerprint (replace with real value before production)
-    'AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99',
-    // Slot B — backup cert fingerprint for rotation continuity
-    'BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA',
-  ];
 
   SecureNetworkClient() : dio = Dio() {
     _configureDio();
@@ -47,8 +37,9 @@ class SecureNetworkClient {
       ..headers['Accept'] = 'application/json'
       ..headers['Content-Type'] = 'application/json';
 
-    // Certificate pinning via custom HttpClient adapter
-    // Certificate pinning via custom HttpClient adapter (Mobile only; browsers handle TLS natively)
+    // Mobile only: browsers check certificates themselves. A certificate the platform
+    // rejects reaches _allowBadCertificate, which allows only a local development host
+    // in a debug build.
     if (!kIsWeb &&
         !Platform.isWindows &&
         !Platform.isMacOS &&
@@ -57,7 +48,7 @@ class SecureNetworkClient {
         createHttpClient: () {
           final client =
               HttpClient(context: SecurityContext(withTrustedRoots: true));
-          client.badCertificateCallback = _verifyCertificate;
+          client.badCertificateCallback = _allowBadCertificate;
           return client;
         },
       );
@@ -71,39 +62,21 @@ class SecureNetworkClient {
     ]);
   }
 
-  bool _verifyCertificate(X509Certificate cert, String host, int port) {
-    // Allow local development hosts without pinning
-    if (host == 'localhost' || host == '127.0.0.1' || host == '10.0.2.2') {
+  /// Called only when the platform has already rejected a certificate. Nothing is
+  /// allowed except a local development host in a debug build.
+  ///
+  /// This is not certificate pinning. Pinning would have to be checked on every
+  /// connection, including the ones the platform accepts, and this callback is not
+  /// called for those. Pins are not set until that is designed.
+  bool _allowBadCertificate(X509Certificate cert, String host, int port) {
+    final local =
+        host == 'localhost' || host == '127.0.0.1' || host == '10.0.2.2';
+    if (!kReleaseMode && local) {
+      logDebug('Accepted an untrusted certificate for local host $host');
       return true;
     }
-
-    // Dynamic bypass for debug/profile environments when using dummy placeholders
-    if (!kReleaseMode) {
-      logDebug('Certificate pinning bypassed in non-release mode for: $host');
-      return true;
-    }
-
-    // Compute SHA-256 fingerprint from the raw DER certificate bytes
-    final fingerprint = _computeSha256Fingerprint(cert.der);
-
-    if (_pinnedFingerprints.contains(fingerprint)) {
-      return true; // Certificate matches a pinned fingerprint
-    }
-
-    logError(
-      'Certificate pinning failure for $host:$port. '
-      'Got fingerprint: $fingerprint',
-    );
-    return false; // Reject — potential MITM
-  }
-
-  String _computeSha256Fingerprint(List<int> derBytes) {
-    // Use proper SHA-256 via package:crypto
-    // Format: XX:XX:XX:... (colon-separated uppercase hex)
-    final digest = crypto.sha256.convert(derBytes);
-    return digest.bytes
-        .map((b) => b.toRadixString(16).padLeft(2, '0').toUpperCase())
-        .join(':');
+    logError('TLS certificate rejected for $host:$port');
+    return false;
   }
 
   // ── Typed helpers ──────────────────────────────────────────────────────────

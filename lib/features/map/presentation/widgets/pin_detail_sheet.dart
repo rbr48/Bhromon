@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/shared_latest_stream.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -1480,7 +1481,9 @@ class _PinDetailSheetState extends State<PinDetailSheet>
           .collection('location_pins')
           .doc(widget.pin.pinId)
           .update({'visitCount': FieldValue.increment(1)});
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
   }
 
   Widget _buildRecentVisitors(LocationPin pin) {

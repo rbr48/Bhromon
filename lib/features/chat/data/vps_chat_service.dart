@@ -28,6 +28,11 @@ class VpsChatService {
   ));
 
   WebSocketChannel? _wsChannel;
+  // Events that come before the socket signs in wait here. The server closes a
+  // socket whose first message is not the auth message, so they go out after it.
+  final List<String> _unsentWsEvents = [];
+  bool _wsSignedIn = false;
+  static const int _maxUnsentWsEvents = 50;
   StreamSubscription<dynamic>? _wsSubscription;
   Timer? _reconnectTimer;
   Timer? _pingTimer;
@@ -109,12 +114,21 @@ class VpsChatService {
 
       // The token goes in the first message, not the URL, so it stays out of
       // proxy and access logs. The server closes a socket whose first message
-      // is not this, so nothing else is sent before it.
+      // is not this, so nothing goes before it: events wait in _unsentWsEvents.
+      _unsentWsEvents.clear();
+      _wsSignedIn = false;
       _wsChannel = WebSocketChannel.connect(Uri.parse(wsUrl));
       await _wsChannel!.ready;
       // confirms: this app confirms the chat messages it shows on screen, so the
       // server can push to a phone that does not confirm.
-      sendWsEvent({'type': 'auth', 'token': token, 'confirms': true});
+      _wsChannel?.sink.add(
+        jsonEncode({'type': 'auth', 'token': token, 'confirms': true}),
+      );
+      _wsSignedIn = true;
+      for (final queued in _unsentWsEvents) {
+        _wsChannel?.sink.add(queued);
+      }
+      _unsentWsEvents.clear();
 
       _reconnectAttempts = 0;
       _isConnecting = false;
@@ -165,15 +179,24 @@ class VpsChatService {
     _wsSubscription = null;
     try {
       _wsChannel?.sink.close();
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     _wsChannel = null;
+    _wsSignedIn = false;
+    _unsentWsEvents.clear();
     _isConnecting = false;
   }
 
   void sendWsEvent(Map<String, dynamic> event) {
     try {
-      if (_wsChannel != null) {
-        _wsChannel!.sink.add(jsonEncode(event));
+      if (_wsChannel == null) return;
+      final encoded = jsonEncode(event);
+      if (_wsSignedIn) {
+        _wsChannel!.sink.add(encoded);
+      } else if (_unsentWsEvents.length < _maxUnsentWsEvents) {
+        // Still connecting: hold the event until the auth message is sent.
+        _unsentWsEvents.add(encoded);
       }
     } catch (e, st) {
       logWarning('[VpsChat] Failed to send WS event', e, st);

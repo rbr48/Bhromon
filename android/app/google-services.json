@@ -12,7 +12,36 @@
           "package_name": "com.bhromon.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "919602851188-7ss5ngl47r59tsvr3d4n8kh3dg4puh5i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bhromon.app",
+            "certificate_hash": "2f439e91f9834816f0796638b7abf4a3b9c1888c"
+          }
+        },
+        {
+          "client_id": "919602851188-pr9mct88grgs0mgfutntkq0k6mlfj00b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bhromon.app",
+            "certificate_hash": "66386d9f397550e7bf7252cfd3e029754b46ff7d"
+          }
+        },
+        {
+          "client_id": "919602851188-vffmj7vq3t7c3o6vev087sa9srn2mvck.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bhromon.app",
+            "certificate_hash": "590526d0f572608bed74bab9c579687d040c11c6"
+          }
+        },
+        {
+          "client_id": "919602851188-19utalf8ermkjdfog5r605s3stc98sfr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyADg43-_aGd8oVLHJAtaOVijhNqOqBzyjQ"
@@ -20,7 +49,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "919602851188-19utalf8ermkjdfog5r605s3stc98sfr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "919602851188-isbg6u5l3l5800fi2hkvj2dil5iokrja.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.bhromon.bhromon"
+              }
+            }
+          ]
         }
       }
     }

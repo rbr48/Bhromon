@@ -10,7 +10,7 @@ const MB = 1024 * 1024;
 
 describe('Safety reports and geofence triggers', () => {
   let env;
-  const db = (uid) => env.authenticatedContext(uid, { email: `${uid}@x.com` }).firestore();
+  const db = (uid) => env.authenticatedContext(uid, { email: `${uid}@x.com`, email_verified: true }).firestore();
   const guestDb = () => env.unauthenticatedContext().firestore();
 
   beforeAll(async () => {

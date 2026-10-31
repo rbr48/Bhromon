@@ -22,6 +22,7 @@ export { sendTourPostNotification } from './sendTourPostNotification';
 export { sendTourCommentNotification } from './sendTourCommentNotification';
 export { sendTourReactionNotification } from './sendTourReactionNotification';
 export { sendTourNoticeNotification } from './sendTourNoticeNotification';
+export { sendTourNoticeReminders } from './sendTourNoticeReminders';
 export { sendTourLedgerNotification } from './sendTourLedgerNotification';
 export { sendCallPushNotification } from './sendCallPushNotification';
 

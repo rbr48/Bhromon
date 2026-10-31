@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+
 import '../../../../core/utils/app_logger.dart';
 
 /// Text-to-Speech audio service for speaking headlines and articles aloud.
@@ -99,7 +100,9 @@ class NewsTtsService {
       if (_flutterTts != null) {
         await _flutterTts!.stop();
       }
-    } catch (_) {}
+    } catch (error, stackTrace) {
+      logSkipped(error, stackTrace);
+    }
     isPlayingNotifier.value = false;
     currentPlayingIdNotifier.value = null;
   }

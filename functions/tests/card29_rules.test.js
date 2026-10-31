@@ -10,7 +10,7 @@ const TOUR = 't1';
 
 describe('Online 29 table rules', () => {
   let env;
-  const db = (email) => env.authenticatedContext(email.split('@')[0], { email }).firestore();
+  const db = (email) => env.authenticatedContext(email.split('@')[0], { email, email_verified: true }).firestore();
   const guest = () => env.unauthenticatedContext().firestore();
   const game = (f, id) => doc(f, 'tours', TOUR, 'games', id);
   const seat = (f, id, n) => doc(f, 'tours', TOUR, 'games', id, 'private', `seat${n}`);
