@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -12,6 +13,7 @@ import '../data/tour_export_images.dart';
 import '../data/tour_export_pdf.dart';
 import '../data/tour_group_repository.dart';
 import '../domain/models/tour_group.dart';
+import 'tour_pdf_download.dart';
 
 /// Makes the tour's whole record into one PDF and opens the share sheet with
 /// it. A progress dialog stays up while the data is read and the pictures are
@@ -65,20 +67,26 @@ Future<void> exportTourPdf(
       },
     );
     closeDialog();
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [
-          XFile.fromData(
-            bytes,
-            mimeType: 'application/pdf',
-            name: _fileName(group),
-          ),
-        ],
-        text: l10n.translate('pdf_export_title', args: {'name': group.name}),
-      ),
-    );
-  } catch (error) {
-    logError('Tour PDF export failed: $error');
+    final fileName = _fileName(group);
+    if (kIsWeb) {
+      await downloadWebFile(bytes, fileName);
+    } else {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(
+              bytes,
+              mimeType: 'application/pdf',
+              name: fileName,
+            ),
+          ],
+          fileNameOverrides: [fileName],
+          text: l10n.translate('pdf_export_title', args: {'name': group.name}),
+        ),
+      );
+    }
+  } catch (error, stack) {
+    logError('Tour PDF export failed: $error\n$stack');
     closeDialog();
     messenger.showSnackBar(
       SnackBar(content: Text(l10n.translate('pdf_export_failed'))),
