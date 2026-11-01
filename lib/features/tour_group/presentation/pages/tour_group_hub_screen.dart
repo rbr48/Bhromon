@@ -1055,30 +1055,32 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             TextButton.icon(
               onPressed: () => _showCreateFamilyDialog(context,
                   preset: TourGroup.schoolPreset),
-              icon: Icon(Icons.menu_book_rounded, color: AppColors.mintGreen),
+              icon: const Icon(Icons.menu_book_rounded,
+                  color: AppColors.mintGreen),
               label: Text(context.l10n.translate('hub_create_school'),
                   style: const TextStyle(color: AppColors.mintGreen)),
             ),
             TextButton.icon(
               onPressed: () => _showCreateFamilyDialog(context,
                   preset: TourGroup.sportsPreset),
-              icon:
-                  Icon(Icons.sports_soccer_rounded, color: AppColors.mintGreen),
+              icon: const Icon(Icons.sports_soccer_rounded,
+                  color: AppColors.mintGreen),
               label: Text(context.l10n.translate('hub_create_sports'),
                   style: const TextStyle(color: AppColors.mintGreen)),
             ),
             TextButton.icon(
               onPressed: () => _showCreateFamilyDialog(context,
                   preset: TourGroup.studyPreset),
-              icon:
-                  Icon(Icons.local_library_rounded, color: AppColors.mintGreen),
+              icon: const Icon(Icons.local_library_rounded,
+                  color: AppColors.mintGreen),
               label: Text(context.l10n.translate('hub_create_study'),
                   style: const TextStyle(color: AppColors.mintGreen)),
             ),
             TextButton.icon(
               onPressed: () => _showCreateFamilyDialog(context,
                   preset: TourGroup.committeePreset),
-              icon: Icon(Icons.how_to_vote_rounded, color: AppColors.mintGreen),
+              icon: const Icon(Icons.how_to_vote_rounded,
+                  color: AppColors.mintGreen),
               label: Text(context.l10n.translate('hub_create_committee'),
                   style: const TextStyle(color: AppColors.mintGreen)),
             ),
