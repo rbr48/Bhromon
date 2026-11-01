@@ -30,10 +30,22 @@ void main() {
 
     test('an unknown preset is read as no preset', () {
       final group =
-          TourGroup.fromMap('g3', _circle(kind: 'family', preset: 'school'));
+          TourGroup.fromMap('g3', _circle(kind: 'family', preset: 'hostel'));
 
       expect(group.isOffice, isFalse);
       expect(group.preset, isNull);
+    });
+
+    test('the four new presets are read back, and only three manage notices',
+        () {
+      for (final preset in ['school', 'sports', 'study', 'committee']) {
+        final group =
+            TourGroup.fromMap('g4', _circle(kind: 'family', preset: preset));
+
+        expect(group.preset, preset, reason: preset);
+        expect(group.hasManagedNotices, preset != 'study', reason: preset);
+        expect(group.isManaged, isFalse, reason: 'SOS stays on for $preset');
+      }
     });
 
     test('the preset is written only when there is one', () {
