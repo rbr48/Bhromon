@@ -1889,6 +1889,25 @@ class TourTranslationKeys {
       'mess_add_expense_sub': 'Bazar, bills, gas, repairs and more',
       'mess_quick_bazar': 'Bazar',
       'mess_quick_bazar_sub': 'Shared between everyone, paid by you',
+      'mess_module_meals': 'Meals',
+      'mess_module_meals_sub': 'Breakfast, lunch and dinner for everyone',
+      'meals_title': 'Meals',
+      'meals_month_totals': 'This month',
+      'meals_day_log': 'This day',
+      'meals_breakfast': 'Breakfast',
+      'meals_lunch': 'Lunch',
+      'meals_dinner': 'Dinner',
+      'meals_total_count': '{count} meals',
+      'meals_none_logged':
+          'No meals logged this month yet, so a bazar would be split by hand.',
+      'meals_split_hint':
+          'A bazar added from the ledger is split by these monthly totals. A member with no meals gets no share.',
+      'meals_read_only':
+          'You set your own row. The owner or an admin sets the others.',
+      'meals_prev_month': 'Previous month',
+      'meals_next_month': 'Next month',
+      'meals_save_failed': 'Could not save the meals. Try again.',
+      'meals_load_failed': 'Could not load the meals.',
       'pdf_export_admin_only':
           'Only the owner or an admin can export the whole tour.',
       'notice_post_failed':
@@ -3935,6 +3954,25 @@ class TourTranslationKeys {
       'mess_add_expense_sub': 'বাজার, বিল, গ্যাস, মেরামত ইত্যাদি',
       'mess_quick_bazar': 'বাজার',
       'mess_quick_bazar_sub': 'সবার মধ্যে ভাগ হবে, আপনি পরিশোধ করেছেন',
+      'mess_module_meals': 'মিল',
+      'mess_module_meals_sub': 'সবার সকাল, দুপুর ও রাতের মিল',
+      'meals_title': 'মিল',
+      'meals_month_totals': 'এই মাসে',
+      'meals_day_log': 'এই দিনের মিল',
+      'meals_breakfast': 'সকাল',
+      'meals_lunch': 'দুপুর',
+      'meals_dinner': 'রাত',
+      'meals_total_count': '{count}টি মিল',
+      'meals_none_logged':
+          'এই মাসে এখনও কোনো মিল লেখা হয়নি, তাই বাজারের ভাগ নিজে বসাতে হবে।',
+      'meals_split_hint':
+          'খরচের খাতা থেকে যোগ করা বাজার এই মাসের মোট মিল অনুযায়ী ভাগ হবে। যাঁর মিল নেই, তাঁর ভাগ নেই।',
+      'meals_read_only':
+          'আপনি নিজের সারি বদলাতে পারেন। অন্যদের সারি মালিক বা অ্যাডমিন বদলান।',
+      'meals_prev_month': 'আগের মাস',
+      'meals_next_month': 'পরের মাস',
+      'meals_save_failed': 'মিল সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
+      'meals_load_failed': 'মিল লোড করা যায়নি।',
       'pdf_export_admin_only':
           'শুধু মালিক বা অ্যাডমিন পুরো ট্যুরের PDF নিতে পারেন।',
       'notice_post_failed':

@@ -17,6 +17,8 @@ import '../domain/models/tour_activity_models.dart';
 import '../domain/models/family_date_models.dart';
 import '../domain/models/dependent_models.dart';
 import '../domain/models/family_task_models.dart';
+import '../domain/models/meal_log.dart';
+import '../domain/services/meal_engine.dart';
 import '../domain/services/dependent_rules.dart';
 import '../domain/services/family_date_rules.dart';
 import '../domain/models/tour_group.dart';
@@ -1701,6 +1703,38 @@ class TourGroupRepository {
       'assigneeEmail': assignee,
     });
   }
+
+  /// One mess's meal counts for a month. A member's row is written with [saveMeal].
+  Stream<List<MealLog>> watchMealsForMonth(String tourId, DateTime month) {
+    return _mealsForMonth(tourId, month).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (MealLog.fromMap(d.data()) case final log?) log,
+        ]);
+  }
+
+  /// Each member's meals in the month, keyed by email, for splitting a bazar.
+  Future<Map<String, int>> mealTotalsForMonth(
+      String tourId, DateTime month) async {
+    final snap = await _mealsForMonth(tourId, month).get();
+    return mealTotalsByEmail([
+      for (final d in snap.docs)
+        if (MealLog.fromMap(d.data()) case final log?) log,
+    ]);
+  }
+
+  /// Writes one member's meals for a day. A member writes their own row; an owner or
+  /// admin writes any row.
+  Future<void> saveMeal(String tourId, MealLog log) async {
+    await _sub(tourId, 'meals').doc(log.id).set({
+      ...log.toFields(currentEmail),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Query<Map<String, dynamic>> _mealsForMonth(String tourId, DateTime month) =>
+      _sub(tourId, 'meals')
+          .where('dateKey', isGreaterThanOrEqualTo: mealMonthFirstKey(month))
+          .where('dateKey', isLessThanOrEqualTo: mealMonthLastKey(month));
 
   Future<void> deleteFamilyTask(String tourId, String taskId) async {
     _requireEmail();

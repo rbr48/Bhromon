@@ -1539,6 +1539,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           color: const Color(0xFF22D3EE),
           onTap: () => context.push('/group/${group.id}/family-tasks'),
         ),
+      if (group.isMess)
+        'meals': _ModuleItem(
+          title: l10n.translate('mess_module_meals'),
+          subtitle: l10n.translate('mess_module_meals_sub'),
+          icon: Icons.restaurant_rounded,
+          color: const Color(0xFFF59E0B),
+          onTap: () => context.push('/group/${group.id}/meals'),
+        ),
       if (group.isFamily && !group.isManaged && !group.isMess)
         'dependents': _ModuleItem(
           title: l10n.translate('hub_module_dependents'),
@@ -3398,6 +3406,7 @@ const List<String> _familyModuleOrder = [
   'channels',
   'notices',
   'family_tasks',
+  'meals',
   'dependents',
   'album',
   'calendar',

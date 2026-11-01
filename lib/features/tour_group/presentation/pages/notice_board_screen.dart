@@ -66,10 +66,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
   // In a family circle every member posts a notice; its author may delete it.
   bool get _isFamily => _group?.isFamily ?? false;
-  bool get _isManaged => _group?.isManaged ?? false;
+  bool get _hasManagedNotices => _group?.hasManagedNotices ?? false;
 
-  /// Members of a family circle post notices. An office or campus reserves them for admins.
-  bool get _membersPost => _isFamily && !_isManaged;
+  /// Members of a family circle post notices. An office, a campus or a mess reserves
+  /// them for its owner and admins.
+  bool get _membersPost => _isFamily && !_hasManagedNotices;
   String get _me => _repository.currentEmail;
 
   @override

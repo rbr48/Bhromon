@@ -86,6 +86,8 @@ Future<ExpenseDraft?> showExpenseEditor(
   ExpenseItem? existing,
   String? initialTitle,
   String? initialCategory,
+  SplitMode? initialSplit,
+  Map<String, int>? initialShares,
 }) {
   return showModalBottomSheet<ExpenseDraft>(
     context: context,
@@ -99,7 +101,9 @@ Future<ExpenseDraft?> showExpenseEditor(
         me: me,
         existing: existing,
         initialTitle: initialTitle,
-        initialCategory: initialCategory),
+        initialCategory: initialCategory,
+        initialSplit: initialSplit,
+        initialShares: initialShares),
   );
 }
 
@@ -111,6 +115,8 @@ class _ExpenseEditor extends StatefulWidget {
     this.existing,
     this.initialTitle,
     this.initialCategory,
+    this.initialSplit,
+    this.initialShares,
   });
 
   final List<TourMember> members;
@@ -121,6 +127,11 @@ class _ExpenseEditor extends StatefulWidget {
   /// Prefilled for a quick entry, such as a lunch split. Ignored when editing.
   final String? initialTitle;
   final String? initialCategory;
+
+  /// The split and the parts a bazar opens with, such as this month's meal counts.
+  /// Ignored when editing.
+  final SplitMode? initialSplit;
+  final Map<String, int>? initialShares;
 
   @override
   State<_ExpenseEditor> createState() => _ExpenseEditorState();
@@ -151,7 +162,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
       (widget.members.any((m) => m.email == widget.me)
           ? widget.me
           : (widget.members.isEmpty ? null : widget.members.first.email));
-  late SplitMode _mode = e?.splitMode ?? SplitMode.family;
+  late SplitMode _mode =
+      e?.splitMode ?? widget.initialSplit ?? SplitMode.family;
   late final Set<String> _people = {
     ...(e?.participantIds ??
         e?.splitShares?.keys ??
@@ -169,7 +181,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                 ? (e!.splitShares![m.email]! / e!.fxRate!).round()
                 : e!.splitShares![m.email]!),
         SplitMode.shares => e!.splitShares?[m.email]?.toString() ?? '',
-        _ => '',
+        _ => widget.initialShares?[m.email]?.toString() ?? '',
       }),
   };
   String? _error;

@@ -325,12 +325,16 @@ class TourGroup {
   bool get isCampus => preset == campusPreset;
 
   /// A mess or shared home: a family-style circle with its own categories and
-  /// channels. Members post notices as they do in a family circle.
+  /// channels. The owner and admins post its notices, and members answer them.
   bool get isMess => preset == messPreset;
 
-  /// An office or a campus: admins write the notices, and the household tiles and
-  /// records do not apply.
+  /// An office or a campus: a workspace, where the household tiles and records do not
+  /// apply and SOS is refused.
   bool get isManaged => isOffice || isCampus;
+
+  /// Whether the owner and admins alone post notices: an office, a campus or a mess.
+  /// Members answer them. A family circle lets any member post.
+  bool get hasManagedNotices => isOffice || isCampus || isMess;
 
   /// The id the origin city has in leg keys.
   static const String originId = 'origin';

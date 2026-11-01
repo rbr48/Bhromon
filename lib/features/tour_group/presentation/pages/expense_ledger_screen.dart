@@ -23,6 +23,7 @@ import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/fund/expense_editor.dart';
 import '../widgets/fund/fund_sheets.dart';
 import '../../../../core/localization/localized_date.dart';
+import '../../../../core/utils/logger.dart';
 
 const _bg = Color(0xFF0F1A1C);
 const _card = Color(0xFF142428);
@@ -1634,8 +1635,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   AppColors.gold,
                   l10n.translate('mess_quick_bazar'),
                   l10n.translate('mess_quick_bazar_sub'),
-                  () => _editExpense(null, false,
-                      l10n.translate('mess_quick_bazar'), 'Groceries')),
+                  () => _addMessBazar(l10n.translate('mess_quick_bazar'))),
             item(
                 Icons.savings_rounded,
                 AppColors.gold,
@@ -1661,11 +1661,27 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     );
   }
 
+  /// A bazar bought for the mess opens split by this month's meal counts, so each
+  /// member shares the cost of the meals they ate. With no meal counts yet, the split
+  /// is left to fill in by hand.
+  Future<void> _addMessBazar(String title) async {
+    Map<String, int>? meals;
+    try {
+      meals =
+          await _repository.mealTotalsForMonth(widget.tourId, DateTime.now());
+    } catch (err) {
+      logError('Meal totals failed: $err');
+    }
+    if (!mounted) return;
+    await _editExpense(null, false, title, 'Groceries', meals);
+  }
+
   Future<void> _editExpense(
       [ExpenseItem? existing,
       bool duplicate = false,
       String? quickTitle,
-      String? quickCategory]) async {
+      String? quickCategory,
+      Map<String, int>? mealShares]) async {
     if (_members.isEmpty) return;
     final draft = await showExpenseEditor(
       context,
@@ -1675,6 +1691,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       existing: existing,
       initialTitle: quickTitle,
       initialCategory: quickCategory,
+      initialSplit: mealShares == null ? null : SplitMode.shares,
+      initialShares: mealShares,
     );
     if (draft == null || !mounted) return;
     await _run(() async {

@@ -25,13 +25,19 @@ void main() {
       expect(mess.toMap()['preset'], 'mess');
     });
 
-    test('a mess is not a managed circle, so its members post notices', () {
+    test('a mess is not a workspace, but its owner and admins post notices',
+        () {
       final mess =
           TourGroup.fromMap('m1', _circle(kind: 'family', preset: 'mess'));
       final family = TourGroup.fromMap('g2', _circle(kind: 'family'));
+      final office =
+          TourGroup.fromMap('o1', _circle(kind: 'family', preset: 'office'));
 
       expect(mess.isManaged, isFalse);
+      expect(mess.hasManagedNotices, isTrue);
+      expect(office.hasManagedNotices, isTrue);
       expect(family.isManaged, isFalse);
+      expect(family.hasManagedNotices, isFalse);
     });
 
     test('a mess offers its own categories: bazar, bills and rent', () {

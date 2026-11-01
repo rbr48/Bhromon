@@ -621,6 +621,12 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
              get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus'];
     }
+    // An office, a campus or a mess: the owner and admins post the notices and members
+    // answer them.
+    function hasManagedNotices(tId) {
+      return exists(/databases/$(database)/documents/tours/$(tId)) &&
+             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus', 'mess'];
+    }
     // A mess or shared home is a family circle with the mess preset.
     function isMessTour(tId) {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
@@ -767,11 +773,11 @@ service cloud.firestore {
       match /notices/{noticeId} {
         allow read: if isActiveMember(tourId);
         allow create: if isTourAdmin(tourId) ||
-                         (isFamilyTour(tourId) && !isManagedTour(tourId) && isActiveMember(tourId) &&
+                         (isFamilyTour(tourId) && !hasManagedNotices(tourId) && isActiveMember(tourId) &&
                           request.resource.data.authorEmail == tourUserEmail());
         allow update: if isTourAdmin(tourId);
         allow delete: if isTourAdmin(tourId) ||
-                         (isFamilyTour(tourId) && !isManagedTour(tourId) && isActiveMember(tourId) &&
+                         (isFamilyTour(tourId) && !hasManagedNotices(tourId) && isActiveMember(tourId) &&
                           resource.data.get('authorEmail', '') == tourUserEmail());
         allow update: if isActiveMember(tourId) &&
                          request.resource.data.diff(resource.data).affectedKeys()
@@ -833,6 +839,28 @@ service cloud.firestore {
                          validFamilyDate(request.resource.data);
         allow delete: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
+      }
+
+      // Mess meal counts: each member logs their own breakfast, lunch and dinner for a
+      // day, and an owner or admin may log for anyone. Only a mess keeps them, and each
+      // count is a whole number from 0 to 5.
+      match /meals/{mealId} {
+        function validMeal(d) {
+          return d.keys().hasOnly(['dateKey', 'email', 'breakfast', 'lunch', 'dinner', 'updatedByEmail', 'updatedAt']) &&
+                 d.dateKey is string && d.dateKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+                 d.email is string && d.email.size() > 0 &&
+                 mealId == d.dateKey + '__' + d.email &&
+                 d.breakfast is int && d.breakfast >= 0 && d.breakfast <= 5 &&
+                 d.lunch is int && d.lunch >= 0 && d.lunch <= 5 &&
+                 d.dinner is int && d.dinner >= 0 && d.dinner <= 5 &&
+                 d.updatedByEmail == tourUserEmail();
+        }
+        allow read: if isActiveMember(tourId);
+        allow create, update: if isMessTour(tourId) && isActiveMember(tourId) &&
+                                 (request.resource.data.email == tourUserEmail() || isTourAdmin(tourId)) &&
+                                 validMeal(request.resource.data);
+        allow delete: if isMessTour(tourId) && isActiveMember(tourId) &&
+                         (resource.data.email == tourUserEmail() || isTourAdmin(tourId));
       }
 
       // Packing checklist: members tick items; admins remove them.
@@ -1166,7 +1194,7 @@ service cloud.firestore {
 
       match /sos/{alertId} {
         allow read: if isActiveMember(tourId);
-        allow create: if isActiveMember(tourId) &&
+        allow create: if isActiveMember(tourId) && !isManagedTour(tourId) &&
                          request.resource.data.senderEmail == tourUserEmail() &&
                          request.resource.data.resolved == false &&
                          request.resource.data.createdAt == request.time;

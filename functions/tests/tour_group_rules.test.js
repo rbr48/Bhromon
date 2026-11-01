@@ -456,6 +456,92 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  describe('mess meals, notices and safety', () => {
+    const MESS = 'mss2';
+    const FAMILY2 = 'fam2';
+    const OFFICE2 = 'off2';
+    const notice = (by) => ({ title: 'Bazar on Friday', content: 'Rice and lentils', authorEmail: by, createdAt: serverTimestamp() });
+    const alert = (sender) => ({ senderEmail: sender, senderName: 'x', resolved: false, createdAt: serverTimestamp() });
+    const meal = (email, date = '2026-11-01', extra = {}) => ({ dateKey: date, email, breakfast: 1, lunch: 1, dinner: 0, updatedByEmail: email, ...extra });
+    const mealId = (email, date = '2026-11-01') => `${date}__${email}`;
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        const tours = [
+          [MESS, 'Block B mess', 'mess'],
+          [FAMILY2, 'Rahman family', null],
+          [OFFICE2, 'Sales team', 'office'],
+        ];
+        for (const [id, name, preset] of tours) {
+          await setDoc(doc(f, 'tours', id), { name, kind: 'family', ...(preset ? { preset } : {}), ownerEmail: people.owner.email, ownerUid: people.owner.uid, inviteCode: `${id.toUpperCase()}CODE` });
+          const membership = (email, role) =>
+            setDoc(doc(f, 'memberships', `${id}__${email}`), { tourId: id, email, role, status: 'active', displayName: email });
+          await membership(people.owner.email, 'owner');
+          await membership(people.admin.email, 'admin');
+          await membership(people.member.email, 'member');
+        }
+      });
+    });
+
+    test('a member logs their own meals in a mess, and not for someone else', async () => {
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', MESS, 'meals', mealId(people.member.email)), meal(people.member.email)));
+      await assertFails(setDoc(doc(db('member'), 'tours', MESS, 'meals', mealId(people.admin.email)), meal(people.admin.email)));
+    });
+
+    test('an owner or admin logs meals for anyone in the mess', async () => {
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', MESS, 'meals', mealId(people.member.email)), meal(people.member.email, '2026-11-01', { updatedByEmail: people.admin.email })));
+      await assertSucceeds(setDoc(doc(db('owner'), 'tours', MESS, 'meals', mealId(people.member.email, '2026-11-02')), meal(people.member.email, '2026-11-02', { updatedByEmail: people.owner.email })));
+    });
+
+    test('meal counts are whole numbers from 0 to 5, under the day and member id', async () => {
+      const id = mealId(people.member.email);
+      await assertFails(setDoc(doc(db('member'), 'tours', MESS, 'meals', id), meal(people.member.email, '2026-11-01', { breakfast: 6 })));
+      await assertFails(setDoc(doc(db('member'), 'tours', MESS, 'meals', id), meal(people.member.email, '2026-11-01', { lunch: -1 })));
+      await assertFails(setDoc(doc(db('member'), 'tours', MESS, 'meals', id), meal(people.member.email, '2026-11-01', { dinner: 2.5 })));
+      await assertFails(setDoc(doc(db('member'), 'tours', MESS, 'meals', 'wrong-id'), meal(people.member.email)));
+      await assertFails(setDoc(doc(db('member'), 'tours', MESS, 'meals', id), { ...meal(people.member.email), guests: 1 }));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', MESS, 'meals', id), meal(people.member.email, '2026-11-01', { breakfast: 5, lunch: 0, dinner: 0 })));
+    });
+
+    test('meals are kept only in a mess, not in a household or an office', async () => {
+      await assertFails(setDoc(doc(db('member'), 'tours', FAMILY2, 'meals', mealId(people.member.email)), meal(people.member.email)));
+      await assertFails(setDoc(doc(db('member'), 'tours', OFFICE2, 'meals', mealId(people.member.email)), meal(people.member.email)));
+    });
+
+    test('members read the mess meal log, and outsiders read nothing', async () => {
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', MESS, 'meals', mealId(people.member.email)), meal(people.member.email)));
+      await assertSucceeds(getDocs(collection(db('member'), 'tours', MESS, 'meals')));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', MESS, 'meals')));
+    });
+
+    test('a member deletes their own meals; an owner or admin deletes any', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', MESS, 'meals', mealId(people.member.email)), meal(people.member.email));
+        await setDoc(doc(ctx.firestore(), 'tours', MESS, 'meals', mealId(people.owner.email)), meal(people.owner.email));
+      });
+      await assertFails(deleteDoc(doc(db('member'), 'tours', MESS, 'meals', mealId(people.owner.email))));
+      await assertSucceeds(deleteDoc(doc(db('member'), 'tours', MESS, 'meals', mealId(people.member.email))));
+      await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', MESS, 'meals', mealId(people.owner.email))));
+    });
+
+    test('a mess posts notices through its owner or admins, and members answer them', async () => {
+      await assertSucceeds(addDoc(collection(db('admin'), 'tours', MESS, 'notices'), notice(people.admin.email)));
+      await assertFails(addDoc(collection(db('member'), 'tours', MESS, 'notices'), notice(people.member.email)));
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', MESS, 'notices', 'n9'), notice(people.admin.email));
+      });
+      await assertSucceeds(updateDoc(doc(db('member'), 'tours', MESS, 'notices', 'n9'), { ackBy: arrayUnion(people.member.email) }));
+    });
+
+    test('an alert is raised in a family circle, a mess or a trip, but not in an office', async () => {
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', MESS, 'sos', 'a1'), alert(people.member.email)));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', FAMILY2, 'sos', 'a1'), alert(people.member.email)));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', TOUR, 'sos', 'a1'), alert(people.member.email)));
+      await assertFails(setDoc(doc(db('member'), 'tours', OFFICE2, 'sos', 'a1'), alert(people.member.email)));
+    });
+  });
+
   describe('feed', () => {
     const postPath = ['tours', TOUR, 'posts', 'p1'];
     const post = (author) => ({
