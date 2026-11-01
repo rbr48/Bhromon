@@ -446,7 +446,7 @@ class _LoginFormState extends State<_LoginForm> {
                 ),
                 SizedBox(height: 16),
                 Text(
-                  '1. Outdoor Trekking Safety Disclaimer',
+                  '1. Group Safety Disclaimer',
                   style: TextStyle(
                       color: _kGreen,
                       fontSize: 13,
@@ -454,7 +454,7 @@ class _LoginFormState extends State<_LoginForm> {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'Bhromon provides offline GPS assistance and hazard maps. However, outdoor terrains, especially in hilly zones like Sajek or Bandarban, are highly unpredictable. Always prioritize local directives and physical assessments over app-indicated routes.',
+                  'Bhromon helps your group share alerts, locations and notices. Alerts depend on signal, battery and the phones involved. In an emergency, contact local emergency services first. The SOS siren coordinates your group; it does not replace emergency services.',
                   style: TextStyle(color: _kWhite54, fontSize: 12, height: 1.4),
                 ),
                 SizedBox(height: 16),
@@ -467,7 +467,7 @@ class _LoginFormState extends State<_LoginForm> {
                 ),
                 SizedBox(height: 6),
                 Text(
-                  'When you log a trip or suggest pins, you commit to providing accurate information. Malicious pins or spam updates violate community standards and will result in a decrease of your explorer score or account suspension.',
+                  'When you post in a group, log a trip or add a note, you commit to providing accurate information. Spam or abusive posts violate community standards and can lead to removal from a group, a lower explorer score, or account suspension.',
                   style: TextStyle(color: _kWhite54, fontSize: 12, height: 1.4),
                 ),
                 SizedBox(height: 16),
@@ -540,7 +540,7 @@ class _LoginFormState extends State<_LoginForm> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Sign in with Google to run your family, office, campus, mess, housing society and savings group, and to plan trips.',
+          'Sign in with Google to run your family, office, school, sports team, study group, neighbourhood committee, housing society, mess, savings group or trip.',
           style: TextStyle(color: _kWhite54, fontSize: 13, height: 1.4),
         ),
         const SizedBox(height: 28),

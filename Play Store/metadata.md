@@ -1,45 +1,48 @@
 # Google Play Store Listing Metadata for Bhromon
 
-## 1. App Title
-**Bhromon — Bangladesh Travel Companion**
+## 1. App Title (max 30 characters)
+**Bhromon: Groups in One App**
 
 ---
 
-## 2. Short Description (Max 80 Characters)
-*Explore Bangladesh with offline maps, local guides, curated tips & travel vlogs.*
+## 2. Short Description (max 80 characters)
+*Chat, notices, shared expenses and SOS for every group you belong to.*
 
 ---
 
-## 3. Full Description (Max 4000 Characters)
-**Discover the beauty of Bangladesh with Bhromon — your ultimate travel companion and guide!**
+## 3. Full Description (max 4000 characters)
+**Bhromon is one app for every group you belong to.**
 
-Whether you are seeking the misty cloud touch decks of Sajek Valley, the sandy shores of Cox's Bazar beach, the lush green tea gardens of Sreemangal, or the deep mysteries of the Sundarbans mangrove forest, Bhromon has everything you need to plan and execute the perfect adventure.
+Run your family, office, school or coaching class, sports team or gym, study or book club, neighbourhood committee, housing society, mess, savings group or trip, all in one place. Bhromon works in Bengali and English.
 
-### Key Features:
+### What you can do in a group
+- **Group chat and channels**: messages, photos and videos, replies, polls and mentions, with a channel for each topic. Voice and video calls with your group members.
+- **Notices and roll calls**: post a notice, pin it, add a time and a place, and ask members to confirm they have seen it. Reminders go out before timed notices.
+- **Shared expenses**: record who paid and who owes, split equally, by share, by exact amount or by family size, in taka. Record settlements when people pay each other.
+- **Calendar and schedules**: dates and events for classes, fixtures, exams, meetings and reading plans.
+- **Safety and SOS**: raise a siren that alerts the other members, with your location when you allow it.
+- **Savings groups**: a rotating savings schedule with payments and payouts. The app keeps the schedule and the records; it does not move money.
+- **Committees and housing**: notices and service requests for residents.
+- **Shared lists**: shopping and to-do lists, and a meal planner for a mess.
+- **Game Zone**: Card 29, Chess AI, Ludo, Teen Patti and Carrom, to play with your group.
+- **Newspaper reader**: read leading Bangladesh newspapers without pop-ups or banner ads.
 
-#### 🗺️ Interactive Maps & Proximity Alerts
-Find local points of interest (POIs) near your coordinates. Get instant proximity notifications and directions to top tourist spots.
+### Private by design
+Your group's data is visible only to the active members of that group. There are no public profiles and no directory of users. When you leave a group, your posts and chat messages in it are removed.
 
-#### 📴 Complete Offline Support
-No internet? No problem! Download maps for Sajek, Cox's Bazar, Bandarban, and Khulna to navigate offline. Save travel log drafts, check cached locations, and keep your journals synchronized locally in a secure SQLite database.
-
-#### 📹 High-Quality Video Vlogs & Logs
-Watch curated, active YouTube travel vlogs directly within the App. Read detailed itineraries with route maps, cost breakdowns, and safety notes.
-
-#### 💡 Curated Travel Pro Tips
-Access authentic, professional travel tips for every destination. Avoid common scams, find budget-friendly transport options, and discover local culinary highlights.
-
-#### 💬 Live Travel Chat & Networking
-Connect with other travelers in real-time. Share tips, coordinates, and plan journeys together. Enjoy real-time push alerts and foreground notification triggers when you receive a message.
-
-#### 🔒 Immersive Img Viewer & Secure Design
-View high-resolution travel photos with pinch-to-zoom and pan interactions. Rest easy knowing all network requests are protected via SSL Pinning and device integrity checks.
+### Free, with no ads
+Bhromon is free. It has no ads and no paywall.
 
 ---
 
 ## 4. Category & Tags
-* **Category**: Travel & Local
-* **Tags**: Travel Guide, Offline Maps, Trip Planner, Travel Diary, Social Networking
+* **Category**: Communication (suggested; set the category in Play Console)
+* **Tags**: Group Chat, Family Group, Shared Expenses, Group Notices, Savings Group
+
+---
+
+## 7. Screenshots and Feature Graphic
+The screenshots and the feature graphic in `Play Store/` show the old travel product and must be replaced before release. Capture them from the new build: the group hub, a group chat, notices and roll calls, the expense ledger, the SOS siren, and the Game Zone.
 
 ---
 
@@ -51,8 +54,4 @@ View high-resolution travel photos with pinch-to-zoom and pan interactions. Rest
 ---
 
 ## 6. App Access / Test Credentials (For Google Play Reviewers)
-If sections of your app are restricted (e.g., requires login), provide the following details to the Google Play review team:
-
-* **Access Instructions**: Enter the review account email on the login screen, click "Send Verification Code", then enter the review code.
-* **Email / Username**: the review account email, supplied in Play Console only.
-* **Verification Code (OTP) / Password**: the review code, supplied in Play Console only. It is set on the server with `functions/scripts/setReviewAccount.js` and is not stored in this repository.
+**Open decision before submission.** The login screen now offers Google sign-in only. The email-code sign-in that this section described is not on the screen. Either restore the email-code screen, or give reviewers a Google account in Play Console. Until that is decided, the review access is not defined here.

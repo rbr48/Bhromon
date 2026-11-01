@@ -1,6 +1,6 @@
 # Bhromon — One App for Every Group (Flutter & Firebase)
 
-Bhromon is one app for every group you belong to: families, offices, campuses, messes, housing societies, savings groups and trips. It is an offline-first Flutter app designed with Clean Architecture, BLoC state management, and a dual-database storage engine. It provides group chat and notices, shared expenses and schedules, safety alerts, trip maps, location pinning, and media-rich trip logging.
+Bhromon is one app for every group you belong to: families, offices, schools, sports teams, study groups, neighbourhood committees, housing societies, messes, savings groups and trips. It is an offline-first Flutter app designed with Clean Architecture, BLoC state management, and a dual-database storage engine. It provides group chat and channels, notices and roll calls, shared expenses and settle-up, calendars, safety alerts with SOS, the Game Zone, and an ad-free newspaper reader.
 
 ---
 
@@ -36,7 +36,7 @@ Bhromon is structured around modular, layered architecture principles separating
 ```
 
 - **State Management**: Scoped by feature. Foundation and explorer features utilize BLoC / Cubit. The `tour_group` operating system utilizes reactive `StatefulWidget`s listening directly to repository streams for high-velocity real-time Firestore collaboration.
-- **Pure-Dart Domain Engines**: Core rules (Game Zone engines: Card 29, Chess, Ludo, Teen Patti, Carrom; Tour OS: Trip Ledger Paisa Engine, Seat Layout Engine, Scrapbook Engine) are 100% pure Dart, decoupled from Flutter UI and independently unit-tested.
+- **Pure-Dart Domain Engines**: Core rules (Game Zone engines: Card 29, Chess, Ludo, Teen Patti, Carrom; Group engines: Ledger Paisa Engine, Seat Layout Engine, Scrapbook Engine, Samity Ledger) are 100% pure Dart, decoupled from Flutter UI and independently unit-tested.
 
 For more architectural decisions, see the [ADRs](docs/adr/):
 - [ADR 001: Choice of BLoC](docs/adr/001_choice_of_bloc.md)

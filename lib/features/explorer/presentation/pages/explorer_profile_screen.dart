@@ -402,7 +402,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 SharePlus.instance.share(
                   ShareParams(
                     text:
-                        'Check out $name (@$handle) on Bhromon — Bangladesh Smart Tour Operating System!\nhttps://app.bhromon.fun',
+                        '$name (@$handle) is on Bhromon, the app for every group you belong to.\nhttps://app.bhromon.fun',
                   ),
                 );
               },
@@ -1040,7 +1040,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             child: IconButton(
               onPressed: () {
                 final text =
-                    '${profile.displayName} — Bhromon Traveler\nhttps://app.bhromon.fun';
+                    '${profile.displayName} — on Bhromon\nhttps://app.bhromon.fun';
                 SharePlus.instance.share(ShareParams(text: text));
               },
               tooltip: _isBn ? 'শেয়ার' : 'Share',
