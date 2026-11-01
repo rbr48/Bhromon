@@ -1,0 +1,5 @@
+# Test vectors from the private-media tests (commit ab91105). Each is an HMAC output of a
+# test-only secret that is written in the same test files. They are not credentials.
+ab91105c2c20591cfd3d42996b988e2c4b9e37c5:test/core/media/media_signing_test.dart:generic-api-key:6
+ab91105c2c20591cfd3d42996b988e2c4b9e37c5:media-server/tests/test_media_access.py:generic-api-key:11
+ab91105c2c20591cfd3d42996b988e2c4b9e37c5:media-server/tests/test_media_access.py:generic-api-key:12

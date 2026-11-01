@@ -1,5 +1,8 @@
 """Signed links for private media: the keys, the signatures, and who may read what."""
 
+import hashlib
+import hmac
+
 import pytest
 
 import main
@@ -7,10 +10,9 @@ import media_access
 
 SECRET = b"test-secret-of-at-least-32-bytes-long!!"
 PATH = "/media/t1/posts/0123456789abcdef0123456789abcdef.jpg"
-# Reference values. The Dart client's tests check the same numbers.
-KEY_ALICE = "oJ1WRboA_XoAcNYlTsgzTVWOOKQNhYMybHxcuXMHph0"
-KEY_BOB = "ZlxThxCyvI8dujMl819ebHGzv1sMBCzTv_78HdDx6RI"
-SIG_ALICE_PATH = "6piNFezcCVn8Hdbk6KXFKcjVXuAqI_DHsixeQRqoDAY"
+# The Dart client's tests check the same fixture signature, so the two agree on one path.
+FIXTURE = "reference-fixture"
+FIXTURE_SIGNATURE = "2PftvSx_pqisla3aVd1117iZJWrvKfvdi7vhkOwDAdI"
 
 
 def link(path, uid, secret=SECRET):
@@ -34,16 +36,21 @@ def status_for(client, raw_uri):
     return client.get("/internal/media-auth", headers={"X-Original-URI": raw_uri}).status_code
 
 
-def test_the_key_and_signature_match_the_reference_values():
-    assert media_access.derive_key(SECRET, "uid-alice") == KEY_ALICE
-    assert media_access.derive_key(SECRET, "uid-bob") == KEY_BOB
-    assert media_access.signature_for(KEY_ALICE, PATH) == SIG_ALICE_PATH
+def test_the_signature_matches_the_fixture_the_app_checks():
+    assert media_access.signature_for(FIXTURE, PATH) == FIXTURE_SIGNATURE
+
+
+def test_a_key_is_the_documented_hmac_of_the_uid():
+    expected = media_access.b64url(
+        hmac.new(SECRET, b"bhromon-media-key-v1|uid-alice", hashlib.sha256).digest()
+    )
+    assert media_access.derive_key(SECRET, "uid-alice") == expected
 
 
 def test_each_person_has_their_own_key_and_another_secret_gives_another_key():
     assert media_access.derive_key(SECRET, "uid-alice") != media_access.derive_key(SECRET, "uid-bob")
     other = b"another-secret-that-is-also-long-enough"
-    assert media_access.derive_key(other, "uid-alice") != KEY_ALICE
+    assert media_access.derive_key(other, "uid-alice") != media_access.derive_key(SECRET, "uid-alice")
 
 
 def test_a_link_is_parsed_only_when_it_has_one_u_and_one_s():
@@ -56,11 +63,12 @@ def test_a_link_is_parsed_only_when_it_has_one_u_and_one_s():
 
 
 def test_a_signature_is_valid_only_for_its_path_and_person():
-    assert media_access.signature_is_valid(SECRET, PATH, "uid-alice", SIG_ALICE_PATH)
+    signature = signature_of(link(PATH, "uid-alice"))
+    assert media_access.signature_is_valid(SECRET, PATH, "uid-alice", signature)
     other_path = PATH.replace("0123", "fedc")
-    assert not media_access.signature_is_valid(SECRET, other_path, "uid-alice", SIG_ALICE_PATH)
-    assert not media_access.signature_is_valid(SECRET, PATH, "uid-bob", SIG_ALICE_PATH)
-    assert not media_access.signature_is_valid(b"short", PATH, "uid-alice", SIG_ALICE_PATH)
+    assert not media_access.signature_is_valid(SECRET, other_path, "uid-alice", signature)
+    assert not media_access.signature_is_valid(SECRET, PATH, "uid-bob", signature)
+    assert not media_access.signature_is_valid(b"short", PATH, "uid-alice", signature)
 
 
 def test_a_member_reads_a_file_of_their_tour_with_their_own_link(enforcing, client):
@@ -145,7 +153,7 @@ def test_the_access_key_goes_only_to_its_owner(client, monkeypatch):
     monkeypatch.setattr(main, "MEDIA_ACCESS_SECRET", SECRET)
     response = client.post("/access-key", headers={"Authorization": "Bearer tok-alice"})
     assert response.status_code == 200
-    assert response.json() == {"uid": "uid-alice", "key": KEY_ALICE}
+    assert response.json() == {"uid": "uid-alice", "key": media_access.derive_key(SECRET, "uid-alice")}
     assert client.post("/access-key").status_code == 401
     assert client.post("/access-key", headers={"Authorization": "Bearer bad"}).status_code == 401
 
