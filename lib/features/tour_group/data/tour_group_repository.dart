@@ -684,6 +684,7 @@ class TourGroupRepository {
     String? meetingPointMapUrl,
     GroupKind kind = GroupKind.tour,
     int ownerFamilyCount = 1,
+    String? preset,
   }) async {
     final email = _requireEmail();
     final uid = currentUid;
@@ -710,6 +711,7 @@ class TourGroupRepository {
       meetingPointMapUrl: meetingPointMapUrl,
       createdAt: now,
       kind: kind,
+      preset: preset,
     );
 
     final tourData = group.toMap()

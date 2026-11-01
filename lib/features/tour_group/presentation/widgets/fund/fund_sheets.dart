@@ -477,6 +477,7 @@ Future<FundBudget?> showBudgetSheet(
   required int headcount,
   required int totalDays,
   bool family = false,
+  bool office = false,
 }) {
   return _sheet(
     context,
@@ -485,6 +486,7 @@ Future<FundBudget?> showBudgetSheet(
       headcount: headcount,
       totalDays: totalDays,
       family: family,
+      office: office,
     ),
   );
 }
@@ -495,20 +497,23 @@ class _BudgetForm extends StatefulWidget {
     required this.headcount,
     required this.totalDays,
     required this.family,
+    this.office = false,
   });
 
   final FundBudget budget;
   final int headcount;
   final int totalDays;
   final bool family;
+  final bool office;
 
   @override
   State<_BudgetForm> createState() => _BudgetFormState();
 }
 
 class _BudgetFormState extends State<_BudgetForm> {
-  late final List<String> _offered =
-      expenseCategoriesFor(family: widget.family);
+  late final List<String> _offered = widget.office
+      ? kOfficeExpenseCategories
+      : expenseCategoriesFor(family: widget.family);
   late final List<String> _cats = [
     ..._offered,
     for (final c in widget.budget.categoryPaisa.keys)

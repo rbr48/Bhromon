@@ -75,9 +75,24 @@ final Set<String> kAllBuiltInChannelIds = {
   ...kFamilyChannelIds,
 };
 
+/// The built-in channels an office or team starts with: lunch and tea, outings,
+/// the general room, safety and the voice lounge.
+const List<String> kOfficeChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
 /// The built-in channels a circle starts with, in the order they are listed.
-List<String> builtInChannelIdsFor({required bool family}) =>
-    family ? kFamilyChannelIds : kBuiltInChannelIds;
+List<String> builtInChannelIdsFor(
+        {required bool family, bool office = false}) =>
+    office
+        ? kOfficeChannelIds
+        : family
+            ? kFamilyChannelIds
+            : kBuiltInChannelIds;
 
 /// The kind of channel: text messaging or voice lounge.
 enum ChannelKind { text, voice }

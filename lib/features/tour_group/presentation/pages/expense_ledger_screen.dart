@@ -818,7 +818,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           (e.paidByName ?? '').toLowerCase().contains(q);
     }).toList();
     final total = filtered.fold<int>(0, (n, e) => n + e.amountPaisa);
-    final offered = expenseCategoriesFor(family: _group?.isFamily ?? false);
+    final offered = expenseCategoriesForGroup(_group);
     final categories = {for (final e in _expenses) e.category}.toList()
       ..sort((a, b) {
         final ia = offered.indexOf(a);
@@ -1604,8 +1604,18 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 Icons.receipt_long_rounded,
                 AppColors.mintGreen,
                 l10n.translate('fund_add_expense'),
-                l10n.translate('fund_add_expense_sub'),
+                l10n.translate(group?.isOffice == true
+                    ? 'office_add_expense_sub'
+                    : 'fund_add_expense_sub'),
                 _editExpense),
+            if (group?.isOffice == true)
+              item(
+                  Icons.restaurant_rounded,
+                  AppColors.gold,
+                  l10n.translate('ledger_quick_lunch'),
+                  l10n.translate('ledger_quick_lunch_sub'),
+                  () => _editExpense(null, false,
+                      l10n.translate('ledger_quick_lunch'), 'Dining')),
             item(
                 Icons.savings_rounded,
                 AppColors.gold,
@@ -1632,7 +1642,10 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
   }
 
   Future<void> _editExpense(
-      [ExpenseItem? existing, bool duplicate = false]) async {
+      [ExpenseItem? existing,
+      bool duplicate = false,
+      String? quickTitle,
+      String? quickCategory]) async {
     if (_members.isEmpty) return;
     final draft = await showExpenseEditor(
       context,
@@ -1640,6 +1653,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       group: _group,
       me: _me,
       existing: existing,
+      initialTitle: quickTitle,
+      initialCategory: quickCategory,
     );
     if (draft == null || !mounted) return;
     await _run(() async {
@@ -1772,6 +1787,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       headcount: _headcount,
       totalDays: group.totalDays,
       family: group.isFamily,
+      office: group.isOffice,
     );
     if (budget == null || !mounted) return;
     await _run(() => _repository.saveFundBudget(widget.tourId, budget),

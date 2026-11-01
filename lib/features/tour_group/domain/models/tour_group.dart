@@ -263,6 +263,10 @@ class TourGroup {
   /// Whether this group plans a trip or is a family circle.
   final GroupKind kind;
 
+  /// The workspace preset a circle was created with, such as [officePreset].
+  /// Null for trips and for family circles made before presets.
+  final String? preset;
+
   /// Numbers every member can call or text in an emergency (at most ten).
   final List<EmergencyContact> emergencyContacts;
 
@@ -294,6 +298,12 @@ class TourGroup {
 
   /// A family circle rather than a trip.
   bool get isFamily => kind == GroupKind.family;
+
+  /// The preset of an office or team. See [preset].
+  static const String officePreset = 'office';
+
+  /// An office or team: a family-style circle where only admins write notices.
+  bool get isOffice => preset == officePreset;
 
   /// The id the origin city has in leg keys.
   static const String originId = 'origin';
@@ -537,6 +547,7 @@ class TourGroup {
     bool? returnHome,
     FundBudget? fundBudget,
     GroupKind? kind,
+    String? preset,
     List<EmergencyContact>? emergencyContacts,
   }) {
     return TourGroup(
@@ -593,6 +604,7 @@ class TourGroup {
       'legPlans': {for (final e in legPlans.entries) e.key: e.value.toMap()},
       'returnHome': returnHome,
       'kind': kind.name,
+      if (preset != null) 'preset': preset,
       'emergencyContacts': [for (final c in emergencyContacts) c.toMap()],
       if (!fundBudget.isEmpty) 'fundBudget': fundBudget.toMap(),
       'schemaVersion': 4,
@@ -633,6 +645,7 @@ class TourGroup {
       legPlans: readLegPlans(map['legPlans']),
       returnHome: map['returnHome'] as bool? ?? true,
       kind: GroupKind.fromString(map['kind']?.toString()),
+      preset: map['preset'] == officePreset ? officePreset : null,
       emergencyContacts: parseEmergencyContacts(map['emergencyContacts']),
       fundBudget: FundBudget.fromMap(map['fundBudget']),
     );

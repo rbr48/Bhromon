@@ -84,6 +84,8 @@ Future<ExpenseDraft?> showExpenseEditor(
   required TourGroup? group,
   required String me,
   ExpenseItem? existing,
+  String? initialTitle,
+  String? initialCategory,
 }) {
   return showModalBottomSheet<ExpenseDraft>(
     context: context,
@@ -92,7 +94,12 @@ Future<ExpenseDraft?> showExpenseEditor(
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (_) => _ExpenseEditor(
-        members: members, group: group, me: me, existing: existing),
+        members: members,
+        group: group,
+        me: me,
+        existing: existing,
+        initialTitle: initialTitle,
+        initialCategory: initialCategory),
   );
 }
 
@@ -102,6 +109,8 @@ class _ExpenseEditor extends StatefulWidget {
     required this.group,
     required this.me,
     this.existing,
+    this.initialTitle,
+    this.initialCategory,
   });
 
   final List<TourMember> members;
@@ -109,13 +118,18 @@ class _ExpenseEditor extends StatefulWidget {
   final String me;
   final ExpenseItem? existing;
 
+  /// Prefilled for a quick entry, such as a lunch split. Ignored when editing.
+  final String? initialTitle;
+  final String? initialCategory;
+
   @override
   State<_ExpenseEditor> createState() => _ExpenseEditorState();
 }
 
 class _ExpenseEditorState extends State<_ExpenseEditor> {
   late final ExpenseItem? e = widget.existing;
-  late final _title = TextEditingController(text: e?.title ?? '');
+  late final _title =
+      TextEditingController(text: e?.title ?? widget.initialTitle ?? '');
   late final _amount = TextEditingController(
       text: e == null
           ? ''
@@ -128,7 +142,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
   Uint8List? _pickedReceiptBytes;
   late String _currency = e?.isForeign == true ? e!.currency! : 'BDT';
   late String _category = e?.category ??
-      expenseCategoriesFor(family: widget.group?.isFamily ?? false).first;
+      widget.initialCategory ??
+      expenseCategoriesForGroup(widget.group).first;
   late DateTime _date = e?.date ?? DateTime.now();
   late String? _stopId = e?.stopId ?? widget.group?.stopOn(_date)?.id;
   late bool _fromFund = e == null || e!.paidById == null;
@@ -312,8 +327,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
     final l10n = context.l10n;
     final stops = widget.group?.effectiveStops ?? const <TourStop>[];
     final bdt = _bdtPaisa;
-    final offered =
-        expenseCategoriesFor(family: widget.group?.isFamily ?? false);
+    final offered = expenseCategoriesForGroup(widget.group);
     final categories = [
       ...offered,
       if (!offered.contains(_category)) _category,

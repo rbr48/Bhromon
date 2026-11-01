@@ -738,7 +738,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               .translate('ig_trip_expense', args: {'name': post.authorName}),
     );
     // The same categories the ledger offers, so the budget lines pick it up.
-    final offered = expenseCategoriesFor(family: _tourGroup?.isFamily ?? false);
+    final offered = expenseCategoriesForGroup(_tourGroup);
     String selectedCategory = post.expenseCategory ?? offered.first;
 
     final result = await showDialog<bool>(

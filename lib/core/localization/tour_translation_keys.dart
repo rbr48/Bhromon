@@ -1838,6 +1838,23 @@ class TourTranslationKeys {
       'hub_family_created':
           'Family circle "{name}" is ready. Invite your family with the code.',
       'hub_family_badge': 'Family',
+      'hub_create_office': 'Create an office or team',
+      'hub_office_title': 'New office or team',
+      'hub_office_intro':
+          'A private space for your office or team: notices that only admins post, acknowledgements, chat channels, shared files, shared expenses and games. It has no trip dates or travel tools.',
+      'hub_office_name_hint': 'Team name (e.g. Sales Team)',
+      'hub_office_created':
+          '"{name}" is ready. Share the code so your team can join.',
+      'hub_office_badge': 'Office',
+      'hub_leave_office_title': 'Leave this team?',
+      'hub_delete_office_title': 'Delete this team?',
+      'hub_delete_office_body':
+          '{name}, its messages, notices and expenses will be deleted for everyone. This cannot be undone.',
+      'office_channel_food': 'Lunch & tea',
+      'office_channel_events': 'Events & outings',
+      'office_add_expense_sub': 'Lunch, tea, bills, transport and more',
+      'ledger_quick_lunch': 'Lunch or tea',
+      'ledger_quick_lunch_sub': 'Shared between everyone, paid by you',
       'pdf_export_admin_only':
           'Only the owner or an admin can export the whole tour.',
       'notice_post_failed':
@@ -3833,6 +3850,23 @@ class TourTranslationKeys {
       'hub_family_created':
           '"{name}" পরিবার-গ্রুপ তৈরি হয়েছে। কোড দিয়ে পরিবারের সবাইকে যুক্ত করুন।',
       'hub_family_badge': 'পরিবার',
+      'hub_create_office': 'অফিস বা দলের গ্রুপ তৈরি করুন',
+      'hub_office_title': 'নতুন অফিস বা দল',
+      'hub_office_intro':
+          'আপনার অফিস বা দলের জন্য ব্যক্তিগত জায়গা: শুধু অ্যাডমিনের দেওয়া নোটিশ, নিশ্চিতকরণ, চ্যাট চ্যানেল, ফাইল, যৌথ খরচ ও গেম। এখানে ভ্রমণের তারিখ বা ভ্রমণের টুল নেই।',
+      'hub_office_name_hint': 'দলের নাম (যেমন: সেলস টিম)',
+      'hub_office_created':
+          '"{name}" তৈরি হয়েছে। কোড শেয়ার করুন, যাতে দলের সবাই যুক্ত হতে পারে।',
+      'hub_office_badge': 'অফিস',
+      'hub_leave_office_title': 'এই দল ছেড়ে যাবেন?',
+      'hub_delete_office_title': 'এই দল মুছবেন?',
+      'hub_delete_office_body':
+          '{name}, এর বার্তা, নোটিশ ও খরচ সবার জন্য মুছে যাবে। এটি ফেরানো যাবে না।',
+      'office_channel_food': 'লাঞ্চ ও চা',
+      'office_channel_events': 'অনুষ্ঠান ও ঘোরাঘুরি',
+      'office_add_expense_sub': 'লাঞ্চ, চা, বিল, যাতায়াত ইত্যাদি',
+      'ledger_quick_lunch': 'লাঞ্চ বা চা',
+      'ledger_quick_lunch_sub': 'সবার মধ্যে ভাগ হবে, আপনি পরিশোধ করেছেন',
       'pdf_export_admin_only':
           'শুধু মালিক বা অ্যাডমিন পুরো ট্যুরের PDF নিতে পারেন।',
       'notice_post_failed':

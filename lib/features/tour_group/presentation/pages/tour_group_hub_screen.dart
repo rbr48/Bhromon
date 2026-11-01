@@ -539,8 +539,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       case 'leave':
         final nav = Navigator.of(context);
         final ok = await _confirm(
-            l10n.translate(
-                group.isFamily ? 'hub_leave_family_title' : 'hub_leave_title'),
+            l10n.translate(group.isOffice
+                ? 'hub_leave_office_title'
+                : group.isFamily
+                    ? 'hub_leave_family_title'
+                    : 'hub_leave_title'),
             l10n.translate('hub_leave_body', args: {'name': group.name}));
         if (!ok) return;
         try {
@@ -562,11 +565,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
       case 'delete':
         final nav = Navigator.of(context);
         final ok = await _confirm(
-            l10n.translate(group.isFamily
-                ? 'hub_delete_family_title'
-                : 'hub_delete_title'),
+            l10n.translate(group.isOffice
+                ? 'hub_delete_office_title'
+                : group.isFamily
+                    ? 'hub_delete_family_title'
+                    : 'hub_delete_title'),
             l10n.translate(
-                group.isFamily ? 'hub_delete_family_body' : 'hub_delete_body',
+                group.isOffice
+                    ? 'hub_delete_office_body'
+                    : group.isFamily
+                        ? 'hub_delete_family_body'
+                        : 'hub_delete_body',
                 args: {'name': group.name}));
         if (!ok) return;
         try {
@@ -666,6 +675,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                   switch (choice) {
                     case 'family':
                       _showCreateFamilyDialog(context);
+                    case 'office':
+                      _showCreateFamilyDialog(context, office: true);
                     case 'trip':
                       _showCreateGroupDialog(context);
                     case 'join':
@@ -677,6 +688,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     value: 'family',
                     child: _menuRow(Icons.family_restroom_rounded,
                         context.l10n.translate('hub_create_family')),
+                  ),
+                  PopupMenuItem(
+                    value: 'office',
+                    child: _menuRow(Icons.work_rounded,
+                        context.l10n.translate('hub_create_office')),
                   ),
                   PopupMenuItem(
                     value: 'trip',
@@ -756,7 +772,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       // 1. Active Tour Card
                       _buildActiveTourBanner(context, current, groups),
                       const SizedBox(height: 18),
-                      if (current.isFamily) ...[
+                      if (current.isFamily && !current.isOffice) ...[
                         FamilyHomeCard(tourId: current.id),
                         const SizedBox(height: 18),
                       ],
@@ -865,6 +881,12 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               label: Text(context.l10n.translate('hub_create_family'),
                   style: const TextStyle(color: AppColors.mintGreen)),
             ),
+            TextButton.icon(
+              onPressed: () => _showCreateFamilyDialog(context, office: true),
+              icon: const Icon(Icons.work_rounded, color: AppColors.mintGreen),
+              label: Text(context.l10n.translate('hub_create_office'),
+                  style: const TextStyle(color: AppColors.mintGreen)),
+            ),
             const SizedBox(height: 12),
             if (!_repository.isSignedIn)
               TextButton.icon(
@@ -934,9 +956,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        group.isFamily
-                            ? context.l10n.translate('hub_family_badge')
-                            : '${group.tourType.labelBn.split(' ').first} ${group.destination}',
+                        group.isOffice
+                            ? context.l10n.translate('hub_office_badge')
+                            : group.isFamily
+                                ? context.l10n.translate('hub_family_badge')
+                                : '${group.tourType.labelBn.split(' ').first} ${group.destination}',
                         style: const TextStyle(
                           color: AppColors.mintGreen,
                           fontSize: 12,
@@ -1438,22 +1462,23 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           color: const Color(0xFF6366F1),
           onTap: () => context.push('/group/${group.id}/logistics'),
         ),
-      'calendar': group.isFamily
-          ? _ModuleItem(
-              title: l10n.translate('hub_module_family_dates'),
-              subtitle: l10n.translate('hub_module_family_dates_sub'),
-              icon: Icons.event_repeat_rounded,
-              color: const Color(0xFF84CC16),
-              onTap: () => context.push('/group/${group.id}/family-dates'),
-            )
-          : _ModuleItem(
-              title: l10n.translate('hub_module_calendar'),
-              subtitle: l10n.translate('hub_module_calendar_sub'),
-              icon: Icons.calendar_month_rounded,
-              color: const Color(0xFF84CC16),
-              onTap: () => context.push('/group/${group.id}/calendar'),
-            ),
-      if (group.isFamily)
+      if (!group.isOffice)
+        'calendar': group.isFamily
+            ? _ModuleItem(
+                title: l10n.translate('hub_module_family_dates'),
+                subtitle: l10n.translate('hub_module_family_dates_sub'),
+                icon: Icons.event_repeat_rounded,
+                color: const Color(0xFF84CC16),
+                onTap: () => context.push('/group/${group.id}/family-dates'),
+              )
+            : _ModuleItem(
+                title: l10n.translate('hub_module_calendar'),
+                subtitle: l10n.translate('hub_module_calendar_sub'),
+                icon: Icons.calendar_month_rounded,
+                color: const Color(0xFF84CC16),
+                onTap: () => context.push('/group/${group.id}/calendar'),
+              ),
+      if (group.isFamily && !group.isOffice)
         'family_tasks': _ModuleItem(
           title: l10n.translate('hub_module_family_tasks'),
           subtitle: l10n.translate('hub_module_family_tasks_sub'),
@@ -1461,7 +1486,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           color: const Color(0xFF22D3EE),
           onTap: () => context.push('/group/${group.id}/family-tasks'),
         ),
-      if (group.isFamily)
+      if (group.isFamily && !group.isOffice)
         'dependents': _ModuleItem(
           title: l10n.translate('hub_module_dependents'),
           subtitle: l10n.translate('hub_module_dependents_sub'),
@@ -1469,7 +1494,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           color: const Color(0xFFF472B6),
           onTap: () => context.push('/group/${group.id}/dependents'),
         ),
-      if (group.isFamily)
+      if (group.isFamily && !group.isOffice)
         'album': _ModuleItem(
           title: l10n.translate('hub_module_album'),
           subtitle: l10n.translate('hub_module_album_sub'),
@@ -1509,13 +1534,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           color: const Color(0xFF10B981),
           onTap: () => context.push('/group/${group.id}/journey'),
         ),
-      'safety': _ModuleItem(
-        title: l10n.translate('hub_module_safety'),
-        subtitle: l10n.translate('hub_module_safety_sub'),
-        icon: Icons.shield_rounded,
-        color: const Color(0xFFEF4444),
-        onTap: () => context.push('/group/${group.id}/safety'),
-      ),
+      if (!group.isOffice)
+        'safety': _ModuleItem(
+          title: l10n.translate('hub_module_safety'),
+          subtitle: l10n.translate('hub_module_safety_sub'),
+          icon: Icons.shield_rounded,
+          color: const Color(0xFFEF4444),
+          onTap: () => context.push('/group/${group.id}/safety'),
+        ),
       if (group.modules.games)
         'games': _ModuleItem(
           title: l10n.translate('hub_module_games'),
@@ -1799,7 +1825,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
 
   /// A family circle: a name and a description. It has no trip, so no dates,
   /// destination or travel modules are asked for.
-  void _showCreateFamilyDialog(BuildContext context) {
+  void _showCreateFamilyDialog(BuildContext context, {bool office = false}) {
     final l10n = context.l10n;
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
@@ -1816,7 +1842,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               backgroundColor: const Color(0xFF14241B),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
-              title: Text(l10n.translate('hub_family_title'),
+              title: Text(
+                  l10n.translate(
+                      office ? 'hub_office_title' : 'hub_family_title'),
                   style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1828,7 +1856,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(l10n.translate('hub_family_intro'),
+                      Text(
+                          l10n.translate(
+                              office ? 'hub_office_intro' : 'hub_family_intro'),
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 12)),
                       const SizedBox(height: 14),
@@ -1837,7 +1867,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         autofocus: true,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          labelText: l10n.translate('hub_family_name_hint'),
+                          labelText: l10n.translate(office
+                              ? 'hub_office_name_hint'
+                              : 'hub_family_name_hint'),
                           labelStyle: const TextStyle(
                               color: Colors.white70, fontSize: 13),
                           filled: true,
@@ -1860,35 +1892,37 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<int>(
-                        initialValue: familyCount,
-                        dropdownColor: const Color(0xFF1B4332),
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: l10n.translate('hub_family_count_label'),
-                          helperText: l10n.translate('hub_family_count_hint'),
-                          helperStyle: const TextStyle(
-                              color: Colors.white54, fontSize: 11),
-                          labelStyle: const TextStyle(
-                              color: Colors.white70, fontSize: 13),
-                          filled: true,
-                          fillColor: Colors.black26,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                      if (!office) const SizedBox(height: 12),
+                      if (!office)
+                        DropdownButtonFormField<int>(
+                          initialValue: familyCount,
+                          dropdownColor: const Color(0xFF1B4332),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            labelText: l10n.translate('hub_family_count_label'),
+                            helperText: l10n.translate('hub_family_count_hint'),
+                            helperStyle: const TextStyle(
+                                color: Colors.white54, fontSize: 11),
+                            labelStyle: const TextStyle(
+                                color: Colors.white70, fontSize: 13),
+                            filled: true,
+                            fillColor: Colors.black26,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          items: [
+                            for (var n = 1; n <= 20; n++)
+                              DropdownMenuItem(
+                                value: n,
+                                child: Text(l10n.translate('hub_people_count',
+                                    args: {'count': n})),
+                              ),
+                          ],
+                          onChanged: (v) {
+                            if (v != null)
+                              setDialogState(() => familyCount = v);
+                          },
                         ),
-                        items: [
-                          for (var n = 1; n <= 20; n++)
-                            DropdownMenuItem(
-                              value: n,
-                              child: Text(l10n.translate('hub_people_count',
-                                  args: {'count': n})),
-                            ),
-                        ],
-                        onChanged: (v) {
-                          if (v != null) setDialogState(() => familyCount = v);
-                        },
-                      ),
                     ],
                   ),
                 ),
@@ -1930,7 +1964,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                 chat: true,
                               ),
                               kind: GroupKind.family,
-                              ownerFamilyCount: familyCount,
+                              ownerFamilyCount: office ? 1 : familyCount,
+                              preset: office ? TourGroup.officePreset : null,
                             );
                             if (mounted) {
                               _selectTour(newGroup);
@@ -1941,7 +1976,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               messenger.showSnackBar(
                                 SnackBar(
                                   content: Text(l10n.translate(
-                                      'hub_family_created',
+                                      office
+                                          ? 'hub_office_created'
+                                          : 'hub_family_created',
                                       args: {'name': newGroup.name})),
                                   backgroundColor: AppColors.midGreen,
                                   behavior: SnackBarBehavior.floating,

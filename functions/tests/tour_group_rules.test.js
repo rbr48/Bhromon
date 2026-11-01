@@ -326,6 +326,43 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  describe('office teams', () => {
+    const OFFICE = 'off1';
+    const notice = (by) => ({ title: 'Office closed Friday', content: 'Dhaka office', authorEmail: by, createdAt: serverTimestamp() });
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        await setDoc(doc(f, 'tours', OFFICE), { name: 'Sales team', kind: 'family', preset: 'office', ownerEmail: people.owner.email, ownerUid: people.owner.uid, inviteCode: 'OFFCODE1' });
+        const membership = (email, role) =>
+          setDoc(doc(f, 'memberships', `${OFFICE}__${email}`), { tourId: OFFICE, email, role, status: 'active', displayName: email });
+        await membership(people.owner.email, 'owner');
+        await membership(people.admin.email, 'admin');
+        await membership(people.member.email, 'member');
+      });
+    });
+
+    test('only admins post notices in an office team', async () => {
+      await assertSucceeds(addDoc(collection(db('admin'), 'tours', OFFICE, 'notices'), notice(people.admin.email)));
+      await assertFails(addDoc(collection(db('member'), 'tours', OFFICE, 'notices'), notice(people.member.email)));
+    });
+
+    test('a member deletes no notice, not even their own; admins delete any', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', OFFICE, 'notices', 'n1'), notice(people.member.email));
+      });
+      await assertFails(deleteDoc(doc(db('member'), 'tours', OFFICE, 'notices', 'n1')));
+      await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', OFFICE, 'notices', 'n1')));
+    });
+
+    test('a member answers an office notice for themselves', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', OFFICE, 'notices', 'n2'), notice(people.admin.email));
+      });
+      await assertSucceeds(updateDoc(doc(db('member'), 'tours', OFFICE, 'notices', 'n2'), { ackBy: arrayUnion(people.member.email) }));
+    });
+  });
+
   describe('feed', () => {
     const postPath = ['tours', TOUR, 'posts', 'p1'];
     const post = (author) => ({
