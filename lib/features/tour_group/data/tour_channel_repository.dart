@@ -507,21 +507,38 @@ class TourChannelRepository {
   // Attachments
   // ---------------------------------------------------------------------------
 
-  /// Starts uploading a photo or video for a message. Throws if the file type
+  /// Starts uploading a photo, video or file for a message. Throws if the file type
   /// is not one the storage accepts.
   Future<TourMediaUpload> startAttachment(
     String tourId,
     XFile file, {
     required bool isVideo,
+    bool isDocument = false,
   }) {
     _groups.requireEmail();
     final name = file.name;
-    final contentType =
-        isVideo ? videoContentType(name) : imageContentType(name);
+    final String? contentType;
+    final int maxBytes;
+    final String defaultExt;
+    if (isDocument) {
+      contentType = docContentType(name) ?? 'application/octet-stream';
+      maxBytes = kMaxDocBytes;
+      defaultExt = 'pdf';
+    } else if (isVideo) {
+      contentType = videoContentType(name);
+      maxBytes = kMaxVideoBytes;
+      defaultExt = 'mp4';
+    } else {
+      contentType = imageContentType(name);
+      maxBytes = kMaxImageBytes;
+      defaultExt = 'jpg';
+    }
     if (contentType == null) {
-      throw TourUploadException(isVideo
-          ? 'এই ধরনের ভিডিও পাঠানো যাবে না।'
-          : 'এই ধরনের ছবি পাঠানো যাবে না।');
+      throw TourUploadException(isDocument
+          ? 'এই ধরনের ফাইল বা ডকুমেন্ট পাঠানো যাবে না।'
+          : isVideo
+              ? 'এই ধরনের ভিডিও পাঠানো যাবে না।'
+              : 'এই ধরনের ছবি পাঠানো যাবে না।');
     }
     // Channel files are not journaled for the sweep, which cannot yet see
     // channel messages. The message commits or discards them instead.
@@ -530,8 +547,8 @@ class TourChannelRepository {
       folder: 'channels',
       file: file,
       contentType: contentType,
-      extension: storedExtension(name, isVideo ? 'mp4' : 'jpg'),
-      maxBytes: isVideo ? kMaxVideoBytes : kMaxImageBytes,
+      extension: storedExtension(name, defaultExt),
+      maxBytes: maxBytes,
       journal: TourMediaJournal.untracked,
     );
   }

@@ -155,11 +155,19 @@ class ChannelAttachment {
   final bool isAudio;
   final int? durationSeconds;
 
+  /// A document/file. Its name and size are kept with it.
+  final bool isFile;
+  final String? fileName;
+  final int? fileSizeBytes;
+
   const ChannelAttachment({
     required this.url,
     this.isVideo = false,
     this.isAudio = false,
     this.durationSeconds,
+    this.isFile = false,
+    this.fileName,
+    this.fileSizeBytes,
   });
 
   factory ChannelAttachment.fromMap(Map<String, dynamic> map) {
@@ -168,6 +176,9 @@ class ChannelAttachment {
       url: map['url'] as String? ?? '',
       isVideo: kind == 'video',
       isAudio: kind == 'audio',
+      isFile: kind == 'file' || kind == 'document',
+      fileName: map['fileName'] as String?,
+      fileSizeBytes: (map['fileSizeBytes'] as num?)?.toInt(),
       durationSeconds: (map['durationSeconds'] as num?)?.toInt(),
     );
   }
@@ -178,6 +189,14 @@ class ChannelAttachment {
         'url': url,
         'kind': 'audio',
         if (durationSeconds != null) 'durationSeconds': durationSeconds,
+      };
+    }
+    if (isFile) {
+      return {
+        'url': url,
+        'kind': 'file',
+        if (fileName != null) 'fileName': fileName,
+        if (fileSizeBytes != null) 'fileSizeBytes': fileSizeBytes,
       };
     }
     return {'url': url, 'kind': isVideo ? 'video' : 'image'};
@@ -199,9 +218,11 @@ class ChannelReply {
   factory ChannelReply.quoting(ChannelMessage message) {
     final clipped = message.text.isEmpty && message.isVoiceNote
         ? '🎤 Voice message'
-        : message.text.length > 140
-            ? '${message.text.substring(0, 140)}…'
-            : message.text;
+        : message.text.isEmpty && message.fileAttachments.isNotEmpty
+            ? '📄 ${message.fileAttachments.first.fileName ?? 'Document'}'
+            : message.text.length > 140
+                ? '${message.text.substring(0, 140)}…'
+                : message.text;
     return ChannelReply(
       id: message.id,
       senderName: message.senderName,
@@ -320,16 +341,22 @@ class ChannelMessage {
   }
 
   /// How many members chose each poll option, in option order.
-  /// The photos or video of the message. Voice notes are shown on their own.
+  /// The photos or video of the message. Voice notes and documents are shown on their own.
   List<ChannelAttachment> get visualAttachments => [
         for (final a in attachments)
-          if (!a.isAudio) a
+          if (!a.isAudio && !a.isFile) a
       ];
 
   /// The voice notes of the message.
   List<ChannelAttachment> get voiceAttachments => [
         for (final a in attachments)
           if (a.isAudio) a
+      ];
+
+  /// The document and file attachments of the message.
+  List<ChannelAttachment> get fileAttachments => [
+        for (final a in attachments)
+          if (a.isFile) a
       ];
 
   /// True for a voice note, a message whose content is an audio attachment.

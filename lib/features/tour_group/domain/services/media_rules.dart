@@ -8,6 +8,8 @@ const int kMaxWebVideoSourceBytes = 250 * 1024 * 1024; // 250 MB
 const int kMaxReelSeconds = 180; // 3 minutes
 const int kMaxPhotosPerPost = 10;
 const int kMaxAudioBytes = 25 * 1024 * 1024; // 25 MB, as the media server
+const int kMaxDocBytes =
+    50 * 1024 * 1024; // 50 MB, matching media-server MAX_DOC_BYTES
 
 const Map<String, String> _imageTypes = {
   'jpg': 'image/jpeg',
@@ -37,6 +39,21 @@ const Map<String, String> _audioTypes = {
   'opus': 'audio/opus',
 };
 
+const Map<String, String> _docTypes = {
+  'pdf': 'application/pdf',
+  'doc': 'application/msword',
+  'docx':
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'xls': 'application/vnd.ms-excel',
+  'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'ppt': 'application/vnd.ms-powerpoint',
+  'pptx':
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'txt': 'text/plain',
+  'csv': 'text/csv',
+  'zip': 'application/zip',
+};
+
 String _extension(String fileName) {
   final dot = fileName.lastIndexOf('.');
   if (dot < 0 || dot == fileName.length - 1) return '';
@@ -60,6 +77,15 @@ bool isSupportedVideoName(String fileName) {
 
 /// The content type to upload a voice note with, or null when not allowed.
 String? audioContentType(String fileName) => _audioTypes[_extension(fileName)];
+
+/// The content type to upload a document or file with, or null when not allowed.
+String? docContentType(String fileName) => _docTypes[_extension(fileName)];
+
+/// Whether a document named [fileName] is supported.
+bool isSupportedDocName(String fileName) {
+  final ext = _extension(fileName);
+  return ext.isNotEmpty && _docTypes.containsKey(ext);
+}
 
 /// Extension to store a file under. Falls back to [fallback] when the name has none.
 String storedExtension(String fileName, String fallback) {

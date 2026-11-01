@@ -228,24 +228,29 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
               ),
             ),
           ),
-          const SizedBox(height: 4),
-          // Time and status row
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.timeStr,
-                  style: const TextStyle(color: Colors.white54, fontSize: 9.5),
-                ),
-                if (widget.isMe && widget.deliveryIcon != null) ...[
-                  const SizedBox(width: 4),
-                  widget.deliveryIcon!,
+          if (widget.timeStr.isNotEmpty ||
+              (widget.isMe && widget.deliveryIcon != null)) ...[
+            const SizedBox(height: 4),
+            // Time and status row
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.timeStr.isNotEmpty)
+                    Text(
+                      widget.timeStr,
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 9.5),
+                    ),
+                  if (widget.isMe && widget.deliveryIcon != null) ...[
+                    const SizedBox(width: 4),
+                    widget.deliveryIcon!,
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
