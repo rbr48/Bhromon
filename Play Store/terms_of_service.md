@@ -22,7 +22,7 @@ Bhromon is operated by **Bhromon Technologies Ltd.** ("we," "our," or "us"). Bhr
 3. **Real-Time Voice Lounge & Calling**: Discord-style group voice lounges and 1-on-1 audio/video calls using WebRTC mesh and Coturn STUN/TURN servers.
 4. **Family Safety Hub & SOS Siren**: Emergency alerting system that broadcasts alarms and transient location coordinates to fellow tour members.
 5. **Smart Newspaper Hub**: Built-in ad-free news reader with client-side network blocking and cosmetic filtering for clean reading.
-6. **Family Game Zone**: Pure-Dart deterministic board and card games (Card 29, Chess AI, Ludo Express, Teen Patti, Carrom).
+6. **Game Zone**: Pure-Dart deterministic board and card games (Card 29, Chess AI, Ludo Express, Teen Patti, Carrom).
 
 ---
 
@@ -71,7 +71,7 @@ Bhromon operates on a membership-based group access model:
 
 ---
 
-## 8. Family Game Zone Terms
+## 8. Game Zone Terms
 
 * **Pure Entertainment**: Games provided in the Game Zone (Card 29, Chess AI, Ludo, Teen Patti, Carrom) are implemented strictly as digital board games for family entertainment during travel.
 * **No Gambling**: The Game Zone does not feature real-money wagering, betting, payouts, or cash prizes. Using the platform for illegal gambling or wagering is strictly forbidden.

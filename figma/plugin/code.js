@@ -324,7 +324,7 @@
   });
   createTextNode({
     parent: dsTitle,
-    text: 'Bengali-first travel ecosystem, Universal Tour Engine, Offline Relational & Family Game Zone Tokens',
+    text: 'Bengali-first travel ecosystem, Universal Tour Engine, Offline Relational & Game Zone Tokens',
     fontSize: 16,
     color: Colors.grayText
   });
@@ -765,7 +765,7 @@
   // PAGE 7: 📱 FAMILY GAME ZONE (5 GAMES)
   // ───────────────────────────────────────────────────────────────────────────
   const pageGames = figma.createPage();
-  pageGames.name = '📱 6. Family Game Zone (5 Games)';
+  pageGames.name = '📱 6. Game Zone (5 Games)';
 
   // Screen 1: Game Zone Hub
   const { content: cGamesHub } = createMobileShell(pageGames, '🎮 Game Zone Hub', 100, 100, true);

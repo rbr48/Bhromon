@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:hive/hive.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../domain/models/newspaper_models.dart';
@@ -24,7 +25,7 @@ class NewspaperService {
         receiveTimeout: const Duration(seconds: 15),
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'BhromonApp/2.1.0 (Flutter)',
+          if (!kIsWeb) 'User-Agent': 'BhromonApp/2.1.0 (Flutter)',
         },
       ),
     );

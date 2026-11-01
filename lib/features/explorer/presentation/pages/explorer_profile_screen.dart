@@ -455,38 +455,44 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     }
 
     if (_error != null && _profile == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline,
-                  color: Colors.redAccent, size: 48),
-              const SizedBox(height: 16),
-              Text(
-                _isBn
-                    ? 'প্রোফাইল লোড করা সম্ভব হয়নি: $_error'
-                    : 'Failed to load profile: $_error',
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadProfile,
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.mintGreen,
-                    foregroundColor: Colors.black),
-                child: Text(_isBn ? 'আবার চেষ্টা করুন' : 'Retry'),
-              ),
-            ],
+      return SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline,
+                    color: Colors.redAccent, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  _isBn
+                      ? 'প্রোফাইল লোড করা সম্ভব হয়নি: $_error'
+                      : 'Failed to load profile: $_error',
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadProfile,
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.mintGreen,
+                      foregroundColor: Colors.black),
+                  child: Text(_isBn ? 'আবার চেষ্টা করুন' : 'Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
     if (_profile == null) {
-      return const SizedBox.shrink();
+      return const SingleChildScrollView(
+        physics: AlwaysScrollableScrollPhysics(),
+        child: SizedBox.shrink(),
+      );
     }
 
     final profile = _profile!;
@@ -1690,7 +1696,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         ),
                         icon: const Icon(Icons.arrow_forward_rounded, size: 14),
                         label: Text(
-                          _isBn ? 'ট্যুর হাব খুলুন' : 'Open Hub',
+                          _isBn ? 'গ্রুপ হাব খুলুন' : 'Open Group Hub',
                           style: const TextStyle(
                               fontSize: 12, fontWeight: FontWeight.bold),
                         ),
@@ -1777,9 +1783,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
         // 4. Game Zone Card
         _buildKeepsakeCard(
-          title: _isBn ? 'ফ্যামিলি গেম জোন' : 'Family Game Zone',
+          title: _isBn ? 'গেম জোন' : 'Game Zone',
           subtitle: _isBn
-              ? 'লুডো, ক্যারাম, কার্ড ২৯, ট্রাভেল চেস এবং তিন পাত্তি মাল্টিপ্লেয়ার।'
+              ? 'লুডো, ক্যারাম, কার্ড ২৯, দাবা এবং তিন পাত্তি মাল্টিপ্লেয়ার।'
               : 'Play Card 29, Carrom, Chess AI, Ludo, and Teen Patti on the bus or train.',
           icon: Icons.sports_esports_rounded,
           color: Colors.lightBlueAccent,
@@ -3126,47 +3132,50 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildGuestPrompt() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.account_circle_outlined,
-                size: 72, color: AppColors.mintGreen),
-            const SizedBox(height: 20),
-            Text(
-              _isBn ? 'আপনার প্রোফাইল' : 'Your profile',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              _isBn
-                  ? 'গ্রুপ পরিচালনা, ফটো শেয়ার ও খরচ ভাগাভাগি করতে সাইন-ইন করুন।'
-                  : 'Sign in to manage your groups, split expenses, and share moments.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => context.go('/login'),
-              icon: const Icon(Icons.login),
-              label: Text(_isBn ? 'লগইন বা সাইন-আপ' : 'Sign In / Register'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.mintGreen,
-                foregroundColor: Colors.black,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.account_circle_outlined,
+                  size: 72, color: AppColors.mintGreen),
+              const SizedBox(height: 20),
+              Text(
+                _isBn ? 'আপনার প্রোফাইল' : 'Your profile',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              Text(
+                _isBn
+                    ? 'গ্রুপ পরিচালনা, ফটো শেয়ার ও খরচ ভাগাভাগি করতে সাইন-ইন করুন।'
+                    : 'Sign in to manage your groups, split expenses, and share moments.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => context.go('/login'),
+                icon: const Icon(Icons.login),
+                label: Text(_isBn ? 'লগইন বা সাইন-আপ' : 'Sign In / Register'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.mintGreen,
+                  foregroundColor: Colors.black,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -3174,7 +3183,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   Widget _buildProfileSkeleton() {
     return const SingleChildScrollView(
-      physics: NeverScrollableScrollPhysics(),
+      physics: AlwaysScrollableScrollPhysics(),
       child: Shimmer(
         child: Column(
           children: [

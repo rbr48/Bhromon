@@ -226,7 +226,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildNavItem(
                       context,
-                      title: 'গেমিং জোন',
+                      title: 'গেম জোন',
                       icon: Icons.sports_esports_outlined,
                       activeIcon: Icons.sports_esports_rounded,
                       route: '/game-zone',
