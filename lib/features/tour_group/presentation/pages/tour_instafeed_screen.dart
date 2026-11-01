@@ -738,7 +738,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
               .translate('ig_trip_expense', args: {'name': post.authorName}),
     );
     // The same categories the ledger offers, so the budget lines pick it up.
-    final offered = expenseCategoriesFor(family: _tourGroup?.isFamily ?? false);
+    final offered = expenseCategoriesForGroup(_tourGroup);
     String selectedCategory = post.expenseCategory ?? offered.first;
 
     final result = await showDialog<bool>(
@@ -947,21 +947,23 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
           ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).padding.bottom > 0
-              ? MediaQuery.of(context).padding.bottom
-              : 8,
-        ),
-        child: FloatingActionButton(
-          backgroundColor: AppColors.mintGreen,
-          foregroundColor: Colors.black,
-          elevation: 6,
-          tooltip: context.l10n.translate('ig_add_camera_photo'),
-          onPressed: () => _showCreatePostModal(context),
-          child: const Icon(Icons.camera_alt_rounded, size: 28),
-        ),
-      ),
+      floatingActionButton: !(_tourGroup?.momentsOpen ?? true)
+          ? null
+          : Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).padding.bottom > 0
+                    ? MediaQuery.of(context).padding.bottom
+                    : 8,
+              ),
+              child: FloatingActionButton(
+                backgroundColor: AppColors.mintGreen,
+                foregroundColor: Colors.black,
+                elevation: 6,
+                tooltip: context.l10n.translate('ig_add_camera_photo'),
+                onPressed: () => _showCreatePostModal(context),
+                child: const Icon(Icons.camera_alt_rounded, size: 28),
+              ),
+            ),
       body: StreamBuilder<List<SafetyAlert>>(
         stream: _alertsStream,
         builder: (context, alertsSnap) {

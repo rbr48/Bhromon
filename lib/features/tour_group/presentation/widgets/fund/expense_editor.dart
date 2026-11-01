@@ -36,6 +36,11 @@ IconData fundCategoryIcon(String category) => switch (category) {
       'School' => Icons.school_rounded,
       'Dining' => Icons.restaurant_menu_rounded,
       'Gifts' => Icons.card_giftcard_rounded,
+      'Security' => Icons.shield_rounded,
+      'Cleaning' => Icons.cleaning_services_rounded,
+      'Repairs' => Icons.build_rounded,
+      'Generator' => Icons.electrical_services_rounded,
+      'Lift' => Icons.elevator_rounded,
       _ => Icons.receipt_long_rounded,
     };
 
@@ -84,6 +89,10 @@ Future<ExpenseDraft?> showExpenseEditor(
   required TourGroup? group,
   required String me,
   ExpenseItem? existing,
+  String? initialTitle,
+  String? initialCategory,
+  SplitMode? initialSplit,
+  Map<String, int>? initialShares,
 }) {
   return showModalBottomSheet<ExpenseDraft>(
     context: context,
@@ -92,7 +101,14 @@ Future<ExpenseDraft?> showExpenseEditor(
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (_) => _ExpenseEditor(
-        members: members, group: group, me: me, existing: existing),
+        members: members,
+        group: group,
+        me: me,
+        existing: existing,
+        initialTitle: initialTitle,
+        initialCategory: initialCategory,
+        initialSplit: initialSplit,
+        initialShares: initialShares),
   );
 }
 
@@ -102,6 +118,10 @@ class _ExpenseEditor extends StatefulWidget {
     required this.group,
     required this.me,
     this.existing,
+    this.initialTitle,
+    this.initialCategory,
+    this.initialSplit,
+    this.initialShares,
   });
 
   final List<TourMember> members;
@@ -109,13 +129,23 @@ class _ExpenseEditor extends StatefulWidget {
   final String me;
   final ExpenseItem? existing;
 
+  /// Prefilled for a quick entry, such as a lunch split. Ignored when editing.
+  final String? initialTitle;
+  final String? initialCategory;
+
+  /// The split and the parts a bazar opens with, such as this month's meal counts.
+  /// Ignored when editing.
+  final SplitMode? initialSplit;
+  final Map<String, int>? initialShares;
+
   @override
   State<_ExpenseEditor> createState() => _ExpenseEditorState();
 }
 
 class _ExpenseEditorState extends State<_ExpenseEditor> {
   late final ExpenseItem? e = widget.existing;
-  late final _title = TextEditingController(text: e?.title ?? '');
+  late final _title =
+      TextEditingController(text: e?.title ?? widget.initialTitle ?? '');
   late final _amount = TextEditingController(
       text: e == null
           ? ''
@@ -128,7 +158,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
   Uint8List? _pickedReceiptBytes;
   late String _currency = e?.isForeign == true ? e!.currency! : 'BDT';
   late String _category = e?.category ??
-      expenseCategoriesFor(family: widget.group?.isFamily ?? false).first;
+      widget.initialCategory ??
+      expenseCategoriesForGroup(widget.group).first;
   late DateTime _date = e?.date ?? DateTime.now();
   late String? _stopId = e?.stopId ?? widget.group?.stopOn(_date)?.id;
   late bool _fromFund = e == null || e!.paidById == null;
@@ -136,7 +167,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
       (widget.members.any((m) => m.email == widget.me)
           ? widget.me
           : (widget.members.isEmpty ? null : widget.members.first.email));
-  late SplitMode _mode = e?.splitMode ?? SplitMode.family;
+  late SplitMode _mode =
+      e?.splitMode ?? widget.initialSplit ?? SplitMode.family;
   late final Set<String> _people = {
     ...(e?.participantIds ??
         e?.splitShares?.keys ??
@@ -154,7 +186,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                 ? (e!.splitShares![m.email]! / e!.fxRate!).round()
                 : e!.splitShares![m.email]!),
         SplitMode.shares => e!.splitShares?[m.email]?.toString() ?? '',
-        _ => '',
+        _ => widget.initialShares?[m.email]?.toString() ?? '',
       }),
   };
   String? _error;
@@ -312,8 +344,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
     final l10n = context.l10n;
     final stops = widget.group?.effectiveStops ?? const <TourStop>[];
     final bdt = _bdtPaisa;
-    final offered =
-        expenseCategoriesFor(family: widget.group?.isFamily ?? false);
+    final offered = expenseCategoriesForGroup(widget.group);
     final categories = [
       ...offered,
       if (!offered.contains(_category)) _category,

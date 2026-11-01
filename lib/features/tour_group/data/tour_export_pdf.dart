@@ -856,6 +856,16 @@ class _TourPdfWriter {
       case 'others':
       case 'other':
         return labels.text('fund_cat_others');
+      case 'security':
+        return labels.text('fund_cat_security');
+      case 'cleaning':
+        return labels.text('fund_cat_cleaning');
+      case 'repairs':
+        return labels.text('fund_cat_repairs');
+      case 'generator':
+        return labels.text('fund_cat_generator');
+      case 'lift':
+        return labels.text('fund_cat_lift');
       default:
         return _clean(raw, max: 60);
     }

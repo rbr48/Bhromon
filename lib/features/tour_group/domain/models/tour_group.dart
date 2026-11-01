@@ -3,6 +3,7 @@
 import 'expense_models.dart';
 import 'itinerary_models.dart';
 import 'date_codec.dart';
+import 'samity_models.dart';
 import '../services/emergency_numbers.dart';
 
 /// Used by copyWith to tell "not passed" apart from an explicit null.
@@ -263,8 +264,19 @@ class TourGroup {
   /// Whether this group plans a trip or is a family circle.
   final GroupKind kind;
 
+  /// The workspace preset a circle was created with, such as [officePreset].
+  /// Null for trips and for family circles made before presets.
+  final String? preset;
+
+  /// Whether Moments (posts and stories) is on. Only an office or campus can turn it
+  /// off; a family circle, a mess or a trip always has it on.
+  final bool momentsEnabled;
+
   /// Numbers every member can call or text in an emergency (at most ten).
   final List<EmergencyContact> emergencyContacts;
+
+  /// The schedule of a rotating savings group (samity). Empty for every other circle.
+  final SamityConfig samity;
 
   const TourGroup({
     required this.id,
@@ -289,11 +301,77 @@ class TourGroup {
     this.returnHome = true,
     this.fundBudget = const FundBudget(),
     this.kind = GroupKind.tour,
+    this.preset,
+    this.momentsEnabled = true,
     this.emergencyContacts = const [],
+    this.samity = const SamityConfig(),
   });
 
   /// A family circle rather than a trip.
   bool get isFamily => kind == GroupKind.family;
+
+  /// The preset of an office or team. See [preset].
+  static const String officePreset = 'office';
+
+  /// The preset of a campus, class, batch or club. See [preset].
+  static const String campusPreset = 'campus';
+
+  /// The preset of a mess or shared home: a shared meal arrangement or a shared
+  /// flat. See [preset].
+  static const String messPreset = 'mess';
+
+  /// The preset of a housing society or apartment building: a family-style circle
+  /// where the committee posts notices and residents raise service requests.
+  static const String societyPreset = 'society';
+
+  /// The preset of a rotating savings group (samity). See [samity].
+  static const String samityPreset = 'samity';
+
+  /// The preset a stored value names, or null when it names none.
+  static String? presetFrom(Object? value) {
+    if (value == officePreset) return officePreset;
+    if (value == campusPreset) return campusPreset;
+    if (value == messPreset) return messPreset;
+    if (value == societyPreset) return societyPreset;
+    if (value == samityPreset) return samityPreset;
+    return null;
+  }
+
+  /// An office or team: a family-style circle where only admins write notices.
+  bool get isOffice => preset == officePreset;
+
+  /// A campus, class, batch or club: the office rules, with campus copy.
+  bool get isCampus => preset == campusPreset;
+
+  /// A mess or shared home: a family-style circle with its own categories and
+  /// channels. The owner and admins post its notices, and members answer them.
+  bool get isMess => preset == messPreset;
+
+  /// A housing society or apartment building: a family-style circle with its own
+  /// categories, channels and service requests.
+  bool get isSociety => preset == societyPreset;
+
+  /// A rotating savings group: a family-style circle with a schedule of payments and
+  /// payouts.
+  bool get isSamity => preset == samityPreset;
+
+  /// An office or a campus: a workspace, where the household tiles and records do not
+  /// apply and SOS is refused.
+  bool get isManaged => isOffice || isCampus;
+
+  /// A plain household: a family circle with no preset. Only a household keeps
+  /// dependents, the family album and family dates.
+  bool get isHousehold => isFamily && preset == null;
+
+  /// Whether the owner and admins alone post notices: an office, a campus, a mess, a
+  /// housing society or a samity. Members answer them. A plain family circle lets any
+  /// member post.
+  bool get hasManagedNotices =>
+      isOffice || isCampus || isMess || isSociety || isSamity;
+
+  /// Whether Moments is open to members: always, except when an office or campus has
+  /// turned it off.
+  bool get momentsOpen => !isManaged || momentsEnabled;
 
   /// The id the origin city has in leg keys.
   static const String originId = 'origin';
@@ -537,7 +615,10 @@ class TourGroup {
     bool? returnHome,
     FundBudget? fundBudget,
     GroupKind? kind,
+    String? preset,
+    bool? momentsEnabled,
     List<EmergencyContact>? emergencyContacts,
+    SamityConfig? samity,
   }) {
     return TourGroup(
       id: id ?? this.id,
@@ -569,7 +650,10 @@ class TourGroup {
       returnHome: returnHome ?? this.returnHome,
       fundBudget: fundBudget ?? this.fundBudget,
       kind: kind ?? this.kind,
+      preset: preset ?? this.preset,
+      momentsEnabled: momentsEnabled ?? this.momentsEnabled,
       emergencyContacts: emergencyContacts ?? this.emergencyContacts,
+      samity: samity ?? this.samity,
     );
   }
 
@@ -593,7 +677,10 @@ class TourGroup {
       'legPlans': {for (final e in legPlans.entries) e.key: e.value.toMap()},
       'returnHome': returnHome,
       'kind': kind.name,
+      if (preset != null) 'preset': preset,
+      if (!momentsEnabled) 'momentsEnabled': false,
       'emergencyContacts': [for (final c in emergencyContacts) c.toMap()],
+      if (samity.hasSettings) 'samity': samity.toMap(),
       if (!fundBudget.isEmpty) 'fundBudget': fundBudget.toMap(),
       'schemaVersion': 4,
     };
@@ -633,8 +720,11 @@ class TourGroup {
       legPlans: readLegPlans(map['legPlans']),
       returnHome: map['returnHome'] as bool? ?? true,
       kind: GroupKind.fromString(map['kind']?.toString()),
+      preset: presetFrom(map['preset']),
+      momentsEnabled: map['momentsEnabled'] != false,
       emergencyContacts: parseEmergencyContacts(map['emergencyContacts']),
       fundBudget: FundBudget.fromMap(map['fundBudget']),
+      samity: SamityConfig.fromMap(map['samity']),
     );
   }
 }

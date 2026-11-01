@@ -23,6 +23,7 @@ import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/fund/expense_editor.dart';
 import '../widgets/fund/fund_sheets.dart';
 import '../../../../core/localization/localized_date.dart';
+import '../../../../core/utils/logger.dart';
 
 const _bg = Color(0xFF0F1A1C);
 const _card = Color(0xFF142428);
@@ -818,7 +819,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           (e.paidByName ?? '').toLowerCase().contains(q);
     }).toList();
     final total = filtered.fold<int>(0, (n, e) => n + e.amountPaisa);
-    final offered = expenseCategoriesFor(family: _group?.isFamily ?? false);
+    final offered = expenseCategoriesForGroup(_group);
     final categories = {for (final e in _expenses) e.category}.toList()
       ..sort((a, b) {
         final ia = offered.indexOf(a);
@@ -1604,8 +1605,41 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 Icons.receipt_long_rounded,
                 AppColors.mintGreen,
                 l10n.translate('fund_add_expense'),
-                l10n.translate('fund_add_expense_sub'),
+                l10n.translate(group?.isOffice == true
+                    ? 'office_add_expense_sub'
+                    : group?.isCampus == true
+                        ? 'campus_add_expense_sub'
+                        : group?.isMess == true
+                            ? 'mess_add_expense_sub'
+                            : group?.isSociety == true
+                                ? 'society_add_expense_sub'
+                                : group?.isSamity == true
+                                    ? 'samity_add_expense_sub'
+                                    : 'fund_add_expense_sub'),
                 _editExpense),
+            if (group?.isOffice == true)
+              item(
+                  Icons.restaurant_rounded,
+                  AppColors.gold,
+                  l10n.translate('ledger_quick_lunch'),
+                  l10n.translate('ledger_quick_lunch_sub'),
+                  () => _editExpense(null, false,
+                      l10n.translate('ledger_quick_lunch'), 'Dining')),
+            if (group?.isCampus == true)
+              item(
+                  Icons.restaurant_rounded,
+                  AppColors.gold,
+                  l10n.translate('campus_quick_snacks'),
+                  l10n.translate('campus_quick_snacks_sub'),
+                  () => _editExpense(null, false,
+                      l10n.translate('campus_quick_snacks'), 'Food')),
+            if (group?.isMess == true)
+              item(
+                  Icons.shopping_basket_rounded,
+                  AppColors.gold,
+                  l10n.translate('mess_quick_bazar'),
+                  l10n.translate('mess_quick_bazar_sub'),
+                  () => _addMessBazar(l10n.translate('mess_quick_bazar'))),
             item(
                 Icons.savings_rounded,
                 AppColors.gold,
@@ -1631,8 +1665,27 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     );
   }
 
+  /// A bazar bought for the mess opens split by this month's meal counts, so each
+  /// member shares the cost of the meals they ate. With no meal counts yet, the split
+  /// is left to fill in by hand.
+  Future<void> _addMessBazar(String title) async {
+    Map<String, int>? meals;
+    try {
+      meals =
+          await _repository.mealTotalsForMonth(widget.tourId, DateTime.now());
+    } catch (err) {
+      logError('Meal totals failed: $err');
+    }
+    if (!mounted) return;
+    await _editExpense(null, false, title, 'Groceries', meals);
+  }
+
   Future<void> _editExpense(
-      [ExpenseItem? existing, bool duplicate = false]) async {
+      [ExpenseItem? existing,
+      bool duplicate = false,
+      String? quickTitle,
+      String? quickCategory,
+      Map<String, int>? mealShares]) async {
     if (_members.isEmpty) return;
     final draft = await showExpenseEditor(
       context,
@@ -1640,6 +1693,10 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       group: _group,
       me: _me,
       existing: existing,
+      initialTitle: quickTitle,
+      initialCategory: quickCategory,
+      initialSplit: mealShares == null ? null : SplitMode.shares,
+      initialShares: mealShares,
     );
     if (draft == null || !mounted) return;
     await _run(() async {
@@ -1772,6 +1829,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       headcount: _headcount,
       totalDays: group.totalDays,
       family: group.isFamily,
+      categories: expenseCategoriesForGroup(group),
     );
     if (budget == null || !mounted) return;
     await _run(() => _repository.saveFundBudget(widget.tourId, budget),

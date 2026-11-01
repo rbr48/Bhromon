@@ -20,6 +20,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -35,6 +36,7 @@ import limits
 import media_access
 import news
 from chat import chat_db, chat_router
+from ack_reminders import AckReminderScheduler, run_ack_reminders
 from family_dates import FamilyDateReminderScheduler
 from news import router as news_router
 from story_cleanup import StoryCleanupScheduler, run_story_cleanup
@@ -50,6 +52,8 @@ FIREBASE_CREDENTIALS = os.getenv("FIREBASE_CREDENTIALS", "")
 # Held by the Bhromon back end only. It lets that back end remove a tour's
 # files when a member leaves or a tour is deleted.
 PURGE_KEY = os.getenv("PURGE_KEY", "")
+# Optional. Lets an operator run the answer reminders on demand; unset, that is refused.
+ACK_REMINDER_RUN_KEY = os.getenv("ACK_REMINDER_RUN_KEY", "")
 ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
@@ -92,6 +96,11 @@ FILENAME_PATTERN = re.compile(
 notification_engine = NotificationEngine()
 notification_watcher = FirestoreNotificationWatcher(notification_engine)
 family_date_scheduler = FamilyDateReminderScheduler(notification_engine)
+ack_reminder_scheduler = AckReminderScheduler(
+    lambda: run_ack_reminders(
+        backend._client(), notification_engine, datetime.now(timezone.utc)
+    )
+)
 story_cleanup_scheduler = StoryCleanupScheduler(
     lambda now: run_story_cleanup(
         backend._client(),
@@ -136,8 +145,10 @@ async def lifespan(app: FastAPI):
         notification_watcher.start()
         family_date_scheduler.start()
         story_cleanup_scheduler.start()
+        ack_reminder_scheduler.start()
     yield
     # Stop them on shutdown
+    ack_reminder_scheduler.stop()
     story_cleanup_scheduler.stop()
     family_date_scheduler.stop()
     notification_watcher.stop()
@@ -836,6 +847,30 @@ def _require_purge_key(provided: Optional[str]) -> None:
         provided.encode("utf-8"), PURGE_KEY.encode("utf-8")
     ):
         raise HTTPException(status_code=401, detail="Wrong purge key.")
+
+
+def _require_ack_reminder_key(provided: Optional[str]) -> None:
+    """Refuses a manual reminder run unless the operator sent the key this server was given."""
+    if not ACK_REMINDER_RUN_KEY:
+        raise HTTPException(status_code=503, detail="Manual reminder runs are not configured.")
+    if not provided or not secrets.compare_digest(
+        provided.encode("utf-8"), ACK_REMINDER_RUN_KEY.encode("utf-8")
+    ):
+        raise HTTPException(status_code=401, detail="Wrong reminder key.")
+
+
+@app.post("/internal/ack-reminders/run")
+async def run_ack_reminders_now(x_ack_reminder_key: Optional[str] = Header(None)):
+    """Runs the answer reminders once, now.
+
+    The media server runs them every 15 minutes on its own. This lets an operator, or a
+    cron job on the VPS, run them on demand. A run that finds nothing due sends nothing,
+    and each reminder is claimed once, so repeating the call is safe.
+    """
+    _require_ack_reminder_key(x_ack_reminder_key)
+    return await run_in_threadpool(
+        run_ack_reminders, backend._client(), notification_engine, datetime.now(timezone.utc)
+    )
 
 
 @app.api_route("/internal/media-auth", methods=["GET", "HEAD"])

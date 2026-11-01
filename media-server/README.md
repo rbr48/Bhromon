@@ -191,3 +191,25 @@ The reader and the web proxy fetch pages only from the newspapers in the catalog
 list. `POST /api/news/sync` needs a platform admin. A `refresh=true` on the headlines
 runs a sync at most every 10 minutes. Run the guard tests with
 `pytest tests/test_news_fetch_guard.py`.
+
+## Answer reminders
+
+A notice can ask its readers to answer it: an acknowledgement or a roll call. The app
+shows the open ones as "needs my reply". `ack_reminders.py` pushes a reminder to the
+members who have not answered yet. It runs inside the media server:
+
+- **Cadence.** The first reminder waits two hours after the notice was posted, because
+  the first push already went out then. A later reminder waits at least twelve hours
+  after the previous one, and at most two are sent for one notice. A notice older than
+  fourteen days is left alone, and an expired notice is in the archive, so it is never
+  reminded about.
+- **Once only.** Each reminder is claimed in a Firestore transaction (`ackReminderSentAt`
+  and `ackReminderCount` on the notice), so overlapping runs send it once.
+- **Schedule.** The scheduler checks every fifteen minutes. Deploying the image starts it
+  with the other background jobs, so nothing else is needed.
+- **Manual run.** `POST /internal/ack-reminders/run` with the header
+  `X-Ack-Reminder-Key` runs the check once and returns the counts. Set the key in
+  `ACK_REMINDER_RUN_KEY` on the server. Without it, the endpoint refuses every call.
+
+The push opens the notice board, the same as a new notice's push. Tests:
+`cd media-server && pytest tests/test_ack_reminders.py`.

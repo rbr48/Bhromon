@@ -57,6 +57,11 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   final List<StreamSubscription<dynamic>> _subs = [];
   // Whether the circle is a family circle, which has its own built-in channels.
   bool _isFamily = false;
+  bool _isOffice = false;
+  bool _isCampus = false;
+  bool _isMess = false;
+  bool _isSociety = false;
+  bool _isSamity = false;
 
   /// Last-seen time of each member, keyed by email. Drives the online count.
   Map<String, DateTime?> _presence = const {};
@@ -148,8 +153,14 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       unawaited(_ensurePrefs(id));
     }
     _subs.add(_groups.watchGroup(widget.tourId).listen(
-        (TourGroup? group) =>
-            _update(() => _isFamily = group?.isFamily ?? false),
+        (TourGroup? group) => _update(() {
+              _isFamily = group?.isFamily ?? false;
+              _isOffice = group?.isOffice ?? false;
+              _isCampus = group?.isCampus ?? false;
+              _isMess = group?.isMess ?? false;
+              _isSociety = group?.isSociety ?? false;
+              _isSamity = group?.isSamity ?? false;
+            }),
         onError: (_) {}));
     unawaited(_markHere());
     _presenceBeat = Timer.periodic(kPresenceHeartbeat, (_) => _markHere());
@@ -202,7 +213,14 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   List<TourChannel> get _channels {
     final byId = {for (final c in _channelDocs) c.id: c};
     final builtIns = [
-      for (final id in builtInChannelIdsFor(family: _isFamily))
+      for (final id in builtInChannelIdsFor(
+        family: _isFamily,
+        office: _isOffice,
+        campus: _isCampus,
+        mess: _isMess,
+        society: _isSociety,
+        samity: _isSamity,
+      ))
         byId[id] ?? TourChannel(id: id),
     ];
     final custom = _channelDocs.where((c) => !c.isBuiltIn).toList()
@@ -267,11 +285,33 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
       case 'general':
         return l10n.translate('tour_channel_general');
       case 'food':
-        return l10n
-            .translate(_isFamily ? 'family_channel_food' : 'tour_channel_food');
+        return l10n.translate(_isOffice
+            ? 'office_channel_food'
+            : _isCampus
+                ? 'campus_channel_food'
+                : _isMess
+                    ? 'mess_channel_food'
+                    : _isSociety
+                        ? 'society_channel_food'
+                        : _isSamity
+                            ? 'samity_channel_food'
+                            : _isFamily
+                                ? 'family_channel_food'
+                                : 'tour_channel_food');
       case 'sightseeing':
-        return l10n.translate(
-            _isFamily ? 'family_channel_sightseeing' : 'tour_channel_places');
+        return l10n.translate(_isOffice
+            ? 'office_channel_events'
+            : _isCampus
+                ? 'campus_channel_events'
+                : _isMess
+                    ? 'mess_channel_bills'
+                    : _isSociety
+                        ? 'society_channel_events'
+                        : _isSamity
+                            ? 'samity_channel_events'
+                            : _isFamily
+                                ? 'family_channel_sightseeing'
+                                : 'tour_channel_places');
       case 'home':
         return l10n.translate('family_channel_home');
       case 'kids':
@@ -1810,8 +1850,14 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
             channel.id,
             title: title,
             amountPaisa: amountPaisa,
-            category:
-                splitCategoryFor(family: _isFamily, channelId: channel.id),
+            category: splitCategoryFor(
+                family: _isFamily,
+                office: _isOffice,
+                campus: _isCampus,
+                mess: _isMess,
+                society: _isSociety,
+                samity: _isSamity,
+                channelId: channel.id),
           );
           draft.clear();
           _snack(l10n.translate('chan_split_done', args: {

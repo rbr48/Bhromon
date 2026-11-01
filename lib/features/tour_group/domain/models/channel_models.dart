@@ -75,9 +75,78 @@ final Set<String> kAllBuiltInChannelIds = {
   ...kFamilyChannelIds,
 };
 
+/// The built-in channels an office or team starts with: lunch and tea, outings,
+/// the general room, safety and the voice lounge.
+const List<String> kOfficeChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
+/// The built-in channels a campus starts with: the same set as an office, with
+/// campus labels.
+const List<String> kCampusChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
+/// The built-in channels a mess starts with: the same set as a campus, with mess
+/// labels.
+const List<String> kMessChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
+/// The built-in channels a housing society starts with: the same set as a mess, with
+/// society labels (maintenance and meetings).
+const List<String> kSocietyChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
+/// The built-in channels a samity starts with: the same set again, with samity labels
+/// (collections and meetings).
+const List<String> kSamityChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
 /// The built-in channels a circle starts with, in the order they are listed.
-List<String> builtInChannelIdsFor({required bool family}) =>
-    family ? kFamilyChannelIds : kBuiltInChannelIds;
+List<String> builtInChannelIdsFor({
+  required bool family,
+  bool office = false,
+  bool campus = false,
+  bool mess = false,
+  bool society = false,
+  bool samity = false,
+}) =>
+    campus
+        ? kCampusChannelIds
+        : mess
+            ? kMessChannelIds
+            : society
+                ? kSocietyChannelIds
+                : samity
+                    ? kSamityChannelIds
+                    : office
+                        ? kOfficeChannelIds
+                        : family
+                            ? kFamilyChannelIds
+                            : kBuiltInChannelIds;
 
 /// The kind of channel: text messaging or voice lounge.
 enum ChannelKind { text, voice }

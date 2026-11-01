@@ -66,6 +66,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
   // In a family circle every member posts a notice; its author may delete it.
   bool get _isFamily => _group?.isFamily ?? false;
+  bool get _hasManagedNotices => _group?.hasManagedNotices ?? false;
+
+  /// Members of a family circle post notices. An office, a campus or a mess reserves
+  /// them for its owner and admins.
+  bool get _membersPost => _isFamily && !_hasManagedNotices;
   String get _me => _repository.currentEmail;
 
   @override
@@ -225,7 +230,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       }
     } catch (_) {
       final key = existing == null || duplicate
-          ? (_isFamily ? 'notice_post_failed' : 'tour_notice_post_admin_only')
+          ? (_membersPost
+              ? 'notice_post_failed'
+              : 'tour_notice_post_admin_only')
           : 'tour_notice_update_admin_only';
       _toast(l10n.translate(key), error: true);
     }
@@ -346,7 +353,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               item(Icons.copy_rounded, l10n.translate('fund_duplicate'),
                   () => _compose(existing: n, duplicate: true)),
             ],
-            if (_isAdmin || (_isFamily && n.authorEmail == _me))
+            if (_isAdmin || (_membersPost && n.authorEmail == _me))
               item(Icons.delete_outline_rounded,
                   l10n.translate('tour_delete_notice'), () => _delete(n),
                   color: Colors.redAccent),
@@ -510,7 +517,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
             ),
         ],
       ),
-      floatingActionButton: _isAdmin || _isFamily
+      floatingActionButton: _isAdmin || _membersPost
           ? FloatingActionButton.extended(
               backgroundColor: AppColors.mintGreen,
               foregroundColor: AppColors.darkGreen,

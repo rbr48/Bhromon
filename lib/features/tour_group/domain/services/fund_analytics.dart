@@ -32,9 +32,79 @@ const List<String> kFamilyExpenseCategories = [
   'Others',
 ];
 
+/// The categories an office or team's ledger offers: meals, transport and office
+/// bills. The names match the family list, so saved expenses read the same.
+const List<String> kOfficeExpenseCategories = [
+  'Dining',
+  'Groceries',
+  'Utilities',
+  'Transport',
+  'Medical',
+  'Shopping',
+  'Gifts',
+  'Others',
+];
+
 /// The categories offered for a circle: family or trip.
 List<String> expenseCategoriesFor({required bool family}) =>
     family ? kFamilyExpenseCategories : kExpenseCategories;
+
+/// The categories a campus, class or batch offers: food, transport, tickets,
+/// activities and course costs. The names come from the trip and family lists.
+const List<String> kCampusExpenseCategories = [
+  'Food',
+  'Transport',
+  'Tickets',
+  'Activities',
+  'Shopping',
+  'Medical',
+  'Gifts',
+  'Others',
+];
+
+/// The categories a mess or shared home offers: bazar, bills, rent, household
+/// shopping, medicine and other costs. The names are the family names, so their
+/// labels are already translated.
+const List<String> kMessExpenseCategories = [
+  'Groceries',
+  'Utilities',
+  'Rent',
+  'Shopping',
+  'Medical',
+  'Others',
+];
+
+/// The categories a housing society's ledger offers: the building's bills and upkeep.
+const List<String> kSocietyExpenseCategories = [
+  'Utilities',
+  'Security',
+  'Cleaning',
+  'Repairs',
+  'Generator',
+  'Lift',
+  'Others',
+];
+
+/// The categories a samity's ledger offers: the group's own running costs, such as a
+/// meeting's tea or the bank's charges. Its payments are records, not expenses.
+const List<String> kSamityExpenseCategories = [
+  'Dining',
+  'Transport',
+  'Shopping',
+  'Others',
+];
+
+/// The categories a group's ledger offers. Each preset has its own list; family circles
+/// and trips keep theirs. No group means a trip.
+List<String> expenseCategoriesForGroup(TourGroup? group) {
+  if (group == null) return kExpenseCategories;
+  if (group.isOffice) return kOfficeExpenseCategories;
+  if (group.isCampus) return kCampusExpenseCategories;
+  if (group.isMess) return kMessExpenseCategories;
+  if (group.isSociety) return kSocietyExpenseCategories;
+  if (group.isSamity) return kSamityExpenseCategories;
+  return expenseCategoriesFor(family: group.isFamily);
+}
 
 /// The first day of the month that [day] falls in. A family's spending view
 /// opens on the current month, and steps from month to month.
@@ -51,8 +121,21 @@ List<ExpenseItem> expensesInMonth(
 
 /// The category a chat `/split` books its expense under. Dinner in the kitchen
 /// channel is food; anything else is "Others", which the owner can change.
-String splitCategoryFor({required bool family, required String channelId}) {
+String splitCategoryFor({
+  required bool family,
+  required String channelId,
+  bool office = false,
+  bool campus = false,
+  bool mess = false,
+  bool society = false,
+  bool samity = false,
+}) {
   if (channelId != 'food') return 'Others';
+  if (office) return 'Dining';
+  if (campus) return 'Food';
+  if (mess) return 'Groceries';
+  if (society) return 'Repairs';
+  if (samity) return 'Others';
   return family ? 'Groceries' : 'Food';
 }
 
@@ -190,7 +273,7 @@ class FundReport {
   }) {
     final today = now ?? DateTime.now();
     final budget = group.fundBudget;
-    final categories = expenseCategoriesFor(family: group.isFamily);
+    final categories = expenseCategoriesForGroup(group);
 
     final spentByCat = <String, int>{};
     final byDayMap = <DateTime, int>{};
