@@ -158,7 +158,7 @@ class VpsQuizService {
         'submit',
         data: {
           'user_uid': userUid,
-          'user_name': userName ?? 'ভ্রমণকারী',
+          'user_name': userName ?? 'সদস্য',
           'tour_id': tourId,
           'score': score,
           'total': total,

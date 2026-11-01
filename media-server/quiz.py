@@ -314,7 +314,7 @@ class QuizDatabase:
                 """,
                 (
                     user_uid,
-                    user_name or "ভ্রমণকারী",
+                    user_name or "সদস্য",
                     tour_id,
                     score,
                     total,

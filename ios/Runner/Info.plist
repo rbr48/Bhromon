@@ -42,11 +42,11 @@
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
 		<key>NSCameraUsageDescription</key>
-		<string>Bhromon needs camera access to let you capture and share photos and videos in travel chats.</string>
+		<string>Bhromon needs camera access to let you capture and share photos and videos in group chats.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
-		<string>Bhromon needs photo library access to let you upload and share travel photos and videos.</string>
+		<string>Bhromon needs photo library access to let you upload and share photos and videos.</string>
 		<key>NSMicrophoneUsageDescription</key>
-		<string>Bhromon needs microphone access to record voice messages and video sound in travel chats.</string>
+		<string>Bhromon needs microphone access to record voice messages and video sound in group chats.</string>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>UIApplicationSupportsIndirectInputEvents</key>

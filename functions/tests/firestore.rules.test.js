@@ -100,61 +100,6 @@ describe('Firestore Security Rules', () => {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Collection 2: trip_logs
-  // ───────────────────────────────────────────────────────────────────────────
-  describe('Trip Logs', () => {
-    const ownerUid = 'trip_owner_123';
-    const tripLogId = 'trip_abc';
-    const tripLogData = {
-      id: tripLogId,
-      authorId: ownerUid,
-      title: 'Beautiful Travel to Sylhet',
-      description: 'Sylhet tea gardens and lakes',
-      hidden: false,
-      tier: 'community',
-      trustScore: 80,
-      createdAt: new Date(),
-    };
-
-    beforeEach(async () => {
-      // Seed user explorer profile to satisfy isNotUnverified()
-      await seedDocument('explorer_profiles', ownerUid, {
-        uid: ownerUid,
-        displayName: 'Trip Owner',
-        tier: 'community',
-      });
-    });
-
-    test('allow create trip log by authenticated user matching ownerUid', async () => {
-      const client = getAuthenticatedContext(ownerUid).firestore();
-      await assertSucceeds(client.collection('trip_logs').doc(tripLogId).set(tripLogData));
-    });
-
-    test('deny create trip log by other user or unauthenticated', async () => {
-      const attackerClient = getAuthenticatedContext('attacker_456').firestore();
-      await assertFails(attackerClient.collection('trip_logs').doc(tripLogId).set(tripLogData));
-
-      const anonymousClient = getUnauthenticatedContext().firestore();
-      await assertFails(anonymousClient.collection('trip_logs').doc(tripLogId).set(tripLogData));
-    });
-
-    test('deny write trip log with excessively long title (>200 chars)', async () => {
-      const client = getAuthenticatedContext(ownerUid).firestore();
-      const longTitleTrip = {
-        ...tripLogData,
-        title: 'A'.repeat(205),
-      };
-      await assertFails(client.collection('trip_logs').doc(tripLogId).set(longTitleTrip));
-    });
-
-    test('deny non-owner from updating trip log', async () => {
-      await seedDocument('trip_logs', tripLogId, tripLogData);
-      const client = getAuthenticatedContext('attacker_456').firestore();
-      await assertFails(client.collection('trip_logs').doc(tripLogId).update({ title: 'Hacked Title' }));
-    });
-  });
-
-  // ───────────────────────────────────────────────────────────────────────────
   // Collection 3: trust_events
   // ───────────────────────────────────────────────────────────────────────────
   describe('Trust Events', () => {

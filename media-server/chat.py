@@ -1347,7 +1347,7 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
                 recipient_uid=recipient_id,
                 call_id=call_id,
                 caller_id=uid,
-                caller_name=_short_text(data.get("callerName"), 80) or "A traveler",
+                caller_name=_short_text(data.get("callerName"), 80) or "A member",
                 is_video=bool(data.get("isVideo", False)),
             )
         )

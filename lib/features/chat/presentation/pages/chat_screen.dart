@@ -1799,7 +1799,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final senderName = senderId == currentUid
         ? 'You'
-        : (data['senderName'] as String? ?? 'Traveler');
+        : (data['senderName'] as String? ?? 'Member');
 
     setState(() {
       _replyingMessage = ReplyMessageInfo(
@@ -2289,7 +2289,7 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context, profileSnap) {
         final profileData = profileSnap.data?.data() as Map<String, dynamic>?;
         final String otherName = profileData?['displayName'] as String? ??
-            'Traveler ${resolvedOtherUid.substring(0, math.min(resolvedOtherUid.length, 6))}';
+            'Member ${resolvedOtherUid.substring(0, math.min(resolvedOtherUid.length, 6))}';
         final String? avatarUrl = profileData?['avatarUrl'] as String?;
         final initials = otherName.length > 2
             ? otherName.substring(0, 2).toUpperCase()
@@ -3098,7 +3098,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                             0.0,
                                     paidByName:
                                         (data['paidByName'] as String?) ??
-                                            'Traveler',
+                                            'Member',
                                     isPaidByMe: data['paidById'] == currentUid,
                                     isSettled: data['isSettled'] == true,
                                     timeStr: timeStr,

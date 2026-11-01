@@ -86,7 +86,7 @@ void main() {
       expect(contacts, isEmpty);
     });
 
-    test('contacts are sorted by name, and a blank name reads as Traveler', () {
+    test('contacts are sorted by name, and a blank name reads as Member', () {
       final contacts = groupContacts(myUid: myUid, myEmail: me, tours: [
         (
           id: 'sajek',
@@ -99,7 +99,7 @@ void main() {
         ),
       ]);
 
-      expect(contacts.map((c) => c.name), ['ann', 'Traveler', 'Zed']);
+      expect(contacts.map((c) => c.name), ['ann', 'Member', 'Zed']);
     });
   });
 

@@ -1150,7 +1150,7 @@ class TourTranslationKeys {
       'prof_no_tagged': 'No tagged posts yet',
       'prof_achieve_photographer': 'Photographer',
       'prof_achieve_reels_director': 'Reels Director',
-      'prof_achieve_star_traveler': 'Star Traveler',
+      'prof_achieve_star_traveler': 'Star member',
       'prof_achieve_life_saver': 'Life Saver',
       'prof_achieve_explorer': 'Spot Explorer',
       'prof_achieve_top_spender': 'Top Contributor',
@@ -1906,6 +1906,14 @@ class TourTranslationKeys {
           '{name}, its messages, notices, requests and expenses will be deleted for everyone. This cannot be undone.',
       'society_channel_food': 'Maintenance',
       'society_channel_events': 'Meetings & events',
+      'school_channel_food': 'Canteen & tiffin',
+      'school_channel_events': 'Events & trips',
+      'sports_channel_food': 'Training & fitness',
+      'sports_channel_events': 'Matches & events',
+      'study_channel_food': 'Reading & notes',
+      'study_channel_events': 'Meetups & events',
+      'committee_channel_food': 'Upkeep & requests',
+      'committee_channel_events': 'Meetings & events',
       'society_add_expense_sub':
           'Utilities, security, cleaning, repairs and more',
       'society_module_requests': 'Service requests',
@@ -1958,6 +1966,50 @@ class TourTranslationKeys {
       'society_load_failed': 'Could not load the requests.',
       'society_save_failed': 'Could not save: {error}',
       'hub_create_samity': 'Create a rotating savings group',
+      'hub_create_school': 'School or coaching class',
+      'hub_create_sports': 'Sports team or gym',
+      'hub_create_study': 'Study or book club',
+      'hub_create_committee': 'Neighbourhood committee',
+      'hub_school_badge': 'School',
+      'hub_sports_badge': 'Team',
+      'hub_study_badge': 'Study group',
+      'hub_committee_badge': 'Committee',
+      'hub_leave_school_title': 'Leave this school group?',
+      'hub_leave_sports_title': 'Leave this team?',
+      'hub_leave_study_title': 'Leave this study group?',
+      'hub_leave_committee_title': 'Leave this committee?',
+      'hub_delete_school_title': 'Delete this school group?',
+      'hub_delete_sports_title': 'Delete this team?',
+      'hub_delete_study_title': 'Delete this study group?',
+      'hub_delete_committee_title': 'Delete this committee?',
+      'hub_delete_school_body':
+          'Everyone loses access to "{name}". Its notices, fees and chats are deleted.',
+      'hub_delete_sports_body':
+          'Everyone loses access to "{name}". Its notices, dues and chats are deleted.',
+      'hub_delete_study_body':
+          'Everyone loses access to "{name}". Its books, notes and chats are deleted.',
+      'hub_delete_committee_body':
+          'Everyone loses access to "{name}". Its notices, dues and requests are deleted.',
+      'hub_school_title': 'New school or class group',
+      'hub_school_intro':
+          'Class notices, fees, exam dates and the class chat, in one place.',
+      'hub_school_name_hint': 'Class or school name',
+      'hub_school_created': 'School group "{name}" created.',
+      'hub_sports_title': 'New team or gym group',
+      'hub_sports_intro':
+          'Fixtures, training dates, monthly dues and kit, in one team space.',
+      'hub_sports_name_hint': 'Team or gym name',
+      'hub_sports_created': 'Team "{name}" created.',
+      'hub_study_title': 'New study or book club',
+      'hub_study_intro':
+          'A reading schedule, shared books and notes, and shared costs.',
+      'hub_study_name_hint': 'Study or club name',
+      'hub_study_created': 'Study group "{name}" created.',
+      'hub_committee_title': 'New neighbourhood committee',
+      'hub_committee_intro':
+          'Community dues, notices, complaints and meetings for your neighbourhood.',
+      'hub_committee_name_hint': 'Committee or neighbourhood name',
+      'hub_committee_created': 'Committee "{name}" created.',
       'hub_samity_title': 'New samity or savings group',
       'hub_samity_intro':
           'A private group for a rotating savings scheme: each member pays a fixed amount every month, and one member takes the whole pot each cycle. The app keeps the schedule and the records. No money moves through the app.',
@@ -2069,6 +2121,12 @@ class TourTranslationKeys {
       'fund_cat_school': 'School',
       'fund_cat_dining': 'Dining out',
       'fund_cat_gifts': 'Gifts',
+      'fund_cat_books': 'Books',
+      'fund_cat_equipment': 'Equipment',
+      'fund_cat_venue': 'Venue',
+      'fund_cat_coaching': 'Coaching',
+      'fund_cat_printing': 'Printing',
+      'fund_cat_events': 'Events',
       'fund_budget_cta_family': 'Set a household budget',
       'fund_budget_cta_help_family':
           'Track spending by category against what you planned.',
@@ -2757,7 +2815,7 @@ class TourTranslationKeys {
           '✨ ভ্রমণকাল: {dates} ({duration})\n'
           '🚌 যাত্রাপথ: {origin} ➔ {destination}\n'
           '🏨 গন্তব্য: {destination}\n'
-          '👥 মোট পরিভ্রমণকারী: {members} জন সদস্য\n\n'
+          '👥 মোট সদস্য: {members} জন সদস্য\n\n'
           '✨ স্মরণীয় দর্শনীয় স্থানসমূহ:\n'
           '{spots}\n\n'
           'ভ্রমণে Bhromon অ্যাপের মাধ্যমে সংরক্ষিত অবিস্মরণীয় স্মৃতিমালা ❤️',
@@ -2775,7 +2833,7 @@ class TourTranslationKeys {
       // ── Scrapbook magazine ─────────────────────────────────────────────────
       'mag_issue': 'সংখ্যা {year} · {destination}',
       'mag_cover_line':
-          '{photos}টি ছবি · {places}টি স্থান · {travellers} জন ভ্রমণকারী',
+          '{photos}টি ছবি · {places}টি স্থান · {travellers} জন সদস্য',
       'mag_empty_cover':
           'এই ম্যাগাজিন নিজেই লেখা হয়। ফিডে ছবি আর রিলস পোস্ট করুন, প্রতিটি পাতা ভরে উঠবে।',
       'mag_kicker_numbers': 'এক নজরে',
@@ -2827,7 +2885,7 @@ class TourTranslationKeys {
       'mag_places': 'আমরা যেখানে গেলাম',
       'mag_place_line': '{count}টি পোস্ট',
       'mag_kicker_thanks': 'ধন্যবাদ',
-      'mag_made_by': '{travellers} জন ভ্রমণকারী মিলে Bhromon-এ তৈরি',
+      'mag_made_by': '{travellers} জন সদস্য মিলে Bhromon-এ তৈরি',
       'mag_prev': 'আগের পাতা',
       'mag_next': 'পরের পাতা',
       'mag_play': 'চালান',
@@ -3374,7 +3432,7 @@ class TourTranslationKeys {
       'prof_no_tagged': 'এখনও কোনো ট্যাগড পোস্ট নেই',
       'prof_achieve_photographer': 'ফটোগ্রাফার',
       'prof_achieve_reels_director': 'রিলস ডিরেক্টর',
-      'prof_achieve_star_traveler': 'স্টার ট্রাভেলার',
+      'prof_achieve_star_traveler': 'স্টার সদস্য',
       'prof_achieve_life_saver': 'লাইফ সেভার',
       'prof_achieve_explorer': 'স্পট এক্সপ্লোরার',
       'prof_achieve_top_spender': 'টপ কন্ট্রিবিউটর',
@@ -3692,7 +3750,7 @@ class TourTranslationKeys {
       'tq_default_tour': 'ট্যুর',
       'tq_badge_learner': 'পর্যটক শিক্ষার্থী',
       'tq_badge_expert': '👑 {dest} এক্সপার্ট',
-      'tq_badge_skilled': '🌟 চৌকস ভ্রমণকারী',
+      'tq_badge_skilled': '🌟 চৌকস সদস্য',
       'tq_result_summary':
           'আপনি {score} / {total} প্রশ্নের সঠিক উত্তর দিয়েছেন!',
       'tq_play_again': 'আবার খেলুন',
@@ -4129,6 +4187,14 @@ class TourTranslationKeys {
           '{name}, এর বার্তা, নোটিস, অনুরোধ ও খরচ সবার জন্য মুছে যাবে। এটি আর ফেরানো যাবে না।',
       'society_channel_food': 'রক্ষণাবেক্ষণ',
       'society_channel_events': 'সভা ও অনুষ্ঠান',
+      'school_channel_food': 'ক্যান্টিন ও টিফিন',
+      'school_channel_events': 'অনুষ্ঠান ও ভ্রমণ',
+      'sports_channel_food': 'প্রশিক্ষণ ও ফিটনেস',
+      'sports_channel_events': 'ম্যাচ ও অনুষ্ঠান',
+      'study_channel_food': 'পড়া ও নোট',
+      'study_channel_events': 'মিটআপ ও অনুষ্ঠান',
+      'committee_channel_food': 'রক্ষণাবেক্ষণ ও আবেদন',
+      'committee_channel_events': 'সভা ও অনুষ্ঠান',
       'society_add_expense_sub':
           'ইউটিলিটি, নিরাপত্তা, পরিচ্ছন্নতা, মেরামত ইত্যাদি',
       'society_module_requests': 'সেবার অনুরোধ',
@@ -4177,6 +4243,48 @@ class TourTranslationKeys {
       'society_load_failed': 'অনুরোধগুলো আনা যায়নি।',
       'society_save_failed': 'সংরক্ষণ করা যায়নি: {error}',
       'hub_create_samity': 'ঘূর্ণায়মান সঞ্চয় গ্রুপ তৈরি করুন',
+      'hub_create_school': 'স্কুল বা কোচিং ক্লাস',
+      'hub_create_sports': 'খেলার দল বা জিম',
+      'hub_create_study': 'স্টাডি বা বুক ক্লাব',
+      'hub_create_committee': 'পাড়া-মহল্লা কমিটি',
+      'hub_school_badge': 'স্কুল',
+      'hub_sports_badge': 'দল',
+      'hub_study_badge': 'স্টাডি গ্রুপ',
+      'hub_committee_badge': 'কমিটি',
+      'hub_leave_school_title': 'এই স্কুল গ্রুপ থেকে বের হবেন?',
+      'hub_leave_sports_title': 'এই দল থেকে বের হবেন?',
+      'hub_leave_study_title': 'এই স্টাডি গ্রুপ থেকে বের হবেন?',
+      'hub_leave_committee_title': 'এই কমিটি থেকে বের হবেন?',
+      'hub_delete_school_title': 'এই স্কুল গ্রুপ মুছে ফেলবেন?',
+      'hub_delete_sports_title': 'এই দল মুছে ফেলবেন?',
+      'hub_delete_study_title': 'এই স্টাডি গ্রুপ মুছে ফেলবেন?',
+      'hub_delete_committee_title': 'এই কমিটি মুছে ফেলবেন?',
+      'hub_delete_school_body':
+          '"{name}"-এর সবার প্রবেশাধিকার চলে যাবে। এর নোটিশ, ফি ও চ্যাট মুছে যাবে।',
+      'hub_delete_sports_body':
+          '"{name}"-এর সবার প্রবেশাধিকার চলে যাবে। এর নোটিশ, চাঁদা ও চ্যাট মুছে যাবে।',
+      'hub_delete_study_body':
+          '"{name}"-এর সবার প্রবেশাধিকার চলে যাবে। এর বই, নোট ও চ্যাট মুছে যাবে।',
+      'hub_delete_committee_body':
+          '"{name}"-এর সবার প্রবেশাধিকার চলে যাবে। এর নোটিশ, চাঁদা ও অভিযোগ মুছে যাবে।',
+      'hub_school_title': 'নতুন স্কুল বা ক্লাস গ্রুপ',
+      'hub_school_intro':
+          'ক্লাসের নোটিশ, ফি, পরীক্ষার তারিখ আর ক্লাসের চ্যাট, সব এক জায়গায়।',
+      'hub_school_name_hint': 'ক্লাস বা স্কুলের নাম',
+      'hub_school_created': '"{name}" স্কুল গ্রুপ তৈরি হয়েছে।',
+      'hub_sports_title': 'নতুন দল বা জিম গ্রুপ',
+      'hub_sports_intro':
+          'খেলার সূচি, অনুশীলনের তারিখ, মাসিক চাঁদা আর সরঞ্জাম, দলের একটাই জায়গায়।',
+      'hub_sports_name_hint': 'দল বা জিমের নাম',
+      'hub_sports_created': '"{name}" দল তৈরি হয়েছে।',
+      'hub_study_title': 'নতুন স্টাডি বা বুক ক্লাব',
+      'hub_study_intro': 'পড়ার সূচি, ভাগ করা বই ও নোট, আর শেয়ার করা খরচ।',
+      'hub_study_name_hint': 'স্টাডি বা ক্লাবের নাম',
+      'hub_study_created': '"{name}" স্টাডি গ্রুপ তৈরি হয়েছে।',
+      'hub_committee_title': 'নতুন পাড়া-মহল্লা কমিটি',
+      'hub_committee_intro': 'আপনার পাড়ার চাঁদা, নোটিশ, অভিযোগ ও সভা।',
+      'hub_committee_name_hint': 'কমিটি বা পাড়ার নাম',
+      'hub_committee_created': '"{name}" কমিটি তৈরি হয়েছে।',
       'hub_samity_title': 'নতুন সমিতি বা সঞ্চয় গ্রুপ',
       'hub_samity_intro':
           'ঘূর্ণায়মান সঞ্চয়ের জন্য ব্যক্তিগত গ্রুপ: প্রতি মাসে প্রত্যেক সদস্য একটি নির্দিষ্ট অঙ্ক দেন, আর প্রতি পর্বে একজন সদস্য পুরো পট নেন। অ্যাপ সূচি ও রেকর্ড রাখে। অ্যাপের ভেতর দিয়ে কোনো টাকা লেনদেন হয় না।',
@@ -4287,6 +4395,12 @@ class TourTranslationKeys {
       'fund_cat_school': 'স্কুল ও পড়াশোনা',
       'fund_cat_dining': 'বাইরে খাওয়া',
       'fund_cat_gifts': 'উপহার',
+      'fund_cat_books': 'বই',
+      'fund_cat_equipment': 'সরঞ্জাম',
+      'fund_cat_venue': 'জায়গা ভাড়া',
+      'fund_cat_coaching': 'কোচিং',
+      'fund_cat_printing': 'ছাপা',
+      'fund_cat_events': 'অনুষ্ঠান',
       'fund_budget_cta_family': 'সংসারের বাজেট ঠিক করুন',
       'fund_budget_cta_help_family': 'পরিকল্পনার তুলনায় খাতভিত্তিক খরচ দেখুন।',
       'notice_tpl_family_dinner_title': 'একসাথে রাতের খাবার',

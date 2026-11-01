@@ -20,7 +20,7 @@ import '../../chat/data/vps_chat_service.dart';
 const _kChannelId = 'bhromon_general';
 const _kChannelName = 'Bhromon Notifications';
 const _kChannelDesc =
-    'General announcements, messages, trip updates, and broadcasts from Bhromon.';
+    'General announcements, messages, group updates, and broadcasts from Bhromon.';
 
 @singleton
 class FcmService {

@@ -94,6 +94,53 @@ const List<String> kSamityExpenseCategories = [
   'Others',
 ];
 
+/// The categories a school or coaching class offers: fees and course books, the bus,
+/// the canteen, class outings and the odd gift or medicine.
+const List<String> kSchoolExpenseCategories = [
+  'School',
+  'Books',
+  'Transport',
+  'Food',
+  'Activities',
+  'Medical',
+  'Gifts',
+  'Others',
+];
+
+/// The categories a sports team or gym offers: coaching, the ground or court, kit,
+/// travel to matches, refreshments and first aid.
+const List<String> kSportsExpenseCategories = [
+  'Coaching',
+  'Venue',
+  'Equipment',
+  'Transport',
+  'Food',
+  'Medical',
+  'Others',
+];
+
+/// The categories a study or book club offers: books, printing, the place it meets
+/// and refreshments.
+const List<String> kStudyExpenseCategories = [
+  'Books',
+  'Printing',
+  'Venue',
+  'Food',
+  'Transport',
+  'Others',
+];
+
+/// The categories a neighbourhood committee offers: the common costs of a street or
+/// block, such as lights and cleaning, repairs and community events.
+const List<String> kCommitteeExpenseCategories = [
+  'Events',
+  'Cleaning',
+  'Repairs',
+  'Security',
+  'Utilities',
+  'Others',
+];
+
 /// The categories a group's ledger offers. Each preset has its own list; family circles
 /// and trips keep theirs. No group means a trip.
 List<String> expenseCategoriesForGroup(TourGroup? group) {
@@ -103,6 +150,10 @@ List<String> expenseCategoriesForGroup(TourGroup? group) {
   if (group.isMess) return kMessExpenseCategories;
   if (group.isSociety) return kSocietyExpenseCategories;
   if (group.isSamity) return kSamityExpenseCategories;
+  if (group.isSchool) return kSchoolExpenseCategories;
+  if (group.isSports) return kSportsExpenseCategories;
+  if (group.isStudy) return kStudyExpenseCategories;
+  if (group.isCommittee) return kCommitteeExpenseCategories;
   return expenseCategoriesFor(family: group.isFamily);
 }
 
@@ -129,6 +180,10 @@ String splitCategoryFor({
   bool mess = false,
   bool society = false,
   bool samity = false,
+  bool school = false,
+  bool sports = false,
+  bool study = false,
+  bool committee = false,
 }) {
   if (channelId != 'food') return 'Others';
   if (office) return 'Dining';
@@ -136,6 +191,8 @@ String splitCategoryFor({
   if (mess) return 'Groceries';
   if (society) return 'Repairs';
   if (samity) return 'Others';
+  if (school || sports || study) return 'Food';
+  if (committee) return 'Repairs';
   return family ? 'Groceries' : 'Food';
 }
 

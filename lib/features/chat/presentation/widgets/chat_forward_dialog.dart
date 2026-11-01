@@ -109,12 +109,12 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                           (data['participants'] as List<dynamic>?) ?? [];
                       final otherUid = participants.firstWhere(
                         (p) => p != widget.currentUid,
-                        orElse: () => 'Traveler',
+                        orElse: () => 'Member',
                       );
                       final otherProfile =
                           (profiles[otherUid] as Map<String, dynamic>?) ?? {};
                       final name = (otherProfile['displayName'] as String?) ??
-                          'Traveler ${otherUid.toString().substring(0, 4)}';
+                          'Member ${otherUid.toString().substring(0, 4)}';
 
                       if (_searchQuery.isNotEmpty &&
                           !name.toLowerCase().contains(_searchQuery)) {

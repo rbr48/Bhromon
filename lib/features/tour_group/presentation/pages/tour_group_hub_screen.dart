@@ -568,9 +568,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             ? 'hub_leave_society_title'
                             : group.isSamity
                                 ? 'hub_leave_samity_title'
-                                : group.isFamily
-                                    ? 'hub_leave_family_title'
-                                    : 'hub_leave_title'),
+                                : group.isSchool
+                                    ? 'hub_leave_school_title'
+                                    : group.isSports
+                                        ? 'hub_leave_sports_title'
+                                        : group.isStudy
+                                            ? 'hub_leave_study_title'
+                                            : group.isCommittee
+                                                ? 'hub_leave_committee_title'
+                                                : group.isFamily
+                                                    ? 'hub_leave_family_title'
+                                                    : 'hub_leave_title'),
             l10n.translate('hub_leave_body', args: {'name': group.name}));
         if (!ok) return;
         try {
@@ -602,9 +610,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                             ? 'hub_delete_society_title'
                             : group.isSamity
                                 ? 'hub_delete_samity_title'
-                                : group.isFamily
-                                    ? 'hub_delete_family_title'
-                                    : 'hub_delete_title'),
+                                : group.isSchool
+                                    ? 'hub_delete_school_title'
+                                    : group.isSports
+                                        ? 'hub_delete_sports_title'
+                                        : group.isStudy
+                                            ? 'hub_delete_study_title'
+                                            : group.isCommittee
+                                                ? 'hub_delete_committee_title'
+                                                : group.isFamily
+                                                    ? 'hub_delete_family_title'
+                                                    : 'hub_delete_title'),
             l10n.translate(
                 group.isOffice
                     ? 'hub_delete_office_body'
@@ -616,9 +632,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                 ? 'hub_delete_society_body'
                                 : group.isSamity
                                     ? 'hub_delete_samity_body'
-                                    : group.isFamily
-                                        ? 'hub_delete_family_body'
-                                        : 'hub_delete_body',
+                                    : group.isSchool
+                                        ? 'hub_delete_school_body'
+                                        : group.isSports
+                                            ? 'hub_delete_sports_body'
+                                            : group.isStudy
+                                                ? 'hub_delete_study_body'
+                                                : group.isCommittee
+                                                    ? 'hub_delete_committee_body'
+                                                    : group.isFamily
+                                                        ? 'hub_delete_family_body'
+                                                        : 'hub_delete_body',
                 args: {'name': group.name}));
         if (!ok) return;
         try {
@@ -733,6 +757,18 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     case 'samity':
                       _showCreateFamilyDialog(context,
                           preset: TourGroup.samityPreset);
+                    case 'school':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.schoolPreset);
+                    case 'sports':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.sportsPreset);
+                    case 'study':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.studyPreset);
+                    case 'committee':
+                      _showCreateFamilyDialog(context,
+                          preset: TourGroup.committeePreset);
                     case 'trip':
                       _showCreateGroupDialog(context);
                     case 'join':
@@ -769,6 +805,26 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     value: 'samity',
                     child: _menuRow(Icons.savings_rounded,
                         context.l10n.translate('hub_create_samity')),
+                  ),
+                  PopupMenuItem(
+                    value: 'school',
+                    child: _menuRow(Icons.menu_book_rounded,
+                        context.l10n.translate('hub_create_school')),
+                  ),
+                  PopupMenuItem(
+                    value: 'sports',
+                    child: _menuRow(Icons.sports_soccer_rounded,
+                        context.l10n.translate('hub_create_sports')),
+                  ),
+                  PopupMenuItem(
+                    value: 'study',
+                    child: _menuRow(Icons.local_library_rounded,
+                        context.l10n.translate('hub_create_study')),
+                  ),
+                  PopupMenuItem(
+                    value: 'committee',
+                    child: _menuRow(Icons.how_to_vote_rounded,
+                        context.l10n.translate('hub_create_committee')),
                   ),
                   PopupMenuItem(
                     value: 'trip',
@@ -886,10 +942,13 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    // The empty state lists every way to start a circle, so it scrolls on a short
+    // screen or with long labels instead of overflowing.
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
@@ -996,6 +1055,38 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
               label: Text(context.l10n.translate('hub_create_samity'),
                   style: const TextStyle(color: AppColors.mintGreen)),
             ),
+            TextButton.icon(
+              onPressed: () => _showCreateFamilyDialog(context,
+                  preset: TourGroup.schoolPreset),
+              icon: const Icon(Icons.menu_book_rounded,
+                  color: AppColors.mintGreen),
+              label: Text(context.l10n.translate('hub_create_school'),
+                  style: const TextStyle(color: AppColors.mintGreen)),
+            ),
+            TextButton.icon(
+              onPressed: () => _showCreateFamilyDialog(context,
+                  preset: TourGroup.sportsPreset),
+              icon: const Icon(Icons.sports_soccer_rounded,
+                  color: AppColors.mintGreen),
+              label: Text(context.l10n.translate('hub_create_sports'),
+                  style: const TextStyle(color: AppColors.mintGreen)),
+            ),
+            TextButton.icon(
+              onPressed: () => _showCreateFamilyDialog(context,
+                  preset: TourGroup.studyPreset),
+              icon: const Icon(Icons.local_library_rounded,
+                  color: AppColors.mintGreen),
+              label: Text(context.l10n.translate('hub_create_study'),
+                  style: const TextStyle(color: AppColors.mintGreen)),
+            ),
+            TextButton.icon(
+              onPressed: () => _showCreateFamilyDialog(context,
+                  preset: TourGroup.committeePreset),
+              icon: const Icon(Icons.how_to_vote_rounded,
+                  color: AppColors.mintGreen),
+              label: Text(context.l10n.translate('hub_create_committee'),
+                  style: const TextStyle(color: AppColors.mintGreen)),
+            ),
             const SizedBox(height: 12),
             if (!_repository.isSignedIn)
               TextButton.icon(
@@ -1077,10 +1168,24 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                         : group.isSamity
                                             ? context.l10n
                                                 .translate('hub_samity_badge')
-                                            : group.isFamily
+                                            : group.isSchool
                                                 ? context.l10n.translate(
-                                                    'hub_family_badge')
-                                                : '${group.tourType.labelBn.split(' ').first} ${group.destination}',
+                                                    'hub_school_badge')
+                                                : group.isSports
+                                                    ? context.l10n.translate(
+                                                        'hub_sports_badge')
+                                                    : group.isStudy
+                                                        ? context.l10n.translate(
+                                                            'hub_study_badge')
+                                                        : group.isCommittee
+                                                            ? context.l10n
+                                                                .translate(
+                                                                    'hub_committee_badge')
+                                                            : group.isFamily
+                                                                ? context.l10n
+                                                                    .translate(
+                                                                        'hub_family_badge')
+                                                                : '${group.tourType.labelBn.split(' ').first} ${group.destination}',
                         style: const TextStyle(
                           color: AppColors.mintGreen,
                           fontSize: 12,
@@ -1629,7 +1734,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
           color: const Color(0xFFF59E0B),
           onTap: () => context.push('/group/${group.id}/meals'),
         ),
-      if (group.isSociety)
+      if (group.isSociety || group.isCommittee)
         'requests': _ModuleItem(
           title: l10n.translate('society_module_requests'),
           subtitle: l10n.translate('society_module_requests_sub'),
@@ -1986,8 +2091,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
   /// trip, so no dates, destination or travel modules are asked for.
   void _showCreateFamilyDialog(BuildContext context, {String? preset}) {
     final l10n = context.l10n;
-    String pick(String family, String office, String campus, String mess,
-            String society, String samity) =>
+    String pick(
+            String family,
+            String office,
+            String campus,
+            String mess,
+            String society,
+            String samity,
+            String school,
+            String sports,
+            String study,
+            String committee) =>
         preset == TourGroup.officePreset
             ? office
             : preset == TourGroup.campusPreset
@@ -1998,7 +2112,15 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         ? society
                         : preset == TourGroup.samityPreset
                             ? samity
-                            : family;
+                            : preset == TourGroup.schoolPreset
+                                ? school
+                                : preset == TourGroup.sportsPreset
+                                    ? sports
+                                    : preset == TourGroup.studyPreset
+                                        ? study
+                                        : preset == TourGroup.committeePreset
+                                            ? committee
+                                            : family;
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     bool isCreating = false;
@@ -2021,7 +2143,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                       'hub_campus_title',
                       'hub_mess_title',
                       'hub_society_title',
-                      'hub_samity_title')),
+                      'hub_samity_title',
+                      'hub_school_title',
+                      'hub_sports_title',
+                      'hub_study_title',
+                      'hub_committee_title')),
                   style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -2040,7 +2166,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               'hub_campus_intro',
                               'hub_mess_intro',
                               'hub_society_intro',
-                              'hub_samity_intro')),
+                              'hub_samity_intro',
+                              'hub_school_intro',
+                              'hub_sports_intro',
+                              'hub_study_intro',
+                              'hub_committee_intro')),
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 12)),
                       const SizedBox(height: 14),
@@ -2055,7 +2185,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               'hub_campus_name_hint',
                               'hub_mess_name_hint',
                               'hub_society_name_hint',
-                              'hub_samity_name_hint')),
+                              'hub_samity_name_hint',
+                              'hub_school_name_hint',
+                              'hub_sports_name_hint',
+                              'hub_study_name_hint',
+                              'hub_committee_name_hint')),
                           labelStyle: const TextStyle(
                               color: Colors.white70, fontSize: 13),
                           filled: true,
@@ -2170,7 +2304,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                                           'hub_campus_created',
                                           'hub_mess_created',
                                           'hub_society_created',
-                                          'hub_samity_created'),
+                                          'hub_samity_created',
+                                          'hub_school_created',
+                                          'hub_sports_created',
+                                          'hub_study_created',
+                                          'hub_committee_created'),
                                       args: {'name': newGroup.name})),
                                   backgroundColor: AppColors.midGreen,
                                   behavior: SnackBarBehavior.floating,

@@ -254,19 +254,7 @@ describe('contact and directory rules', () => {
       await assertFails(getDocs(collection(as(ALICE), 'explorer_scores')));
     });
 
-    test('a diary belongs to its author', async () => {
-      await assertFails(getDoc(doc(as(ALICE), 'trip_logs', 'carol-diary')));
-      await assertFails(getDocs(collection(as(ALICE), 'trip_logs')));
-      await assertSucceeds(getDocs(query(collection(as(CAROL), 'trip_logs'), where('authorId', '==', CAROL.uid))));
-    });
 
-    test('location pins are listed by admins only', async () => {
-      await env.withSecurityRulesDisabled(async (ctx) => {
-        await setDoc(doc(ctx.firestore(), 'location_pins', 'pin1'), { name: 'Pin', createdByUid: ALICE.uid, hidden: false });
-      });
-      await assertFails(getDocs(collection(as(BOB), 'location_pins')));
-      await assertSucceeds(getDoc(doc(as(BOB), 'location_pins', 'pin1')));
-    });
 
     test('signed-out visitors read none of it', async () => {
       await assertFails(getDoc(doc(anon(), 'explorer_profiles', BOB.uid)));

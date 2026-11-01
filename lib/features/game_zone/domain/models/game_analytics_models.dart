@@ -297,7 +297,7 @@ class TourLeaderboardEntry {
 
     return TourLeaderboardEntry(
       uid: uid,
-      displayName: map['displayName'] as String? ?? 'Traveler',
+      displayName: map['displayName'] as String? ?? 'Member',
       photoUrl: map['photoUrl'] as String?,
       totalWins: wins,
       totalMatches: matches,

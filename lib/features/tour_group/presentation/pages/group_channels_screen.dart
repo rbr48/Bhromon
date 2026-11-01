@@ -62,6 +62,10 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   bool _isMess = false;
   bool _isSociety = false;
   bool _isSamity = false;
+  bool _isSchool = false;
+  bool _isSports = false;
+  bool _isStudy = false;
+  bool _isCommittee = false;
 
   /// Last-seen time of each member, keyed by email. Drives the online count.
   Map<String, DateTime?> _presence = const {};
@@ -160,6 +164,10 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               _isMess = group?.isMess ?? false;
               _isSociety = group?.isSociety ?? false;
               _isSamity = group?.isSamity ?? false;
+              _isSchool = group?.isSchool ?? false;
+              _isSports = group?.isSports ?? false;
+              _isStudy = group?.isStudy ?? false;
+              _isCommittee = group?.isCommittee ?? false;
             }),
         onError: (_) {}));
     unawaited(_markHere());
@@ -220,6 +228,10 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         mess: _isMess,
         society: _isSociety,
         samity: _isSamity,
+        school: _isSchool,
+        sports: _isSports,
+        study: _isStudy,
+        committee: _isCommittee,
       ))
         byId[id] ?? TourChannel(id: id),
     ];
@@ -295,9 +307,17 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                         ? 'society_channel_food'
                         : _isSamity
                             ? 'samity_channel_food'
-                            : _isFamily
-                                ? 'family_channel_food'
-                                : 'tour_channel_food');
+                            : _isSchool
+                                ? 'school_channel_food'
+                                : _isSports
+                                    ? 'sports_channel_food'
+                                    : _isStudy
+                                        ? 'study_channel_food'
+                                        : _isCommittee
+                                            ? 'committee_channel_food'
+                                            : _isFamily
+                                                ? 'family_channel_food'
+                                                : 'tour_channel_food');
       case 'sightseeing':
         return l10n.translate(_isOffice
             ? 'office_channel_events'
@@ -309,9 +329,17 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                         ? 'society_channel_events'
                         : _isSamity
                             ? 'samity_channel_events'
-                            : _isFamily
-                                ? 'family_channel_sightseeing'
-                                : 'tour_channel_places');
+                            : _isSchool
+                                ? 'school_channel_events'
+                                : _isSports
+                                    ? 'sports_channel_events'
+                                    : _isStudy
+                                        ? 'study_channel_events'
+                                        : _isCommittee
+                                            ? 'committee_channel_events'
+                                            : _isFamily
+                                                ? 'family_channel_sightseeing'
+                                                : 'tour_channel_places');
       case 'home':
         return l10n.translate('family_channel_home');
       case 'kids':
@@ -1857,6 +1885,10 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 mess: _isMess,
                 society: _isSociety,
                 samity: _isSamity,
+                school: _isSchool,
+                sports: _isSports,
+                study: _isStudy,
+                committee: _isCommittee,
                 channelId: channel.id),
           );
           draft.clear();

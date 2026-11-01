@@ -165,7 +165,7 @@ class GameAnalyticsService {
           // Member has no online game record yet
           entries.add(TourLeaderboardEntry(
             uid: uid,
-            displayName: uidToName[uid] ?? 'Traveler',
+            displayName: uidToName[uid] ?? 'Member',
             photoUrl: uidToPhoto[uid],
             totalWins: 0,
             totalMatches: 0,

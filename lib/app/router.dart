@@ -6,7 +6,6 @@ import 'di/injection.dart';
 import '../features/auth/presentation/cubit/auth_cubit.dart';
 import '../features/auth/presentation/cubit/auth_state.dart';
 import '../features/auth/presentation/pages/login_screen.dart';
-import '../features/offline_vault/presentation/pages/offline_vault_screen.dart';
 import '../features/trust/presentation/pages/trust_dashboard_screen.dart';
 import '../features/explorer/presentation/pages/explorer_profile_screen.dart';
 
@@ -54,8 +53,6 @@ import '../features/newspaper/presentation/pages/adfree_article_reader_screen.da
 import '../features/newspaper/presentation/pages/adblock_browser_screen.dart';
 import '../features/newspaper/domain/models/newspaper_models.dart';
 
-import '../features/offline_vault/presentation/cubit/vault_cubit.dart';
-
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
   static GlobalKey<NavigatorState> get navigatorKey => _rootNavigatorKey;
@@ -92,16 +89,6 @@ class AppRouter {
         path: '/notifications',
         pageBuilder: (context, state) =>
             _customPageTransition(state, const NotificationCenterScreen()),
-      ),
-      GoRoute(
-        path: '/vault',
-        pageBuilder: (context, state) => _customPageTransition(
-          state,
-          BlocProvider<VaultCubit>(
-            create: (context) => getIt<VaultCubit>(),
-            child: const OfflineVaultScreen(),
-          ),
-        ),
       ),
       GoRoute(
         path: '/profile/:uid',
@@ -162,7 +149,7 @@ class AppRouter {
               remoteUid: extra['remoteUid'] as String? ?? '',
               remoteEmail: extra['remoteEmail'] as String?,
               sharedTourId: extra['sharedTourId'] as String?,
-              remoteUserName: extra['remoteUserName'] as String? ?? 'Traveler',
+              remoteUserName: extra['remoteUserName'] as String? ?? 'Member',
               remoteAvatarUrl: extra['remoteAvatarUrl'] as String?,
               isCaller: extra['isCaller'] as bool? ?? false,
               isVideoCall: extra['isVideoCall'] as bool? ?? true,

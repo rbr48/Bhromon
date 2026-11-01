@@ -125,6 +125,46 @@ const List<String> kSamityChannelIds = [
   kBuiltInVoiceChannelId,
 ];
 
+/// The built-in channels a school or coaching class starts with: the same set again,
+/// with school labels (canteen, and events and trips).
+const List<String> kSchoolChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
+/// The built-in channels a sports team or gym starts with: the same set again, with
+/// training and match labels.
+const List<String> kSportsChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
+/// The built-in channels a study or book club starts with: the same set again, with
+/// reading and meetup labels.
+const List<String> kStudyChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
+/// The built-in channels a neighbourhood committee starts with: the same set again,
+/// with upkeep and meeting labels.
+const List<String> kCommitteeChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
 /// The built-in channels a circle starts with, in the order they are listed.
 List<String> builtInChannelIdsFor({
   required bool family,
@@ -133,6 +173,10 @@ List<String> builtInChannelIdsFor({
   bool mess = false,
   bool society = false,
   bool samity = false,
+  bool school = false,
+  bool sports = false,
+  bool study = false,
+  bool committee = false,
 }) =>
     campus
         ? kCampusChannelIds
@@ -142,11 +186,19 @@ List<String> builtInChannelIdsFor({
                 ? kSocietyChannelIds
                 : samity
                     ? kSamityChannelIds
-                    : office
-                        ? kOfficeChannelIds
-                        : family
-                            ? kFamilyChannelIds
-                            : kBuiltInChannelIds;
+                    : school
+                        ? kSchoolChannelIds
+                        : sports
+                            ? kSportsChannelIds
+                            : study
+                                ? kStudyChannelIds
+                                : committee
+                                    ? kCommitteeChannelIds
+                                    : office
+                                        ? kOfficeChannelIds
+                                        : family
+                                            ? kFamilyChannelIds
+                                            : kBuiltInChannelIds;
 
 /// The kind of channel: text messaging or voice lounge.
 enum ChannelKind { text, voice }

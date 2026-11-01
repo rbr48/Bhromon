@@ -208,7 +208,7 @@ void showReactionDetailsSheet(
                       title: Text(
                         isSelf
                             ? 'You'
-                            : 'Traveler ${uid.substring(0, uid.length > 5 ? 5 : uid.length)}',
+                            : 'Member ${uid.substring(0, uid.length > 5 ? 5 : uid.length)}',
                         style:
                             const TextStyle(color: Colors.white, fontSize: 13),
                       ),

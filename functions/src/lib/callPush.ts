@@ -11,7 +11,7 @@ const STALE_CALL_MS = 60_000;
 export const CALLS_PER_WINDOW = 10;
 export const CALL_WINDOW_MS = 10 * 60_000;
 
-const FALLBACK_CALLER_NAME = 'A traveler';
+const FALLBACK_CALLER_NAME = 'A member';
 
 export interface CallPushInput {
   callId: string;

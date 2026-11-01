@@ -437,7 +437,7 @@ class NotificationEngine:
                 except Exception as ex:
                     logger.debug("Failed to fetch caller profile for %s: %s", caller_id, ex)
             if not c_name:
-                c_name = "Traveler"
+                c_name = "Member"
 
             targets = self.get_push_targets_for_uids([callee_uid])
             if not targets:

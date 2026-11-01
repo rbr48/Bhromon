@@ -849,7 +849,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             if (otherUid.trim().isEmpty) {
               final fallbackName = callerNameInDoc?.trim().isNotEmpty == true
                   ? callerNameInDoc!
-                  : 'Traveler';
+                  : 'Member';
               return _buildCallTile(
                 context,
                 displayName: fallbackName,
@@ -880,7 +880,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         ? callerNameInDoc!
                         : (otherUid.contains('@')
                             ? otherUid
-                            : 'Traveler ${otherUid.substring(0, math.min(otherUid.length, 6))}'));
+                            : 'Member ${otherUid.substring(0, math.min(otherUid.length, 6))}'));
                 final avatarUrl =
                     profData?['avatarUrl'] as String? ?? callerAvatarInDoc;
 
@@ -1484,8 +1484,7 @@ class ChatTile extends StatelessWidget {
     }
 
     if (cachedOtherProfile != null) {
-      final name =
-          (cachedOtherProfile!['displayName'] as String?) ?? 'Traveler';
+      final name = (cachedOtherProfile!['displayName'] as String?) ?? 'Member';
       final avatar = cachedOtherProfile!['avatarUrl'] as String?;
       final inits = name.length > 2 ? name.substring(0, 2).toUpperCase() : 'TR';
       return _buildTile(context,
@@ -1502,7 +1501,7 @@ class ChatTile extends StatelessWidget {
       builder: (context, snapshot) {
         final data = snapshot.data?.data();
         final name = (data?['displayName'] as String?) ??
-            'Traveler ${otherUserUid.substring(0, math.min(otherUserUid.length, 6))}';
+            'Member ${otherUserUid.substring(0, math.min(otherUserUid.length, 6))}';
         final avatar = data?['avatarUrl'] as String?;
         final inits =
             name.length > 2 ? name.substring(0, 2).toUpperCase() : 'TR';
