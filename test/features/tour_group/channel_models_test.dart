@@ -74,7 +74,9 @@ void main() {
       expect(m.attachments.last.isVideo, isTrue);
     });
 
-    test('reads document file attachments and separates visual vs file attachments', () {
+    test(
+        'reads document file attachments and separates visual vs file attachments',
+        () {
       final m = ChannelMessage.fromMap('doc1', {
         'text': 'Here is the tour plan',
         'timestamp': DateTime(2026, 1, 2),
