@@ -2519,12 +2519,26 @@ class _ChatScreenState extends State<ChatScreen> {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  otherName,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
+                                Flexible(
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: resolvedOtherUid == 'guest'
+                                        ? null
+                                        : () => context
+                                            .push('/profile/$resolvedOtherUid'),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2, horizontal: 2),
+                                      child: Text(
+                                        otherName,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 if (_disappearingTimerSeconds > 0)
