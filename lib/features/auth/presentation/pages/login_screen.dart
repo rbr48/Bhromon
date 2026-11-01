@@ -337,7 +337,7 @@ class _BrandHeader extends StatelessWidget {
         Text(
           context.l10n.translate('login_tagline'),
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             color: _kWhite,
             fontSize: 14,
             fontWeight: FontWeight.w500,
