@@ -62,6 +62,7 @@ travel_data_crawler/**/*.db
 # Signing keys & machine-local config — never commit
 *.jks
 *.keystore
+*.pem
 **/local.properties
 
 # Node / Cloud Functions
