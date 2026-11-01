@@ -149,7 +149,7 @@ class AppRouter {
               remoteUid: extra['remoteUid'] as String? ?? '',
               remoteEmail: extra['remoteEmail'] as String?,
               sharedTourId: extra['sharedTourId'] as String?,
-              remoteUserName: extra['remoteUserName'] as String? ?? 'Traveler',
+              remoteUserName: extra['remoteUserName'] as String? ?? 'Member',
               remoteAvatarUrl: extra['remoteAvatarUrl'] as String?,
               isCaller: extra['isCaller'] as bool? ?? false,
               isVideoCall: extra['isVideoCall'] as bool? ?? true,

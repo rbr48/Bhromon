@@ -294,7 +294,7 @@ class CallNotificationService {
             callId: callId,
             callerId: extra['callerId']?.toString() ?? '',
             callerName: extra['callerName']?.toString() ??
-                (callKitParams.nameCaller ?? 'Traveler'),
+                (callKitParams.nameCaller ?? 'Member'),
             avatarUrl: extra['avatarUrl']?.toString() ?? callKitParams.avatar,
             isVideo: extra['isVideo'] == true || callKitParams.type == 1,
           );
@@ -474,7 +474,7 @@ class CallNotificationService {
       }
     }
     final name = fallbackName?.trim();
-    return ((name == null || name.isEmpty) ? 'Traveler' : name, fallbackAvatar);
+    return ((name == null || name.isEmpty) ? 'Member' : name, fallbackAvatar);
   }
 
   // ── Presenting and answering ───────────────────────────────────────────────

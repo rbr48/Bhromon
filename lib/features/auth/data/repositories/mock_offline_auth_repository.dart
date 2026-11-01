@@ -54,7 +54,7 @@ class MockOfflineAuthRepository implements IAuthRepository {
   Future<Either<Failure, ExplorerProfile>> verifyOtp(String smsCode) async {
     final profile = ExplorerProfile(
       uid: 'mock_offline_user_phone',
-      displayName: 'Offline Traveler',
+      displayName: 'Offline member',
       division: 'Dhaka',
       tier: TrustTier.community,
       badges: ['Offline Explorer'],
@@ -70,7 +70,7 @@ class MockOfflineAuthRepository implements IAuthRepository {
   Future<Either<Failure, ExplorerProfile>> signInWithGoogle() async {
     final profile = ExplorerProfile(
       uid: 'mock_offline_user_google',
-      displayName: 'Google Offline Traveler',
+      displayName: 'Google offline member',
       division: 'Sylhet',
       tier: TrustTier.pioneer,
       badges: ['Offline Explorer', 'Google Verified'],

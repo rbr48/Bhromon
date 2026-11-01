@@ -1150,7 +1150,7 @@ class TourTranslationKeys {
       'prof_no_tagged': 'No tagged posts yet',
       'prof_achieve_photographer': 'Photographer',
       'prof_achieve_reels_director': 'Reels Director',
-      'prof_achieve_star_traveler': 'Star Traveler',
+      'prof_achieve_star_traveler': 'Star member',
       'prof_achieve_life_saver': 'Life Saver',
       'prof_achieve_explorer': 'Spot Explorer',
       'prof_achieve_top_spender': 'Top Contributor',
@@ -2815,7 +2815,7 @@ class TourTranslationKeys {
           '✨ ভ্রমণকাল: {dates} ({duration})\n'
           '🚌 যাত্রাপথ: {origin} ➔ {destination}\n'
           '🏨 গন্তব্য: {destination}\n'
-          '👥 মোট পরিভ্রমণকারী: {members} জন সদস্য\n\n'
+          '👥 মোট সদস্য: {members} জন সদস্য\n\n'
           '✨ স্মরণীয় দর্শনীয় স্থানসমূহ:\n'
           '{spots}\n\n'
           'ভ্রমণে Bhromon অ্যাপের মাধ্যমে সংরক্ষিত অবিস্মরণীয় স্মৃতিমালা ❤️',
@@ -2833,7 +2833,7 @@ class TourTranslationKeys {
       // ── Scrapbook magazine ─────────────────────────────────────────────────
       'mag_issue': 'সংখ্যা {year} · {destination}',
       'mag_cover_line':
-          '{photos}টি ছবি · {places}টি স্থান · {travellers} জন ভ্রমণকারী',
+          '{photos}টি ছবি · {places}টি স্থান · {travellers} জন সদস্য',
       'mag_empty_cover':
           'এই ম্যাগাজিন নিজেই লেখা হয়। ফিডে ছবি আর রিলস পোস্ট করুন, প্রতিটি পাতা ভরে উঠবে।',
       'mag_kicker_numbers': 'এক নজরে',
@@ -2885,7 +2885,7 @@ class TourTranslationKeys {
       'mag_places': 'আমরা যেখানে গেলাম',
       'mag_place_line': '{count}টি পোস্ট',
       'mag_kicker_thanks': 'ধন্যবাদ',
-      'mag_made_by': '{travellers} জন ভ্রমণকারী মিলে Bhromon-এ তৈরি',
+      'mag_made_by': '{travellers} জন সদস্য মিলে Bhromon-এ তৈরি',
       'mag_prev': 'আগের পাতা',
       'mag_next': 'পরের পাতা',
       'mag_play': 'চালান',
@@ -3432,7 +3432,7 @@ class TourTranslationKeys {
       'prof_no_tagged': 'এখনও কোনো ট্যাগড পোস্ট নেই',
       'prof_achieve_photographer': 'ফটোগ্রাফার',
       'prof_achieve_reels_director': 'রিলস ডিরেক্টর',
-      'prof_achieve_star_traveler': 'স্টার ট্রাভেলার',
+      'prof_achieve_star_traveler': 'স্টার সদস্য',
       'prof_achieve_life_saver': 'লাইফ সেভার',
       'prof_achieve_explorer': 'স্পট এক্সপ্লোরার',
       'prof_achieve_top_spender': 'টপ কন্ট্রিবিউটর',
@@ -3750,7 +3750,7 @@ class TourTranslationKeys {
       'tq_default_tour': 'ট্যুর',
       'tq_badge_learner': 'পর্যটক শিক্ষার্থী',
       'tq_badge_expert': '👑 {dest} এক্সপার্ট',
-      'tq_badge_skilled': '🌟 চৌকস ভ্রমণকারী',
+      'tq_badge_skilled': '🌟 চৌকস সদস্য',
       'tq_result_summary':
           'আপনি {score} / {total} প্রশ্নের সঠিক উত্তর দিয়েছেন!',
       'tq_play_again': 'আবার খেলুন',

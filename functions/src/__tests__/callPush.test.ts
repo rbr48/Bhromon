@@ -51,9 +51,9 @@ describe('callerDisplayName', () => {
   });
 
   it('falls back for a missing, blank or non-text name', () => {
-    expect(callerDisplayName(undefined)).toBe('A traveler');
-    expect(callerDisplayName('   ')).toBe('A traveler');
-    expect(callerDisplayName(42)).toBe('A traveler');
+    expect(callerDisplayName(undefined)).toBe('A member');
+    expect(callerDisplayName('   ')).toBe('A member');
+    expect(callerDisplayName(42)).toBe('A member');
   });
 });
 

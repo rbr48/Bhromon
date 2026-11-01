@@ -185,7 +185,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
   }
 
   void _shareProfile(AppLocalizations l10n, String name, String handle) {
-    final text = '$name (@$handle) — Bhromon Traveler\nhttps://app.bhromon.fun';
+    final text = '$name (@$handle) — on Bhromon\nhttps://app.bhromon.fun';
     SharePlus.instance.share(ShareParams(text: text));
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
@@ -395,7 +395,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                         orElse: () => TourMember(
                           tourId: widget.tourId,
                           email: widget.memberEmail,
-                          displayName: widget.memberName ?? 'Traveler',
+                          displayName: widget.memberName ?? 'Member',
                           photoUrl: widget.memberPhoto,
                           role: TourRole.member,
                           status: TourMemberStatus.active,
@@ -540,7 +540,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
       orElse: () => TourMember(
         tourId: widget.tourId,
         email: widget.memberEmail,
-        displayName: widget.memberName ?? 'Traveler',
+        displayName: widget.memberName ?? 'Member',
         photoUrl: widget.memberPhoto,
         role: TourRole.member,
         status: TourMemberStatus.active,

@@ -48,7 +48,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     await CallNotificationService.showNativeIncomingCall(
       callId: (message.data['callId'] as String?) ?? '',
       callerId: (message.data['callerId'] as String?) ?? '',
-      callerName: (message.data['callerName'] as String?) ?? 'Traveler',
+      callerName: (message.data['callerName'] as String?) ?? 'Member',
       callerAvatar: null,
       isVideo: message.data['isVideo'] == 'true',
     );

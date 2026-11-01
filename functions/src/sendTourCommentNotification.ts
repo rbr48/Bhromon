@@ -42,7 +42,7 @@ export const sendTourCommentNotification = functions
       const commenterName =
         typeof comment.authorName === 'string' && comment.authorName.trim() !== ''
           ? comment.authorName.trim()
-          : 'A traveler';
+          : 'A member';
       const text =
         typeof comment.text === 'string' && comment.text.trim() !== ''
           ? comment.text.trim()

@@ -70,7 +70,7 @@ List<GroupContact> groupContacts({
       GroupContact(
         uid: draft.uid,
         email: draft.email,
-        name: draft.name.isEmpty ? 'Traveler' : draft.name,
+        name: draft.name.isEmpty ? 'Member' : draft.name,
         photoUrl: draft.photoUrl,
         tours: List.unmodifiable(draft.tours),
       ),

@@ -164,7 +164,7 @@ class StarredMessagesScreen extends StatelessWidget {
                               '/chat/$chatId',
                               extra: {
                                 'chatId': chatId,
-                                'otherUserName': isMe ? 'Traveler' : 'Chat',
+                                'otherUserName': isMe ? 'Member' : 'Chat',
                                 'otherUserAvatar': '',
                                 'otherUid': isMe ? '' : senderId,
                               },
@@ -200,7 +200,7 @@ class StarredMessagesScreen extends StatelessWidget {
                                           MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          isMe ? 'You' : 'Traveler',
+                                          isMe ? 'You' : 'Member',
                                           style: const TextStyle(
                                             color: Color(0xFF00A884),
                                             fontSize: 14,

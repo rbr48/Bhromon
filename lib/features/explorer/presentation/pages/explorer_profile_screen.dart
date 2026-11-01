@@ -398,7 +398,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   color: Colors.white70, size: 20),
               tooltip: _isBn ? 'শেয়ার করুন' : 'Share Profile',
               onPressed: () {
-                final name = _profile?.displayName ?? 'Traveler';
+                final name = _profile?.displayName ?? 'Member';
                 SharePlus.instance.share(
                   ShareParams(
                     text:
@@ -757,7 +757,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         ? _statusNote!
                         : (isOwnProfile
                             ? (_isBn ? '+ নোট যুক্ত করুন' : '+ Add Note')
-                            : (_isBn ? 'ভ্রমণকারী নোট' : 'Traveler Note')),
+                            : (_isBn ? 'সদস্য নোট' : 'Member note')),
                     style: const TextStyle(
                       color: AppColors.mintGreen,
                       fontSize: 11,
@@ -771,7 +771,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
           // Display Name
           Text(
-            profile.displayName.isNotEmpty ? profile.displayName : 'Traveler',
+            profile.displayName.isNotEmpty ? profile.displayName : 'Member',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 22,
@@ -800,7 +800,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 Text(
                   email.isNotEmpty
                       ? email
-                      : (_isBn ? 'ভ্রমণকারী সদস্য' : 'Tour Traveler'),
+                      : (_isBn ? 'গ্রুপের সদস্য' : 'Group member'),
                   style: const TextStyle(
                     color: AppColors.mintGreen,
                     fontSize: 12,
@@ -1199,7 +1199,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         color: Colors.purpleAccent,
       ),
       (
-        title: _isBn ? 'স্টার ট্রাভেলার' : 'Star Traveler',
+        title: _isBn ? 'স্টার সদস্য' : 'Star member',
         icon: Icons.star_rounded,
         color: AppColors.gold,
       ),
@@ -2528,9 +2528,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _isBn
-                              ? 'প্রোফাইল তথ্য পরিবর্তন'
-                              : 'EDIT TRAVELER PROFILE',
+                          _isBn ? 'প্রোফাইল তথ্য পরিবর্তন' : 'EDIT PROFILE',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
@@ -3138,7 +3136,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 size: 72, color: AppColors.mintGreen),
             const SizedBox(height: 20),
             Text(
-              _isBn ? 'আপনার ভ্রমণ প্রোফাইল' : 'Your Traveler Profile',
+              _isBn ? 'আপনার প্রোফাইল' : 'Your profile',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,

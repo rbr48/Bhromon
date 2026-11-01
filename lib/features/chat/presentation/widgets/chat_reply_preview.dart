@@ -37,7 +37,7 @@ class ReplyMessageInfo {
     return ReplyMessageInfo(
       messageId: (map['messageId'] as String?) ?? '',
       senderId: (map['senderId'] as String?) ?? '',
-      senderName: (map['senderName'] as String?) ?? 'Traveler',
+      senderName: (map['senderName'] as String?) ?? 'Member',
       text: (map['text'] as String?) ?? '',
       type: (map['type'] as String?) ?? 'text',
       mediaUrl: map['mediaUrl'] as String?,
