@@ -327,6 +327,22 @@ class TourGroup {
   /// The preset of a rotating savings group (samity). See [samity].
   static const String samityPreset = 'samity';
 
+  /// The preset of a school, coaching centre or class: teachers and admins post the
+  /// notices, and parents and students answer them.
+  static const String schoolPreset = 'school';
+
+  /// The preset of a sports team or gym: the coach and admins post the notices, and
+  /// members answer them.
+  static const String sportsPreset = 'sports';
+
+  /// The preset of a study or book club: a family-style circle where any member can
+  /// post, with shared books, a reading schedule and shared costs.
+  static const String studyPreset = 'study';
+
+  /// The preset of a neighbourhood committee: the committee posts the notices, and
+  /// residents raise service requests, as in a housing society.
+  static const String committeePreset = 'committee';
+
   /// The preset a stored value names, or null when it names none.
   static String? presetFrom(Object? value) {
     if (value == officePreset) return officePreset;
@@ -334,6 +350,10 @@ class TourGroup {
     if (value == messPreset) return messPreset;
     if (value == societyPreset) return societyPreset;
     if (value == samityPreset) return samityPreset;
+    if (value == schoolPreset) return schoolPreset;
+    if (value == sportsPreset) return sportsPreset;
+    if (value == studyPreset) return studyPreset;
+    if (value == committeePreset) return committeePreset;
     return null;
   }
 
@@ -355,6 +375,20 @@ class TourGroup {
   /// payouts.
   bool get isSamity => preset == samityPreset;
 
+  /// A school, coaching centre or class: a family-style circle where the teachers post
+  /// the notices. SOS stays on.
+  bool get isSchool => preset == schoolPreset;
+
+  /// A sports team or gym: a family-style circle where the coach posts the notices.
+  bool get isSports => preset == sportsPreset;
+
+  /// A study or book club: a family-style circle where any member can post.
+  bool get isStudy => preset == studyPreset;
+
+  /// A neighbourhood committee: a family-style circle with notices and service requests,
+  /// as in a housing society.
+  bool get isCommittee => preset == committeePreset;
+
   /// An office or a campus: a workspace, where the household tiles and records do not
   /// apply and SOS is refused.
   bool get isManaged => isOffice || isCampus;
@@ -367,7 +401,14 @@ class TourGroup {
   /// housing society or a samity. Members answer them. A plain family circle lets any
   /// member post.
   bool get hasManagedNotices =>
-      isOffice || isCampus || isMess || isSociety || isSamity;
+      isOffice ||
+      isCampus ||
+      isMess ||
+      isSociety ||
+      isSamity ||
+      isSchool ||
+      isSports ||
+      isCommittee;
 
   /// Whether Moments is open to members: always, except when an office or campus has
   /// turned it off.

@@ -545,7 +545,7 @@ service cloud.firestore {
     // the notices and members answer them.
     function hasManagedNotices(tId) {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
-             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus', 'mess', 'society', 'samity'];
+             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus', 'mess', 'society', 'samity', 'school', 'sports', 'committee'];
     }
     // Moments is on unless an office or a campus has turned it off.
     function momentsOpen(tId) {
@@ -560,7 +560,7 @@ service cloud.firestore {
     // A housing society and a samity are family circles with their own preset.
     function isSocietyTour(tId) {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
-             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') == 'society';
+             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['society', 'committee'];
     }
     function isSamityTour(tId) {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
