@@ -29,6 +29,7 @@ import '../../../tour_group/presentation/tour_routes.dart';
 import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
 import '../../domain/usecases/get_explorer_profile_usecase.dart';
 import '../../../game_zone/presentation/widgets/game_analytics_view.dart';
+import '../widgets/server_patron_card.dart';
 
 /// The modern, Tour Group-Centric Profile Screen for Bhromon Travelers.
 /// Replaces the legacy public social/YouTube architecture with live
@@ -1916,6 +1917,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             ],
           ),
         ),
+        const SizedBox(height: 12),
+
+        // Community Support / Keep Bhromon Alive Card
+        const ServerPatronCard(),
         const SizedBox(height: 12),
 
         // Account Information & Logout
