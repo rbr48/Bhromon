@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
@@ -29,7 +30,7 @@ class BlurHashImage extends StatelessWidget {
       memCacheWidth: context.decodeWidth(width != null && height != null
           ? (width! > height! ? width! : height!)
           : width ?? double.infinity),
-      imageUrl: imageUrl,
+      imageUrl: signedMediaUrl(imageUrl),
       width: width,
       height: height,
       fit: fit,

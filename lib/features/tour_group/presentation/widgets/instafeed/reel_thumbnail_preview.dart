@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -57,7 +58,8 @@ class _ReelThumbnailPreviewState extends State<ReelThumbnailPreview> {
     }
 
     try {
-      final ctrl = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+      final ctrl = VideoPlayerController.networkUrl(
+          Uri.parse(signedMediaUrl(widget.videoUrl)));
       _controller = ctrl;
       await ctrl.initialize();
       await ctrl.setVolume(0.0);

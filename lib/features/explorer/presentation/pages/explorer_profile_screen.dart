@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -553,7 +554,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   ? DecorationImage(
                       image: sizedImage(
                         CachedNetworkImageProvider(
-                          profile.coverUrl!,
+                          signedMediaUrl(profile.coverUrl!),
                           errorListener: (dynamic error) {},
                         ),
                         context.decodeWidth(),
@@ -668,7 +669,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       backgroundImage: profile.avatarUrl != null
                           ? sizedImage(
                               CachedNetworkImageProvider(
-                                profile.avatarUrl!,
+                                signedMediaUrl(profile.avatarUrl!),
                                 errorListener: (dynamic error) {},
                               ),
                               context.decodeWidth(92),
@@ -2608,7 +2609,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                 ))
                                         else if (profile.coverUrl != null)
                                           CachedNetworkImage(
-                                            imageUrl: profile.coverUrl!,
+                                            imageUrl: signedMediaUrl(
+                                                profile.coverUrl!),
                                             fit: BoxFit.cover,
                                             errorWidget: (_, __, ___) =>
                                                 const ColoredBox(
@@ -2686,8 +2688,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                       ))
                                                 : (profile.avatarUrl != null
                                                     ? CachedNetworkImage(
-                                                        imageUrl:
-                                                            profile.avatarUrl!,
+                                                        imageUrl: signedMediaUrl(
+                                                            profile.avatarUrl!),
                                                         fit: BoxFit.cover,
                                                         errorWidget: (_, __,
                                                                 ___) =>

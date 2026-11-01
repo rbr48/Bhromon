@@ -4,6 +4,8 @@ import 'package:share_plus/share_plus.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_channel_repository.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
+import 'package:bhromon/features/tour_group/data/tour_media_journal.dart';
+import 'package:bhromon/features/tour_group/data/tour_media_uploader.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
@@ -92,6 +94,17 @@ class InstafeedShareSheet extends StatelessWidget {
     }
   }
 
+  /// The URL of the story's own copy of a media file. A file that is not on the
+  /// media server (legacy storage) cannot be copied, so it is used as it is.
+  Future<String> _ownCopy(String url) async {
+    if (!url.startsWith(TourMediaRef.publicBaseUrl)) return url;
+    return TourMediaUploader.copyMedia(
+      tourId: tourId,
+      sourceUrl: url,
+      folder: 'stories',
+    );
+  }
+
   Future<void> _shareToStory(BuildContext context) async {
     final media = post.coverUrl ??
         (post.images.isNotEmpty ? post.images.first : post.videoUrl);
@@ -105,13 +118,22 @@ class InstafeedShareSheet extends StatelessWidget {
     }
 
     try {
+      // The story gets its own copy of the media. Sharing the post's file would
+      // tie the story to the post, so deleting either one would break the other.
+      // Read before the awaits below, so the context is not used across them.
+      final caption = context.l10n.translate(
+        'ig_reshare_label',
+        args: {'name': post.authorName},
+      );
+      final mediaCopy = await _ownCopy(media);
+      final videoCopy =
+          post.videoUrl == null ? null : await _ownCopy(post.videoUrl!);
       await repository.addStory(
         tourId: tourId,
-        mediaUrl: media,
-        caption: context.l10n
-            .translate('ig_reshare_label', args: {'name': post.authorName}),
+        mediaUrl: mediaCopy,
+        caption: caption,
         isVideo: post.isReel || post.videoUrl != null,
-        videoUrl: post.videoUrl,
+        videoUrl: videoCopy,
       );
 
       if (context.mounted) {

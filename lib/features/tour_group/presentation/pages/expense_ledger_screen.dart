@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -1090,7 +1091,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: Image.network(
-                            e.receiptUrl!,
+                            signedMediaUrl(e.receiptUrl!),
                             width: 48,
                             height: 48,
                             fit: BoxFit.cover,
@@ -2040,7 +2041,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Image.network(
-                  url,
+                  signedMediaUrl(url),
                   fit: BoxFit.contain,
                   loadingBuilder: (context, child, progress) {
                     if (progress == null) return child;

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -289,7 +290,7 @@ class _AttachmentGrid extends StatelessWidget {
       );
     }
     return Image.network(
-      attachment.url,
+      signedMediaUrl(attachment.url),
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => const ColoredBox(
         color: Colors.black38,

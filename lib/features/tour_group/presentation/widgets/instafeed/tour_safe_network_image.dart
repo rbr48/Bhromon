@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -155,7 +156,7 @@ class _TourSafeNetworkImageState extends State<TourSafeNetworkImage> {
     if (kIsWeb) {
       // Direct Web HTML/Browser image decoding with hardware downsampling
       imageWidget = Image.network(
-        widget.imageUrl,
+        signedMediaUrl(widget.imageUrl),
         key: effectiveKey,
         width: widget.width,
         height: widget.height,
@@ -174,7 +175,7 @@ class _TourSafeNetworkImageState extends State<TourSafeNetworkImage> {
       // Mobile: CachedNetworkImage with memory downsampling & fallback
       imageWidget = CachedNetworkImage(
         key: effectiveKey,
-        imageUrl: widget.imageUrl,
+        imageUrl: signedMediaUrl(widget.imageUrl),
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
@@ -186,7 +187,7 @@ class _TourSafeNetworkImageState extends State<TourSafeNetworkImage> {
         placeholder: (context, _) => _buildPlaceholder(),
         errorWidget: (context, _, __) {
           return Image.network(
-            widget.imageUrl,
+            signedMediaUrl(widget.imageUrl),
             width: widget.width,
             height: widget.height,
             fit: widget.fit,

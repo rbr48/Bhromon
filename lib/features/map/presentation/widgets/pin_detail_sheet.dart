@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -275,7 +276,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                       if (pin.imageUrl != null && pin.imageUrl!.isNotEmpty)
                         CachedNetworkImage(
                           memCacheWidth: context.decodeWidth(),
-                          imageUrl: pin.imageUrl!,
+                          imageUrl: signedMediaUrl(pin.imageUrl!),
                           fit: BoxFit.cover,
                           errorWidget: (_, __, ___) =>
                               _buildGradientBanner(pin.name),
@@ -786,7 +787,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                   borderRadius: BorderRadius.circular(10),
                   child: CachedNetworkImage(
                     memCacheWidth: context.decodeWidth(120),
-                    imageUrl: pin.photos[i],
+                    imageUrl: signedMediaUrl(pin.photos[i]),
                     width: 120,
                     height: 90,
                     fit: BoxFit.cover,
@@ -961,7 +962,7 @@ class _PinDetailSheetState extends State<PinDetailSheet>
                 child: thumbUrl != null
                     ? CachedNetworkImage(
                         memCacheWidth: context.decodeWidth(80),
-                        imageUrl: thumbUrl,
+                        imageUrl: signedMediaUrl(thumbUrl),
                         fit: BoxFit.cover,
                         errorWidget: (_, __, ___) =>
                             _thumbnailFallback(tierColor),

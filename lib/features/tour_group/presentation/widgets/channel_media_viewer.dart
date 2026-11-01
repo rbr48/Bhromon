@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -39,7 +40,7 @@ class _ChannelMediaPage extends StatelessWidget {
           : InteractiveViewer(
               child: Center(
                 child: Image.network(
-                  attachment.url,
+                  signedMediaUrl(attachment.url),
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => _LoadFailed(
                     text: context.l10n.translate('chan_media_load_failed'),
@@ -71,7 +72,8 @@ class _VideoPaneState extends State<_VideoPane> {
   }
 
   Future<void> _load() async {
-    final controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    final controller =
+        VideoPlayerController.networkUrl(Uri.parse(signedMediaUrl(widget.url)));
     _controller = controller;
     try {
       await controller.initialize();

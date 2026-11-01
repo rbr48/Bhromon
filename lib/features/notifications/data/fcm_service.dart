@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -245,7 +246,7 @@ class FcmService {
 
     StyleInformation? style;
     if (imageUrl != null && imageUrl.isNotEmpty) {
-      final base64Str = await _fetchImageAsBase64(imageUrl);
+      final base64Str = await _fetchImageAsBase64(signedMediaUrl(imageUrl));
       if (base64Str.isNotEmpty) {
         style = BigPictureStyleInformation(
           ByteArrayAndroidBitmap.fromBase64String(base64Str),

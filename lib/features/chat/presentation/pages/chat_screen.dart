@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -2494,11 +2495,12 @@ class _ChatScreenState extends State<ChatScreen> {
                             CircleAvatar(
                               radius: 18,
                               backgroundColor: const Color(0xFF005C4B),
-                              backgroundImage:
-                                  (avatarUrl != null && avatarUrl.isNotEmpty)
-                                      ? sizedImage(NetworkImage(avatarUrl),
-                                          context.decodeWidth(36))
-                                      : null,
+                              backgroundImage: (avatarUrl != null &&
+                                      avatarUrl.isNotEmpty)
+                                  ? sizedImage(
+                                      NetworkImage(signedMediaUrl(avatarUrl)),
+                                      context.decodeWidth(36))
+                                  : null,
                               child: (avatarUrl == null || avatarUrl.isEmpty)
                                   ? Text(initials,
                                       style: const TextStyle(
@@ -3184,16 +3186,20 @@ class _ChatScreenState extends State<ChatScreen> {
                                               child: InteractiveViewer(
                                                 child: kIsWeb
                                                     ? Image.network(
-                                                        mediaUrl,
+                                                        signedMediaUrl(
+                                                            mediaUrl),
                                                         fit: BoxFit.contain,
                                                       )
                                                     : CachedNetworkImage(
-                                                        imageUrl: mediaUrl,
+                                                        imageUrl:
+                                                            signedMediaUrl(
+                                                                mediaUrl),
                                                         fit: BoxFit.contain,
                                                         errorWidget:
                                                             (_, __, ___) =>
                                                                 Image.network(
-                                                          mediaUrl,
+                                                          signedMediaUrl(
+                                                              mediaUrl),
                                                           fit: BoxFit.contain,
                                                         ),
                                                       ),

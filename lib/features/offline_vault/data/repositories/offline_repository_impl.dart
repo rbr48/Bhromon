@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -346,7 +347,7 @@ class OfflineRepositoryImpl implements IOfflineRepository {
         await Future.wait(
           imageUrls.map((url) async {
             try {
-              await cacheManager.downloadFile(url);
+              await cacheManager.downloadFile(signedMediaUrl(url));
             } catch (error, stackTrace) {
               logSkipped(error, stackTrace);
             }

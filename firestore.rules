@@ -874,7 +874,8 @@ service cloud.firestore {
           allow create: if isActiveMember(tourId) &&
                            request.resource.data.authorEmail == tourUserEmail() &&
                            request.resource.data.createdAt == request.time &&
-                           request.resource.data.get('text', '').size() <= 500;
+                           request.resource.data.get('text', '').size() <= 500 &&
+                           get(/databases/$(database)/documents/tours/$(tourId)/posts/$(postId)).data.get('disableComments', false) != true;
 
           // Any member likes or unlikes a comment (their own entry only).
           allow update: if isActiveMember(tourId) &&
@@ -898,9 +899,15 @@ service cloud.firestore {
 
       match /stories/{storyId} {
         allow read: if isActiveMember(tourId);
+        // A caption, the media links and a poll have size limits. A field that is
+        // not set counts as absent.
         allow create: if isActiveMember(tourId) &&
                          request.resource.data.authorEmail == tourUserEmail() &&
-                         request.resource.data.createdAt == request.time;
+                         request.resource.data.createdAt == request.time &&
+                         (request.resource.data.get('caption', null) == null || request.resource.data.caption.size() <= 2200) &&
+                         (request.resource.data.get('mediaUrl', null) == null || request.resource.data.mediaUrl.size() <= 2048) &&
+                         (request.resource.data.get('videoUrl', null) == null || request.resource.data.videoUrl.size() <= 2048) &&
+                         (request.resource.data.get('poll', null) == null || request.resource.data.poll.options.size() <= 4);
 
         // A member records their own view.
         allow update: if isActiveMember(tourId) &&

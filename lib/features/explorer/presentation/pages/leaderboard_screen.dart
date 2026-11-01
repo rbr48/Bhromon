@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -199,7 +200,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                         profile.avatarUrl!.isNotEmpty
                                     ? sizedImage(
                                         CachedNetworkImageProvider(
-                                          profile.avatarUrl!,
+                                          signedMediaUrl(profile.avatarUrl!),
                                           errorListener: (dynamic error) {},
                                         ),
                                         context.decodeWidth(40))

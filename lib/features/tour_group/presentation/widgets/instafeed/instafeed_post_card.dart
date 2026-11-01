@@ -1,10 +1,11 @@
-import 'dart:math' as math;
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
+import 'package:bhromon/features/tour_group/domain/services/like_state.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'instafeed_carousel.dart';
 import 'instafeed_day_label.dart';
@@ -80,8 +81,9 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   bool _showHeartBurst = false;
   bool _showTags = false;
   bool _isPlayingAudio = false;
+
+  /// The like the user last asked for, shown until the server holds it.
   bool? _optimisticLiked;
-  int _optimisticLikeDelta = 0;
 
   VideoPlayerController? _videoCtrl;
   bool _isVideoInitialized = false;
@@ -152,7 +154,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   }
 
   void _initVideoController(String url) {
-    final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+    final ctrl =
+        VideoPlayerController.networkUrl(Uri.parse(signedMediaUrl(url)));
     _videoCtrl = ctrl;
     ctrl.initialize().then((_) {
       if (!mounted || _videoCtrl != ctrl) return;
@@ -182,10 +185,12 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     if (oldWidget.post.id != widget.post.id) {
       _recordViewIfNew();
     }
-    if (oldWidget.post.id != widget.post.id ||
-        oldWidget.post.likes.length != widget.post.likes.length) {
+    if (oldWidget.post.id != widget.post.id) _optimisticLiked = null;
+    if (LikeState.serverCaughtUp(
+      optimistic: _optimisticLiked,
+      onServer: widget.post.isLikedBy(widget.repository.currentEmail),
+    )) {
       _optimisticLiked = null;
-      _optimisticLikeDelta = 0;
     }
     if (oldWidget.post.videoUrl != widget.post.videoUrl) {
       _disposeVideo();
@@ -236,7 +241,6 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
     // Instant optimistic update
     setState(() {
       _optimisticLiked = targetLiked;
-      _optimisticLikeDelta = targetLiked ? 1 : -1;
     });
 
     try {
@@ -250,7 +254,6 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
       if (mounted) {
         setState(() {
           _optimisticLiked = currentLiked;
-          _optimisticLikeDelta = 0;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1055,11 +1058,13 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isLiked = _optimisticLiked ??
-        widget.post.isLikedBy(widget.repository.currentEmail);
-    final effectiveLikeCount = math.max(
-      0,
-      widget.post.likes.length + _optimisticLikeDelta,
+    final serverLiked = widget.post.isLikedBy(widget.repository.currentEmail);
+    final isLiked =
+        LikeState.shown(optimistic: _optimisticLiked, onServer: serverLiked);
+    final effectiveLikeCount = LikeState.shownCount(
+      onServerCount: widget.post.likes.length,
+      shownLiked: isLiked,
+      onServerLiked: serverLiked,
     );
     final isVideoPost =
         widget.post.videoUrl != null && widget.post.videoUrl!.isNotEmpty;
@@ -1117,7 +1122,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     radius: 18,
                     backgroundColor: AppColors.mintGreen,
                     backgroundImage: widget.post.authorPhoto != null
-                        ? NetworkImage(widget.post.authorPhoto!)
+                        ? NetworkImage(signedMediaUrl(widget.post.authorPhoto!))
                         : null,
                     child: widget.post.authorPhoto == null
                         ? Text(
@@ -1546,7 +1551,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     radius: 12,
                     backgroundColor: AppColors.midGreen,
                     backgroundImage: widget.repository.currentPhotoUrl != null
-                        ? NetworkImage(widget.repository.currentPhotoUrl!)
+                        ? NetworkImage(
+                            signedMediaUrl(widget.repository.currentPhotoUrl!))
                         : null,
                     child: widget.repository.currentPhotoUrl == null
                         ? Text(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1744,7 +1745,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         leading: CircleAvatar(
                           backgroundColor: AppColors.midGreen,
                           backgroundImage: m.photoUrl != null
-                              ? NetworkImage(m.photoUrl!)
+                              ? NetworkImage(signedMediaUrl(m.photoUrl!))
                               : null,
                           child: m.photoUrl == null
                               ? Text(m.displayName.isNotEmpty
@@ -2937,7 +2938,7 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     radius: 24,
                     backgroundColor: AppColors.midGreen,
                     backgroundImage: member.photoUrl != null
-                        ? NetworkImage(member.photoUrl!)
+                        ? NetworkImage(signedMediaUrl(member.photoUrl!))
                         : null,
                     child: member.photoUrl == null
                         ? Text(

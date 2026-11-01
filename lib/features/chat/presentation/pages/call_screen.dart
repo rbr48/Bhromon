@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -884,7 +885,7 @@ class _CallScreenState extends State<CallScreen> {
                 child: (widget.remoteAvatarUrl != null &&
                         widget.remoteAvatarUrl!.isNotEmpty)
                     ? CachedNetworkImage(
-                        imageUrl: widget.remoteAvatarUrl!,
+                        imageUrl: signedMediaUrl(widget.remoteAvatarUrl!),
                         fit: BoxFit.cover,
                         memCacheWidth: context.decodeWidth(140),
                         placeholder: (_, __) => Center(

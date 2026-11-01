@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
@@ -473,8 +474,9 @@ class DesktopTourSidebar extends StatelessWidget {
               CircleAvatar(
                 radius: 16,
                 backgroundColor: AppColors.midGreen,
-                backgroundImage:
-                    photoUrl != null ? NetworkImage(photoUrl) : null,
+                backgroundImage: photoUrl != null
+                    ? NetworkImage(signedMediaUrl(photoUrl))
+                    : null,
                 child: photoUrl == null
                     ? Text(
                         displayName.isNotEmpty

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -691,7 +692,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         radius: 24,
         backgroundColor: const Color(0xFF005C4B),
         backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-            ? sizedImage(NetworkImage(avatarUrl), context.decodeWidth(48))
+            ? sizedImage(NetworkImage(signedMediaUrl(avatarUrl)),
+                context.decodeWidth(48))
             : null,
         child: (avatarUrl == null || avatarUrl.isEmpty)
             ? Text(
@@ -1177,7 +1179,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 radius: 20,
                                 backgroundColor: const Color(0xFF005C4B),
                                 backgroundImage: avatarUrl.isNotEmpty
-                                    ? sizedImage(NetworkImage(avatarUrl),
+                                    ? sizedImage(
+                                        NetworkImage(signedMediaUrl(avatarUrl)),
                                         context.decodeWidth(40))
                                     : null,
                                 child: avatarUrl.isEmpty
@@ -1528,7 +1531,8 @@ class ChatTile extends StatelessWidget {
         radius: 24,
         backgroundColor: const Color(0xFF005C4B),
         backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-            ? sizedImage(NetworkImage(avatarUrl), context.decodeWidth(48))
+            ? sizedImage(NetworkImage(signedMediaUrl(avatarUrl)),
+                context.decodeWidth(48))
             : null,
         child: (avatarUrl == null || avatarUrl.isEmpty)
             ? Text(initials,

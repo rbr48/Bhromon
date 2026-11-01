@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -881,7 +882,7 @@ class _TourMemberProfileModalState extends State<TourMemberProfileModal> {
                 radius: 36,
                 backgroundColor: const Color(0xFF0F1B24),
                 backgroundImage: member.photoUrl != null
-                    ? NetworkImage(member.photoUrl!)
+                    ? NetworkImage(signedMediaUrl(member.photoUrl!))
                     : null,
                 child: member.photoUrl == null
                     ? Text(

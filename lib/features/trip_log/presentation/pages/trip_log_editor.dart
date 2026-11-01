@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/concurrency.dart';
 import '../../../../core/utils/image_sizing.dart';
@@ -1683,7 +1684,7 @@ class _ImageBlockEditorState extends State<ImageBlockEditor> {
                 )
               : CachedNetworkImage(
                   memCacheWidth: context.decodeWidth(),
-                  imageUrl: widget.imageUrl,
+                  imageUrl: signedMediaUrl(widget.imageUrl),
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -1801,7 +1802,7 @@ class _VideoBlockEditorState extends State<VideoBlockEditor> {
                 child: thumbnailUrl != null
                     ? CachedNetworkImage(
                         memCacheWidth: context.decodeWidth(),
-                        imageUrl: thumbnailUrl,
+                        imageUrl: signedMediaUrl(thumbnailUrl),
                         fit: BoxFit.cover,
                         errorWidget: (context, url, error) => Icon(
                             Icons.video_collection_rounded,

@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bhromon/features/tour_group/domain/models/safety_alert_models.dart';
@@ -232,8 +233,9 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
           CircleAvatar(
             radius: 20,
             backgroundColor: AppColors.mintGreen,
-            backgroundImage:
-                authorPhoto != null ? NetworkImage(authorPhoto!) : null,
+            backgroundImage: authorPhoto != null
+                ? NetworkImage(signedMediaUrl(authorPhoto!))
+                : null,
             child: authorPhoto == null
                 ? Text(
                     authorName.isNotEmpty ? authorName[0].toUpperCase() : 'M',

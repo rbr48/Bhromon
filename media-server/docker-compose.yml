@@ -21,6 +21,11 @@ services:
       # and calls use STUN only.
       - SOTTO_TURN_SECRET=${SOTTO_TURN_SECRET:-}
       - PURGE_KEY=${PURGE_KEY:-}
+      # Private media: the secret derives each person's link key. Set it on the host, never
+      # in git. Keep MEDIA_ACCESS_ENFORCE at 0 until the app that signs links is released;
+      # then set it to 1 and restart the container. See README "Private media links".
+      - MEDIA_ACCESS_SECRET=${MEDIA_ACCESS_SECRET:-}
+      - MEDIA_ACCESS_ENFORCE=${MEDIA_ACCESS_ENFORCE:-0}
       - BASE_URL=https://bhromon.fun/media
 
   bhromon-games:

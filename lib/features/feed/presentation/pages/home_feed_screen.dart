@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -2006,7 +2007,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (context) => FullScreenImageViewer(
-                        imageUrl: img.storageUrl,
+                        imageUrl: signedMediaUrl(img.storageUrl),
                         heroTag: heroTag,
                         localPath: img.localPath,
                         caption: img.caption,
@@ -2024,7 +2025,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                   child: Hero(
                     tag: heroTag,
                     child: BlurHashImage(
-                      imageUrl: img.storageUrl,
+                      imageUrl: signedMediaUrl(img.storageUrl),
                       height: 210,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -2477,7 +2478,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                         const BorderRadius.vertical(top: Radius.circular(22)),
                     child: (thumbnailUrl != null && thumbnailUrl.isNotEmpty)
                         ? BlurHashImage(
-                            imageUrl: thumbnailUrl,
+                            imageUrl: signedMediaUrl(thumbnailUrl),
                             fit: BoxFit.cover,
                           )
                         : Container(
