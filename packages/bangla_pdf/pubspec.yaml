@@ -7,24 +7,6 @@ homepage: https://github.com/zamansheikh/bangla_pdf
 issue_tracker: https://github.com/zamansheikh/bangla_pdf/issues
 documentation: https://github.com/zamansheikh/bangla_pdf/wiki
 
-screenshots:
-  - description: >-
-      A Bangla half-yearly report built with the package: metric cards, a bar
-      chart with Bengali axis labels and legend, and Bengali digits throughout.
-    path: images/sample-dashboard.png
-  - description: >-
-      Bangla rendered by 1.0.6 next to 1.1.0: broken conjuncts and stray
-      hasantas on the left, correctly shaped glyphs on the right.
-    path: images/before-after.png
-  - description: >-
-      An invoice built with the package's widgets: Bengali digits, the taka
-      sign and a styled table, all shaped correctly.
-    path: images/sample-invoice.png
-  - description: >-
-      A notice built with the package's widgets: headings, a justified
-      paragraph and a bulleted list.
-    path: images/sample-notice.png
-
 topics:
   - pdf
   - bangla
