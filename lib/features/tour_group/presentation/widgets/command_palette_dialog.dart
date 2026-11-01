@@ -77,7 +77,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
         color: Colors.indigoAccent,
       ),
       const CommandPaletteItem(
-        title: 'গেমিং জোন (Family Game Zone)',
+        title: 'গেম জোন (Game Zone)',
         subtitle: '২৯ কার্ড, দাবা, লুডো, তিন পাত্তি ও ক্যারাম',
         icon: Icons.sports_esports_rounded,
         route: '/game-zone',

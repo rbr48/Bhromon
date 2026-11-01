@@ -120,7 +120,7 @@ This document serves as the persistent system memory, architectural guidelines, 
 - **Platform code:** `dart:io` may be imported only by the files in `tool/dart_io_allowlist.txt`; `tool/check_dart_io.sh` enforces that in CI. New code keeps it behind `kIsWeb` or a conditional import. Web uses `putData` / bytes and blob URLs.
 - **Server-side reel thumbnails:** not generated. The first frame is taken on the device at upload (`VideoCompress.getFileThumbnail` in `instafeed_create_studio.dart`). Server-side generation needs a decision on the package first.
 
-### D. Family Game Zone (`lib/features/game_zone/`)
+### D. Game Zone (`lib/features/game_zone/`)
 Game rules live in pure-Dart models/engines (unit-tested); screens only render and drive timers.
 Every game screen locks portrait (`common/game_zone_portrait_lock.dart`), keeps its game in a
 static session while the user visits other screens, and asks before discarding a game in progress.
