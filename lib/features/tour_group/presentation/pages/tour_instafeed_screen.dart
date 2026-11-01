@@ -68,7 +68,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   // Feed video: one card holds a player, the one nearest the middle of the
   // screen once scrolling has stopped. A scroll releases it.
   final Map<String, GlobalKey> _videoCardKeys = {};
-  String? _playingVideoId;
+  // The video that plays. A notifier, so a change rebuilds only the card that
+  // starts or stops, not the whole feed.
+  final ValueNotifier<String?> _playingVideoNotifier =
+      ValueNotifier<String?>(null);
   bool _isScrolling = false;
   bool _settleScheduled = false;
   TourGroup? _tourGroup;
@@ -124,6 +127,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     _seatSub?.cancel();
     _roomSub?.cancel();
     unawaited(_feed.close());
+    _playingVideoNotifier.dispose();
     super.dispose();
   }
 
@@ -551,7 +555,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     if (n.depth != 0) return false;
     if (n is ScrollStartNotification) {
       _isScrolling = true;
-      if (_playingVideoId != null) setState(() => _playingVideoId = null);
+      _playingVideoNotifier.value = null;
     } else if (n is ScrollEndNotification) {
       _isScrolling = false;
       _scheduleSettle();
@@ -590,9 +594,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         nearest = entry.key;
       }
     }
-    if (nearest != _playingVideoId) {
-      setState(() => _playingVideoId = nearest);
-    }
+    _playingVideoNotifier.value = nearest;
   }
 
   /// The posts the feed filters: the loaded page, plus bookmarks from outside
@@ -1327,59 +1329,80 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                     }
                                     final post = filteredPosts[index];
                                     final isVideo = post.videoUrl != null;
-                                    final card = InstafeedPostCard(
-                                      // Video cards keep a GlobalKey, so the feed can find
-                                      // their position when it picks one to play.
-                                      key: isVideo
-                                          ? _videoCardKeys.putIfAbsent(
-                                              post.id, () => GlobalKey())
-                                          : ValueKey(post.id),
-                                      post: post,
-                                      tourDays: _tourDays,
-                                      videoPlaying: post.id == _playingVideoId,
-                                      onVideoTap: isVideo
-                                          ? () => setState(
-                                              () => _playingVideoId = post.id)
-                                          : null,
-                                      tourId: widget.tourId,
-                                      repository: _repository,
-                                      isAdmin: _isAdmin,
-                                      seatNumber: _seatMap[post.authorEmail],
-                                      roomNumber: _roomMap[post.authorEmail],
-                                      isBookmarked:
-                                          _bookmarkedPostIds.contains(post.id),
-                                      onBookmarkToggle: () =>
-                                          _toggleBookmark(post.id),
-                                      onSaveToCollection:
-                                          _showSaveToCollectionSheet,
-                                      onOpenComments: (p, {targetMediaIndex}) =>
-                                          _showCommentsModal(context, p,
-                                              targetMediaIndex:
-                                                  targetMediaIndex),
-                                      onShare: (p) =>
-                                          _showShareModal(context, p),
-                                      onAddToLedger: (p) =>
-                                          _showAddToLedgerDialog(p),
-                                      onReelTap: (p) {
-                                        final reelIdx = reelsList.indexOf(p);
-                                        _openReelsModal(
-                                          context,
-                                          reelsList,
-                                          reelIdx >= 0 ? reelIdx : 0,
-                                        );
-                                      },
-                                      onHashtagTap: (tag) => setState(
-                                          () => _activeHashtagFilter = tag),
-                                      onPostChanged: () => setState(() {}),
-                                    );
-
-                                    return Center(
-                                      child: ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          maxWidth: 580,
+                                    // Only a video card listens for the video that plays, so a
+                                    // change rebuilds one card, not the whole feed.
+                                    Widget cardFor(String? playingId) {
+                                      return RepaintBoundary(
+                                        child: Center(
+                                          child: ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              maxWidth: 580,
+                                            ),
+                                            child: InstafeedPostCard(
+                                              // Video cards keep a GlobalKey, so the feed can
+                                              // find their position when it picks one to play.
+                                              key: isVideo
+                                                  ? _videoCardKeys.putIfAbsent(
+                                                      post.id,
+                                                      () => GlobalKey())
+                                                  : ValueKey(post.id),
+                                              post: post,
+                                              tourDays: _tourDays,
+                                              videoPlaying:
+                                                  post.id == playingId,
+                                              onVideoTap: isVideo
+                                                  ? () {
+                                                      _playingVideoNotifier
+                                                          .value = post.id;
+                                                    }
+                                                  : null,
+                                              tourId: widget.tourId,
+                                              repository: _repository,
+                                              isAdmin: _isAdmin,
+                                              seatNumber:
+                                                  _seatMap[post.authorEmail],
+                                              roomNumber:
+                                                  _roomMap[post.authorEmail],
+                                              isBookmarked: _bookmarkedPostIds
+                                                  .contains(post.id),
+                                              onBookmarkToggle: () =>
+                                                  _toggleBookmark(post.id),
+                                              onSaveToCollection:
+                                                  _showSaveToCollectionSheet,
+                                              onOpenComments: (p,
+                                                      {targetMediaIndex}) =>
+                                                  _showCommentsModal(context, p,
+                                                      targetMediaIndex:
+                                                          targetMediaIndex),
+                                              onShare: (p) =>
+                                                  _showShareModal(context, p),
+                                              onAddToLedger: (p) =>
+                                                  _showAddToLedgerDialog(p),
+                                              onReelTap: (p) {
+                                                final reelIdx =
+                                                    reelsList.indexOf(p);
+                                                _openReelsModal(
+                                                  context,
+                                                  reelsList,
+                                                  reelIdx >= 0 ? reelIdx : 0,
+                                                );
+                                              },
+                                              onHashtagTap: (tag) => setState(
+                                                  () => _activeHashtagFilter =
+                                                      tag),
+                                              onPostChanged: () =>
+                                                  setState(() {}),
+                                            ),
+                                          ),
                                         ),
-                                        child: card,
-                                      ),
+                                      );
+                                    }
+
+                                    if (!isVideo) return cardFor(null);
+                                    return ValueListenableBuilder<String?>(
+                                      valueListenable: _playingVideoNotifier,
+                                      builder: (context, playingId, _) =>
+                                          cardFor(playingId),
                                     );
                                   },
                                   childCount:
