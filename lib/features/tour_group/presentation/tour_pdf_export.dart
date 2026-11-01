@@ -88,8 +88,11 @@ Future<void> exportTourPdf(
   } catch (error, stack) {
     logError('Tour PDF export failed: $error\n$stack');
     closeDialog();
+    final message = kIsWeb
+        ? '${l10n.translate('pdf_export_failed')} ($error)'
+        : l10n.translate('pdf_export_failed');
     messenger.showSnackBar(
-      SnackBar(content: Text(l10n.translate('pdf_export_failed'))),
+      SnackBar(content: Text(message)),
     );
   } finally {
     images.close();

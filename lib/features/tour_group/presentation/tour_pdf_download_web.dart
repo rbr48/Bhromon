@@ -16,6 +16,10 @@ Future<void> downloadWebFile(Uint8List bytes, String filename) async {
     ..style.display = 'none';
   web.document.body?.appendChild(anchor);
   anchor.click();
-  anchor.remove();
-  web.URL.revokeObjectURL(url);
+  // Keep the blob URL alive for 60 seconds to ensure the browser download starts
+  // and finishes without being prematurely destroyed.
+  Future<void>.delayed(const Duration(seconds: 60), () {
+    anchor.remove();
+    web.URL.revokeObjectURL(url);
+  });
 }
