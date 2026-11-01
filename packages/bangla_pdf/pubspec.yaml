@@ -1,0 +1,62 @@
+name: bangla_pdf
+description: >-
+  Correct Bangla (Bengali) text in PDFs: real OpenType shaping for conjuncts,
+  reph and vowel signs, with text that copies back out as clean Unicode.
+version: 1.9.2
+homepage: https://github.com/zamansheikh/bangla_pdf
+issue_tracker: https://github.com/zamansheikh/bangla_pdf/issues
+documentation: https://github.com/zamansheikh/bangla_pdf/wiki
+
+screenshots:
+  - description: >-
+      A Bangla half-yearly report built with the package: metric cards, a bar
+      chart with Bengali axis labels and legend, and Bengali digits throughout.
+    path: images/sample-dashboard.png
+  - description: >-
+      Bangla rendered by 1.0.6 next to 1.1.0: broken conjuncts and stray
+      hasantas on the left, correctly shaped glyphs on the right.
+    path: images/before-after.png
+  - description: >-
+      An invoice built with the package's widgets: Bengali digits, the taka
+      sign and a styled table, all shaped correctly.
+    path: images/sample-invoice.png
+  - description: >-
+      A notice built with the package's widgets: headings, a justified
+      paragraph and a bulleted list.
+    path: images/sample-notice.png
+
+topics:
+  - pdf
+  - bangla
+  - unicode
+  - typography
+  - text-shaping
+
+environment:
+  sdk: ^3.5.4
+  flutter: '>=3.3.0'
+
+dependencies:
+  # Stream inflation for package:bangla_pdf/extract.dart. Chosen over
+  # dart:io's ZLibCodec so extraction also works on web.
+  archive: ^4.0.0
+  # MD5 and SHA-2 for decrypting protected PDFs. Already in the tree via
+  # package:pdf; the ciphers themselves are in lib/src/extract/crypt.dart.
+  crypto: ^3.0.0
+  flutter:
+    sdk: flutter
+  # Pinned to 3.13 because lib/src/pdf/shaped_pdf_font.dart reaches into
+  # package:pdf's internals to build a glyph-addressed CID font.
+  pdf: ^3.13.0
+  plugin_platform_interface: ^2.1.8
+  
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lint: ^2.8.0
+
+
+flutter:
+
+    
