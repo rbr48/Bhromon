@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/media/media_access.dart';
 import '../../../../core/utils/logger.dart';
 
 /// WhatsApp-style document attachment card.
@@ -73,8 +74,9 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
   Future<void> _openOrDownload() async {
     if (widget.documentUrl.isEmpty) return;
 
+    final signedUrl = signedMediaUrl(widget.documentUrl);
     if (kIsWeb) {
-      final uri = Uri.parse(widget.documentUrl);
+      final uri = Uri.parse(signedUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
@@ -93,7 +95,7 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
 
       if (!await file.exists()) {
         await Dio().download(
-          widget.documentUrl,
+          signedUrl,
           localFilePath,
           onReceiveProgress: (received, total) {
             if (total > 0 && mounted) {
