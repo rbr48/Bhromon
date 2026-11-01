@@ -53,7 +53,6 @@ import '../features/newspaper/presentation/pages/adfree_article_reader_screen.da
 import '../features/newspaper/presentation/pages/adblock_browser_screen.dart';
 import '../features/newspaper/domain/models/newspaper_models.dart';
 
-
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
   static GlobalKey<NavigatorState> get navigatorKey => _rootNavigatorKey;
