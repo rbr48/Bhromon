@@ -2002,7 +2002,7 @@ class TourTranslationKeys {
       'album_load_failed': 'Could not load the photos. Check your connection.',
       'server_patron_title': 'Keep Bhromon Running',
       'server_patron_desc':
-          'Bhromon is 100% free, open-source, and ad-free. Our monthly VPS & server bill is ~৳1,500. Support our uptime with a voluntary contribution.',
+          'Bhromon is 100% free, open-source, and ad-free. Our monthly VPS & server bill is ~৳5,000. Support our uptime with a voluntary contribution.',
       'server_patron_bkash': 'bKash',
       'server_patron_nagad': 'Nagad',
       'server_patron_github': 'GitHub Sponsors',
@@ -4002,7 +4002,7 @@ class TourTranslationKeys {
       'album_load_failed': 'ছবি আনা যায়নি। ইন্টারনেট সংযোগ দেখুন।',
       'server_patron_title': 'ভ্রমণ সার্ভার সচল রাখতে সহায়তা',
       'server_patron_desc':
-          'ভ্রমণ সম্পূর্ণ ফ্রি, বিজ্ঞাপনমুক্ত ও ওপেন-সোর্স। প্রতি মাসে ভিপিএস ও সার্ভার মেইনটেন্যান্স খরচ প্রায় ৳১,৫০০ টাকা। সার্ভার সচল রাখতে আপনিও স্বেচ্ছায় পাশে থাকতে পারেন।',
+          'ভ্রমণ সম্পূর্ণ ফ্রি, বিজ্ঞাপনমুক্ত ও ওপেন-সোর্স। প্রতি মাসে ভিপিএস ও সার্ভার মেইনটেন্যান্স খরচ প্রায় ৳৫,০০০ টাকা। সার্ভার সচল রাখতে আপনিও স্বেচ্ছায় পাশে থাকতে পারেন।',
       'server_patron_bkash': 'বিকাশ',
       'server_patron_nagad': 'নগদ',
       'server_patron_github': 'গিটহাব স্পনসর',

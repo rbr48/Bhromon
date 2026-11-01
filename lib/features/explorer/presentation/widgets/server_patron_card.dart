@@ -10,8 +10,8 @@ import '../../../../core/theme/colors.dart';
 class ServerPatronCard extends StatelessWidget {
   const ServerPatronCard({super.key});
 
-  static const String bKashNumber = '01762033445';
-  static const String nagadNumber = '01762033445';
+  static const String bKashNumber = '01737910040';
+  static const String nagadNumber = '01737910040';
   static const String githubRepoUrl = 'https://github.com/rbr48/Bhromon';
 
   void _copyToClipboard(

@@ -1610,6 +1610,6 @@ Bhromon's Founding Explorer program — particularly recruitment of Local Sage p
 **Last updated:** June 2026  
 **Company:** Bhromon Ltd. (Proposed Private Limited Company)  
 **Founders:** M. S. Rana (CEO & Product Lead) | Izhaan Intellect (Co-Founder & CTO)  
-**WhatsApp:** 01762033445  
+**WhatsApp:** 01737910040  
 **Email:** mybhromon@gmail.com  
 **Website:** [bhromon.fun](https://bhromon.fun)  
