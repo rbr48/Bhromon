@@ -106,6 +106,7 @@ class TranslationKeys {
           'Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.',
       'auth_privacy_open_failed':
           'Could not open the Privacy Policy. Please try again.',
+      'login_tagline': 'Life\'s journey, with groups',
       'retry': 'Retry',
       'cancel': 'Cancel',
       'ok': 'OK',
@@ -271,6 +272,7 @@ class TranslationKeys {
           'ব্রাউজার Google সাইন-ইনের উইন্ডো আটকে দিয়েছে। এই সাইটের জন্য পপ-আপ চালু করে আবার চেষ্টা করুন।',
       'auth_privacy_open_failed':
           'গোপনীয়তা নীতি খোলা যায়নি। আবার চেষ্টা করুন।',
+      'login_tagline': 'জীবনের পথচলা, গ্রুপ নিয়ে',
       'retry': 'পুনরায় চেষ্টা',
       'cancel': 'বাতিল',
       'ok': 'ঠিক আছে',

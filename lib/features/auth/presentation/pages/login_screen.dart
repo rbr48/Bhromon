@@ -334,8 +334,8 @@ class _BrandHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        const Text(
-          'আপনার সব গ্রুপ, এক জায়গায়',
+        Text(
+          context.l10n.translate('login_tagline'),
           textAlign: TextAlign.center,
           style: TextStyle(
             color: _kWhite,
