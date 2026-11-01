@@ -75,7 +75,7 @@ class BhromonBottomNav extends StatelessWidget {
           openTourId,
           'channels',
           missingTourMessage:
-              'চ্যানেল খুলতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।',
+              'চ্যানেল খুলতে অনুগ্রহ করে একটি গ্রুপ নির্বাচন বা তৈরি করুন।',
         );
         break;
       case 2:
@@ -84,7 +84,7 @@ class BhromonBottomNav extends StatelessWidget {
           openTourId,
           'feed',
           missingTourMessage:
-              'মোমেন্টস দেখতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।',
+              'মোমেন্টস দেখতে অনুগ্রহ করে একটি গ্রুপ নির্বাচন বা তৈরি করুন।',
         );
         break;
       case 3:

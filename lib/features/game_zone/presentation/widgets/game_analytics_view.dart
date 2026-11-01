@@ -648,7 +648,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
               ),
               const SizedBox(height: 8),
               Text(
-                'একটি সক্রিয় ট্যুর গ্রুপে যুক্ত থাকলে দলের সকল ভ্রমণসঙ্গীদের গেম পারফরম্যান্স এবং চ্যাম্পিয়ন র‍্যাংকিং এখানে দেখতে পাবেন।',
+                'একটি সক্রিয় গ্রুপে যুক্ত থাকলে দলের সকল ভ্রমণসঙ্গীদের গেম পারফরম্যান্স এবং চ্যাম্পিয়ন র‍্যাংকিং এখানে দেখতে পাবেন।',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.6),
@@ -694,7 +694,7 @@ class _GameAnalyticsViewState extends State<GameAnalyticsView> {
               ),
               const SizedBox(height: 8),
               Text(
-                'ট্যুর গ্রুপের সদস্যরা অনলাইন টেবিল খেললে তাদের স্কোর ও ট্রফি লিডারবোর্ডে যুক্ত হবে।',
+                'গ্রুপের সদস্যরা অনলাইন টেবিল খেললে তাদের স্কোর ও ট্রফি লিডারবোর্ডে যুক্ত হবে।',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.6),

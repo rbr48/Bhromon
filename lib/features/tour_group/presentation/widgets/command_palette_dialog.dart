@@ -46,7 +46,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
     return [
       CommandPaletteItem(
         title: 'ড্যাশবোর্ড (Dashboard)',
-        subtitle: 'ট্যুর গ্রুপ হাব ও সারসংক্ষেপ',
+        subtitle: 'গ্রুপ হাব ও সারসংক্ষেপ',
         icon: Icons.dashboard_rounded,
         route: tourHubPath(tourId),
         category: 'নেভিগেশন',

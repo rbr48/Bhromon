@@ -424,7 +424,7 @@ class _LoginFormState extends State<_LoginForm> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Welcome to Bhromon, your offline-first travel companion in Bangladesh. By using this app, you agree to the following terms:',
+                  'Welcome to Bhromon, the app for every group you belong to in Bangladesh. By using this app, you agree to the following terms:',
                   style: TextStyle(color: _kWhite, fontSize: 13, height: 1.4),
                 ),
                 SizedBox(height: 16),
@@ -523,7 +523,7 @@ class _LoginFormState extends State<_LoginForm> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Sign in with Google to explore Bangladesh, coordinate tour groups, and share verified journey logs.',
+          'Sign in with Google to run your family, office, campus, mess, housing society and savings group, and to plan trips.',
           style: TextStyle(color: _kWhite54, fontSize: 13, height: 1.4),
         ),
         const SizedBox(height: 28),

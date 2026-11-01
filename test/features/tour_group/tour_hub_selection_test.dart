@@ -167,6 +167,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(dhaka.name), findsNothing);
-    expect(find.text('No active tour groups'), findsOneWidget);
+    expect(find.text('No groups yet'), findsOneWidget);
   });
 }

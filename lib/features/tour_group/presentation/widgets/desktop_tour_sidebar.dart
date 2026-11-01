@@ -39,7 +39,7 @@ class DesktopTourSidebar extends StatelessWidget {
         stream: repository.watchGroup(tourId),
         builder: (context, snapshot) {
           final group = snapshot.data;
-          final tourTitle = group?.name ?? 'ট্যুর গ্রুপ';
+          final tourTitle = group?.name ?? 'গ্রুপ';
           final origin = group?.originCity ?? 'ঢাকা';
           final destination = group?.destination ?? 'কক্সবাজার';
           final routeSubtitle = '$origin ➔ $destination';
