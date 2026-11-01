@@ -98,6 +98,14 @@ class TranslationKeys {
       'error_generic': 'Something went wrong. Please try again.',
       'error_no_internet': 'No internet connection.',
       'error_offline_cache': 'Showing cached data (offline mode).',
+      'auth_error_network':
+          'No internet connection. Check your connection and try again.',
+      'auth_error_google_play_services':
+          'Google Sign-In needs Google Play services on this phone. Sign in to Google Play, update Google Play services, then try again.',
+      'auth_error_popup_blocked':
+          'Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.',
+      'auth_privacy_open_failed':
+          'Could not open the Privacy Policy. Please try again.',
       'retry': 'Retry',
       'cancel': 'Cancel',
       'ok': 'OK',
@@ -255,6 +263,14 @@ class TranslationKeys {
       'error_generic': 'কিছু একটা ভুল হয়েছে। আবার চেষ্টা করুন।',
       'error_no_internet': 'ইন্টারনেট সংযোগ নেই।',
       'error_offline_cache': 'ক্যাশ থেকে ডেটা দেখানো হচ্ছে (অফলাইন মোড)।',
+      'auth_error_network':
+          'ইন্টারনেট সংযোগ নেই। আপনার সংযোগ দেখে আবার চেষ্টা করুন।',
+      'auth_error_google_play_services':
+          'এই ফোনে Google সাইন-ইনের জন্য Google Play services দরকার। Google Play-তে সাইন ইন করুন, Google Play services আপডেট করুন, তারপর আবার চেষ্টা করুন।',
+      'auth_error_popup_blocked':
+          'ব্রাউজার Google সাইন-ইনের উইন্ডো আটকে দিয়েছে। এই সাইটের জন্য পপ-আপ চালু করে আবার চেষ্টা করুন।',
+      'auth_privacy_open_failed':
+          'গোপনীয়তা নীতি খোলা যায়নি। আবার চেষ্টা করুন।',
       'retry': 'পুনরায় চেষ্টা',
       'cancel': 'বাতিল',
       'ok': 'ঠিক আছে',

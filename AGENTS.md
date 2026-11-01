@@ -46,7 +46,8 @@ This document serves as the persistent system memory, architectural guidelines, 
    - Always supply `serverClientId` (the Web Client ID from `google-services.json`, `client_type: 3`) to `GoogleSignIn.instance.initialize(serverClientId: ...)` before calling `authenticate()`.
 8. **Google Play Services Absence Mapping (`google_sign_in_failure.dart`)**:
    - On devices or emulators without Google Play services, Google Sign-In fails with `providerConfigurationError`.
-   - `googleSignInFailureMessage` maps this error to an actionable user message prompting to sign in to Google Play and update services, rather than showing a raw platform exception.
+   - `googleSignInFailureReason` maps this error to `AuthFailureReason.googlePlayServices`. The sign-in screen shows the localized message for that reason (`auth_error_google_play_services`) instead of a raw platform exception. The raw error goes to the log.
+   - Cancelling the Google account window is `AuthFailureReason.cancelled`: the cubit returns to the sign-in form with no error message.
 
 ---
 

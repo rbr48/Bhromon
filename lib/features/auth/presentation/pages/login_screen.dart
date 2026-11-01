@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/widgets/bouncy_button.dart';
 import '../cubit/auth_cubit.dart';
@@ -19,6 +21,18 @@ const Color _kGold = Color(0xFFF4A261);
 const Color _kWhite = Color(0xFFECF0F1);
 const Color _kWhite54 = Color(0x8AECF0F1);
 const Color _kWhite30 = Color(0x4DECF0F1);
+
+/// What the user reads when sign-in fails. The technical message only goes to
+/// the log, so no raw exception text reaches the screen.
+String _authErrorText(BuildContext context, AuthFailureReason reason) {
+  final key = switch (reason) {
+    AuthFailureReason.network => 'auth_error_network',
+    AuthFailureReason.googlePlayServices => 'auth_error_google_play_services',
+    AuthFailureReason.popupBlocked => 'auth_error_popup_blocked',
+    AuthFailureReason.unknown || AuthFailureReason.cancelled => 'error_generic',
+  };
+  return context.l10n.translate(key);
+}
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -98,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen>
                     children: [
                       const Icon(Icons.error_outline, color: Colors.white),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(state.message)),
+                      Expanded(child: Text(_authErrorText(ctx, state.reason))),
                     ],
                   ),
                   backgroundColor: const Color(0xFFD32F2F),
@@ -321,7 +335,7 @@ class _BrandHeader extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         const Text(
-          'পথ যেখানে গল্প বলে',
+          'আপনার সব গ্রুপ, এক জায়গায়',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: _kWhite,
@@ -380,10 +394,13 @@ class _LoginFormState extends State<_LoginForm> {
       } else {
         throw Exception('Could not launch $url');
       }
-    } catch (e) {
+    } catch (error, stackTrace) {
+      logWarning('Login: could not open the privacy policy', error, stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to open Privacy Policy: $e')),
+          SnackBar(
+            content: Text(context.l10n.translate('auth_privacy_open_failed')),
+          ),
         );
       }
     }

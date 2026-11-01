@@ -7,6 +7,7 @@ import '../../domain/usecases/sign_in_google_usecase.dart';
 import '../../domain/usecases/sign_out_usecase.dart';
 import '../../domain/usecases/update_profile_usecase.dart';
 import '../../../../core/entities/explorer_profile.dart';
+import '../../../../core/errors/failures.dart';
 import 'auth_state.dart';
 
 /// One instance app-wide: the router's refresh stream and the widget tree
@@ -45,11 +46,21 @@ class AuthCubit extends Cubit<AuthState> {
     );
   }
 
+  /// The state after a failed call. Backing out of the Google account window
+  /// is the user's own choice, so it returns to the sign-in form with no
+  /// message.
+  AuthState _failedState(Failure failure) {
+    final reason =
+        failure is AuthFailure ? failure.reason : AuthFailureReason.unknown;
+    if (reason == AuthFailureReason.cancelled) return const Unauthenticated();
+    return AuthError(failure.message, reason: reason);
+  }
+
   Future<void> signInWithEmail(String email) async {
     emit(const AuthLoading());
     final result = await _signInEmail(email);
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
+      (failure) => emit(_failedState(failure)),
       (_) => emit(AuthOtpSent(email)),
     );
   }
@@ -58,7 +69,7 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthLoading());
     final result = await _verifyOtp(smsCode);
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
+      (failure) => emit(_failedState(failure)),
       (profile) => emit(Authenticated(profile)),
     );
   }
@@ -67,7 +78,7 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthLoading());
     final result = await _signInGoogle();
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
+      (failure) => emit(_failedState(failure)),
       (profile) => emit(Authenticated(profile)),
     );
   }
@@ -76,7 +87,7 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthLoading());
     final result = await _signOut();
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
+      (failure) => emit(_failedState(failure)),
       (_) => emit(const Unauthenticated()),
     );
   }
@@ -85,7 +96,7 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthLoading());
     final result = await _updateProfile(profile);
     result.fold(
-      (failure) => emit(AuthError(failure.message)),
+      (failure) => emit(_failedState(failure)),
       (updatedProfile) => emit(Authenticated(updatedProfile)),
     );
   }

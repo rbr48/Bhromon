@@ -174,16 +174,7 @@ class AuthRepositoryImpl implements IAuthRepository {
         userCredential = await _auth.signInWithPopup(googleProvider);
       } else {
         await _initGoogleSignIn();
-        final GoogleSignInAccount googleUser;
-        try {
-          googleUser = await _googleSignIn.authenticate();
-        } on GoogleSignInException catch (e) {
-          final message = googleSignInFailureMessage(e);
-          if (message != null) {
-            return Left(AuthFailure(message));
-          }
-          rethrow;
-        }
+        final googleUser = await _googleSignIn.authenticate();
         final credential = GoogleAuthProvider.credential(
           idToken: googleUser.authentication.idToken,
         );
@@ -191,18 +182,48 @@ class AuthRepositoryImpl implements IAuthRepository {
       }
       final user = userCredential.user;
       if (user == null) {
-        return const Left(
-            AuthFailure('Google Sign-In failed: No user returned'));
+        logWarning('AuthRepository: Google sign-in returned no user');
+        return const Left(AuthFailure('Google sign-in returned no user'));
       }
       return await _syncUserWithFirestore(user);
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'popup-closed-by-user') {
-        return const Left(AuthFailure('Google Sign-In was cancelled.'));
-      }
-      return Left(AuthFailure(e.message ?? 'Google Sign-In failed'));
-    } catch (e) {
-      return Left(AuthFailure(e.toString()));
+    } on GoogleSignInException catch (e, stack) {
+      return Left(_googleSignInFailure(e, stack, googleSignInFailureReason(e)));
+    } on FirebaseAuthException catch (e, stack) {
+      return Left(_googleSignInFailure(e, stack, _firebaseAuthReason(e.code)));
+    } catch (e, stack) {
+      return Left(_googleSignInFailure(e, stack, AuthFailureReason.unknown));
     }
+  }
+
+  /// Wraps a Google sign-in error for the sign-in screen. The screen words its
+  /// message from [reason], so the raw [error] only goes to the log.
+  AuthFailure _googleSignInFailure(
+    Object error,
+    StackTrace stack,
+    AuthFailureReason reason,
+  ) {
+    if (reason == AuthFailureReason.cancelled) {
+      return AuthFailure('Google sign-in cancelled', reason: reason);
+    }
+    logWarning(
+      'AuthRepository: Google sign-in failed (${reason.name})',
+      error,
+      stack,
+    );
+    return AuthFailure('Google sign-in failed', reason: reason);
+  }
+
+  /// The reason for a Firebase Auth error code from a Google sign-in.
+  AuthFailureReason _firebaseAuthReason(String code) {
+    // The user closed the account window, or a newer sign-in replaced it.
+    if (code == 'popup-closed-by-user' || code == 'cancelled-popup-request') {
+      return AuthFailureReason.cancelled;
+    }
+    return switch (code) {
+      'popup-blocked' => AuthFailureReason.popupBlocked,
+      'network-request-failed' => AuthFailureReason.network,
+      _ => AuthFailureReason.unknown,
+    };
   }
 
   @override
