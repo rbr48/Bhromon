@@ -13,6 +13,8 @@ Future<void> downloadWebFile(Uint8List bytes, String filename) async {
   final anchor = web.document.createElement('a') as web.HTMLAnchorElement
     ..href = url
     ..download = filename
+    ..target = '_blank'
+    ..rel = 'noopener noreferrer'
     ..style.display = 'none';
   web.document.body?.appendChild(anchor);
   anchor.click();
