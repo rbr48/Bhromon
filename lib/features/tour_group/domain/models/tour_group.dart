@@ -293,6 +293,7 @@ class TourGroup {
     this.returnHome = true,
     this.fundBudget = const FundBudget(),
     this.kind = GroupKind.tour,
+    this.preset,
     this.emergencyContacts = const [],
   });
 

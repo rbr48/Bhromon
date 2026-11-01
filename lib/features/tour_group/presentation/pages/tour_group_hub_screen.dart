@@ -1919,8 +1919,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                               ),
                           ],
                           onChanged: (v) {
-                            if (v != null)
+                            if (v != null) {
                               setDialogState(() => familyCount = v);
+                            }
                           },
                         ),
                     ],
