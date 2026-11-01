@@ -621,6 +621,11 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
              get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') == 'office';
     }
+    // A household is a family circle that is not an office or team. Dependents, shared
+    // shopping and family dates are for households only.
+    function isHouseholdTour(tId) {
+      return isFamilyTour(tId) && !isOfficeTour(tId);
+    }
 
     // A family date: a birthday, bill, school or medicine time. Days are YYYY-MM-DD
     // strings, and the reminder days are 0 to 30 (the app offers a few of them).
@@ -769,14 +774,14 @@ service cloud.firestore {
       // removes them.
       match /dependents/{dependentId} {
         allow read: if isActiveMember(tourId);
-        allow create: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+        allow create: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.parentEmail == tourUserEmail() &&
                          validDependent(request.resource.data);
-        allow update: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+        allow update: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
                          resource.data.parentEmail == tourUserEmail() &&
                          request.resource.data.parentEmail == resource.data.parentEmail &&
                          validDependent(request.resource.data);
-        allow delete: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+        allow delete: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
                          resource.data.parentEmail == tourUserEmail();
       }
 
@@ -785,10 +790,10 @@ service cloud.firestore {
       // Editing and removing are for the creator or an admin.
       match /family_tasks/{taskId} {
         allow read: if isActiveMember(tourId);
-        allow create: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+        allow create: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.createdByEmail == tourUserEmail() &&
                          validFamilyTask(request.resource.data);
-        allow update: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+        allow update: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['done', 'doneByEmail']) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
@@ -796,11 +801,11 @@ service cloud.firestore {
                             ? request.resource.data.get('doneByEmail', null) == tourUserEmail()
                             : request.resource.data.get('doneByEmail', null) == null) &&
                          validFamilyTask(request.resource.data);
-        allow update: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+        allow update: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail()) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
                          validFamilyTask(request.resource.data);
-        allow delete: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+        allow delete: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
       }
 
@@ -809,14 +814,14 @@ service cloud.firestore {
       // nextOn and remindOn on with admin rights, so they can change under the rules.
       match /family_dates/{dateId} {
         allow read: if isActiveMember(tourId);
-        allow create: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+        allow create: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.createdByEmail == tourUserEmail() &&
                          validFamilyDate(request.resource.data);
-        allow update: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+        allow update: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail()) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
                          validFamilyDate(request.resource.data);
-        allow delete: if isFamilyTour(tourId) && isActiveMember(tourId) &&
+        allow delete: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
       }
 

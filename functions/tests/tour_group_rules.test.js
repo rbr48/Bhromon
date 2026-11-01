@@ -361,6 +361,28 @@ describe('Tour Group Firestore rules', () => {
       });
       await assertSucceeds(updateDoc(doc(db('member'), 'tours', OFFICE, 'notices', 'n2'), { ackBy: arrayUnion(people.member.email) }));
     });
+
+    test('an office keeps no household records; a household circle keeps them', async () => {
+      const HOUSE = 'house1';
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        await setDoc(doc(f, 'tours', HOUSE), { name: 'Rahman family', kind: 'family', ownerEmail: people.owner.email, ownerUid: people.owner.uid, inviteCode: 'HOUSECD1' });
+        await setDoc(doc(f, 'memberships', `${HOUSE}__${people.member.email}`), { tourId: HOUSE, email: people.member.email, role: 'member', status: 'active', displayName: people.member.email });
+      });
+      const dependent = { name: 'Child', relation: 'son', parentEmail: people.member.email, countedInFamily: true };
+      const task = { title: 'Rice', kind: 'shopping', done: false, assigneeEmail: null, doneByEmail: null, createdByEmail: people.member.email };
+      const date = { title: 'Birthday', kind: 'birthday', recurrence: 'yearly', startOn: '2026-11-01', nextOn: '2026-11-01', remindDays: 3, remindOn: null, note: '', createdByEmail: people.member.email };
+
+      await assertFails(setDoc(doc(db('member'), 'tours', OFFICE, 'dependents', 'd1'), dependent));
+      await assertFails(setDoc(doc(db('admin'), 'tours', OFFICE, 'dependents', 'd2'), { ...dependent, parentEmail: people.admin.email }));
+      await assertFails(addDoc(collection(db('member'), 'tours', OFFICE, 'family_tasks'), task));
+      await assertFails(addDoc(collection(db('admin'), 'tours', OFFICE, 'family_tasks'), { ...task, createdByEmail: people.admin.email }));
+      await assertFails(addDoc(collection(db('member'), 'tours', OFFICE, 'family_dates'), date));
+
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', HOUSE, 'dependents', 'd1'), dependent));
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', HOUSE, 'family_tasks'), task));
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', HOUSE, 'family_dates'), date));
+    });
   });
 
   describe('feed', () => {
