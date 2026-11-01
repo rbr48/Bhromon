@@ -131,7 +131,7 @@ class _ActionTile extends StatelessWidget {
 }
 
 /// Where a new attachment comes from.
-enum AttachSource { photos, camera, video, location }
+enum AttachSource { photos, camera, video, document, location }
 
 Future<AttachSource?> showAttachSheet(BuildContext context) {
   final l10n = context.l10n;
@@ -163,6 +163,13 @@ Future<AttachSource?> showAttachSheet(BuildContext context) {
             title: Text(l10n.translate('chan_attach_video'),
                 style: const TextStyle(color: Colors.white)),
             onTap: () => Navigator.pop(context, AttachSource.video),
+          ),
+          ListTile(
+            leading: const Icon(Icons.insert_drive_file_outlined,
+                color: AppColors.mintGreen),
+            title: Text(l10n.translate('chan_attach_document'),
+                style: const TextStyle(color: Colors.white)),
+            onTap: () => Navigator.pop(context, AttachSource.document),
           ),
           ListTile(
             leading: const Icon(Icons.location_on_outlined,

@@ -38,6 +38,7 @@ ChannelMessage _message({
   double? locationLatitude,
   double? locationLongitude,
   String? locationTitle,
+  List<ChannelAttachment> attachments = const [],
 }) {
   return ChannelMessage(
     isPending: isPending,
@@ -53,6 +54,7 @@ ChannelMessage _message({
     expenseAmountPaisa: expenseAmountPaisa,
     expenseTitle: 'Dinner',
     reactions: reactions,
+    attachments: attachments,
     locationLatitude: locationLatitude,
     locationLongitude: locationLongitude,
     locationTitle: locationTitle,
@@ -87,6 +89,24 @@ void main() {
       expect(find.text('Rahim'), findsOneWidget);
       expect(find.text('Seat B2'), findsOneWidget);
       expect(find.textContaining('Gate 2'), findsOneWidget);
+    });
+
+    testWidgets('shows document bubble when message has file attachments',
+        (tester) async {
+      await _pump(
+          tester,
+          _bubble(_message(
+            text: 'Here is the tickets',
+            attachments: const [
+              ChannelAttachment(
+                url: 'https://media.example/tickets.pdf',
+                isFile: true,
+                fileName: 'tickets.pdf',
+                fileSizeBytes: 204800,
+              ),
+            ],
+          )));
+      expect(find.text('tickets.pdf'), findsOneWidget);
     });
 
     testWidgets('a message still waiting for the server shows a clock',

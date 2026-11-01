@@ -6,12 +6,19 @@ import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
 import '../../../chat/presentation/widgets/voice_message_recorder.dart';
 
-/// A photo or video picked for the next message, not yet uploaded.
+/// A photo, video, or file picked for the next message, not yet uploaded.
 class PendingAttachment {
   final XFile file;
   final bool isVideo;
+  final bool isDocument;
+  final int? fileSizeBytes;
 
-  const PendingAttachment({required this.file, required this.isVideo});
+  const PendingAttachment({
+    required this.file,
+    this.isVideo = false,
+    this.isDocument = false,
+    this.fileSizeBytes,
+  });
 }
 
 /// One line of the mention list. [label] is what goes after the "@".
@@ -272,7 +279,11 @@ class _PendingRow extends StatelessWidget {
           final item = pending[i];
           return Chip(
             avatar: Icon(
-              item.isVideo ? Icons.videocam : Icons.photo,
+              item.isVideo
+                  ? Icons.videocam
+                  : item.isDocument
+                      ? Icons.insert_drive_file
+                      : Icons.photo,
               size: 16,
               color: AppColors.mintGreen,
             ),

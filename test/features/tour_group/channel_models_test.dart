@@ -74,6 +74,45 @@ void main() {
       expect(m.attachments.last.isVideo, isTrue);
     });
 
+    test(
+        'reads document file attachments and separates visual vs file attachments',
+        () {
+      final m = ChannelMessage.fromMap('doc1', {
+        'text': 'Here is the tour plan',
+        'timestamp': DateTime(2026, 1, 2),
+        'attachments': [
+          {'url': 'https://media.example/a.jpg', 'kind': 'image'},
+          {
+            'url': 'https://media.example/plan.pdf',
+            'kind': 'file',
+            'fileName': 'tour_plan.pdf',
+            'fileSizeBytes': 1048576,
+          },
+        ],
+      });
+      expect(m.visualAttachments.length, 1);
+      expect(m.visualAttachments.first.url, 'https://media.example/a.jpg');
+      expect(m.fileAttachments.length, 1);
+      expect(m.fileAttachments.first.isFile, isTrue);
+      expect(m.fileAttachments.first.fileName, 'tour_plan.pdf');
+      expect(m.fileAttachments.first.fileSizeBytes, 1048576);
+
+      final map = m.fileAttachments.first.toMap();
+      expect(map['kind'], 'file');
+      expect(map['fileName'], 'tour_plan.pdf');
+      expect(map['fileSizeBytes'], 1048576);
+
+      final reply = ChannelReply.quoting(ChannelMessage(
+        id: 'msg1',
+        senderEmail: 'a@b.com',
+        senderName: 'Rahim',
+        text: '',
+        timestamp: DateTime.now(),
+        attachments: [m.fileAttachments.first],
+      ));
+      expect(reply.text, '📄 tour_plan.pdf');
+    });
+
     test('an unknown kind is read as an ordinary message', () {
       final m = ChannelMessage.fromMap('k', {
         'kind': 'hologram',
