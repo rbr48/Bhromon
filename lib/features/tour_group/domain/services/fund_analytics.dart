@@ -49,11 +49,25 @@ const List<String> kOfficeExpenseCategories = [
 List<String> expenseCategoriesFor({required bool family}) =>
     family ? kFamilyExpenseCategories : kExpenseCategories;
 
-/// The categories a group's ledger offers. An office or team has its own list;
-/// family circles and trips keep theirs. No group means a trip.
+/// The categories a campus, class or batch offers: food, transport, tickets,
+/// activities and course costs. The names come from the trip and family lists.
+const List<String> kCampusExpenseCategories = [
+  'Food',
+  'Transport',
+  'Tickets',
+  'Activities',
+  'Shopping',
+  'Medical',
+  'Gifts',
+  'Others',
+];
+
+/// The categories a group's ledger offers. An office and a campus each have their
+/// own list; family circles and trips keep theirs. No group means a trip.
 List<String> expenseCategoriesForGroup(TourGroup? group) {
   if (group == null) return kExpenseCategories;
   if (group.isOffice) return kOfficeExpenseCategories;
+  if (group.isCampus) return kCampusExpenseCategories;
   return expenseCategoriesFor(family: group.isFamily);
 }
 
@@ -76,9 +90,11 @@ String splitCategoryFor({
   required bool family,
   required String channelId,
   bool office = false,
+  bool campus = false,
 }) {
   if (channelId != 'food') return 'Others';
   if (office) return 'Dining';
+  if (campus) return 'Food';
   return family ? 'Groceries' : 'Food';
 }
 

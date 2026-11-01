@@ -220,7 +220,7 @@ class _ComposerState extends State<_Composer> {
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold)),
-            if (e == null && !(widget.group?.isOffice ?? false)) ...[
+            if (e == null && !(widget.group?.isManaged ?? false)) ...[
               const SizedBox(height: 10),
               Text(l10n.translate('notice_templates'),
                   style: const TextStyle(color: Colors.white70, fontSize: 12)),

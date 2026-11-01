@@ -1606,7 +1606,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 l10n.translate('fund_add_expense'),
                 l10n.translate(group?.isOffice == true
                     ? 'office_add_expense_sub'
-                    : 'fund_add_expense_sub'),
+                    : group?.isCampus == true
+                        ? 'campus_add_expense_sub'
+                        : 'fund_add_expense_sub'),
                 _editExpense),
             if (group?.isOffice == true)
               item(
@@ -1616,6 +1618,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   l10n.translate('ledger_quick_lunch_sub'),
                   () => _editExpense(null, false,
                       l10n.translate('ledger_quick_lunch'), 'Dining')),
+            if (group?.isCampus == true)
+              item(
+                  Icons.restaurant_rounded,
+                  AppColors.gold,
+                  l10n.translate('campus_quick_snacks'),
+                  l10n.translate('campus_quick_snacks_sub'),
+                  () => _editExpense(null, false,
+                      l10n.translate('campus_quick_snacks'), 'Food')),
             item(
                 Icons.savings_rounded,
                 AppColors.gold,
@@ -1787,7 +1797,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       headcount: _headcount,
       totalDays: group.totalDays,
       family: group.isFamily,
-      office: group.isOffice,
+      categories: expenseCategoriesForGroup(group),
     );
     if (budget == null || !mounted) return;
     await _run(() => _repository.saveFundBudget(widget.tourId, budget),

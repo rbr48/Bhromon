@@ -1,3 +1,4 @@
+import 'package:bhromon/features/tour_group/domain/models/channel_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/services/fund_analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,6 +58,34 @@ void main() {
       expect(expenseCategoriesForGroup(family), contains('Rent'));
       expect(expenseCategoriesForGroup(trip), kExpenseCategories);
       expect(expenseCategoriesForGroup(null), kExpenseCategories);
+    });
+
+    test('a campus batch is managed and has its own categories', () {
+      final campus =
+          TourGroup.fromMap('g5', _circle(kind: 'family', preset: 'campus'));
+      final family = TourGroup.fromMap('g2', _circle(kind: 'family'));
+
+      expect(campus.isCampus, isTrue);
+      expect(campus.isOffice, isFalse);
+      expect(campus.isManaged, isTrue);
+      expect(family.isManaged, isFalse);
+      expect(campus.toMap()['preset'], 'campus');
+      expect(expenseCategoriesForGroup(campus), kCampusExpenseCategories);
+      expect(expenseCategoriesForGroup(campus), contains('Food'));
+      expect(expenseCategoriesForGroup(campus), isNot(contains('Rent')));
+    });
+
+    test('a campus splits food under Food and has its own channels', () {
+      expect(
+        splitCategoryFor(family: true, channelId: 'food', campus: true),
+        'Food',
+      );
+      expect(
+        builtInChannelIdsFor(family: true, campus: true),
+        kCampusChannelIds,
+      );
+      expect(kCampusChannelIds, contains('food'));
+      expect(kCampusChannelIds, contains(kBuiltInVoiceChannelId));
     });
   });
 }

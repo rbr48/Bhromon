@@ -616,15 +616,15 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
              get(/databases/$(database)/documents/tours/$(tId)).data.get('kind', 'tour') == 'family';
     }
-    // An office or team is a family-style circle where only admins write notices.
-    function isOfficeTour(tId) {
+    // An office or a campus is a family-style circle where only admins write notices.
+    function isManagedTour(tId) {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
-             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') == 'office';
+             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus'];
     }
-    // A household is a family circle that is not an office or team. Dependents, shared
-    // shopping and family dates are for households only.
+    // A household is a family circle that is not an office or a campus. Dependents,
+    // shared shopping and family dates are for households only.
     function isHouseholdTour(tId) {
-      return isFamilyTour(tId) && !isOfficeTour(tId);
+      return isFamilyTour(tId) && !isManagedTour(tId);
     }
 
     // A family date: a birthday, bill, school or medicine time. Days are YYYY-MM-DD
@@ -757,11 +757,11 @@ service cloud.firestore {
       match /notices/{noticeId} {
         allow read: if isActiveMember(tourId);
         allow create: if isTourAdmin(tourId) ||
-                         (isFamilyTour(tourId) && !isOfficeTour(tourId) && isActiveMember(tourId) &&
+                         (isFamilyTour(tourId) && !isManagedTour(tourId) && isActiveMember(tourId) &&
                           request.resource.data.authorEmail == tourUserEmail());
         allow update: if isTourAdmin(tourId);
         allow delete: if isTourAdmin(tourId) ||
-                         (isFamilyTour(tourId) && !isOfficeTour(tourId) && isActiveMember(tourId) &&
+                         (isFamilyTour(tourId) && !isManagedTour(tourId) && isActiveMember(tourId) &&
                           resource.data.get('authorEmail', '') == tourUserEmail());
         allow update: if isActiveMember(tourId) &&
                          request.resource.data.diff(resource.data).affectedKeys()

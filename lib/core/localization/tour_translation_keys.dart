@@ -1855,6 +1855,23 @@ class TourTranslationKeys {
       'office_add_expense_sub': 'Lunch, tea, bills, transport and more',
       'ledger_quick_lunch': 'Lunch or tea',
       'ledger_quick_lunch_sub': 'Shared between everyone, paid by you',
+      'hub_create_campus': 'Create a campus or batch',
+      'hub_campus_title': 'New campus or batch',
+      'hub_campus_intro':
+          'A private space for a class, batch or club: routine notices that only admins post, acknowledgements, chat channels, shared notes and files, the event fund and games. It has no trip dates or travel tools.',
+      'hub_campus_name_hint': 'Batch or club name (e.g. CSE 2026 Batch)',
+      'hub_campus_created':
+          '"{name}" is ready. Share the code so your batch can join.',
+      'hub_campus_badge': 'Campus',
+      'hub_leave_campus_title': 'Leave this batch?',
+      'hub_delete_campus_title': 'Delete this batch?',
+      'hub_delete_campus_body':
+          '{name}, its messages, notices and files will be deleted for everyone. This cannot be undone.',
+      'campus_channel_food': 'Canteen & tea',
+      'campus_channel_events': 'Events & picnic',
+      'campus_add_expense_sub': 'Snacks, books, printing, events and more',
+      'campus_quick_snacks': 'Snacks or tea',
+      'campus_quick_snacks_sub': 'Shared between everyone, paid by you',
       'pdf_export_admin_only':
           'Only the owner or an admin can export the whole tour.',
       'notice_post_failed':
@@ -3867,6 +3884,23 @@ class TourTranslationKeys {
       'office_add_expense_sub': 'লাঞ্চ, চা, বিল, যাতায়াত ইত্যাদি',
       'ledger_quick_lunch': 'লাঞ্চ বা চা',
       'ledger_quick_lunch_sub': 'সবার মধ্যে ভাগ হবে, আপনি পরিশোধ করেছেন',
+      'hub_create_campus': 'ক্যাম্পাস বা ব্যাচের গ্রুপ তৈরি করুন',
+      'hub_campus_title': 'নতুন ক্যাম্পাস বা ব্যাচ',
+      'hub_campus_intro':
+          'একটি ক্লাস, ব্যাচ বা ক্লাবের জন্য ব্যক্তিগত জায়গা: শুধু অ্যাডমিনের দেওয়া রুটিন নোটিশ, নিশ্চিতকরণ, চ্যাট চ্যানেল, নোট ও ফাইল, ইভেন্ট ফান্ড ও গেম। এখানে ভ্রমণের তারিখ বা ভ্রমণের টুল নেই।',
+      'hub_campus_name_hint': 'ব্যাচ বা ক্লাবের নাম (যেমন: CSE ২০২৬ ব্যাচ)',
+      'hub_campus_created':
+          '"{name}" তৈরি হয়েছে। কোড শেয়ার করুন, যাতে ব্যাচের সবাই যুক্ত হতে পারে।',
+      'hub_campus_badge': 'ক্যাম্পাস',
+      'hub_leave_campus_title': 'এই ব্যাচ ছেড়ে যাবেন?',
+      'hub_delete_campus_title': 'এই ব্যাচ মুছবেন?',
+      'hub_delete_campus_body':
+          '{name}, এর বার্তা, নোটিশ ও ফাইল সবার জন্য মুছে যাবে। এটি ফেরানো যাবে না।',
+      'campus_channel_food': 'ক্যান্টিন ও চা',
+      'campus_channel_events': 'অনুষ্ঠান ও পিকনিক',
+      'campus_add_expense_sub': 'নাস্তা, বই, প্রিন্টিং, অনুষ্ঠান ইত্যাদি',
+      'campus_quick_snacks': 'নাস্তা বা চা',
+      'campus_quick_snacks_sub': 'সবার মধ্যে ভাগ হবে, আপনি পরিশোধ করেছেন',
       'pdf_export_admin_only':
           'শুধু মালিক বা অ্যাডমিন পুরো ট্যুরের PDF নিতে পারেন।',
       'notice_post_failed':

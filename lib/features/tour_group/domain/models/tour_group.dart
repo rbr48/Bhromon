@@ -303,8 +303,25 @@ class TourGroup {
   /// The preset of an office or team. See [preset].
   static const String officePreset = 'office';
 
+  /// The preset of a campus, class, batch or club. See [preset].
+  static const String campusPreset = 'campus';
+
+  /// The preset a stored value names, or null when it names none.
+  static String? presetFrom(Object? value) {
+    if (value == officePreset) return officePreset;
+    if (value == campusPreset) return campusPreset;
+    return null;
+  }
+
   /// An office or team: a family-style circle where only admins write notices.
   bool get isOffice => preset == officePreset;
+
+  /// A campus, class, batch or club: the office rules, with campus copy.
+  bool get isCampus => preset == campusPreset;
+
+  /// An office or a campus: admins write the notices, and the household tiles and
+  /// records do not apply.
+  bool get isManaged => isOffice || isCampus;
 
   /// The id the origin city has in leg keys.
   static const String originId = 'origin';
@@ -646,7 +663,7 @@ class TourGroup {
       legPlans: readLegPlans(map['legPlans']),
       returnHome: map['returnHome'] as bool? ?? true,
       kind: GroupKind.fromString(map['kind']?.toString()),
-      preset: map['preset'] == officePreset ? officePreset : null,
+      preset: presetFrom(map['preset']),
       emergencyContacts: parseEmergencyContacts(map['emergencyContacts']),
       fundBudget: FundBudget.fromMap(map['fundBudget']),
     );
