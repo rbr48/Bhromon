@@ -138,353 +138,135 @@ document.addEventListener('DOMContentLoaded', () => {
     return result;
   }
 
-  // 5. Interactive Map & Budget Data
-  const mapData = {
-    sajek: {
-      en: {
-        name: "Sajek Valley",
-        div: "Rangamati, Chattogram",
-        insights: [
-          "<strong>Offline Vault:</strong> Offline-first vector maps are 100% available without internet coverage.",
-          "<strong>Best Stay:</strong> Chander Gari transport combined with local cottages offers best value.",
-          "<strong>Network:</strong> Teletalk and Robi provide limited 3G signal; GPS is active."
-        ],
-        sos: "<i class=\"fa-solid fa-circle-check\"></i> High Coverage (Army Help Desk)",
-        badge: "<i class=\"fa-solid fa-shield-halved\"></i> Offline Verified",
-        budgetRateMin: 1500,
-        budgetRateMax: 2000,
-        reliability: "96%",
-        budgetLabel: "Estimated Budget",
-        reliabilityLabel: "Reliability Index",
-        insightsHeader: "Key Insights",
-        sosLabel: "SOS Rescue Hub Coverage:"
-      },
-      bn: {
-        name: "সাজেক ভ্যালি",
-        div: "রাঙ্গামাটি, চট্টগ্রাম",
-        insights: [
-          "<strong>অফলাইন ভল্ট:</strong> ইন্টারনেট সংযোগ ছাড়াও ১০০% অফলাইন ভেক্টর ম্যাপ উপলব্ধ থাকবে।",
-          "<strong>থাকার সুবিধা:</strong> চাঁদের গাড়ি এবং স্থানীয় কটেজের প্যাকেজে সেরা ডিল পাওয়া যায়।",
-          "<strong>নেটওয়ার্ক:</strong> টেলিটক এবং রবিতে সীমিত ৩জি সিগন্যাল; জিপিএস সম্পূর্ণ সচল।"
-        ],
-        sos: "<i class=\"fa-solid fa-circle-check\"></i> হাই কভারেজ (সেনাবাহিনী হেল্প ডেস্ক)",
-        badge: "<i class=\"fa-solid fa-shield-halved\"></i> অফলাইন ভেরিফাইড",
-        budgetRateMin: 1500,
-        budgetRateMax: 2000,
-        reliability: "৯৬%",
-        budgetLabel: "আনুমানিক বাজেট",
-        reliabilityLabel: "নির্ভরযোগ্যতা সূচক",
-        insightsHeader: "মূল তথ্যসমূহ",
-        sosLabel: "SOS উদ্ধার কেন্দ্র কভারেজ:"
-      }
-    },
-    sundarbans: {
-      en: {
-        name: "Sundarbans Eco Tour",
-        div: "Bagerhat/Khulna, Khulna",
-        insights: [
-          "<strong>Offline Vault:</strong> Offline vector maps cover all waterways and forest paths.",
-          "<strong>Permission:</strong> Ship/boat operators handle the forest department entry permits.",
-          "<strong>Network:</strong> Signal is completely dead deep in the forest; GPS tracking is active."
-        ],
-        sos: "<i class=\"fa-solid fa-circle-exclamation\" style=\"color:#f59e0b;\"></i> Medium Coverage (Forest Guard SOS)",
-        badge: "<i class=\"fa-solid fa-shield-halved\"></i> Offline Verified",
-        budgetRateMin: 2500,
-        budgetRateMax: 4000,
-        reliability: "92%",
-        budgetLabel: "Estimated Budget",
-        reliabilityLabel: "Reliability Index",
-        insightsHeader: "Key Insights",
-        sosLabel: "SOS Rescue Hub Coverage:"
-      },
-      bn: {
-        name: "সুন্দরবন ইকো ট্যুর",
-        div: "বাগেরহাট/খুলনা, খুলনা",
-        insights: [
-          "<strong>অফলাইন ভল্ট:</strong> অফলাইন ভেক্টর ম্যাপে নদীপথ ও বনের গভীরের পথ অন্তর্ভুক্ত আছে।",
-          "<strong>অনুমতি:</strong> লঞ্চ/বোট অপারেটররাই বন বিভাগের প্রবেশের অনুমতি ও ফি ম্যানেজ করে।",
-          "<strong>নেটওয়ার্ক:</strong> বনের গভীরে নেটওয়ার্ক সম্পূর্ণ অনুপস্থিত; অফলাইন জিপিএস চালু থাকবে।"
-        ],
-        sos: "<i class=\"fa-solid fa-circle-exclamation\" style=\"color:#f59e0b;\"></i> মিডিয়াম কাভারেজ (বনরক্ষী উদ্ধার কেন্দ্র)",
-        badge: "<i class=\"fa-solid fa-shield-halved\"></i> অফলাইন ভেরিফাইড",
-        budgetRateMin: 2500,
-        budgetRateMax: 4000,
-        reliability: "৯২%",
-        budgetLabel: "আনুমানিক বাজেট",
-        reliabilityLabel: "নির্ভরযোগ্যতা সূচক",
-        insightsHeader: "মূল তথ্যসমূহ",
-        sosLabel: "SOS উদ্ধার কেন্দ্র কভারেজ:"
-      }
-    },
-    sreemangal: {
-      en: {
-        name: "Sreemangal",
-        div: "Moulvibazar, Sylhet",
-        insights: [
-          "<strong>Offline Vault:</strong> Tea estate trails and Lawachara reserve paths are fully offline cached.",
-          "<strong>Transport:</strong> Renting a local CNG driver for the day is highly recommended.",
-          "<strong>Network:</strong> Grameenphone and Banglalink have strong 4G coverage everywhere."
-        ],
-        sos: "<i class=\"fa-solid fa-circle-check\"></i> High Coverage (Local Tourist Police)",
-        badge: "<i class=\"fa-solid fa-shield-halved\"></i> Offline Verified",
-        budgetRateMin: 1000,
-        budgetRateMax: 1500,
-        reliability: "98%",
-        budgetLabel: "Estimated Budget",
-        reliabilityLabel: "Reliability Index",
-        insightsHeader: "Key Insights",
-        sosLabel: "SOS Rescue Hub Coverage:"
-      },
-      bn: {
-        name: "শ্রীমঙ্গল",
-        div: "মৌলভীবাজার, সিলেট",
-        insights: [
-          "<strong>অফলাইন ভল্ট:</strong> চা বাগান ও লাউয়াছড়া জাতীয় উদ্যানের অফলাইন ট্রেইল ডাউনলোডযোগ্য।",
-          "<strong>যাতায়াত:</strong> সারাদিনের জন্য স্থানীয় সিএনজি ভাড়া করাই সবচেয়ে সাশ্রয়ী মাধ্যম।",
-          "<strong>নেটওয়ার্ক:</strong> গ্রামীণফোন ও বাংলালিংকের শক্তিশালী ৪জি কভারেজ প্রায় সর্বত্র রয়েছে।"
-        ],
-        sos: "<i class=\"fa-solid fa-circle-check\"></i> হাই কভারেজ (ট্যুরিস্ট পুলিশ টিম)",
-        badge: "<i class=\"fa-solid fa-shield-halved\"></i> অফলাইন ভেরিফাইড",
-        budgetRateMin: 1000,
-        budgetRateMax: 1500,
-        reliability: "৯৮%",
-        budgetLabel: "আনুমানিক বাজেট",
-        reliabilityLabel: "নির্ভরযোগ্যতা সূচক",
-        insightsHeader: "মূল তথ্যসমূহ",
-        sosLabel: "SOS উদ্ধার কেন্দ্র কভারেজ:"
-      }
-    }
-  };
-
-  function updateDetailsCard() {
-    const detailsWrap = document.getElementById('demo-details-content');
-    if (!detailsWrap) return;
-    
-    // Smooth transition fade-out
-    detailsWrap.classList.add('details-fade-out');
-    
-    setTimeout(() => {
-      const data = mapData[activeLocKey][currentLang];
-      
-      // Calculate dynamic budget based on day slider
-      const minBudget = data.budgetRateMin * activeDays;
-      const maxBudget = data.budgetRateMax * activeDays;
-      let budgetText = '';
-      
-      if (currentLang === 'en') {
-        budgetText = `৳${minBudget.toLocaleString()} - ৳${maxBudget.toLocaleString()}`;
-        document.getElementById('slider-days').innerText = `${activeDays} Day${activeDays > 1 ? 's' : ''}`;
-        document.getElementById('slider-label').innerText = 'Trip Duration';
-      } else {
-        budgetText = `৳${toBengaliNumbers(minBudget.toLocaleString())} - ৳${toBengaliNumbers(maxBudget.toLocaleString())}`;
-        document.getElementById('slider-days').innerText = `${toBengaliNumbers(activeDays)} দিন`;
-        document.getElementById('slider-label').innerText = 'ভ্রমণকাল';
-      }
-      
-      document.getElementById('loc-name').innerText = data.name;
-      document.getElementById('loc-div').innerText = data.div;
-      document.getElementById('loc-budget').innerText = budgetText;
-      document.getElementById('loc-reliability').innerText = data.reliability;
-      document.getElementById('loc-sos').innerHTML = data.sos;
-      document.getElementById('loc-badge').innerHTML = data.badge;
-      
-      // Labels translations
-      document.getElementById('loc-budget-label').innerText = data.budgetLabel;
-      document.getElementById('loc-reliability-label').innerText = data.reliabilityLabel;
-      document.getElementById('loc-insights-header').innerText = data.insightsHeader;
-      document.getElementById('loc-sos-label').innerText = data.sosLabel;
-      
-      // Insights list
-      const list = document.getElementById('loc-insights');
-      list.innerHTML = '';
-      data.insights.forEach(ins => {
-        const li = document.createElement('li');
-        li.innerHTML = ins;
-        list.appendChild(li);
-      });
-      
-      // Fade back in
-      detailsWrap.classList.remove('details-fade-out');
-    }, 150);
-  }
-
-  // Hotspot Click Handlers
-  const hotspots = document.querySelectorAll('.map-hotspot');
-  hotspots.forEach(spot => {
-    spot.addEventListener('click', () => {
-      hotspots.forEach(s => s.classList.remove('active'));
-      spot.classList.add('active');
-      activeLocKey = spot.getAttribute('data-loc');
-      updateDetailsCard();
-    });
-  });
-
-  // Days Slider Input Handler
-  const daySlider = document.getElementById('day-slider');
-  if (daySlider) {
-    daySlider.addEventListener('input', (e) => {
-      activeDays = parseInt(e.target.value);
-      updateDetailsCard();
-    });
-  }
-
-  // 6. Interactive Explorer Tiers Data
+  // 6. Trust tiers data (the five tiers in the app, lowest first)
   const tierData = {
     unverified: {
       en: {
-        badgeName: "Unverified",
+        badgeName: "New Explorer",
         badgeIcon: "fa-user-xmark",
         badgeColor: "#64748b",
-        reqXp: "0 XP Required",
-        title: "Unverified Explorer",
-        desc: "The default tier for all newly registered travelers. Users can read guides, but their contributions require community review before appearing on the directory.",
-        benefitsTitle: "Capabilities & Restrictions",
+        reqXp: "Tier 1 of 5",
+        title: "New Explorer",
+        desc: "Where every member starts. Join a group with an invite code and take part in its chats, notices and calls.",
+        benefitsTitle: "Where to see it",
         benefits: [
-          "Read community TripLogs",
-          "Save maps offline",
-          "<span style='color:#ef4444;'>No direct verified posts</span>",
-          "<span style='color:#ef4444;'>Decay protection inactive</span>"
+          "Shown on the trust dashboard in the app"
         ]
       },
       bn: {
-        badgeName: "আনভেরিফাইড",
+        badgeName: "নতুন পথিক",
         badgeIcon: "fa-user-xmark",
         badgeColor: "#64748b",
-        reqXp: "০ এক্সপি (XP) প্রয়োজন",
-        title: "আনভেরিফাইড এক্সপ্লোরার",
-        desc: "সব নতুন নিবন্ধিত ভ্রমণকারীদের জন্য ডিফল্ট স্তর। ব্যবহারকারীরা গাইড পড়তে পারেন, তবে তাদের কন্টেন্ট পাবলিক ডিরেক্টরিতে দেখানোর আগে রিভিউ প্রয়োজন হয়।",
-        benefitsTitle: "অনুমতি ও সীমাবদ্ধতা",
+        reqXp: "স্তর ১ / ৫",
+        title: "নতুন পথিক",
+        desc: "প্রতিটি সদস্যের যাত্রা এখান থেকে শুরু। আমন্ত্রণ কোড দিয়ে একটি গ্রুপে যোগ দিন, তারপর তার চ্যাট, নোটিশ ও কলে অংশ নিন।",
+        benefitsTitle: "কোথায় দেখবেন",
         benefits: [
-          "কমিউনিটি ট্রিপলগ পড়তে পারবেন",
-          "অফলাইন ম্যাপ সেভ করতে পারবেন",
-          "<span style='color:#ef4444;'>ভেরিফাইড কন্টেন্ট পোস্ট করতে পারবেন না</span>",
-          "<span style='color:#ef4444;'>ডিকে প্রোটেকশন নিষ্ক্রিয়</span>"
+          "অ্যাপের ট্রাস্ট ড্যাশবোর্ডে দেখা যায়"
         ]
       }
     },
-    explorer: {
+    community: {
       en: {
-        badgeName: "Explorer",
-        badgeIcon: "fa-shoe-prints",
-        badgeColor: "#b45309", // Bronze
-        reqXp: "50 XP Required",
-        title: "Explorer Tier",
-        desc: "Granted automatically after publishing 3 accepted posts, check-ins, or correct edits. You can post directly to the community feed.",
-        benefitsTitle: "Capabilities",
-        benefits: [
-          "Write and publish TripLogs directly",
-          "Upload vlogs and photo blocks",
-          "Access public division group chats",
-          "Earn trust scores on helpful votes"
-        ]
-      },
-      bn: {
-        badgeName: "এক্সপ্লোরার",
-        badgeIcon: "fa-shoe-prints",
+        badgeName: "Community Explorer",
+        badgeIcon: "fa-person-hiking",
         badgeColor: "#b45309",
-        reqXp: "৫০ এক্সপি (XP) প্রয়োজন",
-        title: "এক্সপ্লোরার লেভেল",
-        desc: "৩টি পোস্ট বা এডিট এপ্রুভ হওয়ার পর এই স্তর লাভ হয়। আপনি সরাসরি কমিউনিটি ফিডে পোস্ট করতে পারবেন।",
-        benefitsTitle: "ফিচার অ্যাক্সেস",
+        reqXp: "Tier 2 of 5",
+        title: "Community Explorer",
+        desc: "The second tier in the app's trust system, for members who have settled into their groups.",
+        benefitsTitle: "Where to see it",
         benefits: [
-          "সরাসরি ট্রিপলগ পোস্ট করার সুবিধা",
-          "ইউটিউব ভ্লগ ও ছবির ব্লক যুক্ত করা",
-          "বিভাগীয় পাবলিক গ্রুপ চ্যাটে যোগ দেওয়া",
-          "হেল্পফুল ভোট পেয়ে রেটিং বাড়ানো"
-        ]
-      }
-    },
-    trusted: {
-      en: {
-        badgeName: "Trusted",
-        badgeIcon: "fa-user-check",
-        badgeColor: "#475569", // Silver
-        reqXp: "100 XP Required",
-        title: "Trusted Explorer",
-        desc: "Earned by keeping a 90%+ helpful ratio on your logs. Trusted explorers can write 'Pro-Tips' and benefit from longer decay grace periods on their guidelines.",
-        benefitsTitle: "Trusted Capabilities",
-        benefits: [
-          "Publish verified Pro-Tips on map spots",
-          "Double weight on helpful votes",
-          "48-hour grace period before budget decay",
-          "Verify and appeal pending local tags"
+          "Shown on the trust dashboard in the app"
         ]
       },
       bn: {
-        badgeName: "ট্রাস্টেড",
-        badgeIcon: "fa-user-check",
-        badgeColor: "#475569",
-        reqXp: "১০০ এক্সপি (XP) প্রয়োজন",
-        title: "ট্রাস্টেড এক্সপ্লোরার",
-        desc: "আপনার কন্টেন্টে ৯০%+ হেল্পফুল ভোট থাকলে এই লেভেল অর্জিত হয়। ট্রাস্টেড ট্রাভেলাররা সরাসরি প্রোপোজালে প্রো-টিপস লিখতে পারেন এবং বাজেটে বড় ডিকে পিরিয়ড পান।",
-        benefitsTitle: "বিশেষ সুবিধা সমূহ",
+        badgeName: "সহযাত্রী",
+        badgeIcon: "fa-person-hiking",
+        badgeColor: "#b45309",
+        reqXp: "স্তর ২ / ৫",
+        title: "সহযাত্রী",
+        desc: "অ্যাপের ট্রাস্ট ব্যবস্থায় দ্বিতীয় স্তর, যারা নিজেদের গ্রুপে থিতু হয়েছেন।",
+        benefitsTitle: "কোথায় দেখবেন",
         benefits: [
-          "ম্যাপ স্পটে ভেরিফাইড প্রো-টিপস রাইটিং",
-          "আপনার ভোটে দ্বিগুণ ভোট কাউন্ট সুবিধা",
-          "বাজেট ডিকে হওয়ার আগে ৪৮ ঘণ্টা গ্রেস টাইম",
-          "পেন্ডিং লোকাল ট্যাগ ও তথ্য রিভিউ করা"
+          "অ্যাপের ট্রাস্ট ড্যাশবোর্ডে দেখা যায়"
+        ]
+      }
+    },
+    verified: {
+      en: {
+        badgeName: "Verified Explorer",
+        badgeIcon: "fa-user-check",
+        badgeColor: "#0ea5e9",
+        reqXp: "Tier 3 of 5",
+        title: "Verified Explorer",
+        desc: "A member whose standing has been checked, in the app's trust system.",
+        benefitsTitle: "Where to see it",
+        benefits: [
+          "Shown on the trust dashboard in the app"
+        ]
+      },
+      bn: {
+        badgeName: "বিশ্বস্ত গাইড",
+        badgeIcon: "fa-user-check",
+        badgeColor: "#0ea5e9",
+        reqXp: "স্তর ৩ / ৫",
+        title: "বিশ্বস্ত গাইড",
+        desc: "অ্যাপের ট্রাস্ট ব্যবস্থায় এমন একজন সদস্য, যার অবস্থান যাচাই করা হয়েছে।",
+        benefitsTitle: "কোথায় দেখবেন",
+        benefits: [
+          "অ্যাপের ট্রাস্ট ড্যাশবোর্ডে দেখা যায়"
+        ]
+      }
+    },
+    regionExpert: {
+      en: {
+        badgeName: "Region Expert",
+        badgeIcon: "fa-map-location-dot",
+        badgeColor: "#eab308",
+        reqXp: "Tier 4 of 5",
+        title: "Region Expert",
+        desc: "A trusted local expert for a region, in the app's trust system.",
+        benefitsTitle: "Where to see it",
+        benefits: [
+          "Shown on the trust dashboard in the app"
+        ]
+      },
+      bn: {
+        badgeName: "স্থানীয় বিশেষজ্ঞ",
+        badgeIcon: "fa-map-location-dot",
+        badgeColor: "#eab308",
+        reqXp: "স্তর ৪ / ৫",
+        title: "স্থানীয় বিশেষজ্ঞ",
+        desc: "অ্যাপের ট্রাস্ট ব্যবস্থায় একটি অঞ্চলের বিশ্বস্ত স্থানীয় বিশেষজ্ঞ।",
+        benefitsTitle: "কোথায় দেখবেন",
+        benefits: [
+          "অ্যাপের ট্রাস্ট ড্যাশবোর্ডে দেখা যায়"
         ]
       }
     },
     pioneer: {
       en: {
         badgeName: "Pioneer",
-        badgeIcon: "fa-award",
-        badgeColor: "#d97706", // Gold
-        reqXp: "200 XP Required",
-        title: "Pioneer Explorer",
-        desc: "The elite contributor tier. Pioneers are trusted to co-author logs and access closed beta features.",
-        benefitsTitle: "Elite Capabilities",
+        badgeIcon: "fa-rocket",
+        badgeColor: "#a855f7",
+        reqXp: "Tier 5 of 5",
+        title: "Pioneer",
+        desc: "The highest tier in the app's trust system.",
+        benefitsTitle: "Where to see it",
         benefits: [
-          "Co-author collaborative TripLogs",
-          "Invite up to 3 co-authors per log",
-          "Access offline vector map download packages"
+          "Shown on the trust dashboard in the app"
         ]
       },
       bn: {
-        badgeName: "পায়োনিয়ার",
-        badgeIcon: "fa-award",
-        badgeColor: "#d97706",
-        reqXp: "২০০ এক্সপি (XP) প্রয়োজন",
-        title: "পায়োনিয়ার এক্সপ্লোরার",
-        desc: "এলিট কন্ট্রিবিউটর স্তর। পায়োনিয়াররা ট্রিপলগ যৌথভাবে লিখতে এবং ক্লোজড বিটা ফিচার ব্যবহার করতে পারেন।",
-        benefitsTitle: "এলিট সুবিধাসমূহ",
+        badgeName: "অগ্রদূত",
+        badgeIcon: "fa-rocket",
+        badgeColor: "#a855f7",
+        reqXp: "স্তর ৫ / ৫",
+        title: "অগ্রদূত",
+        desc: "অ্যাপের ট্রাস্ট ব্যবস্থায় সর্বোচ্চ স্তর।",
+        benefitsTitle: "কোথায় দেখবেন",
         benefits: [
-          "কো-অথর হিসেবে ট্রিপলগ এডিট করা",
-          "ট্রিপলগে অন্য ট্রাভেলারদের ইনভাইট করা",
-          "সম্পূর্ণ জেলার অফলাইন ভেক্টর প্যাকেজ ডাউনলোড"
-        ]
-      }
-    },
-    expert: {
-      en: {
-        badgeName: "Expert",
-        badgeIcon: "fa-user-shield",
-        badgeColor: "#10b981", // Emerald Green
-        reqXp: "500 XP Required",
-        title: "Regional Expert",
-        desc: "The highest moderator status. Selected by regional councils. Experts review flagged content, approve business entries, and verify local tour guides.",
-        benefitsTitle: "Moderator Power",
-        benefits: [
-          "Moderate regional logs and comments",
-          "Approve local businesses & cottages",
-          "Verify credentials of local tour guides",
-          "Direct appeal processing on complaints"
-        ]
-      },
-      bn: {
-        badgeName: "রিজিয়ন এক্সপার্ট",
-        badgeIcon: "fa-user-shield",
-        badgeColor: "#10b981",
-        reqXp: "৫০০ এক্সপি (XP) প্রয়োজন",
-        title: "আঞ্চলিক এক্সপার্ট",
-        desc: "সর্বোচ্চ মডারেটর স্তর। আঞ্চলিক কাউন্সিলের ভোটে মনোনীত হন। এক্সপার্টরা ফ্ল্যাগড কন্টেন্ট রিভিউ করেন এবং স্থানীয় গাইড ও হোটেল ভেরিফাই করেন।",
-        benefitsTitle: "মডারেটরের ক্ষমতা",
-        benefits: [
-          "আঞ্চলিক ট্রিপলগ ও কমেন্ট ফিল্টারিং",
-          "হোটেল ও লোকাল বিজনেসের ভেরিফিকেশন",
-          "লোকাল ট্যুর গাইড ভেরিফাই করা",
-          "সরাসরি অভিযোগের আপিল প্রসেস করা"
+          "অ্যাপের ট্রাস্ট ড্যাশবোর্ডে দেখা যায়"
         ]
       }
     }
@@ -579,8 +361,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.innerText = tierData[key][currentLang].badgeName;
       });
 
-      // Refresh dynamic components
-      updateDetailsCard();
       updateTiersCard(activeTierKey);
     });
   }
@@ -753,8 +533,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Initialize display details
-  updateDetailsCard();
   updateTiersCard('unverified');
 
   // ===========================================================================
@@ -1426,140 +1204,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===========================================================================
-  // 13. EXPLORER XP CHALLENGE TRACKER
-  // ===========================================================================
-
-  let totalXP = 0;
-
-  const xpTierThresholds = [
-    { key: 'unverified', minXP: 0,   maxXP: 49,  icon: 'fa-user-xmark',  class: '',              nameEn: 'Unverified',      nameBn: 'আনভেরিফাইড' },
-    { key: 'explorer',   minXP: 50,  maxXP: 149, icon: 'fa-compass',      class: 'tier-explorer', nameEn: 'Explorer',        nameBn: 'এক্সপ্লোরার' },
-    { key: 'trusted',    minXP: 150, maxXP: 299, icon: 'fa-shield-check',  class: 'tier-trusted',  nameEn: 'Trusted Explorer',nameBn: 'ট্রাস্টেড এক্সপ্লোরার' },
-    { key: 'pioneer',    minXP: 300, maxXP: 999, icon: 'fa-award',         class: 'tier-pioneer',  nameEn: 'Pioneer',         nameBn: 'পায়োনিয়ার' }
-  ];
-
-  const milestoneMap = {
-    'milestone-explorer': 50,
-    'milestone-trusted': 150,
-    'milestone-pioneer': 300
-  };
-
-  function getCurrentTier(xp) {
-    let tier = xpTierThresholds[0];
-    xpTierThresholds.forEach(t => { if (xp >= t.minXP) tier = t; });
-    return tier;
-  }
-
-  function updateXPUI() {
-    const tier = getCurrentTier(totalXP);
-    const nextTier = xpTierThresholds.find(t => t.minXP > totalXP);
-
-    // Badge icon and tier name
-    const iconEl = document.getElementById('xp-tier-icon');
-    const nameEl = document.getElementById('xp-tier-name');
-    if (iconEl && nameEl) {
-      iconEl.className = `xp-tier-icon ${tier.class}`;
-      iconEl.innerHTML = `<i class="fa-solid ${tier.icon}"></i>`;
-      nameEl.textContent = currentLang === 'bn' ? tier.nameBn : tier.nameEn;
-    }
-
-    // XP bar
-    const barFill  = document.getElementById('xp-bar-fill');
-    const barValue = document.getElementById('xp-bar-value');
-    const nextLabel = document.getElementById('xp-next-label');
-
-    if (nextTier) {
-      const rangeStart = tier.minXP;
-      const rangeEnd   = nextTier.minXP;
-      const pct = Math.min(100, ((totalXP - rangeStart) / (rangeEnd - rangeStart)) * 100);
-      if (barFill) barFill.style.width = pct + '%';
-      if (barValue) {
-        const xpStr    = currentLang === 'bn' ? toBengaliNumbers(totalXP) : totalXP;
-        const maxStr   = currentLang === 'bn' ? toBengaliNumbers(nextTier.minXP) : nextTier.minXP;
-        barValue.textContent = `${xpStr} / ${maxStr} XP`;
-      }
-      if (nextLabel) {
-        const nextName = currentLang === 'bn' ? nextTier.nameBn : nextTier.nameEn;
-        const needed   = nextTier.minXP - totalXP;
-        const neededStr= currentLang === 'bn' ? toBengaliNumbers(needed) : needed;
-        nextLabel.textContent = currentLang === 'bn'
-          ? `${nextName} টায়ার আনলক করতে আরও ${neededStr} XP দরকার!`
-          : `${neededStr} more XP to unlock ${nextName} tier!`;
-      }
-    } else {
-      if (barFill) barFill.style.width = '100%';
-      if (barValue) barValue.textContent = currentLang === 'bn' ? `${toBengaliNumbers(totalXP)} XP` : `${totalXP} XP`;
-      if (nextLabel) nextLabel.textContent = currentLang === 'bn' ? '🎉 সর্বোচ্চ পায়োনিয়ার টায়ার অর্জিত!' : '🎉 Max Pioneer tier achieved!';
-    }
-
-    // Milestones
-    Object.entries(milestoneMap).forEach(([id, threshold]) => {
-      const el = document.getElementById(id);
-      if (el) {
-        if (totalXP >= threshold) {
-          el.classList.add('unlocked');
-          el.querySelector('i').className = 'fa-solid fa-check';
-        } else {
-          el.classList.remove('unlocked');
-          el.querySelector('i').className = 'fa-solid fa-lock';
-        }
-      }
-    });
-  }
-
-  // Wire up challenge checkboxes
-  const challengeItems = document.querySelectorAll('.challenge-item');
-  challengeItems.forEach(item => {
-    const checkbox = item.querySelector('.challenge-checkbox');
-    const xpReward = parseInt(item.getAttribute('data-xp')) || 0;
-
-    if (!checkbox) return;
-
-    checkbox.addEventListener('change', () => {
-      const prevTier = getCurrentTier(totalXP).key;
-
-      if (checkbox.checked) {
-        totalXP += xpReward;
-        item.classList.add('completed');
-      } else {
-        totalXP = Math.max(0, totalXP - xpReward);
-        item.classList.remove('completed');
-      }
-
-      updateXPUI();
-
-      // Level-up flash animation
-      const newTier = getCurrentTier(totalXP).key;
-      if (newTier !== prevTier) {
-        const iconEl = document.getElementById('xp-tier-icon');
-        if (iconEl) {
-          iconEl.classList.remove('levelup-flash');
-          void iconEl.offsetWidth; // reflow to restart animation
-          iconEl.classList.add('levelup-flash');
-          setTimeout(() => iconEl.classList.remove('levelup-flash'), 800);
-        }
-      }
-    });
-  });
-
-  // Reset button
-  const xpResetBtn = document.getElementById('xp-reset-btn');
-  if (xpResetBtn) {
-    xpResetBtn.addEventListener('click', () => {
-      totalXP = 0;
-      challengeItems.forEach(item => {
-        item.classList.remove('completed');
-        const cb = item.querySelector('.challenge-checkbox');
-        if (cb) cb.checked = false;
-      });
-      updateXPUI();
-    });
-  }
-
-  // Initialize XP UI
-  updateXPUI();
-
-  // ===========================================================================
   // 15. EXTEND LANGUAGE TOGGLE — translate new select options & dynamic fields
   // ===========================================================================
 
@@ -1572,33 +1216,9 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.planner-select option[data-en]').forEach(opt => {
         opt.textContent = currentLang === 'bn' ? opt.getAttribute('data-bn') : opt.getAttribute('data-en');
       });
-      // Re-render xp bar text with new lang
-      updateXPUI();
-      // Re-translate challenge items
-      document.querySelectorAll('.challenge-category-label[data-en], .challenge-name[data-en], .challenge-desc[data-en]').forEach(el => {
-        el.textContent = currentLang === 'bn' ? el.getAttribute('data-bn') : el.getAttribute('data-en');
-      });
     });
   }
 
-  // Also update nav to include new section links
-  const navLinks = document.querySelector('.nav-links');
-  if (navLinks && !document.getElementById('nav-link-planner')) {
-    const links = [
-      { id: 'nav-link-planner',     href: '#ai-planner',   en: 'AI Planner', bn: 'এআই প্ল্যানার' },
-      { id: 'nav-link-challenges',  href: '#xp-challenges', en: 'Challenges', bn: 'চ্যালেঞ্জ' }
-    ];
-    links.forEach(link => {
-      const a = document.createElement('a');
-      a.id = link.id;
-      a.href = link.href;
-      a.className = 'lang-text';
-      a.setAttribute('data-en', link.en);
-      a.setAttribute('data-bn', link.bn);
-      a.textContent = link.en;
-      navLinks.appendChild(a);
-    });
-  }
 
 });
 
