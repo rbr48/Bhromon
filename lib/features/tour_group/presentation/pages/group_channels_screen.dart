@@ -59,6 +59,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   bool _isFamily = false;
   bool _isOffice = false;
   bool _isCampus = false;
+  bool _isMess = false;
 
   /// Last-seen time of each member, keyed by email. Drives the online count.
   Map<String, DateTime?> _presence = const {};
@@ -154,6 +155,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               _isFamily = group?.isFamily ?? false;
               _isOffice = group?.isOffice ?? false;
               _isCampus = group?.isCampus ?? false;
+              _isMess = group?.isMess ?? false;
             }),
         onError: (_) {}));
     unawaited(_markHere());
@@ -211,6 +213,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         family: _isFamily,
         office: _isOffice,
         campus: _isCampus,
+        mess: _isMess,
       ))
         byId[id] ?? TourChannel(id: id),
     ];
@@ -280,17 +283,21 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
             ? 'office_channel_food'
             : _isCampus
                 ? 'campus_channel_food'
-                : _isFamily
-                    ? 'family_channel_food'
-                    : 'tour_channel_food');
+                : _isMess
+                    ? 'mess_channel_food'
+                    : _isFamily
+                        ? 'family_channel_food'
+                        : 'tour_channel_food');
       case 'sightseeing':
         return l10n.translate(_isOffice
             ? 'office_channel_events'
             : _isCampus
                 ? 'campus_channel_events'
-                : _isFamily
-                    ? 'family_channel_sightseeing'
-                    : 'tour_channel_places');
+                : _isMess
+                    ? 'mess_channel_bills'
+                    : _isFamily
+                        ? 'family_channel_sightseeing'
+                        : 'tour_channel_places');
       case 'home':
         return l10n.translate('family_channel_home');
       case 'kids':
@@ -1833,6 +1840,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 family: _isFamily,
                 office: _isOffice,
                 campus: _isCampus,
+                mess: _isMess,
                 channelId: channel.id),
           );
           draft.clear();

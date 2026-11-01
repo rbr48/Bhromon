@@ -306,10 +306,15 @@ class TourGroup {
   /// The preset of a campus, class, batch or club. See [preset].
   static const String campusPreset = 'campus';
 
+  /// The preset of a mess or shared home: a shared meal arrangement or a shared
+  /// flat. See [preset].
+  static const String messPreset = 'mess';
+
   /// The preset a stored value names, or null when it names none.
   static String? presetFrom(Object? value) {
     if (value == officePreset) return officePreset;
     if (value == campusPreset) return campusPreset;
+    if (value == messPreset) return messPreset;
     return null;
   }
 
@@ -318,6 +323,10 @@ class TourGroup {
 
   /// A campus, class, batch or club: the office rules, with campus copy.
   bool get isCampus => preset == campusPreset;
+
+  /// A mess or shared home: a family-style circle with its own categories and
+  /// channels. Members post notices as they do in a family circle.
+  bool get isMess => preset == messPreset;
 
   /// An office or a campus: admins write the notices, and the household tiles and
   /// records do not apply.

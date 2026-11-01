@@ -1608,7 +1608,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     ? 'office_add_expense_sub'
                     : group?.isCampus == true
                         ? 'campus_add_expense_sub'
-                        : 'fund_add_expense_sub'),
+                        : group?.isMess == true
+                            ? 'mess_add_expense_sub'
+                            : 'fund_add_expense_sub'),
                 _editExpense),
             if (group?.isOffice == true)
               item(
@@ -1626,6 +1628,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   l10n.translate('campus_quick_snacks_sub'),
                   () => _editExpense(null, false,
                       l10n.translate('campus_quick_snacks'), 'Food')),
+            if (group?.isMess == true)
+              item(
+                  Icons.shopping_basket_rounded,
+                  AppColors.gold,
+                  l10n.translate('mess_quick_bazar'),
+                  l10n.translate('mess_quick_bazar_sub'),
+                  () => _editExpense(null, false,
+                      l10n.translate('mess_quick_bazar'), 'Groceries')),
             item(
                 Icons.savings_rounded,
                 AppColors.gold,

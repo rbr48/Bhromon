@@ -62,12 +62,25 @@ const List<String> kCampusExpenseCategories = [
   'Others',
 ];
 
-/// The categories a group's ledger offers. An office and a campus each have their
-/// own list; family circles and trips keep theirs. No group means a trip.
+/// The categories a mess or shared home offers: bazar, bills, rent, household
+/// shopping, medicine and other costs. The names are the family names, so their
+/// labels are already translated.
+const List<String> kMessExpenseCategories = [
+  'Groceries',
+  'Utilities',
+  'Rent',
+  'Shopping',
+  'Medical',
+  'Others',
+];
+
+/// The categories a group's ledger offers. An office, a campus and a mess each
+/// have their own list; family circles and trips keep theirs. No group means a trip.
 List<String> expenseCategoriesForGroup(TourGroup? group) {
   if (group == null) return kExpenseCategories;
   if (group.isOffice) return kOfficeExpenseCategories;
   if (group.isCampus) return kCampusExpenseCategories;
+  if (group.isMess) return kMessExpenseCategories;
   return expenseCategoriesFor(family: group.isFamily);
 }
 
@@ -91,10 +104,12 @@ String splitCategoryFor({
   required String channelId,
   bool office = false,
   bool campus = false,
+  bool mess = false,
 }) {
   if (channelId != 'food') return 'Others';
   if (office) return 'Dining';
   if (campus) return 'Food';
+  if (mess) return 'Groceries';
   return family ? 'Groceries' : 'Food';
 }
 

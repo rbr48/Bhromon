@@ -1872,6 +1872,23 @@ class TourTranslationKeys {
       'campus_add_expense_sub': 'Snacks, books, printing, events and more',
       'campus_quick_snacks': 'Snacks or tea',
       'campus_quick_snacks_sub': 'Shared between everyone, paid by you',
+      'hub_create_mess': 'Create a mess or shared home',
+      'hub_mess_title': 'New mess or shared home',
+      'hub_mess_intro':
+          'A private space for a shared meal arrangement or a shared flat: bazar and bills split between everyone, a shared shopping and to-do list, chores, notices, channels and games. It has no trip dates, dependents or family dates.',
+      'hub_mess_name_hint': 'Mess or flat name (e.g. Block B mess)',
+      'hub_mess_created':
+          '"{name}" is ready. Share the code so everyone can join.',
+      'hub_mess_badge': 'Mess',
+      'hub_leave_mess_title': 'Leave this mess?',
+      'hub_delete_mess_title': 'Delete this mess?',
+      'hub_delete_mess_body':
+          '{name}, its messages, notices and files will be deleted for everyone. This cannot be undone.',
+      'mess_channel_food': 'Kitchen & menu',
+      'mess_channel_bills': 'Bills & chores',
+      'mess_add_expense_sub': 'Bazar, bills, gas, repairs and more',
+      'mess_quick_bazar': 'Bazar',
+      'mess_quick_bazar_sub': 'Shared between everyone, paid by you',
       'pdf_export_admin_only':
           'Only the owner or an admin can export the whole tour.',
       'notice_post_failed':
@@ -3901,6 +3918,23 @@ class TourTranslationKeys {
       'campus_add_expense_sub': 'নাস্তা, বই, প্রিন্টিং, অনুষ্ঠান ইত্যাদি',
       'campus_quick_snacks': 'নাস্তা বা চা',
       'campus_quick_snacks_sub': 'সবার মধ্যে ভাগ হবে, আপনি পরিশোধ করেছেন',
+      'hub_create_mess': 'মেস বা শেয়ার্ড বাসার গ্রুপ তৈরি করুন',
+      'hub_mess_title': 'নতুন মেস বা শেয়ার্ড বাসা',
+      'hub_mess_intro':
+          'একসাথে খাওয়া-দাওয়ার বা শেয়ার্ড বাসার জন্য ব্যক্তিগত জায়গা: বাজার ও বিল সবার মধ্যে ভাগ, শেয়ার্ড বাজারের তালিকা ও কাজের তালিকা, দায়িত্ব বণ্টন, নোটিশ, চ্যানেল ও গেম। এখানে ভ্রমণের তারিখ, নির্ভরশীল সদস্য বা পারিবারিক তারিখ নেই।',
+      'hub_mess_name_hint': 'মেস বা বাসার নাম (যেমন: বি ব্লক মেস)',
+      'hub_mess_created':
+          '"{name}" তৈরি হয়েছে। কোড শেয়ার করুন, যাতে সবাই যুক্ত হতে পারে।',
+      'hub_mess_badge': 'মেস',
+      'hub_leave_mess_title': 'এই মেস ছেড়ে যাবেন?',
+      'hub_delete_mess_title': 'এই মেস মুছবেন?',
+      'hub_delete_mess_body':
+          '{name}, এর বার্তা, নোটিশ ও ফাইল সবার জন্য মুছে যাবে। এটি ফেরানো যাবে না।',
+      'mess_channel_food': 'রান্নাঘর ও মেনু',
+      'mess_channel_bills': 'বিল ও কাজ',
+      'mess_add_expense_sub': 'বাজার, বিল, গ্যাস, মেরামত ইত্যাদি',
+      'mess_quick_bazar': 'বাজার',
+      'mess_quick_bazar_sub': 'সবার মধ্যে ভাগ হবে, আপনি পরিশোধ করেছেন',
       'pdf_export_admin_only':
           'শুধু মালিক বা অ্যাডমিন পুরো ট্যুরের PDF নিতে পারেন।',
       'notice_post_failed':

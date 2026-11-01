@@ -621,9 +621,19 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
              get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus'];
     }
-    // A household is a family circle that is not an office or a campus. Dependents,
-    // shared shopping and family dates are for households only.
+    // A mess or shared home is a family circle with the mess preset.
+    function isMessTour(tId) {
+      return exists(/databases/$(database)/documents/tours/$(tId)) &&
+             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') == 'mess';
+    }
+    // A household is a family circle that is not an office, a campus or a mess.
+    // Dependents and family dates are for households only.
     function isHouseholdTour(tId) {
+      return isFamilyTour(tId) && !isManagedTour(tId) && !isMessTour(tId);
+    }
+    // Shared shopping and to-do lists also serve a mess, so they follow the family
+    // rule: any family circle that is not an office or a campus.
+    function isSharedListTour(tId) {
       return isFamilyTour(tId) && !isManagedTour(tId);
     }
 
@@ -790,10 +800,10 @@ service cloud.firestore {
       // Editing and removing are for the creator or an admin.
       match /family_tasks/{taskId} {
         allow read: if isActiveMember(tourId);
-        allow create: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
+        allow create: if isSharedListTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.createdByEmail == tourUserEmail() &&
                          validFamilyTask(request.resource.data);
-        allow update: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
+        allow update: if isSharedListTour(tourId) && isActiveMember(tourId) &&
                          request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['done', 'doneByEmail']) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
@@ -801,11 +811,11 @@ service cloud.firestore {
                             ? request.resource.data.get('doneByEmail', null) == tourUserEmail()
                             : request.resource.data.get('doneByEmail', null) == null) &&
                          validFamilyTask(request.resource.data);
-        allow update: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
+        allow update: if isSharedListTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail()) &&
                          request.resource.data.createdByEmail == resource.data.createdByEmail &&
                          validFamilyTask(request.resource.data);
-        allow delete: if isHouseholdTour(tourId) && isActiveMember(tourId) &&
+        allow delete: if isSharedListTour(tourId) && isActiveMember(tourId) &&
                          (isTourAdmin(tourId) || resource.data.get('createdByEmail', '') == tourUserEmail());
       }
 

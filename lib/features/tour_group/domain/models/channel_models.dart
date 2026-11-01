@@ -95,19 +95,32 @@ const List<String> kCampusChannelIds = [
   kBuiltInVoiceChannelId,
 ];
 
+/// The built-in channels a mess starts with: the same set as a campus, with mess
+/// labels.
+const List<String> kMessChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
 /// The built-in channels a circle starts with, in the order they are listed.
 List<String> builtInChannelIdsFor({
   required bool family,
   bool office = false,
   bool campus = false,
+  bool mess = false,
 }) =>
     campus
         ? kCampusChannelIds
-        : office
-            ? kOfficeChannelIds
-            : family
-                ? kFamilyChannelIds
-                : kBuiltInChannelIds;
+        : mess
+            ? kMessChannelIds
+            : office
+                ? kOfficeChannelIds
+                : family
+                    ? kFamilyChannelIds
+                    : kBuiltInChannelIds;
 
 /// The kind of channel: text messaging or voice lounge.
 enum ChannelKind { text, voice }

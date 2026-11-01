@@ -423,6 +423,39 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  describe('mess and shared homes', () => {
+    const MESS = 'mss1';
+    const notice = (by) => ({ title: 'Bazar on Friday', content: 'Rice and lentils', authorEmail: by, createdAt: serverTimestamp() });
+    const task = (by) => ({ title: 'Gas cylinder', kind: 'shopping', done: false, assigneeEmail: null, doneByEmail: null, createdByEmail: by });
+    const date = (by) => ({ title: 'Birthday', kind: 'birthday', recurrence: 'yearly', startOn: '2026-11-01', nextOn: '2026-11-01', remindDays: 3, remindOn: null, note: '', createdByEmail: by });
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        await setDoc(doc(f, 'tours', MESS), { name: 'Block B mess', kind: 'family', preset: 'mess', ownerEmail: people.owner.email, ownerUid: people.owner.uid, inviteCode: 'MSSCODE1' });
+        const membership = (email, role) =>
+          setDoc(doc(f, 'memberships', `${MESS}__${email}`), { tourId: MESS, email, role, status: 'active', displayName: email });
+        await membership(people.owner.email, 'owner');
+        await membership(people.member.email, 'member');
+      });
+    });
+
+    test('a member posts a notice under their own name, as in a family circle', async () => {
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', MESS, 'notices'), notice(people.member.email)));
+      await assertFails(addDoc(collection(db('member'), 'tours', MESS, 'notices'), notice(people.owner.email)));
+    });
+
+    test('a mess keeps the shared shopping and to-do list', async () => {
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', MESS, 'family_tasks'), task(people.member.email)));
+    });
+
+    test('a mess keeps no dependents and no family dates', async () => {
+      const dependent = { name: 'Child', relation: 'son', parentEmail: people.member.email, countedInFamily: true };
+      await assertFails(setDoc(doc(db('member'), 'tours', MESS, 'dependents', 'd1'), dependent));
+      await assertFails(addDoc(collection(db('member'), 'tours', MESS, 'family_dates'), date(people.member.email)));
+    });
+  });
+
   describe('feed', () => {
     const postPath = ['tours', TOUR, 'posts', 'p1'];
     const post = (author) => ({
