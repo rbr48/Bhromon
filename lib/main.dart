@@ -20,18 +20,14 @@ import 'core/utils/app_logger.dart';
 import 'firebase_options.dart';
 import 'app/di/injection.dart';
 import 'app/di/environments.dart';
-import 'core/sync/sync_worker.dart';
 import 'core/security/hive_encryption_service.dart';
 import 'core/media/media_access.dart';
 import 'app/router.dart';
 import 'core/theme/theme.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
-import 'features/map/presentation/bloc/map_bloc.dart';
 import 'features/trust/presentation/bloc/trust_bloc.dart';
 import 'features/auth/domain/repositories/i_auth_repository.dart';
 import 'features/auth/data/repositories/mock_offline_auth_repository.dart';
-import 'features/trip_log/domain/repositories/i_trip_log_repository.dart';
-import 'features/trip_log/data/repositories/mock_offline_trip_log_repository.dart';
 import 'features/ota/presentation/cubit/ota_cubit.dart';
 import 'features/ota/presentation/cubit/ota_state.dart';
 import 'features/ota/presentation/widgets/ota_update_dialog.dart';
@@ -42,8 +38,6 @@ import 'features/chat/data/call_notification_service.dart';
 import 'features/chat/data/vps_chat_service.dart';
 import 'features/game_zone/data/game_analytics_service.dart';
 import 'features/notifications/data/fcm_service.dart';
-import 'features/notifications/geo_fence_service.dart'
-    show registerGeoFenceWork;
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -294,9 +288,6 @@ void main() {
         getIt.registerLazySingleton<IAuthRepository>(
           () => MockOfflineAuthRepository(getIt<AppDatabase>()),
         );
-        getIt.registerLazySingleton<ITripLogRepository>(
-          () => MockOfflineTripLogRepository(getIt<AppDatabase>()),
-        );
       }
     } else {
       configureDependencies(environment: Env.prod);
@@ -375,9 +366,6 @@ void main() {
       CallNotificationService().init();
       VpsChatService().init();
       getIt<FcmService>().initGlobalListener();
-      if (!kIsWeb) {
-        unawaited(_registerBackgroundWork());
-      }
     }
   }, (error, stack) {
     logError('[GlobalError] Asynchronous error caught in runZonedGuarded zone',
@@ -393,20 +381,6 @@ void main() {
   });
 }
 
-Future<void> _registerBackgroundWork() async {
-  if (kIsWeb) return;
-  try {
-    // SyncWorker.initialize() calls Workmanager().initialize() internally
-    // with the single unified callbackDispatcher that handles both sync
-    // and geo-fence tasks.
-    SyncWorker.initialize();
-    SyncWorker.registerPeriodicSync();
-    await registerGeoFenceWork();
-  } catch (e, stack) {
-    logWarning('[SyncWorker] Failed to initialize background sync', e, stack);
-  }
-}
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -416,9 +390,6 @@ class MyApp extends StatelessWidget {
       providers: [
         BlocProvider<AuthCubit>(
           create: (context) => getIt<AuthCubit>()..checkAuthStatus(),
-        ),
-        BlocProvider<MapBloc>(
-          create: (context) => getIt<MapBloc>(),
         ),
         BlocProvider<TrustBloc>(
           create: (context) => getIt<TrustBloc>(),
