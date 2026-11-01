@@ -4,9 +4,6 @@ initializeApp();
 
 // ── Core scoring & content lifecycle ──────────────────────────────────────────
 export { computeExplorerScore } from './computeExplorerScore';
-export { decayFreshness } from './decayFreshness';
-export { moderateContent } from './moderateContent';
-export { maintainPinGeohash, backfillPinGeohashes } from './maintainPinGeohash';
 
 // ── Chat: notifications, rate-limiting, media thumbnails ─────────────────────
 export { sendChatNotification } from './sendChatNotification';

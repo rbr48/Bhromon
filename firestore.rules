@@ -87,89 +87,28 @@ service cloud.firestore {
     // ---- Location Pins ----
     // Pins are listed by admins only; anyone signed in can open one by its ID.
     match /location_pins/{id} {
-      allow list: if isRegionExpertOrAbove();
-      allow get:  if !resource.data.hidden || isAuth();
-      allow create: if isNotUnverified() && request.resource.data.createdByUid == request.auth.uid;
-      allow update: if isOwner(resource.data.createdByUid) || isRegionExpertOrAbove();
-      allow delete: if isRegionExpertOrAbove();
-
-      match /live_tips/{tipId} {
-        allow read: if isAuth();
-        allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
-        allow update, delete: if isAuth() && (isOwner(resource.data.authorId) || isRegionExpertOrAbove());
-      }
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     // ---- Trip Logs (diaries) ----
     // A diary belongs to its author. Nobody else reads one, and a list can only be
     // the author's own diaries, so other people's diaries cannot be browsed.
     match /trip_logs/{id} {
-      allow list: if isAuth() && resource.data.authorId == request.auth.uid;
-      allow get:  if isAuth() && isOwner(resource.data.authorId);
-
-      // Titles are capped at 200 chars (matches the client editor limit)
-      function hasValidTitle() {
-        return !('title' in request.resource.data)
-            || (request.resource.data.title is string
-                && request.resource.data.title.size() <= 200);
-      }
-
-      allow create: if isAuth()
-                    && request.resource.data.authorId == request.auth.uid
-                    && hasValidTitle();
-
-      allow update: if (isOwner(resource.data.authorId)
-                    && request.resource.data.authorId == resource.data.authorId
-                    && hasValidTitle()
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['hidden', 'hiddenReason', 'tier', 'trustScore'])
-                    // Owner can only update visibility within valid values
-                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['visibility'])
-                        || request.resource.data.visibility in ['private', 'friends', 'community']))
-                    || (isAuth()
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportCount'])
-                        && request.resource.data.reportCount == (('reportCount' in resource.data ? resource.data.reportCount : 0) + 1))
-                    || (isAuth()
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
-                        && request.resource.data.views == (('views' in resource.data ? resource.data.views : 0) + 1));
-      allow delete: if isOwner(resource.data.authorId) || isRegionExpertOrAbove();
-
-      match /comments/{commentId} {
-        allow read: if isAuth() && isOwner(get(/databases/$(database)/documents/trip_logs/$(id)).data.authorId);
-        allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
-        allow update, delete: if isAuth() && (isOwner(resource.data.authorId) || isRegionExpertOrAbove());
-      }
-
-      // ---- Diary Reactions (wantToGo, beenHere, learned, beautiful) ----
-      // Only the reactor and the diary's author see who reacted.
-      match /reactions/{userId} {
-        allow read: if isAuth() && (isOwner(userId) || isOwner(get(/databases/$(database)/documents/trip_logs/$(id)).data.authorId));
-        allow write: if isAuth() && isOwner(userId);
-      }
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     // ---- Archived Trip Logs ----
     match /archived_trip_logs/{id} {
-      allow list: if isAuth() && resource.data.authorId == request.auth.uid;
-      allow get:  if isAuth() && isOwner(resource.data.authorId);
-      allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
-      allow update: if isOwner(resource.data.authorId)
-                    && request.resource.data.authorId == resource.data.authorId;
-      allow delete: if isOwner(resource.data.authorId) || isRegionExpertOrAbove();
-
-      match /comments/{commentId} {
-        allow read: if isAuth() && isOwner(get(/databases/$(database)/documents/archived_trip_logs/$(id)).data.authorId);
-        allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
-        allow update, delete: if isAuth() && (isOwner(resource.data.authorId) || isRegionExpertOrAbove());
-      }
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     // ---- Pro Tips ----
     match /pro_tips/{id} {
-      allow list: if isAuth() && resource.data.authorId == request.auth.uid;
-      allow get:  if isAuth() && isOwner(resource.data.authorId);
-      allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
-      allow update: if isOwner(resource.data.authorId);
-      allow delete: if isOwner(resource.data.authorId) || isRegionExpertOrAbove();
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     match /explorer_profiles/{uid} {
@@ -199,21 +138,21 @@ service cloud.firestore {
 
       // ---- Saved Diaries ----
       match /saved_diaries/{tripLogId} {
-        allow read: if isAuth() && isOwner(uid);
-        allow write: if isAuth() && isOwner(uid);
+        // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+        allow read, write: if false;
       }
 
       // ---- Bucket List ----
       match /bucket_list/{itemId} {
-        allow read: if isAuth() && isOwner(uid);
-        allow write: if isAuth() && isOwner(uid);
+        // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+        allow read, write: if false;
       }
     }
 
     // ---- Content Reports ----
     match /travel_log_reports/{id} {
-      allow create: if isAuth();
-      allow read, update, delete: if isRegionExpertOrAbove();
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     // ---- Explorer Scores ----
@@ -265,9 +204,8 @@ service cloud.firestore {
 
     // ---- Suggested Pins (users submit; admins review) ----
     match /suggested_pins/{id} {
-      allow create: if isNotUnverified()
-                    && request.resource.data.submittedBy == request.auth.uid;
-      allow read, update, delete: if isRegionExpertOrAbove();
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     // ---- Push Notifications (admin sends, all users read own) ----
@@ -285,60 +223,42 @@ service cloud.firestore {
 
     // ---- Direct Messages (admin writes to inbox; user reads own inbox) ----
     match /direct_messages/{uid}/inbox/{msgId} {
-      allow read:   if isOwner(uid) || isRegionExpertOrAbove();
-      allow create: if isRegionExpertOrAbove();
-      allow update: if isOwner(uid);  // mark as read
-      allow delete: if false;
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     // ---- Follows ----
     match /follows/{id} {
-      allow read: if isAuth() && resource.data.followerId == request.auth.uid;
-      allow create: if isAuth() && request.resource.data.followerId == request.auth.uid;
-      allow delete: if isAuth() && resource.data.followerId == request.auth.uid;
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     // ---- Likes ----
     match /likes/{id} {
-      allow read: if isAuth() && resource.data.userId == request.auth.uid;
-      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-      allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     // ---- Pin Visits ----
     match /pin_visits/{id} {
-      allow read: if isAuth() && (resource.data.userId == request.auth.uid || isRegionExpertOrAbove());
-      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false;
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     // ---- Safety Reports ----
     // Signed-in reporters only. The reporter is the caller, the report starts
     // pending, and the timestamp is the server's clock.
     match /safety_reports/{id} {
-      allow create: if isAuth()
-                    && request.resource.data.keys().hasOnly(['pinId', 'pinName', 'reason', 'detail', 'reportedBy', 'status', 'timestamp'])
-                    && request.resource.data.reportedBy == request.auth.uid
-                    && request.resource.data.status == 'pending'
-                    && request.resource.data.timestamp == request.time
-                    && request.resource.data.pinId is string && request.resource.data.pinId.size() <= 200
-                    && request.resource.data.pinName is string && request.resource.data.pinName.size() <= 200
-                    && request.resource.data.reason is string && request.resource.data.reason.size() <= 100
-                    && request.resource.data.detail is string && request.resource.data.detail.size() <= 1000;
-      allow read, update, delete: if isRegionExpertOrAbove();
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     // ---- Geo Fence Triggers ----
     // Written by the device when a signed-in user enters a pin's area. Only the
     // fields the function reads are accepted, with the server's clock.
     match /geo_fence_triggers/{id} {
-      allow create: if isAuth()
-                    && request.resource.data.keys().hasOnly(['pinId', 'pinName', 'distanceM', 'triggeredAt'])
-                    && request.resource.data.triggeredAt == request.time
-                    && request.resource.data.pinId is string && request.resource.data.pinId.size() <= 200
-                    && request.resource.data.pinName is string && request.resource.data.pinName.size() <= 200
-                    && request.resource.data.distanceM is int && request.resource.data.distanceM >= 0;
-      allow read, update, delete: if isRegionExpertOrAbove();
+      // Retired: the travel product is gone. The data is kept, and no client can read or write it.
+      allow read, write: if false;
     }
 
     // ---- Users ----
