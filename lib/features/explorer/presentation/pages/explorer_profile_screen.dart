@@ -69,9 +69,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   @override
   void initState() {
     super.initState();
+    LocaleController.instance.addListener(_onLocaleChanged);
     _getExplorerProfile = getIt<GetExplorerProfileUseCase>();
     _tourId = widget.tourId;
     _loadProfile();
+  }
+
+  void _onLocaleChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    LocaleController.instance.removeListener(_onLocaleChanged);
+    super.dispose();
   }
 
   bool get _isBn => LocaleController.instance.locale.languageCode == 'bn';
@@ -1895,24 +1906,33 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildChoiceChip(
-                      selected: _isBn,
-                      label: 'বাংলা (Bengali)',
-                      onTap: () => LocaleController.instance.setLanguage('bn'),
+              ListenableBuilder(
+                listenable: LocaleController.instance,
+                builder: (context, _) => Row(
+                  children: [
+                    Expanded(
+                      child: _buildChoiceChip(
+                        selected: _isBn,
+                        label: 'বাংলা (Bengali)',
+                        onTap: () {
+                          LocaleController.instance.setLanguage('bn');
+                          setState(() {});
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildChoiceChip(
-                      selected: !_isBn,
-                      label: 'English',
-                      onTap: () => LocaleController.instance.setLanguage('en'),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildChoiceChip(
+                        selected: !_isBn,
+                        label: 'English',
+                        onTap: () {
+                          LocaleController.instance.setLanguage('en');
+                          setState(() {});
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

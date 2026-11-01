@@ -45,7 +45,7 @@ void main() {
     await tester.pump(); // Start snackbar animation
 
     expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.textContaining('01762033445'), findsOneWidget);
+    expect(find.textContaining('01737910040'), findsOneWidget);
   });
 
   testWidgets('Tapping info icon opens support details bottom sheet',
@@ -72,7 +72,7 @@ void main() {
     expect(bn.translate('server_patron_nagad'), 'নগদ');
     expect(bn.translate('server_patron_github'), 'গিটহাব স্পনসর');
     expect(
-        bn.translate('server_patron_copied', args: {'number': '01762033445'}),
-        'নম্বর কপি হয়েছে: 01762033445');
+        bn.translate('server_patron_copied', args: {'number': '01737910040'}),
+        'নম্বর কপি হয়েছে: 01737910040');
   });
 }
