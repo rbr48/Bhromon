@@ -238,34 +238,6 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // 3. Flags and Appeals section
-                    const Text(
-                      'ACTIVE PENALTIES & APPEALS',
-                      style: TextStyle(
-                          color: Colors.white70,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          letterSpacing: 1.5),
-                    ),
-                    const SizedBox(height: 12),
-                    Card(
-                      color: AppColors.cardDark,
-                      child: ListTile(
-                        leading: const Icon(Icons.warning_amber,
-                            color: AppColors.amber),
-                        title: const Text('Spam Flag on Sajek TipLog',
-                            style: TextStyle(color: Colors.white)),
-                        subtitle: const Text(
-                            'Penalty weight: -5 points • 3 days ago',
-                            style:
-                                TextStyle(color: Colors.white54, fontSize: 12)),
-                        trailing: TextButton(
-                          onPressed: () => _showAppealSheet(context),
-                          child: const Text('Appeal',
-                              style: TextStyle(color: AppColors.gold)),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               );
@@ -286,83 +258,6 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
             style: TextStyle(color: color, fontWeight: FontWeight.bold),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showAppealSheet(BuildContext context) {
-    final controller = TextEditingController();
-    showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: AppColors.cardDark,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (modalContext) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(modalContext).viewInsets.bottom +
-              MediaQuery.of(modalContext).padding.bottom +
-              24,
-          top: 24,
-          left: 24,
-          right: 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Submit Flag Appeal',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Justify why this content flag is inaccurate. A moderator will review it within 24 hours.',
-              style: TextStyle(color: Colors.white54, fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              maxLines: 4,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Describe the validity of your post...',
-                hintStyle: const TextStyle(color: Colors.white54),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.mintGreen),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                final reason = controller.text.trim();
-                if (reason.isNotEmpty) {
-                  context.read<TrustBloc>().add(SubmitAppealEvent(
-                      targetId: 'flag_sajek_1', justification: reason));
-                  Navigator.pop(modalContext);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.midGreen,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Submit Appeal',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
       ),
     );
   }

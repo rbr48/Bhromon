@@ -1755,18 +1755,6 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ),
         const SizedBox(height: 12),
 
-        // 2. Offline Travel Vault Card
-        _buildKeepsakeCard(
-          title: _isBn ? 'অফলাইন ট্রাভেল ভল্ট' : 'Offline Travel Vault',
-          subtitle: _isBn
-              ? 'বাসের টিকিট, হোটেল বুকিং নোট ও প্যাকিং লিস্টের অফলাইন সংরক্ষণাগার।'
-              : 'Offline storage for bus tickets, hotel reservations, and emergency notes.',
-          icon: Icons.lock_clock_rounded,
-          color: AppColors.gold,
-          onTap: () => context.push('/vault'),
-        ),
-        const SizedBox(height: 12),
-
         // 3. Family Safety & Emergency Card
         _buildKeepsakeCard(
           title:
