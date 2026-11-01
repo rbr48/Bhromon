@@ -132,10 +132,9 @@ packages:
   bangla_pdf:
     dependency: "direct main"
     description:
-      name: bangla_pdf
-      sha256: e18e8ed2f2b45276d41f96780ca5f63886a92b4136e146b575e505919af91b8a
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/bangla_pdf"
+      relative: true
+    source: path
     version: "1.9.2"
   barcode:
     dependency: transitive
@@ -650,7 +649,7 @@ packages:
     source: hosted
     version: "7.0.1"
   firebase_auth_platform_interface:
-    dependency: "direct dev"
+    dependency: "direct overridden"
     description:
       name: firebase_auth_platform_interface
       sha256: "8903c6c17828851daee5fbef05c8498f91e57828e30d68c6425fa7822169346f"

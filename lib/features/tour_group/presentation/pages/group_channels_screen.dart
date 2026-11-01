@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -1702,15 +1703,25 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     });
     try {
       for (final p in _pending) {
-        final upload = await _repo.startAttachment(widget.tourId, p.file,
-            isVideo: p.isVideo);
+        final upload = await _repo.startAttachment(
+          widget.tourId,
+          p.file,
+          isVideo: p.isVideo,
+          isDocument: p.isDocument,
+        );
         uploads.add(upload);
         _currentUpload = upload;
         final progress =
             upload.progress.listen((v) => _update(() => _uploadProgress = v));
         final url = await upload.finish();
         await progress.cancel();
-        attachments.add(ChannelAttachment(url: url, isVideo: p.isVideo));
+        attachments.add(ChannelAttachment(
+          url: url,
+          isVideo: p.isVideo,
+          isFile: p.isDocument,
+          fileName: p.isDocument ? p.file.name : null,
+          fileSizeBytes: p.isDocument ? p.fileSizeBytes : null,
+        ));
         _update(() => _uploadDone++);
       }
       final send = _repo.sendMessage(
@@ -1861,6 +1872,63 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         if (file != null && mounted) {
           _update(
               () => _pending.add(PendingAttachment(file: file, isVideo: true)));
+        }
+        return;
+      }
+      if (source == AttachSource.document) {
+        if (hasVideo) {
+          _snack(l10n.translate('chan_attach_limit'), error: true);
+          return;
+        }
+        final room = kChannelMaxImages - _pending.length;
+        if (room <= 0) {
+          _snack(l10n.translate('chan_attach_limit'), error: true);
+          return;
+        }
+        final res = await FilePicker.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: [
+            'pdf',
+            'doc',
+            'docx',
+            'xls',
+            'xlsx',
+            'ppt',
+            'pptx',
+            'txt',
+            'zip',
+            'csv'
+          ],
+          allowMultiple: true,
+          withData: kIsWeb,
+        );
+        if (res == null || res.files.isEmpty || !mounted) return;
+        if (res.files.length > room) {
+          _snack(l10n.translate('chan_attach_limit'), error: true);
+        }
+        final toAdd = <PendingAttachment>[];
+        for (final f in res.files.take(room)) {
+          if (f.size > kMaxDocBytes) {
+            _snack('${f.name}: ${l10n.translate('chan_file_too_large')}',
+                error: true);
+            continue;
+          }
+          final xfile = f.bytes != null
+              ? XFile.fromData(f.bytes!, name: f.name, length: f.size)
+              : (f.path != null
+                  ? XFile(f.path!, name: f.name, length: f.size)
+                  : null);
+          if (xfile != null) {
+            toAdd.add(PendingAttachment(
+              file: xfile,
+              isVideo: false,
+              isDocument: true,
+              fileSizeBytes: f.size,
+            ));
+          }
+        }
+        if (toAdd.isNotEmpty && mounted) {
+          _update(() => _pending.addAll(toAdd));
         }
         return;
       }

@@ -10,6 +10,7 @@ import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
 import '../../domain/services/chat_markdown.dart';
 import '../../domain/services/trip_ledger_engine.dart';
+import '../../../chat/presentation/widgets/chat_document_bubble.dart';
 import '../../../chat/presentation/widgets/voice_message_bubble.dart';
 import '../../../../core/localization/localized_date.dart';
 
@@ -96,6 +97,17 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
                 _AttachmentGrid(
                   attachments: m.visualAttachments,
                   onTap: widget.onOpenMedia,
+                ),
+                const SizedBox(height: 6),
+              ],
+              for (final doc in m.fileAttachments) ...[
+                ChatDocumentBubble(
+                  documentUrl: doc.url,
+                  fileName: doc.fileName ?? 'Document',
+                  fileSizeBytes: doc.fileSizeBytes ?? 0,
+                  isMe: own,
+                  timeStr: '',
+                  deliveryIcon: null,
                 ),
                 const SizedBox(height: 6),
               ],
