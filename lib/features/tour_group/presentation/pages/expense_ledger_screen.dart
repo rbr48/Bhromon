@@ -1611,7 +1611,11 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         ? 'campus_add_expense_sub'
                         : group?.isMess == true
                             ? 'mess_add_expense_sub'
-                            : 'fund_add_expense_sub'),
+                            : group?.isSociety == true
+                                ? 'society_add_expense_sub'
+                                : group?.isSamity == true
+                                    ? 'samity_add_expense_sub'
+                                    : 'fund_add_expense_sub'),
                 _editExpense),
             if (group?.isOffice == true)
               item(

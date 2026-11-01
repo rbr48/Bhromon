@@ -621,11 +621,11 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
              get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus'];
     }
-    // An office, a campus or a mess: the owner and admins post the notices and members
-    // answer them.
+    // An office, a campus, a mess, a housing society or a samity: the owner and admins post
+    // the notices and members answer them.
     function hasManagedNotices(tId) {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
-             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus', 'mess'];
+             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus', 'mess', 'society', 'samity'];
     }
     // Moments is on unless an office or a campus has turned it off.
     function momentsOpen(tId) {
@@ -637,10 +637,25 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
              get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') == 'mess';
     }
-    // A household is a family circle that is not an office, a campus or a mess.
-    // Dependents and family dates are for households only.
+    // A housing society and a samity are family circles with their own preset.
+    function isSocietyTour(tId) {
+      return exists(/databases/$(database)/documents/tours/$(tId)) &&
+             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') == 'society';
+    }
+    function isSamityTour(tId) {
+      return exists(/databases/$(database)/documents/tours/$(tId)) &&
+             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') == 'samity';
+    }
+    // A family circle with any preset (office, campus, mess, society or samity) is not a
+    // household.
+    function hasPreset(tId) {
+      return exists(/databases/$(database)/documents/tours/$(tId)) &&
+             get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') != '';
+    }
+    // A household is a plain family circle with no preset. Dependents and family dates are
+    // for households only.
     function isHouseholdTour(tId) {
-      return isFamilyTour(tId) && !isManagedTour(tId) && !isMessTour(tId);
+      return isFamilyTour(tId) && !hasPreset(tId);
     }
     // Shared shopping and to-do lists also serve a mess, so they follow the family
     // rule: any family circle that is not an office or a campus.
@@ -653,6 +668,17 @@ service cloud.firestore {
     function isDayKey(v) {
       return v is string && v.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
     }
+    // A samity's schedule on the tour: what each member pays (up to one million taka), the
+    // first month, the due day (1 to 28) and at most 200 members in the payout order.
+    function validSamityConfig(s) {
+      return s is map &&
+             s.keys().hasOnly(['contributionTaka', 'startMonth', 'dueDay', 'payoutOrder']) &&
+             s.contributionTaka is int && s.contributionTaka >= 0 && s.contributionTaka <= 1000000 &&
+             s.dueDay is int && s.dueDay >= 1 && s.dueDay <= 28 &&
+             (s.get('startMonth', null) == null || (s.startMonth is string && s.startMonth.matches('^[0-9]{4}-(0[1-9]|1[0-2])$'))) &&
+             s.payoutOrder is list && s.payoutOrder.size() <= 200;
+    }
+
     // A shared shopping or to-do item in a family circle.
     function validFamilyTask(d) {
       return d.keys().hasOnly(['title', 'kind', 'done', 'assigneeEmail', 'doneByEmail', 'createdByEmail']) &&
@@ -719,6 +745,8 @@ service cloud.firestore {
                      !request.resource.data.diff(resource.data).affectedKeys()
                        .hasAny(['ownerEmail', 'ownerUid', 'inviteCode']))) &&
                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['momentsEnabled']) || isManagedTour(tourId)) &&
+                    (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['samity']) ||
+                     (isSamityTour(tourId) && validSamityConfig(request.resource.data.samity))) &&
                     (!('emergencyContacts' in request.resource.data) ||
                      (request.resource.data.emergencyContacts is list &&
                       request.resource.data.emergencyContacts.size() <= 10));
@@ -867,6 +895,88 @@ service cloud.firestore {
                                  validMeal(request.resource.data);
         allow delete: if isMessTour(tourId) && isActiveMember(tourId) &&
                          (resource.data.email == tourUserEmail() || isTourAdmin(tourId));
+      }
+
+      // Service requests in a housing society. Any member raises one under their own email, and
+      // it starts open. While it is open its author may correct the words. The owner or an
+      // admin moves it on and leaves a note for the residents, and the author or an admin
+      // removes it.
+      match /service_requests/{requestId} {
+        function validRequest(d) {
+          return d.keys().hasOnly(['title', 'details', 'category', 'status', 'adminNote', 'createdByEmail', 'createdByName', 'createdAt', 'updatedAt', 'updatedByEmail']) &&
+                 d.title is string && d.title.size() >= 3 && d.title.size() <= 120 &&
+                 d.details is string && d.details.size() <= 1000 &&
+                 d.category in ['lift', 'water', 'power', 'security', 'cleaning', 'other'] &&
+                 d.status in ['open', 'in_progress', 'resolved'] &&
+                 d.adminNote is string && d.adminNote.size() <= 500 &&
+                 d.createdByEmail is string &&
+                 d.createdByName is string && d.createdByName.size() <= 200 &&
+                 d.updatedByEmail == tourUserEmail();
+        }
+        allow read: if isActiveMember(tourId);
+        allow create: if isSocietyTour(tourId) && isActiveMember(tourId) &&
+                         request.resource.data.createdByEmail == tourUserEmail() &&
+                         request.resource.data.createdAt == request.time &&
+                         request.resource.data.updatedAt == request.time &&
+                         request.resource.data.status == 'open' &&
+                         request.resource.data.adminNote == '' &&
+                         validRequest(request.resource.data);
+        allow update: if isSocietyTour(tourId) && isActiveMember(tourId) &&
+                         resource.data.createdByEmail == tourUserEmail() &&
+                         resource.data.status == 'open' &&
+                         request.resource.data.status == 'open' &&
+                         request.resource.data.adminNote == resource.data.adminNote &&
+                         request.resource.data.createdByEmail == resource.data.createdByEmail &&
+                         request.resource.data.createdAt == resource.data.createdAt &&
+                         request.resource.data.updatedAt == request.time &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['title', 'details', 'category', 'updatedAt', 'updatedByEmail']) &&
+                         validRequest(request.resource.data);
+        allow update: if isSocietyTour(tourId) && isActiveMember(tourId) && isTourAdmin(tourId) &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['status', 'adminNote', 'updatedAt', 'updatedByEmail']) &&
+                         request.resource.data.updatedAt == request.time &&
+                         validRequest(request.resource.data);
+        allow delete: if isSocietyTour(tourId) && isActiveMember(tourId) &&
+                         (resource.data.createdByEmail == tourUserEmail() || isTourAdmin(tourId));
+      }
+
+      // Samity payments. Each member records what they have paid into a cycle, and an owner or
+      // admin records any member's. The amount is what has been paid so far for the cycle, and
+      // may not exceed the contribution. The member or an admin removes a record.
+      match /samity_payments/{paymentId} {
+        function validPayment(d, tId) {
+          return d.keys().hasOnly(['cycleKey', 'email', 'amountTaka', 'recordedByEmail', 'updatedAt']) &&
+                 d.cycleKey is string && d.cycleKey.matches('^[0-9]{3}$') &&
+                 d.email is string && d.email.size() > 0 &&
+                 paymentId == d.cycleKey + '__' + d.email &&
+                 d.amountTaka is int && d.amountTaka >= 1 &&
+                 d.amountTaka <= get(/databases/$(database)/documents/tours/$(tId)).data.samity.contributionTaka &&
+                 d.recordedByEmail == tourUserEmail() &&
+                 d.updatedAt == request.time;
+        }
+        allow read: if isActiveMember(tourId);
+        allow create, update: if isSamityTour(tourId) && isActiveMember(tourId) &&
+                                 (request.resource.data.email == tourUserEmail() || isTourAdmin(tourId)) &&
+                                 validPayment(request.resource.data, tourId);
+        allow delete: if isSamityTour(tourId) && isActiveMember(tourId) &&
+                         (resource.data.email == tourUserEmail() || isTourAdmin(tourId));
+      }
+
+      // Samity payouts: the pot for a cycle, handed to its recipient. Only an owner or admin
+      // records a handover, once per cycle, under the cycle's three-digit key.
+      match /samity_payouts/{cycleKey} {
+        function validPayout(d) {
+          return d.keys().hasOnly(['cycleKey', 'recipientEmail', 'amountTaka', 'recordedByEmail', 'updatedAt']) &&
+                 d.cycleKey is string && d.cycleKey.matches('^[0-9]{3}$') && d.cycleKey == cycleKey &&
+                 d.recipientEmail is string && d.recipientEmail.size() > 0 &&
+                 d.amountTaka is int && d.amountTaka >= 1 &&
+                 d.recordedByEmail == tourUserEmail() &&
+                 d.updatedAt == request.time;
+        }
+        allow read: if isActiveMember(tourId);
+        allow create, update: if isSamityTour(tourId) && isTourAdmin(tourId) && validPayout(request.resource.data);
+        allow delete: if isSamityTour(tourId) && isTourAdmin(tourId);
       }
 
       // Packing checklist: members tick items; admins remove them.

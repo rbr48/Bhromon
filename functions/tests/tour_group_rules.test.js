@@ -611,6 +611,227 @@ describe('Tour Group Firestore rules', () => {
     });
   });
 
+  describe('housing society', () => {
+    const SOC = 'soc1';
+    const FAM = 'fam3';
+    const notice = (by) => ({ title: 'Lift service on Friday', content: 'The lift is off from 10 to 12', authorEmail: by, createdAt: serverTimestamp() });
+    const serviceRequest = (by, extra = {}) => ({
+      title: 'Lift stops at floor 4',
+      details: 'Since Monday',
+      category: 'lift',
+      status: 'open',
+      adminNote: '',
+      createdByEmail: by,
+      createdByName: 'Rahim',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      updatedByEmail: by,
+      ...extra,
+    });
+    const dateRecord = (by) => ({ title: 'Birthday', kind: 'birthday', recurrence: 'yearly', startOn: '2026-11-01', nextOn: '2026-11-01', remindDays: 3, remindOn: null, note: '', createdByEmail: by });
+    const task = (by) => ({ title: 'Gas cylinder', kind: 'shopping', done: false, assigneeEmail: null, doneByEmail: null, createdByEmail: by });
+    const alert = (sender) => ({ senderEmail: sender, senderName: 'x', resolved: false, createdAt: serverTimestamp() });
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        const tours = [
+          [SOC, 'Green Valley Block B', 'society'],
+          [FAM, 'Rahman family', null],
+        ];
+        for (const [id, name, preset] of tours) {
+          await setDoc(doc(f, 'tours', id), { name, kind: 'family', ...(preset ? { preset } : {}), ownerEmail: people.owner.email, ownerUid: people.owner.uid, inviteCode: `${id.toUpperCase()}CODE` });
+          const membership = (email, role) =>
+            setDoc(doc(f, 'memberships', `${id}__${email}`), { tourId: id, email, role, status: 'active', displayName: email });
+          await membership(people.owner.email, 'owner');
+          await membership(people.admin.email, 'admin');
+          await membership(people.member.email, 'member');
+          await membership(people.other.email, 'member');
+        }
+      });
+    });
+
+    test('the committee posts notices in a housing society; a resident is refused', async () => {
+      await assertSucceeds(addDoc(collection(db('owner'), 'tours', SOC, 'notices'), notice(people.owner.email)));
+      await assertSucceeds(addDoc(collection(db('admin'), 'tours', SOC, 'notices'), notice(people.admin.email)));
+      await assertFails(addDoc(collection(db('member'), 'tours', SOC, 'notices'), notice(people.member.email)));
+    });
+
+    test('a resident raises a request under their own email, and it starts open', async () => {
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.member.email)));
+      await assertFails(addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.admin.email)));
+      await assertFails(addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.member.email, { status: 'resolved' })));
+      await assertFails(addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.member.email, { adminNote: 'done' })));
+      await assertFails(addDoc(collection(db('outsider'), 'tours', SOC, 'service_requests'), serviceRequest(people.outsider.email)));
+    });
+
+    test('a request needs a title of 3 to 120 characters and a known category', async () => {
+      await assertFails(addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.member.email, { title: 'ab' })));
+      await assertFails(addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.member.email, { title: 'x'.repeat(121) })));
+      await assertFails(addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.member.email, { category: 'parking' })));
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', SOC, 'service_requests'), serviceRequest(people.member.email, { title: 'x'.repeat(120) })));
+    });
+
+    test('the author corrects the words while the request is open, but not its status', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r1'), serviceRequest(people.member.email));
+      });
+      const ref = doc(db('member'), 'tours', SOC, 'service_requests', 'r1');
+
+      await assertSucceeds(updateDoc(ref, { title: 'Lift stops at floor 4 and 5', details: 'Since Monday morning', updatedAt: serverTimestamp(), updatedByEmail: people.member.email }));
+      await assertFails(updateDoc(ref, { status: 'resolved', updatedAt: serverTimestamp(), updatedByEmail: people.member.email }));
+      await assertFails(updateDoc(ref, { adminNote: 'fixed', updatedAt: serverTimestamp(), updatedByEmail: people.member.email }));
+    });
+
+    test('the words are fixed once the committee has moved the request on', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r2'), serviceRequest(people.member.email, { status: 'in_progress' }));
+      });
+
+      await assertFails(updateDoc(doc(db('member'), 'tours', SOC, 'service_requests', 'r2'), { title: 'Changed my mind', updatedAt: serverTimestamp(), updatedByEmail: people.member.email }));
+    });
+
+    test('an owner or admin sets the status and a note, and does not rewrite the words', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r3'), serviceRequest(people.member.email));
+      });
+
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', SOC, 'service_requests', 'r3'), { status: 'in_progress', adminNote: 'Technician booked for Monday', updatedAt: serverTimestamp(), updatedByEmail: people.admin.email }));
+      await assertSucceeds(updateDoc(doc(db('owner'), 'tours', SOC, 'service_requests', 'r3'), { status: 'resolved', adminNote: 'Lift is working again', updatedAt: serverTimestamp(), updatedByEmail: people.owner.email }));
+      await assertFails(updateDoc(doc(db('admin'), 'tours', SOC, 'service_requests', 'r3'), { title: 'Edited by the committee', updatedAt: serverTimestamp(), updatedByEmail: people.admin.email }));
+      await assertFails(updateDoc(doc(db('member'), 'tours', SOC, 'service_requests', 'r3'), { status: 'open', updatedAt: serverTimestamp(), updatedByEmail: people.member.email }));
+    });
+
+    test('a request is removed by its author or an admin, not by another resident', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r4'), serviceRequest(people.member.email));
+        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r5'), serviceRequest(people.member.email));
+      });
+
+      await assertFails(deleteDoc(doc(db('other'), 'tours', SOC, 'service_requests', 'r4')));
+      await assertSucceeds(deleteDoc(doc(db('member'), 'tours', SOC, 'service_requests', 'r4')));
+      await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', SOC, 'service_requests', 'r5')));
+    });
+
+    test('residents read the requests, and outsiders read nothing', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', SOC, 'service_requests', 'r6'), serviceRequest(people.member.email));
+      });
+
+      await assertSucceeds(getDocs(collection(db('other'), 'tours', SOC, 'service_requests')));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', SOC, 'service_requests')));
+    });
+
+    test('a housing society keeps no dependents, family dates or meals, but keeps shared lists and SOS', async () => {
+      const dependent = { name: 'Child', relation: 'son', parentEmail: people.member.email, countedInFamily: true };
+      await assertFails(setDoc(doc(db('member'), 'tours', SOC, 'dependents', 'd1'), dependent));
+      await assertFails(addDoc(collection(db('member'), 'tours', SOC, 'family_dates'), dateRecord(people.member.email)));
+      await assertFails(setDoc(doc(db('member'), 'tours', SOC, 'meals', `2026-11-01__${people.member.email}`), { dateKey: '2026-11-01', email: people.member.email, breakfast: 1, lunch: 0, dinner: 0, updatedByEmail: people.member.email }));
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', SOC, 'family_tasks'), task(people.member.email)));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', SOC, 'sos', 'a1'), alert(people.member.email)));
+    });
+
+    test('a family circle with no preset keeps its household records', async () => {
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', FAM, 'dependents', 'd1'), { name: 'Child', relation: 'son', parentEmail: people.member.email, countedInFamily: true }));
+    });
+  });
+
+  describe('rotating savings group (samity)', () => {
+    const SAM = 'sam1';
+    const CYCLE0 = '000';
+    const notice = (by) => ({ title: 'Collection on the 10th', content: 'Please pay at the meeting', authorEmail: by, createdAt: serverTimestamp() });
+    const schedule = (extra = {}) => ({
+      contributionTaka: 1000,
+      startMonth: '2026-01',
+      dueDay: 10,
+      payoutOrder: [people.member.email, people.other.email, people.admin.email],
+      ...extra,
+    });
+    const payment = (email, amount, by = email, cycleKey = CYCLE0) => ({ cycleKey, email, amountTaka: amount, recordedByEmail: by, updatedAt: serverTimestamp() });
+    const payout = (by, cycleKey = CYCLE0) => ({ cycleKey, recipientEmail: people.member.email, amountTaka: 3000, recordedByEmail: by, updatedAt: serverTimestamp() });
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        await setDoc(doc(f, 'tours', SAM), { name: 'Mohalla samity', kind: 'family', preset: 'samity', ownerEmail: people.owner.email, ownerUid: people.owner.uid, inviteCode: 'SAM1CODE', samity: schedule() });
+        const membership = (email, role) =>
+          setDoc(doc(f, 'memberships', `${SAM}__${email}`), { tourId: SAM, email, role, status: 'active', displayName: email });
+        await membership(people.owner.email, 'owner');
+        await membership(people.admin.email, 'admin');
+        await membership(people.member.email, 'member');
+        await membership(people.other.email, 'member');
+      });
+    });
+
+    test('a member records their own payment, and not someone else\'s', async () => {
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', SAM, 'samity_payments', `000__${people.member.email}`), payment(people.member.email, 500)));
+      await assertFails(setDoc(doc(db('member'), 'tours', SAM, 'samity_payments', `000__${people.other.email}`), payment(people.other.email, 500)));
+    });
+
+    test('an owner or admin records any member\'s payment, for any cycle', async () => {
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', SAM, 'samity_payments', `000__${people.other.email}`), payment(people.other.email, 1000, people.admin.email)));
+      await assertSucceeds(setDoc(doc(db('owner'), 'tours', SAM, 'samity_payments', `001__${people.member.email}`), payment(people.member.email, 300, people.owner.email, '001')));
+    });
+
+    test('a payment is a whole amount from 1 up to the contribution, under its cycle and member', async () => {
+      const id = `000__${people.member.email}`;
+      await assertFails(setDoc(doc(db('member'), 'tours', SAM, 'samity_payments', id), payment(people.member.email, 0)));
+      await assertFails(setDoc(doc(db('member'), 'tours', SAM, 'samity_payments', id), payment(people.member.email, 1001)));
+      await assertFails(setDoc(doc(db('member'), 'tours', SAM, 'samity_payments', id), payment(people.member.email, 500.5)));
+      await assertFails(setDoc(doc(db('member'), 'tours', SAM, 'samity_payments', 'wrong-id'), payment(people.member.email, 500)));
+      await assertFails(setDoc(doc(db('member'), 'tours', SAM, 'samity_payments', `3__${people.member.email}`), payment(people.member.email, 500, people.member.email, '3')));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', SAM, 'samity_payments', id), payment(people.member.email, 1000)));
+    });
+
+    test('payments are kept only in a samity, and only members read them', async () => {
+      await assertFails(setDoc(doc(db('member'), 'tours', TOUR, 'samity_payments', `000__${people.member.email}`), payment(people.member.email, 500)));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', SAM, 'samity_payments', `000__${people.member.email}`), payment(people.member.email, 500)));
+      await assertSucceeds(getDocs(collection(db('other'), 'tours', SAM, 'samity_payments')));
+      await assertFails(getDocs(collection(db('outsider'), 'tours', SAM, 'samity_payments')));
+    });
+
+    test('a member removes their own payment; an admin removes any', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', SAM, 'samity_payments', `000__${people.member.email}`), payment(people.member.email, 500));
+        await setDoc(doc(ctx.firestore(), 'tours', SAM, 'samity_payments', `000__${people.other.email}`), payment(people.other.email, 500));
+      });
+
+      await assertFails(deleteDoc(doc(db('member'), 'tours', SAM, 'samity_payments', `000__${people.other.email}`)));
+      await assertSucceeds(deleteDoc(doc(db('member'), 'tours', SAM, 'samity_payments', `000__${people.member.email}`)));
+      await assertSucceeds(deleteDoc(doc(db('admin'), 'tours', SAM, 'samity_payments', `000__${people.other.email}`)));
+    });
+
+    test('only an owner or admin records a payout, under the cycle it pays out', async () => {
+      await assertFails(setDoc(doc(db('member'), 'tours', SAM, 'samity_payouts', CYCLE0), payout(people.member.email)));
+      await assertSucceeds(setDoc(doc(db('admin'), 'tours', SAM, 'samity_payouts', CYCLE0), payout(people.admin.email)));
+      await assertFails(setDoc(doc(db('admin'), 'tours', SAM, 'samity_payouts', '001'), payout(people.admin.email)));
+      await assertSucceeds(getDocs(collection(db('other'), 'tours', SAM, 'samity_payouts')));
+      await assertFails(deleteDoc(doc(db('member'), 'tours', SAM, 'samity_payouts', CYCLE0)));
+    });
+
+    test('the schedule is set by an owner or admin, in a valid shape, and only on a samity', async () => {
+      const ref = doc(db('admin'), 'tours', SAM);
+
+      await assertSucceeds(updateDoc(ref, { samity: schedule({ contributionTaka: 1500, dueDay: 28 }) }));
+      await assertFails(updateDoc(doc(db('member'), 'tours', SAM), { samity: schedule() }));
+      await assertFails(updateDoc(ref, { samity: schedule({ dueDay: 29 }) }));
+      await assertFails(updateDoc(ref, { samity: schedule({ startMonth: '2026-13' }) }));
+      await assertFails(updateDoc(ref, { samity: schedule({ contributionTaka: 1000001 }) }));
+      await assertFails(updateDoc(ref, { samity: { ...schedule(), guests: 2 } }));
+      await assertFails(updateDoc(doc(db('admin'), 'tours', TOUR), { samity: schedule() }));
+    });
+
+    test('a samity posts notices through its owner or admins, and members answer them', async () => {
+      await assertSucceeds(addDoc(collection(db('admin'), 'tours', SAM, 'notices'), notice(people.admin.email)));
+      await assertFails(addDoc(collection(db('member'), 'tours', SAM, 'notices'), notice(people.member.email)));
+    });
+
+    test('a samity keeps no dependents or family dates, but its members raise SOS', async () => {
+      await assertFails(setDoc(doc(db('member'), 'tours', SAM, 'dependents', 'd1'), { name: 'Child', relation: 'son', parentEmail: people.member.email, countedInFamily: true }));
+      await assertSucceeds(setDoc(doc(db('member'), 'tours', SAM, 'sos', 'a1'), { senderEmail: people.member.email, senderName: 'x', resolved: false, createdAt: serverTimestamp() }));
+    });
+  });
+
   describe('feed', () => {
     const postPath = ['tours', TOUR, 'posts', 'p1'];
     const post = (author) => ({

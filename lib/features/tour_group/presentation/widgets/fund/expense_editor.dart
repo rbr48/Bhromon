@@ -36,6 +36,11 @@ IconData fundCategoryIcon(String category) => switch (category) {
       'School' => Icons.school_rounded,
       'Dining' => Icons.restaurant_menu_rounded,
       'Gifts' => Icons.card_giftcard_rounded,
+      'Security' => Icons.shield_rounded,
+      'Cleaning' => Icons.cleaning_services_rounded,
+      'Repairs' => Icons.build_rounded,
+      'Generator' => Icons.electrical_services_rounded,
+      'Lift' => Icons.elevator_rounded,
       _ => Icons.receipt_long_rounded,
     };
 

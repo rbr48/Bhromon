@@ -105,22 +105,48 @@ const List<String> kMessChannelIds = [
   kBuiltInVoiceChannelId,
 ];
 
+/// The built-in channels a housing society starts with: the same set as a mess, with
+/// society labels (maintenance and meetings).
+const List<String> kSocietyChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
+/// The built-in channels a samity starts with: the same set again, with samity labels
+/// (collections and meetings).
+const List<String> kSamityChannelIds = [
+  'general',
+  'food',
+  'sightseeing',
+  'emergency',
+  kBuiltInVoiceChannelId,
+];
+
 /// The built-in channels a circle starts with, in the order they are listed.
 List<String> builtInChannelIdsFor({
   required bool family,
   bool office = false,
   bool campus = false,
   bool mess = false,
+  bool society = false,
+  bool samity = false,
 }) =>
     campus
         ? kCampusChannelIds
         : mess
             ? kMessChannelIds
-            : office
-                ? kOfficeChannelIds
-                : family
-                    ? kFamilyChannelIds
-                    : kBuiltInChannelIds;
+            : society
+                ? kSocietyChannelIds
+                : samity
+                    ? kSamityChannelIds
+                    : office
+                        ? kOfficeChannelIds
+                        : family
+                            ? kFamilyChannelIds
+                            : kBuiltInChannelIds;
 
 /// The kind of channel: text messaging or voice lounge.
 enum ChannelKind { text, voice }

@@ -18,6 +18,8 @@ import '../domain/models/family_date_models.dart';
 import '../domain/models/dependent_models.dart';
 import '../domain/models/family_task_models.dart';
 import '../domain/models/meal_log.dart';
+import '../domain/models/samity_models.dart';
+import '../domain/models/service_request_models.dart';
 import '../domain/services/meal_engine.dart';
 import '../domain/services/dependent_rules.dart';
 import '../domain/services/family_date_rules.dart';
@@ -1742,6 +1744,140 @@ class TourGroupRepository {
       _sub(tourId, 'meals')
           .where('dateKey', isGreaterThanOrEqualTo: mealMonthFirstKey(month))
           .where('dateKey', isLessThanOrEqualTo: mealMonthLastKey(month));
+
+  // ---------------------------------------------------------------------------
+  // Housing society service requests
+  // ---------------------------------------------------------------------------
+
+  /// The society's service requests. A stored request that does not read is left out.
+  Stream<List<ServiceRequest>> watchServiceRequests(String tourId) {
+    return _sub(tourId, 'service_requests').limit(300).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (ServiceRequest.fromMap(d.id, d.data()) case final request?)
+              request,
+        ]);
+  }
+
+  /// Raises a request under the signed-in resident's email. It starts open.
+  Future<void> addServiceRequest(
+    String tourId, {
+    required String title,
+    required String details,
+    required ServiceRequestCategory category,
+  }) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'service_requests').add({
+      'title': title.trim(),
+      'details': details.trim(),
+      'category': category.name,
+      'status': ServiceRequestStatus.open.stored,
+      'adminNote': '',
+      'createdByEmail': email,
+      'createdByName': currentDisplayName,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByEmail': email,
+    });
+  }
+
+  /// Corrects a request's words. The rules let only its author do this, and only while
+  /// it is open.
+  Future<void> editServiceRequestText(
+    String tourId,
+    String requestId, {
+    required String title,
+    required String details,
+    required ServiceRequestCategory category,
+  }) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'service_requests').doc(requestId).update({
+      'title': title.trim(),
+      'details': details.trim(),
+      'category': category.name,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByEmail': email,
+    });
+  }
+
+  /// Moves a request on and leaves a note for the residents. Only an owner or admin.
+  Future<void> setServiceRequestStatus(
+    String tourId,
+    String requestId, {
+    required ServiceRequestStatus status,
+    required String note,
+  }) async {
+    final email = _requireEmail();
+    await _sub(tourId, 'service_requests').doc(requestId).update({
+      'status': status.stored,
+      'adminNote': note.trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByEmail': email,
+    });
+  }
+
+  /// Removes a request. Its author or an owner or admin does this.
+  Future<void> deleteServiceRequest(String tourId, String requestId) async {
+    _requireEmail();
+    await _sub(tourId, 'service_requests').doc(requestId).delete();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Samity (rotating savings group)
+  // ---------------------------------------------------------------------------
+
+  /// Saves the schedule on the tour. The rules let only an owner or admin do this, and
+  /// only on a samity.
+  Future<void> saveSamityConfig(String tourId, SamityConfig config) async {
+    _requireEmail();
+    await _tour(tourId).update({'samity': config.toMap()});
+  }
+
+  /// Every payment recorded in the samity. A stored record that does not read is left out.
+  Stream<List<SamityPayment>> watchSamityPayments(String tourId) {
+    return _sub(tourId, 'samity_payments').limit(3000).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (SamityPayment.fromMap(d.data()) case final payment?) payment,
+        ]);
+  }
+
+  /// Records what has been paid into a cycle so far. A member records their own; an
+  /// owner or admin records anyone's.
+  Future<void> saveSamityPayment(String tourId, SamityPayment payment) async {
+    final by = _requireEmail();
+    await _sub(tourId, 'samity_payments').doc(payment.id).set({
+      ...payment.toFields(by),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Removes a payment record. The member it belongs to or an owner or admin does this.
+  Future<void> deleteSamityPayment(String tourId, String paymentId) async {
+    _requireEmail();
+    await _sub(tourId, 'samity_payments').doc(paymentId).delete();
+  }
+
+  /// Every handover recorded in the samity, one per cycle at most.
+  Stream<List<SamityPayout>> watchSamityPayouts(String tourId) {
+    return _sub(tourId, 'samity_payouts').limit(300).snapshots().map((s) => [
+          for (final d in s.docs)
+            if (SamityPayout.fromMap(d.data()) case final payout?) payout,
+        ]);
+  }
+
+  /// Records that a cycle's pot was handed to its recipient. Only an owner or admin.
+  Future<void> saveSamityPayout(String tourId, SamityPayout payout) async {
+    final by = _requireEmail();
+    await _sub(tourId, 'samity_payouts').doc(payout.cycleKey).set({
+      ...payout.toFields(by),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Removes a recorded handover, by its three-digit cycle key. Only an owner or admin.
+  Future<void> deleteSamityPayout(String tourId, String cycleKey) async {
+    _requireEmail();
+    await _sub(tourId, 'samity_payouts').doc(cycleKey).delete();
+  }
 
   Future<void> deleteFamilyTask(String tourId, String taskId) async {
     _requireEmail();

@@ -74,13 +74,35 @@ const List<String> kMessExpenseCategories = [
   'Others',
 ];
 
-/// The categories a group's ledger offers. An office, a campus and a mess each
-/// have their own list; family circles and trips keep theirs. No group means a trip.
+/// The categories a housing society's ledger offers: the building's bills and upkeep.
+const List<String> kSocietyExpenseCategories = [
+  'Utilities',
+  'Security',
+  'Cleaning',
+  'Repairs',
+  'Generator',
+  'Lift',
+  'Others',
+];
+
+/// The categories a samity's ledger offers: the group's own running costs, such as a
+/// meeting's tea or the bank's charges. Its payments are records, not expenses.
+const List<String> kSamityExpenseCategories = [
+  'Dining',
+  'Transport',
+  'Shopping',
+  'Others',
+];
+
+/// The categories a group's ledger offers. Each preset has its own list; family circles
+/// and trips keep theirs. No group means a trip.
 List<String> expenseCategoriesForGroup(TourGroup? group) {
   if (group == null) return kExpenseCategories;
   if (group.isOffice) return kOfficeExpenseCategories;
   if (group.isCampus) return kCampusExpenseCategories;
   if (group.isMess) return kMessExpenseCategories;
+  if (group.isSociety) return kSocietyExpenseCategories;
+  if (group.isSamity) return kSamityExpenseCategories;
   return expenseCategoriesFor(family: group.isFamily);
 }
 
@@ -105,11 +127,15 @@ String splitCategoryFor({
   bool office = false,
   bool campus = false,
   bool mess = false,
+  bool society = false,
+  bool samity = false,
 }) {
   if (channelId != 'food') return 'Others';
   if (office) return 'Dining';
   if (campus) return 'Food';
   if (mess) return 'Groceries';
+  if (society) return 'Repairs';
+  if (samity) return 'Others';
   return family ? 'Groceries' : 'Food';
 }
 

@@ -60,6 +60,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   bool _isOffice = false;
   bool _isCampus = false;
   bool _isMess = false;
+  bool _isSociety = false;
+  bool _isSamity = false;
 
   /// Last-seen time of each member, keyed by email. Drives the online count.
   Map<String, DateTime?> _presence = const {};
@@ -156,6 +158,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               _isOffice = group?.isOffice ?? false;
               _isCampus = group?.isCampus ?? false;
               _isMess = group?.isMess ?? false;
+              _isSociety = group?.isSociety ?? false;
+              _isSamity = group?.isSamity ?? false;
             }),
         onError: (_) {}));
     unawaited(_markHere());
@@ -214,6 +218,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         office: _isOffice,
         campus: _isCampus,
         mess: _isMess,
+        society: _isSociety,
+        samity: _isSamity,
       ))
         byId[id] ?? TourChannel(id: id),
     ];
@@ -285,9 +291,13 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 ? 'campus_channel_food'
                 : _isMess
                     ? 'mess_channel_food'
-                    : _isFamily
-                        ? 'family_channel_food'
-                        : 'tour_channel_food');
+                    : _isSociety
+                        ? 'society_channel_food'
+                        : _isSamity
+                            ? 'samity_channel_food'
+                            : _isFamily
+                                ? 'family_channel_food'
+                                : 'tour_channel_food');
       case 'sightseeing':
         return l10n.translate(_isOffice
             ? 'office_channel_events'
@@ -295,9 +305,13 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 ? 'campus_channel_events'
                 : _isMess
                     ? 'mess_channel_bills'
-                    : _isFamily
-                        ? 'family_channel_sightseeing'
-                        : 'tour_channel_places');
+                    : _isSociety
+                        ? 'society_channel_events'
+                        : _isSamity
+                            ? 'samity_channel_events'
+                            : _isFamily
+                                ? 'family_channel_sightseeing'
+                                : 'tour_channel_places');
       case 'home':
         return l10n.translate('family_channel_home');
       case 'kids':
@@ -1841,6 +1855,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 office: _isOffice,
                 campus: _isCampus,
                 mess: _isMess,
+                society: _isSociety,
+                samity: _isSamity,
                 channelId: channel.id),
           );
           draft.clear();

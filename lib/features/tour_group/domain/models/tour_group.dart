@@ -3,6 +3,7 @@
 import 'expense_models.dart';
 import 'itinerary_models.dart';
 import 'date_codec.dart';
+import 'samity_models.dart';
 import '../services/emergency_numbers.dart';
 
 /// Used by copyWith to tell "not passed" apart from an explicit null.
@@ -274,6 +275,9 @@ class TourGroup {
   /// Numbers every member can call or text in an emergency (at most ten).
   final List<EmergencyContact> emergencyContacts;
 
+  /// The schedule of a rotating savings group (samity). Empty for every other circle.
+  final SamityConfig samity;
+
   const TourGroup({
     required this.id,
     required this.name,
@@ -300,6 +304,7 @@ class TourGroup {
     this.preset,
     this.momentsEnabled = true,
     this.emergencyContacts = const [],
+    this.samity = const SamityConfig(),
   });
 
   /// A family circle rather than a trip.
@@ -315,11 +320,20 @@ class TourGroup {
   /// flat. See [preset].
   static const String messPreset = 'mess';
 
+  /// The preset of a housing society or apartment building: a family-style circle
+  /// where the committee posts notices and residents raise service requests.
+  static const String societyPreset = 'society';
+
+  /// The preset of a rotating savings group (samity). See [samity].
+  static const String samityPreset = 'samity';
+
   /// The preset a stored value names, or null when it names none.
   static String? presetFrom(Object? value) {
     if (value == officePreset) return officePreset;
     if (value == campusPreset) return campusPreset;
     if (value == messPreset) return messPreset;
+    if (value == societyPreset) return societyPreset;
+    if (value == samityPreset) return samityPreset;
     return null;
   }
 
@@ -333,13 +347,27 @@ class TourGroup {
   /// channels. The owner and admins post its notices, and members answer them.
   bool get isMess => preset == messPreset;
 
+  /// A housing society or apartment building: a family-style circle with its own
+  /// categories, channels and service requests.
+  bool get isSociety => preset == societyPreset;
+
+  /// A rotating savings group: a family-style circle with a schedule of payments and
+  /// payouts.
+  bool get isSamity => preset == samityPreset;
+
   /// An office or a campus: a workspace, where the household tiles and records do not
   /// apply and SOS is refused.
   bool get isManaged => isOffice || isCampus;
 
-  /// Whether the owner and admins alone post notices: an office, a campus or a mess.
-  /// Members answer them. A family circle lets any member post.
-  bool get hasManagedNotices => isOffice || isCampus || isMess;
+  /// A plain household: a family circle with no preset. Only a household keeps
+  /// dependents, the family album and family dates.
+  bool get isHousehold => isFamily && preset == null;
+
+  /// Whether the owner and admins alone post notices: an office, a campus, a mess, a
+  /// housing society or a samity. Members answer them. A plain family circle lets any
+  /// member post.
+  bool get hasManagedNotices =>
+      isOffice || isCampus || isMess || isSociety || isSamity;
 
   /// Whether Moments is open to members: always, except when an office or campus has
   /// turned it off.
@@ -590,6 +618,7 @@ class TourGroup {
     String? preset,
     bool? momentsEnabled,
     List<EmergencyContact>? emergencyContacts,
+    SamityConfig? samity,
   }) {
     return TourGroup(
       id: id ?? this.id,
@@ -624,6 +653,7 @@ class TourGroup {
       preset: preset ?? this.preset,
       momentsEnabled: momentsEnabled ?? this.momentsEnabled,
       emergencyContacts: emergencyContacts ?? this.emergencyContacts,
+      samity: samity ?? this.samity,
     );
   }
 
@@ -650,6 +680,7 @@ class TourGroup {
       if (preset != null) 'preset': preset,
       if (!momentsEnabled) 'momentsEnabled': false,
       'emergencyContacts': [for (final c in emergencyContacts) c.toMap()],
+      if (samity.hasSettings) 'samity': samity.toMap(),
       if (!fundBudget.isEmpty) 'fundBudget': fundBudget.toMap(),
       'schemaVersion': 4,
     };
@@ -693,6 +724,7 @@ class TourGroup {
       momentsEnabled: map['momentsEnabled'] != false,
       emergencyContacts: parseEmergencyContacts(map['emergencyContacts']),
       fundBudget: FundBudget.fromMap(map['fundBudget']),
+      samity: SamityConfig.fromMap(map['samity']),
     );
   }
 }
