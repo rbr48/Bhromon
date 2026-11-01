@@ -1,8 +1,11 @@
+import '../domain/models/expense_models.dart';
 import '../domain/models/logistics_models.dart';
+import '../domain/models/safety_alert_models.dart';
 import '../domain/models/tour_activity_models.dart';
 import '../domain/models/tour_export_data.dart';
 import '../domain/models/tour_group.dart';
 import '../domain/models/tour_post_models.dart';
+import '../domain/models/vehicle_models.dart';
 import 'tour_group_repository.dart';
 
 /// Reads everything the PDF export shows, one part of the tour at a time. Posts
@@ -15,17 +18,40 @@ class TourExportCollector {
 
   final TourGroupRepository _repository;
 
+  Future<T> _safe<T>(
+    Stream<T> stream, {
+    required T fallback,
+    Duration timeout = const Duration(seconds: 12),
+  }) async {
+    try {
+      return await stream.first.timeout(timeout);
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   /// [onPosts] reports how many posts have had their comments read, out of all.
   Future<TourExportData> collect(
     TourGroup group, {
     void Function(int done, int total)? onPosts,
   }) async {
     final id = group.id;
-    final latest = await _repository.getGroup(id) ?? group;
-    final members = await _repository.watchMembers(id).first;
-    final notices = await _repository.watchNotices(id).first;
-    final checkpoints = await _repository.watchCheckpoints(id).first;
-    final savedChecklist = await _repository.watchChecklist(id).first;
+    final latest = await _repository
+            .getGroup(id)
+            .timeout(
+              const Duration(seconds: 8),
+              onTimeout: () => group,
+            )
+            .catchError((_) => group) ??
+        group;
+    final members = await _safe(_repository.watchMembers(id),
+        fallback: const <TourMember>[]);
+    final notices = await _safe(_repository.watchNotices(id),
+        fallback: const <TourNotice>[]);
+    final checkpoints = await _safe(_repository.watchCheckpoints(id),
+        fallback: const <RouteCheckpoint>[]);
+    final savedChecklist = await _safe(_repository.watchChecklist(id),
+        fallback: const <ChecklistItem>[]);
     final byId = {for (final item in savedChecklist) item.id: item};
     final tourType = latest.tourType;
     final isBeach = tourType == TourType.beach ||
@@ -54,28 +80,57 @@ class TourExportCollector {
         checklist.add(item);
       }
     }
-    final expenses = await _repository.watchExpenses(id).first;
-    final deposits = await _repository.watchDeposits(id).first;
-    final transfers = await _repository.watchTransfers(id).first;
-    final vehicles = await _repository.watchVehicles(id).first;
+    final expenses = await _safe(_repository.watchExpenses(id),
+        fallback: const <ExpenseItem>[]);
+    final deposits = await _safe(_repository.watchDeposits(id),
+        fallback: const <DepositItem>[]);
+    final transfers = await _safe(_repository.watchTransfers(id),
+        fallback: const <TransferItem>[]);
+    final vehicles = await _safe(_repository.watchVehicles(id),
+        fallback: const <TourVehicle>[]);
     final vehicleSeats = <String, List<BusSeat>>{};
     for (final vehicle in vehicles) {
-      vehicleSeats[vehicle.id] =
-          await _repository.watchSeatsOf(id, vehicle.id).first;
+      vehicleSeats[vehicle.id] = await _safe(
+        _repository.watchSeatsOf(id, vehicle.id),
+        fallback: const <BusSeat>[],
+      );
     }
-    final coachSeats = await _repository.watchCoachSeats(id).first;
-    final hotelRooms = await _repository.watchHotelRooms(id).first;
-    final safetyAlerts =
-        await _repository.watchSafetyAlerts(id, limit: 1000).first;
-    final stories = await _repository.watchStories(id).first;
-    final highlights = await _repository.watchHighlights(id).first;
+    final coachSeats = await _safe(_repository.watchCoachSeats(id),
+        fallback: const <BusSeat>[]);
+    final hotelRooms = await _safe(_repository.watchHotelRooms(id),
+        fallback: const <HotelRoom>[]);
+    final safetyAlerts = await _safe(
+      _repository.watchSafetyAlerts(id, limit: 1000),
+      fallback: const <SafetyAlert>[],
+    );
+    final stories = await _safe(_repository.watchStories(id),
+        fallback: const <TourStoryItem>[]);
+    final highlights = await _safe(_repository.watchHighlights(id),
+        fallback: const <TourStoryHighlight>[]);
 
-    final posts = await _repository.fetchAllPostsForExport(id);
+    List<TourPostItem> posts = const [];
+    try {
+      posts = await _repository.fetchAllPostsForExport(id).timeout(
+            const Duration(seconds: 25),
+            onTimeout: () => const [],
+          );
+    } catch (_) {
+      posts = const [];
+    }
+
     final comments = <String, List<TourCommentItem>>{};
     for (var i = 0; i < posts.length; i += _parallelReads) {
       final chunk = posts.skip(i).take(_parallelReads).toList();
       final results = await Future.wait(
-        chunk.map((post) => _repository.fetchCommentsForExport(id, post.id)),
+        chunk.map((post) async {
+          try {
+            return await _repository
+                .fetchCommentsForExport(id, post.id)
+                .timeout(const Duration(seconds: 8), onTimeout: () => const []);
+          } catch (_) {
+            return const <TourCommentItem>[];
+          }
+        }),
       );
       for (var j = 0; j < chunk.length; j++) {
         comments[chunk[j].id] = results[j];
