@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io';
@@ -311,7 +312,7 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (context) => FullScreenImageViewer(
-                        imageUrl: imageBlock.storageUrl,
+                        imageUrl: signedMediaUrl(imageBlock.storageUrl),
                         heroTag: heroTag,
                         localPath: imageBlock.localPath,
                         caption: imageBlock.caption,
@@ -332,7 +333,7 @@ class _TripLogDetailSheetState extends State<TripLogDetailSheet> {
                           )
                         : CachedNetworkImage(
                             memCacheWidth: context.decodeWidth(),
-                            imageUrl: imageBlock.storageUrl,
+                            imageUrl: signedMediaUrl(imageBlock.storageUrl),
                             fit: BoxFit.cover,
                             height: 180,
                             placeholder: (context, url) => Container(

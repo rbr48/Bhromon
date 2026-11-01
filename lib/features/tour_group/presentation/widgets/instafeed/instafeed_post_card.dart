@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -152,7 +153,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   }
 
   void _initVideoController(String url) {
-    final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+    final ctrl =
+        VideoPlayerController.networkUrl(Uri.parse(signedMediaUrl(url)));
     _videoCtrl = ctrl;
     ctrl.initialize().then((_) {
       if (!mounted || _videoCtrl != ctrl) return;
@@ -1117,7 +1119,7 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     radius: 18,
                     backgroundColor: AppColors.mintGreen,
                     backgroundImage: widget.post.authorPhoto != null
-                        ? NetworkImage(widget.post.authorPhoto!)
+                        ? NetworkImage(signedMediaUrl(widget.post.authorPhoto!))
                         : null,
                     child: widget.post.authorPhoto == null
                         ? Text(
@@ -1546,7 +1548,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     radius: 12,
                     backgroundColor: AppColors.midGreen,
                     backgroundImage: widget.repository.currentPhotoUrl != null
-                        ? NetworkImage(widget.repository.currentPhotoUrl!)
+                        ? NetworkImage(
+                            signedMediaUrl(widget.repository.currentPhotoUrl!))
                         : null,
                     child: widget.repository.currentPhotoUrl == null
                         ? Text(

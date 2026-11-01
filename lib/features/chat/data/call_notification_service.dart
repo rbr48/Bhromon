@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -575,7 +576,7 @@ class CallNotificationService {
               radius: 40,
               backgroundColor: const Color(0xFF00A884),
               backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-                  ? CachedNetworkImageProvider(avatarUrl,
+                  ? CachedNetworkImageProvider(signedMediaUrl(avatarUrl),
                       maxWidth: kMaxDecodeDimension)
                   : null,
               child: (avatarUrl == null || avatarUrl.isEmpty)

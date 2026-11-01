@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -459,7 +460,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               // Card image/gradient with disk and memory cache
               if (hasImg)
                 CachedNetworkImage(
-                  imageUrl: pin.imageUrl!,
+                  imageUrl: signedMediaUrl(pin.imageUrl!),
                   memCacheWidth: context.decodeWidth(),
                   width: double.infinity,
                   height: double.infinity,

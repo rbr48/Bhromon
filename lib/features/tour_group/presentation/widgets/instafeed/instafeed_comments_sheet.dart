@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
@@ -559,7 +560,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
             radius: isReply ? 14 : 18,
             backgroundColor: AppColors.mintGreen,
             backgroundImage: comment.authorPhoto != null
-                ? NetworkImage(comment.authorPhoto!)
+                ? NetworkImage(signedMediaUrl(comment.authorPhoto!))
                 : null,
             child: comment.authorPhoto == null
                 ? Text(

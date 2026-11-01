@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -37,8 +38,8 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
   }
 
   Future<void> _initVideo() async {
-    final controller =
-        VideoPlayerController.networkUrl(Uri.parse(widget.mediaUrl));
+    final controller = VideoPlayerController.networkUrl(
+        Uri.parse(signedMediaUrl(widget.mediaUrl)));
     _videoController = controller;
     await controller.initialize();
     if (mounted) {
@@ -81,7 +82,7 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                       maxScale: 5.0,
                       child: kIsWeb
                           ? Image.network(
-                              widget.mediaUrl,
+                              signedMediaUrl(widget.mediaUrl),
                               fit: BoxFit.contain,
                               loadingBuilder: (_, child, progress) {
                                 if (progress == null) return child;
@@ -98,14 +99,14 @@ class _FullScreenMediaViewerState extends State<FullScreenMediaViewer> {
                             )
                           : CachedNetworkImage(
                               memCacheWidth: kMaxDecodeDimension,
-                              imageUrl: widget.mediaUrl,
+                              imageUrl: signedMediaUrl(widget.mediaUrl),
                               fit: BoxFit.contain,
                               placeholder: (_, __) => const Center(
                                 child: CircularProgressIndicator(
                                     color: Color(0xFF00A884)),
                               ),
                               errorWidget: (_, __, ___) => Image.network(
-                                widget.mediaUrl,
+                                signedMediaUrl(widget.mediaUrl),
                                 fit: BoxFit.contain,
                                 errorBuilder: (_, __, ___) => const Icon(
                                   Icons.broken_image_outlined,

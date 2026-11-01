@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -223,7 +224,7 @@ class ChatMediaBubble extends StatelessWidget {
         if (kIsWeb) {
           // On Web: use Image.network to avoid XHR CORS and flutter_cache_manager issues
           return Image.network(
-            displayUrl,
+            signedMediaUrl(displayUrl),
             fit: BoxFit.contain,
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;
@@ -236,11 +237,11 @@ class ChatMediaBubble extends StatelessWidget {
 
         return CachedNetworkImage(
           memCacheWidth: decodeWidth,
-          imageUrl: displayUrl,
+          imageUrl: signedMediaUrl(displayUrl),
           fit: BoxFit.contain,
           placeholder: (_, __) => buildPlaceholder(),
           errorWidget: (_, __, ___) => Image.network(
-            displayUrl,
+            signedMediaUrl(displayUrl),
             fit: BoxFit.contain,
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;

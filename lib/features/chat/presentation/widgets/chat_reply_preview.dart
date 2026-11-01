@@ -1,3 +1,4 @@
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -98,7 +99,7 @@ class ChatReplyInputBanner extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
               child: kIsWeb
                   ? Image.network(
-                      reply.mediaUrl!,
+                      signedMediaUrl(reply.mediaUrl!),
                       width: 40,
                       height: 40,
                       fit: BoxFit.cover,
@@ -106,14 +107,14 @@ class ChatReplyInputBanner extends StatelessWidget {
                           const Icon(Icons.broken_image, size: 18),
                     )
                   : CachedNetworkImage(
-                      imageUrl: reply.mediaUrl!,
+                      imageUrl: signedMediaUrl(reply.mediaUrl!),
                       width: 40,
                       height: 40,
                       fit: BoxFit.cover,
                       placeholder: (context, _) =>
                           Container(color: Colors.white10),
                       errorWidget: (context, _, __) => Image.network(
-                        reply.mediaUrl!,
+                        signedMediaUrl(reply.mediaUrl!),
                         width: 40,
                         height: 40,
                         fit: BoxFit.cover,
@@ -245,7 +246,7 @@ class ChatQuotedBubble extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
                 child: kIsWeb
                     ? Image.network(
-                        reply.mediaUrl!,
+                        signedMediaUrl(reply.mediaUrl!),
                         width: 32,
                         height: 32,
                         fit: BoxFit.cover,
@@ -253,14 +254,14 @@ class ChatQuotedBubble extends StatelessWidget {
                             const Icon(Icons.broken_image, size: 14),
                       )
                     : CachedNetworkImage(
-                        imageUrl: reply.mediaUrl!,
+                        imageUrl: signedMediaUrl(reply.mediaUrl!),
                         width: 32,
                         height: 32,
                         fit: BoxFit.cover,
                         placeholder: (context, _) =>
                             Container(color: Colors.white10),
                         errorWidget: (context, _, __) => Image.network(
-                          reply.mediaUrl!,
+                          signedMediaUrl(reply.mediaUrl!),
                           width: 32,
                           height: 32,
                           fit: BoxFit.cover,

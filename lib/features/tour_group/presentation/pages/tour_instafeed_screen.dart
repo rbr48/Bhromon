@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -1753,7 +1754,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     radius: 16,
                     backgroundColor: Colors.black,
                     backgroundImage: story.authorPhoto != null
-                        ? NetworkImage(story.authorPhoto!)
+                        ? NetworkImage(signedMediaUrl(story.authorPhoto!))
                         : null,
                     child: story.authorPhoto == null
                         ? Text(

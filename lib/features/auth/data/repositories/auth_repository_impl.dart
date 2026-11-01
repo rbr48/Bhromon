@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/media/media_access.dart';
 import '../../../../core/security/hive_encryption_service.dart';
 import '../../../../core/services/push_device.dart';
 import '../../../../core/entities/explorer_profile.dart';
@@ -208,6 +209,7 @@ class AuthRepositoryImpl implements IAuthRepository {
   Future<Either<Failure, Unit>> signOut() async {
     try {
       _cachedProfile = null;
+      await MediaAccess.instance.clear();
       // Clear local Hive cache immediately for instant logout
       await _clearLocalCache();
 
@@ -353,6 +355,8 @@ class AuthRepositoryImpl implements IAuthRepository {
 
   Future<Either<Failure, ExplorerProfile>> _syncUserWithFirestore(
       User user) async {
+    // Every sign-in ends here, so the person's media key is fetched here.
+    await MediaAccess.instance.refresh();
     try {
       final doc = await _withRetry(
         () => _firestore.collection('explorer_profiles').doc(user.uid).get(),

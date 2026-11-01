@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import aiofiles
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -32,6 +32,7 @@ from pydantic import BaseModel
 import cdn
 import chat
 import limits
+import media_access
 import news
 from chat import chat_db, chat_router
 from family_dates import FamilyDateReminderScheduler
@@ -344,6 +345,14 @@ PUBLIC_OR_USER_SPACES = frozenset({
     "profiles", "users", "general", "explorer", "trip_logs"
 })
 
+# Private media. The secret derives each person's link key (media_access.py). With
+# enforcement off, a request that fails the check is logged and still served, so the app
+# can roll out before the check is enforced.
+MEDIA_ACCESS_SECRET = os.getenv("MEDIA_ACCESS_SECRET", "").encode("utf-8")
+MEDIA_ACCESS_ENFORCE = os.getenv("MEDIA_ACCESS_ENFORCE", "0").strip() == "1"
+media_decisions = media_access.AccessDecisions()
+MEDIA_PATH = re.compile(r"/media/([A-Za-z0-9_-]{1,128})/([a-z_]{1,32})/([^/]+)")
+
 
 def chat_partner_of(space: str, uid: str) -> Optional[str]:
     """The other person in a chat space (`chat_{uidA}_{uidB}`), or None when `uid` is not one of them."""
@@ -389,6 +398,44 @@ def require_member(tour_id: str, caller: Caller) -> str:
             detail="You are not an active member of this tour.",
         )
     return role
+
+
+def can_read_space(space: str, caller: Caller) -> bool:
+    """Whether the caller may read files in the space. The rules are the same as for uploads."""
+    try:
+        require_member(space, caller)
+    except HTTPException:
+        return False
+    return True
+
+
+def media_read_decision(raw_uri: str) -> Tuple[bool, str]:
+    """Whether nginx may serve a media file, and why. The reason never includes the link."""
+    path = raw_uri.partition("?")[0]
+    match = MEDIA_PATH.fullmatch(path)
+    if match is None or FILENAME_PATTERN.fullmatch(match.group(3)) is None:
+        return False, "not a media file"
+    space, folder, _filename = match.groups()
+    if folder not in ALLOWED_FOLDERS:
+        return False, "unknown folder"
+    if not media_access.secret_is_usable(MEDIA_ACCESS_SECRET):
+        return False, "private media is not configured"
+    link = media_access.parse_link(raw_uri)
+    if link is None:
+        return False, "unsigned link"
+    _path, uid, signature = link
+    if not media_access.signature_is_valid(MEDIA_ACCESS_SECRET, path, uid, signature):
+        return False, "bad signature"
+    try:
+        email = backend.email_for_uid(uid)
+        if not email:
+            return False, "no verified account"
+        caller = Caller(email=email, uid=uid)
+        allowed = media_decisions.allowed(uid, space, lambda: can_read_space(space, caller))
+    except Exception as error:  # Fail closed: a check that fails refuses the file.
+        logger.error("Media access check failed: %s: %s", type(error).__name__, error)
+        return False, "check failed"
+    return (True, "allowed") if allowed else (False, "not a member of that space")
 
 
 def check_tour_id(tour_id: str) -> None:
@@ -789,6 +836,31 @@ def _require_purge_key(provided: Optional[str]) -> None:
         provided.encode("utf-8"), PURGE_KEY.encode("utf-8")
     ):
         raise HTTPException(status_code=401, detail="Wrong purge key.")
+
+
+@app.api_route("/internal/media-auth", methods=["GET", "HEAD"])
+async def media_auth(request: Request):
+    """Asked by nginx before it serves a media file: 200 lets it through, 403 refuses it."""
+    raw_uri = request.headers.get("x-original-uri", "")
+    allowed, reason = await run_in_threadpool(media_read_decision, raw_uri)
+    if allowed:
+        return Response(status_code=200)
+    if MEDIA_ACCESS_ENFORCE:
+        logger.info("Media refused: %s", reason)
+        return Response(status_code=403)
+    logger.info("Media would be refused (log only): %s", reason)
+    return Response(status_code=200)
+
+
+@app.post("/access-key")
+async def media_access_key(authorization: Optional[str] = Header(None)):
+    """The key the caller's app signs its media links with. Only the caller is given it."""
+    caller = await run_in_threadpool(authenticate, authorization)
+    if not media_access.secret_is_usable(MEDIA_ACCESS_SECRET):
+        raise HTTPException(status_code=503, detail="Private media is not configured on this server.")
+    if not media_access.UID_PATTERN.fullmatch(caller.uid):
+        raise HTTPException(status_code=400, detail="Unsupported account id.")
+    return {"uid": caller.uid, "key": media_access.derive_key(MEDIA_ACCESS_SECRET, caller.uid)}
 
 
 @app.post("/purge")

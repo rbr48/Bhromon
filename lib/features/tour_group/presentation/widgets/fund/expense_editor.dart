@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -648,7 +649,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(
-                        _receiptUrl!,
+                        signedMediaUrl(_receiptUrl!),
                         height: 120,
                         width: double.infinity,
                         fit: BoxFit.cover,

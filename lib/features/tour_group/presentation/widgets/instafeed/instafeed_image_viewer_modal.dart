@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
@@ -240,7 +241,7 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
                     radius: 16,
                     backgroundColor: AppColors.mintGreen,
                     backgroundImage: widget.post.authorPhoto != null
-                        ? NetworkImage(widget.post.authorPhoto!)
+                        ? NetworkImage(signedMediaUrl(widget.post.authorPhoto!))
                         : null,
                     child: widget.post.authorPhoto == null
                         ? Text(

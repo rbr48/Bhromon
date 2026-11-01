@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -61,7 +62,7 @@ class FullScreenImageViewer extends StatelessWidget {
                           )
                         : CachedNetworkImage(
                             memCacheWidth: kMaxDecodeDimension,
-                            imageUrl: imageUrl,
+                            imageUrl: signedMediaUrl(imageUrl),
                             fit: BoxFit.contain,
                             width: double.infinity,
                             height: double.infinity,

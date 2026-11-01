@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -123,7 +124,8 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
     if (isVideo) {
       setState(() => _isVideoLoading = true);
       final videoUrl = story.videoUrl ?? story.mediaUrl;
-      final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+      final controller =
+          VideoPlayerController.networkUrl(Uri.parse(signedMediaUrl(videoUrl)));
 
       bool isCurrent() => mounted && loadId == _loadId;
 
@@ -744,7 +746,7 @@ class _InstafeedStoryViewerState extends State<InstafeedStoryViewer>
                           radius: 16,
                           backgroundColor: AppColors.mintGreen,
                           backgroundImage: story.authorPhoto != null
-                              ? NetworkImage(story.authorPhoto!)
+                              ? NetworkImage(signedMediaUrl(story.authorPhoto!))
                               : null,
                           child: story.authorPhoto == null
                               ? Text(

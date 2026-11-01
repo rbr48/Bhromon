@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
@@ -67,7 +68,7 @@ class TourExportImages {
   Future<TourExportPhoto?> _fetch(String url) async {
     try {
       final response = await _client
-          .get(Uri.parse(url))
+          .get(Uri.parse(signedMediaUrl(url)))
           .timeout(const Duration(seconds: 25));
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
         return null;

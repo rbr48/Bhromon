@@ -29,7 +29,7 @@ Both services mount `/etc/bhromon/firebase-admin.json:ro` to authenticate reques
 - `POST /api/media/upload` — Multipart upload with `Authorization: Bearer <token>`. The token's email must be verified; an unverified address is refused, as the Firestore and Storage rules refuse it.
 - `DELETE /api/media/media/{tourId}/{folder}/{filename}` — File deletion by author or tour admin.
 - `POST /api/media/purge/account` — Closing an account: the back end removes that person's files and chat-service data (key-protected, see below).
-- `GET /media/{tourId}/{folder}/{filename}` — Direct Nginx byte-range streaming (`206 Partial Content`).
+- `GET /media/{tourId}/{folder}/{filename}?u=<uid>&s=<signature>` — Nginx byte-range streaming (`206 Partial Content`), once the signed link passes the check. See "Private media links" below. `/media/apk/` stays public.
 - `POST /api/media/notify/sos` — Direct emergency SOS multicast trigger.
 - `POST /api/media/notify/channel` — Channel message and mention push notifications.
 
@@ -132,6 +132,42 @@ the same bytes, so deleting the original post does not remove the story's file.
 
 Deleting a file also clears its cached copy on the CDN when `config/cdn` holds a zone and a
 token. A failed purge is logged and never fails the delete.
+
+## Private media links
+
+Tour, chat and profile media is private. nginx serves a file only when its link carries a
+valid signature for a person who may read that space (`media_access.py`).
+
+- `POST /api/media/access-key` (signed in, verified email) returns `{uid, key}`. The key is
+  derived from `MEDIA_ACCESS_SECRET`, and only its owner is given it. The app keeps it on
+  the device.
+- A link is the file's `/media/...` path with `?u=<uid>&s=<signature>`. The signature is
+  HMAC-SHA256 of `v1|<path>` under the key, base64url without padding.
+- Before it serves a file, nginx asks `/internal/media-auth`. The server checks the
+  signature, then the same rules as uploads: an active member of the tour, one of the two
+  people in a chat who share a tour, the owner of a user space, or any signed-in person in
+  the public spaces. Each answer is remembered for 60 seconds.
+- `/media/apk/` stays public. It is the Android download linked from the newspaper page.
+
+Links do not expire, so cached copies and offline viewing keep working. A link stops
+working when its person leaves the tour, when the file is deleted, or when the secret
+changes, which revokes every link at once. Browsers may keep a copy for a day, and shared
+caches are told not to keep one at all.
+
+Rollout, in this order:
+
+1. Set `MEDIA_ACCESS_SECRET` on the host. Generate it once with
+   `python3 -c 'import secrets; print(secrets.token_urlsafe(48))'`. Never commit it.
+2. Deploy this server with `MEDIA_ACCESS_ENFORCE=0` (the default). Requests that would be
+   refused are logged as "would be refused" and still served, so the logs show what older
+   app builds would lose.
+3. Copy `bhromon.fun.conf` to nginx, run `nginx -t`, and reload.
+4. Release the app that signs links.
+5. When the logs show no more refusals from current builds, set `MEDIA_ACCESS_ENFORCE=1`
+   and restart the container.
+
+Tests: `pytest tests/test_media_access.py`. The Dart client checks the same reference
+values in `test/core/media/media_signing_test.dart`.
 
 ## Backups
 

@@ -22,6 +22,7 @@ import 'app/di/injection.dart';
 import 'app/di/environments.dart';
 import 'core/sync/sync_worker.dart';
 import 'core/security/hive_encryption_service.dart';
+import 'core/media/media_access.dart';
 import 'app/router.dart';
 import 'core/theme/theme.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
@@ -357,6 +358,7 @@ void main() {
       }
     }
 
+    await MediaAccess.instance.startUp();
     runApp(const MyApp());
 
     // Background job registration and call listener isn't needed to draw the first frame.

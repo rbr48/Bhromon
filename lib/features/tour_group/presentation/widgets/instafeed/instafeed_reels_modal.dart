@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -96,7 +97,8 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
         post.videoUrl ?? (post.images.isNotEmpty ? post.images.first : null);
     if (url == null || !isRemoteMediaUrl(url)) return null;
 
-    final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+    final controller =
+        VideoPlayerController.networkUrl(Uri.parse(signedMediaUrl(url)));
     _controllerPool[index] = controller;
     controller.addListener(() => _onVideoTick(index, controller));
 
@@ -588,7 +590,8 @@ class _ReelPageItemState extends State<_ReelPageItem>
                           radius: 16,
                           backgroundColor: AppColors.mintGreen,
                           backgroundImage: widget.post.authorPhoto != null
-                              ? NetworkImage(widget.post.authorPhoto!)
+                              ? NetworkImage(
+                                  signedMediaUrl(widget.post.authorPhoto!))
                               : null,
                           child: widget.post.authorPhoto == null
                               ? Text(
