@@ -441,7 +441,7 @@ describe('Tour Group Firestore rules', () => {
     });
 
     test('a mess posts notices through its owner or admins only; a member is refused', async () => {
-      await assertSucceeds(addDoc(collection(db('admin'), 'tours', MESS, 'notices'), notice(people.admin.email)));
+      await assertSucceeds(addDoc(collection(db('owner'), 'tours', MESS, 'notices'), notice(people.owner.email)));
       await assertFails(addDoc(collection(db('member'), 'tours', MESS, 'notices'), notice(people.member.email)));
       await assertFails(addDoc(collection(db('member'), 'tours', MESS, 'notices'), notice(people.owner.email)));
     });
@@ -540,6 +540,74 @@ describe('Tour Group Firestore rules', () => {
       await assertSucceeds(setDoc(doc(db('member'), 'tours', FAMILY2, 'sos', 'a1'), alert(people.member.email)));
       await assertSucceeds(setDoc(doc(db('member'), 'tours', TOUR, 'sos', 'a1'), alert(people.member.email)));
       await assertFails(setDoc(doc(db('member'), 'tours', OFFICE2, 'sos', 'a1'), alert(people.member.email)));
+    });
+  });
+
+  describe('moments setting in an office', () => {
+    const OFFICE3 = 'off3';
+    const FAMILY3 = 'fam3';
+    const post = (tour, author) => ({
+      tourId: tour,
+      authorEmail: author,
+      caption: 'hi',
+      images: [],
+      likes: [],
+      commentCount: 0,
+      createdAt: serverTimestamp(),
+    });
+    const story = (author) => ({
+      authorEmail: author,
+      authorName: 'x',
+      mediaUrl: 'https://bhromon.fun/media/t1/stories/a.jpg',
+      createdAt: serverTimestamp(),
+      viewers: [],
+      poll: { question: 'Beach?', options: ['Yes', 'No'], votes: {} },
+      reactions: {},
+    });
+
+    beforeEach(async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        const f = ctx.firestore();
+        const tours = [
+          [OFFICE3, 'Sales team', 'office'],
+          [FAMILY3, 'Rahman family', null],
+        ];
+        for (const [id, name, preset] of tours) {
+          await setDoc(doc(f, 'tours', id), { name, kind: 'family', ...(preset ? { preset } : {}), ownerEmail: people.owner.email, ownerUid: people.owner.uid, inviteCode: `${id.toUpperCase()}CODE` });
+          const membership = (email, role) =>
+            setDoc(doc(f, 'memberships', `${id}__${email}`), { tourId: id, email, role, status: 'active', displayName: email });
+          await membership(people.owner.email, 'owner');
+          await membership(people.admin.email, 'admin');
+          await membership(people.member.email, 'member');
+        }
+      });
+    });
+
+    test('an owner or admin turns Moments off and on in an office; a member cannot', async () => {
+      await assertFails(updateDoc(doc(db('member'), 'tours', OFFICE3), { momentsEnabled: false }));
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', OFFICE3), { momentsEnabled: false }));
+      await assertSucceeds(updateDoc(doc(db('owner'), 'tours', OFFICE3), { momentsEnabled: true }));
+    });
+
+    test('a family circle cannot change the Moments setting', async () => {
+      await assertFails(updateDoc(doc(db('admin'), 'tours', FAMILY3), { momentsEnabled: false }));
+      await assertFails(updateDoc(doc(db('owner'), 'tours', FAMILY3), { momentsEnabled: false }));
+    });
+
+    test('with Moments off, nobody in the office posts or shares a story until it is back on', async () => {
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', OFFICE3), { momentsEnabled: false }));
+      await assertFails(addDoc(collection(db('member'), 'tours', OFFICE3, 'posts'), post(OFFICE3, people.member.email)));
+      await assertFails(addDoc(collection(db('admin'), 'tours', OFFICE3, 'posts'), post(OFFICE3, people.admin.email)));
+      await assertFails(addDoc(collection(db('member'), 'tours', OFFICE3, 'stories'), story(people.member.email)));
+      await assertSucceeds(updateDoc(doc(db('admin'), 'tours', OFFICE3), { momentsEnabled: true }));
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', OFFICE3, 'posts'), post(OFFICE3, people.member.email)));
+    });
+
+    test('a family circle keeps Moments on, whatever its stored setting says', async () => {
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        await setDoc(doc(ctx.firestore(), 'tours', FAMILY3), { momentsEnabled: false }, { merge: true });
+      });
+      await assertSucceeds(addDoc(collection(db('member'), 'tours', FAMILY3, 'posts'), post(FAMILY3, people.member.email)));
     });
   });
 

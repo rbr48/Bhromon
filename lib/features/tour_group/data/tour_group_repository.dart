@@ -968,6 +968,13 @@ class TourGroupRepository {
     await _tour(tourId).update(updates);
   }
 
+  /// Turns Moments on or off for an office or campus. The owner or an admin may do it;
+  /// the rules refuse it for any other circle.
+  Future<void> setMomentsEnabled(String tourId, bool enabled) async {
+    _requireEmail();
+    await _tour(tourId).update({'momentsEnabled': enabled});
+  }
+
   /// Admins save the itinerary. The summary fields older screens read are
   /// kept in step: the destination becomes "A → B → C", the tour type is
   /// beach when any stop is (so beach items and tide tools show), and the

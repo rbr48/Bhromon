@@ -627,6 +627,11 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
              get(/databases/$(database)/documents/tours/$(tId)).data.get('preset', '') in ['office', 'campus', 'mess'];
     }
+    // Moments is on unless an office or a campus has turned it off.
+    function momentsOpen(tId) {
+      return exists(/databases/$(database)/documents/tours/$(tId)) &&
+             (!isManagedTour(tId) || get(/databases/$(database)/documents/tours/$(tId)).data.get('momentsEnabled', true) != false);
+    }
     // A mess or shared home is a family circle with the mess preset.
     function isMessTour(tId) {
       return exists(/databases/$(database)/documents/tours/$(tId)) &&
@@ -713,6 +718,7 @@ service cloud.firestore {
                     (isTourAdmin(tourId) &&
                      !request.resource.data.diff(resource.data).affectedKeys()
                        .hasAny(['ownerEmail', 'ownerUid', 'inviteCode']))) &&
+                    (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['momentsEnabled']) || isManagedTour(tourId)) &&
                     (!('emergencyContacts' in request.resource.data) ||
                      (request.resource.data.emergencyContacts is list &&
                       request.resource.data.emergencyContacts.size() <= 10));
@@ -883,7 +889,7 @@ service cloud.firestore {
       match /posts/{postId} {
         allow read: if isActiveMember(tourId);
         // The server stamps the time. A new post starts with no likes or comments.
-        allow create: if isActiveMember(tourId) &&
+        allow create: if isActiveMember(tourId) && momentsOpen(tourId) &&
                          request.resource.data.authorEmail == tourUserEmail() &&
                          request.resource.data.createdAt == request.time &&
                          request.resource.data.get('likes', []).size() == 0 &&
@@ -949,7 +955,7 @@ service cloud.firestore {
         allow read: if isActiveMember(tourId);
         // A caption, the media links and a poll have size limits. A field that is
         // not set counts as absent.
-        allow create: if isActiveMember(tourId) &&
+        allow create: if isActiveMember(tourId) && momentsOpen(tourId) &&
                          request.resource.data.authorEmail == tourUserEmail() &&
                          request.resource.data.createdAt == request.time &&
                          (request.resource.data.get('caption', null) == null || request.resource.data.caption.size() <= 2200) &&

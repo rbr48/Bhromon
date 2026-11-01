@@ -267,6 +267,10 @@ class TourGroup {
   /// Null for trips and for family circles made before presets.
   final String? preset;
 
+  /// Whether Moments (posts and stories) is on. Only an office or campus can turn it
+  /// off; a family circle, a mess or a trip always has it on.
+  final bool momentsEnabled;
+
   /// Numbers every member can call or text in an emergency (at most ten).
   final List<EmergencyContact> emergencyContacts;
 
@@ -294,6 +298,7 @@ class TourGroup {
     this.fundBudget = const FundBudget(),
     this.kind = GroupKind.tour,
     this.preset,
+    this.momentsEnabled = true,
     this.emergencyContacts = const [],
   });
 
@@ -335,6 +340,10 @@ class TourGroup {
   /// Whether the owner and admins alone post notices: an office, a campus or a mess.
   /// Members answer them. A family circle lets any member post.
   bool get hasManagedNotices => isOffice || isCampus || isMess;
+
+  /// Whether Moments is open to members: always, except when an office or campus has
+  /// turned it off.
+  bool get momentsOpen => !isManaged || momentsEnabled;
 
   /// The id the origin city has in leg keys.
   static const String originId = 'origin';
@@ -579,6 +588,7 @@ class TourGroup {
     FundBudget? fundBudget,
     GroupKind? kind,
     String? preset,
+    bool? momentsEnabled,
     List<EmergencyContact>? emergencyContacts,
   }) {
     return TourGroup(
@@ -611,6 +621,8 @@ class TourGroup {
       returnHome: returnHome ?? this.returnHome,
       fundBudget: fundBudget ?? this.fundBudget,
       kind: kind ?? this.kind,
+      preset: preset ?? this.preset,
+      momentsEnabled: momentsEnabled ?? this.momentsEnabled,
       emergencyContacts: emergencyContacts ?? this.emergencyContacts,
     );
   }
@@ -636,6 +648,7 @@ class TourGroup {
       'returnHome': returnHome,
       'kind': kind.name,
       if (preset != null) 'preset': preset,
+      if (!momentsEnabled) 'momentsEnabled': false,
       'emergencyContacts': [for (final c in emergencyContacts) c.toMap()],
       if (!fundBudget.isEmpty) 'fundBudget': fundBudget.toMap(),
       'schemaVersion': 4,
@@ -677,6 +690,7 @@ class TourGroup {
       returnHome: map['returnHome'] as bool? ?? true,
       kind: GroupKind.fromString(map['kind']?.toString()),
       preset: presetFrom(map['preset']),
+      momentsEnabled: map['momentsEnabled'] != false,
       emergencyContacts: parseEmergencyContacts(map['emergencyContacts']),
       fundBudget: FundBudget.fromMap(map['fundBudget']),
     );

@@ -525,6 +525,25 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         await exportTourPdf(context, group: group, repository: _repository);
       case 'add_member':
         _showAddMemberDialog(context, group.id);
+      case 'moments':
+        final role = await _repository.myRole(group.id);
+        if (role == null || !role.isAdminOrOwner) {
+          _snack(l10n.translate('moments_admins_only'), error: true);
+          return;
+        }
+        final turningOff = group.momentsEnabled;
+        if (turningOff) {
+          final ok = await _confirm(l10n.translate('hub_moments_off_title'),
+              l10n.translate('hub_moments_off_body'));
+          if (!ok) return;
+        }
+        try {
+          await _repository.setMomentsEnabled(group.id, !turningOff);
+          _snack(l10n.translate(
+              turningOff ? 'moments_turned_off' : 'moments_turned_on'));
+        } catch (e) {
+          _reportFailure(e);
+        }
       case 'code':
         final ok = await _confirm(l10n.translate('hub_rotate_code_title'),
             l10n.translate('hub_rotate_code_body'));
@@ -1060,6 +1079,17 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         child: _menuRow(Icons.picture_as_pdf_rounded,
                             context.l10n.translate('pdf_export_menu')),
                       ),
+                      if (group.isManaged)
+                        PopupMenuItem(
+                          value: 'moments',
+                          child: _menuRow(
+                              group.momentsEnabled
+                                  ? Icons.visibility_off_rounded
+                                  : Icons.visibility_rounded,
+                              context.l10n.translate(group.momentsEnabled
+                                  ? 'hub_moments_turn_off'
+                                  : 'hub_moments_turn_on')),
+                        ),
                       if (group.ownerEmail == _repository.currentEmail) ...[
                         PopupMenuItem(
                           value: 'add_member',
@@ -1493,13 +1523,14 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
     final isTrip = !group.isFamily;
     final l10n = context.l10n;
     final entries = <String, _ModuleItem>{
-      'feed': _ModuleItem(
-        title: l10n.translate('hub_module_feed'),
-        subtitle: l10n.translate('hub_module_feed_sub'),
-        icon: Icons.camera_alt_rounded,
-        color: const Color(0xFFF43F5E),
-        onTap: () => context.push('/group/${group.id}/feed'),
-      ),
+      if (group.momentsOpen)
+        'feed': _ModuleItem(
+          title: l10n.translate('hub_module_feed'),
+          subtitle: l10n.translate('hub_module_feed_sub'),
+          icon: Icons.camera_alt_rounded,
+          color: const Color(0xFFF43F5E),
+          onTap: () => context.push('/group/${group.id}/feed'),
+        ),
       'ledger': _ModuleItem(
         title: l10n.translate('hub_module_ledger'),
         subtitle: l10n.translate('hub_module_ledger_sub'),

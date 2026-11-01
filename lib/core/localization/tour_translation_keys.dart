@@ -1908,6 +1908,14 @@ class TourTranslationKeys {
       'meals_next_month': 'Next month',
       'meals_save_failed': 'Could not save the meals. Try again.',
       'meals_load_failed': 'Could not load the meals.',
+      'hub_moments_turn_off': 'Turn Moments off',
+      'hub_moments_turn_on': 'Turn Moments on',
+      'hub_moments_off_title': 'Turn Moments off?',
+      'hub_moments_off_body':
+          'Members will not be able to post or share stories until an owner or admin turns Moments back on.',
+      'moments_turned_off': 'Moments is off for everyone in this circle.',
+      'moments_turned_on': 'Moments is on again.',
+      'moments_admins_only': 'Only the owner or an admin can change Moments.',
       'pdf_export_admin_only':
           'Only the owner or an admin can export the whole tour.',
       'notice_post_failed':
@@ -3973,6 +3981,14 @@ class TourTranslationKeys {
       'meals_next_month': 'পরের মাস',
       'meals_save_failed': 'মিল সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
       'meals_load_failed': 'মিল লোড করা যায়নি।',
+      'hub_moments_turn_off': 'মোমেন্টস বন্ধ করুন',
+      'hub_moments_turn_on': 'মোমেন্টস চালু করুন',
+      'hub_moments_off_title': 'মোমেন্টস বন্ধ করবেন?',
+      'hub_moments_off_body':
+          'মালিক বা অ্যাডমিন মোমেন্টস আবার চালু না করা পর্যন্ত সদস্যরা পোস্ট বা স্টোরি দিতে পারবেন না।',
+      'moments_turned_off': 'এই গ্রুপে সবার জন্য মোমেন্টস বন্ধ করা হয়েছে।',
+      'moments_turned_on': 'মোমেন্টস আবার চালু হয়েছে।',
+      'moments_admins_only': 'শুধু মালিক বা অ্যাডমিন মোমেন্টস বদলাতে পারেন।',
       'pdf_export_admin_only':
           'শুধু মালিক বা অ্যাডমিন পুরো ট্যুরের PDF নিতে পারেন।',
       'notice_post_failed':
