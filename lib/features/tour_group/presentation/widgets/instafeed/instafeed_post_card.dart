@@ -1122,7 +1122,10 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     radius: 18,
                     backgroundColor: AppColors.mintGreen,
                     backgroundImage: widget.post.authorPhoto != null
-                        ? NetworkImage(signedMediaUrl(widget.post.authorPhoto!))
+                        ? ResizeImage(
+                            NetworkImage(
+                                signedMediaUrl(widget.post.authorPhoto!)),
+                            width: 160)
                         : null,
                     child: widget.post.authorPhoto == null
                         ? Text(
@@ -1551,8 +1554,10 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                     radius: 12,
                     backgroundColor: AppColors.midGreen,
                     backgroundImage: widget.repository.currentPhotoUrl != null
-                        ? NetworkImage(
-                            signedMediaUrl(widget.repository.currentPhotoUrl!))
+                        ? ResizeImage(
+                            NetworkImage(signedMediaUrl(
+                                widget.repository.currentPhotoUrl!)),
+                            width: 96)
                         : null,
                     child: widget.repository.currentPhotoUrl == null
                         ? Text(
