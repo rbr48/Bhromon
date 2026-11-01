@@ -2,7 +2,7 @@
 
 **Last Updated: October 31, 2026**
 
-Welcome to **Bhromon** (the "App" and "Platform"). Bhromon is an all-in-one universal travel companion, group tour ledger, and community platform owned and operated by **Bhromon Technologies Ltd.** ("we," "our," or "us"). 
+Welcome to **Bhromon** (the "App" and "Platform"). Bhromon is one app for every group you belong to: families, offices, campuses, messes, housing societies, savings groups and trips, owned and operated by **Bhromon Technologies Ltd.** ("we," "our," or "us"). 
 
 We are deeply committed to protecting your personal privacy and safeguarding your data. Bhromon is built on privacy-first and open-source principles: **we do not sell your personal data, we do not show third-party ads, and we do not track you across other applications or services.**
 
@@ -34,7 +34,7 @@ Location services power our Universal Tour Engine, multi-stop route roadmaps, an
 
 ### E. Account & Profile Information
 * **Authentication Data**: When you register or sign in via Firebase Auth (Email/Password or Google Sign-In), we store your email address, display name, and avatar image.
-* **Group Memberships & Roles**: Each tour you join stores your name, email, photo, role (`owner`, `admin`, `member`), family size, and the user ID that lets members of that tour chat and call you. Roles govern channel access, ledger permissions, and itinerary editing rights.
+* **Group Memberships & Roles**: Each group you join stores your name, email, photo, role (`owner`, `admin`, `member`), family size, and the user ID that lets members of that tour chat and call you. Roles govern channel access, ledger permissions, and itinerary editing rights.
 
 ### F. Local Database & Offline Relational Storage
 * **Drift (SQLite) & Hive**: Your tour itineraries, checklists, bus seat selections, hotel room assignments, and offline drafts are stored locally on your device using encrypted Drift SQLite and Hive boxes.

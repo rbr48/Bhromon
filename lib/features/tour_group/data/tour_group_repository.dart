@@ -154,8 +154,7 @@ class TourGroupRepository {
 
   String _requireEmail() {
     if (!isSignedIn || currentEmail.isEmpty) {
-      throw const TourAccessException(
-          'ট্যুর গ্রুপ ব্যবহার করতে আগে সাইন-ইন করুন।');
+      throw const TourAccessException('গ্রুপ ব্যবহার করতে আগে সাইন-ইন করুন।');
     }
     return currentEmail;
   }
@@ -805,8 +804,7 @@ class TourGroupRepository {
     }
 
     if (tourId == null || tourId.isEmpty) {
-      throw const FormatException(
-          'এই আমন্ত্রণ কোডে কোনো ট্যুর গ্রুপ পাওয়া যায়নি।');
+      throw const FormatException('এই আমন্ত্রণ কোডে কোনো গ্রুপ পাওয়া যায়নি।');
     }
 
     final membershipRef = _memberships.doc(_membershipId(tourId, email));
@@ -3064,7 +3062,7 @@ class TourGroupRepository {
 
     return {
       'exportedAt': DateTime.now().toIso8601String(),
-      'app': 'Bhromon Tour Group',
+      'app': 'Bhromon',
       'tour': tourData,
       'members': members.docs
           .map((d) => {

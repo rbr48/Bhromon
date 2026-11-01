@@ -203,6 +203,46 @@ void main() {
         AuthError(tAuthError.message),
       ],
     );
+
+    blocTest<AuthCubit, AuthState>(
+      'returns to the sign-in form without an error when the user cancels',
+      build: () {
+        when(mockRepo.signInWithGoogle()).thenAnswer(
+          (_) async => const Left(
+            AuthFailure(
+              'Google sign-in cancelled',
+              reason: AuthFailureReason.cancelled,
+            ),
+          ),
+        );
+        return buildCubit();
+      },
+      act: (cubit) => cubit.signInWithGoogle(),
+      expect: () => [const AuthLoading(), const Unauthenticated()],
+    );
+
+    blocTest<AuthCubit, AuthState>(
+      'keeps the failure reason so the sign-in screen can word the message',
+      build: () {
+        when(mockRepo.signInWithGoogle()).thenAnswer(
+          (_) async => const Left(
+            AuthFailure(
+              'Google sign-in failed',
+              reason: AuthFailureReason.network,
+            ),
+          ),
+        );
+        return buildCubit();
+      },
+      act: (cubit) => cubit.signInWithGoogle(),
+      expect: () => [
+        const AuthLoading(),
+        const AuthError(
+          'Google sign-in failed',
+          reason: AuthFailureReason.network,
+        ),
+      ],
+    );
   });
 
   // ────────────────────────────────────────────────────

@@ -839,7 +839,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                   color: Colors.white38, size: 64),
               const SizedBox(height: 16),
               const Text(
-                'No Active Tour Group',
+                'No Active Group',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -848,7 +848,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
               ),
               const SizedBox(height: 8),
               const Text(
-                'Join or create a tour group to unlock online multiplayer with in-game voice chat.',
+                'Join or create a group to unlock online multiplayer with in-game voice chat.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white70, fontSize: 13),
               ),
@@ -1043,7 +1043,7 @@ class _GameZoneHubScreenState extends State<GameZoneHubScreen>
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Create a table above and invite your tour group members to play!',
+                      'Create a table above and invite your group members to play!',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.white54, fontSize: 12),
                     ),

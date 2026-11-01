@@ -87,7 +87,7 @@ void main() {
         .map((destination) => destination.label)
         .toList();
 
-    expect(labels, ['Tours', 'Channels', 'Moments', 'Chat', 'Profile']);
+    expect(labels, ['Groups', 'Channels', 'Moments', 'Chat', 'Profile']);
   });
 
   group('a tour tab opens the tour the screen belongs to', () {
@@ -121,7 +121,7 @@ void main() {
     testWidgets('Tours opens the hub on that tour', (tester) async {
       await _pumpAt(tester, '/start?tab=1&tourId=tour_a');
 
-      await tester.tap(find.text('Tours'));
+      await tester.tap(find.text('Groups'));
       await tester.pumpAndSettle();
 
       expect(find.text('hub page tour_a'), findsOneWidget);
@@ -139,7 +139,7 @@ void main() {
       expect(find.text('hub page -'), findsOneWidget);
       expect(
         find.text(
-            'মোমেন্টস দেখতে অনুগ্রহ করে একটি ট্যুর গ্রুপ নির্বাচন বা তৈরি করুন।'),
+            'মোমেন্টস দেখতে অনুগ্রহ করে একটি গ্রুপ নির্বাচন বা তৈরি করুন।'),
         findsOneWidget,
       );
     });

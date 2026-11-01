@@ -1,3 +1,4 @@
+import 'package:bhromon/core/errors/failures.dart';
 import 'package:bhromon/features/auth/data/google_sign_in_failure.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -9,25 +10,25 @@ void main() {
       description: 'getCredentialAsync no provider dependencies found',
     );
 
-    final message = googleSignInFailureMessage(error);
-
-    expect(message, contains('Google Play services'));
-    expect(message, isNot(contains('GoogleSignInException')));
+    expect(
+      googleSignInFailureReason(error),
+      AuthFailureReason.googlePlayServices,
+    );
   });
 
-  test('a cancelled sign-in reads as aborted, as before', () {
+  test('a cancelled sign-in is a choice the user made, not an error', () {
     const error = GoogleSignInException(
       code: GoogleSignInExceptionCode.canceled,
     );
 
-    expect(googleSignInFailureMessage(error), 'Google Sign-In aborted.');
+    expect(googleSignInFailureReason(error), AuthFailureReason.cancelled);
   });
 
-  test('other failures keep the raw exception, so they can be diagnosed', () {
+  test('other failures are unknown, so the screen words them generically', () {
     const error = GoogleSignInException(
       code: GoogleSignInExceptionCode.unknownError,
     );
 
-    expect(googleSignInFailureMessage(error), isNull);
+    expect(googleSignInFailureReason(error), AuthFailureReason.unknown);
   });
 }

@@ -8,6 +8,7 @@ This document serves as the persistent system memory, architectural guidelines, 
 - **Repository**: [https://github.com/rbr48/Bhromon](https://github.com/rbr48/Bhromon)
 - **Primary Branch**: `main` (active and default).
 - **GitHub PR Workflow (MANDATORY)**: Never push directly to `main` on GitHub. Always create a feature/fix branch, commit changes, push the branch, and open a Pull Request via `gh pr create --base main`.
+- **Product**: Bhromon is one app for every group you belong to: families, offices, campuses, messes, housing societies, savings groups and trips. The name, the Android and iOS identifiers, the domains and the Firebase project are unchanged. Copy and branding follow the group product; a trip is one group type among the others.
 - **Architecture**: Clean Architecture (Domain, Data, Presentation) with injectable DI, Drift (SQLite) for offline relational storage, and Hive for encrypted local boxes.
 - **State management**: by feature. `tour_group` screens use `StatefulWidget`s that call repositories directly and listen to their streams. BLoC and Cubit remain in the other features. New tour-group code follows the direct pattern; don't add BLoC there.
 - **Status**: free and open source, with no business model. No feature is sold, and no paywall or payments should be added. The Game Zone is a core feature and stays.
@@ -45,7 +46,8 @@ This document serves as the persistent system memory, architectural guidelines, 
    - Always supply `serverClientId` (the Web Client ID from `google-services.json`, `client_type: 3`) to `GoogleSignIn.instance.initialize(serverClientId: ...)` before calling `authenticate()`.
 8. **Google Play Services Absence Mapping (`google_sign_in_failure.dart`)**:
    - On devices or emulators without Google Play services, Google Sign-In fails with `providerConfigurationError`.
-   - `googleSignInFailureMessage` maps this error to an actionable user message prompting to sign in to Google Play and update services, rather than showing a raw platform exception.
+   - `googleSignInFailureReason` maps this error to `AuthFailureReason.googlePlayServices`. The sign-in screen shows the localized message for that reason (`auth_error_google_play_services`) instead of a raw platform exception. The raw error goes to the log.
+   - Cancelling the Google account window is `AuthFailureReason.cancelled`: the cubit returns to the sign-in form with no error message.
 
 ---
 

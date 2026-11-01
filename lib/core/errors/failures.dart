@@ -15,8 +15,19 @@ final class CacheFailure extends Failure {
   const CacheFailure(super.message);
 }
 
+/// Why a sign-in failed. On the sign-in screen the message is replaced by text
+/// for this reason. The failure's message is technical and is for the logs.
+enum AuthFailureReason {
+  unknown,
+  cancelled,
+  network,
+  googlePlayServices,
+  popupBlocked,
+}
+
 final class AuthFailure extends Failure {
-  const AuthFailure(super.message);
+  final AuthFailureReason reason;
+  const AuthFailure(super.message, {this.reason = AuthFailureReason.unknown});
 }
 
 final class ValidationFailure extends Failure {

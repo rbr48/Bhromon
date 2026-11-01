@@ -4375,7 +4375,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
             // 2. Tour Group Icon
             _buildBottomNavItem(
               icon: Icons.hub_outlined,
-              label: 'Tours',
+              label: 'Groups',
               isActive: false,
               onTap: () => context.go('/group-hub'),
             ),
@@ -4537,8 +4537,8 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                     ),
                     _buildNavMenuItem(
                       icon: Icons.groups_outlined,
-                      title: 'Tour Groups',
-                      subtitle: 'Tours & Ledger',
+                      title: 'Groups',
+                      subtitle: 'Groups, trips & ledger',
                       color: const Color(0xFF2DD4BF),
                       onTap: () {
                         Navigator.pop(ctx);
@@ -4717,7 +4717,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                           ),
                         ),
                         Text(
-                          'ভ্রমণ · Travel Club',
+                          'ভ্রমণ · Your groups',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -4780,7 +4780,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
                   const SizedBox(height: 4),
                   _buildWebNavItem(
                     icon: Icons.groups_outlined,
-                    label: 'Tour Groups',
+                    label: 'Groups',
                     isActive: false,
                     isExtended: isExtended,
                     onTap: () => context.push('/group-hub'),

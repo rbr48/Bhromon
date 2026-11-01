@@ -72,7 +72,7 @@ void main() {
 
     // Verify Brand title & Tour OS subtitle
     expect(find.text('Bhromon'), findsOneWidget);
-    expect(find.text('Family & tour groups'), findsOneWidget);
+    expect(find.text('Your groups'), findsOneWidget);
 
     // The action bar has one labelled menu for creating and joining.
     expect(find.byIcon(Icons.backup_rounded), findsNothing);
@@ -81,14 +81,14 @@ void main() {
 
     // Verify Tour OS Bottom Navigation Bar with 5 tabs
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.text('Tours'), findsOneWidget);
+    expect(find.text('Groups'), findsOneWidget);
     expect(find.text('Channels'), findsOneWidget);
     expect(find.text('Moments'), findsOneWidget);
     expect(find.text('Chat'), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);
 
     // Empty state should be visible since 0 groups were emitted
-    expect(find.text('No active tour groups'), findsOneWidget);
+    expect(find.text('No groups yet'), findsOneWidget);
     expect(find.text('Create tour'), findsOneWidget);
     expect(find.text('Enter code'), findsOneWidget);
 

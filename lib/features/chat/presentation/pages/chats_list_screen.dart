@@ -280,7 +280,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 ),
                 const PopupMenuItem(
                   value: 'tour_groups',
-                  child: Text('Tour Groups',
+                  child: Text('Your groups',
                       style: TextStyle(color: Colors.white)),
                 ),
                 const PopupMenuItem(
@@ -1084,7 +1084,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      'Only members of your tour groups',
+                      'Only members of your groups',
                       style: TextStyle(color: Colors.white54, fontSize: 11),
                     ),
                   ),
@@ -1150,7 +1150,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                             child: Padding(
                               padding: EdgeInsets.all(24),
                               child: Text(
-                                'Join or create a tour group to chat with its members.',
+                                'Join or create a group to chat with its members.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                     color: Colors.white54, fontSize: 12),

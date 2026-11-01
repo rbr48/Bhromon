@@ -82,8 +82,8 @@ void main() {
     expect(find.text('hub page'), findsOneWidget);
     expect(find.text('feed page'), findsNothing);
     expect(repo.cleared, ['tour_a']);
-    expect(find.text('You are no longer a member of this tour group.'),
-        findsOneWidget);
+    expect(
+        find.text('You are no longer a member of this group.'), findsOneWidget);
   });
 
   testWidgets('a membership answer never confirmed does not close the tour',

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../../../core/entities/explorer_profile.dart';
+import '../../../../core/errors/failures.dart';
 
 sealed class AuthState extends Equatable {
   const AuthState();
@@ -37,9 +38,14 @@ class Unauthenticated extends AuthState {
 }
 
 class AuthError extends AuthState {
+  /// Technical detail for the logs. The sign-in screen does not show it.
   final String message;
-  const AuthError(this.message);
+
+  /// Why sign-in failed. The sign-in screen words its message from this.
+  final AuthFailureReason reason;
+
+  const AuthError(this.message, {this.reason = AuthFailureReason.unknown});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, reason];
 }

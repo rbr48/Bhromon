@@ -127,7 +127,7 @@ class _OnlineGameCreateDialogState extends State<OnlineGameCreateDialog> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Host a match for tour group members with live voice lounge.',
+            'Host a match for group members with live voice lounge.',
             style: TextStyle(color: Colors.white70, fontSize: 13),
           ),
           const SizedBox(height: 16),

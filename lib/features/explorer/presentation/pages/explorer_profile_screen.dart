@@ -908,7 +908,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         children: [
           _buildMetricItem(
             '${groups.length}',
-            _isBn ? 'ট্যুর গ্রুপ' : 'Tour Groups',
+            _isBn ? 'গ্রুপ' : 'Groups',
             Icons.groups_rounded,
           ),
           Container(
@@ -1400,7 +1400,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 size: 56, color: AppColors.mintGreen),
             const SizedBox(height: 14),
             Text(
-              _isBn ? 'কোনো ট্যুর গ্রুপ পাওয়া যায়নি' : 'No Tour Groups Found',
+              _isBn ? 'কোনো গ্রুপ পাওয়া যায়নি' : 'No Groups Found',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -2094,7 +2094,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
               title: Text(
-                _isBn ? 'নতুন ট্যুর গ্রুপ তৈরি করুন' : 'Create New Tour Group',
+                _isBn ? 'নতুন গ্রুপ তৈরি করুন' : 'Create New Group',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -2281,7 +2281,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 SnackBar(
                                   content: Text(
                                     _isBn
-                                        ? 'ট্যুর গ্রুপ তৈরি হয়েছে: ${newGroup.name}'
+                                        ? 'গ্রুপ তৈরি হয়েছে: ${newGroup.name}'
                                         : 'Created tour: ${newGroup.name}',
                                   ),
                                   backgroundColor: AppColors.midGreen,
@@ -2340,7 +2340,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18)),
               title: Text(
-                _isBn ? 'ট্যুর গ্রুপে যোগ দিন' : 'Join Tour Group',
+                _isBn ? 'গ্রুপে যোগ দিন' : 'Join a Group',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -3160,8 +3160,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             const SizedBox(height: 10),
             Text(
               _isBn
-                  ? 'ট্যুর গ্রুপ পরিচালনা, ফটো শেয়ার ও খরচ ভাগাভাগি করতে সাইন-ইন করুন।'
-                  : 'Sign in to manage tour groups, split expenses, and share moments.',
+                  ? 'গ্রুপ পরিচালনা, ফটো শেয়ার ও খরচ ভাগাভাগি করতে সাইন-ইন করুন।'
+                  : 'Sign in to manage your groups, split expenses, and share moments.',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white70, fontSize: 13),
             ),
