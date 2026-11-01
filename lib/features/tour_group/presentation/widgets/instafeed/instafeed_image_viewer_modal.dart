@@ -1,9 +1,9 @@
-import 'dart:math' as math;
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
+import 'package:bhromon/features/tour_group/domain/services/like_state.dart';
 import 'instafeed_zoomable_media.dart';
 import 'tour_safe_network_image.dart';
 import '../../../../../core/theme/colors.dart';
@@ -72,8 +72,21 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
   late int _currentIndex;
   bool _showOverlays = true;
   bool _showHeartBurst = false;
+
+  /// The like the user last asked for, shown until the server holds it.
   bool? _optimisticLiked;
-  int _optimisticLikeDelta = 0;
+
+  @override
+  void didUpdateWidget(InstafeedImageViewerModal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.id != widget.post.id) _optimisticLiked = null;
+    if (LikeState.serverCaughtUp(
+      optimistic: _optimisticLiked,
+      onServer: widget.post.isLikedBy(widget.repository.currentEmail),
+    )) {
+      _optimisticLiked = null;
+    }
+  }
 
   List<String> get _images {
     if (widget.post.images.isNotEmpty) {
@@ -114,7 +127,6 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
 
     setState(() {
       _optimisticLiked = targetLiked;
-      _optimisticLikeDelta = targetLiked ? 1 : -1;
     });
 
     try {
@@ -127,7 +139,6 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
       if (mounted) {
         setState(() {
           _optimisticLiked = currentLiked;
-          _optimisticLikeDelta = 0;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -151,9 +162,14 @@ class _InstafeedImageViewerModalState extends State<InstafeedImageViewerModal> {
   Widget build(BuildContext context) {
     final images = _images;
     final email = widget.repository.currentEmail;
-    final isLiked = _optimisticLiked ?? widget.post.isLikedBy(email);
-    final likeCount =
-        math.max(0, widget.post.likes.length + _optimisticLikeDelta);
+    final serverLiked = widget.post.isLikedBy(email);
+    final isLiked =
+        LikeState.shown(optimistic: _optimisticLiked, onServer: serverLiked);
+    final likeCount = LikeState.shownCount(
+      onServerCount: widget.post.likes.length,
+      shownLiked: isLiked,
+      onServerLiked: serverLiked,
+    );
     final dateStr = localizedDateFormat('d MMMM, yyyy • h:mm a')
         .format(widget.post.createdAt);
 

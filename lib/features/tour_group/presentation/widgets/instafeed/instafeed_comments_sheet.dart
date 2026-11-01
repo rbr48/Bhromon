@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
+import 'package:bhromon/features/tour_group/domain/services/like_state.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
 
@@ -29,6 +30,8 @@ class InstafeedCommentsSheet extends StatefulWidget {
 }
 
 class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
+  /// The like each comment's control last asked for, shown until the server holds it.
+  final Map<String, bool> _optimisticCommentLikes = {};
   final TextEditingController _commentCtrl = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
@@ -122,22 +125,53 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
     _focusNode.unfocus();
   }
 
+  /// Shows the comment's like at once, then saves it. A tap asks for the opposite of what is
+  /// shown, so two quick taps end in the state the user last asked for.
   Future<void> _toggleLike(TourCommentItem comment) async {
-    final isLiked = comment.isLikedBy(widget.repository.currentEmail);
+    final email = widget.repository.currentEmail;
+    final onServer = comment.isLikedBy(email);
+    final before = LikeState.shown(
+      optimistic: _optimisticCommentLikes[comment.id],
+      onServer: onServer,
+    );
+    final target = !before;
+    setState(() {
+      _optimisticCommentLikes[comment.id] = target;
+    });
     try {
       await widget.repository.setCommentLiked(
         widget.tourId,
         widget.post.id,
         comment.id,
-        liked: !isLiked,
+        liked: target,
       );
     } catch (e) {
       if (mounted) {
+        setState(() {
+          if (before == onServer) {
+            _optimisticCommentLikes.remove(comment.id);
+          } else {
+            _optimisticCommentLikes[comment.id] = before;
+          }
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(context.l10n
                   .translate('ig_like_failed', args: {'error': e}))),
         );
+      }
+    }
+  }
+
+  /// Drops the shown like of each comment that the server now holds in the same state.
+  void _pruneCaughtUpLikes(List<TourCommentItem> comments) {
+    final email = widget.repository.currentEmail;
+    for (final comment in comments) {
+      if (LikeState.serverCaughtUp(
+        optimistic: _optimisticCommentLikes[comment.id],
+        onServer: comment.isLikedBy(email),
+      )) {
+        _optimisticCommentLikes.remove(comment.id);
       }
     }
   }
@@ -318,6 +352,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                   }
 
                   final allComments = snapshot.data!;
+                  _pruneCaughtUpLikes(allComments);
                   if (allComments.isEmpty) {
                     return Center(
                       child: Column(
@@ -544,7 +579,16 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
 
   Widget _buildCommentRow(TourCommentItem comment, {bool isReply = false}) {
     final currentEmail = widget.repository.currentEmail;
-    final isLiked = comment.isLikedBy(currentEmail);
+    final serverLiked = comment.isLikedBy(currentEmail);
+    final isLiked = LikeState.shown(
+      optimistic: _optimisticCommentLikes[comment.id],
+      onServer: serverLiked,
+    );
+    final likeCount = LikeState.shownCount(
+      onServerCount: comment.likes.length,
+      shownLiked: isLiked,
+      onServerLiked: serverLiked,
+    );
     final canDelete = comment.authorEmail == currentEmail ||
         widget.post.authorEmail == currentEmail ||
         widget.isAdmin;
@@ -728,9 +772,9 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
                 padding: EdgeInsets.zero,
                 onPressed: () => _toggleLike(comment),
               ),
-              if (comment.likes.isNotEmpty)
+              if (likeCount > 0)
                 Text(
-                  '${comment.likes.length}',
+                  '$likeCount',
                   style: const TextStyle(color: Colors.white54, fontSize: 11),
                 ),
             ],

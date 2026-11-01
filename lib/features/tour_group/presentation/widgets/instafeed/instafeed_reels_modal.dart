@@ -1,10 +1,10 @@
-import 'dart:math' as math;
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
+import 'package:bhromon/features/tour_group/domain/services/like_state.dart';
 import 'instafeed_zoomable_media.dart';
 import 'reel_picture.dart';
 import '../../../../../core/theme/colors.dart';
@@ -117,13 +117,14 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
     return controller;
   }
 
-  Future<void> _toggleLike(TourPostItem post) async {
-    final isLiked = post.isLikedBy(widget.repository.currentEmail);
+  /// Saves the like that a reel's control asked for. A failure is shown here and rethrown, so
+  /// the control goes back to what it showed before.
+  Future<void> _saveLike(TourPostItem post, bool liked) async {
     try {
       await widget.repository.setPostLiked(
         widget.tourId,
         post.id,
-        liked: !isLiked,
+        liked: liked,
       );
     } catch (e) {
       if (mounted) {
@@ -133,6 +134,7 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
                   .translate('ig_like_failed', args: {'error': e}))),
         );
       }
+      rethrow;
     }
   }
 
@@ -251,7 +253,7 @@ class _InstafeedReelsModalState extends State<InstafeedReelsModal> {
             onOpenComments: () => widget.onOpenComments?.call(post),
             onShare: () => widget.onShare?.call(post),
             onAddToLedger: () => widget.onAddToLedger?.call(post),
-            onLikeToggle: () => _toggleLike(post),
+            onSetLiked: (liked) => _saveLike(post, liked),
             currentEmail: widget.repository.currentEmail,
           );
         },
@@ -271,7 +273,7 @@ class _ReelPageItem extends StatefulWidget {
   final VoidCallback onOpenComments;
   final VoidCallback onShare;
   final VoidCallback onAddToLedger;
-  final VoidCallback onLikeToggle;
+  final Future<void> Function(bool liked) onSetLiked;
   final String currentEmail;
 
   const _ReelPageItem({
@@ -285,7 +287,7 @@ class _ReelPageItem extends StatefulWidget {
     required this.onOpenComments,
     required this.onShare,
     required this.onAddToLedger,
-    required this.onLikeToggle,
+    required this.onSetLiked,
     required this.currentEmail,
   });
 
@@ -297,17 +299,37 @@ class _ReelPageItemState extends State<_ReelPageItem>
     with SingleTickerProviderStateMixin {
   bool _isCleanScreen = false;
   bool _showHeartBurst = false;
+
+  /// The like the user last asked for, shown until the server holds it.
   bool? _optimisticLiked;
-  int _optimisticLikeDelta = 0;
   late final AnimationController _discRotCtrl;
+
+  bool get _serverLiked => widget.post.isLikedBy(widget.currentEmail);
 
   @override
   void didUpdateWidget(_ReelPageItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.post.id != widget.post.id ||
-        oldWidget.post.likes.length != widget.post.likes.length) {
+    if (oldWidget.post.id != widget.post.id) _optimisticLiked = null;
+    if (LikeState.serverCaughtUp(
+      optimistic: _optimisticLiked,
+      onServer: _serverLiked,
+    )) {
       _optimisticLiked = null;
-      _optimisticLikeDelta = 0;
+    }
+  }
+
+  /// Shows [liked] at once and saves it. If the save fails, the control goes back to what it
+  /// showed before the tap.
+  Future<void> _setLiked(bool liked) async {
+    final before = LikeState.shown(
+      optimistic: _optimisticLiked,
+      onServer: _serverLiked,
+    );
+    setState(() => _optimisticLiked = liked);
+    try {
+      await widget.onSetLiked(liked);
+    } catch (_) {
+      if (mounted) setState(() => _optimisticLiked = before);
     }
   }
 
@@ -328,10 +350,14 @@ class _ReelPageItemState extends State<_ReelPageItem>
 
   @override
   Widget build(BuildContext context) {
+    final serverLiked = widget.post.isLikedBy(widget.currentEmail);
     final isLiked =
-        _optimisticLiked ?? widget.post.isLikedBy(widget.currentEmail);
-    final likeCount =
-        math.max(0, widget.post.likes.length + _optimisticLikeDelta);
+        LikeState.shown(optimistic: _optimisticLiked, onServer: serverLiked);
+    final likeCount = LikeState.shownCount(
+      onServerCount: widget.post.likes.length,
+      shownLiked: isLiked,
+      onServerLiked: serverLiked,
+    );
     final ctrl = widget.controller;
     final isReady = ctrl != null && ctrl.value.isInitialized;
 
@@ -350,16 +376,14 @@ class _ReelPageItemState extends State<_ReelPageItem>
             }
           },
           onDoubleTap: () {
-            setState(() {
-              _showHeartBurst = true;
-              final current = _optimisticLiked ??
-                  widget.post.isLikedBy(widget.currentEmail);
-              if (!current) {
-                _optimisticLiked = true;
-                _optimisticLikeDelta = 1;
-              }
-            });
-            widget.onLikeToggle();
+            setState(() => _showHeartBurst = true);
+            // A double tap likes a reel. It never unlikes one that is already liked.
+            if (!LikeState.shown(
+              optimistic: _optimisticLiked,
+              onServer: _serverLiked,
+            )) {
+              _setLiked(true);
+            }
           },
           onLongPressStart: (_) {
             setState(() => _isCleanScreen = true);
@@ -479,15 +503,12 @@ class _ReelPageItemState extends State<_ReelPageItem>
                         color: isLiked ? Colors.redAccent : Colors.white,
                         size: 32,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          final current = _optimisticLiked ??
-                              widget.post.isLikedBy(widget.currentEmail);
-                          _optimisticLiked = !current;
-                          _optimisticLikeDelta = !current ? 1 : -1;
-                        });
-                        widget.onLikeToggle();
-                      },
+                      onPressed: () => _setLiked(
+                        LikeState.tapTarget(
+                          optimistic: _optimisticLiked,
+                          onServer: _serverLiked,
+                        ),
+                      ),
                     ),
                     Text(
                       '$likeCount',
