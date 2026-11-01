@@ -440,8 +440,9 @@ describe('Tour Group Firestore rules', () => {
       });
     });
 
-    test('a member posts a notice under their own name, as in a family circle', async () => {
-      await assertSucceeds(addDoc(collection(db('member'), 'tours', MESS, 'notices'), notice(people.member.email)));
+    test('a mess posts notices through its owner or admins only; a member is refused', async () => {
+      await assertSucceeds(addDoc(collection(db('admin'), 'tours', MESS, 'notices'), notice(people.admin.email)));
+      await assertFails(addDoc(collection(db('member'), 'tours', MESS, 'notices'), notice(people.member.email)));
       await assertFails(addDoc(collection(db('member'), 'tours', MESS, 'notices'), notice(people.owner.email)));
     });
 
