@@ -1021,12 +1021,10 @@ class _SetupSheetState extends State<_SetupSheet> {
                 height: 320,
                 child: ReorderableListView(
                   buildDefaultDragHandles: true,
-                  onReorder: (oldIndex, newIndex) {
+                  onReorderItem: (oldIndex, newIndex) {
                     setState(() {
-                      var target = newIndex;
-                      if (target > oldIndex) target -= 1;
                       final slot = _order.removeAt(oldIndex);
-                      _order.insert(target, slot);
+                      _order.insert(newIndex, slot);
                     });
                   },
                   children: [
