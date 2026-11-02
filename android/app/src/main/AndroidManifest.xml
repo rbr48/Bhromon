@@ -48,6 +48,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:supportsPictureInPicture="true"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
@@ -72,6 +73,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Keeps a call's microphone and camera running in the background. -->
+        <service
+            android:name=".CallOngoingService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|camera" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility?hl=en and

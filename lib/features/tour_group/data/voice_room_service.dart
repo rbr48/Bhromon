@@ -133,6 +133,10 @@ class VoiceRoomService {
   final Map<String, RTCRtpSender> _videoSenders = {};
   // Peers whose connection is being set up. Stops a second attempt while the first is still waiting.
   final Set<String> _connecting = {};
+  // The ICE candidates this side wrote for each connection, deleted when it
+  // closes so the signaling documents do not keep growing.
+  final Map<String, List<DocumentReference<Map<String, dynamic>>>>
+      _ownCandidates = {};
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _participantsSub;
   QuerySnapshot<Map<String, dynamic>>? _lastSeats;
@@ -285,11 +289,20 @@ class VoiceRoomService {
       live[email] = data['sessionId'] as String? ?? '';
     }
 
-    for (final email in _peerConnections.keys.toList()) {
+    // Connections being set up count too: a peer who leaves or joins again
+    // while one is being made must not keep it, or it never completes.
+    final known = {..._peerConnections.keys, ..._connecting};
+    var reconnect = false;
+    for (final email in known) {
       if (!live.containsKey(email) || _peerSessions[email] != live[email]) {
+        final wasConnecting = _connecting.contains(email);
         _disconnectFromPeer(email);
+        // The setup still running stops on its own; the new join is tried once
+        // it has.
+        if (wasConnecting && live.containsKey(email)) reconnect = true;
       }
     }
+    if (reconnect) _scheduleRetry();
 
     for (final entry in live.entries) {
       if (!_peerConnections.containsKey(entry.key) &&
@@ -307,8 +320,11 @@ class VoiceRoomService {
   }
 
   /// Whether a connection to [remoteEmail] for [remoteSession] is still wanted.
-  bool _stillWanted(String remoteEmail, String remoteSession) =>
-      isConnected && _peerSessions[remoteEmail] == remoteSession;
+  bool _stillWanted(
+          String remoteEmail, String remoteSession, String mySession) =>
+      isConnected &&
+      _mySession == mySession &&
+      _peerSessions[remoteEmail] == remoteSession;
 
   Future<void> _connectToPeer(String remoteEmail, String remoteSession) async {
     final tourId = _activeTourId;
@@ -324,11 +340,20 @@ class VoiceRoomService {
 
     _connecting.add(remoteEmail);
     _peerSessions[remoteEmail] = remoteSession;
+    RTCPeerConnection? made;
     try {
       final iceConfig = await CallIceConfig.shared.current();
-      if (!_stillWanted(remoteEmail, remoteSession)) return;
+      if (!_stillWanted(remoteEmail, remoteSession, mySession)) return;
 
       final pc = await createPeerConnection(iceConfig);
+      made = pc;
+      if (!_stillWanted(remoteEmail, remoteSession, mySession)) {
+        // The peer left or joined again, or this side left the room, while the
+        // connection was being made. Nothing else holds it, so it closes here.
+        await pc.close();
+        await pc.dispose();
+        return;
+      }
       _peerConnections[remoteEmail] = pc;
 
       // A video section is always negotiated, so the camera can be turned on
@@ -402,6 +427,8 @@ class VoiceRoomService {
           'sdpMid': candidate.sdpMid,
           'sdpMLineIndex': candidate.sdpMLineIndex,
           'session': mySession,
+        }).then((ref) {
+          if (ref != null) (_ownCandidates[remoteEmail] ??= []).add(ref);
         }));
       };
 
@@ -433,7 +460,7 @@ class VoiceRoomService {
           'offerToReceiveVideo': 1,
         });
         await pc.setLocalDescription(offer);
-        if (!_stillWanted(remoteEmail, remoteSession)) return;
+        if (!_stillWanted(remoteEmail, remoteSession, mySession)) return;
 
         await signalRef.set({
           'offer': {'type': offer.type, 'sdp': offer.sdp},
@@ -495,6 +522,12 @@ class VoiceRoomService {
     } catch (e, st) {
       logWarning(
           'VoiceRoomService: connectToPeer error for $remoteEmail', e, st);
+      final failed = made;
+      if (failed != null && !identical(_peerConnections[remoteEmail], failed)) {
+        // Never registered, so the cleanup below cannot reach it.
+        unawaited(
+            failed.close().then((_) => failed.dispose()).catchError((_) {}));
+      }
       _disconnectFromPeer(remoteEmail);
       _scheduleRetry();
     } finally {
@@ -512,14 +545,15 @@ class VoiceRoomService {
     });
   }
 
-  Future<void> _addQuietly(
+  Future<DocumentReference<Map<String, dynamic>>?> _addQuietly(
     CollectionReference<Map<String, dynamic>> col,
     Map<String, dynamic> data,
   ) async {
     try {
-      await col.add(data);
+      return await col.add(data);
     } catch (error, stackTrace) {
       logSkipped(error, stackTrace);
+      return null;
     }
   }
 
@@ -536,6 +570,12 @@ class VoiceRoomService {
     final candSub = _signalSubs.remove('${remoteEmail}_cand');
     final pc = _peerConnections.remove(remoteEmail);
     final renderer = _remoteRenderers.remove(remoteEmail);
+    final candidates = _ownCandidates.remove(remoteEmail) ?? const [];
+    for (final ref in candidates) {
+      unawaited(ref
+          .delete()
+          .catchError((Object e) => logSkipped(e, StackTrace.current)));
+    }
     await sigSub?.cancel();
     await candSub?.cancel();
     await pc?.close();
@@ -678,6 +718,15 @@ class VoiceRoomService {
       // No connection was made, so the plugin never switches the audio session off.
       await CallAudioSession.release();
     }
+    // Candidates of connections that never registered are removed as well.
+    for (final refs in _ownCandidates.values) {
+      for (final ref in refs) {
+        unawaited(ref
+            .delete()
+            .catchError((Object e) => logSkipped(e, StackTrace.current)));
+      }
+    }
+    _ownCandidates.clear();
     _peerSessions.clear();
     _videoSenders.clear();
     _connecting.clear();

@@ -44,6 +44,10 @@ class CallIceConfig {
 
   Map<String, dynamic>? _cached;
   DateTime? _refreshAt;
+
+  /// When the cached credential stops working. Until then it is still used if
+  /// a refresh fails, so a short outage of the call server does not drop TURN.
+  DateTime? _expiresAt;
   Future<Map<String, dynamic>>? _inFlight;
 
   /// The ICE configuration to use now. Callers that arrive together share one request.
@@ -57,16 +61,32 @@ class CallIceConfig {
   }
 
   Future<Map<String, dynamic>> _load() async {
-    final body = await _fetch();
-    final config = parse(body);
+    var body = await _fetch();
+    var config = parse(body);
+    // One more try: a TURN relay is what connects calls behind strict networks.
     if (config == null) {
+      body = await _fetch();
+      config = parse(body);
+    }
+    if (config == null) {
+      final previous = _cached;
+      final expiresAt = _expiresAt;
+      if (previous != null &&
+          expiresAt != null &&
+          _clock().isBefore(expiresAt)) {
+        // The last credential still works; the next call asks again.
+        return previous;
+      }
       // Not cached, so the next call asks the server again.
       _cached = null;
       _refreshAt = null;
+      _expiresAt = null;
+      logWarning('CallIceConfig: no TURN credential, this call uses STUN only');
       return stunOnly;
     }
     _cached = config;
     final expiresAt = _expiryOf(body!);
+    _expiresAt = expiresAt;
     _refreshAt = expiresAt == null
         ? _clock().add(const Duration(minutes: 5))
         : expiresAt.subtract(refreshBeforeExpiry);

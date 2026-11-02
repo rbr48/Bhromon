@@ -25,6 +25,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, WebSocket,
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
+from voip_push import VOIP_PLATFORM, voip_sender
+
 logger = logging.getLogger("bhromon.chat")
 
 DEAD_TOKEN_CODES = {
@@ -716,6 +718,8 @@ class PushNotificationDispatcher:
         # Build notification object
         sent_count = 0
         for entry in tokens:
+            if entry.get("platform") == VOIP_PLATFORM:
+                continue  # An iPhone's PushKit token takes call pushes only.
             token = entry["token"]
             try:
                 android_config = messaging.AndroidConfig(
@@ -796,6 +800,20 @@ class PushNotificationDispatcher:
         sent_count = 0
         for entry in tokens:
             token = entry["token"]
+            if entry.get("platform") == VOIP_PLATFORM:
+                # A closed iPhone shows the system call screen only for a VoIP push.
+                result = voip_sender.send_call(
+                    token,
+                    call_id=call_id,
+                    caller_id=caller_id,
+                    caller_name=caller_name,
+                    is_video=is_video,
+                )
+                if result == "sent":
+                    sent_count += 1
+                elif result == "dead":
+                    self.db.delete_device_token(token)
+                continue
             try:
                 if entry.get("platform") == "web":
                     # A browser has no native call screen, so it gets a visible alert.
@@ -1173,6 +1191,14 @@ TURN_URLS = [
     f"turn:{TURN_HOST}:3478?transport=tcp",
     f"turns:{TURN_HOST}:5349?transport=tcp",
 ]
+
+
+def turn_tls_urls() -> List[str]:
+    """TURN over TLS, for networks that let only HTTPS out. Set TURN_TLS_URLS
+    (comma separated, for example "turns:turn.bhromon.fun:443?transport=tcp")
+    once coturn listens with a certificate; see the README."""
+    raw = os.environ.get("TURN_TLS_URLS", "")
+    return [url.strip() for url in raw.split(",") if url.strip().startswith("turns:")]
 # A TURN credential is short-lived and bound to the caller. The app refetches it
 # before it expires, so a leaked credential stops working within the hour.
 ICE_CREDENTIAL_TTL_SECONDS = 3600
@@ -1187,7 +1213,7 @@ def build_ice_servers(uid: str, secret: str, now: Optional[int] = None) -> Dict[
         "iceServers": [
             {"urls": STUN_URLS},
             {
-                "urls": TURN_URLS,
+                "urls": TURN_URLS + [url for url in turn_tls_urls() if url not in TURN_URLS],
                 "username": username,
                 "credential": base64.b64encode(digest).decode("ascii"),
             },
@@ -1214,9 +1240,16 @@ async def get_ice_servers(uid: str = Depends(authenticate_user)):
 # is how a dropped link is rebuilt. "renegotiate" asks the caller for a new offer.
 # None of the three rings a phone, so they are relayed without a push, an ack or
 # the offer limit.
-CALL_SIGNAL_TYPES = frozenset({"offer", "answer", "candidate", "end", "declined", "reoffer", "reanswer", "renegotiate"})
+# "camera" says whether the sender's camera is on, so a voice call can turn into a
+# video call and back without a new offer.
+CALL_SIGNAL_TYPES = frozenset(
+    {"offer", "answer", "candidate", "end", "declined", "reoffer", "reanswer", "renegotiate", "camera"}
+)
 MAX_CALL_SIGNAL_BYTES = 64 * 1024
-CALL_OFFERS_PER_WINDOW = 6
+# The same limit as the call push watcher (notifications.py) and the Cloud
+# Function (CALLS_PER_WINDOW), so a call that one of them allows is not refused
+# by another halfway through ringing.
+CALL_OFFERS_PER_WINDOW = 10
 CALL_OFFER_WINDOW_SECONDS = 600.0
 WS_AUTH_TIMEOUT_SECONDS = 10.0
 # How long a chat message waits for its recipient's app to confirm it on screen,
@@ -1282,6 +1315,17 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
     signal_type = data.get("signalType")
     recipient_id = data.get("recipientId")
 
+    # A recipient named by email is resolved first, so the group check below
+    # runs on the uid it applies to.
+    target_uid = recipient_id
+    if isinstance(recipient_id, str) and "@" in recipient_id:
+        try:
+            from firebase_admin import auth as fb_auth
+            user = await run_in_threadpool(fb_auth.get_user_by_email, recipient_id.strip().lower())
+            target_uid = user.uid
+        except Exception as ex:
+            logger.debug("Could not resolve recipient email %s to uid: %s", recipient_id, ex)
+
     refusal: Optional[str] = None
     if (
         not isinstance(signal_type, str)
@@ -1289,11 +1333,12 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
         or not isinstance(recipient_id, str)
         or not recipient_id
         or recipient_id == uid
+        or target_uid == uid
     ):
         refusal = "invalid"
     elif len(json.dumps(data)) > MAX_CALL_SIGNAL_BYTES:
         refusal = "too_large"
-    elif not await run_in_threadpool(shares_group, uid, recipient_id):
+    elif not await run_in_threadpool(shares_group, uid, target_uid):
         refusal = "not_in_group"
     elif signal_type == "offer" and not call_offer_limiter.allow(uid):
         refusal = "rate_limited"
@@ -1304,15 +1349,6 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
             {"type": "call_signal_error", "callId": call_id, "signalType": signal_type, "reason": refusal}
         )
         return
-
-    target_uid = recipient_id
-    if isinstance(recipient_id, str) and "@" in recipient_id:
-        try:
-            from firebase_admin import auth as fb_auth
-            user = await run_in_threadpool(fb_auth.get_user_by_email, recipient_id.strip().lower())
-            target_uid = user.uid
-        except Exception as ex:
-            logger.debug("Could not resolve recipient email %s to uid: %s", recipient_id, ex)
 
     delivered = await ws_manager.send_to_user(
         target_uid,
@@ -1346,7 +1382,7 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
         _start_background(
             run_in_threadpool(
                 push_dispatcher.send_call_push_to_uid,
-                recipient_uid=recipient_id,
+                recipient_uid=target_uid,
                 call_id=call_id,
                 caller_id=uid,
                 caller_name=_short_text(data.get("callerName"), 80) or "A member",
