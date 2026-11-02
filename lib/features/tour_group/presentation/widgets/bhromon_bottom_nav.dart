@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -28,8 +29,8 @@ class BhromonBottomNav extends StatelessWidget {
   static List<NavigationDestination> destinations(BuildContext context) {
     return [
       NavigationDestination(
-        icon: const Icon(Icons.hub_outlined, color: AppColors.mintGreen),
-        selectedIcon: const Icon(Icons.hub, color: AppColors.mintGreen),
+        icon: Icon(Icons.hub_outlined, color: context.forest.accentText),
+        selectedIcon: Icon(Icons.hub, color: context.forest.accentText),
         label: context.l10n.translate('hub_nav_tours'),
       ),
       NavigationDestination(
@@ -151,7 +152,7 @@ class BhromonBottomNav extends StatelessWidget {
       height: 80,
       child: ColoredBox(
         color: Theme.of(context).navigationBarTheme.backgroundColor ??
-            const Color(0xFF0D1A12),
+            context.forest.background,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
