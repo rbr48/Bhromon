@@ -8,12 +8,12 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/di/injection.dart';
 import '../../../../core/entities/explorer_profile.dart';
 import '../../../../core/localization/locale_controller.dart';
+import '../../../../core/localization/localized_date.dart';
 import '../../../../core/services/media_upload_service.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/theme_context.dart';
@@ -1610,7 +1610,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           size: 14, color: Colors.white54),
                       const SizedBox(width: 5),
                       Text(
-                        '${DateFormat('d MMM yyyy').format(group.startDate)} – ${DateFormat('d MMM yyyy').format(group.endDate)}',
+                        '${localizedDateFormat('d MMM yyyy').format(group.startDate)} – ${localizedDateFormat('d MMM yyyy').format(group.endDate)}',
                         style: const TextStyle(
                             color: Colors.white70, fontSize: 12),
                       ),
@@ -1970,7 +1970,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               _buildAccountRow(_isBn ? 'বিভাগ' : 'Division', profile.division),
               _buildAccountRow(
                 _isBn ? 'যোগদান' : 'Joined',
-                DateFormat('d MMMM yyyy').format(profile.createdAt),
+                localizedDateFormat('d MMMM yyyy').format(profile.createdAt),
               ),
               const Divider(color: Colors.white10, height: 24),
               SizedBox(
@@ -2221,7 +2221,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  '${DateFormat('d MMM yyyy').format(startDate)} – ${DateFormat('d MMM yyyy').format(endDate)} ($durationText)',
+                                  '${localizedDateFormat('d MMM yyyy').format(startDate)} – ${localizedDateFormat('d MMM yyyy').format(endDate)} ($durationText)',
                                   style: const TextStyle(
                                       color: Colors.white, fontSize: 12),
                                 ),
