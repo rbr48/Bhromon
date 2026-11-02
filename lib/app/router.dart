@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'di/injection.dart';
+import '../core/utils/logger.dart';
+import 'route_not_found_screen.dart';
 import '../features/auth/presentation/cubit/auth_cubit.dart';
 import '../features/auth/presentation/cubit/auth_state.dart';
 import '../features/auth/presentation/pages/login_screen.dart';
@@ -60,6 +62,10 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/group-hub',
+    errorBuilder: (context, state) {
+      logWarning('[router] no page for ${state.uri}');
+      return const RouteNotFoundScreen();
+    },
     redirect: (context, state) {
       final authState = context.read<AuthCubit>().state;
       final bool loggingIn = state.matchedLocation == '/login';
