@@ -884,8 +884,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                         const SizedBox(width: 4),
                         Text(
                           context.l10n.translate('ig_watch_reel'),
-                          style: TextStyle(
-                            color: context.forest.text,
+                          style: const TextStyle(
+                            color: Colors.white,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -971,8 +971,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Text(
                           '@$tagEmail',
-                          style: TextStyle(
-                            color: context.forest.text,
+                          style: const TextStyle(
+                            color: Colors.white,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1072,11 +1072,13 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
         right: isWide ? 12 : 0,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFF161616),
+        color: context.forest.feedSurface,
         borderRadius: isWide ? BorderRadius.circular(16) : BorderRadius.zero,
         border: isWide
             ? Border.all(color: context.forest.divider12, width: 0.8)
-            : null,
+            : Border(
+                bottom: BorderSide(color: context.forest.divider12, width: 0.8),
+              ),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -1341,8 +1343,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                             padding: const EdgeInsets.symmetric(vertical: 2),
                             child: Text(
                               '@$tagEmail',
-                              style: TextStyle(
-                                color: context.forest.text,
+                              style: const TextStyle(
+                                color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1558,8 +1560,8 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
                                 ? widget.repository.currentDisplayName[0]
                                     .toUpperCase()
                                 : 'M',
-                            style: TextStyle(
-                              color: context.forest.text,
+                            style: const TextStyle(
+                              color: Colors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),

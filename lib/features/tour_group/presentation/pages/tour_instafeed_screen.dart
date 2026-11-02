@@ -992,7 +992,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: selectedCategory,
-              dropdownColor: const Color(0xFF222222),
+              dropdownColor: context.forest.feedRaised,
               style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
                 labelText: context.l10n.translate('ig_category'),
@@ -1832,11 +1832,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                     context.l10n.translate('ig_your_story'),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: context.forest.text,
+                    style: const TextStyle(
+                      color: Colors.white,
                       fontSize: 11.5,
                       fontWeight: FontWeight.bold,
-                      shadows: const [
+                      shadows: [
                         Shadow(
                             color: Colors.black87,
                             blurRadius: 4,
@@ -2046,8 +2046,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                         if (storyCount > 1)
                           Text(
                             '$storyCount',
-                            style: TextStyle(
-                              color: context.forest.text,
+                            style: const TextStyle(
+                              color: Colors.white,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -2064,11 +2064,11 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                   story.authorName,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: context.forest.text,
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 11.5,
                     fontWeight: FontWeight.bold,
-                    shadows: const [
+                    shadows: [
                       Shadow(
                           color: Colors.black87,
                           blurRadius: 4,
@@ -2141,8 +2141,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                 highlight.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: context.forest.text,
+                style: const TextStyle(
+                  color: Colors.white,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),

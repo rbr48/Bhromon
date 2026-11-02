@@ -27,7 +27,9 @@ class _FakeTourGroupRepo extends TourGroupRepository {
   }
 }
 
-Widget _wrap(Widget child, {Locale locale = const Locale('bn')}) {
+Widget _wrap(Widget child,
+    {Locale locale = const Locale('bn'),
+    Brightness brightness = Brightness.light}) {
   return MaterialApp(
     locale: locale,
     supportedLocales: const [Locale('en'), Locale('bn')],
@@ -37,8 +39,11 @@ Widget _wrap(Widget child, {Locale locale = const Locale('bn')}) {
       GlobalWidgetsLocalizations.delegate,
       GlobalCupertinoLocalizations.delegate,
     ],
-    home: Scaffold(
-      body: SingleChildScrollView(child: child),
+    home: Theme(
+      data: ThemeData(brightness: brightness),
+      child: Scaffold(
+        body: SingleChildScrollView(child: child),
+      ),
     ),
   );
 }
@@ -164,5 +169,69 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('👁️'), findsNothing);
+  });
+
+  testWidgets(
+      'InstafeedPostCard adapts card background to feedSurface in Light and Dark themes',
+      (tester) async {
+    final post = TourPostItem(
+      id: 'post_theme_test',
+      tourId: 'tour_cox',
+      authorEmail: 'traveler@bhromon.fun',
+      authorName: 'Traveler Test',
+      authorPhoto: null,
+      caption: 'Testing adaptive surface colors',
+      images: const ['https://example.com/photo.jpg'],
+      createdAt: now,
+      viewCount: 5,
+    );
+
+    // 1. Test Light Theme (feedSurface should be Colors.white, not 0xFF161616)
+    await tester.pumpWidget(
+      _wrap(
+        InstafeedPostCard(
+          repository: repo,
+          tourId: 'tour_cox',
+          post: post,
+          isBookmarked: false,
+          onBookmarkToggle: () {},
+        ),
+        brightness: Brightness.light,
+      ),
+    );
+    await tester.pump();
+
+    final lightContainer = tester.widget<Container>(
+      find.byWidgetPredicate((w) =>
+          w is Container &&
+          w.decoration is BoxDecoration &&
+          (w.decoration as BoxDecoration).color == Colors.white),
+    );
+    expect((lightContainer.decoration as BoxDecoration).color, Colors.white);
+
+    // 2. Test Dark Theme (feedSurface should be Color(0xFF1E1E1E))
+    await tester.pumpWidget(
+      _wrap(
+        InstafeedPostCard(
+          key: const ValueKey('dark_card'),
+          repository: repo,
+          tourId: 'tour_cox',
+          post: post,
+          isBookmarked: false,
+          onBookmarkToggle: () {},
+        ),
+        brightness: Brightness.dark,
+      ),
+    );
+    await tester.pump();
+
+    final darkContainer = tester.widget<Container>(
+      find.byWidgetPredicate((w) =>
+          w is Container &&
+          w.decoration is BoxDecoration &&
+          (w.decoration as BoxDecoration).color == const Color(0xFF1E1E1E)),
+    );
+    expect((darkContainer.decoration as BoxDecoration).color,
+        const Color(0xFF1E1E1E));
   });
 }

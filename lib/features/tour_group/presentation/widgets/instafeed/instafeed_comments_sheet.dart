@@ -506,7 +506,7 @@ class _InstafeedCommentsSheetState extends State<InstafeedCommentsSheet> {
             Container(
               height: 44,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              color: const Color(0xFF181818),
+              color: context.forest.feedDeep,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: _quickEmojis.map((emoji) {
