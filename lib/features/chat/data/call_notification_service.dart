@@ -142,6 +142,18 @@ class CallNotificationService {
 
   AppLifecycleListener? _lifecycleListener;
 
+  /// Calls this app has closed in the phone's call system itself (accepted in
+  /// the app, declined, or dismissed). The phone reports those as "ended", which
+  /// must not be read as the user hanging up the call on screen.
+  final Set<String> _closedByApp = {};
+
+  /// Closes a call in the phone's call system, and remembers it was this app.
+  Future<void> _closeSystemCall(String callId) async {
+    if (kIsWeb || callId.isEmpty) return;
+    _closedByApp.add(callId);
+    await FlutterCallkitIncoming.endCall(callId);
+  }
+
   void _onAppLifecycleChanged(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed || kIsWeb) return;
     final pending = _inAppCall;
@@ -304,6 +316,11 @@ class CallNotificationService {
         case CallEventActionCallEnded(:final callKitParams):
           final id =
               callKitParams.extra?['callId']?.toString() ?? callKitParams.id;
+          if (_closedByApp.remove(id)) {
+            // This app closed the call in the phone's call system, so the call
+            // on screen is not hung up.
+            break;
+          }
           if (id.isNotEmpty && ActiveCallControls.callId == id) {
             // Ended by the phone: its hang-up button, a headset or car button,
             // or the phone's own call screen.
@@ -508,6 +525,10 @@ class CallNotificationService {
     required bool isVideo,
   }) async {
     if (!_shown.claim(callId, DateTime.now())) return;
+    // The phone already rings for this call (the background push did), or the
+    // call has been answered or ended: a second ring is never shown.
+    if (await SystemCallBridge.isActive(callId)) return;
+    if (!await CallSignalingService.isStillRinging(callId)) return;
 
     final waiting = CallSignalingService.isInCall &&
         CallSignalingService.activeCallId != callId;
@@ -736,7 +757,7 @@ class CallNotificationService {
     // it ends. One answered in the app was never there, so only a stray native
     // ring is closed.
     if (!kIsWeb && !fromSystem) {
-      await FlutterCallkitIncoming.endCall(callId);
+      await _closeSystemCall(callId);
     }
     await _endCallInProgressFor(callId);
     _openCall(
@@ -833,9 +854,7 @@ class CallNotificationService {
   }) async {
     if (!_settled.claim('decline:$callId', DateTime.now())) return;
     if (_activeIncomingCallId == callId) _activeIncomingCallId = null;
-    if (!kIsWeb) {
-      await FlutterCallkitIncoming.endCall(callId);
-    }
+    await _closeSystemCall(callId);
     await CallSignalingService().declineCall(
       callId,
       callerId: callerId,
@@ -860,7 +879,7 @@ class CallNotificationService {
     if (callId != null && callId != active) return;
     _activeIncomingCallId = null;
     if (!kIsWeb && active != null) {
-      unawaited(FlutterCallkitIncoming.endCall(active));
+      unawaited(_closeSystemCall(active));
     }
     _closeInAppDialog();
   }
