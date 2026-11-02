@@ -2280,6 +2280,10 @@ class _ChatScreenState extends State<ChatScreen> {
     final currentAvatarUrl =
         authState is Authenticated ? authState.profile.avatarUrl : null;
     final resolvedOtherUid = _resolveOtherUid(currentUid) ?? 'guest';
+    // Opens the other person's profile from the header's name and avatar.
+    final VoidCallback? openOtherProfile = resolvedOtherUid == 'guest'
+        ? null
+        : () => context.push('/profile/$resolvedOtherUid');
 
     // ── Stream: Retrieve profile of the other explorer ──
     final profileStream = _otherProfileStream(resolvedOtherUid);
@@ -2492,22 +2496,26 @@ class _ChatScreenState extends State<ChatScreen> {
                                 }
                               },
                             ),
-                            CircleAvatar(
-                              radius: 18,
-                              backgroundColor: const Color(0xFF005C4B),
-                              backgroundImage: (avatarUrl != null &&
-                                      avatarUrl.isNotEmpty)
-                                  ? sizedImage(
-                                      NetworkImage(signedMediaUrl(avatarUrl)),
-                                      context.decodeWidth(36))
-                                  : null,
-                              child: (avatarUrl == null || avatarUrl.isEmpty)
-                                  ? Text(initials,
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 11))
-                                  : null,
+                            InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: openOtherProfile,
+                              child: CircleAvatar(
+                                radius: 18,
+                                backgroundColor: const Color(0xFF005C4B),
+                                backgroundImage: (avatarUrl != null &&
+                                        avatarUrl.isNotEmpty)
+                                    ? sizedImage(
+                                        NetworkImage(signedMediaUrl(avatarUrl)),
+                                        context.decodeWidth(36))
+                                    : null,
+                                child: (avatarUrl == null || avatarUrl.isEmpty)
+                                    ? Text(initials,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11))
+                                    : null,
+                              ),
                             ),
                           ],
                         ),
@@ -2519,12 +2527,23 @@ class _ChatScreenState extends State<ChatScreen> {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  otherName,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
+                                Flexible(
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: openOtherProfile,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 2, horizontal: 2),
+                                      child: Text(
+                                        otherName,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 if (_disappearingTimerSeconds > 0)
