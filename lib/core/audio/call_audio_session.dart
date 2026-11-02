@@ -19,9 +19,47 @@ class CallAudioSession {
       MethodChannel('com.bhromon.app/call_audio');
 
   /// Keeps the microphone, and the camera when [camera] is set, running while
-  /// the app is in the background during a call. Android only.
-  static Future<void> startOngoing({required bool camera}) =>
-      _invoke('startOngoing', {'camera': camera});
+  /// the app is in the background during a call. Android only. The texts are
+  /// shown in the "call in progress" notification, whose [hangUp] button ends
+  /// the call through [setHangUpHandler].
+  static Future<void> startOngoing({
+    required bool camera,
+    required String title,
+    required String text,
+    required String hangUp,
+  }) =>
+      _invoke('startOngoing', {
+        'camera': camera,
+        'title': title,
+        'text': text,
+        'hangUp': hangUp,
+      });
+
+  /// Lets the call screen show over the lock screen and turn the display on,
+  /// so a call answered on a locked phone opens without unlocking. Android only.
+  static Future<void> showOverLockScreen(bool enabled) =>
+      _invoke('showOverLockScreen', {'enabled': enabled});
+
+  /// Turns the screen off while the phone is held to the ear. Android only.
+  static Future<void> setProximityScreenOff(bool enabled) =>
+      _invoke('setProximityScreenOff', {'enabled': enabled});
+
+  static void Function()? _onHangUp;
+  static bool _listening = false;
+
+  /// Sets what the notification's Hang up button does. Null clears it.
+  static void setHangUpHandler(void Function()? handler) {
+    _onHangUp = handler;
+    if (_listening ||
+        kIsWeb ||
+        defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+    _listening = true;
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'hangUp') _onHangUp?.call();
+    });
+  }
 
   /// Stops what [startOngoing] started. Safe to call when nothing is running.
   static Future<void> stopOngoing() => _invoke('stopOngoing');

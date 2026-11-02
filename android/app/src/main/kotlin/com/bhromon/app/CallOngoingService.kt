@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.IBinder
 
@@ -20,8 +21,22 @@ class CallOngoingService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    private var title = "Bhromon"
+    private var text = "Call in progress"
+    private var hangUpLabel = "Hang up"
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_HANG_UP) {
+            // The notification's Hang up button. The app ends the call, which
+            // stops this service; with no app left to ask, it stops itself.
+            val listener = onHangUp
+            if (listener != null) listener() else stopSelf()
+            return START_NOT_STICKY
+        }
         val camera = intent?.getBooleanExtra(EXTRA_CAMERA, false) ?: false
+        intent?.getStringExtra(EXTRA_TITLE)?.let { title = it }
+        intent?.getStringExtra(EXTRA_TEXT)?.let { text = it }
+        intent?.getStringExtra(EXTRA_HANG_UP)?.let { hangUpLabel = it }
         val notification = buildNotification()
         if (!enterForeground(notification, camera) && !(camera && enterForeground(notification, false))) {
             // The system refused (for example, a permission was withdrawn). The
@@ -59,10 +74,27 @@ class CallOngoingService : Service() {
             legacyBuilder()
         }
         builder
-            .setContentTitle("Bhromon")
-            .setContentText("Call in progress")
+            .setContentTitle(title)
+            .setContentText(text)
             .setSmallIcon(applicationInfo.icon)
             .setOngoing(true)
+        val hangUp = PendingIntent.getService(
+            this,
+            1,
+            Intent(this, CallOngoingService::class.java).setAction(ACTION_HANG_UP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            builder.addAction(
+                Notification.Action.Builder(
+                    Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
+                    hangUpLabel,
+                    hangUp
+                ).build()
+            )
+        } else {
+            addLegacyAction(builder, hangUp)
+        }
         val launch = packageManager.getLaunchIntentForPackage(packageName)
         if (launch != null) {
             builder.setContentIntent(
@@ -80,14 +112,30 @@ class CallOngoingService : Service() {
     @Suppress("DEPRECATION")
     private fun legacyBuilder(): Notification.Builder = Notification.Builder(this)
 
+    @Suppress("DEPRECATION")
+    private fun addLegacyAction(builder: Notification.Builder, intent: PendingIntent) {
+        builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, hangUpLabel, intent)
+    }
+
     companion object {
         private const val CHANNEL_ID = "bhromon_ongoing_call"
         private const val NOTIFICATION_ID = 4711
         private const val EXTRA_CAMERA = "camera"
+        private const val EXTRA_TITLE = "title"
+        private const val EXTRA_TEXT = "text"
+        private const val EXTRA_HANG_UP = "hangUp"
+        private const val ACTION_HANG_UP = "com.bhromon.app.CALL_HANG_UP"
 
-        fun start(context: Context, camera: Boolean) {
+        /** Called when the notification's Hang up button is pressed. Set by MainActivity. */
+        @Volatile
+        var onHangUp: (() -> Unit)? = null
+
+        fun start(context: Context, camera: Boolean, title: String?, text: String?, hangUp: String?) {
             val intent = Intent(context, CallOngoingService::class.java)
                 .putExtra(EXTRA_CAMERA, camera)
+                .putExtra(EXTRA_TITLE, title)
+                .putExtra(EXTRA_TEXT, text)
+                .putExtra(EXTRA_HANG_UP, hangUp)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {

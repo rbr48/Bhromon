@@ -129,6 +129,10 @@ class _CallScreenState extends State<CallScreen> {
     if (!kIsWeb) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
+    // A call answered on a locked phone opens over the lock screen, and the
+    // notification's Hang up button ends it.
+    unawaited(CallAudioSession.showOverLockScreen(true));
+    CallAudioSession.setHangUpHandler(_endCall);
     // The setup reads the app's language, which is only available once the
     // screen is in the tree, so it starts after the first frame.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -259,8 +263,17 @@ class _CallScreenState extends State<CallScreen> {
       _applyAudioRouting();
       // Keeps the microphone (and camera) running when the app goes to the
       // background mid-call.
-      unawaited(
-          CallAudioSession.startOngoing(camera: _signaling.hasLocalVideo));
+      if (mounted) {
+        final l10n = context.l10n;
+        unawaited(CallAudioSession.startOngoing(
+          camera: _signaling.hasLocalVideo,
+          title: l10n.translate('call_ongoing_title'),
+          text: l10n.translate('call_ongoing_text',
+              args: {'name': widget.remoteUserName}),
+          hangUp: l10n.translate('call_hang_up'),
+        ));
+        _updateProximity();
+      }
     } catch (e) {
       // A call that started has already been ended by the signaling service. A setup
       // that failed before any connection may still hold the audio mode, so the
@@ -458,6 +471,14 @@ class _CallScreenState extends State<CallScreen> {
       _isSpeakerOn = !_isSpeakerOn;
     });
     _applyAudioRouting();
+    _updateProximity();
+  }
+
+  /// On the earpiece of an audio call the phone is held to the ear, so the
+  /// screen turns off when something is close, and cheeks press no buttons.
+  void _updateProximity() {
+    unawaited(CallAudioSession.setProximityScreenOff(
+        !widget.isVideoCall && !_isSpeakerOn && !_hasExited));
   }
 
   void _switchCamera() {
@@ -510,6 +531,9 @@ class _CallScreenState extends State<CallScreen> {
     _remoteRenderer.dispose();
     _signaling.dispose();
     unawaited(CallAudioSession.stopOngoing());
+    unawaited(CallAudioSession.setProximityScreenOff(false));
+    unawaited(CallAudioSession.showOverLockScreen(false));
+    CallAudioSession.setHangUpHandler(null);
     super.dispose();
   }
 
