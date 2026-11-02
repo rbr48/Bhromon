@@ -98,3 +98,11 @@ media-server/deploy.sh
 media-server/nginx_patch.py
 scripts/delete_game_tables.js
 scripts/run_delete_tables.py
+
+# Non-app files & assets (kept local only)
+Bhromon Website/
+Play Store/
+Project Plan/
+figma/
+docs/
+
