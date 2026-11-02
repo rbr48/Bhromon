@@ -678,8 +678,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           const SizedBox(width: 6),
                           Text(
                             _isBn ? 'কভার পরিবর্তন' : 'Edit Cover',
-                            style: TextStyle(
-                              color: context.forest.text,
+                            style: const TextStyle(
+                              color: Colors.white,
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
@@ -750,8 +750,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               profile.displayName.isNotEmpty
                                   ? profile.displayName[0].toUpperCase()
                                   : 'T',
-                              style: TextStyle(
-                                color: context.forest.text,
+                              style: const TextStyle(
+                                color: Colors.white,
                                 fontSize: 36,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1500,8 +1500,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                   icon: const Icon(Icons.key, size: 16),
                   label: Text(_isBn ? 'যোগ দিন' : 'Join'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.mintGreen,
-                    side: const BorderSide(color: AppColors.mintGreen),
+                    foregroundColor: context.forest.accentText,
+                    side: BorderSide(color: context.forest.accentText),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -1588,18 +1588,24 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             return Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1B4332), Color(0xFF112217)],
+                gradient: LinearGradient(
+                  colors: [
+                    context.forest.bannerStart,
+                    context.forest.bannerEnd,
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppColors.mintGreen.withValues(alpha: 0.25),
+                  color: context.forest.isDark
+                      ? AppColors.mintGreen.withValues(alpha: 0.25)
+                      : context.forest.text.withValues(alpha: 0.12),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
+                    color: Colors.black
+                        .withValues(alpha: context.forest.isDark ? 0.3 : 0.06),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
@@ -1641,8 +1647,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: isOwner
-                              ? AppColors.gold.withValues(alpha: 0.2)
-                              : context.forest.divider10,
+                              ? AppColors.gold.withValues(
+                                  alpha: context.forest.isDark ? 0.2 : 0.15)
+                              : (context.forest.isDark
+                                  ? context.forest.divider10
+                                  : context.forest.text
+                                      .withValues(alpha: 0.08)),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isOwner
@@ -1657,7 +1667,9 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               : (_isBn ? '🎒 সদস্য' : 'Member'),
                           style: TextStyle(
                             color: isOwner
-                                ? AppColors.gold
+                                ? (context.forest.isDark
+                                    ? AppColors.gold
+                                    : const Color(0xFFB78103))
                                 : context.forest.text70,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -1718,11 +1730,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 5),
                           decoration: BoxDecoration(
-                            color: context.forest.inset26,
+                            color: context.forest.isDark
+                                ? context.forest.inset26
+                                : Colors.white.withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                                color:
-                                    AppColors.mintGreen.withValues(alpha: 0.3)),
+                                color: context.forest.isDark
+                                    ? AppColors.mintGreen.withValues(alpha: 0.3)
+                                    : AppColors.midGreen
+                                        .withValues(alpha: 0.35)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -2256,7 +2272,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           labelStyle: TextStyle(
                               color: context.forest.text70, fontSize: 13),
                           filled: true,
-                          fillColor: Colors.black26,
+                          fillColor: context.forest.inset26,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
@@ -2324,7 +2340,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           labelStyle: TextStyle(
                               color: context.forest.text70, fontSize: 13),
                           filled: true,
-                          fillColor: Colors.black26,
+                          fillColor: context.forest.inset26,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
@@ -2511,7 +2527,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       hintStyle: TextStyle(
                           color: context.forest.text38, letterSpacing: 2),
                       filled: true,
-                      fillColor: Colors.black26,
+                      fillColor: context.forest.inset26,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide:
@@ -2870,9 +2886,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                               ? profile
                                                                   .displayName[0]
                                                               : 'T',
-                                                          style: TextStyle(
-                                                              color: context
-                                                                  .forest.text,
+                                                          style: const TextStyle(
+                                                              color: Colors.white,
                                                               fontSize: 24,
                                                               fontWeight:
                                                                   FontWeight
