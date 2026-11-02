@@ -2887,7 +2887,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                                                   .displayName[0]
                                                               : 'T',
                                                           style: const TextStyle(
-                                                              color: Colors.white,
+                                                              color:
+                                                                  Colors.white,
                                                               fontSize: 24,
                                                               fontWeight:
                                                                   FontWeight
