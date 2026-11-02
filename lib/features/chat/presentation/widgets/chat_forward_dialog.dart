@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// WhatsApp-style Forward Message Dialog.
@@ -58,7 +59,7 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
             TextField(
               style: const TextStyle(color: Colors.white, fontSize: 13),
               decoration: InputDecoration(
-                hintText: 'Search chats...',
+                hintText: context.l10n.translate('chat_search_chats_hint'),
                 hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                 prefixIcon:
                     const Icon(Icons.search, color: Colors.white38, size: 18),
@@ -89,10 +90,11 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                   }
                   final docs = snap.data!.docs;
                   if (docs.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: Text(
-                        'No other conversations found',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                        context.l10n.translate('chat_no_other_conversations'),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12),
                       ),
                     );
                   }
@@ -109,7 +111,7 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                           (data['participants'] as List<dynamic>?) ?? [];
                       final otherUid = participants.firstWhere(
                         (p) => p != widget.currentUid,
-                        orElse: () => 'Member',
+                        orElse: () => context.l10n.translate('chats_member'),
                       );
                       final otherProfile =
                           (profiles[otherUid] as Map<String, dynamic>?) ?? {};
@@ -166,8 +168,8 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('CANCEL',
-                      style: TextStyle(color: Colors.white54)),
+                  child: Text(context.l10n.translate('chat_cancel_action'),
+                      style: const TextStyle(color: Colors.white54)),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
@@ -177,8 +179,8 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                         borderRadius: BorderRadius.circular(10)),
                   ),
                   icon: const Icon(Icons.send, size: 16, color: Colors.white),
-                  label: const Text('FORWARD',
-                      style: TextStyle(color: Colors.white)),
+                  label: Text(context.l10n.translate('chat_forward_action'),
+                      style: const TextStyle(color: Colors.white)),
                   onPressed: _selectedChatId == null
                       ? null
                       : () {

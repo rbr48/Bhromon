@@ -134,6 +134,18 @@ class ChatLocalCache {
     }
   }
 
+  /// Removes a deleted chat's cached messages and its list entry from this
+  /// device. The lock stays, so the chat is still locked if it comes back.
+  Future<void> removeChat(String chatId) async {
+    try {
+      await init();
+      await _convBox?.delete(chatId);
+      await Hive.deleteBoxFromDisk('$_kMessagesBoxPrefix$chatId');
+    } catch (e, st) {
+      logWarning('Error removing cached chat $chatId', e, st);
+    }
+  }
+
   /// Returns the set of all locked chat IDs.
   Set<String> getLockedChatIds() {
     if (_lockedBox == null) return {};

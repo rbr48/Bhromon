@@ -17,8 +17,11 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/utils/doc_future_cache.dart';
 import '../../data/call_history_stream.dart';
+import '../../data/chat_deletion_service.dart';
 import '../../data/chat_local_cache.dart';
 import '../../data/vps_chat_service.dart';
+import '../../domain/chat_deletion.dart';
+import '../widgets/chat_delete_dialogs.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/models/tour_group.dart';
 import '../../../tour_group/domain/services/group_contacts.dart';
@@ -451,6 +454,16 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                   if (_lockedChatIds.contains(doc.id)) {
                                     return false;
                                   }
+                                  // A chat this person deleted stays hidden until a newer message arrives.
+                                  if (isChatHiddenByCutoff(
+                                    clearedAt: ChatDeletionService.clearedAtOf(
+                                        data, currentUid),
+                                    lastMessageAt:
+                                        ChatDeletionService.timestampOf(
+                                            data['lastMessageTime']),
+                                  )) {
+                                    return false;
+                                  }
 
                                   // Match Search Query against UID or last message text
                                   if (_searchQuery.isNotEmpty) {
@@ -605,6 +618,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       if (blockedUids.contains(otherUser)) return false;
       final cId = (data['chatId'] ?? data['id'] ?? '') as String;
       if (_lockedChatIds.contains(cId)) return false;
+      if (isChatHiddenByCutoff(
+        clearedAt: ChatDeletionService.clearedAtOf(data, currentUid),
+        lastMessageAt: ChatDeletionService.timestampOf(
+            data['lastMessageTime'] ?? data['lastTime']),
+      )) {
+        return false;
+      }
       if (_searchQuery.isNotEmpty) {
         final lastMsg = (data['lastMessage'] as String? ?? '').toLowerCase();
         final otherUserLower = otherUser.toLowerCase();
@@ -1416,6 +1436,15 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     );
   }
 
+  /// The other person's name in a chat, for the delete dialog.
+  String _otherNameFor(String chatId, String otherUid) {
+    final profiles =
+        _chatDataById[chatId]?['participantProfiles'] as Map<String, dynamic>?;
+    final name = (profiles?[otherUid] as Map?)?['displayName'] as String?;
+    final clean = name?.trim() ?? '';
+    return clean.isEmpty ? context.l10n.translate('chats_member') : clean;
+  }
+
   void _showChatTileOptions(
       BuildContext context, String chatId, String otherUid) {
     final isLocked = _lockedChatIds.contains(chatId);
@@ -1463,6 +1492,37 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                       backgroundColor: const Color(0xFF00A884),
                     ),
                   );
+                }
+              },
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.delete_outline, color: Colors.redAccent),
+              title: Text(
+                context.l10n.translate('chat_menu_delete_chat'),
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+              subtitle: Text(
+                context.l10n.translate('chats_delete_chat_hint'),
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final uid = _streamsUid;
+                if (uid == null || uid.isEmpty) return;
+                final otherName = _otherNameFor(chatId, otherUid);
+                final deleted = await showDeleteChatDialog(
+                  context,
+                  chatId: chatId,
+                  uid: uid,
+                  otherName: otherName,
+                );
+                if (deleted && mounted) {
+                  setState(() {
+                    _offlineConversations = _offlineConversations
+                        .where((c) => (c['chatId'] ?? c['id']) != chatId)
+                        .toList();
+                  });
                 }
               },
             ),

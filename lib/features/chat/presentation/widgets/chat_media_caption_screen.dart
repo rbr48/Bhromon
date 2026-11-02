@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -107,7 +108,7 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                   IconButton(
                     icon: const Icon(Icons.rotate_right,
                         color: Colors.white, size: 26),
-                    tooltip: 'Rotate',
+                    tooltip: context.l10n.translate('chat_media_rotate'),
                     onPressed: _rotateImage,
                   ),
                 ],
@@ -139,12 +140,14 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                         controller: _captionController,
                         style:
                             const TextStyle(color: Colors.white, fontSize: 15),
-                        decoration: const InputDecoration(
-                          hintText: 'Add a caption...',
-                          hintStyle:
-                              TextStyle(color: Colors.white54, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText:
+                              context.l10n.translate('chat_media_caption_hint'),
+                          hintStyle: const TextStyle(
+                              color: Colors.white54, fontSize: 14),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 12),
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 12),
                         ),
                         maxLines: 3,
                         minLines: 1,
@@ -163,8 +166,8 @@ class _ChatMediaCaptionScreenState extends State<ChatMediaCaptionScreen> {
                         SnackBar(
                           content: Text(
                             _isViewOnce
-                                ? 'Photo set to view once'
-                                : 'View once turned off',
+                                ? context.l10n.translate('chat_view_once_on')
+                                : context.l10n.translate('chat_view_once_off'),
                             style: const TextStyle(fontSize: 13),
                           ),
                           duration: const Duration(seconds: 2),

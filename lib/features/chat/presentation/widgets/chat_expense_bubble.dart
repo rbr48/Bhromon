@@ -1,3 +1,4 @@
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// WhatsApp-style travel expense split bubble.
@@ -52,10 +53,10 @@ class ChatExpenseBubble extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Travel Expense Split',
-                  style: TextStyle(
+                  context.l10n.translate('chat_expense_split_title'),
+                  style: const TextStyle(
                     color: Color(0xFF00A884),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -85,8 +86,12 @@ class ChatExpenseBubble extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             isPaidByMe
-                ? 'You paid • ৳${splitAmount.toStringAsFixed(0)} owed to you'
-                : '$paidByName paid • You owe ৳${splitAmount.toStringAsFixed(0)}',
+                ? context.l10n.translate('chat_expense_you_paid',
+                    args: {'amount': splitAmount.toStringAsFixed(0)})
+                : context.l10n.translate('chat_expense_they_paid', args: {
+                    'name': paidByName,
+                    'amount': splitAmount.toStringAsFixed(0)
+                  }),
             style: TextStyle(
               color: isPaidByMe
                   ? const Color(0xFF53BDEB)
@@ -108,9 +113,10 @@ class ChatExpenseBubble extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 6),
                 ),
                 onPressed: onSettle,
-                child: const Text(
-                  'Mark Settled',
-                  style: TextStyle(color: Color(0xFF00A884), fontSize: 12),
+                child: Text(
+                  context.l10n.translate('chat_expense_mark_settled'),
+                  style:
+                      const TextStyle(color: Color(0xFF00A884), fontSize: 12),
                 ),
               ),
             ),
@@ -121,14 +127,16 @@ class ChatExpenseBubble extends StatelessWidget {
                 color: Colors.white10,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle, color: Color(0xFF00A884), size: 12),
-                  SizedBox(width: 4),
+                  const Icon(Icons.check_circle,
+                      color: Color(0xFF00A884), size: 12),
+                  const SizedBox(width: 4),
                   Text(
-                    'Settled',
-                    style: TextStyle(color: Color(0xFF00A884), fontSize: 10),
+                    context.l10n.translate('chat_expense_settled'),
+                    style:
+                        const TextStyle(color: Color(0xFF00A884), fontSize: 10),
                   ),
                 ],
               ),

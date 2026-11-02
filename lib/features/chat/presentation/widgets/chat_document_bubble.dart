@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
@@ -117,7 +118,10 @@ class _ChatDocumentBubbleState extends State<ChatDocumentBubble> {
         setState(() => _isDownloading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not open file: $e'),
+            content: Text(
+              context.l10n
+                  .translate('chat_open_file_failed', args: {'error': '$e'}),
+            ),
             backgroundColor: Colors.redAccent,
           ),
         );

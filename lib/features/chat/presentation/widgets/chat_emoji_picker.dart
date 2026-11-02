@@ -1,13 +1,14 @@
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// WhatsApp-style emoji category definition.
 class _EmojiCategory {
-  final String title;
+  final String titleKey;
   final IconData icon;
   final List<String> emojis;
 
   const _EmojiCategory({
-    required this.title,
+    required this.titleKey,
     required this.icon,
     required this.emojis,
   });
@@ -38,7 +39,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
 
   static const List<_EmojiCategory> _categories = [
     _EmojiCategory(
-      title: 'Smileys & Emotion',
+      titleKey: 'chat_emoji_smileys',
       icon: Icons.sentiment_satisfied_alt_outlined,
       emojis: [
         '😀',
@@ -144,7 +145,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'People & Hands',
+      titleKey: 'chat_emoji_people',
       icon: Icons.waving_hand_outlined,
       emojis: [
         '👋',
@@ -220,7 +221,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'Animals & Nature',
+      titleKey: 'chat_emoji_animals',
       icon: Icons.pets_outlined,
       emojis: [
         '🐶',
@@ -306,7 +307,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'Food & Drink',
+      titleKey: 'chat_emoji_food',
       icon: Icons.fastfood_outlined,
       emojis: [
         '🍏',
@@ -392,7 +393,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'Travel & Places',
+      titleKey: 'chat_emoji_travel',
       icon: Icons.flight_takeoff_outlined,
       emojis: [
         '🚗',
@@ -478,7 +479,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'Activities & Sports',
+      titleKey: 'chat_emoji_activities',
       icon: Icons.sports_soccer_outlined,
       emojis: [
         '⚽',
@@ -554,7 +555,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
       ],
     ),
     _EmojiCategory(
-      title: 'Objects & Symbols',
+      titleKey: 'chat_emoji_objects',
       icon: Icons.favorite_border_rounded,
       emojis: [
         '❤️',
@@ -698,7 +699,7 @@ class _ChatEmojiPickerState extends State<ChatEmojiPicker> {
                 ),
                 // Backspace button on the right of category header
                 IconButton(
-                  tooltip: 'Delete',
+                  tooltip: context.l10n.translate('chat_action_delete'),
                   icon: const Icon(
                     Icons.backspace_outlined,
                     color: Color(0xFF8696A0),

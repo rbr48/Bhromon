@@ -1,4 +1,5 @@
 import 'package:bhromon/core/media/media_access.dart';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -88,7 +89,7 @@ class ChatReplyInputBanner extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                _buildSnippet(reply),
+                _buildSnippet(context, reply),
               ],
             ),
           ),
@@ -126,7 +127,7 @@ class ChatReplyInputBanner extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white60, size: 18),
             onPressed: onCancel,
-            tooltip: 'Cancel reply',
+            tooltip: context.l10n.translate('chat_reply_cancel'),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
           ),
@@ -135,30 +136,38 @@ class ChatReplyInputBanner extends StatelessWidget {
     );
   }
 
-  Widget _buildSnippet(ReplyMessageInfo reply) {
+  Widget _buildSnippet(BuildContext context, ReplyMessageInfo reply) {
     IconData? icon;
     String label = reply.text;
 
     switch (reply.type) {
       case 'image':
         icon = Icons.photo_camera;
-        if (label.isEmpty) label = 'Photo';
+        if (label.isEmpty) {
+          label = context.l10n.translate('chat_label_photo');
+        }
         break;
       case 'video':
         icon = Icons.videocam;
-        if (label.isEmpty) label = 'Video';
+        if (label.isEmpty) {
+          label = context.l10n.translate('chat_video_label');
+        }
         break;
       case 'audio':
         icon = Icons.mic;
-        label = 'Voice message';
+        label = context.l10n.translate('chat_voice_message');
         break;
       case 'document':
         icon = Icons.insert_drive_file;
-        if (label.isEmpty) label = 'Document';
+        if (label.isEmpty) {
+          label = context.l10n.translate('chat_attach_document');
+        }
         break;
       case 'location':
         icon = Icons.location_on;
-        if (label.isEmpty) label = 'Location';
+        if (label.isEmpty) {
+          label = context.l10n.translate('chat_attach_location');
+        }
         break;
     }
 
@@ -234,7 +243,7 @@ class ChatQuotedBubble extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 1),
-                  _buildSnippet(reply),
+                  _buildSnippet(context, reply),
                 ],
               ),
             ),
@@ -277,30 +286,38 @@ class ChatQuotedBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildSnippet(ReplyMessageInfo reply) {
+  Widget _buildSnippet(BuildContext context, ReplyMessageInfo reply) {
     IconData? icon;
     String label = reply.text;
 
     switch (reply.type) {
       case 'image':
         icon = Icons.photo_camera;
-        if (label.isEmpty) label = 'Photo';
+        if (label.isEmpty) {
+          label = context.l10n.translate('chat_label_photo');
+        }
         break;
       case 'video':
         icon = Icons.videocam;
-        if (label.isEmpty) label = 'Video';
+        if (label.isEmpty) {
+          label = context.l10n.translate('chat_video_label');
+        }
         break;
       case 'audio':
         icon = Icons.mic;
-        label = 'Voice message';
+        label = context.l10n.translate('chat_voice_message');
         break;
       case 'document':
         icon = Icons.insert_drive_file;
-        if (label.isEmpty) label = 'Document';
+        if (label.isEmpty) {
+          label = context.l10n.translate('chat_attach_document');
+        }
         break;
       case 'location':
         icon = Icons.location_on;
-        if (label.isEmpty) label = 'Location';
+        if (label.isEmpty) {
+          label = context.l10n.translate('chat_attach_location');
+        }
         break;
     }
 

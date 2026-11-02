@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -221,13 +222,15 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
                   color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.lock_outline, color: Colors.white70, size: 14),
-                    SizedBox(width: 4),
-                    Text('Lock',
-                        style: TextStyle(color: Colors.white70, fontSize: 11)),
+                    const Icon(Icons.lock_outline,
+                        color: Colors.white70, size: 14),
+                    const SizedBox(width: 4),
+                    Text(context.l10n.translate('chat_record_lock'),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 11)),
                   ],
                 ),
               ),
@@ -235,7 +238,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
             const SizedBox(width: 8),
             IconButton(
               icon: const Icon(Icons.close, color: Colors.white60, size: 20),
-              tooltip: 'Cancel',
+              tooltip: context.l10n.translate('cancel'),
               onPressed: _cancelRecording,
             ),
             GestureDetector(
@@ -251,7 +254,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
             IconButton(
               icon: const Icon(Icons.delete_outline,
                   color: Colors.redAccent, size: 22),
-              tooltip: 'Delete recording',
+              tooltip: context.l10n.translate('chat_record_delete'),
               onPressed: _cancelRecording,
             ),
             const SizedBox(width: 4),

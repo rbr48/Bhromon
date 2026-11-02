@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -57,9 +58,9 @@ class _ChatMediaPickerSheet extends StatelessWidget {
                 ),
               ),
             ),
-            const Text(
-              'Share Media',
-              style: TextStyle(
+            Text(
+              context.l10n.translate('chat_media_picker_title'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -71,19 +72,19 @@ class _ChatMediaPickerSheet extends StatelessWidget {
               children: [
                 _MediaOption(
                   icon: Icons.camera_alt_rounded,
-                  label: 'Camera',
+                  label: context.l10n.translate('chat_open_camera'),
                   color: const Color(0xFF00A884),
                   onTap: () => _pick(context, _PickMode.camera),
                 ),
                 _MediaOption(
                   icon: Icons.photo_library_rounded,
-                  label: 'Gallery',
+                  label: context.l10n.translate('chat_attach_gallery'),
                   color: const Color(0xFF34B7F1),
                   onTap: () => _pick(context, _PickMode.gallery),
                 ),
                 _MediaOption(
                   icon: Icons.videocam_rounded,
-                  label: 'Video',
+                  label: context.l10n.translate('chat_video_label'),
                   color: const Color(0xFFE4175B),
                   onTap: () => _pick(context, _PickMode.video),
                 ),
@@ -105,14 +106,13 @@ class _ChatMediaPickerSheet extends StatelessWidget {
 
       if (status.isDenied || status.isPermanentlyDenied) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text('Camera permission denied. Please enable it in Settings.'),
+          SnackBar(
+            content: Text(context.l10n.translate('chat_camera_denied')),
             action: SnackBarAction(
-              label: 'Settings',
+              label: context.l10n.translate('chat_open_settings'),
               onPressed: openAppSettings,
             ),
-            backgroundColor: Color(0xFF1F2C34),
+            backgroundColor: const Color(0xFF1F2C34),
           ),
         );
         Navigator.of(context).pop();
