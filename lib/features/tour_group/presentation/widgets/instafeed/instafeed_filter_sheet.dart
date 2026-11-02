@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../domain/models/tour_group.dart';
 import '../../../../../core/localization/app_localizations.dart';
@@ -47,7 +48,7 @@ class InstafeedFilterBar extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
+                  color: context.forest.feedSurface,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: AppColors.mintGreen.withValues(alpha: 0.5),
@@ -56,23 +57,23 @@ class InstafeedFilterBar extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.tune_rounded,
-                        size: 16, color: AppColors.mintGreen),
+                    Icon(Icons.tune_rounded,
+                        size: 16, color: context.forest.accentText),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
                         summary,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: context.forest.text,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(Icons.expand_more_rounded,
-                        size: 18, color: Colors.white70),
+                    Icon(Icons.expand_more_rounded,
+                        size: 18, color: context.forest.text70),
                   ],
                 ),
               ),
@@ -116,8 +117,8 @@ class InstafeedFilterSheet extends StatelessWidget {
           children: [
             Text(
               context.l10n.translate('ig_filter_title'),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -129,6 +130,7 @@ class InstafeedFilterSheet extends StatelessWidget {
               children: [
                 for (final option in instafeedMediaFilters(context))
                   _choice(
+                    context: context,
                     label: option.label,
                     selected: option.id == selectedMedia,
                     onTap: () => onMediaSelected(option.id),
@@ -139,7 +141,7 @@ class InstafeedFilterSheet extends StatelessWidget {
               const SizedBox(height: 18),
               Text(
                 context.l10n.translate('ig_day'),
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: TextStyle(color: context.forest.text70, fontSize: 13),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -147,12 +149,14 @@ class InstafeedFilterSheet extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   _choice(
+                    context: context,
                     label: context.l10n.translate('ig_all_days'),
                     selected: selectedDay == 'all',
                     onTap: () => onDaySelected('all'),
                   ),
                   for (final day in days)
                     _choice(
+                      context: context,
                       label: day.label,
                       selected: selectedDay == day.id,
                       onTap: () => onDaySelected(day.id),
@@ -167,6 +171,7 @@ class InstafeedFilterSheet extends StatelessWidget {
   }
 
   Widget _choice({
+    required BuildContext context,
     required String label,
     required bool selected,
     required VoidCallback onTap,
@@ -175,9 +180,9 @@ class InstafeedFilterSheet extends StatelessWidget {
       label: Text(label),
       selected: selected,
       selectedColor: AppColors.mintGreen,
-      backgroundColor: const Color(0xFF2A2A2A),
+      backgroundColor: context.forest.feedRaised,
       labelStyle: TextStyle(
-        color: selected ? Colors.black : Colors.white70,
+        color: selected ? Colors.black : context.forest.text70,
         fontWeight: selected ? FontWeight.bold : FontWeight.normal,
         fontSize: 12,
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -180,9 +181,9 @@ class InstafeedShareSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: context.forest.feedSurface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: SafeArea(
         child: Column(
@@ -194,7 +195,7 @@ class InstafeedShareSheet extends StatelessWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: context.forest.text24,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -202,8 +203,8 @@ class InstafeedShareSheet extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               context.l10n.translate('ig_share_post_title'),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -222,18 +223,18 @@ class InstafeedShareSheet extends StatelessWidget {
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold)),
               subtitle: Text(context.l10n.translate('ig_story_lasts'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12)),
               onTap: () => _shareToStory(context),
             ),
-            const Divider(color: Colors.white10),
+            Divider(color: context.forest.divider10),
 
             // Send to Tour Channels
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Text(
                 context.l10n.translate('ig_send_to_channel'),
-                style: const TextStyle(
-                    color: Colors.white70,
+                style: TextStyle(
+                    color: context.forest.text70,
                     fontSize: 13,
                     fontWeight: FontWeight.w600),
               ),
@@ -247,29 +248,32 @@ class InstafeedShareSheet extends StatelessWidget {
                   backgroundColor:
                       (ch['color'] as Color).withValues(alpha: 0.2),
                   child: Icon(ch['icon'] as IconData,
-                      size: 16, color: ch['color'] as Color),
+                      size: 16,
+                      color: context.forest.readable(ch['color'] as Color)),
                 ),
                 title: Text(_channelTitle(context, ch['id'] as String),
-                    style: const TextStyle(color: Colors.white, fontSize: 14)),
-                trailing: const Icon(Icons.send_rounded,
-                    size: 16, color: Colors.white54),
+                    style: TextStyle(color: context.forest.text, fontSize: 14)),
+                trailing: Icon(Icons.send_rounded,
+                    size: 16, color: context.forest.text54),
                 onTap: () => _sendToChannel(context, ch['id'] as String,
                     _channelTitle(context, ch['id'] as String)),
               );
             }),
 
-            const Divider(color: Colors.white10),
+            Divider(color: context.forest.divider10),
 
             // External Action Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _buildActionButton(
+                  context: context,
                   icon: Icons.link,
                   label: context.l10n.translate('ig_copy_link'),
                   onTap: () => _copyLink(context),
                 ),
                 _buildActionButton(
+                  context: context,
                   icon: Icons.share,
                   label: context.l10n.translate('ig_other_apps'),
                   onTap: () {
@@ -287,6 +291,7 @@ class InstafeedShareSheet extends StatelessWidget {
   }
 
   Widget _buildActionButton({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required VoidCallback onTap,
@@ -299,12 +304,12 @@ class InstafeedShareSheet extends StatelessWidget {
         child: Column(
           children: [
             CircleAvatar(
-              backgroundColor: Colors.white12,
-              child: Icon(icon, color: Colors.white),
+              backgroundColor: context.forest.divider12,
+              child: Icon(icon, color: context.forest.text),
             ),
             const SizedBox(height: 6),
             Text(label,
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                style: TextStyle(color: context.forest.text70, fontSize: 12)),
           ],
         ),
       ),
@@ -418,9 +423,9 @@ class InstafeedStoryShareSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: context.forest.feedSurface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: SafeArea(
         child: Column(
@@ -432,7 +437,7 @@ class InstafeedStoryShareSheet extends StatelessWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: context.forest.text24,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -440,8 +445,8 @@ class InstafeedStoryShareSheet extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               context.l10n.translate('ig_share_story_title'),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -453,8 +458,8 @@ class InstafeedStoryShareSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Text(
                 context.l10n.translate('ig_send_to_channel'),
-                style: const TextStyle(
-                    color: Colors.white70,
+                style: TextStyle(
+                    color: context.forest.text70,
                     fontSize: 13,
                     fontWeight: FontWeight.w600),
               ),
@@ -468,18 +473,19 @@ class InstafeedStoryShareSheet extends StatelessWidget {
                   backgroundColor:
                       (ch['color'] as Color).withValues(alpha: 0.2),
                   child: Icon(ch['icon'] as IconData,
-                      size: 16, color: ch['color'] as Color),
+                      size: 16,
+                      color: context.forest.readable(ch['color'] as Color)),
                 ),
                 title: Text(_channelTitle(context, ch['id'] as String),
-                    style: const TextStyle(color: Colors.white, fontSize: 14)),
-                trailing: const Icon(Icons.send_rounded,
-                    size: 16, color: Colors.white54),
+                    style: TextStyle(color: context.forest.text, fontSize: 14)),
+                trailing: Icon(Icons.send_rounded,
+                    size: 16, color: context.forest.text54),
                 onTap: () => _sendToChannel(context, ch['id'] as String,
                     _channelTitle(context, ch['id'] as String)),
               );
             }),
 
-            const Divider(color: Colors.white10),
+            Divider(color: context.forest.divider10),
 
             // External Action Buttons
             Row(
@@ -493,14 +499,14 @@ class InstafeedStoryShareSheet extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Column(
                       children: [
-                        const CircleAvatar(
-                          backgroundColor: Colors.white12,
-                          child: Icon(Icons.link, color: Colors.white),
+                        CircleAvatar(
+                          backgroundColor: context.forest.divider12,
+                          child: Icon(Icons.link, color: context.forest.text),
                         ),
                         const SizedBox(height: 6),
                         Text(context.l10n.translate('ig_copy_link'),
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 12)),
+                            style: TextStyle(
+                                color: context.forest.text70, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -516,14 +522,14 @@ class InstafeedStoryShareSheet extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Column(
                       children: [
-                        const CircleAvatar(
-                          backgroundColor: Colors.white12,
-                          child: Icon(Icons.share, color: Colors.white),
+                        CircleAvatar(
+                          backgroundColor: context.forest.divider12,
+                          child: Icon(Icons.share, color: context.forest.text),
                         ),
                         const SizedBox(height: 6),
                         Text(context.l10n.translate('ig_other_apps'),
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 12)),
+                            style: TextStyle(
+                                color: context.forest.text70, fontSize: 12)),
                       ],
                     ),
                   ),

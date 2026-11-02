@@ -39,6 +39,38 @@ class ForestPalette {
   Color get bannerEnd =>
       isDark ? const Color(0xFF081C15) : const Color(0xFFCDE7D7);
 
+  // The Moments feed uses neutral greys instead of forest green.
+
+  /// The feed page behind the posts.
+  Color get feedPage =>
+      isDark ? const Color(0xFF0A120D) : const Color(0xFFF2F4F3);
+
+  /// Feed cards, sheets and dialogs.
+  Color get feedSurface => isDark ? const Color(0xFF1E1E1E) : Colors.white;
+
+  /// The comments sheet.
+  Color get feedSheet => isDark ? const Color(0xFF121212) : Colors.white;
+
+  /// Recessed feed areas.
+  Color get feedDeep =>
+      isDark ? const Color(0xFF141414) : const Color(0xFFF6F7F7);
+
+  /// Raised chips and tiles on a feed surface.
+  Color get feedRaised =>
+      isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEDEFEE);
+
+  /// Text fields in the feed.
+  Color get feedField =>
+      isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF0F2F1);
+
+  /// Story rings and bubbles.
+  Color get feedBubble =>
+      isDark ? const Color(0xFF242526) : const Color(0xFFF0F2F5);
+
+  /// Placeholders while a photo loads.
+  Color get feedPlaceholder =>
+      isDark ? const Color(0xFF1B1B1B) : const Color(0xFFE4E7E5);
+
   /// Circles behind category icons.
   Color get chip => isDark ? const Color(0xFF182630) : const Color(0xFFE6ECE8);
 
