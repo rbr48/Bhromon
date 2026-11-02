@@ -20,7 +20,7 @@ services:
       # environment, never from git. Without it /api/chat/ice_servers answers 503
       # and calls use STUN only.
       - SOTTO_TURN_SECRET=${SOTTO_TURN_SECRET:-}
-      # Extra TURN-over-TLS addresses, e.g. turns:call.sottocall.com:443?transport=tcp (5349 is offered already)
+      # Extra TURN-over-TLS addresses, e.g. turns:turn.sottocall.com:443?transport=tcp (5349 is offered already)
       - TURN_TLS_URLS=${TURN_TLS_URLS:-}
       # Apple VoIP pushes (iPhone call screen when the app is closed). Leave empty to skip.
       - APNS_KEY_PATH=${APNS_KEY_PATH:-}

@@ -218,18 +218,17 @@ The push opens the notice board, the same as a new notice's push. Tests:
 
 Both are off until configured, and the server works without them.
 
-**TURN over TLS.** The relay host is `call.sottocall.com` (`TURN_SERVER_HOST`),
+**TURN over TLS.** The relay host is `turn.sottocall.com` (`TURN_SERVER_HOST`),
 and `/api/chat/ice_servers` offers it on UDP and TCP 3478 and over TLS on 5349
-(`turns:`). coturn's certificate must name the host the app is given: the TLS
-handshake is checked against `call.sottocall.com`, so a certificate issued only
-for another name (such as `turn.sottocall.com`) makes the `turns:` path fail.
-Check it with `openssl s_client -connect call.sottocall.com:5349 -servername
-call.sottocall.com`.
+(`turns:`). coturn's certificate matches the host the app is given: the TLS
+handshake is checked against `turn.sottocall.com`.
+Check it with `openssl s_client -connect turn.sottocall.com:5349 -servername
+turn.sottocall.com`.
 
 Some networks let only port 443 out. To offer TLS-TURN there as well, give coturn
-a second IP on 443 or let nginx pass `call.sottocall.com` through to coturn by SNI
+a second IP on 443 or let nginx pass `turn.sottocall.com` through to coturn by SNI
 (`stream` with `ssl_preread on;`), then set
-`TURN_TLS_URLS=turns:call.sottocall.com:443?transport=tcp` for the media
+`TURN_TLS_URLS=turns:turn.sottocall.com:443?transport=tcp` for the media
 container. Extra addresses are added once; an address already offered is not
 repeated.
 
