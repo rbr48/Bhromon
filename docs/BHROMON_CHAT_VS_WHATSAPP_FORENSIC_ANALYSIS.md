@@ -361,7 +361,7 @@ flowchart TD
 - [ ] **Fix Message Deletion in Firestore Rules**: Update [`firestore.rules`](file:///d:/Software_and_Apps/Apps/Bhromon/firestore.rules#L366-L371) to allow soft-tombstoning (`type: 'deleted'`, `text: 'This message was deleted'`) and allow updating `deletedFor` array for participants.
 - [ ] **Activate `'delivered'` Delivery Receipts**: Add a lightweight FCM data message handler that acknowledges receipt and transitions message state from `'sent'` to `'delivered'`.
 - [ ] **Fix VoIP Incoming Call Listener**: Move WebRTC incoming call listener out of [`chat_screen.dart`](file:///d:/Software_and_Apps/Apps/Bhromon/lib/features/chat/presentation/pages/chat_screen.dart) into top-level app lifecycle (`App` or `HomeShell`) so calls ring from any screen.
-- [ ] **Deploy TURN Relay**: Configure Coturn on the Hostinger VPS (`148.135.137.245`) with credentials injected into [`call_signaling_service.dart`](file:///d:/Software_and_Apps/Apps/Bhromon/lib/features/chat/data/call_signaling_service.dart) to guarantee WebRTC call completion over cellular networks.
+- [ ] **Deploy TURN Relay**: Configure Coturn on the Hostinger VPS (`bhromon.fun`) with credentials injected into [`call_signaling_service.dart`](file:///d:/Software_and_Apps/Apps/Bhromon/lib/features/chat/data/call_signaling_service.dart) to guarantee WebRTC call completion over cellular networks.
 
 ### Phase 2: Performance & Read Amplification Elimination
 - [ ] **Denormalize Chat Metadata**: Embed `unreadCount` and `lastMessage` (with sender details) directly inside `/chats/{chatId}` to replace the $3 \times N$ stream storm with a single stream query.

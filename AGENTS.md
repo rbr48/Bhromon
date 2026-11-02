@@ -103,7 +103,7 @@ This document serves as the persistent system memory, architectural guidelines, 
 
 ### C. Tour Reels & Media Sharing (VPS Microservice)
 - Vertical reels video feed (`tour_instafeed_screen.dart`) matching Family Bhromon with video playback controls, aspect ratio fitting, upload flows, and media filters.
-- **Dedicated VPS Media Storage**: To bypass Firebase Storage rate limits and bandwidth charges, media is hosted on the user's Hostinger VPS (`148.135.137.245`) in an isolated Docker container (`bhromon-media-app` on `127.0.0.1:8210`), saving to `/var/www/bhromon-media`.
+- **Dedicated VPS Media Storage**: To bypass Firebase Storage rate limits and bandwidth charges, media is hosted on the user's Hostinger VPS (`bhromon.fun`) in an isolated Docker container (`bhromon-media-app` on `127.0.0.1:8210`), saving to `/var/www/bhromon-media`.
 - **High-Performance Streaming**: Nginx serves `/media/` using `http_mp4_module` with native HTTP Range Requests (`206 Partial Content`) for instant video reels seeking.
 - **Private media**: tour, chat and profile media is served only with a signed link (`?u=<uid>&s=<signature>`). The app gets its key from `POST /api/media/access-key` after sign-in and signs each `/media/` URL with `signedMediaUrl` (`lib/core/media/`). nginx asks `/internal/media-auth` (`media-server/media_access.py`) before it serves a file, and that check applies membership. `MEDIA_ACCESS_ENFORCE` turns refusals on, and stays 0 until the app that signs links is released (see `media-server/README.md`, "Private media links"). Responses are `Cache-Control: private`, so shared caches never keep a file.
 - **Moments & Media Server Quotas (PR #175)**:
@@ -182,7 +182,7 @@ static session while the user visits other screens, and asks before discarding a
     - Only when the user reaches the root page does the browser pop back to `NewspaperHubScreen`. It never jumps past the hub or closes the app.
     - Tapping the top App Bar back arrow (`←`) immediately returns to `NewspaperHubScreen`.
 - **Platform Invariant: Web Iframe vs Native Android WebView**:
-  - **Flutter Web (`kIsWeb == true`)**: Browser renders as an HTML `<iframe>`. Chrome strictly enforces `X-Frame-Options: SAMEORIGIN` and CSP `frame-ancestors 'self'`, blocking direct embedding of Samakal, Kaler Kantho, Jugantor, etc. While Prothom Alo and Daily Star proxy cleanly (HTTP 200), Cloudflare WAF on Samakal and Kaler Kantho challenges datacenter IPs (like Hostinger VPS `148.135.137.245`). On Web, these sites render a responsive fallback protection card offering: 1) "Open site directly ↗" in a new tab (`target="_blank"`), 2) "Distraction-Free Reader Mode 📖", or 3) "Download Bhromon Android App 📱".
+  - **Flutter Web (`kIsWeb == true`)**: Browser renders as an HTML `<iframe>`. Chrome strictly enforces `X-Frame-Options: SAMEORIGIN` and CSP `frame-ancestors 'self'`, blocking direct embedding of Samakal, Kaler Kantho, Jugantor, etc. While Prothom Alo and Daily Star proxy cleanly (HTTP 200), Cloudflare WAF on Samakal and Kaler Kantho challenges datacenter IPs (like VPS datacenter IPs). On Web, these sites render a responsive fallback protection card offering: 1) "Open site directly ↗" in a new tab (`target="_blank"`), 2) "Distraction-Free Reader Mode 📖", or 3) "Download Bhromon Android App 📱".
   - **Android APK (`!kIsWeb`)**: Runs native Chromium `android.webkit.WebView` directly with the phone's mobile/carrier IP. No `<iframe>` or `X-Frame-Options` restrictions exist, Cloudflare WAF is not triggered, and all newspaper sites open with 120 FPS hardware acceleration.
   - Fetch allowlist: the reader and the web proxy fetch only from the newspapers' domains (`ALLOWED_FETCH_DOMAINS` in `news.py`), and every redirect is checked against it. `POST /api/news/sync` is for platform admins, and a `refresh=true` runs at most every 10 minutes.
   - Direct APK download URL: `https://bhromon.fun/media/apk/bhromon-release.apk` (served with byte-range support).
@@ -211,7 +211,7 @@ static session while the user visits other screens, and asks before discarding a
   - Running on Hostinger VPS (`coturn/coturn:4.18.0`) to relay media when direct peer-to-peer UDP is blocked by symmetric NATs or restrictive mobile carrier firewalls. OpenRelay fallback configured.
 
 ### G. Hostinger VPS Infrastructure & Microservices Architecture
-- **Server**: Hostinger VPS (`148.135.137.245`), SSH port `2222`, user `root`, key `~/.ssh/id_rsa_dbm`.
+- **Server**: Hostinger VPS (`bhromon.fun`), protected by Cloudflare SSL.
 - **Firebase Spark Plan Invariant**:
   - The Firebase project `bhromon-ff801` is strictly on the free Spark plan without billing. Google Secret Manager (`secrets: [...]`) and Cloud Functions Gen 2 / Extensions fail with 403 `BILLING_DISABLED`.
   - All heavy server compute (multiplayer games, push notification listeners, news proxy, and media storage) is hosted on the VPS so that the platform remains 100% free with zero infrastructure charges.
