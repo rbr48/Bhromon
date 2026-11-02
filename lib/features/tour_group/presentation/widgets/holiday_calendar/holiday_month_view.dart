@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../../../core/theme/colors.dart';
@@ -40,15 +41,16 @@ class HolidayMonthView extends StatelessWidget {
             IconButton(
               tooltip: l10n.translate('hol_prev_month'),
               onPressed: month > 1 ? () => onMonthChanged(month - 1) : null,
-              icon: const Icon(Icons.chevron_left_rounded, color: Colors.white),
+              icon:
+                  Icon(Icons.chevron_left_rounded, color: context.forest.text),
             ),
             Expanded(
               child: Text(
                 localizedDateFormat('MMMM yyyy')
                     .format(DateTime(calendar.year, month)),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.forest.text,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -58,7 +60,7 @@ class HolidayMonthView extends StatelessWidget {
               tooltip: l10n.translate('hol_next_month'),
               onPressed: month < 12 ? () => onMonthChanged(month + 1) : null,
               icon:
-                  const Icon(Icons.chevron_right_rounded, color: Colors.white),
+                  Icon(Icons.chevron_right_rounded, color: context.forest.text),
             ),
           ],
         ),
@@ -72,7 +74,7 @@ class HolidayMonthView extends StatelessWidget {
                   style: TextStyle(
                     color: key == 'hol_wd_fri' || key == 'hol_wd_sat'
                         ? kHolidayRed.withValues(alpha: 0.8)
-                        : Colors.white60,
+                        : context.forest.text60,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -136,8 +138,8 @@ class _HolidayDayCell extends StatelessWidget {
         : isHoliday
             ? kHolidayRed
             : isWeekend
-                ? Colors.white38
-                : Colors.white;
+                ? context.forest.text38
+                : context.forest.text;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -298,8 +300,8 @@ class _MiniMonth extends StatelessWidget {
           color: isHoliday
               ? kHolidayRed
               : HolidayCalendar.isWeekend(date)
-                  ? Colors.white38
-                  : Colors.white70,
+                  ? context.forest.text38
+                  : context.forest.text70,
           fontSize: 8.5,
           fontWeight: isHoliday ? FontWeight.bold : FontWeight.normal,
         ),

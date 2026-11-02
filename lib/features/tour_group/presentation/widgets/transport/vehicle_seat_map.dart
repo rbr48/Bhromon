@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../domain/models/date_codec.dart';
@@ -76,11 +77,12 @@ class VehicleSeatMap extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(vehicleKindIcon(kind), color: AppColors.mintGreen, size: 18),
+            Icon(vehicleKindIcon(kind),
+                color: context.forest.accentText, size: 18),
             const SizedBox(width: 6),
             Text(l10n.translate('veh_front').toUpperCase(),
-                style: const TextStyle(
-                    color: Colors.white54,
+                style: TextStyle(
+                    color: context.forest.text54,
                     fontSize: 11,
                     letterSpacing: 2,
                     fontWeight: FontWeight.w700)),
@@ -97,8 +99,8 @@ class VehicleSeatMap extends StatelessWidget {
                     e.key:
                         e.value is int ? l10n.number(e.value as int) : e.value,
                 }),
-                style: const TextStyle(
-                    color: AppColors.gold,
+                style: TextStyle(
+                    color: context.forest.readable(AppColors.gold),
                     fontWeight: FontWeight.bold,
                     fontSize: 13),
               ),
@@ -132,8 +134,10 @@ class VehicleSeatMap extends StatelessWidget {
         const SizedBox(height: 8),
         Center(
           child: Text(l10n.translate('veh_back').toUpperCase(),
-              style: const TextStyle(
-                  color: Colors.white24, fontSize: 10, letterSpacing: 2)),
+              style: TextStyle(
+                  color: context.forest.text24,
+                  fontSize: 10,
+                  letterSpacing: 2)),
         ),
       ],
     );
@@ -165,8 +169,8 @@ class VehicleSeatMap extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 4, top: 4),
               child: Text(label,
-                  style: const TextStyle(
-                      color: Colors.white70,
+                  style: TextStyle(
+                      color: context.forest.text70,
                       fontWeight: FontWeight.w700,
                       fontSize: 12)),
             ),
@@ -178,8 +182,8 @@ class VehicleSeatMap extends StatelessWidget {
                 child: isHeading || label == null
                     ? null
                     : Text(label,
-                        style: const TextStyle(
-                            color: Colors.white38,
+                        style: TextStyle(
+                            color: context.forest.text38,
                             fontSize: 11,
                             fontWeight: FontWeight.w700)),
               ),
@@ -207,14 +211,14 @@ class VehicleSeatMap extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(6, 4, 6, 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: context.forest.divider12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(title,
-              style: const TextStyle(color: Colors.white54, fontSize: 10)),
+              style: TextStyle(color: context.forest.text54, fontSize: 10)),
           const SizedBox(height: 4),
           row,
         ],

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -533,12 +534,12 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1B1E),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1B1E)),
       appBar: AppBar(
         title: Text(context.l10n.translate('fsh_title'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        backgroundColor: const Color(0xFF142428),
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+        foregroundColor: context.forest.text,
         elevation: 0,
       ),
       body: SafeArea(
@@ -567,8 +568,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             // Live Landmark Direction Cards
             Text(
               context.l10n.translate('fsh_important_points'),
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: context.forest.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 15),
             ),
@@ -593,7 +594,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         final alertColor = _isSirenActive
             ? Color.lerp(Colors.red.shade900, Colors.redAccent,
                 _sirenAnimController.value)!
-            : const Color(0xFF1F2E33);
+            : context.forest.surfaceFor(const Color(0xFF1F2E33));
 
         return Container(
           padding: const EdgeInsets.all(18),
@@ -712,8 +713,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           children: [
             Text(
               context.l10n.translate('fsh_group_alerts'),
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: context.forest.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 15),
             ),
@@ -741,7 +742,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF3B1F1F),
+        color: context.forest.surfaceFor(const Color(0xFF3B1F1F)),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.redAccent),
       ),
@@ -750,18 +751,19 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
         children: [
           Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.redAccent),
+              Icon(Icons.warning_amber_rounded,
+                  color: context.forest.readable(Colors.redAccent)),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   context.l10n.translate('fsh_sender_sent_alert',
                       args: {'name': alert.senderName}),
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: context.forest.text, fontWeight: FontWeight.bold),
                 ),
               ),
               Text(when,
-                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 11)),
             ],
           ),
           const SizedBox(height: 10),
@@ -795,14 +797,14 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF142428),
+        color: context.forest.surfaceFor(const Color(0xFF142428)),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: context.forest.divider12),
       ),
       child: Row(
         children: [
-          const Icon(Icons.favorite_rounded,
-              color: AppColors.mintGreen, size: 22),
+          Icon(Icons.favorite_rounded,
+              color: context.forest.accentText, size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -810,14 +812,14 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               children: [
                 Text(
                   l10n.translate('fsh_im_safe_title'),
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: context.forest.text,
                       fontWeight: FontWeight.bold,
                       fontSize: 14),
                 ),
                 Text(
                   l10n.translate('fsh_im_safe_sub'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  style: TextStyle(color: context.forest.text54, fontSize: 11),
                 ),
               ],
             ),
@@ -848,23 +850,23 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF142428),
+        color: context.forest.surfaceFor(const Color(0xFF142428)),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: context.forest.divider12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.contact_phone_rounded,
-                  color: AppColors.mintGreen, size: 20),
+              Icon(Icons.contact_phone_rounded,
+                  color: context.forest.accentText, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   l10n.translate('fsh_family_numbers'),
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: context.forest.text,
                       fontWeight: FontWeight.bold,
                       fontSize: 14),
                 ),
@@ -873,7 +875,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 IconButton(
                   tooltip: l10n.translate('fsh_add_family_number'),
                   icon:
-                      const Icon(Icons.add_rounded, color: AppColors.mintGreen),
+                      Icon(Icons.add_rounded, color: context.forest.accentText),
                   onPressed: () => unawaited(_addFamilyNumber()),
                 ),
             ],
@@ -881,7 +883,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           if (contacts.isEmpty)
             Text(
               l10n.translate('fsh_family_numbers_empty'),
-              style: const TextStyle(color: Colors.white54, fontSize: 11),
+              style: TextStyle(color: context.forest.text54, fontSize: 11),
             )
           else
             for (final contact in contacts)
@@ -915,32 +917,32 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(contact.name,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: context.forest.text,
                         fontWeight: FontWeight.bold,
                         fontSize: 13)),
                 Text(contact.phone,
                     style:
-                        const TextStyle(color: Colors.white54, fontSize: 11)),
+                        TextStyle(color: context.forest.text54, fontSize: 11)),
               ],
             ),
           ),
           IconButton(
             tooltip: l10n.translate('fsh_call'),
-            icon: const Icon(Icons.call_rounded, color: AppColors.mintGreen),
+            icon: Icon(Icons.call_rounded, color: context.forest.accentText),
             onPressed: () => unawaited(_callNumber(contact.phone)),
           ),
           if (!kIsWeb)
             IconButton(
               tooltip: l10n.translate('fsh_text'),
-              icon: const Icon(Icons.sms_rounded, color: AppColors.mintGreen),
+              icon: Icon(Icons.sms_rounded, color: context.forest.accentText),
               onPressed: () => unawaited(_textNumbers([contact.phone])),
             ),
           if (isAdmin)
             IconButton(
               tooltip: l10n.translate('fsh_remove_family_number'),
-              icon: const Icon(Icons.delete_outline_rounded,
-                  color: Colors.white54),
+              icon: Icon(Icons.delete_outline_rounded,
+                  color: context.forest.text54),
               onPressed: () => unawaited(_removeFamilyNumber(contact)),
             ),
         ],
@@ -983,22 +985,22 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF14241B),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
           title: Text(l10n.translate('fsh_add_number_title'),
-              style: const TextStyle(color: Colors.white)),
+              style: TextStyle(color: context.forest.text)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                     labelText: l10n.translate('fsh_number_name_label')),
               ),
               TextField(
                 controller: phoneCtrl,
                 keyboardType: TextInputType.phone,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                     labelText: l10n.translate('fsh_number_phone_label'),
                     errorText: error),
@@ -1075,12 +1077,12 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF142428),
+        color: context.forest.surfaceFor(const Color(0xFF142428)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: _locationShareOn
               ? AppColors.mintGreen.withValues(alpha: 0.5)
-              : Colors.white12,
+              : context.forest.divider12,
         ),
       ),
       child: Column(
@@ -1092,7 +1094,9 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 _locationShareOn
                     ? Icons.my_location_rounded
                     : Icons.location_off_rounded,
-                color: _locationShareOn ? AppColors.mintGreen : Colors.white54,
+                color: _locationShareOn
+                    ? context.forest.accentText
+                    : context.forest.text54,
                 size: 20,
               ),
               const SizedBox(width: 8),
@@ -1102,8 +1106,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                   children: [
                     Text(
                       l10n.translate('fsh_share_my_location'),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.forest.text,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -1111,7 +1115,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                     Text(
                       l10n.translate('fsh_share_my_location_sub'),
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 11),
+                          TextStyle(color: context.forest.text54, fontSize: 11),
                     ),
                   ],
                 ),
@@ -1134,8 +1138,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               ),
               child: Text(
                 l10n.translate('fsh_sharing_now_banner'),
-                style: const TextStyle(
-                  color: AppColors.mintGreen,
+                style: TextStyle(
+                  color: context.forest.accentText,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1173,12 +1177,12 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFF142428),
+                color: context.forest.surfaceFor(const Color(0xFF142428)),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: hasLowBattery
                       ? Colors.redAccent.withValues(alpha: 0.4)
-                      : Colors.white12,
+                      : context.forest.divider12,
                 ),
               ),
               child: Column(
@@ -1189,8 +1193,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                       Icon(
                         Icons.radar_rounded,
                         color: hasLowBattery
-                            ? Colors.redAccent
-                            : AppColors.mintGreen,
+                            ? context.forest.readable(Colors.redAccent)
+                            : context.forest.accentText,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -1200,16 +1204,16 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                           children: [
                             Text(
                               l10n.translate('fsh_battery_radar_title'),
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: context.forest.text,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
                             ),
                             Text(
                               l10n.translate('fsh_family_status_sub'),
-                              style: const TextStyle(
-                                color: Colors.white54,
+                              style: TextStyle(
+                                color: context.forest.text54,
                                 fontSize: 11,
                               ),
                             ),
@@ -1231,14 +1235,16 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.warning_amber_rounded,
-                              size: 16, color: Colors.redAccent),
+                          Icon(Icons.warning_amber_rounded,
+                              size: 16,
+                              color: context.forest.readable(Colors.redAccent)),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               l10n.translate('fsh_battery_low_warning'),
-                              style: const TextStyle(
-                                color: Colors.redAccent,
+                              style: TextStyle(
+                                color:
+                                    context.forest.readable(Colors.redAccent),
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1309,10 +1315,12 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       decoration: BoxDecoration(
         color: low
             ? Colors.redAccent.withValues(alpha: 0.08)
-            : Colors.white.withValues(alpha: 0.03),
+            : context.forest.text.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: low ? Colors.redAccent.withValues(alpha: 0.3) : Colors.white10,
+          color: low
+              ? Colors.redAccent.withValues(alpha: 0.3)
+              : context.forest.divider10,
         ),
       ),
       child: Row(
@@ -1326,12 +1334,12 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                         ? Icons.battery_2_bar_rounded
                         : Icons.battery_full_rounded,
             color: battery == null
-                ? Colors.white54
+                ? context.forest.text54
                 : critical
-                    ? Colors.redAccent
+                    ? context.forest.readable(Colors.redAccent)
                     : low
-                        ? AppColors.gold
-                        : AppColors.mintGreen,
+                        ? context.forest.readable(AppColors.gold)
+                        : context.forest.accentText,
             size: 20,
           ),
           const SizedBox(width: 8),
@@ -1341,8 +1349,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.forest.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
@@ -1351,8 +1359,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                   placeText,
                   style: TextStyle(
                     color: status == LocationStatus.live
-                        ? AppColors.mintGreen
-                        : Colors.white54,
+                        ? context.forest.accentText
+                        : context.forest.text54,
                     fontSize: 11,
                   ),
                 ),
@@ -1361,15 +1369,16 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                     l10n.translate('fsh_battery_last_seen', args: {
                       'time': localizedDateFormat('h:mm a').format(updated),
                     }),
-                    style: const TextStyle(color: Colors.white38, fontSize: 10),
+                    style:
+                        TextStyle(color: context.forest.text38, fontSize: 10),
                   ),
                 if (safeAt != null)
                   Text(
                     l10n.translate('fsh_checked_in_at', args: {
                       'time': localizedDateFormat('h:mm a').format(safeAt),
                     }),
-                    style: const TextStyle(
-                        color: AppColors.mintGreen,
+                    style: TextStyle(
+                        color: context.forest.accentText,
                         fontSize: 10,
                         fontWeight: FontWeight.w600),
                   ),
@@ -1377,7 +1386,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             ),
           ),
           if (record?.isCharging ?? false) ...[
-            const Icon(Icons.bolt_rounded, size: 16, color: AppColors.gold),
+            Icon(Icons.bolt_rounded,
+                size: 16, color: context.forest.readable(AppColors.gold)),
             const SizedBox(width: 4),
           ],
           Text(
@@ -1386,12 +1396,12 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 : '${l10n.number(battery)}%',
             style: TextStyle(
               color: battery == null
-                  ? Colors.white54
+                  ? context.forest.text54
                   : critical
-                      ? Colors.redAccent
+                      ? context.forest.readable(Colors.redAccent)
                       : low
-                          ? AppColors.gold
-                          : AppColors.mintGreen,
+                          ? context.forest.readable(AppColors.gold)
+                          : context.forest.accentText,
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
@@ -1400,8 +1410,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             const SizedBox(width: 8),
             IconButton(
               tooltip: l10n.translate('fsh_battery_map_view'),
-              icon: const Icon(Icons.map_rounded,
-                  size: 18, color: AppColors.mintGreen),
+              icon: Icon(Icons.map_rounded,
+                  size: 18, color: context.forest.accentText),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
               onPressed: () {
@@ -1422,8 +1432,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       children: [
         Text(
           context.l10n.translate('fsh_hotlines_title'),
-          style: const TextStyle(
-            color: Colors.white70,
+          style: TextStyle(
+            color: context.forest.text70,
             fontSize: 12,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
@@ -1473,7 +1483,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF142428),
+          color: context.forest.surfaceFor(const Color(0xFF142428)),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
@@ -1483,8 +1493,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             Icon(icon, color: color, size: 24),
             const SizedBox(height: 6),
             Text(title,
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.forest.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 13)),
             const SizedBox(height: 2),
@@ -1514,7 +1524,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF142428),
+          color: context.forest.surfaceFor(const Color(0xFF142428)),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
@@ -1527,8 +1537,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: context.forest.text,
                           fontWeight: FontWeight.bold,
                           fontSize: 13)),
                   Text(displayNumber,
@@ -1539,8 +1549,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                 ],
               ),
             ),
-            const Icon(Icons.phone_in_talk,
-                color: Colors.greenAccent, size: 20),
+            Icon(Icons.phone_in_talk,
+                color: context.forest.readable(Colors.greenAccent), size: 20),
           ],
         ),
       ),
@@ -1571,7 +1581,7 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF142428),
+        color: context.forest.surfaceFor(const Color(0xFF142428)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: landmark.color.withValues(alpha: 0.2)),
       ),
@@ -1592,22 +1602,23 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
               children: [
                 Text(
                   landmark.name,
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: context.forest.text,
                       fontWeight: FontWeight.bold,
                       fontSize: 13),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   landmark.subtitle,
-                  style: const TextStyle(color: Colors.white60, fontSize: 11),
+                  style: TextStyle(color: context.forest.text60, fontSize: 11),
                 ),
                 if (distanceMeters != null) ...[
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.near_me,
-                          size: 12, color: Colors.greenAccent),
+                      Icon(Icons.near_me,
+                          size: 12,
+                          color: context.forest.readable(Colors.greenAccent)),
                       const SizedBox(width: 4),
                       Text(
                         distanceMeters > 1000
@@ -1616,8 +1627,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                               })
                             : context.l10n.translate('fsh_meters_away',
                                 args: {'meters': distanceMeters}),
-                        style: const TextStyle(
-                          color: Colors.greenAccent,
+                        style: TextStyle(
+                          color: context.forest.readable(Colors.greenAccent),
                           fontWeight: FontWeight.bold,
                           fontSize: 11,
                         ),
@@ -1626,8 +1637,10 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
                         const SizedBox(width: 8),
                         Transform.rotate(
                           angle: ((bearing - _headingDegrees) * math.pi / 180),
-                          child: const Icon(Icons.arrow_upward,
-                              size: 12, color: Colors.amberAccent),
+                          child: Icon(Icons.arrow_upward,
+                              size: 12,
+                              color:
+                                  context.forest.readable(Colors.amberAccent)),
                         ),
                       ],
                     ],
@@ -1637,7 +1650,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.directions, color: Colors.tealAccent),
+            icon: Icon(Icons.directions,
+                color: context.forest.readable(Colors.tealAccent)),
             tooltip: context.l10n.translate('fsh_google_directions'),
             onPressed: () => _openMapNavigation(landmark.lat, landmark.lng),
           ),
@@ -1650,21 +1664,22 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF102024),
+        color: context.forest.surfaceFor(const Color(0xFF102024)),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: context.forest.divider10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.info_outline, color: Colors.amber, size: 18),
+              Icon(Icons.info_outline,
+                  color: context.forest.readable(Colors.amber), size: 18),
               const SizedBox(width: 8),
               Text(
                 context.l10n.translate('fsh_sea_guide_title'),
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.forest.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 13),
               ),
@@ -1673,8 +1688,8 @@ class _FamilySafetyHubScreenState extends State<FamilySafetyHubScreen>
           const SizedBox(height: 8),
           Text(
             context.l10n.translate('fsh_sea_guide_body'),
-            style: const TextStyle(
-                color: Colors.white70, fontSize: 11, height: 1.5),
+            style: TextStyle(
+                color: context.forest.text70, fontSize: 11, height: 1.5),
           ),
         ],
       ),

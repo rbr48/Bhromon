@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
@@ -69,7 +70,7 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
   Future<void> _addHoliday() async {
     final picked = await showModalBottomSheet<HolidayOccurrence>(
       context: context,
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -94,12 +95,12 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
     final l10n = context.l10n;
     final today = DateUtils.dateOnly(DateTime.now());
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
         title: Text(l10n.translate('fd_title'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        backgroundColor: _card,
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(_card),
+        foregroundColor: context.forest.text,
         elevation: 0,
         actions: [
           IconButton(
@@ -130,7 +131,7 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             children: [
               Text(l10n.translate('fd_intro'),
-                  style: const TextStyle(color: Colors.white60, fontSize: 13)),
+                  style: TextStyle(color: context.forest.text60, fontSize: 13)),
               const SizedBox(height: 8),
               if (dates.isEmpty)
                 _message(l10n.translate('fd_empty'))
@@ -150,8 +151,8 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
   Widget _sectionHeader(String text) => Padding(
         padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
         child: Text(text,
-            style: const TextStyle(
-                color: AppColors.mintGreen,
+            style: TextStyle(
+                color: context.forest.accentText,
                 fontWeight: FontWeight.bold,
                 fontSize: 13)),
       );
@@ -160,7 +161,7 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
         padding: const EdgeInsets.symmetric(vertical: 32),
         child: Text(text,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70, fontSize: 14)),
+            style: TextStyle(color: context.forest.text70, fontSize: 14)),
       );
 
   Widget _tile(FamilyDate date, DateTime today) {
@@ -179,22 +180,22 @@ class _FamilyDatesScreenState extends State<FamilyDatesScreen> {
     ];
     final editable = _canEdit(date);
     return Card(
-      color: _card,
+      color: context.forest.surfaceFor(_card),
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: const Color(0xFF1E3326),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF1E3326)),
           child: Text(date.kind.emoji),
         ),
         title: Text(date.title,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                color: context.forest.text, fontWeight: FontWeight.w600)),
         subtitle: Text(parts.join(' · '),
-            style: const TextStyle(color: Colors.white60, fontSize: 12)),
+            style: TextStyle(color: context.forest.text60, fontSize: 12)),
         trailing: editable
             ? null
-            : const Icon(Icons.lock_outline_rounded,
-                color: Colors.white38, size: 18),
+            : Icon(Icons.lock_outline_rounded,
+                color: context.forest.text38, size: 18),
         onTap: () => _open(date),
       ),
     );
@@ -221,15 +222,15 @@ class _HolidayPicker extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
               child: Text(l10n.translate('fd_holiday_title'),
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 18,
                       fontWeight: FontWeight.bold)),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Text(l10n.translate('fd_holiday_help'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12)),
             ),
             Flexible(
               child: ListView.builder(
@@ -239,10 +240,10 @@ class _HolidayPicker extends StatelessWidget {
                   final o = holidays[i];
                   return ListTile(
                     title: Text(bengali ? o.holiday.nameBn : o.holiday.nameEn,
-                        style: const TextStyle(color: Colors.white)),
+                        style: TextStyle(color: context.forest.text)),
                     subtitle: Text(
                         localizedDateFormat('EEE, d MMM yyyy').format(o.date),
-                        style: const TextStyle(color: Colors.white54)),
+                        style: TextStyle(color: context.forest.text54)),
                     onTap: () => Navigator.pop(context, o),
                   );
                 },

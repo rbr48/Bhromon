@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -100,7 +101,7 @@ class _FamilyHomeCardState extends State<FamilyHomeCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: _card,
+        color: context.forest.surfaceFor(_card),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.18)),
       ),
@@ -110,18 +111,18 @@ class _FamilyHomeCardState extends State<FamilyHomeCard> {
         children: [
           Row(
             children: [
-              const Icon(Icons.home_rounded,
-                  color: AppColors.mintGreen, size: 18),
+              Icon(Icons.home_rounded,
+                  color: context.forest.accentText, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(l10n.translate('fh_title'),
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: context.forest.text,
                         fontWeight: FontWeight.bold,
                         fontSize: 15)),
               ),
               Text(localizedDateFormat('EEE, d MMM').format(now),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12)),
             ],
           ),
           const SizedBox(height: 6),
@@ -180,16 +181,16 @@ class _FamilyHomeCardState extends State<FamilyHomeCard> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white60, size: 18),
+            Icon(icon, color: context.forest.text60, size: 18),
             const SizedBox(width: 10),
             Expanded(
               child: Text(text,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                  style: TextStyle(color: context.forest.text70, fontSize: 13)),
             ),
-            const Icon(Icons.chevron_right_rounded,
-                color: Colors.white38, size: 18),
+            Icon(Icons.chevron_right_rounded,
+                color: context.forest.text38, size: 18),
           ],
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../domain/models/channel_models.dart';
@@ -34,7 +35,7 @@ Future<ChannelActionChoice?> showChannelMessageActions(
   return showModalBottomSheet<ChannelActionChoice>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: _sheetColor,
+    backgroundColor: context.forest.surfaceFor(_sheetColor),
     shape: _sheetShape(),
     builder: (_) => SafeArea(
         child: SingleChildScrollView(
@@ -65,7 +66,7 @@ Future<ChannelActionChoice?> showChannelMessageActions(
               ],
             ),
           ),
-          const Divider(color: Colors.white10, height: 1),
+          Divider(color: context.forest.divider10, height: 1),
           const _ActionTile(
             icon: Icons.reply,
             label: 'chan_action_reply',
@@ -120,7 +121,7 @@ class _ActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = danger ? Colors.redAccent : Colors.white;
+    final color = danger ? Colors.redAccent : context.forest.text;
     return ListTile(
       leading: Icon(icon, color: color),
       title: Text(context.l10n.translate(label),
@@ -137,45 +138,45 @@ Future<AttachSource?> showAttachSheet(BuildContext context) {
   final l10n = context.l10n;
   return showModalBottomSheet<AttachSource>(
     context: context,
-    backgroundColor: _sheetColor,
+    backgroundColor: context.forest.surfaceFor(_sheetColor),
     shape: _sheetShape(),
     builder: (_) => SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: const Icon(Icons.photo_library_outlined,
-                color: AppColors.mintGreen),
+            leading: Icon(Icons.photo_library_outlined,
+                color: context.forest.accentText),
             title: Text(l10n.translate('chan_attach_photos'),
-                style: const TextStyle(color: Colors.white)),
+                style: TextStyle(color: context.forest.text)),
             onTap: () => Navigator.pop(context, AttachSource.photos),
           ),
           ListTile(
-            leading: const Icon(Icons.photo_camera_outlined,
-                color: AppColors.mintGreen),
+            leading: Icon(Icons.photo_camera_outlined,
+                color: context.forest.accentText),
             title: Text(l10n.translate('chan_attach_camera'),
-                style: const TextStyle(color: Colors.white)),
+                style: TextStyle(color: context.forest.text)),
             onTap: () => Navigator.pop(context, AttachSource.camera),
           ),
           ListTile(
             leading:
-                const Icon(Icons.videocam_outlined, color: AppColors.mintGreen),
+                Icon(Icons.videocam_outlined, color: context.forest.accentText),
             title: Text(l10n.translate('chan_attach_video'),
-                style: const TextStyle(color: Colors.white)),
+                style: TextStyle(color: context.forest.text)),
             onTap: () => Navigator.pop(context, AttachSource.video),
           ),
           ListTile(
-            leading: const Icon(Icons.insert_drive_file_outlined,
-                color: AppColors.mintGreen),
+            leading: Icon(Icons.insert_drive_file_outlined,
+                color: context.forest.accentText),
             title: Text(l10n.translate('chan_attach_document'),
-                style: const TextStyle(color: Colors.white)),
+                style: TextStyle(color: context.forest.text)),
             onTap: () => Navigator.pop(context, AttachSource.document),
           ),
           ListTile(
-            leading: const Icon(Icons.location_on_outlined,
-                color: AppColors.mintGreen),
+            leading: Icon(Icons.location_on_outlined,
+                color: context.forest.accentText),
             title: Text(l10n.translate('chan_attach_location'),
-                style: const TextStyle(color: Colors.white)),
+                style: TextStyle(color: context.forest.text)),
             onTap: () => Navigator.pop(context, AttachSource.location),
           ),
         ],
@@ -269,8 +270,8 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      backgroundColor: _sheetColor,
-      title: Text(widget.title, style: const TextStyle(color: Colors.white)),
+      backgroundColor: context.forest.surfaceFor(_sheetColor),
+      title: Text(widget.title, style: TextStyle(color: context.forest.text)),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -280,10 +281,10 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
                 controller: _name,
                 autofocus: true,
                 maxLength: 40,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('chan_name_label'),
-                  labelStyle: const TextStyle(color: Colors.white60),
+                  labelStyle: TextStyle(color: context.forest.text60),
                   errorText: _nameMissing
                       ? l10n.translate('chan_name_required')
                       : null,
@@ -313,17 +314,17 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
               maxLength: 200,
               minLines: 1,
               maxLines: 3,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
                 labelText: l10n.translate('chan_topic_label'),
-                labelStyle: const TextStyle(color: Colors.white60),
+                labelStyle: TextStyle(color: context.forest.text60),
               ),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               activeThumbColor: AppColors.mintGreen,
               title: Text(l10n.translate('chan_admin_only_label'),
-                  style: const TextStyle(color: Colors.white, fontSize: 14)),
+                  style: TextStyle(color: context.forest.text, fontSize: 14)),
               value: _adminOnly,
               onChanged: (v) => setState(() => _adminOnly = v),
             ),
@@ -357,7 +358,7 @@ Future<void> showChannelMembersSheet(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: _sheetColor,
+    backgroundColor: context.forest.surfaceFor(_sheetColor),
     shape: _sheetShape(),
     builder: (_) => SafeArea(
       child: ConstrainedBox(
@@ -372,8 +373,8 @@ Future<void> showChannelMembersSheet(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: Text(
                 l10n.translate('chan_members_title'),
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.forest.text,
                     fontSize: 16,
                     fontWeight: FontWeight.bold),
               ),
@@ -391,11 +392,11 @@ Future<void> showChannelMembersSheet(
                   m.email == myEmail
                       ? '${m.displayName} (${l10n.translate('chan_you')})'
                       : m.displayName,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.forest.text),
                 ),
                 subtitle: Text(
                   _roleLabel(l10n, m.role),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12),
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -405,15 +406,15 @@ Future<void> showChannelMembersSheet(
                         padding: const EdgeInsets.only(right: 4),
                         child: Text(
                           badgeFor(m.email),
-                          style: const TextStyle(
-                              color: AppColors.mintGreen, fontSize: 11),
+                          style: TextStyle(
+                              color: context.forest.accentText, fontSize: 11),
                         ),
                       ),
                     if (m.email != myEmail) ...[
                       if (onStartChat != null)
                         IconButton(
-                          icon: const Icon(Icons.chat_bubble_outline,
-                              size: 19, color: AppColors.mintGreen),
+                          icon: Icon(Icons.chat_bubble_outline,
+                              size: 19, color: context.forest.accentText),
                           tooltip: l10n.translate('chan_direct_message'),
                           onPressed: () {
                             Navigator.pop(context);
@@ -422,8 +423,8 @@ Future<void> showChannelMembersSheet(
                         ),
                       if (onStartCall != null) ...[
                         IconButton(
-                          icon: const Icon(Icons.call,
-                              size: 19, color: AppColors.mintGreen),
+                          icon: Icon(Icons.call,
+                              size: 19, color: context.forest.accentText),
                           tooltip: l10n.translate('chan_call_audio'),
                           onPressed: () {
                             Navigator.pop(context);
@@ -431,8 +432,8 @@ Future<void> showChannelMembersSheet(
                           },
                         ),
                         IconButton(
-                          icon: const Icon(Icons.videocam,
-                              size: 21, color: AppColors.mintGreen),
+                          icon: Icon(Icons.videocam,
+                              size: 21, color: context.forest.accentText),
                           tooltip: l10n.translate('chan_call_video'),
                           onPressed: () {
                             Navigator.pop(context);

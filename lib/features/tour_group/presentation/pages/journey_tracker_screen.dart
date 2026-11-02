@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:share_plus/share_plus.dart';
@@ -180,7 +181,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final plan = await showModalBottomSheet<LegPlan>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF142428),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _LegSheet(leg: leg),
@@ -223,7 +224,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final result = await showModalBottomSheet<RouteCheckpoint>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF142428),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _CheckpointSheet(
@@ -260,15 +261,15 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final l10n = context.l10n;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF142428),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               title: Text('${c.kind.emoji} ${c.name}',
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: context.forest.text, fontWeight: FontWeight.bold)),
             ),
             ListTile(
               leading: ValueListenableBuilder<bool>(
@@ -279,12 +280,14 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                           c.id;
                   return Icon(
                     active ? Icons.volume_off_rounded : Icons.volume_up_rounded,
-                    color: active ? AppColors.gold : AppColors.mintGreen,
+                    color: active
+                        ? context.forest.readable(AppColors.gold)
+                        : context.forest.accentText,
                   );
                 },
               ),
               title: Text(l10n.translate('route_cp_listen_guide'),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: context.forest.text)),
               onTap: () {
                 Navigator.pop(ctx);
                 JourneyAudioGuideService().speakCheckpoint(
@@ -297,9 +300,9 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             if (c.hasLocation)
               ListTile(
                 leading:
-                    const Icon(Icons.map_rounded, color: AppColors.mintGreen),
+                    Icon(Icons.map_rounded, color: context.forest.accentText),
                 title: Text(l10n.translate('route_open_map'),
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: context.forest.text)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _open(Uri.https('www.google.com', '/maps/search/',
@@ -312,12 +315,12 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                     c.visitedAt == null
                         ? Icons.check_circle_outline
                         : Icons.undo_rounded,
-                    color: AppColors.gold),
+                    color: context.forest.readable(AppColors.gold)),
                 title: Text(
                     l10n.translate(c.visitedAt == null
                         ? 'route_cp_mark_passed'
                         : 'route_cp_unmark'),
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: context.forest.text)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _guard(() => _repository.setCheckpointVisited(
@@ -326,19 +329,19 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               ),
             if (_canChange(c)) ...[
               ListTile(
-                leading: const Icon(Icons.edit_rounded, color: Colors.white70),
+                leading: Icon(Icons.edit_rounded, color: context.forest.text70),
                 title: Text(l10n.translate('route_cp_edit'),
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: context.forest.text)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _editCheckpoint(leg, existing: c);
                 },
               ),
               ListTile(
-                leading:
-                    const Icon(Icons.delete_outline, color: Colors.redAccent),
+                leading: Icon(Icons.delete_outline,
+                    color: context.forest.readable(Colors.redAccent)),
                 title: Text(l10n.translate('route_cp_delete'),
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: context.forest.text)),
                 onTap: () {
                   Navigator.pop(ctx);
                   _guard(
@@ -388,10 +391,10 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final l10n = context.l10n;
     final g = _group;
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1A1C),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1A1C)),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF142428),
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
+        foregroundColor: context.forest.text,
         elevation: 0,
         title: Text(l10n.translate('route_title'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -447,7 +450,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
         ),
         const SizedBox(height: 14),
         Text(l10n.translate('route_nearby'),
-            style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            style: TextStyle(color: context.forest.text70, fontSize: 13)),
         const SizedBox(height: 6),
         Wrap(
           spacing: 6,
@@ -472,10 +475,11 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               ('public toilet', Icons.wc_rounded, 'route_near_toilet'),
             ])
               ActionChip(
-                avatar: Icon(n.$2, size: 16, color: AppColors.mintGreen),
+                avatar: Icon(n.$2, size: 16, color: context.forest.accentText),
                 label: Text(l10n.translate(n.$3)),
-                backgroundColor: const Color(0xFF142428),
-                labelStyle: const TextStyle(color: Colors.white, fontSize: 12),
+                backgroundColor:
+                    context.forest.surfaceFor(const Color(0xFF142428)),
+                labelStyle: TextStyle(color: context.forest.text, fontSize: 12),
                 onPressed: () => _open(nearbySearchUri(n.$1,
                     lat: pos?.latitude, lng: pos?.longitude)),
               ),
@@ -553,23 +557,23 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF142428),
+        color: context.forest.surfaceFor(const Color(0xFF142428)),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: context.forest.divider10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.mosque_rounded,
-                  size: 18, color: AppColors.mintGreen),
+              Icon(Icons.mosque_rounded,
+                  size: 18, color: context.forest.accentText),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   l10n.translate('prayer_card_title'),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.forest.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -586,15 +590,15 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.explore_rounded,
-                        size: 14, color: AppColors.mintGreen),
+                    Icon(Icons.explore_rounded,
+                        size: 14, color: context.forest.accentText),
                     const SizedBox(width: 4),
                     Text(
                       l10n.translate('prayer_qibla_bearing', args: {
                         'deg': l10n.number(schedule.qiblaBearing.round()),
                       }),
-                      style: const TextStyle(
-                        color: AppColors.mintGreen,
+                      style: TextStyle(
+                        color: context.forest.accentText,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -614,8 +618,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.alarm_rounded,
-                    size: 15, color: AppColors.gold),
+                Icon(Icons.alarm_rounded,
+                    size: 15, color: context.forest.readable(AppColors.gold)),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -623,8 +627,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                       'prayer': l10n.translate(next.key),
                       'time': timeStr,
                     }),
-                    style: const TextStyle(
-                      color: AppColors.gold,
+                    style: TextStyle(
+                      color: context.forest.readable(AppColors.gold),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -650,10 +654,12 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                       decoration: BoxDecoration(
                         color: isNext
                             ? AppColors.mintGreen.withValues(alpha: 0.15)
-                            : Colors.white.withValues(alpha: 0.04),
+                            : context.forest.text.withValues(alpha: 0.04),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isNext ? AppColors.mintGreen : Colors.white10,
+                          color: isNext
+                              ? AppColors.mintGreen
+                              : context.forest.divider10,
                         ),
                       ),
                       child: Column(
@@ -662,8 +668,9 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                           Text(
                             l10n.translate(p.key),
                             style: TextStyle(
-                              color:
-                                  isNext ? AppColors.mintGreen : Colors.white70,
+                              color: isNext
+                                  ? context.forest.accentText
+                                  : context.forest.text70,
                               fontSize: 11,
                               fontWeight:
                                   isNext ? FontWeight.bold : FontWeight.normal,
@@ -673,7 +680,9 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                           Text(
                             timeFmt,
                             style: TextStyle(
-                              color: isNext ? Colors.white : Colors.white54,
+                              color: isNext
+                                  ? context.forest.text
+                                  : context.forest.text54,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -729,7 +738,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF142428),
+        color: context.forest.surfaceFor(const Color(0xFF142428)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.mintGreen.withValues(alpha: 0.3)),
       ),
@@ -742,8 +751,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                 ...g.effectiveStops.map((s) => s.name),
                 if (g.returnHome) g.originCity,
               ].join(' → '),
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: context.forest.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 15)),
           const SizedBox(height: 6),
@@ -753,7 +762,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               'legs': l10n.number(plan.legs.length),
               'nights': l10n.number(nights),
             }),
-            style: const TextStyle(color: AppColors.gold, fontSize: 12),
+            style: TextStyle(
+                color: context.forest.readable(AppColors.gold), fontSize: 12),
           ),
           const SizedBox(height: 10),
           ClipRRect(
@@ -761,21 +771,21 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             child: LinearProgressIndicator(
               value: plan.progress,
               minHeight: 8,
-              backgroundColor: Colors.white10,
+              backgroundColor: context.forest.divider10,
               valueColor: const AlwaysStoppedAnimation(AppColors.mintGreen),
             ),
           ),
           const SizedBox(height: 8),
           Text(status,
-              style: const TextStyle(
-                  color: AppColors.mintGreen,
+              style: TextStyle(
+                  color: context.forest.accentText,
                   fontWeight: FontWeight.w600,
                   fontSize: 13)),
           if (g.stops.isEmpty && _isAdmin)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(l10n.translate('route_add_more_hint'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12)),
             ),
         ],
       ),
@@ -799,9 +809,9 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF142428),
+              color: context.forest.surfaceFor(const Color(0xFF142428)),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: context.forest.divider12),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -810,8 +820,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                   children: [
                     Expanded(
                       child: Text(p.name,
-                          style: const TextStyle(
-                              color: Colors.white,
+                          style: TextStyle(
+                              color: context.forest.text,
                               fontWeight: FontWeight.bold,
                               fontSize: 15)),
                     ),
@@ -819,8 +829,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                       IconButton(
                         visualDensity: VisualDensity.compact,
                         tooltip: l10n.translate('route_open_map'),
-                        icon: const Icon(Icons.map_rounded,
-                            color: AppColors.mintGreen, size: 20),
+                        icon: Icon(Icons.map_rounded,
+                            color: context.forest.accentText, size: 20),
                         onPressed: () => _open(Uri.https(
                             'www.google.com',
                             '/maps/search/',
@@ -836,21 +846,21 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                           l10n.translate('itin_nights',
                               args: {'n': l10n.number(s.nights)}),
                         ].join(' · '),
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
+                  style: TextStyle(color: context.forest.text60, fontSize: 12),
                 ),
                 if (s != null && s.stay.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text('🏨 ${s.stay}',
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12)),
+                        style: TextStyle(
+                            color: context.forest.text70, fontSize: 12)),
                   ),
                 if (s != null && s.notes.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(s.notes,
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12)),
+                        style: TextStyle(
+                            color: context.forest.text54, fontSize: 12)),
                   ),
               ],
             ),
@@ -866,7 +876,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
     final statusColor = switch (status) {
       LegStatus.done => AppColors.mintGreen,
       LegStatus.underway => AppColors.gold,
-      LegStatus.planned => Colors.white38,
+      LegStatus.planned => context.forest.text38,
     };
     final checkpoints = [
       for (final c in _checkpoints)
@@ -899,7 +909,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
               margin: const EdgeInsets.symmetric(vertical: 8),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF10201A),
+                color: context.forest.surfaceFor(const Color(0xFF10201A)),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: statusColor.withValues(alpha: 0.5)),
               ),
@@ -915,8 +925,9 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                         child: Text(
                           '${l10n.translate(transportModeKey(leg.plan.mode))} · ${_km(l10n, leg)}'
                           '${d == null ? '' : ' · ${_duration(l10n, d)}'}',
-                          style: const TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              color: context.forest.text,
+                              fontWeight: FontWeight.w600),
                         ),
                       ),
                       Container(
@@ -943,8 +954,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                             l10n.translate('route_arrives',
                                 args: {'time': _when(leg.plan.arriveAt!)}),
                         ].join(' · '),
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 12),
+                        style: TextStyle(
+                            color: context.forest.text70, fontSize: 12),
                       ),
                     ),
                   if (leg.plan.departedAt != null)
@@ -968,7 +979,7 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                     LinearProgressIndicator(
                       value: live.fraction,
                       minHeight: 4,
-                      backgroundColor: Colors.white10,
+                      backgroundColor: context.forest.divider10,
                       valueColor: const AlwaysStoppedAnimation(AppColors.gold),
                     ),
                   ],
@@ -976,8 +987,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(leg.plan.notes,
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 12)),
+                          style: TextStyle(
+                              color: context.forest.text54, fontSize: 12)),
                     ),
                   if (checkpoints.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -1062,7 +1073,9 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                 children: [
                   Text(c.name,
                       style: TextStyle(
-                          color: passed ? Colors.white54 : Colors.white,
+                          color: passed
+                              ? context.forest.text54
+                              : context.forest.text,
                           decoration:
                               passed ? TextDecoration.lineThrough : null,
                           fontSize: 13)),
@@ -1075,12 +1088,13 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                         localizedDateFormat('h:mm a').format(c.plannedAt!),
                       if (c.highlight.isNotEmpty) c.highlight,
                     ].join(' · '),
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                    style:
+                        TextStyle(color: context.forest.text54, fontSize: 11),
                   ),
                   if (c.notes.isNotEmpty)
                     Text(c.notes,
-                        style: const TextStyle(
-                            color: Colors.white38, fontSize: 11)),
+                        style: TextStyle(
+                            color: context.forest.text38, fontSize: 11)),
                 ],
               ),
             ),
@@ -1100,7 +1114,9 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
                     isCurrent
                         ? Icons.volume_up_rounded
                         : Icons.volume_up_outlined,
-                    color: isCurrent ? AppColors.gold : Colors.white38,
+                    color: isCurrent
+                        ? context.forest.readable(AppColors.gold)
+                        : context.forest.text38,
                   ),
                   tooltip: l10n.translate('route_cp_audio_guide'),
                   onPressed: () {
@@ -1115,8 +1131,8 @@ class _JourneyTrackerScreenState extends State<JourneyTrackerScreen> {
             ),
             if (passed) ...[
               const SizedBox(width: 4),
-              const Icon(Icons.check_circle,
-                  color: AppColors.mintGreen, size: 16),
+              Icon(Icons.check_circle,
+                  color: context.forest.accentText, size: 16),
             ],
           ],
         ),
@@ -1175,8 +1191,8 @@ class _LegSheetState extends State<_LegSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('${widget.leg.from.name} → ${widget.leg.to.name}',
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.forest.text,
                     fontSize: 16,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
@@ -1190,14 +1206,16 @@ class _LegSheetState extends State<_LegSheet> {
                         size: 16,
                         color: m == _p.mode
                             ? AppColors.darkGreen
-                            : Colors.white70),
+                            : context.forest.text70),
                     label: Text(l10n.translate(transportModeKey(m))),
                     selected: m == _p.mode,
                     selectedColor: AppColors.mintGreen,
-                    backgroundColor: const Color(0xFF1E3326),
+                    backgroundColor:
+                        context.forest.surfaceFor(const Color(0xFF1E3326)),
                     labelStyle: TextStyle(
-                        color:
-                            m == _p.mode ? AppColors.darkGreen : Colors.white),
+                        color: m == _p.mode
+                            ? AppColors.darkGreen
+                            : context.forest.text),
                     onSelected: (_) =>
                         setState(() => _p = _p.copyWith(mode: m)),
                   ),
@@ -1206,11 +1224,11 @@ class _LegSheetState extends State<_LegSheet> {
             TextField(
               controller: _km,
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
                   labelText: l10n.translate('route_distance'),
                   helperText: l10n.translate('route_distance_help'),
-                  helperStyle: const TextStyle(color: Colors.white38)),
+                  helperStyle: TextStyle(color: context.forest.text38)),
             ),
             for (final (label, value, set) in [
               (
@@ -1226,20 +1244,20 @@ class _LegSheetState extends State<_LegSheet> {
             ])
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading:
-                    const Icon(Icons.schedule_rounded, color: AppColors.gold),
+                leading: Icon(Icons.schedule_rounded,
+                    color: context.forest.readable(AppColors.gold)),
                 title: Text(
                     value == null
                         ? l10n.translate('route_time_unset')
                         : when.format(value),
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: context.forest.text)),
                 subtitle: Text(l10n.translate(label),
-                    style: const TextStyle(color: Colors.white54)),
+                    style: TextStyle(color: context.forest.text54)),
                 trailing: value == null
                     ? null
                     : IconButton(
                         tooltip: l10n.translate('route_time_clear'),
-                        icon: const Icon(Icons.close, color: Colors.white54),
+                        icon: Icon(Icons.close, color: context.forest.text54),
                         onPressed: () => setState(() => set(null)),
                       ),
                 onTap: () async {
@@ -1251,7 +1269,7 @@ class _LegSheetState extends State<_LegSheet> {
               controller: _notes,
               maxLines: 2,
               maxLength: 300,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration:
                   InputDecoration(labelText: l10n.translate('route_leg_notes')),
             ),
@@ -1333,13 +1351,13 @@ class _CheckpointSheetState extends State<_CheckpointSheet> {
                 l10n.translate(widget.existing == null
                     ? 'route_add_stop'
                     : 'route_cp_edit'),
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.forest.text,
                     fontSize: 16,
                     fontWeight: FontWeight.bold)),
             TextField(
               controller: _name,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration:
                   InputDecoration(labelText: l10n.translate('route_cp_name')),
             ),
@@ -1360,27 +1378,27 @@ class _CheckpointSheetState extends State<_CheckpointSheet> {
             TextField(
               controller: _km,
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration:
                   InputDecoration(labelText: l10n.translate('route_cp_km')),
             ),
             TextField(
               controller: _highlight,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
                   labelText: l10n.translate('route_cp_highlight')),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading:
-                  const Icon(Icons.schedule_rounded, color: AppColors.gold),
+              leading: Icon(Icons.schedule_rounded,
+                  color: context.forest.readable(AppColors.gold)),
               title: Text(
                   _planned == null
                       ? l10n.translate('route_time_unset')
                       : localizedDateFormat('d MMM, h:mm a').format(_planned!),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: context.forest.text)),
               subtitle: Text(l10n.translate('route_cp_planned'),
-                  style: const TextStyle(color: Colors.white54)),
+                  style: TextStyle(color: context.forest.text54)),
               onTap: () async {
                 final now = _planned ?? DateTime.now();
                 final date = await showDatePicker(
@@ -1401,19 +1419,21 @@ class _CheckpointSheetState extends State<_CheckpointSheet> {
                 value: _useGps,
                 activeThumbColor: AppColors.mintGreen,
                 title: Text(l10n.translate('route_cp_use_gps'),
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: context.forest.text)),
                 onChanged: (v) => setState(() => _useGps = v),
               ),
             TextField(
               controller: _notes,
               maxLines: 2,
               maxLength: 300,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration:
                   InputDecoration(labelText: l10n.translate('itin_notes')),
             ),
             if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+              Text(_error!,
+                  style: TextStyle(
+                      color: context.forest.readable(Colors.redAccent))),
             SizedBox(
               width: double.infinity,
               child: FilledButton(

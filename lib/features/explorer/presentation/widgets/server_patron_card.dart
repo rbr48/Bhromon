@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -36,7 +37,7 @@ class ServerPatronCard extends StatelessWidget {
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF14241B),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -56,9 +57,9 @@ class ServerPatronCard extends StatelessWidget {
                         color: AppColors.mintGreen.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.volunteer_activism_rounded,
-                        color: AppColors.mintGreen,
+                        color: context.forest.accentText,
                         size: 22,
                       ),
                     ),
@@ -66,8 +67,8 @@ class ServerPatronCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         l10n.translate('server_patron_title'),
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: context.forest.text,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -78,8 +79,8 @@ class ServerPatronCard extends StatelessWidget {
                 const SizedBox(height: 14),
                 Text(
                   l10n.translate('server_patron_desc'),
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: context.forest.text70,
                     fontSize: 13,
                     height: 1.4,
                   ),
@@ -120,11 +121,11 @@ class ServerPatronCard extends StatelessWidget {
                         mode: LaunchMode.externalApplication,
                       );
                     },
-                    icon: const Icon(Icons.code_rounded,
-                        color: AppColors.mintGreen, size: 18),
+                    icon: Icon(Icons.code_rounded,
+                        color: context.forest.accentText, size: 18),
                     label: Text(
                       l10n.translate('server_patron_github'),
-                      style: const TextStyle(color: AppColors.mintGreen),
+                      style: TextStyle(color: context.forest.accentText),
                     ),
                   ),
                 ),

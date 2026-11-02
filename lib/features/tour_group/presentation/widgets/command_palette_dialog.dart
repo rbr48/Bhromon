@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
 import '../tour_routes.dart';
@@ -197,7 +198,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 580, maxHeight: 540),
         child: Material(
-          color: const Color(0xFF1E1E1E),
+          color: context.forest.surfaceFor(const Color(0xFF1E1E1E)),
           borderRadius: BorderRadius.circular(16),
           elevation: 24,
           clipBehavior: Clip.antiAlias,
@@ -208,26 +209,27 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF161616),
-                  border: Border(bottom: BorderSide(color: Colors.white10)),
+                decoration: BoxDecoration(
+                  color: context.forest.surfaceFor(const Color(0xFF161616)),
+                  border: Border(
+                      bottom: BorderSide(color: context.forest.divider10)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.search_rounded,
-                        color: AppColors.mintGreen, size: 22),
+                    Icon(Icons.search_rounded,
+                        color: context.forest.accentText, size: 22),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
                         controller: _searchCtrl,
                         autofocus: true,
                         style:
-                            const TextStyle(color: Colors.white, fontSize: 15),
-                        decoration: const InputDecoration(
+                            TextStyle(color: context.forest.text, fontSize: 15),
+                        decoration: InputDecoration(
                           hintText:
                               'কমান্ড খুঁজুন (যেমন: হিসাব, ইন্সটাফিড, সিট প্ল্যান...)',
-                          hintStyle:
-                              TextStyle(color: Colors.white38, fontSize: 13.5),
+                          hintStyle: TextStyle(
+                              color: context.forest.text38, fontSize: 13.5),
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
@@ -261,10 +263,11 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
               // Filtered list
               Expanded(
                 child: filtered.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
                           'কোনো কমান্ড খুঁজে পাওয়া যায়নি',
-                          style: TextStyle(color: Colors.white38, fontSize: 13),
+                          style: TextStyle(
+                              color: context.forest.text38, fontSize: 13),
                         ),
                       )
                     : ListView.builder(
@@ -307,7 +310,8 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                                     child: Icon(
                                       item.icon,
                                       size: 18,
-                                      color: item.color ?? AppColors.mintGreen,
+                                      color: item.color ??
+                                          context.forest.accentText,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -318,16 +322,16 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                                       children: [
                                         Text(
                                           item.title,
-                                          style: const TextStyle(
-                                            color: Colors.white,
+                                          style: TextStyle(
+                                            color: context.forest.text,
                                             fontWeight: FontWeight.w600,
                                             fontSize: 13.5,
                                           ),
                                         ),
                                         Text(
                                           item.subtitle,
-                                          style: const TextStyle(
-                                            color: Colors.white54,
+                                          style: TextStyle(
+                                            color: context.forest.text54,
                                             fontSize: 11.5,
                                           ),
                                         ),
@@ -338,14 +342,14 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.06),
+                                      color: context.forest.text
+                                          .withValues(alpha: 0.06),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       item.category,
-                                      style: const TextStyle(
-                                        color: Colors.white54,
+                                      style: TextStyle(
+                                        color: context.forest.text54,
                                         fontSize: 10,
                                       ),
                                     ),
@@ -362,21 +366,23 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF161616),
-                  border: Border(top: BorderSide(color: Colors.white10)),
+                decoration: BoxDecoration(
+                  color: context.forest.surfaceFor(const Color(0xFF161616)),
+                  border:
+                      Border(top: BorderSide(color: context.forest.divider10)),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
                     Icon(Icons.keyboard_return_rounded,
-                        size: 14, color: Colors.white38),
-                    SizedBox(width: 4),
+                        size: 14, color: context.forest.text38),
+                    const SizedBox(width: 4),
                     Text('নির্বাচন করতে ক্লিক করুন',
-                        style: TextStyle(color: Colors.white38, fontSize: 11)),
-                    Spacer(),
+                        style: TextStyle(
+                            color: context.forest.text38, fontSize: 11)),
+                    const Spacer(),
                     Text('ভ্রমণ অপারেটিং সিস্টেম • Bhromon OS',
                         style: TextStyle(
-                            color: AppColors.mintGreen, fontSize: 10.5)),
+                            color: context.forest.accentText, fontSize: 10.5)),
                   ],
                 ),
               ),

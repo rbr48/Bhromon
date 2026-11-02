@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../../core/localization/app_localizations.dart';
@@ -18,7 +19,7 @@ Future<TourVehicle?> showVehicleEditor(BuildContext context,
   return showModalBottomSheet<TourVehicle>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF14241B),
+    backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (_) => VehicleEditorSheet(existing: existing),
@@ -118,23 +119,23 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
     return Row(
       children: [
         Expanded(
-            child: Text(label, style: const TextStyle(color: Colors.white70))),
+            child: Text(label, style: TextStyle(color: context.forest.text70))),
         IconButton(
           tooltip: l10n.translate('veh_less'),
           onPressed: value > min ? () => onChanged(value - 1) : null,
-          icon: const Icon(Icons.remove_circle_outline, color: Colors.white70),
+          icon: Icon(Icons.remove_circle_outline, color: context.forest.text70),
         ),
         SizedBox(
           width: 32,
           child: Text(l10n.number(value),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                  color: context.forest.text, fontWeight: FontWeight.bold)),
         ),
         IconButton(
           tooltip: l10n.translate('veh_more'),
           onPressed: value < max ? () => onChanged(value + 1) : null,
-          icon: const Icon(Icons.add_circle_outline, color: Colors.white70),
+          icon: Icon(Icons.add_circle_outline, color: context.forest.text70),
         ),
       ],
     );
@@ -142,9 +143,9 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
 
   InputDecoration _field(String label) => InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white60),
-        enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Colors.white24)),
+        labelStyle: TextStyle(color: context.forest.text60),
+        enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: context.forest.text24)),
       );
 
   @override
@@ -171,14 +172,14 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
           children: [
             Text(
               l10n.translate(widget.existing == null ? 'veh_add' : 'veh_edit'),
-              style: const TextStyle(
-                  color: Colors.white,
+              style: TextStyle(
+                  color: context.forest.text,
                   fontSize: 18,
                   fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Text(l10n.translate('veh_kind'),
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                style: TextStyle(color: context.forest.text54, fontSize: 12)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -188,14 +189,18 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
                   ChoiceChip(
                     avatar: Icon(vehicleKindIcon(k),
                         size: 18,
-                        color:
-                            k == kind ? AppColors.darkGreen : Colors.white70),
+                        color: k == kind
+                            ? AppColors.darkGreen
+                            : context.forest.text70),
                     label: Text(l10n.translate(vehicleKindKey(k))),
                     selected: k == kind,
                     selectedColor: AppColors.mintGreen,
-                    backgroundColor: const Color(0xFF1E3326),
+                    backgroundColor:
+                        context.forest.surfaceFor(const Color(0xFF1E3326)),
                     labelStyle: TextStyle(
-                        color: k == kind ? AppColors.darkGreen : Colors.white,
+                        color: k == kind
+                            ? AppColors.darkGreen
+                            : context.forest.text,
                         fontWeight:
                             k == kind ? FontWeight.bold : FontWeight.normal),
                     onSelected: (_) => _pickKind(k),
@@ -205,46 +210,46 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
             const SizedBox(height: 12),
             TextField(
               controller: _name,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: _field(l10n.translate('veh_name_hint')),
             ),
             TextField(
               controller: _number,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: _field(l10n.translate('veh_number_hint')),
             ),
             TextField(
               controller: _route,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: _field(l10n.translate('veh_route_hint')),
             ),
             const SizedBox(height: 8),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.schedule_rounded,
-                  color: AppColors.mintGreen),
+              leading: Icon(Icons.schedule_rounded,
+                  color: context.forest.accentText),
               title: Text(
                 _v.departure == null
                     ? l10n.translate('veh_departure_pick')
                     : localizedDateFormat('d MMM yyyy, h:mm a')
                         .format(_v.departure!),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
               ),
               subtitle: Text(l10n.translate('veh_departure'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 11)),
               trailing: _v.departure == null
                   ? null
                   : IconButton(
                       tooltip: l10n.translate('veh_departure_clear'),
-                      icon: const Icon(Icons.close, color: Colors.white54),
+                      icon: Icon(Icons.close, color: context.forest.text54),
                       onPressed: () =>
                           setState(() => _v = _v.copyWith(departure: null)),
                     ),
               onTap: _pickDeparture,
             ),
-            const Divider(color: Colors.white12),
+            Divider(color: context.forest.divider12),
             Text(l10n.translate('veh_layout'),
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                style: TextStyle(color: context.forest.text54, fontSize: 12)),
             _stepper(rowsLabel, _v.rows, 1, kMaxVehicleRows,
                 (n) => setState(() => _v = _v.copyWith(rows: n))),
             if (kind.hasPattern)
@@ -252,11 +257,11 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
                 children: [
                   Expanded(
                       child: Text(l10n.translate('veh_pattern'),
-                          style: const TextStyle(color: Colors.white70))),
+                          style: TextStyle(color: context.forest.text70))),
                   DropdownButton<String>(
                     value: _v.pattern,
                     dropdownColor: const Color(0xFF1B4332),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: context.forest.text),
                     items: [
                       for (final p in kSeatPatterns)
                         DropdownMenuItem(
@@ -291,22 +296,24 @@ class _VehicleEditorSheetState extends State<VehicleEditorSheet> {
               child: Text(
                 l10n.translate('veh_seat_count',
                     args: {'n': l10n.number(seatCount)}),
-                style: const TextStyle(
-                    color: AppColors.gold, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: context.forest.readable(AppColors.gold),
+                    fontWeight: FontWeight.bold),
               ),
             ),
             TextField(
               controller: _notes,
               maxLines: 2,
               maxLength: 300,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: _field(l10n.translate('veh_notes_hint')),
             ),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(_error!,
-                    style: const TextStyle(color: Colors.redAccent)),
+                    style: TextStyle(
+                        color: context.forest.readable(Colors.redAccent))),
               ),
             FilledButton(
               style: FilledButton.styleFrom(

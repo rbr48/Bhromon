@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../domain/models/itinerary_models.dart';
@@ -21,7 +22,7 @@ Color noticeKindColor(NoticeKind k) => switch (k) {
       NoticeKind.reminder => const Color(0xFFC084FC),
       NoticeKind.rule => const Color(0xFFFB923C),
       NoticeKind.rollcall => AppColors.mintGreen,
-      NoticeKind.announcement => Colors.white70,
+      NoticeKind.announcement => Colors.blueGrey,
     };
 
 /// Writes a new notice or edits [existing]. Returns the notice to save; its
@@ -35,7 +36,7 @@ Future<TourNotice?> showNoticeComposer(
   return showModalBottomSheet<TourNotice>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: _sheet,
+    backgroundColor: context.forest.surfaceFor(_sheet),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (_) =>
@@ -185,11 +186,11 @@ class _ComposerState extends State<_Composer> {
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
         dense: true,
-        title: Text(label, style: const TextStyle(color: Colors.white)),
+        title: Text(label, style: TextStyle(color: context.forest.text)),
         subtitle: help == null
             ? null
             : Text(help,
-                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                style: TextStyle(color: context.forest.text54, fontSize: 11)),
         value: value,
         activeThumbColor: AppColors.mintGreen,
         onChanged: onChanged,
@@ -216,14 +217,14 @@ class _ComposerState extends State<_Composer> {
                 l10n.translate(e == null
                     ? 'tour_notice_new_title'
                     : 'tour_notice_edit_title'),
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.forest.text,
                     fontSize: 18,
                     fontWeight: FontWeight.bold)),
             if (e == null && !(widget.group?.isManaged ?? false)) ...[
               const SizedBox(height: 10),
               Text(l10n.translate('notice_templates'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text70, fontSize: 12)),
               const SizedBox(height: 6),
               SizedBox(
                 height: 40,
@@ -235,15 +236,16 @@ class _ComposerState extends State<_Composer> {
                       Padding(
                         padding: const EdgeInsets.only(right: 6),
                         child: ActionChip(
-                          backgroundColor:
-                              _templateId == t.id ? AppColors.mintGreen : _chip,
+                          backgroundColor: _templateId == t.id
+                              ? AppColors.mintGreen
+                              : context.forest.surfaceFor(_chip),
                           label: Text(
                               '${t.kind.emoji} ${l10n.translate('notice_tpl_${t.id}_title')}',
                               style: TextStyle(
                                   fontSize: 12,
                                   color: _templateId == t.id
                                       ? AppColors.darkGreen
-                                      : Colors.white)),
+                                      : context.forest.text)),
                           onPressed: () => _applyTemplate(t),
                         ),
                       ),
@@ -262,9 +264,9 @@ class _ComposerState extends State<_Composer> {
                         style: const TextStyle(fontSize: 12)),
                     selected: _kind == k,
                     selectedColor: noticeKindColor(k),
-                    backgroundColor: _chip,
+                    backgroundColor: context.forest.surfaceFor(_chip),
                     labelStyle: TextStyle(
-                        color: _kind == k ? Colors.black : Colors.white),
+                        color: _kind == k ? Colors.black : context.forest.text),
                     onSelected: (_) => setState(() {
                       _kind = k;
                       if (k.asksEveryone) _ack = true;
@@ -275,7 +277,7 @@ class _ComposerState extends State<_Composer> {
             TextField(
               controller: _title,
               maxLength: 100,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
                   labelText: l10n.translate('tour_notice_heading')),
             ),
@@ -284,27 +286,29 @@ class _ComposerState extends State<_Composer> {
               maxLines: 4,
               minLines: 2,
               maxLength: 1000,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration:
                   InputDecoration(labelText: l10n.translate('tour_details')),
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.schedule_rounded,
-                  color: _kind.isTimed ? AppColors.gold : Colors.white38),
+                  color: _kind.isTimed
+                      ? context.forest.readable(AppColors.gold)
+                      : context.forest.text38),
               title: Text(
                   _eventAt == null
                       ? l10n.translate(_kind.isTimed
                           ? 'notice_set_time'
                           : 'notice_set_time_optional')
                       : fmt.format(_eventAt!),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: context.forest.text)),
               trailing: _eventAt == null
                   ? null
                   : IconButton(
                       tooltip: l10n.translate('notice_clear_time'),
-                      icon: const Icon(Icons.close_rounded,
-                          color: Colors.white54),
+                      icon: Icon(Icons.close_rounded,
+                          color: context.forest.text54),
                       onPressed: () => setState(() => _eventAt = null),
                     ),
               onTap: _pickEventTime,
@@ -314,20 +318,20 @@ class _ComposerState extends State<_Composer> {
               children: [
                 for (final m in const [15, 30, 60, 120])
                   ActionChip(
-                    backgroundColor: _chip,
+                    backgroundColor: context.forest.surfaceFor(_chip),
                     label: Text(
                         l10n.translate('notice_in_minutes',
                             args: {'n': l10n.number(m)}),
-                        style:
-                            const TextStyle(color: Colors.white, fontSize: 12)),
+                        style: TextStyle(
+                            color: context.forest.text, fontSize: 12)),
                     onPressed: () => setState(() => _eventAt =
                         _roundUp(widget.now.add(Duration(minutes: m)))),
                   ),
                 ActionChip(
-                  backgroundColor: _chip,
+                  backgroundColor: context.forest.surfaceFor(_chip),
                   label: Text(l10n.translate('notice_tomorrow_morning'),
                       style:
-                          const TextStyle(color: Colors.white, fontSize: 12)),
+                          TextStyle(color: context.forest.text, fontSize: 12)),
                   onPressed: () => setState(() => _eventAt = DateTime(
                       widget.now.year,
                       widget.now.month,
@@ -344,20 +348,20 @@ class _ComposerState extends State<_Composer> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                leading:
-                    const Icon(Icons.event_busy_rounded, color: Colors.white54),
+                leading: Icon(Icons.event_busy_rounded,
+                    color: context.forest.text54),
                 title: Text(
                     _until == null
                         ? l10n.translate('notice_until_none')
                         : l10n.translate('notice_until', args: {
                             'date': localizedDateFormat('d MMM').format(_until!)
                           }),
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: context.forest.text)),
                 trailing: _until == null
                     ? null
                     : IconButton(
-                        icon: const Icon(Icons.close_rounded,
-                            color: Colors.white54),
+                        icon: Icon(Icons.close_rounded,
+                            color: context.forest.text54),
                         onPressed: () => setState(() => _until = null),
                       ),
                 onTap: _pickUntil,
@@ -365,22 +369,22 @@ class _ComposerState extends State<_Composer> {
             TextField(
               controller: _place,
               maxLength: 120,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.place_rounded,
-                      color: Colors.amber, size: 20),
+                  prefixIcon: Icon(Icons.place_rounded,
+                      color: context.forest.readable(Colors.amber), size: 20),
                   labelText: l10n.translate('notice_place')),
             ),
             TextField(
               controller: _map,
               keyboardType: TextInputType.url,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.map_rounded,
-                      color: Colors.white54, size: 20),
+                  prefixIcon: Icon(Icons.map_rounded,
+                      color: context.forest.text54, size: 20),
                   labelText: l10n.translate('tour_map_link_label'),
                   helperText: l10n.translate('notice_map_help'),
-                  helperStyle: const TextStyle(color: Colors.white38)),
+                  helperStyle: TextStyle(color: context.forest.text38)),
             ),
             if (stops.length > 1)
               DropdownButtonFormField<String?>(
@@ -421,7 +425,8 @@ class _ComposerState extends State<_Composer> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(_error!,
-                    style: const TextStyle(color: Colors.redAccent)),
+                    style: TextStyle(
+                        color: context.forest.readable(Colors.redAccent))),
               ),
             const SizedBox(height: 6),
             FilledButton(

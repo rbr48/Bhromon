@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -155,7 +156,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         tileColor: unread ? AppColors.mintGreen.withValues(alpha: 0.08) : null,
         leading: CircleAvatar(
           backgroundColor: AppColors.mintGreen.withValues(alpha: 0.15),
-          child: Icon(_iconFor(n.action), color: AppColors.mintGreen, size: 20),
+          child: Icon(_iconFor(n.action),
+              color: context.forest.accentText, size: 20),
         ),
         title: Text(
           n.title,

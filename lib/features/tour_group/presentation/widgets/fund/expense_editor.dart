@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -103,7 +104,7 @@ Future<ExpenseDraft?> showExpenseEditor(
   return showModalBottomSheet<ExpenseDraft>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF142428),
+    backgroundColor: context.forest.surfaceFor(const Color(0xFF142428)),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (_) => _ExpenseEditor(
@@ -370,14 +371,14 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
             Text(
                 l10n.translate(
                     e == null ? 'fund_add_expense' : 'fund_edit_expense'),
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.forest.text,
                     fontSize: 18,
                     fontWeight: FontWeight.bold)),
             TextField(
               controller: _title,
               maxLength: 80,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration:
                   InputDecoration(labelText: l10n.translate('fund_what')),
             ),
@@ -390,7 +391,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                     onChanged: (_) => setState(() {}),
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: context.forest.text),
                     decoration: InputDecoration(
                         labelText: l10n.translate('fund_amount')),
                   ),
@@ -420,12 +421,12 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                 onChanged: (_) => setState(() {}),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                   labelText: l10n
                       .translate('fund_rate', args: {'currency': _currency}),
                   helperText: l10n.translate('fund_rate_help'),
-                  helperStyle: const TextStyle(color: Colors.white38),
+                  helperStyle: TextStyle(color: context.forest.text38),
                 ),
               ),
               if (bdt != null)
@@ -434,7 +435,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                   child: Text(
                       l10n.translate('fund_in_taka',
                           args: {'amount': TripLedgerEngine.formatTaka(bdt)}),
-                      style: const TextStyle(color: AppColors.gold)),
+                      style: TextStyle(
+                          color: context.forest.readable(AppColors.gold))),
                 ),
             ],
             const SizedBox(height: 12),
@@ -448,26 +450,28 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                         size: 16,
                         color: c == _category
                             ? AppColors.darkGreen
-                            : Colors.white70),
+                            : context.forest.text70),
                     label: Text(fundCategoryLabel(l10n, c)),
                     selected: c == _category,
                     selectedColor: AppColors.mintGreen,
-                    backgroundColor: const Color(0xFF1E3326),
+                    backgroundColor:
+                        context.forest.surfaceFor(const Color(0xFF1E3326)),
                     labelStyle: TextStyle(
                         color: c == _category
                             ? AppColors.darkGreen
-                            : Colors.white),
+                            : context.forest.text),
                     onSelected: (_) => setState(() => _category = c),
                   ),
               ],
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.event_rounded, color: AppColors.gold),
+              leading: Icon(Icons.event_rounded,
+                  color: context.forest.readable(AppColors.gold)),
               title: Text(localizedDateFormat('EEE, d MMM yyyy').format(_date),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: context.forest.text)),
               subtitle: Text(l10n.translate('fund_date'),
-                  style: const TextStyle(color: Colors.white54)),
+                  style: TextStyle(color: context.forest.text54)),
               onTap: () async {
                 final picked = await showDatePicker(
                   context: context,
@@ -503,12 +507,12 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.translate('fund_paid_from_fund'),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: context.forest.text)),
               subtitle: Text(
                   l10n.translate(_fromFund
                       ? 'fund_paid_fund_note'
                       : 'fund_paid_member_note'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 11)),
               value: _fromFund,
               activeThumbColor: AppColors.mintGreen,
               onChanged: (v) => setState(() => _fromFund = v),
@@ -532,7 +536,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
               ),
             const SizedBox(height: 14),
             Text(l10n.translate('fund_split_how'),
-                style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                style: TextStyle(color: context.forest.text70, fontSize: 13)),
             const SizedBox(height: 6),
             SegmentedButton<SplitMode>(
               showSelectedIcon: false,
@@ -548,7 +552,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
             ),
             const SizedBox(height: 6),
             Text(l10n.translate('fund_split_${_mode.name}_help'),
-                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                style: TextStyle(color: context.forest.text54, fontSize: 11)),
             const SizedBox(height: 8),
             if (_mode == SplitMode.family || _mode == SplitMode.equal)
               Wrap(
@@ -582,7 +586,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                     ),
                     Expanded(
                         child: Text(m.displayName,
-                            style: const TextStyle(color: Colors.white))),
+                            style: TextStyle(color: context.forest.text))),
                     SizedBox(
                       width: 110,
                       child: TextField(
@@ -591,13 +595,13 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                         onChanged: (_) => setState(() {}),
                         keyboardType: TextInputType.numberWithOptions(
                             decimal: _mode == SplitMode.exact),
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(color: context.forest.text),
                         decoration: InputDecoration(
                           isDense: true,
                           hintText: l10n.translate(_mode == SplitMode.exact
                               ? 'fund_amount'
                               : 'fund_parts'),
-                          hintStyle: const TextStyle(color: Colors.white38),
+                          hintStyle: TextStyle(color: context.forest.text38),
                         ),
                       ),
                     ),
@@ -613,8 +617,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                     }),
                     style: TextStyle(
                         color: (_enteredMinor ?? 0) == _exactTotal
-                            ? AppColors.mintGreen
-                            : AppColors.gold),
+                            ? context.forest.accentText
+                            : context.forest.readable(AppColors.gold)),
                   ),
                 ),
             ],
@@ -622,7 +626,7 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
               controller: _notes,
               maxLines: 2,
               maxLength: 300,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration:
                   InputDecoration(labelText: l10n.translate('fund_notes')),
             ),
@@ -630,22 +634,22 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
+                color: context.forest.text.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white10),
+                border: Border.all(color: context.forest.divider10),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.receipt_long_rounded,
-                          size: 16, color: AppColors.mintGreen),
+                      Icon(Icons.receipt_long_rounded,
+                          size: 16, color: context.forest.accentText),
                       const SizedBox(width: 8),
                       Text(
                         l10n.translate('fund_receipt'),
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: context.forest.text,
                             fontSize: 13,
                             fontWeight: FontWeight.bold),
                       ),
@@ -677,9 +681,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                         height: 120,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                            Icons.broken_image,
-                            color: Colors.white24),
+                        errorBuilder: (_, __, ___) => Icon(Icons.broken_image,
+                            color: context.forest.text24),
                       ),
                     )
                   else if (_receiptUrl != null && _receiptUrl!.isNotEmpty)
@@ -690,9 +693,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                         height: 120,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                            Icons.broken_image,
-                            color: Colors.white24),
+                        errorBuilder: (_, __, ___) => Icon(Icons.broken_image,
+                            color: context.forest.text24),
                       ),
                     )
                   else
@@ -701,8 +703,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                         Expanded(
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white70,
-                              side: const BorderSide(color: Colors.white24),
+                              foregroundColor: context.forest.text70,
+                              side: BorderSide(color: context.forest.text24),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8)),
                             ),
@@ -717,8 +719,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
                         Expanded(
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white70,
-                              side: const BorderSide(color: Colors.white24),
+                              foregroundColor: context.forest.text70,
+                              side: BorderSide(color: context.forest.text24),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8)),
                             ),
@@ -739,7 +741,8 @@ class _ExpenseEditorState extends State<_ExpenseEditor> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(_error!,
-                    style: const TextStyle(color: Colors.redAccent)),
+                    style: TextStyle(
+                        color: context.forest.readable(Colors.redAccent))),
               ),
             FilledButton(
               style: FilledButton.styleFrom(

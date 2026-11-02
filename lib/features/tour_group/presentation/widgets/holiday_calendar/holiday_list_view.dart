@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../domain/models/holiday_models.dart';
@@ -19,7 +20,7 @@ class HolidayListView extends StatelessWidget {
       children: [
         Text(
           context.l10n.translate('hol_gazette_note'),
-          style: const TextStyle(color: Colors.white60, fontSize: 12),
+          style: TextStyle(color: context.forest.text60, fontSize: 12),
         ),
         const SizedBox(height: 10),
         for (final o in calendar.occurrences)
