@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'colors.dart';
 
-/// The colours of the profile screens (the profile page and the member
-/// profile sheet), for the active theme.
+/// The forest-green colours of the group and profile screens (the group hub,
+/// the bottom navigation bar, the profile page and the member profile sheet),
+/// for the active theme.
 ///
 /// The dark values are exactly the colours these screens used before they
-/// followed the theme, so dark mode looks the same. Use `context.profile`
-/// instead of fixed colours. The header keeps its dark cover or gradient in
-/// both themes, so text on it stays white.
-class ProfilePalette {
-  const ProfilePalette._(this.isDark);
+/// followed the theme, so dark mode looks the same. Use `context.forest`
+/// instead of fixed colours. Dark covers, gradients and photos keep their colours
+/// in both themes, so text on them stays white.
+class ForestPalette {
+  const ForestPalette._(this.isDark);
 
-  static const ProfilePalette dark = ProfilePalette._(true);
-  static const ProfilePalette light = ProfilePalette._(false);
+  static const ForestPalette dark = ForestPalette._(true);
+  static const ForestPalette light = ForestPalette._(false);
 
   final bool isDark;
 
@@ -27,8 +28,16 @@ class ProfilePalette {
   /// Dialogs and sheets.
   Color get dialog => isDark ? const Color(0xFF1B3326) : Colors.white;
 
-  /// The member profile sheet.
+  /// Bottom sheets, such as the member profile sheet.
   Color get sheet => isDark ? const Color(0xFF0F1B24) : Colors.white;
+
+  /// The active group banner's gradient, top-left to bottom-right.
+  Color get bannerStart =>
+      isDark ? const Color(0xFF1B4332) : const Color(0xFFE4F3EA);
+
+  /// See [bannerStart].
+  Color get bannerEnd =>
+      isDark ? const Color(0xFF081C15) : const Color(0xFFCDE7D7);
 
   /// Circles behind category icons.
   Color get chip => isDark ? const Color(0xFF182630) : const Color(0xFFE6ECE8);
@@ -83,9 +92,9 @@ class ProfilePalette {
   Color get divider10 => isDark ? Colors.white10 : const Color(0x14000000);
 }
 
-/// `context.profile` is the profile palette for the active theme.
-extension ProfilePaletteContext on BuildContext {
-  ProfilePalette get profile => Theme.of(this).brightness == Brightness.dark
-      ? ProfilePalette.dark
-      : ProfilePalette.light;
+/// `context.forest` is the forest palette for the active theme.
+extension ForestPaletteContext on BuildContext {
+  ForestPalette get forest => Theme.of(this).brightness == Brightness.dark
+      ? ForestPalette.dark
+      : ForestPalette.light;
 }

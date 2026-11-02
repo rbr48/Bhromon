@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:bhromon/core/theme/colors.dart';
-import 'package:bhromon/core/theme/profile_palette.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 
 double contrast(Color a, Color b) {
   final la = a.computeLuminance();
@@ -12,7 +12,7 @@ double contrast(Color a, Color b) {
 
 void main() {
   test('dark palette keeps the original profile colours', () {
-    const d = ProfilePalette.dark;
+    const d = ForestPalette.dark;
     expect(d.background, const Color(0xFF0D1A12));
     expect(d.card, const Color(0xFF14241B));
     expect(d.dialog, const Color(0xFF1B3326));
@@ -32,7 +32,7 @@ void main() {
   });
 
   group('light palette is readable', () {
-    const l = ProfilePalette.light;
+    const l = ForestPalette.light;
     final surfaces = {
       'background': l.background,
       'card': l.card,
@@ -69,6 +69,14 @@ void main() {
         Colors.purpleAccent,
         Colors.blueAccent,
         Colors.redAccent,
+        // Group hub module colours.
+        Color(0xFF0EA5E9), Color(0xFF10B981), Color(0xFF14B8A6),
+        Color(0xFF22D3EE), Color(0xFF38BDF8), Color(0xFF52B788),
+        Color(0xFF6366F1), Color(0xFF64B5F6), Color(0xFF65A30D),
+        Color(0xFF81C784), Color(0xFF84CC16), Color(0xFF8B5CF6),
+        Color(0xFFD97706), Color(0xFFEA580C), Color(0xFFEAB308),
+        Color(0xFFEC4899), Color(0xFFEF4444), Color(0xFFF43F5E),
+        Color(0xFFF472B6), Color(0xFFF59E0B), Color(0xFFFBBF24),
       ];
       for (final accent in accents) {
         final shade = l.readable(accent);
@@ -82,7 +90,21 @@ void main() {
 
     test('dark mode leaves per-item accents unchanged', () {
       expect(
-          ProfilePalette.dark.readable(Colors.amberAccent), Colors.amberAccent);
+          ForestPalette.dark.readable(Colors.amberAccent), Colors.amberAccent);
+    });
+
+    test('text and accents are readable on the group banner', () {
+      for (final bg in [l.bannerStart, l.bannerEnd]) {
+        expect(contrast(l.text, bg), greaterThanOrEqualTo(4.5));
+        expect(contrast(l.text70, bg), greaterThanOrEqualTo(4.5));
+        expect(contrast(l.accentText, bg), greaterThanOrEqualTo(4.5));
+        expect(contrast(l.text54, bg), greaterThanOrEqualTo(3.0));
+      }
+    });
+
+    test('dark banner keeps the original gradient', () {
+      expect(ForestPalette.dark.bannerStart, const Color(0xFF1B4332));
+      expect(ForestPalette.dark.bannerEnd, const Color(0xFF081C15));
     });
 
     test('cards stand apart from the page', () {
