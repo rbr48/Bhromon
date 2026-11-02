@@ -76,6 +76,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   StreamSubscription<List<BusSeat>>? _seatSub;
   StreamSubscription<List<HotelRoom>>? _roomSub;
 
+  // The feed's scroll offset, per tour, so coming back resumes where it was
+  // left. The screen is rebuilt when you leave it, so the map lives on the class.
+  static final Map<String, double> _feedOffsetByTour = {};
+  final ScrollController _feedScroll = ScrollController();
+  bool _feedRestoreScheduled = false;
+  bool _feedRestored = false;
+
   // Logistics cache (Seat & Room mappings: email -> seat/room)
   final Map<String, String> _seatMap = {};
   final Map<String, String> _roomMap = {};
@@ -108,6 +115,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     _highlightsStream = _repository.watchHighlights(widget.tourId);
     _alertsStream = _repository.watchSafetyAlerts(widget.tourId);
 
+    _feedScroll.addListener(_rememberFeedOffset);
     _watchGroup();
     _loadMyRole();
     _loadFeedPrefs();
@@ -123,8 +131,56 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     _groupSub?.cancel();
     _seatSub?.cancel();
     _roomSub?.cancel();
+    _feedScroll.removeListener(_rememberFeedOffset);
+    _feedScroll.dispose();
     unawaited(_feed.close());
     super.dispose();
+  }
+
+  /// Keeps the feed's offset as the user scrolls, so it outlives a rebuild.
+  void _rememberFeedOffset() {
+    if (_feedScroll.hasClients) {
+      _feedOffsetByTour[widget.tourId] = _feedScroll.offset;
+    }
+  }
+
+  /// Returns the feed to the offset it was left at, once the posts have laid
+  /// out far enough. Gives up after a while, and leaves the feed where it is if
+  /// the user has already scrolled.
+  void _restoreFeedOffset(int attemptsLeft) {
+    _feedRestoreScheduled = false;
+    if (_feedRestored || !mounted) return;
+    final saved = _feedOffsetByTour[widget.tourId] ?? 0.0;
+    if (saved <= 0) {
+      _feedRestored = true;
+      return;
+    }
+    if (!_feedScroll.hasClients) {
+      if (attemptsLeft > 0) {
+        _scheduleFeedRestore(attemptsLeft - 1);
+      } else {
+        _feedRestored = true;
+      }
+      return;
+    }
+    final position = _feedScroll.position;
+    if (position.pixels > 0) {
+      _feedRestored = true;
+      return;
+    }
+    if (position.maxScrollExtent < saved && attemptsLeft > 0) {
+      _scheduleFeedRestore(attemptsLeft - 1);
+      return;
+    }
+    _feedScroll.jumpTo(saved.clamp(0.0, position.maxScrollExtent).toDouble());
+    _feedRestored = true;
+  }
+
+  void _scheduleFeedRestore(int attemptsLeft) {
+    if (_feedRestoreScheduled) return;
+    _feedRestoreScheduled = true;
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _restoreFeedOffset(attemptsLeft));
   }
 
   /// Keeps the tour's details live, so a trip change by an admin shows at once
@@ -1058,9 +1114,13 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           needsMore: filteredPosts.isEmpty && hasMore);
                       final reelsList = posts.where((p) => p.isReel).toList();
 
+                      if (!_feedRestored && filteredPosts.isNotEmpty) {
+                        _scheduleFeedRestore(120);
+                      }
                       return NotificationListener<ScrollNotification>(
                         onNotification: _onFeedScroll,
                         child: CustomScrollView(
+                          controller: _feedScroll,
                           // ignore: deprecated_member_use
                           cacheExtent: 1600.0,
                           physics: const AlwaysScrollableScrollPhysics(
