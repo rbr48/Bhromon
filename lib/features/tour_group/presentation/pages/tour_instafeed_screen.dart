@@ -15,6 +15,7 @@ import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/models/tour_post_models.dart';
 import '../../domain/services/fund_analytics.dart';
+import '../../domain/services/post_view_queue.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/fund/expense_editor.dart';
 import '../widgets/instafeed/feed_resume.dart';
@@ -74,6 +75,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   final ValueNotifier<String?> _playingVideoNotifier =
       ValueNotifier<String?>(null);
   bool _isScrolling = false;
+  // Views of the posts the feed has built, sent in a few writes once scrolling
+  // settles, rather than one write per post during a fling.
+  final PostViewQueue _viewQueue = PostViewQueue();
+  Timer? _viewFlushTimer;
   bool _settleScheduled = false;
   TourGroup? _tourGroup;
   StreamSubscription<TourGroup?>? _groupSub;
@@ -146,6 +151,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     _seatSub?.cancel();
     _roomSub?.cancel();
     _saveFeedView();
+    // Views noted so far are sent now, so leaving the feed does not lose them.
+    unawaited(_sendPendingViews());
     _feedScroll.removeListener(_rememberFeedOffset);
     _feedScroll.dispose();
     unawaited(_feed.close());
@@ -717,6 +724,33 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         _activeHashtagFilter,
       ].join('|');
 
+  /// Notes a post the feed has built. Its view is recorded later, in a few
+  /// writes, rather than one write each time a card is built.
+  void _noteViewed(TourPostItem post) {
+    final email = _repository.currentEmail;
+    if (email.isEmpty) return;
+    _viewQueue.note(post.id, alreadyViewed: post.isViewedBy(email));
+    if (!_viewQueue.isEmpty) {
+      _viewFlushTimer ??= Timer(const Duration(seconds: 1), _onViewFlushTimer);
+    }
+  }
+
+  /// Sends the waiting views once the feed has been still for a moment. While it
+  /// is moving, they wait for the scroll to end.
+  void _onViewFlushTimer() {
+    _viewFlushTimer = null;
+    if (!_isScrolling) unawaited(_sendPendingViews());
+  }
+
+  /// Records the waiting views, in as few writes as the list allows.
+  Future<void> _sendPendingViews() async {
+    _viewFlushTimer?.cancel();
+    _viewFlushTimer = null;
+    final ids = _viewQueue.take();
+    if (ids.isEmpty) return;
+    await _repository.recordPostViews(tourId: widget.tourId, postIds: ids);
+  }
+
   /// Handles the feed's own scrolling. A scroll releases the playing video, and
   /// the one nearest the middle is picked when it stops. Nested scrollers, such
   /// as the stories tray, are ignored.
@@ -728,6 +762,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     } else if (n is ScrollEndNotification) {
       _isScrolling = false;
       _scheduleSettle();
+      if (!_viewQueue.isEmpty) unawaited(_sendPendingViews());
     }
     return false;
   }
@@ -1508,6 +1543,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                       );
                                     }
                                     final post = filteredPosts[index];
+                                    _noteViewed(post);
                                     final isVideo = post.videoUrl != null;
                                     // Only a video card listens for the video that plays, so a
                                     // change rebuilds one card, not the whole feed.

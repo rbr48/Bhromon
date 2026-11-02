@@ -7,6 +7,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeTourGroupRepo extends TourGroupRepository {
+  int viewWrites = 0;
+
   @override
   String get currentEmail => 'traveler@bhromon.fun';
 
@@ -20,7 +22,9 @@ class _FakeTourGroupRepo extends TourGroupRepository {
   Future<void> recordPostView({
     required String tourId,
     required String postId,
-  }) async {}
+  }) async {
+    viewWrites++;
+  }
 }
 
 Widget _wrap(Widget child, {Locale locale = const Locale('bn')}) {
@@ -42,6 +46,38 @@ Widget _wrap(Widget child, {Locale locale = const Locale('bn')}) {
 void main() {
   final repo = _FakeTourGroupRepo();
   final now = DateTime(2026, 10, 27, 10, 30);
+
+  testWidgets('building a card does not record a view by itself',
+      (tester) async {
+    final counting = _FakeTourGroupRepo();
+    final post = TourPostItem(
+      id: 'post_202',
+      tourId: 'tour_cox',
+      authorEmail: 'author@bhromon.fun',
+      authorName: 'Author',
+      authorPhoto: null,
+      caption: 'Built, not viewed',
+      images: const ['https://example.com/unseen.jpg'],
+      createdAt: now,
+      viewCount: 0,
+      viewers: const [],
+    );
+
+    await tester.pumpWidget(
+      _wrap(
+        InstafeedPostCard(
+          repository: counting,
+          tourId: 'tour_cox',
+          post: post,
+          isBookmarked: false,
+          onBookmarkToggle: () {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(counting.viewWrites, 0);
+  });
 
   testWidgets(
       'InstafeedPostCard renders clean metric row and does NOT show duplicate view count on timestamp row',

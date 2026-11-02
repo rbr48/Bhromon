@@ -2682,6 +2682,48 @@ class TourGroupRepository {
     }
   }
 
+  /// Records this member's view of each post in [postIds]. The posts go through
+  /// transactions of 25, and a post that already lists the member as a viewer is
+  /// left alone, so each view is counted once.
+  Future<void> recordPostViews({
+    required String tourId,
+    required List<String> postIds,
+  }) async {
+    final email = currentEmail;
+    if (email.isEmpty || postIds.isEmpty) return;
+    const batchSize = 25;
+    for (var start = 0; start < postIds.length; start += batchSize) {
+      final end = start + batchSize < postIds.length
+          ? start + batchSize
+          : postIds.length;
+      final batch = postIds.sublist(start, end);
+      try {
+        await _firestore.runTransaction((tx) async {
+          // A transaction reads everything before it writes anything.
+          final refs = [for (final id in batch) _sub(tourId, 'posts').doc(id)];
+          final snaps = <DocumentSnapshot<Map<String, dynamic>>>[];
+          for (final ref in refs) {
+            snaps.add(await tx.get(ref));
+          }
+          for (var i = 0; i < refs.length; i++) {
+            final data = snaps[i].data();
+            if (data == null) continue;
+            final viewers =
+                (data['viewers'] as List?)?.cast<Object?>() ?? const [];
+            if (viewers.contains(email)) continue;
+            tx.update(refs[i], {
+              'viewers': FieldValue.arrayUnion([email]),
+              'viewCount': FieldValue.increment(1),
+            });
+          }
+        });
+      } catch (e, st) {
+        logWarning(
+            '[recordPostViews] Failed to record ${batch.length} views', e, st);
+      }
+    }
+  }
+
   Future<void> setPostPinned(String tourId, String postId,
       {required bool isPinned}) async {
     _requireEmail();

@@ -125,15 +125,6 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   void initState() {
     super.initState();
     _checkAndInitVideo();
-    _recordViewIfNew();
-  }
-
-  /// Records this member's view unless the post already shows it as seen.
-  void _recordViewIfNew() {
-    final email = widget.repository.currentEmail;
-    if (email.isEmpty || widget.post.isViewedBy(email)) return;
-    widget.repository
-        .recordPostView(tourId: widget.tourId, postId: widget.post.id);
   }
 
   void _checkAndInitVideo() {
@@ -182,9 +173,6 @@ class _InstafeedPostCardState extends State<InstafeedPostCard> {
   @override
   void didUpdateWidget(InstafeedPostCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.post.id != widget.post.id) {
-      _recordViewIfNew();
-    }
     if (oldWidget.post.id != widget.post.id) _optimisticLiked = null;
     if (LikeState.serverCaughtUp(
       optimistic: _optimisticLiked,
