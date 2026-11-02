@@ -8,7 +8,7 @@ Welcome to **Bhromon** (the "App", "Platform", or "Service"). By accessing, inst
 
 ## 1. About the Service & Free / Open Source Philosophy
 
-Bhromon is operated by **Bhromon Technologies Ltd.** ("we," "our," or "us"). Bhromon is an all-in-one universal tour companion, multi-family trip ledger, and group collaboration platform designed for travelers across Bangladesh and beyond.
+Bhromon is operated by **Izhaan Intellect** ("we," "our," or "us"). Bhromon is an all-in-one universal tour companion, multi-family trip ledger, and group collaboration platform designed for travelers across Bangladesh and beyond.
 
 * **Free & Open Source**: Bhromon is 100% free and open-source software (FOSS). There are no paid tiers, subscriptions, paywalls, or in-app purchases.
 * **No Monetization of Personal Data**: We do not sell advertisements, track browsing histories, or commercialize your personal or travel information.
@@ -81,7 +81,7 @@ Bhromon operates on a membership-based group access model:
 ## 9. Intellectual Property & Open Source License
 
 * **Codebase**: The Bhromon client codebase is open source under the terms of its repository license ([https://github.com/rbr48/Bhromon](https://github.com/rbr48/Bhromon)).
-* **Trademarks & Branding**: The Bhromon name, logo, and brand identity are property of Bhromon Technologies Ltd.
+* **Trademarks & Branding**: The Bhromon name, logo, and brand identity are property of Izhaan Intellect.
 * **User Content**: You retain complete ownership of all photos, journals, and comments you share. By submitting content to public tour spaces, you grant fellow tour members the right to view and interact with that content within the platform.
 
 ---
@@ -95,7 +95,7 @@ Bhromon operates on a membership-based group access model:
 
 ## 11. Limitation of Liability
 
-To the maximum extent permitted by applicable law, Bhromon Technologies Ltd., its founders, developers, and contributors shall not be liable for any direct, indirect, incidental, punitive, or consequential damages resulting from:
+To the maximum extent permitted by applicable law, Izhaan Intellect, its founders, developers, and contributors shall not be liable for any direct, indirect, incidental, punitive, or consequential damages resulting from:
 - The use or inability to use the platform.
 - Inaccuracies in route estimates, maps, checkpoint locations, or tide predictions.
 - Physical travel accidents, delays, property damage, or disputes occurring during tours.
@@ -112,7 +112,7 @@ These Terms shall be governed by and interpreted in accordance with the laws of 
 ## 13. Contact Us
 
 For any legal questions, notifications, or concerns regarding these Terms of Service, please contact:
-* **Entity**: Bhromon Technologies Ltd.
-* **Email**: info@bhromon.fun / mybhromon@gmail.com
+* **Operating Entity**: Izhaan Intellect
+* **Email**: contact@izhaanintellect.fun / info@bhromon.fun / mybhromon@gmail.com
 * **WhatsApp**: +880 1762 033445
 * **Website**: https://bhromon.fun

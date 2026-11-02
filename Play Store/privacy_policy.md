@@ -2,7 +2,7 @@
 
 **Last Updated: October 31, 2026**
 
-Welcome to **Bhromon** (the "App" and "Platform"). Bhromon is one app for every group you belong to: families, offices, campuses, messes, housing societies, savings groups and trips, owned and operated by **Bhromon Technologies Ltd.** ("we," "our," or "us"). 
+Welcome to **Bhromon** (the "App" and "Platform"). Bhromon is one app for every group you belong to: families, offices, campuses, messes, housing societies, savings groups and trips, owned and operated by **Izhaan Intellect** ("we," "our," or "us"). 
 
 We are deeply committed to protecting your personal privacy and safeguarding your data. Bhromon is built on privacy-first and open-source principles: **we do not sell your personal data, we do not show third-party ads, and we do not track you across other applications or services.**
 
@@ -121,8 +121,8 @@ We may update this Privacy Policy periodically to reflect technological updates 
 ## 10. Contact Us
 
 If you have any questions, inquiries, or privacy requests, please reach out to us:
-* **Company**: Bhromon Technologies Ltd.
-* **Email**: info@bhromon.fun / mybhromon@gmail.com
+* **Operating Entity**: Izhaan Intellect
+* **Email**: contact@izhaanintellect.fun / info@bhromon.fun / mybhromon@gmail.com
 * **WhatsApp**: +880 1762 033445
 * **Website**: https://bhromon.fun
 * **Web App**: https://app.bhromon.fun
