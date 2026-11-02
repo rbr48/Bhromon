@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -166,7 +167,7 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
       height: 52,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF202C33), // WhatsApp message bubble slate
+        color: context.chat.panel, // WhatsApp message bubble slate
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
@@ -195,8 +196,8 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
           // ── Duration Timer ───────────────────────────────────────────────
           Text(
             _formatDuration(_recordDuration),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: context.chat.text,
               fontSize: 14,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
@@ -219,25 +220,25 @@ class _VoiceMessageRecorderState extends State<VoiceMessageRecorder>
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: context.chat.text.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.lock_outline,
-                        color: Colors.white70, size: 14),
+                    Icon(Icons.lock_outline,
+                        color: context.chat.text70, size: 14),
                     const SizedBox(width: 4),
                     Text(context.l10n.translate('chat_record_lock'),
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 11)),
+                        style: TextStyle(
+                            color: context.chat.text70, fontSize: 11)),
                   ],
                 ),
               ),
             ),
             const SizedBox(width: 8),
             IconButton(
-              icon: const Icon(Icons.close, color: Colors.white60, size: 20),
+              icon: Icon(Icons.close, color: context.chat.text60, size: 20),
               tooltip: context.l10n.translate('cancel'),
               onPressed: _cancelRecording,
             ),

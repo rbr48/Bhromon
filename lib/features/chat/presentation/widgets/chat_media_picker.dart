@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +26,7 @@ Future<MediaPickResult?> showChatMediaPicker(BuildContext context) {
   return showModalBottomSheet<MediaPickResult>(
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.75),
-    backgroundColor: const Color(0xFF1F2C34),
+    backgroundColor: context.chat.bar,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -53,15 +54,15 @@ class _ChatMediaPickerSheet extends StatelessWidget {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: context.chat.text24,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             Text(
               context.l10n.translate('chat_media_picker_title'),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.chat.text,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -201,7 +202,7 @@ class _MediaOption extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
+            style: TextStyle(color: context.chat.text70, fontSize: 12),
           ),
         ],
       ),

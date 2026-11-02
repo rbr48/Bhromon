@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -30,7 +31,7 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF1F2C34),
+      backgroundColor: context.chat.bar,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         height: 480,
@@ -39,17 +40,17 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
           children: [
             Row(
               children: [
-                const Text(
+                Text(
                   'Forward to...',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: context.chat.text,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white70),
+                  icon: Icon(Icons.close, color: context.chat.text70),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -57,14 +58,14 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
             const SizedBox(height: 8),
             // Search field
             TextField(
-              style: const TextStyle(color: Colors.white, fontSize: 13),
+              style: TextStyle(color: context.chat.text, fontSize: 13),
               decoration: InputDecoration(
                 hintText: context.l10n.translate('chat_search_chats_hint'),
-                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                hintStyle: TextStyle(color: context.chat.text38, fontSize: 13),
                 prefixIcon:
-                    const Icon(Icons.search, color: Colors.white38, size: 18),
+                    Icon(Icons.search, color: context.chat.text38, size: 18),
                 filled: true,
-                fillColor: const Color(0xFF2A3942),
+                fillColor: context.chat.field,
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -93,8 +94,8 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                     return Center(
                       child: Text(
                         context.l10n.translate('chat_no_other_conversations'),
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12),
+                        style:
+                            TextStyle(color: context.chat.text54, fontSize: 12),
                       ),
                     );
                   }
@@ -131,12 +132,12 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                         selectedTileColor:
                             const Color(0xFF00A884).withValues(alpha: 0.15),
                         leading: CircleAvatar(
-                          backgroundColor: const Color(0xFF005C4B),
+                          backgroundColor: context.chat.outgoing,
                           radius: 18,
                           child: Text(
                             name.isNotEmpty ? name[0].toUpperCase() : 'T',
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: context.chat.text,
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
@@ -144,15 +145,15 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                         ),
                         title: Text(
                           name,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 13),
+                          style:
+                              TextStyle(color: context.chat.text, fontSize: 13),
                         ),
                         trailing: Icon(
                           _selectedChatId == doc.id
                               ? Icons.radio_button_checked
                               : Icons.radio_button_unchecked,
                           color: _selectedChatId == doc.id
-                              ? const Color(0xFF00A884)
+                              ? context.chat.accentText
                               : Colors.grey,
                         ),
                         onTap: () => setState(() => _selectedChatId = doc.id),
@@ -169,7 +170,7 @@ class _ChatForwardDialogState extends State<ChatForwardDialog> {
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: Text(context.l10n.translate('chat_cancel_action'),
-                      style: const TextStyle(color: Colors.white54)),
+                      style: TextStyle(color: context.chat.text54)),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -225,12 +226,12 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         context.go('/group-hub');
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF0B141A), // WhatsApp dark background
+        backgroundColor: context.chat.wallpaper, // WhatsApp dark background
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1F2C34), // WhatsApp secondary bar
+          backgroundColor: context.chat.bar, // WhatsApp secondary bar
           elevation: 1,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(Icons.arrow_back, color: context.chat.text),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -243,8 +244,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             _bottomNavIndex == 0
                 ? context.l10n.translate('chats_title')
                 : context.l10n.translate('chats_calls_title'),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: context.chat.text,
               fontSize: 18,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.5,
@@ -252,13 +253,13 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.camera_alt_outlined, color: Colors.white),
+              icon: Icon(Icons.camera_alt_outlined, color: context.chat.text),
               tooltip: context.l10n.translate('chats_quick_camera'),
               onPressed: _openQuickCamera,
             ),
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
-              color: const Color(0xFF1F2C34),
+              icon: Icon(Icons.more_vert, color: context.chat.text),
+              color: context.chat.bar,
               onSelected: (val) {
                 if (val == 'new_chat') {
                   _showSelectTravelerSheet(context, currentUid);
@@ -276,27 +277,27 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 PopupMenuItem(
                   value: 'new_chat',
                   child: Text(context.l10n.translate('chats_menu_new_chat'),
-                      style: const TextStyle(color: Colors.white)),
+                      style: TextStyle(color: context.chat.text)),
                 ),
                 PopupMenuItem(
                   value: 'starred_messages',
                   child: Text(context.l10n.translate('chats_menu_starred'),
-                      style: const TextStyle(color: Colors.white)),
+                      style: TextStyle(color: context.chat.text)),
                 ),
                 PopupMenuItem(
                   value: 'locked_chats',
                   child: Text(context.l10n.translate('chats_menu_locked'),
-                      style: const TextStyle(color: Colors.white)),
+                      style: TextStyle(color: context.chat.text)),
                 ),
                 PopupMenuItem(
                   value: 'tour_groups',
                   child: Text(context.l10n.translate('chats_menu_groups'),
-                      style: const TextStyle(color: Colors.white)),
+                      style: TextStyle(color: context.chat.text)),
                 ),
                 PopupMenuItem(
                   value: 'settings',
                   child: Text(context.l10n.translate('chats_menu_settings'),
-                      style: const TextStyle(color: Colors.white)),
+                      style: TextStyle(color: context.chat.text)),
                 ),
               ],
             ),
@@ -319,28 +320,28 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     children: [
                       // WhatsApp styled Search Bar
                       Container(
-                        color: const Color(0xFF1F2C34),
+                        color: context.chat.bar,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2A3942),
+                            color: context.chat.field,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: TextField(
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 13),
+                            style: TextStyle(
+                                color: context.chat.text, fontSize: 13),
                             decoration: InputDecoration(
                               hintText:
                                   context.l10n.translate('chats_search_hint'),
-                              hintStyle: const TextStyle(
-                                  color: Colors.white54, fontSize: 13),
-                              prefixIcon: const Icon(Icons.search,
-                                  color: Colors.white54, size: 18),
+                              hintStyle: TextStyle(
+                                  color: context.chat.text54, fontSize: 13),
+                              prefixIcon: Icon(Icons.search,
+                                  color: context.chat.text54, size: 18),
                               suffixIcon: _searchQuery.isNotEmpty
                                   ? IconButton(
-                                      icon: const Icon(Icons.clear,
-                                          color: Colors.white54, size: 16),
+                                      icon: Icon(Icons.clear,
+                                          color: context.chat.text54, size: 16),
                                       onPressed: () =>
                                           setState(() => _searchQuery = ''),
                                     )
@@ -360,7 +361,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
                       // WhatsApp tabs (All, Unread, Favourites, Groups)
                       Container(
-                        color: const Color(0xFF0B141A),
+                        color: context.chat.wallpaper,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 8),
                         child: SingleChildScrollView(
@@ -414,8 +415,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       child: Text(
                                         context.l10n
                                             .translate('chats_connecting'),
-                                        style: const TextStyle(
-                                            color: Colors.white54,
+                                        style: TextStyle(
+                                            color: context.chat.text54,
                                             fontSize: 13),
                                         textAlign: TextAlign.center,
                                       ),
@@ -490,22 +491,22 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                       children: [
                                         Icon(Icons.chat_bubble_outline,
                                             size: 64,
-                                            color: Colors.white
+                                            color: context.chat.text
                                                 .withValues(alpha: 0.08)),
                                         const SizedBox(height: 16),
                                         Text(
                                           context.l10n
                                               .translate('chats_empty_title'),
-                                          style: const TextStyle(
-                                              color: Colors.white54,
+                                          style: TextStyle(
+                                              color: context.chat.text54,
                                               fontSize: 13),
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
                                           context.l10n
                                               .translate('chats_empty_hint'),
-                                          style: const TextStyle(
-                                              color: Color(0xFF00A884),
+                                          style: TextStyle(
+                                              color: context.chat.accentText,
                                               fontSize: 11),
                                         ),
                                       ],
@@ -514,9 +515,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                 }
 
                                 return ListView.separated(
-                                  separatorBuilder: (context, index) =>
-                                      const Divider(
-                                    color: Color(0xFF1F2C34),
+                                  separatorBuilder: (context, index) => Divider(
+                                    color: context.chat.bar,
                                     height: 1,
                                     indent: 72,
                                     endIndent: 16,
@@ -637,8 +637,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     }).toList();
 
     return ListView.separated(
-      separatorBuilder: (context, index) => const Divider(
-        color: Color(0xFF1F2C34),
+      separatorBuilder: (context, index) => Divider(
+        color: context.chat.bar,
         height: 1,
         indent: 72,
         endIndent: 16,
@@ -725,7 +725,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: CircleAvatar(
         radius: 24,
-        backgroundColor: const Color(0xFF005C4B),
+        backgroundColor: context.chat.outgoing,
         backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
             ? sizedImage(NetworkImage(signedMediaUrl(avatarUrl)),
                 context.decodeWidth(48))
@@ -733,8 +733,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         child: (avatarUrl == null || avatarUrl.isEmpty)
             ? Text(
                 initials,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.chat.text,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
@@ -744,7 +744,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       title: Text(
         displayName,
         style: TextStyle(
-          color: isMissed ? Colors.redAccent : Colors.white,
+          color: isMissed ? Colors.redAccent : context.chat.text,
           fontWeight: FontWeight.bold,
           fontSize: 14,
         ),
@@ -756,7 +756,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 ? Icons.call_missed
                 : (isCaller ? Icons.call_made : Icons.call_received),
             size: 15,
-            color: isMissed ? Colors.redAccent : const Color(0xFF00A884),
+            color: isMissed ? Colors.redAccent : context.chat.accentText,
           ),
           const SizedBox(width: 4),
           Text(
@@ -767,14 +767,14 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                             's': durationSeconds % 60
                           })})'
                     : ''),
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: context.chat.text54, fontSize: 12),
           ),
         ],
       ),
       trailing: IconButton(
         icon: Icon(
           isVideo ? Icons.videocam : Icons.call,
-          color: onTap != null ? const Color(0xFF00A884) : Colors.white24,
+          color: onTap != null ? context.chat.accentText : context.chat.text24,
           size: 22,
         ),
         onPressed: onTap,
@@ -827,17 +827,17 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.add_call,
-                    size: 64, color: Colors.white.withValues(alpha: 0.08)),
+                    size: 64, color: context.chat.text.withValues(alpha: 0.08)),
                 const SizedBox(height: 16),
                 Text(
                   context.l10n.translate('chats_calls_empty_title'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  style: TextStyle(color: context.chat.text54, fontSize: 13),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   context.l10n.translate('chats_calls_empty_hint'),
                   style:
-                      const TextStyle(color: Color(0xFF00A884), fontSize: 11),
+                      TextStyle(color: context.chat.accentText, fontSize: 11),
                 ),
               ],
             ),
@@ -847,8 +847,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(0, 8, 0, 80),
           itemCount: docs.length,
-          separatorBuilder: (_, __) => const Divider(
-            color: Color(0xFF1F2C34),
+          separatorBuilder: (_, __) => Divider(
+            color: context.chat.bar,
             height: 1,
             indent: 72,
             endIndent: 16,
@@ -978,7 +978,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
   Widget _buildSectionTab(String label, int index) {
     final selected = _bottomNavIndex == index;
-    final color = selected ? const Color(0xFF00A884) : Colors.white60;
+    final color = selected ? const Color(0xFF00A884) : context.chat.text60;
     return InkWell(
       onTap: () => setState(() => _bottomNavIndex = index),
       child: Container(
@@ -1012,18 +1012,18 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.cloud_off_outlined,
-                size: 48, color: Colors.white.withValues(alpha: 0.15)),
+                size: 48, color: context.chat.text.withValues(alpha: 0.15)),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
+              style: TextStyle(color: context.chat.text54, fontSize: 13),
             ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: onRetry,
               child: Text(context.l10n.translate('chats_retry'),
-                  style: const TextStyle(color: Color(0xFF00A884))),
+                  style: TextStyle(color: context.chat.accentText)),
             ),
           ],
         ),
@@ -1038,7 +1038,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF005C4B) : const Color(0xFF1F2C34),
+          color: isSelected ? context.chat.outgoing : context.chat.bar,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
@@ -1050,7 +1050,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         child: Text(
           _tabLabel(context, label),
           style: TextStyle(
-            color: isSelected ? const Color(0xFF00A884) : Colors.white60,
+            color: isSelected ? context.chat.accentText : context.chat.text60,
             fontSize: 12,
             fontWeight: FontWeight.bold,
           ),
@@ -1100,9 +1100,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).padding.bottom + 12,
               ),
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2C34), // WhatsApp slate dark
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: context.chat.bar, // WhatsApp slate dark
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
                 children: [
@@ -1111,7 +1112,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white12,
+                      color: context.chat.divider12,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1120,8 +1121,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
                       context.l10n.translate('chats_start_title'),
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: context.chat.text,
                           fontSize: 16,
                           fontWeight: FontWeight.bold),
                     ),
@@ -1132,7 +1133,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     child: Text(
                       context.l10n.translate('chats_start_subtitle'),
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 11),
+                          TextStyle(color: context.chat.text54, fontSize: 11),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -1140,19 +1141,19 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2A3942),
+                        color: context.chat.field,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: TextField(
                         style:
-                            const TextStyle(color: Colors.white, fontSize: 13),
+                            TextStyle(color: context.chat.text, fontSize: 13),
                         decoration: InputDecoration(
                           hintText:
                               context.l10n.translate('chats_start_search_hint'),
-                          hintStyle: const TextStyle(
-                              color: Colors.white54, fontSize: 12),
-                          prefixIcon: const Icon(Icons.search,
-                              color: Colors.white54, size: 18),
+                          hintStyle: TextStyle(
+                              color: context.chat.text54, fontSize: 12),
+                          prefixIcon: Icon(Icons.search,
+                              color: context.chat.text54, size: 18),
                           border: InputBorder.none,
                           contentPadding:
                               const EdgeInsets.symmetric(vertical: 10),
@@ -1180,8 +1181,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                               child: Text(
                                 context.l10n.translate('chats_start_error'),
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                    color: Colors.white54, fontSize: 12),
+                                style: TextStyle(
+                                    color: context.chat.text54, fontSize: 12),
                               ),
                             ),
                           );
@@ -1201,8 +1202,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                               child: Text(
                                 context.l10n.translate('chats_start_empty'),
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                    color: Colors.white54, fontSize: 12),
+                                style: TextStyle(
+                                    color: context.chat.text54, fontSize: 12),
                               ),
                             ),
                           );
@@ -1211,7 +1212,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                         return ListView.separated(
                           padding: const EdgeInsets.all(8),
                           separatorBuilder: (context, index) =>
-                              const Divider(color: Colors.white10, height: 1),
+                              Divider(color: context.chat.divider10, height: 1),
                           itemCount: contacts.length,
                           itemBuilder: (context, idx) {
                             final contact = contacts[idx];
@@ -1224,7 +1225,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                   horizontal: 16, vertical: 4),
                               leading: CircleAvatar(
                                 radius: 20,
-                                backgroundColor: const Color(0xFF005C4B),
+                                backgroundColor: context.chat.outgoing,
                                 backgroundImage: avatarUrl.isNotEmpty
                                     ? sizedImage(
                                         NetworkImage(signedMediaUrl(avatarUrl)),
@@ -1232,28 +1233,29 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                     : null,
                                 child: avatarUrl.isEmpty
                                     ? Text(initials,
-                                        style: const TextStyle(
-                                            color: Colors.white,
+                                        style: TextStyle(
+                                            color: context.chat.text,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 12))
                                     : null,
                               ),
                               title: Text(name,
-                                  style: const TextStyle(
-                                      color: Colors.white,
+                                  style: TextStyle(
+                                      color: context.chat.text,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13)),
                               subtitle: Text(
                                 contact.tours.map((t) => t.name).join(' · '),
-                                style: const TextStyle(
-                                    color: Colors.white54, fontSize: 11),
+                                style: TextStyle(
+                                    color: context.chat.text54, fontSize: 11),
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.call,
-                                        color: Color(0xFF00A884), size: 20),
+                                    icon: Icon(Icons.call,
+                                        color: context.chat.accentText,
+                                        size: 20),
                                     tooltip: context.l10n
                                         .translate('chats_audio_call'),
                                     onPressed: () {
@@ -1270,8 +1272,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                                     },
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.videocam,
-                                        color: Color(0xFF00A884), size: 22),
+                                    icon: Icon(Icons.videocam,
+                                        color: context.chat.accentText,
+                                        size: 22),
                                     tooltip: context.l10n
                                         .translate('chats_video_call'),
                                     onPressed: () {
@@ -1351,7 +1354,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   void _showLockedChatsModal(BuildContext context, String currentUid) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF1F2C34),
+      backgroundColor: context.chat.bar,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -1367,7 +1370,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: context.chat.text24,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1375,12 +1378,12 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.lock, color: Color(0xFF00A884), size: 20),
+                  Icon(Icons.lock, color: context.chat.accentText, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     context.l10n.translate('chats_locked_title'),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.chat.text,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1394,7 +1397,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   child: Text(
                     context.l10n.translate('chats_locked_empty'),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white54, height: 1.4),
+                    style: TextStyle(color: context.chat.text54, height: 1.4),
                   ),
                 )
               else
@@ -1450,7 +1453,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     final isLocked = _lockedChatIds.contains(chatId);
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF1F2C34),
+      backgroundColor: context.chat.bar,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -1461,19 +1464,19 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
             ListTile(
               leading: Icon(
                 isLocked ? Icons.lock_open : Icons.lock_outline,
-                color: const Color(0xFF00A884),
+                color: context.chat.accentText,
               ),
               title: Text(
                 isLocked
                     ? context.l10n.translate('chats_unlock')
                     : context.l10n.translate('chats_lock'),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.chat.text),
               ),
               subtitle: Text(
                 isLocked
                     ? context.l10n.translate('chats_unlock_hint')
                     : context.l10n.translate('chats_lock_hint'),
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: TextStyle(color: context.chat.text54, fontSize: 12),
               ),
               onTap: () async {
                 final messenger = ScaffoldMessenger.of(context);
@@ -1504,7 +1507,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
               ),
               subtitle: Text(
                 context.l10n.translate('chats_delete_chat_hint'),
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: TextStyle(color: context.chat.text54, fontSize: 12),
               ),
               onTap: () async {
                 Navigator.pop(ctx);
@@ -1608,7 +1611,7 @@ class _LockedChatTile extends StatelessWidget {
     return ListTile(
       leading: CircleAvatar(
         radius: 20,
-        backgroundColor: const Color(0xFF005C4B),
+        backgroundColor: context.chat.outgoing,
         backgroundImage: hasAvatar
             ? sizedImage(NetworkImage(signedMediaUrl(avatarUrl)),
                 context.decodeWidth(40))
@@ -1616,14 +1619,14 @@ class _LockedChatTile extends StatelessWidget {
         child: hasAvatar
             ? null
             : Text(_initialsOf(name),
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.chat.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 13)),
       ),
-      title: Text(name, style: const TextStyle(color: Colors.white)),
+      title: Text(name, style: TextStyle(color: context.chat.text)),
       trailing: IconButton(
-        icon: const Icon(Icons.lock_open, color: Colors.white54),
+        icon: Icon(Icons.lock_open, color: context.chat.text54),
         tooltip: context.l10n.translate('chats_unlock'),
         onPressed: onUnlock,
       ),
@@ -1713,31 +1716,33 @@ class ChatTile extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: CircleAvatar(
         radius: 24,
-        backgroundColor: const Color(0xFF005C4B),
+        backgroundColor: context.chat.outgoing,
         backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
             ? sizedImage(NetworkImage(signedMediaUrl(avatarUrl)),
                 context.decodeWidth(48))
             : null,
         child: (avatarUrl == null || avatarUrl.isEmpty)
             ? Text(initials,
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.chat.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 13))
             : null,
       ),
       title: Text(
         displayName,
-        style: const TextStyle(
-            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+        style: TextStyle(
+            color: context.chat.text,
+            fontWeight: FontWeight.bold,
+            fontSize: 14),
       ),
       subtitle: Row(
         children: [
           if (isMe && lastMessage.isNotEmpty) ...[
-            const Icon(
+            Icon(
               Icons.done_all,
               size: 16,
-              color: Colors.white30,
+              color: context.chat.text30,
             ),
             const SizedBox(width: 4),
           ],
@@ -1749,8 +1754,9 @@ class ChatTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color:
-                    unreadCount > 0 ? const Color(0xFF00A884) : Colors.white54,
+                color: unreadCount > 0
+                    ? context.chat.accentText
+                    : context.chat.text54,
                 fontSize: 12,
                 fontWeight:
                     unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
@@ -1766,7 +1772,9 @@ class ChatTile extends StatelessWidget {
           Text(
             timeStr,
             style: TextStyle(
-              color: unreadCount > 0 ? const Color(0xFF00A884) : Colors.white30,
+              color: unreadCount > 0
+                  ? context.chat.accentText
+                  : context.chat.text30,
               fontSize: 10,
               fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
             ),

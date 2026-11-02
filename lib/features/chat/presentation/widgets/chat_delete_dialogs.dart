@@ -1,4 +1,5 @@
 import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/utils/app_logger.dart';
 import 'package:bhromon/features/chat/data/chat_deletion_service.dart';
 import 'package:bhromon/features/chat/domain/chat_deletion.dart';
@@ -53,15 +54,15 @@ Future<Set<String>?> showDeleteMessagesDialog(
     builder: (dialogContext) {
       final l10n = dialogContext.l10n;
       return AlertDialog(
-        backgroundColor: const Color(0xFF1F2C34),
+        backgroundColor: context.chat.bar,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           allIds.length == 1
               ? l10n.translate('chat_delete_message_title')
               : l10n.translate('chat_delete_messages_title',
                   args: {'count': allIds.length}),
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.chat.text,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
@@ -72,7 +73,7 @@ Future<Set<String>?> showDeleteMessagesDialog(
           children: [
             Text(
               l10n.translate('chat_delete_messages_body'),
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: context.chat.text70, fontSize: 13),
             ),
             if (everyoneIds.isNotEmpty && refusedForEveryone > 0) ...[
               const SizedBox(height: 10),
@@ -84,7 +85,7 @@ Future<Set<String>?> showDeleteMessagesDialog(
                     'hours': kDeleteForEveryoneWindow.inHours,
                   },
                 ),
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                style: TextStyle(color: context.chat.text54, fontSize: 12),
               ),
             ],
           ],
@@ -94,7 +95,7 @@ Future<Set<String>?> showDeleteMessagesDialog(
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               l10n.translate('chat_delete_cancel'),
-              style: const TextStyle(color: Color(0xFF00A884)),
+              style: TextStyle(color: context.chat.accentText),
             ),
           ),
           TextButton(
@@ -168,26 +169,26 @@ Future<bool> showDeleteChatDialog(
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.75),
     builder: (dialogContext) => AlertDialog(
-      backgroundColor: const Color(0xFF1F2C34),
+      backgroundColor: context.chat.bar,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
         title,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: context.chat.text,
           fontSize: 16,
           fontWeight: FontWeight.bold,
         ),
       ),
       content: Text(
         body,
-        style: const TextStyle(color: Colors.white70, fontSize: 13),
+        style: TextStyle(color: context.chat.text70, fontSize: 13),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext, false),
           child: Text(
             cancel,
-            style: const TextStyle(color: Color(0xFF00A884)),
+            style: TextStyle(color: context.chat.accentText),
           ),
         ),
         TextButton(

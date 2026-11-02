@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/services.dart';
 
 /// WhatsApp-style swipe-to-reply gesture wrapper.
@@ -116,7 +117,7 @@ class _SwipeToReplyState extends State<SwipeToReply>
                   decoration: BoxDecoration(
                     color: _thresholdTriggered
                         ? const Color(0xFF00A884)
-                        : const Color(0xFF1F2C34),
+                        : context.chat.bar,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -128,9 +129,8 @@ class _SwipeToReplyState extends State<SwipeToReply>
                   ),
                   child: Icon(
                     Icons.reply_rounded,
-                    color: _thresholdTriggered
-                        ? Colors.white
-                        : const Color(0xFF8696A0),
+                    color:
+                        _thresholdTriggered ? Colors.white : context.chat.grey,
                     size: 18,
                   ),
                 ),

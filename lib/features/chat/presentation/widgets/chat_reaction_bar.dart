@@ -1,4 +1,5 @@
 import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/material.dart';
 
 /// WhatsApp-style emoji reaction bar and message reaction badge.
@@ -19,7 +20,7 @@ class ChatReactionBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2C34),
+        color: context.chat.bar,
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
@@ -29,7 +30,7 @@ class ChatReactionBar extends StatelessWidget {
           ),
         ],
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
+          color: context.chat.text.withValues(alpha: 0.08),
           width: 1,
         ),
       ),
@@ -56,13 +57,13 @@ class ChatReactionBar extends StatelessWidget {
             child: Container(
               width: 32,
               height: 32,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2A3942),
+              decoration: BoxDecoration(
+                color: context.chat.field,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.add,
-                color: Colors.white70,
+                color: context.chat.text70,
                 size: 20,
               ),
             ),
@@ -110,10 +111,10 @@ class ChatReactionBadge extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: const Color(0xFF1F2C34),
+          color: context.chat.bar,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: const Color(0xFF2A3942),
+            color: context.chat.field,
             width: 1,
           ),
           boxShadow: [
@@ -134,8 +135,8 @@ class ChatReactionBadge extends StatelessWidget {
               const SizedBox(width: 3),
               Text(
                 '$total',
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: TextStyle(
+                  color: context.chat.text70,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),
@@ -156,7 +157,7 @@ void showReactionDetailsSheet(
 }) {
   showModalBottomSheet<void>(
     context: context,
-    backgroundColor: const Color(0xFF1F2C34),
+    backgroundColor: context.chat.bar,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
@@ -175,8 +176,8 @@ void showReactionDetailsSheet(
                   children: [
                     Text(
                       context.l10n.translate('chat_reactions_title'),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.chat.text,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -184,8 +185,8 @@ void showReactionDetailsSheet(
                     const Spacer(),
                     Text(
                       '${entries.length}',
-                      style: const TextStyle(
-                        color: Color(0xFF00A884),
+                      style: TextStyle(
+                        color: context.chat.accentText,
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
@@ -193,7 +194,7 @@ void showReactionDetailsSheet(
                   ],
                 ),
               ),
-              const Divider(color: Colors.white10),
+              Divider(color: context.chat.divider10),
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
@@ -211,14 +212,14 @@ void showReactionDetailsSheet(
                             ? context.l10n.translate('chat_you')
                             : '${context.l10n.translate('chats_member')} ${uid.substring(0, uid.length > 5 ? 5 : uid.length)}',
                         style:
-                            const TextStyle(color: Colors.white, fontSize: 13),
+                            TextStyle(color: context.chat.text, fontSize: 13),
                       ),
                       trailing: isSelf
                           ? Text(
                               context.l10n
                                   .translate('chat_reaction_tap_remove'),
-                              style: const TextStyle(
-                                  color: Colors.white38, fontSize: 11),
+                              style: TextStyle(
+                                  color: context.chat.text38, fontSize: 11),
                             )
                           : null,
                     );
