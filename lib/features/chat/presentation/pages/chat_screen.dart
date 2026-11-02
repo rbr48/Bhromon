@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/features/chat/domain/message_paging.dart';
 import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/localized_date.dart';
 import 'dart:io';
@@ -133,7 +134,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // ── Pagination state ────────────────────────────────────────────────────────
   static const int _pageSize = 30;
-  DocumentSnapshot? _oldestLoadedDoc; // cursor for the next page
+  // Cursor for the next older page: the oldest message loaded so far.
+  DocumentSnapshot? get _oldestLoadedDoc =>
+      _allMessages.isEmpty ? null : _allMessages.last;
   bool _hasMoreMessages = true; // false once all pages loaded
   bool _isLoadingMore = false; // prevents duplicate fetches
   final List<QueryDocumentSnapshot> _allMessages = [];
@@ -204,7 +207,11 @@ class _ChatScreenState extends State<ChatScreen> {
           _clearedAt = cleared;
         });
       }
-    });
+    }, onError: _logStreamError);
+  }
+
+  void _logStreamError(Object error, StackTrace stackTrace) {
+    logError('Chat stream failed', error, stackTrace);
   }
 
   /// Starts a Firebase Performance trace for chat screen open → first message load.
@@ -248,31 +255,24 @@ class _ChatScreenState extends State<ChatScreen> {
         ChatLocalCache().cacheMessages(widget.chatId, cacheList);
       }
 
-      final incomingMap = {for (final d in incoming) d.id: d};
-      final incomingIds = incomingMap.keys.toSet();
+      final incomingIds = {for (final d in incoming) d.id};
 
       setState(() {
         // Remove from optimistic pending text list once confirmed by snapshot
         _pendingTextMessages.removeWhere((p) => incomingIds.contains(p.id));
 
-        // 1. Update any existing docs in-place (updates delivery ticks, reactions, seen status)
-        for (int i = 0; i < _allMessages.length; i++) {
-          final id = _allMessages[i].id;
-          if (incomingMap.containsKey(id)) {
-            _allMessages[i] = incomingMap[id]!;
-          }
-        }
-
-        // 2. Insert any brand new incoming docs at the top
-        final existingIds = _allMessages.map((d) => d.id).toSet();
-        final fresh =
-            incoming.where((d) => !existingIds.contains(d.id)).toList();
-        if (fresh.isNotEmpty) {
-          _allMessages.insertAll(0, fresh);
-        }
+        // Loaded messages are updated in place (ticks, reactions, seen) and new
+        // ones go on top. Nothing is added twice.
+        final merged = applyNewestPage<QueryDocumentSnapshot>(
+          loaded: _allMessages,
+          newest: incoming,
+          idOf: (d) => d.id,
+        );
+        _allMessages
+          ..clear()
+          ..addAll(merged);
 
         if (incoming.length < _pageSize) _hasMoreMessages = false;
-        if (incoming.isNotEmpty) _oldestLoadedDoc = incoming.last;
       });
 
       // Automatically mark unread incoming messages as seen on snapshot receive
@@ -286,7 +286,7 @@ class _ChatScreenState extends State<ChatScreen> {
       } catch (error, stackTrace) {
         logSkipped(error, stackTrace);
       }
-    });
+    }, onError: _logStreamError);
   }
 
   /// Called when the user scrolls near the top (oldest messages end).
@@ -315,15 +315,19 @@ class _ChatScreenState extends State<ChatScreen> {
 
       if (!mounted) return;
       setState(() {
-        _allMessages.addAll(snap.docs);
-        if (snap.docs.isEmpty || snap.docs.length < _pageSize) {
-          _hasMoreMessages = false;
-        } else {
-          _oldestLoadedDoc = snap.docs.last;
-        }
+        final merged = appendOlderPage<QueryDocumentSnapshot>(
+          loaded: _allMessages,
+          older: snap.docs,
+          idOf: (d) => d.id,
+        );
+        _allMessages
+          ..clear()
+          ..addAll(merged);
+        if (snap.docs.length < _pageSize) _hasMoreMessages = false;
         _isLoadingMore = false;
       });
-    } catch (_) {
+    } catch (error, stackTrace) {
+      logWarning('Could not load earlier messages', error, stackTrace);
       if (mounted) setState(() => _isLoadingMore = false);
     }
   }
@@ -653,51 +657,18 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// Tries again to send a message that failed.
   Future<void> _retryPendingTextMessage(
     _PendingTextMessage pending,
     String currentUid,
     String currentName,
-  ) async {
+  ) {
     setState(() => pending.isFailed = false);
-    _ensureChatDocument(currentUid);
-    final msgRef = FirebaseFirestore.instance
-        .collection('chats')
-        .doc(widget.chatId)
-        .collection('messages')
-        .doc(pending.id);
-
-    final msgData = <String, dynamic>{
-      'senderId': currentUid,
-      'type': 'text',
-      'text': pending.text,
-      if (pending.replyTo != null) 'replyTo': pending.replyTo!.toMap(),
-      'seen': false,
-      'status': 'sent',
-      'timestamp': FieldValue.serverTimestamp(),
-    };
-
-    final resolvedOtherUid = _resolveOtherUid(currentUid);
-    if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
-      unawaited(VpsChatService().sendMessage(
-        chatId: widget.chatId,
-        recipientId: resolvedOtherUid,
-        text: pending.text,
-        type: 'text',
-        senderName: currentName,
-        replyTo: pending.replyTo?.toMap(),
-      ));
-    }
-
-    try {
-      await msgRef.set(msgData);
-    } catch (error, stackTrace) {
-      logSkipped(error, stackTrace);
-    }
-
-    if (mounted) {
-      setState(
-          () => _pendingTextMessages.removeWhere((p) => p.id == pending.id));
-    }
+    return _deliverPendingText(
+      pending,
+      currentUid: currentUid,
+      currentName: currentName,
+    );
   }
 
   /// A finished call, centred in the conversation: the direction or outcome,
@@ -876,6 +847,17 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       } catch (e) {
         logError('Error editing message: $e');
+        if (mounted) {
+          // Put the edit back so nothing the user typed is lost.
+          setState(() => _editingMessage = editDoc);
+          _messageController.text = text;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.l10n.translate('chat_edit_failed')),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
       }
       return;
     }
@@ -900,18 +882,16 @@ class _ChatScreenState extends State<ChatScreen> {
       _updateTypingStatus(currentUid, false);
     }
 
-    final replyPayload = _replyingMessage?.toMap();
     final replyModel = _replyingMessage;
     setState(() => _replyingMessage = null);
 
-    // Reference & unique doc ID
-    _ensureChatDocument(currentUid);
-    final msgRef = FirebaseFirestore.instance
+    // Unique doc ID, reserved before the write so the bubble can be keyed on it.
+    final msgId = FirebaseFirestore.instance
         .collection('chats')
         .doc(widget.chatId)
         .collection('messages')
-        .doc();
-    final msgId = msgRef.id;
+        .doc()
+        .id;
 
     // Add optimistic pending message so user sees it in 0ms!
     final pendingMsg = _PendingTextMessage(
@@ -930,71 +910,100 @@ class _ChatScreenState extends State<ChatScreen> {
       curve: Curves.easeOut,
     );
 
-    final msgData = <String, dynamic>{
-      'senderId': currentUid,
-      'type': 'text',
-      'text': text,
-      if (replyPayload != null) 'replyTo': replyPayload,
-      'seen': false,
-      'status': 'sent', // delivery states: sent → delivered → read
-      'timestamp': FieldValue.serverTimestamp(),
-    };
+    await _deliverPendingText(
+      pendingMsg,
+      currentUid: currentUid,
+      currentName: currentName,
+    );
+  }
 
+  /// Sends a text message that is on screen as a pending bubble.
+  ///
+  /// The message goes out over the VPS and is written to Firestore. The bubble
+  /// is removed once either path has saved it. If neither does, the bubble stays
+  /// as a failed message that the sender can tap to retry.
+  Future<void> _deliverPendingText(
+    _PendingTextMessage pending, {
+    required String currentUid,
+    required String currentName,
+  }) async {
+    _ensureChatDocument(currentUid);
     final resolvedOtherUid = _resolveOtherUid(currentUid);
-    final chatRef =
-        FirebaseFirestore.instance.collection('chats').doc(widget.chatId);
+    final replyPayload = pending.replyTo?.toMap();
+    final hasRecipient =
+        resolvedOtherUid != null && resolvedOtherUid.isNotEmpty;
+
+    // Direct VPS dispatch: reliable, and it uses no Firestore quota.
+    final vpsSave = hasRecipient
+        ? VpsChatService().sendMessage(
+            chatId: widget.chatId,
+            recipientId: resolvedOtherUid,
+            text: pending.text,
+            type: 'text',
+            senderName: currentName,
+            replyTo: replyPayload,
+          )
+        : Future<Map<String, dynamic>?>.value(null);
+
+    final msgRef = FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .collection('messages')
+        .doc(pending.id);
+
+    var savedToFirestore = true;
+    try {
+      await msgRef.set(<String, dynamic>{
+        'senderId': currentUid,
+        'type': 'text',
+        'text': pending.text,
+        if (replyPayload != null) 'replyTo': replyPayload,
+        'seen': false,
+        'status': 'sent', // delivery states: sent → delivered → read
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (error, stackTrace) {
+      savedToFirestore = false;
+      if (await vpsSave == null) {
+        // Neither path saved it: keep the bubble so the sender can retry.
+        logWarning('Text message was not saved', error, stackTrace);
+        if (mounted) setState(() => pending.isFailed = true);
+        return;
+      }
+      // The VPS delivered it; only the Firestore copy is missing.
+      logSkipped(error, stackTrace);
+    }
+    if (savedToFirestore) unawaited(vpsSave);
+
+    if (mounted) {
+      setState(
+          () => _pendingTextMessages.removeWhere((p) => p.id == pending.id));
+    }
+    if (!savedToFirestore) return;
+
+    // Update chat metadata asynchronously without blocking
     final chatMeta = _buildChatMeta(
-      lastMessage: text,
+      lastMessage: pending.text,
       lastMessageType: 'text',
       currentUid: currentUid,
       currentName: currentName,
       resolvedOtherUid: resolvedOtherUid,
     );
+    FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .set(chatMeta, SetOptions(merge: true))
+        .catchError((Object e) {
+      logWarning('Chat metadata update failed: $e');
+    });
 
-    // 1. Direct VPS dispatch - 100% reliable, zero Firestore quota consumption
-    if (resolvedOtherUid != null && resolvedOtherUid.isNotEmpty) {
-      unawaited(VpsChatService().sendMessage(
-        chatId: widget.chatId,
-        recipientId: resolvedOtherUid,
-        text: text,
-        type: 'text',
-        senderName: currentName,
-        replyTo: replyPayload,
-      ));
-    }
-
-    try {
-      // 2. Direct write message to Firestore (best-effort)
-      await msgRef.set(msgData);
-
-      // Clean up optimistic pending entry
-      if (mounted) {
-        setState(() {
-          _pendingTextMessages.removeWhere((p) => p.id == msgId);
-        });
-      }
-
-      // Update chat metadata asynchronously without blocking
-      chatRef.set(chatMeta, SetOptions(merge: true)).catchError((Object e) {
-        logWarning('Chat metadata update failed: $e');
-      });
-
-      // Send in-app notification in background
-      _sendNotificationToRecipient(
-        recipientUid: resolvedOtherUid,
-        currentUid: currentUid,
-        currentName: currentName,
-        body: text,
-      );
-    } catch (e) {
-      logWarning('Firestore message write error (delivered via VPS): $e');
-      // If Firestore failed due to quota or network, clear pending message since VPS delivered it
-      if (mounted) {
-        setState(() {
-          _pendingTextMessages.removeWhere((p) => p.id == msgId);
-        });
-      }
-    }
+    // Send in-app notification in background
+    _sendNotificationToRecipient(
+      recipientUid: resolvedOtherUid,
+      currentUid: currentUid,
+      currentName: currentName,
+      body: pending.text,
+    );
   }
 
   /// Uploads media picked via [pickResult] to Firebase Storage and writes a message.
