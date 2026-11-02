@@ -89,7 +89,10 @@ def test_build_ice_servers_uses_the_coturn_shared_secret_format():
     stun, turn = body["iceServers"]
     assert all(url.startswith("stun:") for url in stun["urls"])
     assert turn["username"] == "4600:uid-x"
-    assert all(url.startswith("turn:turn.bhromon.fun:3478") for url in turn["urls"])
+    assert all(
+        url.startswith("turn:call.sottocall.com:3478") or url.startswith("turns:call.sottocall.com:5349")
+        for url in turn["urls"]
+    )
 
 
 # ── Signaling relay ───────────────────────────────────────────────────────────
