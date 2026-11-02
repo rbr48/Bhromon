@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/localization/locale_controller.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/theme_context.dart';
+import '../../../../core/theme/theme_controller.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -78,6 +79,19 @@ class _NotificationSettingsScreenState
                     ),
                     const SizedBox(height: 12),
                     _buildLanguagePicker(),
+                    const SizedBox(height: 16),
+                    Divider(color: context.forest.divider10),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Theme / থিম',
+                      style: TextStyle(
+                          color: context.forest.text60,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildThemePicker(),
                     const SizedBox(height: 16),
                     Divider(color: context.forest.divider10),
                     const SizedBox(height: 16),
@@ -213,6 +227,47 @@ class _NotificationSettingsScreenState
           },
         ),
       ),
+    );
+  }
+
+  /// Dark, Light, or System theme for the whole app. The choice is saved on this device.
+  Widget _buildThemePicker() {
+    return AnimatedBuilder(
+      animation: ThemeController.instance,
+      builder: (context, _) {
+        final isBn = LocaleController.instance.locale.languageCode == 'bn';
+        return SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<ThemeMode>(
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: AppColors.midGreen,
+              selectedForegroundColor: context.forest.text,
+              foregroundColor: context.forest.text70,
+            ),
+            segments: [
+              ButtonSegment(
+                value: ThemeMode.dark,
+                icon: const Icon(Icons.dark_mode_outlined, size: 16),
+                label: Text(isBn ? 'ডার্ক' : 'Dark'),
+              ),
+              ButtonSegment(
+                value: ThemeMode.light,
+                icon: const Icon(Icons.light_mode_outlined, size: 16),
+                label: Text(isBn ? 'লাইট' : 'Light'),
+              ),
+              ButtonSegment(
+                value: ThemeMode.system,
+                icon: const Icon(Icons.brightness_auto_outlined, size: 16),
+                label: Text(isBn ? 'সিস্টেম' : 'System'),
+              ),
+            ],
+            selected: {ThemeController.instance.mode},
+            onSelectionChanged: (selection) {
+              unawaited(ThemeController.instance.setMode(selection.first));
+            },
+          ),
+        );
+      },
     );
   }
 
