@@ -148,6 +148,7 @@ class TranslationKeys {
           '{count} of these can only be deleted for you. Delete for everyone works only on your own messages sent in the last {hours} hours.',
       'chat_delete_for_me': 'DELETE FOR ME',
       'chat_delete_for_everyone': 'DELETE FOR EVERYONE',
+      'chat_edit_failed': "Couldn't save your edit. Please try again.",
       'chat_delete_failed':
           "Couldn't delete. Check your connection and try again.",
       'chat_delete_chat_title': 'Delete chat?',
@@ -527,6 +528,7 @@ class TranslationKeys {
           'এর মধ্যে {count}টি শুধু আপনার জন্য মোছা যাবে। সবার জন্য শুধু গত {hours} ঘণ্টায় পাঠানো নিজের বার্তা মোছা যায়।',
       'chat_delete_for_me': 'আমার জন্য মুছুন',
       'chat_delete_for_everyone': 'সবার জন্য মুছুন',
+      'chat_edit_failed': 'বার্তা সম্পাদনা করা যায়নি। আবার চেষ্টা করুন।',
       'chat_delete_failed':
           'মোছা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
       'chat_delete_chat_title': 'চ্যাট মুছবেন?',
