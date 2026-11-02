@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
@@ -40,9 +41,9 @@ class StarredMessagesScreen extends StatelessWidget {
               }
             },
           ),
-          title: const Text(
-            'Starred messages',
-            style: TextStyle(
+          title: Text(
+            context.l10n.translate('chats_menu_starred'),
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -50,10 +51,10 @@ class StarredMessagesScreen extends StatelessWidget {
           ),
         ),
         body: currentUid.isEmpty
-            ? const Center(
+            ? Center(
                 child: Text(
-                  'Please sign in to view starred messages',
-                  style: TextStyle(color: Colors.white54),
+                  context.l10n.translate('starred_sign_in'),
+                  style: const TextStyle(color: Colors.white54),
                 ),
               )
             : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -110,19 +111,19 @@ class StarredMessagesScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 24),
-                            const Text(
-                              'No starred messages',
-                              style: TextStyle(
+                            Text(
+                              context.l10n.translate('starred_empty_title'),
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 12),
-                            const Text(
-                              'Tap and hold on any message in any chat to star it, so you can easily find it later.',
+                            Text(
+                              context.l10n.translate('starred_empty_hint'),
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.white60,
                                 fontSize: 14,
                                 height: 1.4,
@@ -237,7 +238,8 @@ class StarredMessagesScreen extends StatelessWidget {
                                   color: Colors.amber,
                                   size: 20,
                                 ),
-                                tooltip: 'Unstar',
+                                tooltip:
+                                    context.l10n.translate('starred_unstar'),
                                 onPressed: () async {
                                   try {
                                     await doc.reference.update({
