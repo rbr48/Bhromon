@@ -17,6 +17,7 @@ import '../../domain/models/tour_post_models.dart';
 import '../../domain/services/fund_analytics.dart';
 import '../../domain/services/trip_ledger_engine.dart';
 import '../widgets/fund/expense_editor.dart';
+import '../widgets/instafeed/feed_resume.dart';
 import '../widgets/instafeed/instafeed_create_studio.dart';
 import '../widgets/instafeed/instafeed_comments_sheet.dart';
 import '../widgets/instafeed/instafeed_day_filter_bar.dart';
@@ -68,7 +69,10 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   // Feed video: one card holds a player, the one nearest the middle of the
   // screen once scrolling has stopped. A scroll releases it.
   final Map<String, GlobalKey> _videoCardKeys = {};
-  String? _playingVideoId;
+  // The video that plays. A notifier, so a change rebuilds only the card that
+  // starts or stops, not the whole feed.
+  final ValueNotifier<String?> _playingVideoNotifier =
+      ValueNotifier<String?>(null);
   bool _isScrolling = false;
   bool _settleScheduled = false;
   TourGroup? _tourGroup;
@@ -76,12 +80,21 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   StreamSubscription<List<BusSeat>>? _seatSub;
   StreamSubscription<List<HotelRoom>>? _roomSub;
 
-  // The feed's scroll offset, per tour, so coming back resumes where it was
-  // left. The screen is rebuilt when you leave it, so the map lives on the class.
-  static final Map<String, double> _feedOffsetByTour = {};
+  // Where the feed was left, per tour: its view and the post at the top. The
+  // screen is rebuilt when you leave it, so the map lives on the class.
+  static final Map<String, FeedResume> _resumeByTour = {};
+  // Enough frames to reach a post that is far down, or on a page not loaded yet.
+  static const int _restoreAttempts = 240;
   final ScrollController _feedScroll = ScrollController();
+  // Each post's row, and each post's place in the list shown, so the feed can
+  // find the post at the top of the screen.
+  final Map<String, GlobalKey> _rowKeys = {};
+  Map<String, int> _visibleIndex = {};
   bool _feedRestoreScheduled = false;
   bool _feedRestored = false;
+  bool _feedCaptureScheduled = false;
+  double? _restoredTo;
+  int? _resumeLoadRequestedFor;
 
   // Logistics cache (Seat & Room mappings: email -> seat/room)
   final Map<String, String> _seatMap = {};
@@ -115,6 +128,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     _highlightsStream = _repository.watchHighlights(widget.tourId);
     _alertsStream = _repository.watchSafetyAlerts(widget.tourId);
 
+    _restoreFeedView();
     _feedScroll.addListener(_rememberFeedOffset);
     _watchGroup();
     _loadMyRole();
@@ -131,17 +145,76 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     _groupSub?.cancel();
     _seatSub?.cancel();
     _roomSub?.cancel();
+    _saveFeedView();
     _feedScroll.removeListener(_rememberFeedOffset);
     _feedScroll.dispose();
     unawaited(_feed.close());
+    _playingVideoNotifier.dispose();
     super.dispose();
   }
 
-  /// Keeps the feed's offset as the user scrolls, so it outlives a rebuild.
-  void _rememberFeedOffset() {
-    if (_feedScroll.hasClients) {
-      _feedOffsetByTour[widget.tourId] = _feedScroll.offset;
-    }
+  /// Notes where the feed is as the user scrolls, so it outlives a rebuild.
+  void _rememberFeedOffset() => _scheduleFeedCapture();
+
+  FeedResume _resumeFor(String tourId) =>
+      _resumeByTour.putIfAbsent(tourId, () => FeedResume());
+
+  GlobalKey _rowKeyFor(String postId) =>
+      _rowKeys.putIfAbsent(postId, () => GlobalKey());
+
+  /// Puts the filters, sort and layout back to how the feed was left.
+  void _restoreFeedView() {
+    final resume = _resumeByTour[widget.tourId];
+    if (resume == null) return;
+    _selectedDayFilter = resume.day;
+    _selectedMediaFilter = resume.media;
+    _activeHashtagFilter = resume.hashtag;
+    _selectedLandmarkFilter = resume.landmark;
+    _selectedBookmarkCollection = resume.bookmarkCollection;
+    _sortByPopular = resume.popular;
+    _isGridView = resume.grid;
+  }
+
+  /// Writes the current filters, sort and layout into the tour's record.
+  void _saveFeedView() {
+    final resume = _resumeFor(widget.tourId);
+    resume
+      ..day = _selectedDayFilter
+      ..media = _selectedMediaFilter
+      ..hashtag = _activeHashtagFilter
+      ..landmark = _selectedLandmarkFilter
+      ..bookmarkCollection = _selectedBookmarkCollection
+      ..popular = _sortByPopular
+      ..grid = _isGridView;
+  }
+
+  /// Notes the post at the top of the screen once the frame has laid out. It is
+  /// taken again after each change, so it is current when the user leaves, even
+  /// after new posts have pushed the content down.
+  void _scheduleFeedCapture() {
+    if (_feedCaptureScheduled) return;
+    _feedCaptureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _feedCaptureScheduled = false;
+      if (mounted) _captureFeedResume();
+    });
+  }
+
+  void _captureFeedResume() {
+    // Nothing is noted while the feed is still moving to its saved place.
+    if (!_feedRestored) return;
+    _saveFeedView();
+    if (_isGridView || !_feedScroll.hasClients) return;
+    final resume = _resumeFor(widget.tourId);
+    final pixels = _feedScroll.position.pixels;
+    final rows = layoutFeedRows(_rowKeys, _visibleIndex);
+    final anchor = pickFeedAnchor(rows, pixels);
+    resume
+      ..pixels = pixels
+      ..anchorPostId = anchor?.postId
+      ..anchorDy = anchor?.dy ?? 0;
+    final average = averageFeedRowHeight(rows);
+    if (average > 0) resume.averageHeight = average;
   }
 
   /// Returns the feed to the offset it was left at, once the posts have laid
@@ -150,8 +223,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
   void _restoreFeedOffset(int attemptsLeft) {
     _feedRestoreScheduled = false;
     if (_feedRestored || !mounted) return;
-    final saved = _feedOffsetByTour[widget.tourId] ?? 0.0;
-    if (saved <= 0) {
+    final resume = _resumeByTour[widget.tourId];
+    if (resume == null || resume.grid) {
       _feedRestored = true;
       return;
     }
@@ -164,16 +237,51 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       return;
     }
     final position = _feedScroll.position;
-    if (position.pixels > 0) {
+    final anchorId = resume.anchorPostId;
+    final index = anchorId == null ? null : _visibleIndex[anchorId];
+    final anchorKey = anchorId == null ? null : _rowKeys[anchorId];
+    final anchorBox = anchorKey == null ? null : laidOutRow(anchorKey);
+    final rows = layoutFeedRows(_rowKeys, _visibleIndex);
+    final restoredTo = _restoredTo;
+    final plan = planFeedRestore(
+      resume: resume,
+      userScrolled: feedMovedByUser(
+        pixels: position.pixels,
+        restoredTo: restoredTo,
+        maxExtent: position.maxScrollExtent,
+      ),
+      anchorListed: index != null,
+      hasMore: _feed.hasMore,
+      loadRequested: _resumeLoadRequestedFor == _latestPosts.length,
+      anchorTop: anchorBox == null ? null : feedRowTop(anchorBox),
+      estimate: index == null
+          ? null
+          : estimateFeedOffset(
+              rows: rows,
+              index: index,
+              averageHeight: resume.averageHeight > 0
+                  ? resume.averageHeight
+                  : averageFeedRowHeight(rows),
+            ),
+      outOfTime: attemptsLeft <= 0,
+      maxExtent: position.maxScrollExtent,
+    );
+    if (plan.loadMore) {
+      _resumeLoadRequestedFor = _latestPosts.length;
+      _loadMorePosts();
+    }
+    final target = plan.jumpTo;
+    if (target != null) {
+      _restoredTo = target;
+      position.jumpTo(target);
+    }
+    if (plan.finished) {
       _feedRestored = true;
+      // The video to play is chosen where the feed is, so choose it again here.
+      _scheduleSettle();
       return;
     }
-    if (position.maxScrollExtent < saved && attemptsLeft > 0) {
-      _scheduleFeedRestore(attemptsLeft - 1);
-      return;
-    }
-    _feedScroll.jumpTo(saved.clamp(0.0, position.maxScrollExtent).toDouble());
-    _feedRestored = true;
+    _scheduleFeedRestore(attemptsLeft - 1);
   }
 
   void _scheduleFeedRestore(int attemptsLeft) {
@@ -181,6 +289,8 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     _feedRestoreScheduled = true;
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _restoreFeedOffset(attemptsLeft));
+    // The restore may wait on a frame that nothing else asks for.
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   /// Keeps the tour's details live, so a trip change by an admin shows at once
@@ -206,7 +316,14 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
       _bookmarkedPostIds = Set<String>.from(prefs.bookmarks);
       _seenStoryIds = Set<String>.from(prefs.seenStories);
       _bookmarkCollections = Map<String, List<String>>.from(prefs.collections);
+      // A collection deleted since the view was left is not restored.
+      if (_selectedBookmarkCollection != null &&
+          !_bookmarkCollections.containsKey(_selectedBookmarkCollection)) {
+        _selectedBookmarkCollection = null;
+      }
     });
+    // A restored Saved view reads its posts from these bookmarks.
+    if (_selectedMediaFilter == 'saved') unawaited(_refreshSavedPosts());
   }
 
   void _saveFeedPrefs() {
@@ -607,7 +724,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
     if (n.depth != 0) return false;
     if (n is ScrollStartNotification) {
       _isScrolling = true;
-      if (_playingVideoId != null) setState(() => _playingVideoId = null);
+      _playingVideoNotifier.value = null;
     } else if (n is ScrollEndNotification) {
       _isScrolling = false;
       _scheduleSettle();
@@ -646,9 +763,7 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
         nearest = entry.key;
       }
     }
-    if (nearest != _playingVideoId) {
-      setState(() => _playingVideoId = nearest);
-    }
+    _playingVideoNotifier.value = nearest;
   }
 
   /// The posts the feed filters: the loaded page, plus bookmarks from outside
@@ -1114,9 +1229,16 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                           needsMore: filteredPosts.isEmpty && hasMore);
                       final reelsList = posts.where((p) => p.isReel).toList();
 
+                      _visibleIndex = {
+                        for (var i = 0; i < filteredPosts.length; i++)
+                          filteredPosts[i].id: i,
+                      };
+                      _rowKeys.removeWhere(
+                          (id, _) => !_visibleIndex.containsKey(id));
                       if (!_feedRestored && filteredPosts.isNotEmpty) {
-                        _scheduleFeedRestore(120);
+                        _scheduleFeedRestore(_restoreAttempts);
                       }
+                      _scheduleFeedCapture();
                       return NotificationListener<ScrollNotification>(
                         onNotification: _onFeedScroll,
                         child: CustomScrollView(
@@ -1387,59 +1509,81 @@ class _TourInstaFeedScreenState extends State<TourInstaFeedScreen> {
                                     }
                                     final post = filteredPosts[index];
                                     final isVideo = post.videoUrl != null;
-                                    final card = InstafeedPostCard(
-                                      // Video cards keep a GlobalKey, so the feed can find
-                                      // their position when it picks one to play.
-                                      key: isVideo
-                                          ? _videoCardKeys.putIfAbsent(
-                                              post.id, () => GlobalKey())
-                                          : ValueKey(post.id),
-                                      post: post,
-                                      tourDays: _tourDays,
-                                      videoPlaying: post.id == _playingVideoId,
-                                      onVideoTap: isVideo
-                                          ? () => setState(
-                                              () => _playingVideoId = post.id)
-                                          : null,
-                                      tourId: widget.tourId,
-                                      repository: _repository,
-                                      isAdmin: _isAdmin,
-                                      seatNumber: _seatMap[post.authorEmail],
-                                      roomNumber: _roomMap[post.authorEmail],
-                                      isBookmarked:
-                                          _bookmarkedPostIds.contains(post.id),
-                                      onBookmarkToggle: () =>
-                                          _toggleBookmark(post.id),
-                                      onSaveToCollection:
-                                          _showSaveToCollectionSheet,
-                                      onOpenComments: (p, {targetMediaIndex}) =>
-                                          _showCommentsModal(context, p,
-                                              targetMediaIndex:
-                                                  targetMediaIndex),
-                                      onShare: (p) =>
-                                          _showShareModal(context, p),
-                                      onAddToLedger: (p) =>
-                                          _showAddToLedgerDialog(p),
-                                      onReelTap: (p) {
-                                        final reelIdx = reelsList.indexOf(p);
-                                        _openReelsModal(
-                                          context,
-                                          reelsList,
-                                          reelIdx >= 0 ? reelIdx : 0,
-                                        );
-                                      },
-                                      onHashtagTap: (tag) => setState(
-                                          () => _activeHashtagFilter = tag),
-                                      onPostChanged: () => setState(() {}),
-                                    );
-
-                                    return Center(
-                                      child: ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          maxWidth: 580,
+                                    // Only a video card listens for the video that plays, so a
+                                    // change rebuilds one card, not the whole feed.
+                                    Widget cardFor(String? playingId) {
+                                      return RepaintBoundary(
+                                        key: _rowKeyFor(post.id),
+                                        child: Center(
+                                          child: ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              maxWidth: 580,
+                                            ),
+                                            child: InstafeedPostCard(
+                                              // Video cards keep a GlobalKey, so the feed can
+                                              // find their position when it picks one to play.
+                                              key: isVideo
+                                                  ? _videoCardKeys.putIfAbsent(
+                                                      post.id,
+                                                      () => GlobalKey())
+                                                  : ValueKey(post.id),
+                                              post: post,
+                                              tourDays: _tourDays,
+                                              videoPlaying:
+                                                  post.id == playingId,
+                                              onVideoTap: isVideo
+                                                  ? () {
+                                                      _playingVideoNotifier
+                                                          .value = post.id;
+                                                    }
+                                                  : null,
+                                              tourId: widget.tourId,
+                                              repository: _repository,
+                                              isAdmin: _isAdmin,
+                                              seatNumber:
+                                                  _seatMap[post.authorEmail],
+                                              roomNumber:
+                                                  _roomMap[post.authorEmail],
+                                              isBookmarked: _bookmarkedPostIds
+                                                  .contains(post.id),
+                                              onBookmarkToggle: () =>
+                                                  _toggleBookmark(post.id),
+                                              onSaveToCollection:
+                                                  _showSaveToCollectionSheet,
+                                              onOpenComments: (p,
+                                                      {targetMediaIndex}) =>
+                                                  _showCommentsModal(context, p,
+                                                      targetMediaIndex:
+                                                          targetMediaIndex),
+                                              onShare: (p) =>
+                                                  _showShareModal(context, p),
+                                              onAddToLedger: (p) =>
+                                                  _showAddToLedgerDialog(p),
+                                              onReelTap: (p) {
+                                                final reelIdx =
+                                                    reelsList.indexOf(p);
+                                                _openReelsModal(
+                                                  context,
+                                                  reelsList,
+                                                  reelIdx >= 0 ? reelIdx : 0,
+                                                );
+                                              },
+                                              onHashtagTap: (tag) => setState(
+                                                  () => _activeHashtagFilter =
+                                                      tag),
+                                              onPostChanged: () =>
+                                                  setState(() {}),
+                                            ),
+                                          ),
                                         ),
-                                        child: card,
-                                      ),
+                                      );
+                                    }
+
+                                    if (!isVideo) return cardFor(null);
+                                    return ValueListenableBuilder<String?>(
+                                      valueListenable: _playingVideoNotifier,
+                                      builder: (context, playingId, _) =>
+                                          cardFor(playingId),
                                     );
                                   },
                                   childCount:
