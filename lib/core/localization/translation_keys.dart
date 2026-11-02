@@ -3,6 +3,24 @@ class TranslationKeys {
     'en': {
       // ── Chat list ──────────────────────────────────────────────────────────
       'chats_title': 'Bhromon Chat',
+      'chat_delete_cancel': 'CANCEL',
+      'chat_delete_message_title': 'Delete message?',
+      'chat_delete_messages_title': 'Delete {count} messages?',
+      'chat_delete_messages_body':
+          'Delete for me removes them only from your chat.',
+      'chat_delete_everyone_partial':
+          '{count} of these can only be deleted for you. Delete for everyone works only on your own messages sent in the last {hours} hours.',
+      'chat_delete_for_me': 'DELETE FOR ME',
+      'chat_delete_for_everyone': 'DELETE FOR EVERYONE',
+      'chat_delete_failed':
+          "Couldn't delete. Check your connection and try again.",
+      'chat_delete_chat_title': 'Delete chat?',
+      'chat_delete_chat_body':
+          'The messages will be removed from your Bhromon. {name} keeps their copy. The chat comes back only when they send a new message.',
+      'chat_delete_chat_action': 'Delete',
+      'chat_delete_chat_done': 'Chat deleted',
+      'chat_menu_delete_chat': 'Delete chat',
+      'chats_delete_chat_hint': 'Only on your side',
       'chats_calls_title': 'Calls',
       'chats_menu_new_chat': 'New chat',
       'chats_menu_starred': 'Starred messages',
@@ -229,6 +247,24 @@ class TranslationKeys {
     'bn': {
       // ── Chat list ──────────────────────────────────────────────────────────
       'chats_title': 'Bhromon চ্যাট',
+      'chat_delete_cancel': 'বাতিল',
+      'chat_delete_message_title': 'বার্তা মুছবেন?',
+      'chat_delete_messages_title': '{count}টি বার্তা মুছবেন?',
+      'chat_delete_messages_body':
+          'আপনার জন্য মুছলে শুধু আপনার চ্যাট থেকে সরবে।',
+      'chat_delete_everyone_partial':
+          'এর মধ্যে {count}টি শুধু আপনার জন্য মোছা যাবে। সবার জন্য শুধু গত {hours} ঘণ্টায় পাঠানো নিজের বার্তা মোছা যায়।',
+      'chat_delete_for_me': 'আমার জন্য মুছুন',
+      'chat_delete_for_everyone': 'সবার জন্য মুছুন',
+      'chat_delete_failed':
+          'মোছা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।',
+      'chat_delete_chat_title': 'চ্যাট মুছবেন?',
+      'chat_delete_chat_body':
+          'আপনার Bhromon থেকে এই চ্যাটের বার্তাগুলো মুছে যাবে। {name} তাঁদের কপি রাখবেন। নতুন বার্তা এলে চ্যাট আবার দেখা যাবে।',
+      'chat_delete_chat_action': 'মুছুন',
+      'chat_delete_chat_done': 'চ্যাট মুছে ফেলা হয়েছে',
+      'chat_menu_delete_chat': 'চ্যাট মুছুন',
+      'chats_delete_chat_hint': 'শুধু আপনার দিক থেকে',
       'chats_calls_title': 'কল',
       'chats_menu_new_chat': 'নতুন চ্যাট',
       'chats_menu_starred': 'তারকাচিহ্নিত বার্তা',

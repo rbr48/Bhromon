@@ -37,6 +37,9 @@ import '../widgets/chat_media_caption_screen.dart';
 import '../widgets/chat_expense_bubble.dart';
 import '../widgets/chat_emoji_picker.dart';
 import '../../data/chat_local_cache.dart';
+import '../../data/chat_deletion_service.dart';
+import '../../domain/chat_deletion.dart';
+import '../widgets/chat_delete_dialogs.dart';
 import '../../data/vps_chat_service.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../domain/call_log_entry.dart';
@@ -163,6 +166,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Timer? _onlinePoll;
   bool _vpsOtherIsTyping = false;
   int _disappearingTimerSeconds = 0;
+  // When this person deleted the chat. Messages sent up to then stay hidden.
+  DateTime? _clearedAt;
   StreamSubscription<DocumentSnapshot>? _chatDocSub;
 
   @override
@@ -188,8 +193,14 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       final data = snap.data() as Map<String, dynamic>?;
       final secs = (data?['disappearingTimerSeconds'] as num?)?.toInt() ?? 0;
-      if (secs != _disappearingTimerSeconds) {
-        setState(() => _disappearingTimerSeconds = secs);
+      final authState = context.read<AuthCubit>().state;
+      final uid = authState is Authenticated ? authState.profile.uid : '';
+      final cleared = ChatDeletionService.clearedAtOf(data, uid);
+      if (secs != _disappearingTimerSeconds || cleared != _clearedAt) {
+        setState(() {
+          _disappearingTimerSeconds = secs;
+          _clearedAt = cleared;
+        });
       }
     });
   }
@@ -2021,14 +2032,70 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _deleteSelectedMessages(String currentUid) {
+  /// Deletes every selected message, after asking what the choice means.
+  Future<void> _deleteSelectedMessages(String currentUid) async {
     if (_selectedMessageIds.isEmpty) return;
-    final docId = _selectedMessageIds.first;
-    final doc = _allMessages.firstWhere((d) => d.id == docId);
-    final data = doc.data() as Map<String, dynamic>;
-    final isMe = data['senderId'] == currentUid;
-    setState(() => _selectedMessageIds.clear());
-    _showDeleteMessageDialog(doc, isMe);
+    final selected =
+        _allMessages.where((d) => _selectedMessageIds.contains(d.id)).toList();
+    final changed = await showDeleteMessagesDialog(
+      context,
+      messages: selected,
+      chatId: widget.chatId,
+      currentUid: currentUid,
+    );
+    if (!mounted) return;
+    setState(() {
+      _selectedMessageIds.clear();
+      _reactionTargetDoc = null;
+    });
+    if (changed != null && changed.isNotEmpty) {
+      await _refreshMessageDocs(changed);
+    }
+  }
+
+  /// Reloads [ids] after a delete, so the list shows the new state at once. The
+  /// live query covers only the newest messages, so older pages need this.
+  Future<void> _refreshMessageDocs(Set<String> ids) async {
+    final messages = FirebaseFirestore.instance
+        .collection('chats')
+        .doc(widget.chatId)
+        .collection('messages');
+    final list = ids.toList();
+    final fresh = <QueryDocumentSnapshot>[];
+    try {
+      for (var start = 0; start < list.length; start += 10) {
+        final chunk = list.skip(start).take(10).toList();
+        final snap =
+            await messages.where(FieldPath.documentId, whereIn: chunk).get();
+        fresh.addAll(snap.docs);
+      }
+    } catch (error, stackTrace) {
+      logWarning('Could not reload deleted messages', error, stackTrace);
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      for (final doc in fresh) {
+        final index = _allMessages.indexWhere((d) => d.id == doc.id);
+        if (index != -1) _allMessages[index] = doc;
+      }
+    });
+  }
+
+  /// Deletes this chat for the current person only, then leaves it.
+  Future<void> _confirmDeleteChat(String currentUid, String otherName) async {
+    final deleted = await showDeleteChatDialog(
+      context,
+      chatId: widget.chatId,
+      uid: currentUid,
+      otherName: otherName,
+    );
+    if (!deleted || !mounted) return;
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/chats');
+    }
   }
 
   void _onSearchQueryChanged(String query) {
@@ -2178,6 +2245,14 @@ class _ChatScreenState extends State<ChatScreen> {
       final deletedFor = data['deletedFor'] as List<dynamic>? ?? [];
       if (deletedFor.contains(currentUid)) return false;
 
+      // Messages sent before this person deleted the chat stay hidden.
+      if (isMessageHiddenByCutoff(
+        sentAt: ChatDeletionService.timestampOf(data['timestamp']),
+        clearedAt: _clearedAt,
+      )) {
+        return false;
+      }
+
       // Disappearing message filter
       if (_disappearingTimerSeconds > 0) {
         final ts = (data['timestamp'] as Timestamp?)?.toDate();
@@ -2190,84 +2265,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
       return true;
     }).toList();
-  }
-
-  void _showDeleteMessageDialog(QueryDocumentSnapshot doc, bool isMe) {
-    final authState = context.read<AuthCubit>().state;
-    final currentUid = authState is Authenticated ? authState.profile.uid : '';
-    final data = doc.data() as Map<String, dynamic>?;
-    final bool isAlreadyDeleted =
-        (data?['type'] == 'deleted' || data?['isDeleted'] == true);
-
-    showDialog<void>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.75),
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2C34),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Message?',
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold)),
-        content: const Text(
-          'Do you want to delete this message?',
-          style: TextStyle(color: Colors.white70, fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('CANCEL',
-                style: TextStyle(color: Color(0xFF00A884))),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              try {
-                await FirebaseFirestore.instance
-                    .collection('chats')
-                    .doc(widget.chatId)
-                    .collection('messages')
-                    .doc(doc.id)
-                    .update({
-                  'deletedFor': FieldValue.arrayUnion([currentUid])
-                });
-                setState(() {
-                  _allMessages.removeWhere((d) => d.id == doc.id);
-                });
-              } catch (e) {
-                logError('Error deleting for me: $e');
-              }
-            },
-            child: const Text('DELETE FOR ME',
-                style: TextStyle(color: Colors.redAccent)),
-          ),
-          if (isMe && !isAlreadyDeleted)
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(dialogContext);
-                try {
-                  await FirebaseFirestore.instance
-                      .collection('chats')
-                      .doc(widget.chatId)
-                      .collection('messages')
-                      .doc(doc.id)
-                      .update({
-                    'type': 'deleted',
-                    'text': 'This message was deleted',
-                    'isDeleted': true,
-                    'deletedAt': FieldValue.serverTimestamp(),
-                  });
-                } catch (e) {
-                  logError('Error deleting for everyone: $e');
-                }
-              },
-              child: const Text('DELETE FOR EVERYONE',
-                  style: TextStyle(color: Colors.redAccent)),
-            ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -2633,6 +2630,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                 _showSplitBillDialog(currentUid, currentName);
                               } else if (val == 'disappearing') {
                                 _showDisappearingMessagesSheet(context);
+                              } else if (val == 'delete_chat') {
+                                _confirmDeleteChat(currentUid, otherName);
                               }
                             },
                             itemBuilder: (context) => [
@@ -2651,6 +2650,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                 child: Text('Disappearing messages',
                                     style: TextStyle(color: Colors.white)),
                               ),
+                              const PopupMenuItem(
+                                value: 'delete_chat',
+                                child: Text('Delete chat',
+                                    style: TextStyle(color: Colors.redAccent)),
+                              ),
                             ],
                           ),
                         ],
@@ -2664,8 +2668,18 @@ class _ChatScreenState extends State<ChatScreen> {
                     builder: (context, chatSnap) {
                       final data =
                           chatSnap.data?.data() as Map<String, dynamic>?;
-                      final pinned =
+                      // A pin made before this person deleted the chat stays hidden for them.
+                      final pinnedRaw =
                           data?['pinnedMessage'] as Map<String, dynamic>?;
+                      final pinned = (pinnedRaw != null &&
+                              !isMessageHiddenByCutoff(
+                                sentAt: ChatDeletionService.timestampOf(
+                                    pinnedRaw['pinnedAt']),
+                                clearedAt: ChatDeletionService.clearedAtOf(
+                                    data, currentUid),
+                              ))
+                          ? pinnedRaw
+                          : null;
                       final disappearingSeconds =
                           (data?['disappearingTimerSeconds'] as num?)
                                   ?.toInt() ??
