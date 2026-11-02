@@ -1213,7 +1213,7 @@ def build_ice_servers(uid: str, secret: str, now: Optional[int] = None) -> Dict[
         "iceServers": [
             {"urls": STUN_URLS},
             {
-                "urls": TURN_URLS + turn_tls_urls(),
+                "urls": TURN_URLS + [url for url in turn_tls_urls() if url not in TURN_URLS],
                 "username": username,
                 "credential": base64.b64encode(digest).decode("ascii"),
             },

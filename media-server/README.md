@@ -218,17 +218,20 @@ The push opens the notice board, the same as a new notice's push. Tests:
 
 Both are off until configured, and the server works without them.
 
-**TURN over TLS.** Some office, campus and hotel networks let only HTTPS out, so
-TURN on 3478 cannot connect there. coturn can also listen with TLS:
+**TURN over TLS.** The relay host is `call.sottocall.com` (`TURN_SERVER_HOST`),
+and `/api/chat/ice_servers` offers it on UDP and TCP 3478 and over TLS on 5349
+(`turns:`). coturn's certificate must name the host the app is given: the TLS
+handshake is checked against `call.sottocall.com`, so a certificate issued only
+for another name (such as `turn.sottocall.com`) makes the `turns:` path fail.
+Check it with `openssl s_client -connect call.sottocall.com:5349 -servername
+call.sottocall.com`.
 
-1. Give coturn the certificate for `turn.bhromon.fun` (`cert=` and `pkey=` in
-   `turnserver.conf`) and a TLS port (`tls-listening-port=5349`).
-2. Port 443 on the VPS belongs to nginx. Either give coturn a second IP address
-   on 443, or let nginx pass TLS for `turn.bhromon.fun` through to coturn by
-   SNI (`stream { map $ssl_preread_server_name ... }` with `ssl_preread on;`).
-3. Set `TURN_TLS_URLS=turns:turn.bhromon.fun:443?transport=tcp` for the media
-   container and restart it. `/api/chat/ice_servers` then offers it with the
-   other TURN addresses, under the same short-lived credential.
+Some networks let only port 443 out. To offer TLS-TURN there as well, give coturn
+a second IP on 443 or let nginx pass `call.sottocall.com` through to coturn by SNI
+(`stream` with `ssl_preread on;`), then set
+`TURN_TLS_URLS=turns:call.sottocall.com:443?transport=tcp` for the media
+container. Extra addresses are added once; an address already offered is not
+repeated.
 
 **iPhone VoIP pushes.** A closed iPhone shows the system call screen only for an
 Apple VoIP push. The app registers its PushKit token with the platform

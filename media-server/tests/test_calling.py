@@ -497,12 +497,18 @@ def test_a_dead_pushkit_token_is_removed(monkeypatch, tmp_path):
     assert db.get_device_tokens("uid-bob") == []
 
 
-def test_turn_over_tls_is_offered_only_when_configured(monkeypatch):
-    monkeypatch.delenv("TURN_TLS_URLS", raising=False)
-    servers = build_ice_servers("uid-alice", TURN_SECRET)["iceServers"]
-    assert not any("turns:" in url for server in servers for url in server["urls"])
+def test_extra_turn_over_tls_addresses_come_from_the_environment(monkeypatch):
+    def turn_urls():
+        return next(s for s in build_ice_servers("uid-alice", TURN_SECRET)["iceServers"] if "username" in s)["urls"]
 
-    monkeypatch.setenv("TURN_TLS_URLS", "turns:turn.example.com:443?transport=tcp, http://not-turn")
-    turn = next(s for s in build_ice_servers("uid-alice", TURN_SECRET)["iceServers"] if "username" in s)
-    assert "turns:turn.example.com:443?transport=tcp" in turn["urls"]
-    assert "http://not-turn" not in turn["urls"]
+    monkeypatch.delenv("TURN_TLS_URLS", raising=False)
+    default = turn_urls()
+    assert default == chat.TURN_URLS
+
+    # An address already offered is not listed twice, and only turns: URLs are taken.
+    monkeypatch.setenv(
+        "TURN_TLS_URLS",
+        f"{chat.TURN_URLS[-1]}, turns:turn.example.com:443?transport=tcp, http://not-turn",
+    )
+    urls = turn_urls()
+    assert urls == chat.TURN_URLS + ["turns:turn.example.com:443?transport=tcp"]
