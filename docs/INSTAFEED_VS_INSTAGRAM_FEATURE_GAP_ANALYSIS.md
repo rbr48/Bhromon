@@ -29,7 +29,7 @@ flowchart LR
 | System Dimension | Bhromon InstaFeed (Current State) | Official Instagram Production Architecture |
 | :--- | :--- | :--- |
 | **Social Graph Model** | Closed, tour-scoped ACL (`memberships/{tourId}__{email}`). Strict membership boundary. | Hybrid: Asymmetric follow graph, bilateral close friends, global public discovery, bidirectional DMs. |
-| **Media Hosting & Storage** | Single VPS server (`148.135.137.245`) with Docker volume `/var/www/bhromon-media`. | Geo-distributed Haystack / Meta FBOPS Object Store with multi-tier SSD edge caches. |
+| **Media Hosting & Storage** | Single VPS server (`bhromon.fun`) with Docker volume `/var/www/bhromon-media`. | Geo-distributed Haystack / Meta FBOPS Object Store with multi-tier SSD edge caches. |
 | **Streaming Protocol** | Progressive MP4 download over native HTTP with `Range: bytes=X-Y` (HTTP 206 Partial Content). | Dynamic Adaptive Streaming over HTTP (DASH) & HLS with 2-second sub-segment chunks and ABR algorithm. |
 | **Video Transcoding Engine** | Client-side hardware/software encoding via `video_compress` (Fixed 720p, ~2-3 Mbps H.264 single track). | Multi-pass server-side distributed encoding producing 5+ ladder bitrates (360p, 480p, 720p, 1080p, 4K) in AV1, VP9, and H.264. |
 | **Audio Pipeline** | Single raw audio channel embedded in MP4; no secondary audio mixing. | Dual/triple track mixing engine: Original Video Audio, Licensed Catalog Track, and Recorded Voiceover with loudness normalization (-14 LUFS). |

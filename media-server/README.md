@@ -1,6 +1,6 @@
 # Bhromon VPS Microservices Suite
 
-A unified microservices suite running on the Hostinger VPS (`148.135.137.245`) designed to eliminate Firebase Blaze billing, Firebase Cloud Functions costs, and Firebase Storage rate limits. Keeps Bhromon operating 100% free on the Firebase Spark plan.
+A unified microservices suite running on the Hostinger VPS (`bhromon.fun`) designed to eliminate Firebase Blaze billing, Firebase Cloud Functions costs, and Firebase Storage rate limits. Keeps Bhromon operating 100% free on the Firebase Spark plan.
 
 ---
 

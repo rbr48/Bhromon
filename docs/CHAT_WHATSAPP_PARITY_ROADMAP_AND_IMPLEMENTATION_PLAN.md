@@ -26,7 +26,7 @@ flowchart TD
     subgraph Backend & Infrastructure
         RULES[Hardened Firestore Rules]
         FUNCTIONS[Firebase Cloud Functions / FCM Push Relay]
-        COTURN[Coturn STUN/TURN on Hostinger VPS 148.135.137.245]
+        COTURN[Coturn STUN/TURN on Hostinger VPS bhromon.fun]
         GEMINI[Gemini 1.5 Flash AI Travel Engine]
     end
 
@@ -165,7 +165,7 @@ ROADMAP PHASING
 #### Task 0.4: Deploy & Configure Coturn TURN Server on Hostinger VPS
 - **Problem**: P2P STUN-only WebRTC fails across cellular carrier CGNATs (Grameenphone, Banglalink, Robi) and symmetric firewalls.
 - **Implementation**:
-  1. Deploy `coturn` Docker container on the Hostinger VPS (`148.135.137.245`):
+  1. Deploy `coturn` Docker container on the Hostinger VPS (`bhromon.fun`):
      ```bash
      docker run -d --name coturn --net=host \
        -v /etc/coturn/turnserver.conf:/etc/coturn/turnserver.conf \
@@ -178,7 +178,7 @@ ROADMAP PHASING
        'iceServers': [
          {'urls': ['stun:stun.l.google.com:19302']},
          {
-           'urls': ['turn:148.135.137.245:3478?transport=udp', 'turn:148.135.137.245:3478?transport=tcp'],
+           'urls': ['turn:turn.bhromon.fun:3478?transport=udp', 'turn:turn.bhromon.fun:3478?transport=tcp'],
            'username': 'bhromon_guest',
            'credential': 'TURN_PASSWORD_SECRET',
          },

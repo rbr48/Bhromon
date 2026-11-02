@@ -1167,9 +1167,10 @@ STUN_URLS = [
     "stun:stun2.l.google.com:19302",
     "stun:stun.cloudflare.com:3478",
 ]
+TURN_HOST = os.environ.get("TURN_SERVER_HOST", "turn.bhromon.fun")
 TURN_URLS = [
-    "turn:148.135.137.245:3478?transport=udp",
-    "turn:148.135.137.245:3478?transport=tcp",
+    f"turn:{TURN_HOST}:3478?transport=udp",
+    f"turn:{TURN_HOST}:3478?transport=tcp",
 ]
 # A TURN credential is short-lived and bound to the caller. The app refetches it
 # before it expires, so a leaked credential stops working within the hour.
