@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -76,7 +77,9 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
               BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
           decoration: BoxDecoration(
-            color: own ? AppColors.midGreen : const Color(0xFF1E3326),
+            color: own
+                ? AppColors.midGreen
+                : context.forest.surfaceFor(const Color(0xFF1E3326)),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(14),
               topRight: const Radius.circular(14),
@@ -162,8 +165,8 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
           child: Text(
             widget.message.senderName,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                color: AppColors.gold,
+            style: TextStyle(
+                color: context.forest.readable(AppColors.gold),
                 fontSize: 11,
                 fontWeight: FontWeight.bold),
           ),
@@ -192,23 +195,24 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (m.isPending) ...[
-          const Icon(Icons.schedule, size: 11, color: Colors.white54),
+          Icon(Icons.schedule, size: 11, color: context.forest.text54),
           const SizedBox(width: 4),
         ],
         if (m.isPinned) ...[
-          const Icon(Icons.push_pin, size: 11, color: AppColors.gold),
+          Icon(Icons.push_pin,
+              size: 11, color: context.forest.readable(AppColors.gold)),
           const SizedBox(width: 4),
         ],
         if (m.editedAt != null) ...[
           Text(
             l10n.translate('chan_edited'),
-            style: const TextStyle(color: Colors.white54, fontSize: 10),
+            style: TextStyle(color: context.forest.text54, fontSize: 10),
           ),
           const SizedBox(width: 4),
         ],
         Text(
           localizedDateFormat('hh:mm a').format(m.timestamp),
-          style: const TextStyle(color: Colors.white54, fontSize: 10),
+          style: TextStyle(color: context.forest.text54, fontSize: 10),
         ),
       ],
     );
@@ -427,27 +431,27 @@ class _PollBlock extends StatelessWidget {
                               ? Icons.check_circle
                               : Icons.radio_button_unchecked,
                           size: 16,
-                          color: AppColors.mintGreen,
+                          color: context.forest.accentText,
                         ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             message.pollOptions[i],
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 13),
+                            style: TextStyle(
+                                color: context.forest.text, fontSize: 13),
                           ),
                         ),
                         Text(
                           '${counts[i]}',
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 12),
+                          style: TextStyle(
+                              color: context.forest.text70, fontSize: 12),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     LinearProgressIndicator(
                       value: total == 0 ? 0 : counts[i] / total,
-                      backgroundColor: Colors.white10,
+                      backgroundColor: context.forest.divider10,
                       color: AppColors.mintGreen,
                       minHeight: 4,
                     ),
@@ -458,7 +462,7 @@ class _PollBlock extends StatelessWidget {
           ),
         Text(
           context.l10n.translate('chan_poll_votes', args: {'count': total}),
-          style: const TextStyle(color: Colors.white54, fontSize: 11),
+          style: TextStyle(color: context.forest.text54, fontSize: 11),
         ),
       ],
     );
@@ -502,7 +506,7 @@ class _ReactionRow extends StatelessWidget {
                 ),
                 child: Text(
                   '${entry.key} ${entry.value}',
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  style: TextStyle(color: context.forest.text, fontSize: 12),
                 ),
               ),
             ),
@@ -553,7 +557,8 @@ class _ChannelRichTextState extends State<ChannelRichText> {
     // The recognizers belong to the spans built below, so the previous set is
     // released first.
     _disposeRecognizers();
-    const base = TextStyle(color: Colors.white, fontSize: 14, height: 1.35);
+    final base =
+        TextStyle(color: context.forest.text, fontSize: 14, height: 1.35);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -596,7 +601,7 @@ class _ChannelRichTextState extends State<ChannelRichText> {
     if (spoilerId != null && !widget.revealed.contains(spoilerId)) {
       style = style.copyWith(
         color: Colors.transparent,
-        backgroundColor: const Color(0xFF0B1410),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0B1410)),
       );
     }
 

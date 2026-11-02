@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../domain/models/expense_models.dart';
@@ -19,7 +20,7 @@ Future<T?> _sheet<T>(BuildContext context, Widget child) {
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: _sheetColor,
+    backgroundColor: context.forest.surfaceFor(_sheetColor),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (ctx) => Padding(
@@ -29,18 +30,21 @@ Future<T?> _sheet<T>(BuildContext context, Widget child) {
   );
 }
 
-Widget _title(String text) => Padding(
+Widget _title(BuildContext context, String text) => Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(text,
-          style: const TextStyle(
-              color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          style: TextStyle(
+              color: context.forest.text,
+              fontSize: 18,
+              fontWeight: FontWeight.bold)),
     );
 
-Widget _errorText(String? error) => error == null
+Widget _errorText(BuildContext context, String? error) => error == null
     ? const SizedBox.shrink()
     : Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text(error, style: const TextStyle(color: Colors.redAccent)),
+        child: Text(error,
+            style: TextStyle(color: context.forest.readable(Colors.redAccent))),
       );
 
 Widget _saveButton(String label, VoidCallback onPressed) => FilledButton(
@@ -159,8 +163,9 @@ class _TransferFormState extends State<_TransferForm> {
                     ? Icons.account_balance_rounded
                     : Icons.person_rounded,
                 size: 16,
-                color:
-                    k == _fundKey ? const Color(0xFF38BDF8) : Colors.white70),
+                color: k == _fundKey
+                    ? context.forest.readable(const Color(0xFF38BDF8))
+                    : context.forest.text70),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -214,9 +219,9 @@ class _TransferFormState extends State<_TransferForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _title(l10n.translate('fund_record_payment')),
+          _title(context, l10n.translate('fund_record_payment')),
           Text(l10n.translate('fund_record_payment_help'),
-              style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              style: TextStyle(color: context.forest.text54, fontSize: 12)),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             initialValue: _from,
@@ -229,8 +234,8 @@ class _TransferFormState extends State<_TransferForm> {
           Center(
             child: IconButton(
               tooltip: l10n.translate('fund_swap'),
-              icon: const Icon(Icons.swap_vert_rounded,
-                  color: AppColors.mintGreen),
+              icon: Icon(Icons.swap_vert_rounded,
+                  color: context.forest.accentText),
               onPressed: () => setState(() {
                 final t = _from;
                 _from = _to;
@@ -249,7 +254,7 @@ class _TransferFormState extends State<_TransferForm> {
           TextField(
             controller: _amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: context.forest.text),
             decoration:
                 InputDecoration(labelText: l10n.translate('fund_amount_taka')),
           ),
@@ -263,9 +268,12 @@ class _TransferFormState extends State<_TransferForm> {
                   label: Text(l10n.translate('fund_method_$m')),
                   selected: _method == m,
                   selectedColor: AppColors.mintGreen,
-                  backgroundColor: const Color(0xFF1E3326),
+                  backgroundColor:
+                      context.forest.surfaceFor(const Color(0xFF1E3326)),
                   labelStyle: TextStyle(
-                      color: _method == m ? AppColors.darkGreen : Colors.white),
+                      color: _method == m
+                          ? AppColors.darkGreen
+                          : context.forest.text),
                   onSelected: (_) => setState(() => _method = m),
                 ),
             ],
@@ -273,11 +281,11 @@ class _TransferFormState extends State<_TransferForm> {
           TextField(
             controller: _notes,
             maxLength: 120,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: context.forest.text),
             decoration:
                 InputDecoration(labelText: l10n.translate('fund_payment_ref')),
           ),
-          _errorText(_error),
+          _errorText(context, _error),
           _saveButton(l10n.translate('fund_mark_paid'), _save),
         ],
       ),
@@ -409,8 +417,10 @@ class _DepositFormState extends State<_DepositForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _title(l10n
-              .translate(d == null ? 'fund_add_deposit' : 'fund_edit_deposit')),
+          _title(
+              context,
+              l10n.translate(
+                  d == null ? 'fund_add_deposit' : 'fund_edit_deposit')),
           if (_options.isNotEmpty)
             DropdownButtonFormField<String>(
               initialValue: _member,
@@ -429,15 +439,16 @@ class _DepositFormState extends State<_DepositForm> {
           TextField(
             controller: _amount,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: context.forest.text),
             decoration:
                 InputDecoration(labelText: l10n.translate('fund_amount_taka')),
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.event_rounded, color: AppColors.gold),
+            leading: Icon(Icons.event_rounded,
+                color: context.forest.readable(AppColors.gold)),
             title: Text(localizedDateFormat('EEE, d MMM yyyy').format(_date),
-                style: const TextStyle(color: Colors.white)),
+                style: TextStyle(color: context.forest.text)),
             onTap: () async {
               final picked = await showDatePicker(
                 context: context,
@@ -453,11 +464,11 @@ class _DepositFormState extends State<_DepositForm> {
           TextField(
             controller: _notes,
             maxLength: 120,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: context.forest.text),
             decoration:
                 InputDecoration(labelText: l10n.translate('fund_payment_ref')),
           ),
-          _errorText(_error),
+          _errorText(context, _error),
           _saveButton(l10n.translate('tour_save'), _save),
         ],
       ),
@@ -590,20 +601,21 @@ class _BudgetFormState extends State<_BudgetForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _title(l10n.translate('fund_budget_title')),
+          _title(context, l10n.translate('fund_budget_title')),
           Text(l10n.translate('fund_budget_help'),
-              style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              style: TextStyle(color: context.forest.text54, fontSize: 12)),
           const SizedBox(height: 8),
           for (final c in _cats)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Row(
                 children: [
-                  Icon(fundCategoryIcon(c), color: Colors.white70, size: 20),
+                  Icon(fundCategoryIcon(c),
+                      color: context.forest.text70, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                       child: Text(fundCategoryLabel(l10n, c),
-                          style: const TextStyle(color: Colors.white))),
+                          style: TextStyle(color: context.forest.text))),
                   SizedBox(
                     width: 130,
                     child: TextField(
@@ -612,28 +624,30 @@ class _BudgetFormState extends State<_BudgetForm> {
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       textAlign: TextAlign.end,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
+                      style: TextStyle(color: context.forest.text),
+                      decoration: InputDecoration(
                           isDense: true,
                           prefixText: '৳ ',
                           hintText: '0',
-                          hintStyle: TextStyle(color: Colors.white24)),
+                          hintStyle: TextStyle(color: context.forest.text24)),
                     ),
                   ),
                 ],
               ),
             ),
-          const Divider(color: Colors.white12, height: 24),
+          Divider(color: context.forest.divider12, height: 24),
           Row(
             children: [
               Expanded(
                 child: Text(l10n.translate('fund_budget_total'),
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: TextStyle(
+                        color: context.forest.text,
+                        fontWeight: FontWeight.bold)),
               ),
               Text(TripLedgerEngine.formatTaka(total),
-                  style: const TextStyle(
-                      color: AppColors.gold, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: context.forest.readable(AppColors.gold),
+                      fontWeight: FontWeight.bold)),
             ],
           ),
           if (widget.headcount > 0 && total > 0)
@@ -650,24 +664,24 @@ class _BudgetFormState extends State<_BudgetForm> {
                       'head': TripLedgerEngine.formatTaka(
                           total ~/ widget.headcount),
                     }),
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: context.forest.text54, fontSize: 12),
             ),
           const SizedBox(height: 16),
           TextField(
             controller: _perHead,
             onChanged: (_) => setState(() {}),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: context.forest.text),
             decoration: InputDecoration(
               labelText: l10n.translate('fund_per_head_target'),
               helperText: l10n.translate('fund_per_head_help'),
               helperMaxLines: 3,
-              helperStyle: const TextStyle(color: Colors.white38),
+              helperStyle: TextStyle(color: context.forest.text38),
               prefixText: '৳ ',
               suffixIcon: IconButton(
                 tooltip: l10n.translate('fund_per_head_from_budget'),
-                icon: const Icon(Icons.auto_fix_high_rounded,
-                    color: AppColors.mintGreen),
+                icon: Icon(Icons.auto_fix_high_rounded,
+                    color: context.forest.accentText),
                 onPressed: _fillPerHead,
               ),
             ),
@@ -680,11 +694,13 @@ class _BudgetFormState extends State<_BudgetForm> {
                   'amount': TripLedgerEngine.formatTaka(per * widget.headcount),
                   'people': l10n.number(widget.headcount),
                 }),
-                style: const TextStyle(color: AppColors.gold, fontSize: 12),
+                style: TextStyle(
+                    color: context.forest.readable(AppColors.gold),
+                    fontSize: 12),
               ),
             ),
           const SizedBox(height: 12),
-          _errorText(_error),
+          _errorText(context, _error),
           _saveButton(l10n.translate('tour_save'), _save),
         ],
       ),

@@ -10,6 +10,7 @@ import 'package:bhromon/features/tour_group/data/tour_media_uploader.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import 'package:bhromon/features/tour_group/domain/services/media_rules.dart';
+import 'package:bhromon/features/tour_group/domain/services/photo_filter.dart';
 import 'package:bhromon/features/tour_group/domain/services/tour_video_compressor.dart';
 import 'package:bhromon/features/tour_group/domain/services/web_video_transcoder.dart';
 import 'package:video_compress/video_compress.dart';
@@ -716,41 +717,14 @@ class _InstafeedCreateStudioState extends State<InstafeedCreateStudio>
   }
 
   ColorFilter? get _activeColorFilter {
-    // If tuning sliders are applied, combine with color matrix or return adjustment filter
-    // For normal matrix, return null
-    if (_selectedFilterId == 'normal' &&
-        _brightness == 0.0 &&
-        _contrast == 1.0 &&
-        _warmth == 0.0) {
-      return null;
-    }
-    // High-performance color matrix for brightness, contrast & warmth
-    final b = _brightness * 255;
-    final c = _contrast;
-    final wR = 1.0 + (_warmth * 0.35);
-    final wB = 1.0 - (_warmth * 0.35);
-    return ColorFilter.matrix([
-      c * wR,
-      0,
-      0,
-      0,
-      b,
-      0,
-      c,
-      0,
-      0,
-      b,
-      0,
-      0,
-      c * wB,
-      0,
-      b,
-      0,
-      0,
-      0,
-      1,
-      0,
-    ]);
+    final matrix = photoColorMatrix(
+      filterId: _selectedFilterId,
+      brightness: _brightness,
+      contrast: _contrast,
+      saturation: _saturation,
+      warmth: _warmth,
+    );
+    return matrix == null ? null : ColorFilter.matrix(matrix);
   }
 
   @override

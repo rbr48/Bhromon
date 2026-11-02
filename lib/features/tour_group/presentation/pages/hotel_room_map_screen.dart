@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -81,7 +82,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
         if (snapshot.hasError && !snapshot.hasData) {
           return Center(
             child: Text(l10n.translate('room_unavailable'),
-                style: const TextStyle(color: Colors.white54)),
+                style: TextStyle(color: context.forest.text54)),
           );
         }
         if (!snapshot.hasData) {
@@ -105,13 +106,13 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
 
     if (widget.embedded) return body;
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1A12),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1A12),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
         elevation: 0,
         title: Text(l10n.translate('room_title'),
-            style: const TextStyle(
-                color: Colors.white,
+            style: TextStyle(
+                color: context.forest.text,
                 fontWeight: FontWeight.bold,
                 fontSize: 18)),
       ),
@@ -124,10 +125,10 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.hotel_rounded, size: 64, color: Colors.white54),
+          Icon(Icons.hotel_rounded, size: 64, color: context.forest.text54),
           const SizedBox(height: 16),
           Text(l10n.translate('room_none'),
-              style: const TextStyle(color: Colors.white70)),
+              style: TextStyle(color: context.forest.text70)),
           if (_isAdmin) ...[
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -176,14 +177,16 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                           size: 18,
                           color: h == hotel
                               ? AppColors.darkGreen
-                              : AppColors.mintGreen),
+                              : context.forest.accentText),
                       label: Text(_hotelLabel(l10n, h)),
                       selected: h == hotel,
                       selectedColor: AppColors.mintGreen,
-                      backgroundColor: const Color(0xFF14241B),
+                      backgroundColor:
+                          context.forest.surfaceFor(const Color(0xFF14241B)),
                       labelStyle: TextStyle(
-                          color:
-                              h == hotel ? AppColors.darkGreen : Colors.white),
+                          color: h == hotel
+                              ? AppColors.darkGreen
+                              : context.forest.text),
                       onSelected: (_) => setState(() => _hotel = h),
                     ),
                   ),
@@ -194,16 +197,16 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFF14241B),
+            color: context.forest.surfaceFor(const Color(0xFF14241B)),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white10),
+            border: Border.all(color: context.forest.divider10),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(_hotelLabel(l10n, hotel),
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: context.forest.text,
                       fontWeight: FontWeight.bold,
                       fontSize: 16)),
               const SizedBox(height: 4),
@@ -213,7 +216,9 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   'placed': l10n.number(placed),
                   'capacity': l10n.number(capacity),
                 }),
-                style: const TextStyle(color: AppColors.gold, fontSize: 13),
+                style: TextStyle(
+                    color: context.forest.readable(AppColors.gold),
+                    fontSize: 13),
               ),
               const SizedBox(height: 8),
               ClipRRect(
@@ -221,7 +226,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                 child: LinearProgressIndicator(
                   value: capacity == 0 ? 0 : (placed / capacity).clamp(0, 1),
                   minHeight: 6,
-                  backgroundColor: Colors.white10,
+                  backgroundColor: context.forest.divider10,
                   valueColor: const AlwaysStoppedAnimation(AppColors.mintGreen),
                 ),
               ),
@@ -259,7 +264,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
           Text(
               l10n.translate('room_waiting',
                   args: {'n': l10n.number(waiting.length)}),
-              style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              style: TextStyle(color: context.forest.text70, fontSize: 13)),
           const SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -278,7 +283,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                             'n': l10n.number(m.familyCount),
                           })
                         : m.displayName,
-                    style: const TextStyle(color: Colors.white, fontSize: 11),
+                    style: TextStyle(color: context.forest.text, fontSize: 11),
                   ),
                 ),
             ],
@@ -288,15 +293,17 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              const Icon(Icons.stairs_rounded, color: AppColors.gold, size: 18),
+              Icon(Icons.stairs_rounded,
+                  color: context.forest.readable(AppColors.gold), size: 18),
               const SizedBox(width: 6),
               Text(
                   floor == 0
                       ? l10n.translate('room_ground_floor')
                       : l10n.translate('room_floor',
                           args: {'n': l10n.number(floor)}),
-                  style: const TextStyle(
-                      color: AppColors.gold, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: context.forest.readable(AppColors.gold),
+                      fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 8),
@@ -322,7 +329,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
     final people = room.peopleIn(sizes);
     final ratio = room.capacity == 0 ? 0.0 : people / room.capacity;
     final color = people == 0
-        ? Colors.white24
+        ? context.forest.text24
         : ratio >= 1
             ? Colors.redAccent
             : AppColors.mintGreen;
@@ -332,7 +339,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF14241B),
+          color: context.forest.surfaceFor(const Color(0xFF14241B)),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.6)),
         ),
@@ -343,8 +350,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               children: [
                 Expanded(
                   child: Text(room.roomNumber,
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: context.forest.text,
                           fontWeight: FontWeight.w800,
                           fontSize: 18)),
                 ),
@@ -355,8 +362,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                     child: PopupMenuButton<String>(
                       padding: EdgeInsets.zero,
                       tooltip: l10n.translate('room_options'),
-                      icon: const Icon(Icons.more_vert,
-                          color: Colors.white54, size: 18),
+                      icon: Icon(Icons.more_vert,
+                          color: context.forest.text54, size: 18),
                       color: const Color(0xFF1B4332),
                       onSelected: (v) {
                         if (v == 'edit') {
@@ -371,8 +378,9 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                         PopupMenuItem(
                             value: 'delete',
                             child: Text(l10n.translate('room_delete'),
-                                style:
-                                    const TextStyle(color: Colors.redAccent))),
+                                style: TextStyle(
+                                    color: context.forest
+                                        .readable(Colors.redAccent)))),
                       ],
                     ),
                   ),
@@ -382,7 +390,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               Text(room.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text70, fontSize: 12)),
             const SizedBox(height: 6),
             Wrap(
               spacing: 6,
@@ -406,7 +414,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               child: LinearProgressIndicator(
                 value: ratio.clamp(0, 1),
                 minHeight: 5,
-                backgroundColor: Colors.white10,
+                backgroundColor: context.forest.divider10,
                 valueColor: AlwaysStoppedAnimation(color),
               ),
             ),
@@ -424,7 +432,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                 room.assignedMemberNames.where((n) => n.isNotEmpty).join(', '),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 11),
+                style: TextStyle(color: context.forest.text, fontSize: 11),
               ),
             ],
           ],
@@ -435,7 +443,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
 
   Widget _feature(IconData icon, String label) => Tooltip(
         message: label,
-        child: Icon(icon, size: 16, color: Colors.white54),
+        child: Icon(icon, size: 16, color: context.forest.text54),
       );
 
   Future<void> _autoRoom(List<HotelRoom> rooms, String hotel) async {
@@ -493,7 +501,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
     final manifestText = lines.join('\n');
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF14241B),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -505,14 +513,14 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.hotel_outlined,
-                    color: AppColors.mintGreen, size: 20),
+                Icon(Icons.hotel_outlined,
+                    color: context.forest.accentText, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _hotelLabel(l10n, hotel),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -520,7 +528,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                 ),
                 IconButton(
                   icon:
-                      const Icon(Icons.close, color: Colors.white54, size: 20),
+                      Icon(Icons.close, color: context.forest.text54, size: 20),
                   onPressed: () => Navigator.pop(ctx),
                 ),
               ],
@@ -533,13 +541,13 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.white10),
+                border: Border.all(color: context.forest.divider10),
               ),
               child: SingleChildScrollView(
                 child: SelectableText(
                   manifestText,
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: context.forest.text70,
                     fontFamily: 'monospace',
                     fontSize: 12,
                     height: 1.4,
@@ -553,8 +561,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white24),
+                      foregroundColor: context.forest.text,
+                      side: BorderSide(color: context.forest.text24),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
@@ -606,11 +614,11 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF14241B),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
         title: Text(
             l10n.translate('room_delete_confirm',
                 args: {'number': room.roomNumber}),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
@@ -618,7 +626,8 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
           TextButton(
               onPressed: () => Navigator.pop(c, true),
               child: Text(l10n.translate('room_delete'),
-                  style: const TextStyle(color: Colors.redAccent))),
+                  style: TextStyle(
+                      color: context.forest.readable(Colors.redAccent)))),
         ],
       ),
     );
@@ -651,21 +660,21 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: const Color(0xFF14241B),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
           title: Text(
               l10n.translate(existing == null ? 'room_add' : 'room_edit'),
-              style: const TextStyle(color: Colors.white)),
+              style: TextStyle(color: context.forest.text)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: hotelCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.forest.text),
                   decoration: InputDecoration(
                       labelText: l10n.translate('room_hotel_name'),
                       helperText: l10n.translate('room_hotel_name_help'),
-                      helperStyle: const TextStyle(color: Colors.white38)),
+                      helperStyle: TextStyle(color: context.forest.text38)),
                 ),
                 if (hotels.where((h) => h.isNotEmpty).isNotEmpty)
                   Wrap(
@@ -681,13 +690,13 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   ),
                 TextField(
                   controller: numberCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.forest.text),
                   decoration:
                       InputDecoration(labelText: l10n.translate('room_number')),
                 ),
                 TextField(
                   controller: titleCtrl,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.forest.text),
                   decoration:
                       InputDecoration(labelText: l10n.translate('room_type')),
                 ),
@@ -725,14 +734,14 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                 TextField(
                   controller: floorCtrl,
                   keyboardType: TextInputType.number,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.forest.text),
                   decoration: InputDecoration(
                       labelText: l10n.translate('room_floor_label')),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(l10n.translate('room_ac'),
-                      style: const TextStyle(color: Colors.white)),
+                      style: TextStyle(color: context.forest.text)),
                   value: isAc,
                   activeThumbColor: AppColors.mintGreen,
                   onChanged: (v) => setDialogState(() => isAc = v),
@@ -740,7 +749,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(l10n.translate('room_sea_view'),
-                      style: const TextStyle(color: Colors.white)),
+                      style: TextStyle(color: context.forest.text)),
                   value: hasSeaView,
                   activeThumbColor: AppColors.gold,
                   onChanged: (v) => setDialogState(() => hasSeaView = v),
@@ -748,15 +757,16 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(l10n.translate('room_balcony'),
-                      style: const TextStyle(color: Colors.white)),
+                      style: TextStyle(color: context.forest.text)),
                   value: hasBalcony,
                   activeThumbColor: AppColors.gold,
                   onChanged: (v) => setDialogState(() => hasBalcony = v),
                 ),
                 if (error != null)
                   Text(error!,
-                      style: const TextStyle(
-                          color: Colors.redAccent, fontSize: 12)),
+                      style: TextStyle(
+                          color: context.forest.readable(Colors.redAccent),
+                          fontSize: 12)),
               ],
             ),
           ),
@@ -833,7 +843,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
       context: context,
       isScrollControlled: true,
       barrierColor: Colors.black.withValues(alpha: 0.75),
-      backgroundColor: const Color(0xFF14241B),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
       builder: (ctx) {
         return StreamBuilder<List<HotelRoom>>(
           stream: _repository.watchHotelRooms(widget.tourId),
@@ -846,7 +856,7 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                   height: 120,
                   child: Center(
                       child: Text(l10n.translate('room_gone'),
-                          style: const TextStyle(color: Colors.white54))));
+                          style: TextStyle(color: context.forest.text54))));
             }
             final sizes = _familySizes;
             return SafeArea(
@@ -864,16 +874,16 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
                               'people': l10n.number(room.peopleIn(sizes)),
                               'capacity': l10n.number(room.capacity),
                             })}',
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: context.forest.text,
                             fontWeight: FontWeight.bold,
                             fontSize: 15),
                       ),
                       if (room.hotelName.isNotEmpty)
                         Text(room.hotelName,
-                            style: const TextStyle(
-                                color: Colors.white54, fontSize: 12)),
-                      const Divider(color: Colors.white12),
+                            style: TextStyle(
+                                color: context.forest.text54, fontSize: 12)),
+                      Divider(color: context.forest.divider12),
                       Expanded(
                         child: ListView(
                           children: [
@@ -910,21 +920,21 @@ class _HotelRoomMapScreenState extends State<HotelRoomMapScreen> {
               ? l10n.translate('room_family_of',
                   args: {'name': m.displayName, 'n': l10n.number(family)})
               : m.displayName,
-          style: const TextStyle(color: Colors.white)),
+          style: TextStyle(color: context.forest.text)),
       subtitle: Text(
         here
             ? l10n.translate('room_in_this')
             : fits
                 ? l10n.translate('room_move_note')
                 : l10n.translate('room_no_space'),
-        style: const TextStyle(color: Colors.white54, fontSize: 11),
+        style: TextStyle(color: context.forest.text54, fontSize: 11),
       ),
       trailing: IconButton(
         tooltip: l10n.translate(here ? 'room_remove_guest' : 'room_add_guest'),
         icon: Icon(here ? Icons.remove_circle : Icons.add_circle,
             color: here
-                ? Colors.redAccent
-                : (fits ? AppColors.mintGreen : Colors.white24)),
+                ? context.forest.readable(Colors.redAccent)
+                : (fits ? AppColors.mintGreen : context.forest.text24)),
         onPressed: !here && !fits
             ? null
             : () async {

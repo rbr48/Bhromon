@@ -84,6 +84,20 @@ class ForestPalette {
   /// surfaces, so light mode uses a darker green. Buttons keep mint.
   Color get accentText => isDark ? AppColors.mintGreen : AppColors.midGreen;
 
+  /// A dark surface colour (a page, card, sheet or panel) for the active
+  /// theme. Dark mode returns it unchanged. Light mode returns a pale tint of
+  /// the same hue: the darkest surfaces (pages) become a soft off-white and
+  /// lighter ones (raised cards) become nearly white, so the layering stays.
+  Color surfaceFor(Color darkSurface) {
+    if (isDark) return darkSurface;
+    final hsl = HSLColor.fromColor(darkSurface.withValues(alpha: 1));
+    final luminance = darkSurface.computeLuminance();
+    final lightness = (0.955 + luminance * 1.6).clamp(0.955, 1.0);
+    final saturation = hsl.saturation.clamp(0.0, 0.28);
+    return HSLColor.fromAHSL(darkSurface.a, hsl.hue, saturation, lightness)
+        .toColor();
+  }
+
   /// A per-item colour (amber, cyan, light blue...) used as text or an icon
   /// colour. Dark mode returns it unchanged. Light mode returns a darker shade
   /// of the same hue, dark enough to reach 4.5:1 on a card.

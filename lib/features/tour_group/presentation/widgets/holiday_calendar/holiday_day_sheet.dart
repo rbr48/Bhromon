@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -62,8 +63,8 @@ class _HolidayDaySheet extends StatelessWidget {
           children: [
             Text(
               '${localizedDateFormat('EEEE').format(date)}, ${holidayDateLabel(context, date)}',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -81,12 +82,12 @@ class _HolidayDaySheet extends StatelessWidget {
                 if (weekend)
                   HolidayChip(
                     label: l10n.translate('hol_status_weekend'),
-                    color: Colors.white54,
+                    color: context.forest.text54,
                   ),
                 if (!weekend && holidays.isEmpty)
                   HolidayChip(
                     label: l10n.translate('hol_status_workday'),
-                    color: Colors.white54,
+                    color: context.forest.text54,
                   ),
               ],
             ),
@@ -94,7 +95,7 @@ class _HolidayDaySheet extends StatelessWidget {
             if (holidays.isEmpty)
               Text(
                 l10n.translate('hol_no_holiday'),
-                style: const TextStyle(color: Colors.white60),
+                style: TextStyle(color: context.forest.text60),
               ),
             for (final o in holidays)
               Padding(
@@ -112,7 +113,7 @@ class _HolidayDaySheet extends StatelessWidget {
                     Text(
                       o.holiday.description(bengali: bengali),
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12),
+                          TextStyle(color: context.forest.text54, fontSize: 12),
                     ),
                   ],
                 ),
@@ -120,18 +121,18 @@ class _HolidayDaySheet extends StatelessWidget {
             if (bangla != null)
               Text(
                 '${l10n.translate('hol_bangla_date')}: ${banglaDateLabel(context, bangla)}',
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: TextStyle(color: context.forest.text70, fontSize: 13),
               ),
             Text(
               '${l10n.translate('hol_hijri_date')}: ${hijriDateLabel(context, hijri)}',
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: context.forest.text70, fontSize: 13),
             ),
             if (leave != null) ...[
               const SizedBox(height: 10),
               Text(
                 l10n.translate('hol_leave_gain', args: {'count': leave.days}),
-                style: const TextStyle(
-                  color: AppColors.mintGreen,
+                style: TextStyle(
+                  color: context.forest.accentText,
                   fontWeight: FontWeight.w600,
                 ),
               ),

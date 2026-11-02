@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -434,12 +435,12 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           }
         },
         child: Scaffold(
-          backgroundColor: const Color(0xFF0D1A12),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
           appBar: AppBar(
-            backgroundColor: const Color(0xFF0D1A12),
+            backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: Icon(Icons.arrow_back, color: context.forest.text),
               onPressed: () {
                 if (_searching) {
                   _toggleSearch();
@@ -456,11 +457,11 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 ? TextField(
                     controller: _searchCtrl,
                     autofocus: true,
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
+                    style: TextStyle(color: context.forest.text, fontSize: 15),
                     cursorColor: AppColors.mintGreen,
                     decoration: InputDecoration(
                       hintText: l10n.translate('chan_search_hint'),
-                      hintStyle: const TextStyle(color: Colors.white54),
+                      hintStyle: TextStyle(color: context.forest.text54),
                       border: InputBorder.none,
                     ),
                     onChanged: (v) => _update(() => _searchText = v),
@@ -471,16 +472,16 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                     children: [
                       Text(
                         l10n.translate('tour_channels_title'),
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: context.forest.text,
                             fontWeight: FontWeight.bold,
                             fontSize: 16),
                       ),
                       Text(
                         l10n.translate('chan_online_count',
                             args: {'count': l10n.number(_onlineCount())}),
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 11),
+                        style: TextStyle(
+                            color: context.forest.text54, fontSize: 11),
                       ),
                     ],
                   ),
@@ -488,18 +489,18 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               IconButton(
                 tooltip: l10n.translate('chan_search_tooltip'),
                 icon: Icon(_searching ? Icons.close : Icons.search,
-                    color: Colors.white70),
+                    color: context.forest.text70),
                 onPressed: _toggleSearch,
               ),
               IconButton(
                 tooltip: l10n.translate('chan_pins_tooltip'),
                 icon:
-                    const Icon(Icons.push_pin_outlined, color: Colors.white70),
+                    Icon(Icons.push_pin_outlined, color: context.forest.text70),
                 onPressed: () => _showPins(selected),
               ),
               IconButton(
                 tooltip: l10n.translate('chan_members_tooltip'),
-                icon: const Icon(Icons.group_outlined, color: Colors.white70),
+                icon: Icon(Icons.group_outlined, color: context.forest.text70),
                 onPressed: () => showChannelMembersSheet(
                   context,
                   members: _members,
@@ -511,8 +512,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 ),
               ),
               PopupMenuButton<_ChannelMenu>(
-                icon: const Icon(Icons.more_vert, color: Colors.white70),
-                color: const Color(0xFF1F2C34),
+                icon: Icon(Icons.more_vert, color: context.forest.text70),
+                color: context.forest.surfaceFor(const Color(0xFF1F2C34)),
                 onSelected: (choice) => _onMenu(choice, selected),
                 itemBuilder: (_) => [
                   PopupMenuItem(
@@ -521,25 +522,27 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       l10n.translate(_muted.contains(selected.id)
                           ? 'chan_unmute'
                           : 'chan_mute'),
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: context.forest.text),
                     ),
                   ),
                   if (_isAdmin) ...[
                     PopupMenuItem(
                       value: _ChannelMenu.newChannel,
                       child: Text(l10n.translate('chan_new_channel'),
-                          style: const TextStyle(color: Colors.white)),
+                          style: TextStyle(color: context.forest.text)),
                     ),
                     PopupMenuItem(
                       value: _ChannelMenu.editChannel,
                       child: Text(l10n.translate('chan_edit_channel'),
-                          style: const TextStyle(color: Colors.white)),
+                          style: TextStyle(color: context.forest.text)),
                     ),
                     if (!selected.isBuiltIn)
                       PopupMenuItem(
                         value: _ChannelMenu.deleteChannel,
                         child: Text(l10n.translate('chan_delete_channel'),
-                            style: const TextStyle(color: Colors.redAccent)),
+                            style: TextStyle(
+                                color:
+                                    context.forest.readable(Colors.redAccent))),
                       ),
                   ],
                 ],
@@ -558,7 +561,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                     child: Text(
                       selected.topic,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12),
+                          TextStyle(color: context.forest.text54, fontSize: 12),
                     ),
                   ),
                 ),
@@ -579,7 +582,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       l10n.translate('chan_read_only'),
                       textAlign: TextAlign.center,
                       style:
-                          const TextStyle(color: Colors.white54, fontSize: 12),
+                          TextStyle(color: context.forest.text54, fontSize: 12),
                     ),
                   ),
               ],
@@ -624,7 +627,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     }
 
     return Material(
-      color: const Color(0xFF13261A),
+      color: context.forest.surfaceFor(const Color(0xFF13261A)),
       child: Column(
         children: [
           InkWell(
@@ -633,20 +636,21 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               child: Row(
                 children: [
-                  const Icon(Icons.place_outlined,
-                      size: 16, color: AppColors.gold),
+                  Icon(Icons.place_outlined,
+                      size: 16, color: context.forest.readable(AppColors.gold)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       line,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                      style:
+                          TextStyle(color: context.forest.text, fontSize: 12),
                     ),
                   ),
                   Icon(
                     _itineraryOpen ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.white54,
+                    color: context.forest.text54,
                   ),
                 ],
               ),
@@ -662,27 +666,27 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                     ListTile(
                       dense: true,
                       selected: s.id == _liveStopId,
-                      selectedTileColor: Colors.white10,
+                      selectedTileColor: context.forest.divider10,
                       leading: Icon(
                         s.id == _liveStopId
                             ? Icons.my_location
                             : Icons.circle_outlined,
                         size: 16,
-                        color: AppColors.mintGreen,
+                        color: context.forest.accentText,
                       ),
                       title: Text(s.name,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 13)),
+                          style: TextStyle(
+                              color: context.forest.text, fontSize: 13)),
                       subtitle: Text('${s.kmFromStart} km',
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 11)),
+                          style: TextStyle(
+                              color: context.forest.text54, fontSize: 11)),
                       onTap: _isAdmin ? () => _setStop(s.id) : null,
                     ),
                   if (_isAdmin && _liveStopId != null)
                     TextButton(
                       onPressed: () => _setStop(null),
                       child: Text(l10n.translate('chan_stop_clear'),
-                          style: const TextStyle(color: AppColors.mintGreen)),
+                          style: TextStyle(color: context.forest.accentText)),
                     ),
                 ],
               ),
@@ -804,11 +808,11 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2C34),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF1F2C34)),
         title: Text(l10n.translate('chan_delete_channel'),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         content: Text(l10n.translate('chan_delete_channel_body'),
-            style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: context.forest.text70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -817,7 +821,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.translate('chan_delete_channel'),
-                style: const TextStyle(color: Colors.redAccent)),
+                style: TextStyle(
+                    color: context.forest.readable(Colors.redAccent))),
           ),
         ],
       ),
@@ -947,14 +952,14 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                                 color:
                                     AppColors.midGreen.withValues(alpha: 0.2),
                               ),
-                              child: const Icon(Icons.headset_mic_rounded,
-                                  size: 64, color: AppColors.mintGreen),
+                              child: Icon(Icons.headset_mic_rounded,
+                                  size: 64, color: context.forest.accentText),
                             ),
                             const SizedBox(height: 20),
                             Text(
                               _titleOf(channel),
-                              style: const TextStyle(
-                                  color: Colors.white,
+                              style: TextStyle(
+                                  color: context.forest.text,
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold),
                             ),
@@ -962,8 +967,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                             Text(
                               l10n.translate('chan_voice_empty'),
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  color: Colors.white60, fontSize: 14),
+                              style: TextStyle(
+                                  color: context.forest.text60, fontSize: 14),
                             ),
                             const SizedBox(height: 24),
                             if (!isConnectedToThis)
@@ -1053,12 +1058,12 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2C34),
+        color: context.forest.surfaceFor(const Color(0xFF1F2C34)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: !p.isAudioMuted
               ? AppColors.mintGreen.withValues(alpha: 0.6)
-              : Colors.white10,
+              : context.forest.divider10,
           width: !p.isAudioMuted ? 2 : 1,
         ),
       ),
@@ -1128,8 +1133,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                     isMe ? '${p.displayName} (you)' : p.displayName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: context.forest.text,
                         fontSize: 13,
                         fontWeight: FontWeight.w600),
                   ),
@@ -1150,11 +1155,11 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       isMe ? '${p.displayName} (you)' : p.displayName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: context.forest.text,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          shadows: [
+                          shadows: const [
                             Shadow(color: Colors.black87, blurRadius: 4),
                           ]),
                     ),
@@ -1187,7 +1192,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2C34),
+        color: context.forest.surfaceFor(const Color(0xFF1F2C34)),
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
@@ -1206,8 +1211,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                   ? Icons.volume_up
                   : Icons.volume_down_rounded,
               color: _voiceService.isSpeakerOn
-                  ? AppColors.mintGreen
-                  : Colors.white70,
+                  ? context.forest.accentText
+                  : context.forest.text70,
             ),
             tooltip: l10n.translate('chan_voice_speaker'),
             onPressed: () => _voiceService.toggleSpeaker(),
@@ -1216,8 +1221,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
             icon: Icon(
               _voiceService.isAudioMuted ? Icons.mic_off : Icons.mic,
               color: _voiceService.isAudioMuted
-                  ? Colors.redAccent
-                  : AppColors.mintGreen,
+                  ? context.forest.readable(Colors.redAccent)
+                  : context.forest.accentText,
             ),
             tooltip: l10n.translate(_voiceService.isAudioMuted
                 ? 'chan_voice_unmute'
@@ -1228,8 +1233,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
             icon: Icon(
               _voiceService.isVideoOn ? Icons.videocam : Icons.videocam_off,
               color: _voiceService.isVideoOn
-                  ? AppColors.mintGreen
-                  : Colors.white70,
+                  ? context.forest.accentText
+                  : context.forest.text70,
             ),
             tooltip: l10n.translate(_voiceService.isVideoOn
                 ? 'chan_voice_video_off'
@@ -1238,7 +1243,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           ),
           if (!kIsWeb && _voiceService.isVideoOn)
             IconButton(
-              icon: const Icon(Icons.cameraswitch, color: Colors.white70),
+              icon: Icon(Icons.cameraswitch, color: context.forest.text70),
               onPressed: () => _voiceService.switchCamera(),
             ),
           GestureDetector(
@@ -1268,7 +1273,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     final l10n = context.l10n;
 
     return Material(
-      color: const Color(0xFF13261A),
+      color: context.forest.surfaceFor(const Color(0xFF13261A)),
       child: InkWell(
         onTap: () => _selectChannel(activeId),
         child: Container(
@@ -1279,7 +1284,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.volume_up, color: AppColors.mintGreen, size: 20),
+              Icon(Icons.volume_up, color: context.forest.accentText, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -1288,8 +1293,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                   children: [
                     Text(
                       l10n.translate('chan_voice_connected'),
-                      style: const TextStyle(
-                          color: AppColors.mintGreen,
+                      style: TextStyle(
+                          color: context.forest.accentText,
                           fontSize: 11,
                           fontWeight: FontWeight.bold),
                     ),
@@ -1297,7 +1302,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       _titleOf(activeChan),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      style:
+                          TextStyle(color: context.forest.text, fontSize: 13),
                     ),
                   ],
                 ),
@@ -1306,8 +1312,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 icon: Icon(
                   _voiceService.isAudioMuted ? Icons.mic_off : Icons.mic,
                   color: _voiceService.isAudioMuted
-                      ? Colors.redAccent
-                      : AppColors.mintGreen,
+                      ? context.forest.readable(Colors.redAccent)
+                      : context.forest.accentText,
                   size: 20,
                 ),
                 tooltip: l10n.translate(_voiceService.isAudioMuted
@@ -1316,8 +1322,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                 onPressed: () => _voiceService.toggleAudio(),
               ),
               IconButton(
-                icon: const Icon(Icons.call_end,
-                    color: Colors.redAccent, size: 20),
+                icon: Icon(Icons.call_end,
+                    color: context.forest.readable(Colors.redAccent), size: 20),
                 tooltip: l10n.translate('chan_voice_leave'),
                 onPressed: () => _voiceService.leaveVoiceRoom(),
               ),
@@ -1340,7 +1346,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
         if (snapshot.hasError && !snapshot.hasData) {
           return Center(
             child: Text(l10n.translate('tour_messages_load_failed'),
-                style: const TextStyle(color: Colors.white54)),
+                style: TextStyle(color: context.forest.text54)),
           );
         }
         if (!snapshot.hasData) {
@@ -1365,7 +1371,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                   ? 'tour_no_messages'
                   : 'chan_no_search_results'),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54),
+              style: TextStyle(color: context.forest.text54),
             ),
           );
         }
@@ -1465,11 +1471,11 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1F2C34),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF1F2C34)),
         title: Text(l10n.translate('chan_delete_message_title'),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         content: Text(l10n.translate('chan_delete_message_body'),
-            style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: context.forest.text70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -1478,7 +1484,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.translate('chan_action_delete'),
-                style: const TextStyle(color: Colors.redAccent)),
+                style: TextStyle(
+                    color: context.forest.readable(Colors.redAccent))),
           ),
         ],
       ),
@@ -1514,7 +1521,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF1F2C34),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF1F2C34)),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1535,8 +1542,8 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                     child: Text(
                       l10n.translate('chan_pins_title'),
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: context.forest.text,
                           fontSize: 16,
                           fontWeight: FontWeight.bold),
                     ),
@@ -1546,12 +1553,13 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                       padding: const EdgeInsets.all(24),
                       child: Text(l10n.translate('chan_pins_empty'),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white54)),
+                          style: TextStyle(color: context.forest.text54)),
                     ),
                   for (final p in pins)
                     ListTile(
-                      leading: const Icon(Icons.push_pin,
-                          size: 18, color: AppColors.gold),
+                      leading: Icon(Icons.push_pin,
+                          size: 18,
+                          color: context.forest.readable(AppColors.gold)),
                       title: Text(
                         p.kind == ChannelMessageKind.expense
                             ? p.expenseTitle
@@ -1559,16 +1567,17 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style:
-                            const TextStyle(color: Colors.white, fontSize: 13),
+                            TextStyle(color: context.forest.text, fontSize: 13),
                       ),
                       subtitle: Text(p.senderName,
-                          style: const TextStyle(
-                              color: AppColors.gold, fontSize: 11)),
+                          style: TextStyle(
+                              color: context.forest.readable(AppColors.gold),
+                              fontSize: 11)),
                       trailing: _isAdmin
                           ? IconButton(
                               tooltip: l10n.translate('chan_action_unpin'),
-                              icon: const Icon(Icons.close,
-                                  color: Colors.white54, size: 18),
+                              icon: Icon(Icons.close,
+                                  color: context.forest.text54, size: 18),
                               onPressed: () => unawaited(_guard(() =>
                                   _repo.setPinned(
                                       widget.tourId, channel.id, p.id, false))),
@@ -2050,14 +2059,14 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1B3326),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF1B3326)),
         title: Row(
           children: [
-            const Icon(Icons.location_on_rounded, color: AppColors.mintGreen),
+            Icon(Icons.location_on_rounded, color: context.forest.accentText),
             const SizedBox(width: 8),
             Text(
               l10n.translate('chan_attach_location'),
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: TextStyle(color: context.forest.text, fontSize: 16),
             ),
           ],
         ),
@@ -2067,14 +2076,15 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
             TextField(
               controller: nameCtrl,
               autofocus: true,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
                 labelText: l10n.translate('chan_location_name'),
-                labelStyle: const TextStyle(color: Colors.white70),
+                labelStyle: TextStyle(color: context.forest.text70),
                 hintText: l10n.translate('chan_location_hint'),
-                hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white30)),
+                hintStyle:
+                    TextStyle(color: context.forest.text38, fontSize: 12),
+                enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: context.forest.text38)),
                 focusedBorder: const UnderlineInputBorder(
                     borderSide: BorderSide(color: AppColors.mintGreen)),
               ),
@@ -2082,14 +2092,15 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: urlCtrl,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: context.forest.text),
               decoration: InputDecoration(
                 labelText: l10n.translate('chan_location_maps_link'),
-                labelStyle: const TextStyle(color: Colors.white70),
+                labelStyle: TextStyle(color: context.forest.text70),
                 hintText: 'https://maps.app.goo.gl/...',
-                hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                enabledBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white30)),
+                hintStyle:
+                    TextStyle(color: context.forest.text38, fontSize: 12),
+                enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: context.forest.text38)),
                 focusedBorder: const UnderlineInputBorder(
                     borderSide: BorderSide(color: AppColors.mintGreen)),
               ),
@@ -2135,7 +2146,7 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.translate('tour_cancel'),
-                style: const TextStyle(color: Colors.white54)),
+                style: TextStyle(color: context.forest.text54)),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.mintGreen),
@@ -2181,7 +2192,9 @@ class _NewMessagesDivider extends StatelessWidget {
           const Expanded(child: Divider(color: AppColors.gold, height: 1)),
           const SizedBox(width: 8),
           Text(label,
-              style: const TextStyle(color: AppColors.gold, fontSize: 11)),
+              style: TextStyle(
+                  color: context.forest.readable(AppColors.gold),
+                  fontSize: 11)),
           const SizedBox(width: 8),
           const Expanded(child: Divider(color: AppColors.gold, height: 1)),
         ],
@@ -2233,7 +2246,7 @@ class _ChannelChip extends StatelessWidget {
               decoration: BoxDecoration(
                 color: selected
                     ? AppColors.midGreen
-                    : Colors.white.withValues(alpha: 0.06),
+                    : context.forest.text.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Row(
@@ -2242,7 +2255,9 @@ class _ChannelChip extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      color: selected ? Colors.white : Colors.white70,
+                      color: selected
+                          ? context.forest.text
+                          : context.forest.text70,
                       fontSize: 13,
                       fontWeight:
                           selected ? FontWeight.bold : FontWeight.normal,
@@ -2297,21 +2312,24 @@ class _ChannelChip extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: selected
                       ? AppColors.midGreen
-                      : Colors.white.withValues(alpha: 0.06),
+                      : context.forest.text.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (adminOnly) ...[
-                      const Icon(Icons.campaign_outlined,
-                          size: 14, color: AppColors.gold),
+                      Icon(Icons.campaign_outlined,
+                          size: 14,
+                          color: context.forest.readable(AppColors.gold)),
                       const SizedBox(width: 4),
                     ],
                     Text(
                       label,
                       style: TextStyle(
-                        color: selected ? Colors.white : Colors.white70,
+                        color: selected
+                            ? context.forest.text
+                            : context.forest.text70,
                         fontSize: 13,
                         fontWeight:
                             selected ? FontWeight.bold : FontWeight.normal,
@@ -2319,8 +2337,8 @@ class _ChannelChip extends StatelessWidget {
                     ),
                     if (muted) ...[
                       const SizedBox(width: 4),
-                      const Icon(Icons.notifications_off_outlined,
-                          size: 13, color: Colors.white54),
+                      Icon(Icons.notifications_off_outlined,
+                          size: 13, color: context.forest.text54),
                     ],
                     if (hasNew) ...[
                       const SizedBox(width: 6),
@@ -2416,8 +2434,8 @@ class _TypingLineState extends State<_TypingLine> {
             alignment: Alignment.centerLeft,
             child: Text(
               text,
-              style: const TextStyle(
-                  color: Colors.white54,
+              style: TextStyle(
+                  color: context.forest.text54,
                   fontSize: 11,
                   fontStyle: FontStyle.italic),
             ),

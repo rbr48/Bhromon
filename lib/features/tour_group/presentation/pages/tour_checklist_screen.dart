@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/localization/app_localizations.dart';
@@ -107,19 +108,21 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     final me = _repository.currentEmail;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1A12),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D1A12),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF0D1A12)),
         elevation: 0,
         title: Text(
           l10n.translate('check_title'),
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+              color: context.forest.text,
+              fontWeight: FontWeight.bold,
+              fontSize: 18),
         ),
         actions: [
           IconButton(
             icon:
-                const Icon(Icons.add_task_rounded, color: AppColors.mintGreen),
+                Icon(Icons.add_task_rounded, color: context.forest.accentText),
             tooltip: l10n.translate('check_add_item'),
             onPressed: () => _showAddItemDialog(context),
           ),
@@ -131,7 +134,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
           if (snapshot.hasError && !snapshot.hasData) {
             return Center(
               child: Text(l10n.translate('check_load_failed'),
-                  style: const TextStyle(color: Colors.white54)),
+                  style: TextStyle(color: context.forest.text54)),
             );
           }
           final saved = snapshot.data ?? const <ChecklistItem>[];
@@ -159,9 +162,9 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                 margin: const EdgeInsets.all(14),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF14241B),
+                  color: context.forest.surfaceFor(const Color(0xFF14241B)),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white10),
+                  border: Border.all(color: context.forest.divider10),
                 ),
                 child: Column(
                   children: [
@@ -169,13 +172,13 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(l10n.translate('check_my_progress'),
-                            style: const TextStyle(
-                                color: Colors.white,
+                            style: TextStyle(
+                                color: context.forest.text,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13)),
                         Text('$packedCount / $totalCount',
-                            style: const TextStyle(
-                                color: AppColors.mintGreen,
+                            style: TextStyle(
+                                color: context.forest.accentText,
                                 fontWeight: FontWeight.bold)),
                       ],
                     ),
@@ -186,7 +189,7 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                         value: totalCount > 0
                             ? (packedCount / totalCount).clamp(0.0, 1.0)
                             : 0,
-                        backgroundColor: Colors.white12,
+                        backgroundColor: context.forest.divider12,
                         valueColor:
                             const AlwaysStoppedAnimation(AppColors.mintGreen),
                         minHeight: 8,
@@ -197,8 +200,8 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         l10n.translate('check_tick_own'),
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 11),
+                        style: TextStyle(
+                            color: context.forest.text54, fontSize: 11),
                       ),
                     ),
                   ],
@@ -257,9 +260,9 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF14241B),
+        color: context.forest.surfaceFor(const Color(0xFF14241B)),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: context.forest.divider10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,14 +271,14 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
             padding: const EdgeInsets.all(14),
             child: Text(
               l10n.translate(category),
-              style: const TextStyle(
-                color: AppColors.gold,
+              style: TextStyle(
+                color: context.forest.readable(AppColors.gold),
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),
             ),
           ),
-          const Divider(color: Colors.white10, height: 1),
+          Divider(color: context.forest.divider10, height: 1),
           ...rows,
         ],
       ),
@@ -292,19 +295,19 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
       title: Text(
         title,
         style: TextStyle(
-          color: checked ? Colors.white54 : Colors.white,
+          color: checked ? context.forest.text54 : context.forest.text,
           fontSize: 13,
           decoration: checked ? TextDecoration.lineThrough : null,
         ),
       ),
       value: checked,
       activeColor: AppColors.midGreen,
-      checkColor: Colors.white,
+      checkColor: context.forest.text,
       controlAffinity: ListTileControlAffinity.leading,
       secondary: deletable
           ? IconButton(
               tooltip: context.l10n.translate('check_delete_item'),
-              icon: const Icon(Icons.delete_outline, color: Colors.white54),
+              icon: Icon(Icons.delete_outline, color: context.forest.text54),
               onPressed: () => _confirmDelete(id, title),
             )
           : null,
@@ -317,10 +320,10 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: const Color(0xFF14241B),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
         title: Text(
             l10n.translate('check_delete_confirm', args: {'title': title}),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
@@ -328,7 +331,8 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
           TextButton(
               onPressed: () => Navigator.pop(c, true),
               child: Text(l10n.translate('check_delete'),
-                  style: const TextStyle(color: Colors.redAccent))),
+                  style: TextStyle(
+                      color: context.forest.readable(Colors.redAccent)))),
         ],
       ),
     );
@@ -349,26 +353,26 @@ class _TourChecklistScreenState extends State<TourChecklistScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.75),
       builder: (ctx) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF14241B),
+          backgroundColor: context.forest.surfaceFor(const Color(0xFF14241B)),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           title: Text(l10n.translate('check_add_item'),
-              style: const TextStyle(color: Colors.white)),
+              style: TextStyle(color: context.forest.text)),
           content: TextField(
             controller: titleCtrl,
             autofocus: true,
             maxLength: 80,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: context.forest.text),
             decoration: InputDecoration(
               labelText: l10n.translate('check_item_name'),
-              labelStyle: const TextStyle(color: Colors.white70),
+              labelStyle: TextStyle(color: context.forest.text70),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: Text(l10n.translate('tour_cancel'),
-                  style: const TextStyle(color: Colors.white54)),
+                  style: TextStyle(color: context.forest.text54)),
             ),
             ElevatedButton(
               style:

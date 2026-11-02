@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../../../../core/theme/colors.dart';
@@ -45,12 +46,12 @@ class _FamilyAlbumScreenState extends State<FamilyAlbumScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
         title: Text(l10n.translate('album_title'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        backgroundColor: _card,
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(_card),
+        foregroundColor: context.forest.text,
         elevation: 0,
       ),
       body: StreamBuilder<List<TourPostItem>>(
@@ -78,8 +79,8 @@ class _FamilyAlbumScreenState extends State<FamilyAlbumScreen> {
                           child: Text(
                             localizedDateFormat('MMMM yyyy')
                                 .format(month.month),
-                            style: const TextStyle(
-                                color: Colors.white,
+                            style: TextStyle(
+                                color: context.forest.text,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15),
                           ),
@@ -88,8 +89,8 @@ class _FamilyAlbumScreenState extends State<FamilyAlbumScreen> {
                           l10n.translate('album_count', args: {
                             'count': l10n.number(month.photos.length),
                           }),
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 12),
+                          style: TextStyle(
+                              color: context.forest.text54, fontSize: 12),
                         ),
                       ],
                     ),
@@ -131,7 +132,7 @@ class _FamilyAlbumScreenState extends State<FamilyAlbumScreen> {
           padding: const EdgeInsets.all(32),
           child: Text(text,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 14)),
+              style: TextStyle(color: context.forest.text70, fontSize: 14)),
         ),
       );
 }

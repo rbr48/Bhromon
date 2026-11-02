@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -222,7 +223,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
   void _showClusterDetailsModal(StoryCluster cluster) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF1B1F24),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF1B1F24)),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -235,13 +236,13 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
             children: [
               Row(
                 children: [
-                  const Icon(Icons.layers_rounded,
-                      color: AppColors.mintGreen, size: 20),
+                  Icon(Icons.layers_rounded,
+                      color: context.forest.accentText, size: 20),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'Same story, different papers',
                     style: TextStyle(
-                      color: AppColors.mintGreen,
+                      color: context.forest.accentText,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -249,7 +250,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   const Spacer(),
                   IconButton(
                     icon:
-                        const Icon(Icons.close_rounded, color: Colors.white70),
+                        Icon(Icons.close_rounded, color: context.forest.text70),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -257,8 +258,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
               const SizedBox(height: 8),
               Text(
                 cluster.topic,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.forest.text,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -266,16 +267,16 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
               const SizedBox(height: 6),
               Text(
                 '${cluster.papers.length} publications covering this story • Tap to read ad-free',
-                style: const TextStyle(color: Colors.white54, fontSize: 13),
+                style: TextStyle(color: context.forest.text54, fontSize: 13),
               ),
               const SizedBox(height: 16),
-              Divider(color: Colors.white.withValues(alpha: 0.1)),
+              Divider(color: context.forest.text.withValues(alpha: 0.1)),
               Expanded(
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: cluster.items.length,
-                  separatorBuilder: (_, __) =>
-                      Divider(color: Colors.white.withValues(alpha: 0.08)),
+                  separatorBuilder: (_, __) => Divider(
+                      color: context.forest.text.withValues(alpha: 0.08)),
                   itemBuilder: (context, idx) {
                     final item = cluster.items[idx];
                     return ListTile(
@@ -288,8 +289,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                           item.paperName.isNotEmpty
                               ? item.paperName[0].toUpperCase()
                               : 'N',
-                          style: const TextStyle(
-                            color: AppColors.mintGreen,
+                          style: TextStyle(
+                            color: context.forest.accentText,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -297,19 +298,19 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                       ),
                       title: Text(
                         item.title,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: context.forest.text,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       subtitle: Text(
                         '${item.paperName} • ${item.relativeTime}',
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12),
+                        style: TextStyle(
+                            color: context.forest.text54, fontSize: 12),
                       ),
-                      trailing: const Icon(Icons.arrow_forward_ios_rounded,
-                          size: 14, color: Colors.white38),
+                      trailing: Icon(Icons.arrow_forward_ios_rounded,
+                          size: 14, color: context.forest.text38),
                       onTap: () {
                         Navigator.pop(context);
                         _openArticleReader(item);
@@ -328,12 +329,12 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1115),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF0F1115)),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF14181E),
+        backgroundColor: context.forest.surfaceFor(const Color(0xFF14181E)),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_rounded, color: context.forest.text),
           onPressed: () {
             if (context.canPop()) {
               context.pop();
@@ -345,10 +346,10 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Newspaper Hub',
               style: TextStyle(
-                color: Colors.white,
+                color: context.forest.text,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -364,9 +365,9 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Text(
+                Text(
                   'Ad-Free Live Headlines & Directory',
-                  style: TextStyle(color: Colors.white54, fontSize: 11),
+                  style: TextStyle(color: context.forest.text54, fontSize: 11),
                 ),
               ],
             ),
@@ -382,7 +383,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: AppColors.mintGreen),
                   )
-                : const Icon(Icons.refresh_rounded, color: Colors.white70),
+                : Icon(Icons.refresh_rounded, color: context.forest.text70),
             onPressed: () {
               _loadHeadlines(refresh: true);
               _loadPapers(forceRefresh: true);
@@ -394,7 +395,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
           indicatorColor: AppColors.mintGreen,
           indicatorWeight: 3,
           labelColor: AppColors.mintGreen,
-          unselectedLabelColor: Colors.white54,
+          unselectedLabelColor: context.forest.text54,
           labelStyle:
               const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           tabs: const [
@@ -427,7 +428,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
   Widget _buildLiveHeadlinesTab() {
     return RefreshIndicator(
       color: AppColors.mintGreen,
-      backgroundColor: const Color(0xFF1B1F24),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF1B1F24)),
       onRefresh: () => _loadHeadlines(refresh: true),
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -435,22 +436,24 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
           // Search Bar across all papers
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF1B1F24),
+              color: context.forest.surfaceFor(const Color(0xFF1B1F24)),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(
+                  color: context.forest.text.withValues(alpha: 0.08)),
             ),
             child: TextField(
               controller: _headlineSearchCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: context.forest.text, fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Search headlines across all papers',
-                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                prefixIcon: const Icon(Icons.search_rounded,
-                    color: Colors.white54, size: 20),
+                hintStyle:
+                    TextStyle(color: context.forest.text38, fontSize: 13),
+                prefixIcon: Icon(Icons.search_rounded,
+                    color: context.forest.text54, size: 20),
                 suffixIcon: _headlineSearchCtrl.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear_rounded,
-                            color: Colors.white54, size: 18),
+                        icon: Icon(Icons.clear_rounded,
+                            color: context.forest.text54, size: 18),
                         onPressed: () {
                           _headlineSearchCtrl.clear();
                           _loadHeadlines();
@@ -480,9 +483,10 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   label: Text(cat['label']!),
                   selected: isSelected,
                   selectedColor: AppColors.mintGreen,
-                  backgroundColor: const Color(0xFF1B1F24),
+                  backgroundColor:
+                      context.forest.surfaceFor(const Color(0xFF1B1F24)),
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.black : Colors.white70,
+                    color: isSelected ? Colors.black : context.forest.text70,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     fontSize: 12,
                   ),
@@ -491,7 +495,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     side: BorderSide(
                       color: isSelected
                           ? AppColors.mintGreen
-                          : Colors.white.withValues(alpha: 0.1),
+                          : context.forest.text.withValues(alpha: 0.1),
                     ),
                   ),
                   onSelected: (_) => _onCategorySelected(cat['id']!),
@@ -515,19 +519,19 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Updated Just now',
                   style: TextStyle(
-                      color: Colors.white70,
+                      color: context.forest.text70,
                       fontSize: 12,
                       fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(width: 8),
-                const Text('•', style: TextStyle(color: Colors.white38)),
+                Text('•', style: TextStyle(color: context.forest.text38)),
                 const SizedBox(width: 8),
                 Text(
                   '${_headlines.length} live stories',
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  style: TextStyle(color: context.forest.text38, fontSize: 12),
                 ),
               ],
             ),
@@ -546,20 +550,21 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  const Text('Filtering by: ',
-                      style: TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text('Filtering by: ',
+                      style: TextStyle(
+                          color: context.forest.text54, fontSize: 12)),
                   Chip(
                     backgroundColor:
                         AppColors.mintGreen.withValues(alpha: 0.15),
                     label: Text(
                       _selectedPaperId!,
-                      style: const TextStyle(
-                          color: AppColors.mintGreen,
+                      style: TextStyle(
+                          color: context.forest.accentText,
                           fontSize: 12,
                           fontWeight: FontWeight.bold),
                     ),
-                    deleteIcon: const Icon(Icons.close_rounded,
-                        size: 16, color: AppColors.mintGreen),
+                    deleteIcon: Icon(Icons.close_rounded,
+                        size: 16, color: context.forest.accentText),
                     onDeleted: () => _onPaperFilterSelected(null),
                   ),
                 ],
@@ -568,12 +573,12 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
           ],
 
           // Latest Headlines Section Header
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             child: Text(
               'Latest headlines',
               style: TextStyle(
-                color: Colors.white,
+                color: context.forest.text,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -595,12 +600,13 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                 padding: const EdgeInsets.all(40),
                 child: Column(
                   children: [
-                    const Icon(Icons.article_rounded,
-                        size: 48, color: Colors.white24),
+                    Icon(Icons.article_rounded,
+                        size: 48, color: context.forest.text24),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'কোনো শিরোনাম পাওয়া যায়নি',
-                      style: TextStyle(color: Colors.white54, fontSize: 14),
+                      style:
+                          TextStyle(color: context.forest.text54, fontSize: 14),
                     ),
                     const SizedBox(height: 12),
                     TextButton.icon(
@@ -633,7 +639,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1B222C),
+          color: context.forest.surfaceFor(const Color(0xFF1B222C)),
           borderRadius: BorderRadius.circular(16),
           border:
               Border.all(color: AppColors.mintGreen.withValues(alpha: 0.25)),
@@ -650,13 +656,13 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
           children: [
             Row(
               children: [
-                const Icon(Icons.layers_rounded,
-                    color: AppColors.mintGreen, size: 18),
+                Icon(Icons.layers_rounded,
+                    color: context.forest.accentText, size: 18),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Same story, different papers',
                   style: TextStyle(
-                    color: AppColors.mintGreen,
+                    color: context.forest.accentText,
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -671,8 +677,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   ),
                   child: Text(
                     '${_clusters.length} stories',
-                    style: const TextStyle(
-                        color: AppColors.mintGreen,
+                    style: TextStyle(
+                        color: context.forest.accentText,
                         fontSize: 11,
                         fontWeight: FontWeight.bold),
                   ),
@@ -682,8 +688,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
             const SizedBox(height: 12),
             Text(
               cluster.topic,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
                 height: 1.35,
@@ -696,18 +702,18 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
+                    color: context.forest.text.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.compare_arrows_rounded,
-                          size: 14, color: Colors.white70),
+                      Icon(Icons.compare_arrows_rounded,
+                          size: 14, color: context.forest.text70),
                       const SizedBox(width: 6),
                       Text(
                         '${cluster.papers.length} papers • Tap to compare coverage',
-                        style: const TextStyle(
-                            color: Colors.white70,
+                        style: TextStyle(
+                            color: context.forest.text70,
                             fontSize: 12,
                             fontWeight: FontWeight.w500),
                       ),
@@ -729,9 +735,9 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF14181E),
+        color: context.forest.surfaceFor(const Color(0xFF14181E)),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: context.forest.text.withValues(alpha: 0.06)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -750,13 +756,13 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: context.forest.text.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         item.paperName,
-                        style: const TextStyle(
-                          color: AppColors.mintGreen,
+                        style: TextStyle(
+                          color: context.forest.accentText,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -766,7 +772,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     Text(
                       item.relativeTime,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 11),
+                          TextStyle(color: context.forest.text38, fontSize: 11),
                     ),
                     const Spacer(),
                     // TTS Audio Speaker Button
@@ -783,8 +789,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                             ? Icons.volume_up_rounded
                             : Icons.volume_down_rounded,
                         color: isSpeakingThis
-                            ? AppColors.mintGreen
-                            : Colors.white54,
+                            ? context.forest.accentText
+                            : context.forest.text54,
                       ),
                       onPressed: () => _speakHeadline(item),
                     ),
@@ -800,8 +806,9 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                         isBookmarked
                             ? Icons.bookmark_rounded
                             : Icons.bookmark_border_rounded,
-                        color:
-                            isBookmarked ? AppColors.mintGreen : Colors.white54,
+                        color: isBookmarked
+                            ? context.forest.accentText
+                            : context.forest.text54,
                       ),
                       onPressed: () => _toggleBookmark(item),
                     ),
@@ -812,9 +819,9 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                       constraints:
                           const BoxConstraints(minWidth: 32, minHeight: 32),
                       tooltip: 'Open in AdBlock Browser',
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.public_rounded,
-                        color: Colors.white54,
+                        color: context.forest.text54,
                       ),
                       onPressed: () => _openAdBlockBrowser(
                         url: item.articleUrl,
@@ -835,8 +842,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                         children: [
                           Text(
                             item.title,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: context.forest.text,
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                               height: 1.35,
@@ -848,8 +855,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                               item.snippet,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white60,
+                              style: TextStyle(
+                                color: context.forest.text60,
                                 fontSize: 12.5,
                                 height: 1.4,
                               ),
@@ -910,12 +917,12 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
       children: [
         // Continue Reading Section (Matching reference screen 2)
         if (_continueReadingIds.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
             child: Text(
               'Continue reading',
               style: TextStyle(
-                color: Colors.white,
+                color: context.forest.text,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
@@ -939,18 +946,20 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
               );
 
               return ActionChip(
-                avatar: const Icon(Icons.bookmark_rounded,
-                    size: 14, color: AppColors.mintGreen),
+                avatar: Icon(Icons.bookmark_rounded,
+                    size: 14, color: context.forest.accentText),
                 label: Text(paper.name),
-                backgroundColor: const Color(0xFF1B1F24),
-                labelStyle: const TextStyle(
-                  color: Colors.white,
+                backgroundColor:
+                    context.forest.surfaceFor(const Color(0xFF1B1F24)),
+                labelStyle: TextStyle(
+                  color: context.forest.text,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                  side: BorderSide(
+                      color: context.forest.text.withValues(alpha: 0.1)),
                 ),
                 onPressed: () {
                   if (paper.websiteUrl.isNotEmpty) {
@@ -973,22 +982,23 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
         // Search Newspapers Input
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF1B1F24),
+            color: context.forest.surfaceFor(const Color(0xFF1B1F24)),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border:
+                Border.all(color: context.forest.text.withValues(alpha: 0.08)),
           ),
           child: TextField(
             controller: _paperSearchCtrl,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: TextStyle(color: context.forest.text, fontSize: 14),
             decoration: InputDecoration(
               hintText: 'Search newspapers',
-              hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-              prefixIcon: const Icon(Icons.search_rounded,
-                  color: Colors.white54, size: 20),
+              hintStyle: TextStyle(color: context.forest.text38, fontSize: 13),
+              prefixIcon: Icon(Icons.search_rounded,
+                  color: context.forest.text54, size: 20),
               suffixIcon: _paperSearchCtrl.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear_rounded,
-                          color: Colors.white54, size: 18),
+                      icon: Icon(Icons.clear_rounded,
+                          color: context.forest.text54, size: 18),
                       onPressed: () {
                         setState(() => _paperSearchCtrl.clear());
                       },
@@ -1037,8 +1047,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
           child: Text(
             title,
-            style: const TextStyle(
-              color: Colors.white54,
+            style: TextStyle(
+              color: context.forest.text54,
               fontSize: 12,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.8,
@@ -1057,9 +1067,9 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF14181E),
+        color: context.forest.surfaceFor(const Color(0xFF14181E)),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: context.forest.text.withValues(alpha: 0.06)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -1080,7 +1090,7 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
+                    color: context.forest.text.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: AppColors.mintGreen.withValues(alpha: 0.25),
@@ -1090,8 +1100,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   child: Center(
                     child: Text(
                       paper.name.isNotEmpty ? paper.name[0].toUpperCase() : 'N',
-                      style: const TextStyle(
-                        color: AppColors.mintGreen,
+                      style: TextStyle(
+                        color: context.forest.accentText,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1108,8 +1118,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                           Flexible(
                             child: Text(
                               paper.name,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: context.forest.text,
                                 fontSize: 14.5,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1125,16 +1135,16 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                                   AppColors.mintGreen.withValues(alpha: 0.14),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.shield_rounded,
-                                    size: 10, color: AppColors.mintGreen),
-                                SizedBox(width: 3),
+                                    size: 10, color: context.forest.accentText),
+                                const SizedBox(width: 3),
                                 Text(
                                   'AD-FREE',
                                   style: TextStyle(
-                                    color: AppColors.mintGreen,
+                                    color: context.forest.accentText,
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1149,8 +1159,8 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                         paper.nameBn.isNotEmpty
                             ? '${paper.nameBn} • ${paper.domain}'
                             : paper.domain,
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12),
+                        style: TextStyle(
+                            color: context.forest.text54, fontSize: 12),
                       ),
                     ],
                   ),
@@ -1166,20 +1176,20 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.06),
+                      color: context.forest.text.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white10),
+                      border: Border.all(color: context.forest.divider10),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.feed_outlined,
-                            size: 13, color: Colors.white70),
-                        SizedBox(width: 4),
+                            size: 13, color: context.forest.text70),
+                        const SizedBox(width: 4),
                         Text(
                           'খবর',
                           style: TextStyle(
-                              color: Colors.white70,
+                              color: context.forest.text70,
                               fontSize: 11,
                               fontWeight: FontWeight.w500),
                         ),
@@ -1196,7 +1206,9 @@ class _NewspaperHubScreenState extends State<NewspaperHubScreen>
                   padding: EdgeInsets.zero,
                   icon: Icon(
                     isFav ? Icons.star_rounded : Icons.star_outline_rounded,
-                    color: isFav ? Colors.amber : Colors.white38,
+                    color: isFav
+                        ? context.forest.readable(Colors.amber)
+                        : context.forest.text38,
                   ),
                   onPressed: () => _toggleFavorite(paper.id),
                 ),

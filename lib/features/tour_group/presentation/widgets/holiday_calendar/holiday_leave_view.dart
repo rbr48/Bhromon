@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../../../core/theme/colors.dart';
@@ -64,8 +65,8 @@ class _HolidayLeaveViewState extends State<HolidayLeaveView> {
         const SizedBox(height: 20),
         Text(
           l10n.translate('hol_leave_best'),
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: context.forest.text,
             fontSize: 15,
             fontWeight: FontWeight.bold,
           ),

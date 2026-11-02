@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'dart:convert';
 
 import 'package:bhromon/core/media/media_access.dart';
@@ -169,11 +170,11 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           );
 
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: _card,
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(_card),
+        foregroundColor: context.forest.text,
         title: Text(l10n.translate('fund_title'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
@@ -193,7 +194,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           controller: _tabs,
           indicatorColor: AppColors.mintGreen,
           labelColor: AppColors.mintGreen,
-          unselectedLabelColor: Colors.white60,
+          unselectedLabelColor: context.forest.text60,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
           tabs: [
@@ -236,9 +237,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         margin: const EdgeInsets.only(bottom: 12),
         padding: padding ?? const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: _card,
+          color: context.forest.surfaceFor(_card),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white10),
+          border: Border.all(color: context.forest.divider10),
         ),
         child: child,
       );
@@ -248,8 +249,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         child: Row(children: [
           Expanded(
             child: Text(text,
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.forest.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 15)),
           ),
@@ -262,7 +263,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           padding: const EdgeInsets.all(32),
           child: Text(text,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54)),
+              style: TextStyle(color: context.forest.text54)),
         ),
       );
 
@@ -276,7 +277,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           const SizedBox(height: 2),
           Text(label,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white54, fontSize: 11)),
+              style: TextStyle(color: context.forest.text54, fontSize: 11)),
         ]),
       );
 
@@ -297,15 +298,16 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         children: [
           Row(children: [
             if (icon != null) ...[
-              Icon(icon, size: 16, color: Colors.white70),
+              Icon(icon, size: 16, color: context.forest.text70),
               const SizedBox(width: 6),
             ],
             Expanded(
                 child: Text(label,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontSize: 13))),
+                    style:
+                        TextStyle(color: context.forest.text, fontSize: 13))),
             Text(trailing ?? _money(value),
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                style: TextStyle(color: context.forest.text70, fontSize: 12)),
           ]),
           const SizedBox(height: 5),
           ClipRRect(
@@ -314,7 +316,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               value: ratio,
               minHeight: 7,
               color: color,
-              backgroundColor: Colors.white10,
+              backgroundColor: context.forest.divider10,
             ),
           ),
         ],
@@ -346,7 +348,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       ? AppColors.mintGreen
                       : Colors.redAccent),
               _stat(l10n.translate('fund_spent'),
-                  _money(summary.totalExpensePaisa), Colors.white),
+                  _money(summary.totalExpensePaisa), context.forest.text),
               _stat(l10n.translate('fund_collected'),
                   _money(summary.totalDepositsPaisa), AppColors.gold),
             ]),
@@ -356,15 +358,16 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 'people': l10n.number(summary.headcount),
                 'amount': _money(summary.perHeadCostPaisa),
               }),
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: context.forest.text54, fontSize: 12),
             ),
             if (summary.fundBalancePaisa < 0)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(l10n.translate('fund_negative_warning'),
                     textAlign: TextAlign.center,
-                    style:
-                        const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                    style: TextStyle(
+                        color: context.forest.readable(Colors.redAccent),
+                        fontSize: 12)),
               ),
           ]),
         ),
@@ -383,7 +386,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     final settled = mine.netPaisa == 0;
     final gets = mine.netPaisa > 0;
     final color = settled
-        ? Colors.white70
+        ? context.forest.text70
         : (gets ? AppColors.mintGreen : AppColors.gold);
     return _box(
       child: Row(children: [
@@ -416,13 +419,15 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   'paid': _money(mine.contributedPaisa),
                   'share': _money(mine.sharePaisa),
                 }),
-                style: const TextStyle(color: Colors.white54, fontSize: 11),
+                style: TextStyle(color: context.forest.text54, fontSize: 11),
               ),
               if (due != null && due.duePaisa > 0)
                 Text(
                   l10n.translate('fund_me_due',
                       args: {'amount': _money(due.duePaisa)}),
-                  style: const TextStyle(color: AppColors.gold, fontSize: 11),
+                  style: TextStyle(
+                      color: context.forest.readable(AppColors.gold),
+                      fontSize: 11),
                 ),
             ],
           ),
@@ -431,7 +436,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           TextButton(
             onPressed: () => _tabs.animateTo(2),
             child: Text(l10n.translate('fund_tab_settle'),
-                style: const TextStyle(color: AppColors.mintGreen)),
+                style: TextStyle(color: context.forest.accentText)),
           ),
       ]),
     );
@@ -447,17 +452,17 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           child: ListTile(
             contentPadding: EdgeInsets.zero,
             leading:
-                const Icon(Icons.savings_outlined, color: AppColors.mintGreen),
+                Icon(Icons.savings_outlined, color: context.forest.accentText),
             title: Text(
                 l10n.translate(group.isFamily
                     ? 'fund_budget_cta_family'
                     : 'fund_budget_cta'),
-                style: const TextStyle(color: Colors.white)),
+                style: TextStyle(color: context.forest.text)),
             subtitle: Text(
                 l10n.translate(group.isFamily
                     ? 'fund_budget_cta_help_family'
                     : 'fund_budget_cta_help'),
-                style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                style: TextStyle(color: context.forest.text54, fontSize: 12)),
             onTap: () => _editBudget(group),
           ),
         ),
@@ -476,8 +481,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               trailing: _isAdmin && group != null
                   ? IconButton(
                       visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.edit_rounded,
-                          size: 18, color: Colors.white54),
+                      icon: Icon(Icons.edit_rounded,
+                          size: 18, color: context.forest.text54),
                       onPressed: () => _editBudget(group),
                     )
                   : null,
@@ -497,7 +502,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     : l10n.translate('fund_left',
                         args: {'amount': _money(r.leftPaisa)}),
                 style: TextStyle(
-                    color: over ? Colors.redAccent : Colors.white70,
+                    color: over
+                        ? context.forest.readable(Colors.redAccent)
+                        : context.forest.text70,
                     fontSize: 12),
               ),
               const SizedBox(height: 12),
@@ -514,7 +521,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       'day': l10n.number(r.daysElapsed),
                       'days': l10n.number(r.totalDays),
                     }),
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    style: TextStyle(color: context.forest.text, fontSize: 12),
                   ),
                 ),
               ]),
@@ -531,7 +538,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                           'over': _money(r.projectedPaisa - r.budgetPaisa),
                         }),
                     style: TextStyle(
-                        color: projectedOver ? AppColors.gold : Colors.white54,
+                        color: projectedOver
+                            ? context.forest.readable(AppColors.gold)
+                            : context.forest.text54,
                         fontSize: 12),
                   ),
                 ),
@@ -571,10 +580,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                 ? null
                 : TextButton.icon(
                     onPressed: () => _shareReminder(r),
-                    icon: const Icon(Icons.campaign_rounded,
-                        size: 18, color: AppColors.gold),
+                    icon: Icon(Icons.campaign_rounded,
+                        size: 18,
+                        color: context.forest.readable(AppColors.gold)),
                     label: Text(l10n.translate('fund_remind'),
-                        style: const TextStyle(color: AppColors.gold)),
+                        style: TextStyle(
+                            color: context.forest.readable(AppColors.gold))),
                   ),
           ),
           _bar(
@@ -587,30 +598,31 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           ),
           if (dues.isEmpty)
             Text(l10n.translate('fund_collection_done'),
-                style: const TextStyle(color: AppColors.mintGreen))
+                style: TextStyle(color: context.forest.accentText))
           else
             for (final c in dues)
               ListTile(
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 title:
-                    Text(c.name, style: const TextStyle(color: Colors.white)),
+                    Text(c.name, style: TextStyle(color: context.forest.text)),
                 subtitle: Text(
                   l10n.translate('fund_paid_of', args: {
                     'paid': _money(c.paidPaisa),
                     'target': _money(c.targetPaisa),
                   }),
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  style: TextStyle(color: context.forest.text54, fontSize: 11),
                 ),
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                   Text(_money(c.duePaisa),
-                      style: const TextStyle(
-                          color: AppColors.gold, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          color: context.forest.readable(AppColors.gold),
+                          fontWeight: FontWeight.bold)),
                   if (_isAdmin || c.id.toLowerCase() == _me)
                     IconButton(
                       tooltip: l10n.translate('fund_add_deposit'),
-                      icon: const Icon(Icons.add_card_rounded,
-                          color: AppColors.mintGreen, size: 20),
+                      icon: Icon(Icons.add_card_rounded,
+                          color: context.forest.accentText, size: 20),
                       onPressed: () =>
                           _deposit(memberId: c.id, suggestedPaisa: c.duePaisa),
                     ),
@@ -654,7 +666,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   label: l10n.translate('fund_where_none'),
                   value: r.byStop[null]!,
                   max: r.spentPaisa,
-                  color: Colors.white38,
+                  color: context.forest.text38,
                 ),
             ],
           ),
@@ -705,8 +717,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                                             1)
                                       })
                                     : localizedDateFormat('d/M').format(d.day),
-                                style: const TextStyle(
-                                    color: Colors.white54, fontSize: 9),
+                                style: TextStyle(
+                                    color: context.forest.text54, fontSize: 9),
                               ),
                             ],
                           ),
@@ -753,8 +765,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           children: [
             IconButton(
               tooltip: l10n.translate('fund_month_prev'),
-              icon:
-                  const Icon(Icons.chevron_left_rounded, color: Colors.white70),
+              icon: Icon(Icons.chevron_left_rounded,
+                  color: context.forest.text70),
               onPressed: _allMonths
                   ? null
                   : () => setState(
@@ -766,14 +778,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     ? l10n.translate('fund_month_all_label')
                     : localizedDateFormat('MMMM yyyy').format(_month),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: context.forest.text, fontWeight: FontWeight.bold),
               ),
             ),
             IconButton(
               tooltip: l10n.translate('fund_month_next'),
-              icon: const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white70),
+              icon: Icon(Icons.chevron_right_rounded,
+                  color: context.forest.text70),
               // No month after the current one.
               onPressed: _allMonths || nextMonth.isAfter(thisMonth)
                   ? null
@@ -794,7 +806,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Text(l10n.translate('fund_month_empty'),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                style: TextStyle(color: context.forest.text54, fontSize: 13)),
           ),
       ],
     );
@@ -844,14 +856,15 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         TextField(
           controller: _search,
           onChanged: (_) => setState(() {}),
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: context.forest.text),
           decoration: InputDecoration(
             isDense: true,
-            prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54),
+            prefixIcon:
+                Icon(Icons.search_rounded, color: context.forest.text54),
             hintText: l10n.translate('fund_search'),
-            hintStyle: const TextStyle(color: Colors.white38),
+            hintStyle: TextStyle(color: context.forest.text38),
             filled: true,
-            fillColor: _card,
+            fillColor: context.forest.surfaceFor(_card),
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none),
@@ -894,7 +907,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               'count': l10n.number(filtered.length),
               'amount': _money(total),
             }),
-            style: const TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: context.forest.text54, fontSize: 12),
           ),
         ),
         for (final day in days.entries) ...[
@@ -903,12 +916,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             child: Row(children: [
               Expanded(
                 child: Text(localizedDateFormat('EEE, d MMM').format(day.key),
-                    style: const TextStyle(
-                        color: AppColors.mintGreen,
+                    style: TextStyle(
+                        color: context.forest.accentText,
                         fontWeight: FontWeight.bold)),
               ),
               Text(_money(day.value.fold<int>(0, (n, e) => n + e.amountPaisa)),
-                  style: const TextStyle(color: Colors.white70)),
+                  style: TextStyle(color: context.forest.text70)),
             ]),
           ),
           for (final e in day.value) _expenseTile(l10n, e),
@@ -924,9 +937,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           label: Text(label, style: const TextStyle(fontSize: 12)),
           selected: selected,
           selectedColor: AppColors.mintGreen,
-          backgroundColor: _card,
-          labelStyle:
-              TextStyle(color: selected ? AppColors.darkGreen : Colors.white),
+          backgroundColor: context.forest.surfaceFor(_card),
+          labelStyle: TextStyle(
+              color: selected ? AppColors.darkGreen : context.forest.text),
           onSelected: (_) => onTap(),
         ),
       );
@@ -951,9 +964,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: _card,
+        color: context.forest.surfaceFor(_card),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: context.forest.divider10),
       ),
       child: ListTile(
         onTap: () => _expenseDetails(l10n, e),
@@ -962,15 +975,18 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           backgroundColor:
               (fromFund ? _fundBlue : AppColors.gold).withValues(alpha: 0.16),
           child: Icon(fundCategoryIcon(e.category),
-              color: fromFund ? _fundBlue : AppColors.gold, size: 20),
+              color: fromFund
+                  ? _fundBlue
+                  : context.forest.readable(AppColors.gold),
+              size: 20),
         ),
         title: Row(
           children: [
             Expanded(
               child: Text(e.title,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
+                  style: TextStyle(
+                      color: context.forest.text, fontWeight: FontWeight.w600)),
             ),
             if (e.receiptUrl != null && e.receiptUrl!.isNotEmpty) ...[
               const SizedBox(width: 4),
@@ -989,12 +1005,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.receipt_long_rounded,
-                          size: 11, color: AppColors.mintGreen),
+                      Icon(Icons.receipt_long_rounded,
+                          size: 11, color: context.forest.accentText),
                       const SizedBox(width: 3),
                       Text(l10n.translate('fund_receipt'),
-                          style: const TextStyle(
-                              color: AppColors.mintGreen,
+                          style: TextStyle(
+                              color: context.forest.accentText,
                               fontSize: 10,
                               fontWeight: FontWeight.bold)),
                     ],
@@ -1015,19 +1031,19 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           ].join(' · '),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Colors.white54, fontSize: 11),
+          style: TextStyle(color: context.forest.text54, fontSize: 11),
         ),
         trailing: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(_money(e.amountPaisa),
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    color: context.forest.text, fontWeight: FontWeight.bold)),
             if (e.isForeign)
               Text(
                   '$symbol${TripLedgerEngine.formatTaka(e.originalMinor ?? 0).replaceAll('৳', '')}',
-                  style: const TextStyle(color: Colors.white38, fontSize: 10)),
+                  style: TextStyle(color: context.forest.text38, fontSize: 10)),
           ],
         ),
       ),
@@ -1041,7 +1057,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       ..sort((a, b) => b.sharePaisa.compareTo(a.sharePaisa));
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       isScrollControlled: true,
       builder: (ctx) => SafeArea(
         child: SingleChildScrollView(
@@ -1050,15 +1066,15 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(e.title,
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 18,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
               Text(
                   '${_money(e.amountPaisa)} · ${fundCategoryLabel(l10n, e.category)} · '
                   '${localizedDateFormat('d MMM yyyy').format(e.date)}',
-                  style: const TextStyle(color: Colors.white70)),
+                  style: TextStyle(color: context.forest.text70)),
               if (e.isForeign)
                 Text(
                     l10n.translate('fund_fx_line', args: {
@@ -1067,12 +1083,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                           TripLedgerEngine.plainTakaInput(e.originalMinor ?? 0),
                       'rate': '${e.fxRate}',
                     }),
-                    style: const TextStyle(color: Colors.white54)),
+                    style: TextStyle(color: context.forest.text54)),
               if ((e.notes ?? '').isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(e.notes!,
-                      style: const TextStyle(color: Colors.white70)),
+                      style: TextStyle(color: context.forest.text70)),
                 ),
               if (e.receiptUrl != null && e.receiptUrl!.isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -1096,9 +1112,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                             width: 48,
                             height: 48,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            errorBuilder: (_, __, ___) => Icon(
                                 Icons.receipt_long_rounded,
-                                color: AppColors.mintGreen),
+                                color: context.forest.accentText),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -1107,19 +1123,19 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(l10n.translate('fund_receipt'),
-                                  style: const TextStyle(
-                                      color: Colors.white,
+                                  style: TextStyle(
+                                      color: context.forest.text,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13)),
                               Text(l10n.translate('fund_receipt_view'),
-                                  style: const TextStyle(
-                                      color: AppColors.mintGreen,
+                                  style: TextStyle(
+                                      color: context.forest.accentText,
                                       fontSize: 11)),
                             ],
                           ),
                         ),
-                        const Icon(Icons.open_in_full_rounded,
-                            size: 16, color: AppColors.mintGreen),
+                        Icon(Icons.open_in_full_rounded,
+                            size: 16, color: context.forest.accentText),
                       ],
                     ),
                   ),
@@ -1127,8 +1143,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               ],
               const SizedBox(height: 12),
               Text(_splitLabel(l10n, e),
-                  style: const TextStyle(
-                      color: AppColors.mintGreen, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: context.forest.accentText,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
               for (final r in shares)
                 _bar(
@@ -1145,10 +1162,10 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       Navigator.pop(ctx);
                       _editExpense(e);
                     },
-                    icon: const Icon(Icons.edit_rounded,
-                        color: AppColors.mintGreen),
+                    icon: Icon(Icons.edit_rounded,
+                        color: context.forest.accentText),
                     label: Text(l10n.translate('fund_edit'),
-                        style: const TextStyle(color: AppColors.mintGreen)),
+                        style: TextStyle(color: context.forest.accentText)),
                   ),
                   TextButton.icon(
                     onPressed: () {
@@ -1156,10 +1173,11 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       _confirmDelete(e.title,
                           () => _repository.deleteExpense(widget.tourId, e.id));
                     },
-                    icon: const Icon(Icons.delete_outline_rounded,
-                        color: Colors.redAccent),
+                    icon: Icon(Icons.delete_outline_rounded,
+                        color: context.forest.readable(Colors.redAccent)),
                     label: Text(l10n.translate('fund_delete'),
-                        style: const TextStyle(color: Colors.redAccent)),
+                        style: TextStyle(
+                            color: context.forest.readable(Colors.redAccent))),
                   ),
                 ]),
             ],
@@ -1207,8 +1225,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     ? null
                     : IconButton(
                         tooltip: l10n.translate('fund_share_plan'),
-                        icon: const Icon(Icons.share_rounded,
-                            color: AppColors.mintGreen),
+                        icon: Icon(Icons.share_rounded,
+                            color: context.forest.accentText),
                         onPressed: () => _sharePlan(summary, activeSettlements),
                       ),
               ),
@@ -1222,12 +1240,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     decoration: BoxDecoration(
                       color: _simplifyDebts
                           ? AppColors.mintGreen.withValues(alpha: 0.15)
-                          : Colors.white.withValues(alpha: 0.05),
+                          : context.forest.text.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: _simplifyDebts
                             ? AppColors.mintGreen
-                            : Colors.white12,
+                            : context.forest.divider12,
                       ),
                     ),
                     child: Row(
@@ -1237,16 +1255,16 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                           Icons.bolt_rounded,
                           size: 16,
                           color: _simplifyDebts
-                              ? AppColors.mintGreen
-                              : Colors.white60,
+                              ? context.forest.accentText
+                              : context.forest.text60,
                         ),
                         const SizedBox(width: 6),
                         Text(
                           l10n.translate('fund_simplify_debts'),
                           style: TextStyle(
                             color: _simplifyDebts
-                                ? AppColors.mintGreen
-                                : Colors.white70,
+                                ? context.forest.accentText
+                                : context.forest.text70,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1279,12 +1297,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               ],
               if (activeSettlements.isEmpty)
                 Row(children: [
-                  const Icon(Icons.verified_rounded,
-                      color: AppColors.mintGreen),
+                  Icon(Icons.verified_rounded,
+                      color: context.forest.accentText),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(l10n.translate('fund_all_settled'),
-                        style: const TextStyle(color: Colors.white70)),
+                        style: TextStyle(color: context.forest.text70)),
                   ),
                 ])
               else ...[
@@ -1296,7 +1314,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       : l10n.translate('fund_settle_help', args: {
                           'count': l10n.number(activeSettlements.length),
                         }),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
                 for (final s in activeSettlements) _settlementTile(l10n, s),
@@ -1308,14 +1326,14 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           l10n.translate('fund_payments'),
           trailing: TextButton.icon(
             onPressed: () => _transfer(),
-            icon: const Icon(Icons.add_rounded, color: AppColors.mintGreen),
+            icon: Icon(Icons.add_rounded, color: context.forest.accentText),
             label: Text(l10n.translate('fund_record_payment'),
-                style: const TextStyle(color: AppColors.mintGreen)),
+                style: TextStyle(color: context.forest.accentText)),
           ),
         ),
         if (_transfers.isEmpty)
           Text(l10n.translate('fund_no_payments'),
-              style: const TextStyle(color: Colors.white54, fontSize: 12))
+              style: TextStyle(color: context.forest.text54, fontSize: 12))
         else
           for (final t in _transfers)
             _box(
@@ -1325,23 +1343,24 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     ? () => _confirmDelete('${t.fromName} → ${t.toName}',
                         () => _repository.deleteTransfer(widget.tourId, t.id))
                     : null,
-                leading: const Icon(Icons.payments_rounded,
-                    color: AppColors.mintGreen),
+                leading: Icon(Icons.payments_rounded,
+                    color: context.forest.accentText),
                 title: Text(
                   '${_party(l10n, t.fromName, t.fromId == null)} → '
                   '${_party(l10n, t.toName, t.toId == null)}',
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: context.forest.text),
                 ),
                 subtitle: Text(
                   [
                     localizedDateFormat('d MMM, h:mm a').format(t.date),
                     if ((t.notes ?? '').isNotEmpty) t.notes!,
                   ].join(' · '),
-                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  style: TextStyle(color: context.forest.text54, fontSize: 11),
                 ),
                 trailing: Text(_money(t.amountPaisa),
-                    style: const TextStyle(
-                        color: AppColors.gold, fontWeight: FontWeight.bold)),
+                    style: TextStyle(
+                        color: context.forest.readable(AppColors.gold),
+                        fontWeight: FontWeight.bold)),
               ),
             ),
       ],
@@ -1357,12 +1376,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
       decoration: BoxDecoration(
         color: (mineOut || mineIn)
             ? AppColors.mintGreen.withValues(alpha: 0.08)
-            : Colors.white.withValues(alpha: 0.03),
+            : context.forest.text.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
             color: (mineOut || mineIn)
                 ? AppColors.mintGreen.withValues(alpha: 0.4)
-                : Colors.white10),
+                : context.forest.divider10),
       ),
       child: Row(children: [
         Expanded(
@@ -1371,8 +1390,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             children: [
               Text(
                 '${_party(l10n, s.from, s.fromFund)} → ${_party(l10n, s.to, s.toFund)}',
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: context.forest.text, fontWeight: FontWeight.bold),
               ),
               Text(
                 l10n.translate(s.fromFund
@@ -1380,7 +1399,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                     : s.toFund
                         ? 'fund_settle_topup'
                         : 'fund_settle_direct'),
-                style: const TextStyle(color: Colors.white54, fontSize: 11),
+                style: TextStyle(color: context.forest.text54, fontSize: 11),
               ),
             ],
           ),
@@ -1389,8 +1408,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(_money(s.amountPaisa),
-                style: const TextStyle(
-                    color: AppColors.gold,
+                style: TextStyle(
+                    color: context.forest.readable(AppColors.gold),
                     fontWeight: FontWeight.bold,
                     fontSize: 15)),
             Row(
@@ -1412,7 +1431,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 8)),
                     onPressed: () => _transfer(suggestion: s),
                     child: Text(l10n.translate('fund_mark_paid'),
-                        style: const TextStyle(color: AppColors.mintGreen)),
+                        style: TextStyle(color: context.forest.accentText)),
                   ),
                 ],
               ],
@@ -1455,8 +1474,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                               })})',
                         if (r.isFormerMember) l10n.translate('fund_former'),
                       ].join(' '),
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: context.forest.text,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                   Container(
@@ -1464,7 +1484,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: (r.netPaisa == 0
-                              ? Colors.white24
+                              ? context.forest.text24
                               : r.netPaisa > 0
                                   ? AppColors.mintGreen
                                   : Colors.redAccent)
@@ -1477,7 +1497,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                           : l10n.translate(
                               r.netPaisa > 0 ? 'fund_gets' : 'fund_owes',
                               args: {'amount': _money(r.netPaisa.abs())}),
-                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                      style:
+                          TextStyle(color: context.forest.text, fontSize: 11),
                     ),
                   ),
                 ]),
@@ -1502,14 +1523,15 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     );
   }
 
-  Widget _kv(String k, int paisa, {Color color = Colors.white70}) => Text.rich(
+  Widget _kv(String k, int paisa, {Color? color}) => Text.rich(
         TextSpan(children: [
           TextSpan(
               text: '$k ',
-              style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              style: TextStyle(color: context.forest.text38, fontSize: 11)),
           TextSpan(
               text: _money(paisa),
-              style: TextStyle(color: color, fontSize: 12)),
+              style: TextStyle(
+                  color: color ?? context.forest.text70, fontSize: 12)),
         ]),
       );
 
@@ -1534,8 +1556,9 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             children: [
               _heading(l10n.translate('fund_deposits_by_member'),
                   trailing: Text(_money(total),
-                      style: const TextStyle(
-                          color: AppColors.gold, fontWeight: FontWeight.bold))),
+                      style: TextStyle(
+                          color: context.forest.readable(AppColors.gold),
+                          fontWeight: FontWeight.bold))),
               for (final e in byMember.entries)
                 _bar(
                     label: e.key,
@@ -1557,20 +1580,21 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                             _repository.deleteDeposit(widget.tourId, d.id),
                       )
                   : null,
-              leading: const Icon(Icons.south_west_rounded,
-                  color: AppColors.mintGreen),
+              leading: Icon(Icons.south_west_rounded,
+                  color: context.forest.accentText),
               title: Text(d.memberName,
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: context.forest.text)),
               subtitle: Text(
                 [
                   localizedDateFormat('d MMM yyyy').format(d.date),
                   if ((d.notes ?? '').isNotEmpty) d.notes!,
                 ].join(' · '),
-                style: const TextStyle(color: Colors.white54, fontSize: 11),
+                style: TextStyle(color: context.forest.text54, fontSize: 11),
               ),
               trailing: Text(_money(d.amountPaisa),
-                  style: const TextStyle(
-                      color: AppColors.gold, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: context.forest.readable(AppColors.gold),
+                      fontWeight: FontWeight.bold)),
             ),
           ),
       ],
@@ -1587,8 +1611,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             VoidCallback onTap) =>
         ListTile(
           leading: Icon(icon, color: color),
-          title: Text(title, style: const TextStyle(color: Colors.white)),
-          subtitle: Text(sub, style: const TextStyle(color: Colors.white54)),
+          title: Text(title, style: TextStyle(color: context.forest.text)),
+          subtitle: Text(sub, style: TextStyle(color: context.forest.text54)),
           onTap: () {
             Navigator.pop(context);
             onTap();
@@ -1596,7 +1620,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         );
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1655,7 +1679,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
             if (_isAdmin && group != null)
               item(
                   Icons.pie_chart_rounded,
-                  Colors.white70,
+                  context.forest.text70,
                   l10n.translate('fund_budget_title'),
                   l10n.translate('fund_budget_sub'),
                   () => _editBudget(group)),
@@ -1845,16 +1869,16 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     final l10n = context.l10n;
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading:
-                  const Icon(Icons.edit_rounded, color: AppColors.mintGreen),
+                  Icon(Icons.edit_rounded, color: context.forest.accentText),
               title: Text(l10n.translate('fund_edit'),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: context.forest.text)),
               onTap: () {
                 Navigator.pop(ctx);
                 onEdit();
@@ -1864,17 +1888,17 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               ListTile(
                 leading: const Icon(Icons.copy_rounded, color: _fundBlue),
                 title: Text(l10n.translate('fund_duplicate'),
-                    style: const TextStyle(color: Colors.white)),
+                    style: TextStyle(color: context.forest.text)),
                 onTap: () {
                   Navigator.pop(ctx);
                   onDuplicate();
                 },
               ),
             ListTile(
-              leading: const Icon(Icons.delete_outline_rounded,
-                  color: Colors.redAccent),
+              leading: Icon(Icons.delete_outline_rounded,
+                  color: context.forest.readable(Colors.redAccent)),
               title: Text(l10n.translate('fund_delete'),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: context.forest.text)),
               onTap: () {
                 Navigator.pop(ctx);
                 _confirmDelete(subject, delete);
@@ -1892,10 +1916,10 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: _card,
+        backgroundColor: context.forest.surfaceFor(_card),
         title: Text(l10n.translate('fund_delete_confirm'),
-            style: const TextStyle(color: Colors.white)),
-        content: Text(subject, style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: context.forest.text)),
+        content: Text(subject, style: TextStyle(color: context.forest.text70)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(c, false),
@@ -1903,7 +1927,8 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
           TextButton(
               onPressed: () => Navigator.pop(c, true),
               child: Text(l10n.translate('fund_delete'),
-                  style: const TextStyle(color: Colors.redAccent))),
+                  style: TextStyle(
+                      color: context.forest.readable(Colors.redAccent)))),
         ],
       ),
     );
@@ -2166,7 +2191,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -2210,15 +2235,15 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       children: [
                         Text(
                           l10n.translate('fund_bkash_nagad_assist'),
-                          style: const TextStyle(
-                              color: Colors.white,
+                          style: TextStyle(
+                              color: context.forest.text,
                               fontWeight: FontWeight.bold,
                               fontSize: 16),
                         ),
                         Text(
                           '$senderName → $recipientName',
-                          style: const TextStyle(
-                              color: Colors.white60, fontSize: 12),
+                          style: TextStyle(
+                              color: context.forest.text60, fontSize: 12),
                         ),
                       ],
                     ),
@@ -2228,15 +2253,15 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
               const SizedBox(height: 12),
               Text(
                 l10n.translate('fund_bkash_nagad_help'),
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: TextStyle(color: context.forest.text70, fontSize: 13),
               ),
               const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
+                  color: context.forest.text.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white12),
+                  border: Border.all(color: context.forest.divider12),
                 ),
                 child: Column(
                   children: [
@@ -2244,22 +2269,22 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(l10n.translate('fund_balance_owed'),
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 13)),
+                            style: TextStyle(
+                                color: context.forest.text70, fontSize: 13)),
                         Text('৳ $amountTaka',
-                            style: const TextStyle(
-                                color: AppColors.gold,
+                            style: TextStyle(
+                                color: context.forest.readable(AppColors.gold),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18)),
                       ],
                     ),
-                    const Divider(color: Colors.white12, height: 20),
+                    Divider(color: context.forest.divider12, height: 20),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(recipientName,
-                            style: const TextStyle(
-                                color: Colors.white,
+                            style: TextStyle(
+                                color: context.forest.text,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14)),
                         if (s.toId != null && s.toId!.isNotEmpty)
@@ -2267,11 +2292,12 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
                             style: TextButton.styleFrom(
                                 padding: EdgeInsets.zero,
                                 visualDensity: VisualDensity.compact),
-                            icon: const Icon(Icons.copy_rounded,
-                                size: 14, color: AppColors.mintGreen),
+                            icon: Icon(Icons.copy_rounded,
+                                size: 14, color: context.forest.accentText),
                             label: Text(l10n.translate('fund_copy_payee'),
-                                style: const TextStyle(
-                                    color: AppColors.mintGreen, fontSize: 12)),
+                                style: TextStyle(
+                                    color: context.forest.accentText,
+                                    fontSize: 12)),
                             onPressed: () {
                               Clipboard.setData(ClipboardData(text: s.toId!));
                               ScaffoldMessenger.of(context).showSnackBar(

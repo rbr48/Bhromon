@@ -1,4 +1,5 @@
 import 'package:bhromon/core/media/media_access.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
@@ -31,9 +32,9 @@ class DesktopTourSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 260,
-      decoration: const BoxDecoration(
-        color: Color(0xFF141414),
-        border: Border(right: BorderSide(color: Colors.white10)),
+      decoration: BoxDecoration(
+        color: context.forest.surfaceFor(const Color(0xFF141414)),
+        border: Border(right: BorderSide(color: context.forest.divider10)),
       ),
       child: StreamBuilder<TourGroup?>(
         stream: repository.watchGroup(tourId),
@@ -49,8 +50,9 @@ class DesktopTourSidebar extends StatelessWidget {
               // Header with logo and tour identity
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Colors.white10)),
+                decoration: BoxDecoration(
+                  border: Border(
+                      bottom: BorderSide(color: context.forest.divider10)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,14 +79,14 @@ class DesktopTourSidebar extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Bhromon OS',
                                 style: TextStyle(
-                                  color: AppColors.mintGreen,
+                                  color: context.forest.accentText,
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 0.5,
@@ -93,7 +95,7 @@ class DesktopTourSidebar extends StatelessWidget {
                               Text(
                                 'Universal Tour Engine',
                                 style: TextStyle(
-                                    color: Colors.white54, fontSize: 10),
+                                    color: context.forest.text54, fontSize: 10),
                               ),
                             ],
                           ),
@@ -103,8 +105,8 @@ class DesktopTourSidebar extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       tourTitle,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.forest.text,
                         fontSize: 14.5,
                         fontWeight: FontWeight.bold,
                       ),
@@ -114,14 +116,14 @@ class DesktopTourSidebar extends StatelessWidget {
                     const SizedBox(height: 3),
                     Row(
                       children: [
-                        const Icon(Icons.route_rounded,
-                            size: 13, color: AppColors.mintGreen),
+                        Icon(Icons.route_rounded,
+                            size: 13, color: context.forest.accentText),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             routeSubtitle,
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: context.forest.text70,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w500,
                             ),
@@ -145,20 +147,20 @@ class DesktopTourSidebar extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: context.forest.text.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.white12),
+                      border: Border.all(color: context.forest.divider12),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.terminal_rounded,
-                            size: 15, color: AppColors.mintGreen),
+                        Icon(Icons.terminal_rounded,
+                            size: 15, color: context.forest.accentText),
                         const SizedBox(width: 8),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             '>_ কমান্ড প্যালেট',
                             style: TextStyle(
-                                color: Colors.white70,
+                                color: context.forest.text70,
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w600),
                           ),
@@ -191,7 +193,7 @@ class DesktopTourSidebar extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   children: [
-                    _buildSectionHeader('প্রধান মডিউলসমূহ'),
+                    _buildSectionHeader(context, 'প্রধান মডিউলসমূহ'),
                     _buildNavItem(
                       context,
                       title: 'ড্যাশবোর্ড',
@@ -265,7 +267,8 @@ class DesktopTourSidebar extends StatelessWidget {
                       isActive: _isActive('/group/$tourId/checklist'),
                     ),
                     const SizedBox(height: 12),
-                    _buildSectionHeader('ট্যুর সুপারপাওয়ার ও বিশেষ টুলস'),
+                    _buildSectionHeader(
+                        context, 'ট্যুর সুপারপাওয়ার ও বিশেষ টুলস'),
                     _buildToolItem(
                       context,
                       title: 'সুরক্ষা ও বিচ কম্পাস',
@@ -315,13 +318,13 @@ class DesktopTourSidebar extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.white38,
+        style: TextStyle(
+          color: context.forest.text38,
           fontSize: 9.5,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.8,
@@ -361,14 +364,17 @@ class DesktopTourSidebar extends StatelessWidget {
             Icon(
               isActive ? activeIcon : icon,
               size: 18,
-              color: isActive ? AppColors.mintGreen : Colors.white70,
+              color:
+                  isActive ? context.forest.accentText : context.forest.text70,
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 title,
                 style: TextStyle(
-                  color: isActive ? AppColors.mintGreen : Colors.white,
+                  color: isActive
+                      ? context.forest.accentText
+                      : context.forest.text,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                   fontSize: 12.5,
                 ),
@@ -411,13 +417,17 @@ class DesktopTourSidebar extends StatelessWidget {
           children: [
             Icon(icon,
                 size: 16,
-                color: isActive ? AppColors.mintGreen : Colors.white70),
+                color: isActive
+                    ? context.forest.accentText
+                    : context.forest.text70),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 title,
                 style: TextStyle(
-                  color: isActive ? AppColors.mintGreen : Colors.white70,
+                  color: isActive
+                      ? context.forest.accentText
+                      : context.forest.text70,
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                 ),
@@ -463,9 +473,9 @@ class DesktopTourSidebar extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF101010),
-        border: Border(top: BorderSide(color: Colors.white10)),
+      decoration: BoxDecoration(
+        color: context.forest.surfaceFor(const Color(0xFF101010)),
+        border: Border(top: BorderSide(color: context.forest.divider10)),
       ),
       child: Column(
         children: [
@@ -496,8 +506,8 @@ class DesktopTourSidebar extends StatelessWidget {
                   children: [
                     Text(
                       displayName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.forest.text,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -507,7 +517,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     Text(
                       email,
                       style:
-                          const TextStyle(color: Colors.white38, fontSize: 10),
+                          TextStyle(color: context.forest.text38, fontSize: 10),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -515,8 +525,8 @@ class DesktopTourSidebar extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.settings_outlined,
-                    size: 16, color: Colors.white54),
+                icon: Icon(Icons.settings_outlined,
+                    size: 16, color: context.forest.text54),
                 tooltip: 'প্রোফাইল সেটিংস',
                 onPressed: () {
                   final uid = repository.currentUid.isNotEmpty
@@ -540,11 +550,11 @@ class DesktopTourSidebar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'ফায়ারবেস লাইভ সিঙ্ক সক্রিয়',
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white54, fontSize: 9.5),
+                  style: TextStyle(color: context.forest.text54, fontSize: 9.5),
                 ),
               ),
             ],

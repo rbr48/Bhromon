@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/colors.dart';
@@ -50,15 +51,15 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
           context.go('/group-hub');
         },
         child: Scaffold(
-          backgroundColor: AppColors.backgroundDark,
+          backgroundColor: context.forest.surfaceFor(AppColors.backgroundDark),
           appBar: AppBar(
             title: const Text('Trust & Moderation Dashboard'),
-            backgroundColor: AppColors.cardDark,
+            backgroundColor: context.forest.surfaceFor(AppColors.cardDark),
             elevation: 0,
             centerTitle: true,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white70, size: 18),
+              icon: Icon(Icons.arrow_back_ios_new_rounded,
+                  color: context.forest.text70, size: 18),
               onPressed: () {
                 if (context.canPop()) {
                   context.pop();
@@ -98,7 +99,8 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                     children: [
                       Text(
                         state.errorMessage ?? 'Failed to load trust data.',
-                        style: const TextStyle(color: Colors.redAccent),
+                        style: TextStyle(
+                            color: context.forest.readable(Colors.redAccent)),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -132,7 +134,7 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                   children: [
                     // 1. Interactive Gauge Card
                     Card(
-                      color: AppColors.cardDark,
+                      color: context.forest.surfaceFor(AppColors.cardDark),
                       elevation: 6,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20)),
@@ -151,7 +153,7 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                                   child: CircularProgressIndicator(
                                     value: scoreValue / 1000.0,
                                     strokeWidth: 10,
-                                    backgroundColor: Colors.white10,
+                                    backgroundColor: context.forest.divider10,
                                     valueColor:
                                         AlwaysStoppedAnimation<Color>(color),
                                   ),
@@ -168,10 +170,10 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                                         letterSpacing: -1,
                                       ),
                                     ),
-                                    const Text(
+                                    Text(
                                       'TRUST SCORE',
                                       style: TextStyle(
-                                        color: Colors.white54,
+                                        color: context.forest.text54,
                                         fontSize: 9,
                                         fontWeight: FontWeight.bold,
                                         letterSpacing: 1.2,
@@ -192,11 +194,11 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
+                            Text(
                               'Moderation authority is active. Maintain your score above 500 to keep verified status.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                  color: Colors.white54,
+                                  color: context.forest.text54,
                                   fontSize: 11,
                                   height: 1.4),
                             ),
@@ -206,17 +208,17 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                     ),
                     const SizedBox(height: 20),
                     // 2. Score Breakdown Card
-                    const Text(
+                    Text(
                       'SCORE FORMULA & CONTRIBUTIONS',
                       style: TextStyle(
-                          color: Colors.white70,
+                          color: context.forest.text70,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                           letterSpacing: 1.5),
                     ),
                     const SizedBox(height: 12),
                     Card(
-                      color: AppColors.cardDark,
+                      color: context.forest.surfaceFor(AppColors.cardDark),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16)),
                       child: Padding(
@@ -224,13 +226,13 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
                         child: Column(
                           children: [
                             _buildFormulaRow(
-                                'Base Score', '+100', Colors.white70),
-                            const Divider(color: Colors.white10),
+                                'Base Score', '+100', context.forest.text70),
+                            Divider(color: context.forest.divider10),
                             _buildFormulaRow(
                                 'Verified Contributions',
                                 '+${(scoreValue - 100).clamp(0, 900)}',
                                 AppColors.mintGreen),
-                            const Divider(color: Colors.white10),
+                            Divider(color: context.forest.divider10),
                             _buildFormulaRow(
                                 'Community Flags', '-0', Colors.redAccent),
                           ],
@@ -252,7 +254,7 @@ class _TrustDashboardScreenState extends State<TrustDashboardScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white70)),
+          Text(label, style: TextStyle(color: context.forest.text70)),
           Text(
             value,
             style: TextStyle(color: color, fontWeight: FontWeight.bold),

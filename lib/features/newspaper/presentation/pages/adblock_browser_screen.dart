@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -270,7 +271,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
   void _showShieldInfoDialog() {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF14181E),
+      backgroundColor: context.forest.surfaceFor(const Color(0xFF14181E)),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -289,14 +290,14 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                       decoration: BoxDecoration(
                         color: _isAdBlockEnabled
                             ? AppColors.mintGreen.withValues(alpha: 0.15)
-                            : Colors.white10,
+                            : context.forest.divider10,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         Icons.shield_rounded,
                         color: _isAdBlockEnabled
-                            ? AppColors.mintGreen
-                            : Colors.white54,
+                            ? context.forest.accentText
+                            : context.forest.text54,
                         size: 26,
                       ),
                     ),
@@ -309,8 +310,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                             _isAdBlockEnabled
                                 ? 'AdBlock Shield Active'
                                 : 'AdBlock Paused',
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: context.forest.text,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -321,8 +322,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                                 : 'Ads are currently shown on this page',
                             style: TextStyle(
                               color: _isAdBlockEnabled
-                                  ? AppColors.mintGreen
-                                  : Colors.white54,
+                                  ? context.forest.accentText
+                                  : context.forest.text54,
                               fontSize: 12.5,
                             ),
                           ),
@@ -340,7 +341,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Divider(color: Colors.white12),
+                Divider(color: context.forest.divider12),
                 const SizedBox(height: 12),
                 _buildShieldFeatureRow(
                   Icons.block_rounded,
@@ -364,15 +365,16 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1B232D),
-                      foregroundColor: Colors.white,
+                      backgroundColor:
+                          context.forest.surfaceFor(const Color(0xFF1B232D)),
+                      foregroundColor: context.forest.text,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    icon: const Icon(Icons.chrome_reader_mode_rounded,
-                        color: AppColors.mintGreen, size: 18),
+                    icon: Icon(Icons.chrome_reader_mode_rounded,
+                        color: context.forest.accentText, size: 18),
                     label: const Text(
                       'Open in Distraction-Free Text Reader',
                       style:
@@ -397,7 +399,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppColors.mintGreen, size: 18),
+        Icon(icon, color: context.forest.accentText, size: 18),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -405,8 +407,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: context.forest.text,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -414,7 +416,7 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
               const SizedBox(height: 2),
               Text(
                 description,
-                style: const TextStyle(color: Colors.white60, fontSize: 11.5),
+                style: TextStyle(color: context.forest.text60, fontSize: 11.5),
               ),
             ],
           ),
@@ -852,9 +854,9 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
         margin: const EdgeInsets.all(24),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFF14181E),
+          color: context.forest.surfaceFor(const Color(0xFF14181E)),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white12),
+          border: Border.all(color: context.forest.divider12),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -865,14 +867,14 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                 color: AppColors.mintGreen.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.public_rounded,
-                  color: AppColors.mintGreen, size: 36),
+              child: Icon(Icons.public_rounded,
+                  color: context.forest.accentText, size: 36),
             ),
             const SizedBox(height: 16),
             Text(
               _pageTitle,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: context.forest.text,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -881,14 +883,14 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
             const SizedBox(height: 8),
             Text(
               _cleanDisplayUrl(_currentUrl),
-              style: const TextStyle(color: AppColors.mintGreen, fontSize: 13),
+              style: TextStyle(color: context.forest.accentText, fontSize: 13),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'To bypass external web security headers (X-Frame-Options) on browser platforms, you can read this newspaper in Clean Distraction-Free Reader mode, or launch in a dedicated tab.',
-              style:
-                  TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+              style: TextStyle(
+                  color: context.forest.text70, fontSize: 13, height: 1.4),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -898,7 +900,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.mintGreen,
-                      foregroundColor: const Color(0xFF0F1E14),
+                      foregroundColor:
+                          context.forest.surfaceFor(const Color(0xFF0F1E14)),
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -915,8 +918,8 @@ class _AdBlockBrowserScreenState extends State<AdBlockBrowserScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white24),
+                      foregroundColor: context.forest.text,
+                      side: BorderSide(color: context.forest.text24),
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),

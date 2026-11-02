@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:open_filex/open_filex.dart';
@@ -29,15 +30,15 @@ class OtaUpdateDialog extends StatelessWidget {
                 side: BorderSide(
                     color: AppColors.mintGreen.withValues(alpha: 0.2)),
               ),
-              title: const Row(
+              title: Row(
                 children: [
                   Icon(Icons.system_update_outlined,
-                      color: AppColors.mintGreen),
-                  SizedBox(width: 12),
+                      color: context.forest.accentText),
+                  const SizedBox(width: 12),
                   Text(
                     'UPDATE AVAILABLE',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: context.forest.text,
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1,
@@ -51,15 +52,16 @@ class OtaUpdateDialog extends StatelessWidget {
                 children: [
                   Text(
                     'A new version (${info.latestVersion}) of Bhromon is ready for you.',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    style:
+                        TextStyle(color: context.forest.text70, fontSize: 13),
                   ),
                   const SizedBox(height: 16),
 
                   // ── Downloading state ──
                   if (state.isDownloading) ...[
-                    const Row(
+                    Row(
                       children: [
-                        SizedBox(
+                        const SizedBox(
                           width: 12,
                           height: 12,
                           child: CircularProgressIndicator(
@@ -67,11 +69,11 @@ class OtaUpdateDialog extends StatelessWidget {
                             color: AppColors.mintGreen,
                           ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
                           'Downloading update…',
                           style: TextStyle(
-                            color: AppColors.mintGreen,
+                            color: context.forest.accentText,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -86,7 +88,7 @@ class OtaUpdateDialog extends StatelessWidget {
                             ? state.downloadProgress
                             : null,
                         color: AppColors.mintGreen,
-                        backgroundColor: Colors.white12,
+                        backgroundColor: context.forest.divider12,
                         minHeight: 7,
                       ),
                     ),
@@ -97,22 +99,23 @@ class OtaUpdateDialog extends StatelessWidget {
                         state.downloadProgress > 0
                             ? '${(state.downloadProgress * 100).toInt()}%'
                             : 'Connecting…',
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 11),
+                        style: TextStyle(
+                            color: context.forest.text54, fontSize: 11),
                       ),
                     ),
 
                     // ── Download complete — ready to install ──
                   ] else if (state.downloadProgress >= 1.0) ...[
-                    const Row(
+                    Row(
                       children: [
                         Icon(Icons.check_circle_outline,
-                            color: Colors.greenAccent, size: 16),
-                        SizedBox(width: 8),
+                            color: context.forest.readable(Colors.greenAccent),
+                            size: 16),
+                        const SizedBox(width: 8),
                         Text(
                           'Download complete — ready to install',
                           style: TextStyle(
-                            color: Colors.greenAccent,
+                            color: context.forest.readable(Colors.greenAccent),
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -122,10 +125,12 @@ class OtaUpdateDialog extends StatelessWidget {
 
                     // ── Initial prompt ──
                   ] else ...[
-                    const Text(
+                    Text(
                       'This update contains stability fixes, performance improvements, and updated content.',
                       style: TextStyle(
-                          color: Colors.white54, fontSize: 12, height: 1.4),
+                          color: context.forest.text54,
+                          fontSize: 12,
+                          height: 1.4),
                     ),
                   ],
                 ],
@@ -137,8 +142,8 @@ class OtaUpdateDialog extends StatelessWidget {
                     state.downloadProgress < 1.0)
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('LATER',
-                        style: TextStyle(color: Colors.white54)),
+                    child: Text('LATER',
+                        style: TextStyle(color: context.forest.text54)),
                   ),
 
                 // UPDATE NOW — shown only when no download is in progress

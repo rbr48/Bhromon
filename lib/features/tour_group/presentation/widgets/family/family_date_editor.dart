@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../../core/localization/app_localizations.dart';
 import '../../../../../core/localization/localized_date.dart';
 import '../../../../../core/theme/colors.dart';
@@ -32,7 +33,7 @@ Future<bool> showFamilyDateEditor(
   final changed = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: _sheet,
+    backgroundColor: context.forest.surfaceFor(_sheet),
     shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (_) => _FamilyDateEditor(
@@ -150,11 +151,11 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: _sheet,
+        backgroundColor: context.forest.surfaceFor(_sheet),
         title: Text(l10n.translate('fd_delete_title'),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         content: Text(l10n.translate('fd_delete_body'),
-            style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: context.forest.text70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -204,30 +205,30 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
                   l10n.translate(_e == null
                       ? 'fd_add_title'
                       : (widget.canEdit ? 'fd_edit_title' : 'fd_view_title')),
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: context.forest.text,
                       fontSize: 18,
                       fontWeight: FontWeight.bold)),
               if (!widget.canEdit) ...[
                 const SizedBox(height: 6),
                 Text(l10n.translate('fd_view_only'),
                     style:
-                        const TextStyle(color: Colors.white54, fontSize: 12)),
+                        TextStyle(color: context.forest.text54, fontSize: 12)),
               ],
               const SizedBox(height: 12),
               TextField(
                 controller: _title,
                 maxLength: 80,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('fd_name_label'),
                   hintText: l10n.translate('fd_name_hint'),
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: TextStyle(color: context.forest.text38),
                 ),
               ),
               const SizedBox(height: 8),
               Text(l10n.translate('fd_kind_label'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text70, fontSize: 12)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -244,7 +245,7 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
               ),
               const SizedBox(height: 12),
               Text(l10n.translate('fd_repeat_label'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text70, fontSize: 12)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -261,20 +262,21 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
               const SizedBox(height: 8),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.event_rounded, color: AppColors.gold),
+                leading: Icon(Icons.event_rounded,
+                    color: context.forest.readable(AppColors.gold)),
                 title: Text(l10n.translate('fd_date_label'),
                     style:
-                        const TextStyle(color: Colors.white70, fontSize: 12)),
+                        TextStyle(color: context.forest.text70, fontSize: 12)),
                 subtitle: Text(
                     localizedDateFormat('EEE, d MMM yyyy').format(_startOn),
-                    style: const TextStyle(color: Colors.white, fontSize: 15)),
-                trailing: const Icon(Icons.edit_calendar_rounded,
-                    color: Colors.white54),
+                    style: TextStyle(color: context.forest.text, fontSize: 15)),
+                trailing: Icon(Icons.edit_calendar_rounded,
+                    color: context.forest.text54),
                 onTap: editable ? _pickDate : null,
               ),
               const SizedBox(height: 4),
               Text(l10n.translate('fd_remind_label'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text70, fontSize: 12)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -294,7 +296,7 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
                 maxLength: 500,
                 minLines: 1,
                 maxLines: 3,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('fd_note_label'),
                 ),
@@ -303,7 +305,8 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(_error!,
-                      style: const TextStyle(color: Colors.redAccent)),
+                      style: TextStyle(
+                          color: context.forest.readable(Colors.redAccent))),
                 ),
               if (widget.canEdit) ...[
                 const SizedBox(height: 12),
@@ -312,10 +315,12 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
                     if (_e != null)
                       TextButton.icon(
                         onPressed: _saving ? null : _delete,
-                        icon: const Icon(Icons.delete_outline_rounded,
-                            color: Colors.redAccent),
+                        icon: Icon(Icons.delete_outline_rounded,
+                            color: context.forest.readable(Colors.redAccent)),
                         label: Text(l10n.translate('fd_delete'),
-                            style: const TextStyle(color: Colors.redAccent)),
+                            style: TextStyle(
+                                color:
+                                    context.forest.readable(Colors.redAccent))),
                       ),
                     const Spacer(),
                     FilledButton(
@@ -349,9 +354,9 @@ class _FamilyDateEditorState extends State<_FamilyDateEditor> {
       label: Text(label, style: const TextStyle(fontSize: 12)),
       selected: selected,
       selectedColor: AppColors.mintGreen,
-      backgroundColor: _chip,
-      labelStyle:
-          TextStyle(color: selected ? AppColors.darkGreen : Colors.white),
+      backgroundColor: context.forest.surfaceFor(_chip),
+      labelStyle: TextStyle(
+          color: selected ? AppColors.darkGreen : context.forest.text),
       onSelected: (_) => onTap(),
     );
   }

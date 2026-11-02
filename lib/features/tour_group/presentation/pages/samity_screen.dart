@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -102,7 +103,7 @@ class _SamityScreenState extends State<SamityScreen> {
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       shape: _sheetShape,
       builder: (_) => _SetupSheet(
         repository: _repository,
@@ -120,7 +121,7 @@ class _SamityScreenState extends State<SamityScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       shape: _sheetShape,
       builder: (_) => _CycleSheet(
         repository: _repository,
@@ -139,12 +140,12 @@ class _SamityScreenState extends State<SamityScreen> {
     final group = _group;
     final samityOn = group != null && group.isSamity;
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
         title: Text(l10n.translate('samity_title'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        backgroundColor: _card,
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(_card),
+        foregroundColor: context.forest.text,
         elevation: 0,
         actions: [
           if (_isAdmin && samityOn)
@@ -201,8 +202,8 @@ class _SamityScreenState extends State<SamityScreen> {
                 l10n.translate('samity_pot', args: {
                   'amount': _taka(config.potTaka),
                 }),
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: context.forest.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 15)),
             const SizedBox(height: 4),
@@ -210,7 +211,7 @@ class _SamityScreenState extends State<SamityScreen> {
                 l10n.translate('samity_monthly_amount', args: {
                   'amount': _taka(config.contributionTaka),
                 }),
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                style: TextStyle(color: context.forest.text70, fontSize: 12)),
             if (current != null) ...[
               const SizedBox(height: 10),
               Text(
@@ -218,13 +219,14 @@ class _SamityScreenState extends State<SamityScreen> {
                     'current': l10n.number(current.number),
                     'total': l10n.number(config.cycleCount),
                   }),
-                  style: const TextStyle(
-                      color: AppColors.mintGreen, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: context.forest.accentText,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
               Text(
                   '${_collectedText(l10n, ledger.collectedFor(current.index), current.potTaka)} · '
                   '${_dueText(l10n, current.dueOn)}',
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12)),
             ],
             const SizedBox(height: 6),
             Text(
@@ -233,7 +235,7 @@ class _SamityScreenState extends State<SamityScreen> {
                     : l10n.translate('samity_next_payout', args: {
                         'name': _nameOf(next.recipientEmail),
                       }),
-                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                style: TextStyle(color: context.forest.text70, fontSize: 12)),
           ],
         ),
         if (config.payoutOrder.contains(me)) ...[
@@ -260,8 +262,8 @@ class _SamityScreenState extends State<SamityScreen> {
     return _panel(
       children: [
         Text(l10n.translate('samity_my_standing'),
-            style: const TextStyle(
-                color: AppColors.mintGreen,
+            style: TextStyle(
+                color: context.forest.accentText,
                 fontWeight: FontWeight.bold,
                 fontSize: 13)),
         const SizedBox(height: 6),
@@ -271,13 +273,15 @@ class _SamityScreenState extends State<SamityScreen> {
                 : l10n
                     .translate('samity_my_owed', args: {'amount': _taka(owed)}),
             style: TextStyle(
-                color: owed == 0 ? AppColors.mintGreen : Colors.redAccent,
+                color: owed == 0
+                    ? context.forest.accentText
+                    : context.forest.readable(Colors.redAccent),
                 fontWeight: FontWeight.w600)),
         const SizedBox(height: 2),
         Text(
             l10n.translate('samity_my_paid',
                 args: {'amount': _taka(ledger.paidAcross(me))}),
-            style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            style: TextStyle(color: context.forest.text70, fontSize: 12)),
         if (due != null) ...[
           const SizedBox(height: 2),
           Text(
@@ -285,7 +289,7 @@ class _SamityScreenState extends State<SamityScreen> {
                 'number': l10n.number(due.number),
                 'date': _dateLabel(due.dueOn),
               }),
-              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              style: TextStyle(color: context.forest.text70, fontSize: 12)),
         ],
       ],
     );
@@ -306,7 +310,7 @@ class _SamityScreenState extends State<SamityScreen> {
       SamityCycle cycle, SamityLedger ledger, AppLocalizations l10n) {
     final status = ledger.statusOf(cycle);
     return Card(
-      color: _card,
+      color: context.forest.surfaceFor(_card),
       margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
         onTap: () => _openCycle(cycle),
@@ -314,24 +318,25 @@ class _SamityScreenState extends State<SamityScreen> {
           radius: 16,
           backgroundColor: AppColors.mintGreen.withValues(alpha: 0.2),
           child: Text(l10n.number(cycle.number),
-              style: const TextStyle(
-                  color: AppColors.mintGreen, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                  color: context.forest.accentText,
+                  fontWeight: FontWeight.bold)),
         ),
         title: Text(
             l10n.translate('samity_cycle_title',
                 args: {'number': l10n.number(cycle.number)}),
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600)),
+            style: TextStyle(
+                color: context.forest.text, fontWeight: FontWeight.w600)),
         subtitle: Text(
           '${_recipientText(l10n, _nameOf(cycle.recipientEmail))}\n'
           '${_dueText(l10n, cycle.dueOn)} · '
           '${_collectedText(l10n, ledger.collectedFor(cycle.index), cycle.potTaka)}',
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
+          style: TextStyle(color: context.forest.text54, fontSize: 12),
         ),
         isThreeLine: true,
         trailing: _StatusChip(
           label: _statusText(l10n, status),
-          color: _statusTone(status),
+          color: _statusTone(context, status),
         ),
       ),
     );
@@ -339,19 +344,20 @@ class _SamityScreenState extends State<SamityScreen> {
 
   Widget _standingTile(SamityStanding standing, AppLocalizations l10n) {
     return Card(
-      color: _card,
+      color: context.forest.surfaceFor(_card),
       margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
         title: Text(_nameOf(standing.email),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         trailing: Text(
           standing.isUpToDate
               ? l10n.translate('samity_all_paid_up')
               : l10n.translate('samity_owes',
                   args: {'amount': _taka(standing.owedTaka)}),
           style: TextStyle(
-              color:
-                  standing.isUpToDate ? AppColors.mintGreen : Colors.redAccent,
+              color: standing.isUpToDate
+                  ? context.forest.accentText
+                  : context.forest.readable(Colors.redAccent),
               fontSize: 12,
               fontWeight: FontWeight.w600),
         ),
@@ -363,7 +369,7 @@ class _SamityScreenState extends State<SamityScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: _card,
+          color: context.forest.surfaceFor(_card),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -375,8 +381,8 @@ class _SamityScreenState extends State<SamityScreen> {
   Widget _sectionTitle(String text) => Padding(
         padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
         child: Text(text,
-            style: const TextStyle(
-                color: AppColors.mintGreen,
+            style: TextStyle(
+                color: context.forest.accentText,
                 fontWeight: FontWeight.bold,
                 fontSize: 13)),
       );
@@ -385,7 +391,7 @@ class _SamityScreenState extends State<SamityScreen> {
         padding: const EdgeInsets.all(24),
         child: Text(text,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white60)),
+            style: TextStyle(color: context.forest.text60)),
       );
 
   String _nameOf(String email) => _displayName(_members, email);
@@ -433,10 +439,10 @@ String _statusText(AppLocalizations l10n, SamityCycleStatus status) {
   }
 }
 
-Color _statusTone(SamityCycleStatus status) {
+Color _statusTone(BuildContext context, SamityCycleStatus status) {
   switch (status) {
     case SamityCycleStatus.upcoming:
-      return Colors.white54;
+      return context.forest.text54;
     case SamityCycleStatus.due:
       return const Color(0xFFF59E0B);
     case SamityCycleStatus.overdue:
@@ -637,14 +643,14 @@ class _CycleSheetState extends State<_CycleSheet> {
                               l10n.translate('samity_cycle_title', args: {
                                 'number': l10n.number(cycle.number),
                               }),
-                              style: const TextStyle(
-                                  color: Colors.white,
+                              style: TextStyle(
+                                  color: context.forest.text,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16)),
                         ),
                         _StatusChip(
                           label: _statusText(l10n, status),
-                          color: _statusTone(status),
+                          color: _statusTone(context, status),
                         ),
                       ],
                     ),
@@ -652,12 +658,12 @@ class _CycleSheetState extends State<_CycleSheet> {
                     Text(
                         '${_recipientText(l10n, _displayName(widget.members, cycle.recipientEmail))} · '
                         '${_dueText(l10n, cycle.dueOn)}',
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 12)),
+                        style: TextStyle(
+                            color: context.forest.text54, fontSize: 12)),
                     const SizedBox(height: 4),
                     Text(_collectedText(l10n, collected, cycle.potTaka),
-                        style: const TextStyle(
-                            color: AppColors.mintGreen,
+                        style: TextStyle(
+                            color: context.forest.accentText,
                             fontWeight: FontWeight.w600)),
                     const SizedBox(height: 12),
                     for (final email in widget.config.payoutOrder)
@@ -692,15 +698,16 @@ class _CycleSheetState extends State<_CycleSheet> {
                               child: Text(
                                   '${l10n.translate('samity_payout_amount')}: '
                                   '${_taka(payout.amountTaka)}',
-                                  style: const TextStyle(
-                                      color: AppColors.mintGreen,
+                                  style: TextStyle(
+                                      color: context.forest.accentText,
                                       fontWeight: FontWeight.w600)),
                             ),
                             TextButton(
                               onPressed: () => _removePayout(cycle),
                               child: Text(l10n.translate('fd_delete'),
-                                  style:
-                                      const TextStyle(color: Colors.redAccent)),
+                                  style: TextStyle(
+                                      color: context.forest
+                                          .readable(Colors.redAccent))),
                             ),
                           ],
                         ),
@@ -726,15 +733,15 @@ class _CycleSheetState extends State<_CycleSheet> {
   }) {
     final name = _displayName(widget.members, email);
     return Card(
-      color: const Color(0xFF1B3A2F),
+      color: context.forest.surfaceFor(const Color(0xFF1B3A2F)),
       margin: const EdgeInsets.only(bottom: 6),
       child: ListTile(
         onTap: canRecord ? onTap : null,
-        title: Text(name, style: const TextStyle(color: Colors.white)),
+        title: Text(name, style: TextStyle(color: context.forest.text)),
         subtitle: isRecipient
             ? Text(
                 l10n.translate('samity_cycle_recipient', args: {'name': name}),
-                style: const TextStyle(color: Colors.white54, fontSize: 12))
+                style: TextStyle(color: context.forest.text54, fontSize: 12))
             : null,
         trailing: Text(
           l10n.translate('samity_members_paid', args: {
@@ -742,8 +749,9 @@ class _CycleSheetState extends State<_CycleSheet> {
             'due': _taka(contribution),
           }),
           style: TextStyle(
-              color:
-                  paid >= contribution ? AppColors.mintGreen : Colors.white70,
+              color: paid >= contribution
+                  ? context.forest.accentText
+                  : context.forest.text70,
               fontSize: 12,
               fontWeight: FontWeight.w600),
         ),
@@ -796,18 +804,18 @@ class _AmountDialogState extends State<_AmountDialog> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      backgroundColor: _card,
-      title: Text(widget.title, style: const TextStyle(color: Colors.white)),
+      backgroundColor: context.forest.surfaceFor(_card),
+      title: Text(widget.title, style: TextStyle(color: context.forest.text)),
       content: TextField(
         controller: _controller,
         autofocus: true,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: context.forest.text),
         decoration: InputDecoration(
           labelText: l10n.translate('samity_paid_so_far'),
           errorText: _error,
-          labelStyle: const TextStyle(color: Colors.white70),
+          labelStyle: TextStyle(color: context.forest.text70),
         ),
       ),
       actions: [
@@ -959,8 +967,8 @@ class _SetupSheetState extends State<_SetupSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(l10n.translate('samity_setup_title'),
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: context.forest.text,
                       fontWeight: FontWeight.bold,
                       fontSize: 16)),
               const SizedBox(height: 12),
@@ -968,10 +976,10 @@ class _SetupSheetState extends State<_SetupSheet> {
                 controller: _amount,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('samity_contribution_label'),
-                  labelStyle: const TextStyle(color: Colors.white70),
+                  labelStyle: TextStyle(color: context.forest.text70),
                   border: const OutlineInputBorder(),
                 ),
               ),
@@ -980,20 +988,20 @@ class _SetupSheetState extends State<_SetupSheet> {
                 contentPadding: EdgeInsets.zero,
                 title: Text(l10n.translate('samity_start_month_label'),
                     style:
-                        const TextStyle(color: Colors.white70, fontSize: 13)),
+                        TextStyle(color: context.forest.text70, fontSize: 13)),
                 subtitle: Text(localizedDateFormat('MMMM yyyy').format(_month),
-                    style: const TextStyle(color: Colors.white, fontSize: 15)),
-                trailing: const Icon(Icons.calendar_month_rounded,
-                    color: AppColors.mintGreen),
+                    style: TextStyle(color: context.forest.text, fontSize: 15)),
+                trailing: Icon(Icons.calendar_month_rounded,
+                    color: context.forest.accentText),
                 onTap: _pickMonth,
               ),
               DropdownButtonFormField<int>(
                 initialValue: _dueDay,
                 dropdownColor: const Color(0xFF1B4332),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: context.forest.text),
                 decoration: InputDecoration(
                   labelText: l10n.translate('samity_due_day_label'),
-                  labelStyle: const TextStyle(color: Colors.white70),
+                  labelStyle: TextStyle(color: context.forest.text70),
                   border: const OutlineInputBorder(),
                 ),
                 items: [
@@ -1009,13 +1017,13 @@ class _SetupSheetState extends State<_SetupSheet> {
               ),
               const SizedBox(height: 14),
               Text(l10n.translate('samity_order_label'),
-                  style: const TextStyle(
-                      color: AppColors.mintGreen,
+                  style: TextStyle(
+                      color: context.forest.accentText,
                       fontWeight: FontWeight.bold,
                       fontSize: 13)),
               const SizedBox(height: 4),
               Text(l10n.translate('samity_order_hint'),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12)),
               const SizedBox(height: 6),
               SizedBox(
                 height: 320,
@@ -1035,13 +1043,13 @@ class _SetupSheetState extends State<_SetupSheet> {
                         activeColor: AppColors.mintGreen,
                         contentPadding: const EdgeInsets.only(left: 4),
                         title: Text(slot.name,
-                            style: const TextStyle(color: Colors.white)),
+                            style: TextStyle(color: context.forest.text)),
                         subtitle: Text(
                             slot.included
                                 ? l10n.translate('samity_in_rotation')
                                 : slot.email,
-                            style: const TextStyle(
-                                color: Colors.white54, fontSize: 12)),
+                            style: TextStyle(
+                                color: context.forest.text54, fontSize: 12)),
                         onChanged: (value) =>
                             setState(() => slot.included = value ?? false),
                       ),
@@ -1051,8 +1059,9 @@ class _SetupSheetState extends State<_SetupSheet> {
               if (_error != null) ...[
                 const SizedBox(height: 10),
                 Text(_error!,
-                    style:
-                        const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                    style: TextStyle(
+                        color: context.forest.readable(Colors.redAccent),
+                        fontSize: 12)),
               ],
               const SizedBox(height: 12),
               FilledButton(

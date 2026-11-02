@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/utils/logger.dart';
@@ -62,11 +63,11 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: _card,
+        backgroundColor: context.forest.surfaceFor(_card),
         title: Text(l10n.translate('dp_remove_title'),
-            style: const TextStyle(color: Colors.white)),
+            style: TextStyle(color: context.forest.text)),
         content: Text(l10n.translate('dp_remove_body'),
-            style: const TextStyle(color: Colors.white70)),
+            style: TextStyle(color: context.forest.text70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -93,12 +94,12 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: context.forest.surfaceFor(_bg),
       appBar: AppBar(
         title: Text(l10n.translate('dp_title'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        backgroundColor: _card,
-        foregroundColor: Colors.white,
+        backgroundColor: context.forest.surfaceFor(_card),
+        foregroundColor: context.forest.text,
         elevation: 0,
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -147,7 +148,7 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 96),
       children: [
         Text(l10n.translate('dp_intro'),
-            style: const TextStyle(color: Colors.white60, fontSize: 13)),
+            style: TextStyle(color: context.forest.text60, fontSize: 13)),
         const SizedBox(height: 10),
         for (final member in active) _memberCard(member, dependents, l10n),
       ],
@@ -164,7 +165,7 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
     final name = member.displayName.isEmpty ? member.email : member.displayName;
 
     return Card(
-      color: _card,
+      color: context.forest.surfaceFor(_card),
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
@@ -176,8 +177,8 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
                 Expanded(
                   child: Text(
                     mine ? '$name · ${l10n.translate('dp_you')}' : name,
-                    style: const TextStyle(
-                        color: Colors.white,
+                    style: TextStyle(
+                        color: context.forest.text,
                         fontWeight: FontWeight.bold,
                         fontSize: 15),
                   ),
@@ -185,7 +186,7 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
                 Text(
                   l10n.translate('dp_family_size',
                       args: {'count': l10n.number(member.familyCount)}),
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12),
                 ),
               ],
             ),
@@ -194,7 +195,7 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(l10n.translate('dp_none'),
                     style:
-                        const TextStyle(color: Colors.white38, fontSize: 12)),
+                        TextStyle(color: context.forest.text38, fontSize: 12)),
               )
             else
               for (final d in listed)
@@ -203,24 +204,25 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
                     radius: 16,
-                    backgroundColor: const Color(0xFF1E3326),
+                    backgroundColor:
+                        context.forest.surfaceFor(const Color(0xFF1E3326)),
                     child: Text(
                       String.fromCharCode(d.name.runes.first).toUpperCase(),
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: context.forest.text),
                     ),
                   ),
-                  title:
-                      Text(d.name, style: const TextStyle(color: Colors.white)),
+                  title: Text(d.name,
+                      style: TextStyle(color: context.forest.text)),
                   subtitle: d.relation.isEmpty
                       ? null
                       : Text(d.relation,
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 12)),
+                          style: TextStyle(
+                              color: context.forest.text54, fontSize: 12)),
                   trailing: mine
                       ? IconButton(
                           tooltip: l10n.translate('dp_remove_tip'),
-                          icon: const Icon(Icons.delete_outline_rounded,
-                              color: Colors.white54),
+                          icon: Icon(Icons.delete_outline_rounded,
+                              color: context.forest.text54),
                           onPressed: () => _remove(d),
                         )
                       : null,
@@ -239,7 +241,7 @@ class _FamilyDependentsScreenState extends State<FamilyDependentsScreen> {
           padding: const EdgeInsets.all(32),
           child: Text(text,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 14)),
+              style: TextStyle(color: context.forest.text70, fontSize: 14)),
         ),
       );
 }
@@ -268,9 +270,9 @@ class _DependentPromptState extends State<_DependentPrompt> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return AlertDialog(
-      backgroundColor: _card,
+      backgroundColor: context.forest.surfaceFor(_card),
       title: Text(l10n.translate('dp_add_title'),
-          style: const TextStyle(color: Colors.white)),
+          style: TextStyle(color: context.forest.text)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -278,7 +280,7 @@ class _DependentPromptState extends State<_DependentPrompt> {
             controller: _name,
             autofocus: true,
             maxLength: kMaxDependentNameLength,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: context.forest.text),
             decoration: InputDecoration(
               labelText: l10n.translate('dp_name_label'),
             ),
@@ -286,11 +288,11 @@ class _DependentPromptState extends State<_DependentPrompt> {
           TextField(
             controller: _relation,
             maxLength: kMaxDependentRelationLength,
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: context.forest.text),
             decoration: InputDecoration(
               labelText: l10n.translate('dp_relation_label'),
               hintText: l10n.translate('dp_relation_hint'),
-              hintStyle: const TextStyle(color: Colors.white38),
+              hintStyle: TextStyle(color: context.forest.text38),
             ),
           ),
         ],
