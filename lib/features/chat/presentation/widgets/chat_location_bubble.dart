@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/utils/logger.dart';
 
@@ -125,7 +126,9 @@ class ChatLocationBubble extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title.isNotEmpty ? title : 'Shared Location',
+                  title.isNotEmpty
+                      ? title
+                      : context.l10n.translate('chat_location_title'),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -149,16 +152,16 @@ class ChatLocationBubble extends StatelessWidget {
                 const SizedBox(height: 6),
                 InkWell(
                   onTap: () => _openGoogleMaps(context),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.directions,
+                      const Icon(Icons.directions,
                           color: Color(0xFF00A884), size: 14),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          'Directions in Google Maps',
-                          style: TextStyle(
+                          context.l10n.translate('chat_location_directions'),
+                          style: const TextStyle(
                             color: Color(0xFF00A884),
                             fontSize: 11,
                             fontWeight: FontWeight.bold,

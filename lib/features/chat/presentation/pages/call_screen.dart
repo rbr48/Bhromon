@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -135,6 +136,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _initCall() async {
+    final l10n = context.l10n;
     await _localRenderer.initialize();
     await _remoteRenderer.initialize();
     if (!mounted) return;
@@ -149,7 +151,7 @@ class _CallScreenState extends State<CallScreen> {
       final micStatus = await Permission.microphone.request();
       if (micStatus.isDenied || micStatus.isPermanentlyDenied) {
         await _failCall(
-          'Microphone permission is required for calls.',
+          l10n.translate('call_mic_required'),
           messenger,
         );
         return;
@@ -186,8 +188,9 @@ class _CallScreenState extends State<CallScreen> {
       setState(() {
         switch (state) {
           case 'calling':
-            _callStatusText =
-                widget.isCaller ? 'Ringing...' : 'Incoming call...';
+            _callStatusText = widget.isCaller
+                ? 'Ringing...'
+                : l10n.translate('call_incoming');
             if (widget.isCaller) {
               _startRingback();
             }
@@ -199,7 +202,7 @@ class _CallScreenState extends State<CallScreen> {
           case 'connected':
             _stopRingback();
             _isConnected = true;
-            _callStatusText = 'Connected';
+            _callStatusText = context.l10n.translate('chat_connected');
             _applyAudioRouting();
             _startDurationTimer();
           case 'reconnecting':
@@ -208,10 +211,10 @@ class _CallScreenState extends State<CallScreen> {
           case 'declined' || 'missed' || 'ended' || 'failed':
             _stopRingback();
             _callStatusText = switch (state) {
-              'declined' => 'Call declined',
-              'missed' => 'No answer',
-              'failed' => 'Could not connect',
-              _ => 'Call ended',
+              'declined' => l10n.translate('call_status_declined'),
+              'missed' => l10n.translate('call_status_no_answer'),
+              'failed' => l10n.translate('call_status_failed'),
+              _ => l10n.translate('call_status_ended'),
             };
             Future.delayed(const Duration(milliseconds: 300), _safeExit);
         }
@@ -255,7 +258,7 @@ class _CallScreenState extends State<CallScreen> {
           content: Text(
             e is CallSetupException
                 ? e.message
-                : 'Could not connect the call. Please try again.',
+                : l10n.translate('call_connect_failed'),
           ),
           backgroundColor: Colors.redAccent,
         ),
@@ -269,6 +272,7 @@ class _CallScreenState extends State<CallScreen> {
   /// there is none, the call says why instead of failing with a generic message.
   /// Returns null when there is no partner email, which startCall refuses on its own.
   Future<String?> _confirmCanCall() async {
+    final l10n = context.l10n;
     final remoteEmail = widget.remoteEmail;
     if (remoteEmail == null || remoteEmail.isEmpty) return null;
     final ({String? tourId, CallPartnerStatus status}) resolved;
@@ -285,17 +289,17 @@ class _CallScreenState extends State<CallScreen> {
     final tourId = resolved.tourId;
     if (tourId != null) return tourId;
     final typedName = widget.remoteUserName.trim();
-    final name = typedName.isEmpty ? 'This person' : typedName;
+    final name =
+        typedName.isEmpty ? l10n.translate('call_this_person') : typedName;
     final problem = switch (resolved.status) {
       CallPartnerStatus.ready => null,
-      CallPartnerStatus.youLeft =>
-        'You are no longer a member of this tour, so you cannot call from it.',
+      CallPartnerStatus.youLeft => l10n.translate('call_not_member_self'),
       CallPartnerStatus.partnerLeft =>
-        '$name is no longer a member of this tour, so you cannot call them.',
+        l10n.translate('call_peer_not_member', args: {'name': name}),
       CallPartnerStatus.partnerNotLinked =>
-        '$name needs to open Bhromon once before you can call them.',
+        l10n.translate('call_peer_not_signed_in', args: {'name': name}),
       CallPartnerStatus.noSharedTour =>
-        'You do not share a tour with $name, so you cannot call them.',
+        l10n.translate('call_peer_no_shared_group', args: {'name': name}),
     };
     throw CallSetupException(problem ?? kCallUnreachableMessage);
   }
@@ -346,46 +350,51 @@ class _CallScreenState extends State<CallScreen> {
   void _showLinkDetails() {
     final sample = _signaling.linkSample;
     String figure(double? value, String unit, {int digits = 0}) => value == null
-        ? 'No data yet'
+        ? context.l10n.translate('call_quality_no_data')
         : '${value.toStringAsFixed(digits)} $unit';
 
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1F2C34),
-        title:
-            const Text('Call quality', style: TextStyle(color: Colors.white)),
+        title: Text(context.l10n.translate('call_quality_title'),
+            style: const TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _detailRow(
-                'Link',
+                context.l10n.translate('chat_quality_link'),
                 switch (_signaling.networkQuality.value) {
-                  CallNetworkQuality.good => 'Good',
-                  CallNetworkQuality.fair => 'Fair',
-                  CallNetworkQuality.poor => 'Weak',
+                  CallNetworkQuality.good =>
+                    context.l10n.translate('chat_quality_good'),
+                  CallNetworkQuality.fair =>
+                    context.l10n.translate('chat_quality_fair'),
+                  CallNetworkQuality.poor =>
+                    context.l10n.translate('chat_quality_weak'),
                 }),
-            _detailRow('Round trip', figure(sample?.roundTripMs, 'ms')),
-            _detailRow('Jitter', figure(sample?.jitterMs, 'ms')),
+            _detailRow(context.l10n.translate('call_quality_rtt'),
+                figure(sample?.roundTripMs, 'ms')),
+            _detailRow(context.l10n.translate('chat_quality_jitter'),
+                figure(sample?.jitterMs, 'ms')),
             _detailRow(
-              'Packets lost',
+              context.l10n.translate('call_quality_loss'),
               sample?.lossRatio == null
-                  ? 'No data yet'
+                  ? context.l10n.translate('call_quality_no_data')
                   : '${(sample!.lossRatio! * 100).toStringAsFixed(1)} %',
             ),
             _detailRow(
-              'Sending',
+              context.l10n.translate('chat_quality_sending'),
               figure(sample?.outboundKbps, 'kbps'),
             ),
-            _detailRow(
-                'Loudness', '${_signaling.remoteGain.toStringAsFixed(0)}x'),
+            _detailRow(context.l10n.translate('chat_quality_loudness'),
+                '${_signaling.remoteGain.toStringAsFixed(0)}x'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+            child: Text(context.l10n.translate('call_close')),
           ),
         ],
       ),
@@ -416,8 +425,8 @@ class _CallScreenState extends State<CallScreen> {
     // A call that started without a camera has no video track to switch on.
     if (_isVideoOff && !_signaling.hasLocalVideo) {
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(
-          content: Text('The camera is not available for this call.'),
+        SnackBar(
+          content: Text(context.l10n.translate('call_camera_unavailable')),
         ),
       );
       return;
@@ -616,17 +625,20 @@ class _CallScreenState extends State<CallScreen> {
                                               case CallNetworkQuality.good:
                                                 dotColor =
                                                     const Color(0xFF00E676);
-                                                label = 'HD';
+                                                label = context.l10n.translate(
+                                                    'chat_quality_hd');
                                                 break;
                                               case CallNetworkQuality.fair:
                                                 dotColor =
                                                     const Color(0xFFFFD600);
-                                                label = 'Fair';
+                                                label = context.l10n.translate(
+                                                    'chat_quality_fair');
                                                 break;
                                               case CallNetworkQuality.poor:
                                                 dotColor =
                                                     const Color(0xFFFF1744);
-                                                label = 'Weak';
+                                                label = context.l10n.translate(
+                                                    'chat_quality_weak');
                                                 break;
                                             }
                                             return GestureDetector(
@@ -775,7 +787,7 @@ class _CallScreenState extends State<CallScreen> {
                             bgColor: _isSpeakerOn
                                 ? Colors.white.withValues(alpha: 0.15)
                                 : const Color(0xFF2A3942),
-                            tooltip: 'Speaker',
+                            tooltip: context.l10n.translate('call_speaker'),
                             onTap: _toggleSpeaker,
                           ),
 
@@ -787,7 +799,9 @@ class _CallScreenState extends State<CallScreen> {
                             bgColor: _isAudioMuted
                                 ? Colors.white.withValues(alpha: 0.15)
                                 : const Color(0xFF2A3942),
-                            tooltip: _isAudioMuted ? 'Unmute' : 'Mute',
+                            tooltip: _isAudioMuted
+                                ? context.l10n.translate('chat_unmute')
+                                : context.l10n.translate('chat_mute'),
                             onTap: _toggleAudio,
                           ),
 
@@ -800,8 +814,10 @@ class _CallScreenState extends State<CallScreen> {
                             bgColor: _signaling.remoteGain > 1
                                 ? Colors.white.withValues(alpha: 0.15)
                                 : const Color(0xFF2A3942),
-                            tooltip:
-                                'Louder (${_signaling.remoteGain.toStringAsFixed(0)}x)',
+                            tooltip: context.l10n
+                                .translate('call_louder', args: {
+                              'gain': _signaling.remoteGain.toStringAsFixed(0)
+                            }),
                             onTap: _cycleRemoteGain,
                           ),
 
@@ -817,8 +833,8 @@ class _CallScreenState extends State<CallScreen> {
                                   ? Colors.white.withValues(alpha: 0.15)
                                   : const Color(0xFF2A3942),
                               tooltip: _isVideoOff
-                                  ? 'Turn Video On'
-                                  : 'Turn Video Off',
+                                  ? context.l10n.translate('call_video_on')
+                                  : context.l10n.translate('call_video_off'),
                               onTap: _toggleVideo,
                             ),
 
@@ -828,7 +844,7 @@ class _CallScreenState extends State<CallScreen> {
                             color: Colors.white,
                             bgColor: Colors.redAccent,
                             isEndCall: true,
-                            tooltip: 'End Call',
+                            tooltip: context.l10n.translate('call_end'),
                             onTap: _endCall,
                           ),
                         ],

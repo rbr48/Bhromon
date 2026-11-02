@@ -228,7 +228,11 @@ class StarredMessagesScreen extends StatelessWidget {
                                               MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
-                                              isMe ? 'You' : 'Member',
+                                              isMe
+                                                  ? context.l10n
+                                                      .translate('chat_you')
+                                                  : context.l10n.translate(
+                                                      'chats_member'),
                                               style: const TextStyle(
                                                 color: Color(0xFF00A884),
                                                 fontSize: 14,
@@ -246,7 +250,8 @@ class StarredMessagesScreen extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          _typeSnippet(type, text, data),
+                                          _typeSnippet(
+                                              context, type, text, data),
                                           maxLines: 3,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
@@ -312,7 +317,8 @@ class StarredMessagesScreen extends StatelessWidget {
     }
   }
 
-  String _typeSnippet(String type, String text, Map<String, dynamic> data) {
+  String _typeSnippet(BuildContext context, String type, String text,
+      Map<String, dynamic> data) {
     switch (type) {
       case 'image':
         return text.isNotEmpty ? '📷 $text' : '📷 Photo';
@@ -321,13 +327,16 @@ class StarredMessagesScreen extends StatelessWidget {
       case 'audio':
         return '🎤 Voice message';
       case 'document':
-        final fileName = (data['fileName'] as String?) ?? 'Document';
+        final fileName = (data['fileName'] as String?) ??
+            context.l10n.translate('chat_attach_document');
         return '📄 $fileName';
       case 'location':
-        final title = (data['title'] as String?) ?? 'Shared Location';
+        final title = (data['title'] as String?) ??
+            context.l10n.translate('chat_location_title');
         return '📍 $title';
       case 'expense':
-        final title = (data['expenseTitle'] as String?) ?? 'Expense Split';
+        final title = (data['expenseTitle'] as String?) ??
+            context.l10n.translate('chat_expense_split_title');
         final amount = data['amount']?.toString() ?? '0';
         return '💰 $title • ৳$amount';
       default:

@@ -1,3 +1,4 @@
+import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// WhatsApp-style emoji reaction bar and message reaction badge.
@@ -172,9 +173,9 @@ void showReactionDetailsSheet(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    const Text(
-                      'Reactions',
-                      style: TextStyle(
+                    Text(
+                      context.l10n.translate('chat_reactions_title'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -207,15 +208,16 @@ void showReactionDetailsSheet(
                           Text(emoji, style: const TextStyle(fontSize: 24)),
                       title: Text(
                         isSelf
-                            ? 'You'
-                            : 'Member ${uid.substring(0, uid.length > 5 ? 5 : uid.length)}',
+                            ? context.l10n.translate('chat_you')
+                            : '${context.l10n.translate('chats_member')} ${uid.substring(0, uid.length > 5 ? 5 : uid.length)}',
                         style:
                             const TextStyle(color: Colors.white, fontSize: 13),
                       ),
                       trailing: isSelf
-                          ? const Text(
-                              'Tap to remove',
-                              style: TextStyle(
+                          ? Text(
+                              context.l10n
+                                  .translate('chat_reaction_tap_remove'),
+                              style: const TextStyle(
                                   color: Colors.white38, fontSize: 11),
                             )
                           : null,
