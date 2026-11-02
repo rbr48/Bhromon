@@ -1,6 +1,21 @@
 # Bhromon — One App for Every Group (Flutter & Firebase)
 
-Bhromon is one app for every group you belong to: families, offices, schools, sports teams, study groups, neighbourhood committees, housing societies, messes, savings groups and trips. It is an offline-first Flutter app designed with Clean Architecture, BLoC state management, and a dual-database storage engine. It provides group chat and channels, notices and roll calls, shared expenses and settle-up, calendars, safety alerts with SOS, the Game Zone, and an ad-free newspaper reader.
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.bhromon.app">
+    <img src="https://img.shields.io/badge/Google_Play-Install_App-00875A?style=for-the-badge&logo=google-play&logoColor=white" alt="Google Play">
+  </a>
+  <a href="https://app.bhromon.fun">
+    <img src="https://img.shields.io/badge/Web_App-app.bhromon.fun-10B981?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Web App">
+  </a>
+  <a href="https://github.com/rbr48/Bhromon/releases/latest">
+    <img src="https://img.shields.io/badge/Latest_Release-v1.8.70_(Build_124)-2563EB?style=for-the-badge&logo=github&logoColor=white" alt="Latest Release">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-Apache_2.0-64748B?style=for-the-badge" alt="License">
+  </a>
+</p>
+
+Bhromon is one app for every group you belong to: families, offices, campuses, messes, housing societies, savings groups and trips. It is an offline-first Flutter app designed with Clean Architecture, BLoC state management, and a dual-database storage engine. It provides group chat and channels, notices and roll calls, shared expenses and settle-up, calendars, safety alerts with SOS, the Game Zone, and an ad-free newspaper reader.
 
 ---
 
