@@ -18,6 +18,7 @@ import '../../../../core/localization/localized_date.dart';
 import '../../../../core/services/media_upload_service.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/theme_context.dart';
+import '../../../../core/theme/theme_controller.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/widgets/skeleton.dart';
@@ -1994,6 +1995,81 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Theme Selector (Dark / Light / System)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: context.forest.card,
+            borderRadius: BorderRadius.circular(16),
+            border:
+                Border.all(color: context.forest.text.withValues(alpha: 0.08)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.palette_outlined,
+                      color: context.forest.accentText, size: 20),
+                  const SizedBox(width: 10),
+                  Text(
+                    _isBn ? 'অ্যাপের থিম' : 'App Theme',
+                    style: TextStyle(
+                      color: context.forest.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ListenableBuilder(
+                listenable: ThemeController.instance,
+                builder: (context, _) {
+                  final currentMode = ThemeController.instance.mode;
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: _buildChoiceChip(
+                          selected: currentMode == ThemeMode.dark,
+                          label: _isBn ? 'ডার্ক' : 'Dark',
+                          onTap: () {
+                            ThemeController.instance.setMode(ThemeMode.dark);
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildChoiceChip(
+                          selected: currentMode == ThemeMode.light,
+                          label: _isBn ? 'লাইট' : 'Light',
+                          onTap: () {
+                            ThemeController.instance.setMode(ThemeMode.light);
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildChoiceChip(
+                          selected: currentMode == ThemeMode.system,
+                          label: _isBn ? 'সিস্টেম' : 'System',
+                          onTap: () {
+                            ThemeController.instance.setMode(ThemeMode.system);
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
