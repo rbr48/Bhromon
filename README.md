@@ -8,7 +8,7 @@
     <img src="https://img.shields.io/badge/Web_App-app.bhromon.fun-10B981?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Web App">
   </a>
   <a href="https://github.com/rbr48/Bhromon/releases/latest">
-    <img src="https://img.shields.io/badge/Latest_Release-v1.8.70_(Build_124)-2563EB?style=for-the-badge&logo=github&logoColor=white" alt="Latest Release">
+    <img src="https://img.shields.io/badge/Latest_Release-v1.8.71_(Build_125)-2563EB?style=for-the-badge&logo=github&logoColor=white" alt="Latest Release">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-Apache_2.0-64748B?style=for-the-badge" alt="License">
