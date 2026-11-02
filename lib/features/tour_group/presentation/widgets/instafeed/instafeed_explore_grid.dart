@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import '../../../../../core/theme/colors.dart';
 import 'reel_thumbnail_preview.dart';
@@ -26,11 +27,11 @@ class InstafeedExploreGrid extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.grid_on_outlined,
-                size: 54, color: Colors.white.withValues(alpha: 0.2)),
+                size: 54, color: context.forest.text.withValues(alpha: 0.2)),
             const SizedBox(height: 12),
             Text(
               context.l10n.translate('ig_grid_empty'),
-              style: const TextStyle(color: Colors.white54),
+              style: TextStyle(color: context.forest.text54),
             ),
           ],
         ),
@@ -112,14 +113,16 @@ class InstafeedExploreGrid extends StatelessWidget {
 
                 // Reel / Video Indicator
                 if (post.isReel)
-                  const Positioned(
+                  Positioned(
                     top: 6,
                     right: 6,
                     child: Icon(
                       Icons.play_arrow_rounded,
-                      color: Colors.white,
+                      color: context.forest.text,
                       size: 20,
-                      shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
+                      shadows: const [
+                        Shadow(color: Colors.black87, blurRadius: 4)
+                      ],
                     ),
                   )
                 else if (post.images.length > 1)
@@ -154,8 +157,8 @@ class InstafeedExploreGrid extends StatelessWidget {
                           const SizedBox(width: 2),
                           Text(
                             context.l10n.number(post.effectiveViewCount),
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: context.forest.text,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -190,8 +193,8 @@ class InstafeedExploreGrid extends StatelessWidget {
                         color: Colors.purple.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Icon(Icons.archive_outlined,
-                          color: Colors.white, size: 12),
+                      child: Icon(Icons.archive_outlined,
+                          color: context.forest.text, size: 12),
                     ),
                   ),
 

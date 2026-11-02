@@ -1,4 +1,5 @@
 import 'package:bhromon/core/media/media_access.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:flutter/material.dart';
 
 import 'package:bhromon/features/tour_group/domain/models/safety_alert_models.dart';
@@ -66,20 +67,21 @@ class InstafeedTideBanner extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      color:
-                          isHighTide ? Colors.tealAccent : Colors.orangeAccent,
+                      color: context.forest.readable(
+                          isHighTide ? Colors.tealAccent : Colors.orangeAccent),
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+                    style:
+                        TextStyle(color: context.forest.text70, fontSize: 11),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.white54, size: 18),
+            Icon(Icons.chevron_right, color: context.forest.text54, size: 18),
           ],
         ),
       ),
@@ -127,22 +129,22 @@ class InstafeedSosBanner extends StatelessWidget {
                 Text(
                   context.l10n.translate('ig_sos_banner',
                       args: {'name': alert.senderName}),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.forest.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
                 ),
                 Text(
                   context.l10n.translate('ig_sos_help'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  style: TextStyle(color: context.forest.text70, fontSize: 11),
                 ),
               ],
             ),
           ),
           FilledButton.tonal(
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.white,
+              backgroundColor: context.forest.text,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             ),
             onPressed: () {
@@ -226,7 +228,7 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF1E1E1E),
+      backgroundColor: context.forest.feedSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
@@ -251,15 +253,15 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
               children: [
                 Text(
                   authorName,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.forest.text,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   authorEmail,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: context.forest.text54, fontSize: 12),
                 ),
               ],
             ),
@@ -269,19 +271,22 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Divider(color: Colors.white10),
+          Divider(color: context.forest.divider10),
           _buildInfoRow(
+            context: context,
             icon: Icons.directions_bus,
             label: context.l10n.translate('ig_bus_seat_label'),
             value: seatNumber != null && seatNumber!.isNotEmpty
                 ? context.l10n
                     .translate('ig_seat_number', args: {'seat': '$seatNumber'})
                 : context.l10n.translate('ig_not_assigned'),
-            valueColor:
-                seatNumber != null ? AppColors.mintGreen : Colors.white54,
+            valueColor: seatNumber != null
+                ? AppColors.mintGreen
+                : context.forest.text54,
           ),
           const SizedBox(height: 10),
           _buildInfoRow(
+            context: context,
             icon: Icons.hotel,
             label: context.l10n.translate('ig_hotel_room_label'),
             value: roomNumber != null && roomNumber!.isNotEmpty
@@ -289,11 +294,12 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
                     .translate('ig_room_number', args: {'room': '$roomNumber'})
                 : context.l10n.translate('ig_not_assigned'),
             valueColor:
-                roomNumber != null ? Colors.amberAccent : Colors.white54,
+                roomNumber != null ? Colors.amberAccent : context.forest.text54,
           ),
           if (familyCount != null && familyCount! > 1) ...[
             const SizedBox(height: 10),
             _buildInfoRow(
+              context: context,
               icon: Icons.family_restroom,
               label: context.l10n.translate('ig_family_members'),
               value: context.l10n.translate('ig_people_count',
@@ -318,6 +324,7 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
   }
 
   Widget _buildInfoRow({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required String value,
@@ -326,15 +333,15 @@ class InstafeedMemberLogisticsDialog extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: context.forest.text.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: Colors.white70),
+          Icon(icon, size: 20, color: context.forest.text70),
           const SizedBox(width: 10),
           Text(label,
-              style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              style: TextStyle(color: context.forest.text70, fontSize: 13)),
           const Spacer(),
           Text(
             value,

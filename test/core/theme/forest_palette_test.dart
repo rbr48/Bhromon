@@ -102,6 +102,36 @@ void main() {
       }
     });
 
+    test('text is readable on every feed surface', () {
+      for (final bg in [
+        l.feedPage,
+        l.feedSurface,
+        l.feedSheet,
+        l.feedDeep,
+        l.feedRaised,
+        l.feedField,
+        l.feedBubble,
+        l.feedPlaceholder,
+      ]) {
+        expect(contrast(l.text, bg), greaterThanOrEqualTo(4.5));
+        expect(contrast(l.text70, bg), greaterThanOrEqualTo(4.5));
+        expect(contrast(l.accentText, bg), greaterThanOrEqualTo(4.5));
+        expect(contrast(l.text54, bg), greaterThanOrEqualTo(3.0));
+      }
+    });
+
+    test('dark feed keeps the original greys', () {
+      const d = ForestPalette.dark;
+      expect(d.feedPage, const Color(0xFF0A120D));
+      expect(d.feedSurface, const Color(0xFF1E1E1E));
+      expect(d.feedSheet, const Color(0xFF121212));
+      expect(d.feedDeep, const Color(0xFF141414));
+      expect(d.feedRaised, const Color(0xFF2A2A2A));
+      expect(d.feedField, const Color(0xFF2C2C2C));
+      expect(d.feedBubble, const Color(0xFF242526));
+      expect(d.feedPlaceholder, const Color(0xFF1B1B1B));
+    });
+
     test('dark banner keeps the original gradient', () {
       expect(ForestPalette.dark.bannerStart, const Color(0xFF1B4332));
       expect(ForestPalette.dark.bannerEnd, const Color(0xFF081C15));

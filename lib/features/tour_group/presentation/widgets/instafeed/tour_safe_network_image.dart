@@ -1,4 +1,5 @@
 import 'package:bhromon/core/media/media_access.dart';
+import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -66,11 +67,11 @@ class _TourSafeNetworkImageState extends State<TourSafeNetworkImage> {
     return Container(
       width: widget.width,
       height: widget.height,
-      color: const Color(0xFF1E1E1E),
-      child: const Center(
+      color: context.forest.feedSurface,
+      child: Center(
         child: CircularProgressIndicator(
           strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.white38),
+          valueColor: AlwaysStoppedAnimation<Color>(context.forest.text38),
         ),
       ),
     );
@@ -84,24 +85,24 @@ class _TourSafeNetworkImageState extends State<TourSafeNetworkImage> {
     return Container(
       width: widget.width,
       height: widget.height,
-      color: const Color(0xFF1E1E1E),
+      color: context.forest.feedSurface,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.broken_image_outlined,
-              color: Colors.white54,
+              color: context.forest.text54,
               size: 34,
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: context.forest.text70,
                 fontSize: 12,
               ),
             ),
@@ -113,20 +114,20 @@ class _TourSafeNetworkImageState extends State<TourSafeNetworkImage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white12,
+                  color: context.forest.divider12,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white24, width: 0.8),
+                  border: Border.all(color: context.forest.text24, width: 0.8),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.refresh_rounded,
-                        color: Colors.white, size: 14),
+                    Icon(Icons.refresh_rounded,
+                        color: context.forest.text, size: 14),
                     const SizedBox(width: 6),
                     Text(
                       l10n.translate('ig_image_retry'),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: context.forest.text,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
