@@ -220,10 +220,10 @@ Both are off until configured, and the server works without them.
 
 **TURN over TLS.** The relay host is `turn.sottocall.com` (`TURN_SERVER_HOST`),
 and `/api/chat/ice_servers` offers it on UDP and TCP 3478 and over TLS on 5349
-(`turns:`). coturn's certificate matches the host the app is given: the TLS
-handshake is checked against `turn.sottocall.com`.
-Check it with `openssl s_client -connect turn.sottocall.com:5349 -servername
-turn.sottocall.com`.
+(`turns:`). coturn serves the Let's Encrypt certificate for that name, so the
+TLS handshake the app makes is checked against `turn.sottocall.com`. If the host
+ever changes, the certificate must name the new host too. Check it with
+`openssl s_client -connect turn.sottocall.com:5349 -servername turn.sottocall.com`.
 
 Some networks let only port 443 out. To offer TLS-TURN there as well, give coturn
 a second IP on 443 or let nginx pass `turn.sottocall.com` through to coturn by SNI
