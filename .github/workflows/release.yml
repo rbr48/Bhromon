@@ -12,7 +12,6 @@ jobs:
   deploy_firebase:
     name: Deploy Firebase
     runs-on: ubuntu-latest
-    if: ${{ secrets.FIREBASE_TOKEN != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -33,10 +32,11 @@ jobs:
         run: npm run build
 
       - name: Deploy to Firebase (rules, indexes, storage, functions)
+        if: env.FIREBASE_TOKEN != ''
         run: |
           npx firebase-tools deploy \
             --only firestore:rules,firestore:indexes,storage,functions \
-            --token ${{ secrets.FIREBASE_TOKEN }} \
+            --token "$FIREBASE_TOKEN" \
             --non-interactive
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
