@@ -1215,7 +1215,10 @@ async def get_ice_servers(uid: str = Depends(authenticate_user)):
 # the offer limit.
 CALL_SIGNAL_TYPES = frozenset({"offer", "answer", "candidate", "end", "declined", "reoffer", "reanswer", "renegotiate"})
 MAX_CALL_SIGNAL_BYTES = 64 * 1024
-CALL_OFFERS_PER_WINDOW = 6
+# The same limit as the call push watcher (notifications.py) and the Cloud
+# Function (CALLS_PER_WINDOW), so a call that one of them allows is not refused
+# by another halfway through ringing.
+CALL_OFFERS_PER_WINDOW = 10
 CALL_OFFER_WINDOW_SECONDS = 600.0
 WS_AUTH_TIMEOUT_SECONDS = 10.0
 # How long a chat message waits for its recipient's app to confirm it on screen,
@@ -1281,6 +1284,17 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
     signal_type = data.get("signalType")
     recipient_id = data.get("recipientId")
 
+    # A recipient named by email is resolved first, so the group check below
+    # runs on the uid it applies to.
+    target_uid = recipient_id
+    if isinstance(recipient_id, str) and "@" in recipient_id:
+        try:
+            from firebase_admin import auth as fb_auth
+            user = await run_in_threadpool(fb_auth.get_user_by_email, recipient_id.strip().lower())
+            target_uid = user.uid
+        except Exception as ex:
+            logger.debug("Could not resolve recipient email %s to uid: %s", recipient_id, ex)
+
     refusal: Optional[str] = None
     if (
         not isinstance(signal_type, str)
@@ -1288,11 +1302,12 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
         or not isinstance(recipient_id, str)
         or not recipient_id
         or recipient_id == uid
+        or target_uid == uid
     ):
         refusal = "invalid"
     elif len(json.dumps(data)) > MAX_CALL_SIGNAL_BYTES:
         refusal = "too_large"
-    elif not await run_in_threadpool(shares_group, uid, recipient_id):
+    elif not await run_in_threadpool(shares_group, uid, target_uid):
         refusal = "not_in_group"
     elif signal_type == "offer" and not call_offer_limiter.allow(uid):
         refusal = "rate_limited"
@@ -1303,15 +1318,6 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
             {"type": "call_signal_error", "callId": call_id, "signalType": signal_type, "reason": refusal}
         )
         return
-
-    target_uid = recipient_id
-    if isinstance(recipient_id, str) and "@" in recipient_id:
-        try:
-            from firebase_admin import auth as fb_auth
-            user = await run_in_threadpool(fb_auth.get_user_by_email, recipient_id.strip().lower())
-            target_uid = user.uid
-        except Exception as ex:
-            logger.debug("Could not resolve recipient email %s to uid: %s", recipient_id, ex)
 
     delivered = await ws_manager.send_to_user(
         target_uid,
@@ -1345,7 +1351,7 @@ async def relay_call_signal(websocket: WebSocket, uid: str, data: Dict[str, Any]
         _start_background(
             run_in_threadpool(
                 push_dispatcher.send_call_push_to_uid,
-                recipient_uid=recipient_id,
+                recipient_uid=target_uid,
                 call_id=call_id,
                 caller_id=uid,
                 caller_name=_short_text(data.get("callerName"), 80) or "A member",

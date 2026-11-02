@@ -15,6 +15,7 @@ import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
 import '../../data/call_signaling_service.dart';
+import '../../domain/call_display.dart';
 import '../../../tour_group/data/tour_group_repository.dart';
 import '../../../tour_group/domain/services/call_partner.dart';
 
@@ -65,7 +66,9 @@ class _CallScreenState extends State<CallScreen> {
   bool _remoteVideoConnected = false;
   bool _controlsVisible = true;
   bool _hasExited = false;
-  String _callStatusText = 'Calling...';
+
+  /// The translation key of the status line shown until the call connects.
+  String _statusKey = 'call_status_calling';
 
   /// True while the media is up. The clock and the link badge show only then.
   bool _isConnected = false;
@@ -126,7 +129,11 @@ class _CallScreenState extends State<CallScreen> {
     if (!kIsWeb) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     }
-    _initCall();
+    // The setup reads the app's language, which is only available once the
+    // screen is in the tree, so it starts after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_initCall());
+    });
   }
 
   void _applyAudioRouting() {
@@ -149,6 +156,8 @@ class _CallScreenState extends State<CallScreen> {
     var videoEnabled = widget.isVideoCall;
     if (!kIsWeb) {
       final micStatus = await Permission.microphone.request();
+      // Left while the prompt was open: the call must not start.
+      if (!mounted) return;
       if (micStatus.isDenied || micStatus.isPermanentlyDenied) {
         await _failCall(
           l10n.translate('call_mic_required'),
@@ -158,6 +167,7 @@ class _CallScreenState extends State<CallScreen> {
       }
       if (widget.isVideoCall) {
         videoEnabled = (await Permission.camera.request()).isGranted;
+        if (!mounted) return;
       }
       _applyAudioRouting();
     }
@@ -188,33 +198,32 @@ class _CallScreenState extends State<CallScreen> {
       setState(() {
         switch (state) {
           case 'calling':
-            _callStatusText = widget.isCaller
-                ? 'Ringing...'
-                : l10n.translate('call_incoming');
+            _statusKey =
+                widget.isCaller ? 'call_status_ringing' : 'call_incoming';
             if (widget.isCaller) {
               _startRingback();
             }
           case 'answered':
             // Accepted, but the media has not connected yet.
             _stopRingback();
-            _callStatusText = 'Connecting...';
+            _statusKey = 'call_status_connecting';
             _applyAudioRouting();
           case 'connected':
             _stopRingback();
             _isConnected = true;
-            _callStatusText = context.l10n.translate('chat_connected');
+            _statusKey = 'chat_connected';
             _applyAudioRouting();
             _startDurationTimer();
           case 'reconnecting':
             _isConnected = false;
-            _callStatusText = 'Reconnecting...';
+            _statusKey = 'call_status_reconnecting';
           case 'declined' || 'missed' || 'ended' || 'failed':
             _stopRingback();
-            _callStatusText = switch (state) {
-              'declined' => l10n.translate('call_status_declined'),
-              'missed' => l10n.translate('call_status_no_answer'),
-              'failed' => l10n.translate('call_status_failed'),
-              _ => l10n.translate('call_status_ended'),
+            _statusKey = switch (state) {
+              'declined' => 'call_status_declined',
+              'missed' => 'call_status_no_answer',
+              'failed' => 'call_status_failed',
+              _ => 'call_status_ended',
             };
             Future.delayed(const Duration(milliseconds: 300), _safeExit);
         }
@@ -228,6 +237,7 @@ class _CallScreenState extends State<CallScreen> {
     try {
       if (widget.isCaller) {
         final tourId = await _confirmCanCall();
+        if (!mounted) return;
         await _signaling.startCall(
           widget.callId,
           widget.localUid,
@@ -247,12 +257,18 @@ class _CallScreenState extends State<CallScreen> {
         );
       }
       _applyAudioRouting();
+      // Keeps the microphone (and camera) running when the app goes to the
+      // background mid-call.
+      unawaited(
+          CallAudioSession.startOngoing(camera: _signaling.hasLocalVideo));
     } catch (e) {
       // A call that started has already been ended by the signaling service. A setup
       // that failed before any connection may still hold the audio mode, so the
       // session is handed back here as well.
       logError('CallScreen initialization error: $e');
       await CallAudioSession.release();
+      // A setup stopped because the user hung up or left needs no message.
+      if (!mounted || _signaling.wasCancelled) return;
       messenger?.showSnackBar(
         SnackBar(
           content: Text(
@@ -493,6 +509,7 @@ class _CallScreenState extends State<CallScreen> {
     _localRenderer.dispose();
     _remoteRenderer.dispose();
     _signaling.dispose();
+    unawaited(CallAudioSession.stopOngoing());
     super.dispose();
   }
 
@@ -597,7 +614,8 @@ class _CallScreenState extends State<CallScreen> {
                                       Text(
                                         _isConnected
                                             ? _formatDuration(_callDuration)
-                                            : _callStatusText,
+                                            : context.l10n
+                                                .translate(_statusKey),
                                         style: TextStyle(
                                           color: _isConnected
                                               ? const Color(0xFF00A884)
@@ -714,11 +732,12 @@ class _CallScreenState extends State<CallScreen> {
                     child: GestureDetector(
                       onPanUpdate: (details) {
                         setState(() {
+                          final size = MediaQuery.of(context).size;
                           _pipOffset = Offset(
-                            (_pipOffset.dx - details.delta.dx).clamp(
-                                10, MediaQuery.of(context).size.width - 120),
-                            (_pipOffset.dy + details.delta.dy).clamp(
-                                60, MediaQuery.of(context).size.height - 200),
+                            clampWithin(_pipOffset.dx - details.delta.dx, 10,
+                                size.width - 120),
+                            clampWithin(_pipOffset.dy + details.delta.dy, 60,
+                                size.height - 200),
                           );
                         });
                       },
@@ -861,9 +880,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Widget _buildAudioOrPlaceholderBackground() {
-    final initials = widget.remoteUserName.isNotEmpty
-        ? widget.remoteUserName.substring(0, 1).toUpperCase()
-        : 'T';
+    final initials = callInitial(widget.remoteUserName);
 
     return Container(
       width: double.infinity,
@@ -948,7 +965,9 @@ class _CallScreenState extends State<CallScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              _isConnected ? _formatDuration(_callDuration) : _callStatusText,
+              _isConnected
+                  ? _formatDuration(_callDuration)
+                  : context.l10n.translate(_statusKey),
               style: TextStyle(
                 color: _isConnected ? const Color(0xFF00A884) : Colors.white60,
                 fontSize: 16,

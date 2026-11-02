@@ -29,6 +29,20 @@ class MainActivity: FlutterFragmentActivity() {
                     AudioSwitchManager.instance?.stop()
                     result.success(null)
                 }
+                "startOngoing" -> {
+                    // Started while the call screen is open, which Android requires
+                    // for a microphone or camera foreground service.
+                    try {
+                        CallOngoingService.start(this, call.argument<Boolean>("camera") ?: false)
+                        result.success(null)
+                    } catch (e: Exception) {
+                        result.error("ongoing_failed", e.message, null)
+                    }
+                }
+                "stopOngoing" -> {
+                    CallOngoingService.stop(this)
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }

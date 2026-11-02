@@ -11,9 +11,11 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../../app/router.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../../core/utils/app_logger.dart';
 import '../../../core/utils/image_sizing.dart';
 import '../../../firebase_options.dart';
+import '../domain/call_display.dart';
 import 'call_signaling_service.dart';
 import 'vps_chat_service.dart';
 
@@ -410,11 +412,9 @@ class CallNotificationService {
     final createdAt = data['createdAt'] as Timestamp?;
     if (createdAt != null &&
         DateTime.now().difference(createdAt.toDate()) > _staleCallAge) {
-      unawaited(_declineCall(
-        callId,
-        callerId: data['callerId'] as String?,
-        isVideo: isVideo,
-      ));
+      // The caller's app went away without ending it. This phone never rang
+      // for it, so it is closed as missed rather than declined.
+      unawaited(_expireStaleCall(callId, callerId: callerId, isVideo: isVideo));
       return;
     }
     final (callerName, callerAvatar) = await _resolveCaller(
@@ -435,6 +435,9 @@ class CallNotificationService {
   Future<void> _presentFromRelay(
       Map<String, dynamic> event, String callId) async {
     if (callId.isEmpty) return;
+    // An offer can arrive after the call was answered elsewhere, declined or
+    // ended. Only a call that is still ringing rings here.
+    if (!await CallSignalingService.isStillRinging(callId)) return;
     final callerId = event['callerId']?.toString() ?? '';
     final (callerName, callerAvatar) = await _resolveCaller(
       callerId,
@@ -581,9 +584,7 @@ class CallNotificationService {
                   : null,
               child: (avatarUrl == null || avatarUrl.isEmpty)
                   ? Text(
-                      callerName.isNotEmpty
-                          ? callerName.substring(0, 1).toUpperCase()
-                          : 'T',
+                      callInitial(callerName),
                       style: const TextStyle(
                           fontSize: 32,
                           color: Colors.white,
@@ -611,7 +612,8 @@ class CallNotificationService {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  isVideo ? 'Incoming Video Call...' : 'Incoming Voice Call...',
+                  ctx.l10n.translate(
+                      isVideo ? 'call_incoming_video' : 'call_incoming_voice'),
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ],
@@ -644,9 +646,9 @@ class CallNotificationService {
                             color: Colors.white, size: 26),
                       ),
                       const SizedBox(height: 6),
-                      const Text('Decline',
-                          style:
-                              TextStyle(color: Colors.redAccent, fontSize: 12)),
+                      Text(ctx.l10n.translate('call_decline'),
+                          style: const TextStyle(
+                              color: Colors.redAccent, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -676,8 +678,8 @@ class CallNotificationService {
                             color: Colors.white, size: 26),
                       ),
                       const SizedBox(height: 6),
-                      const Text('Accept',
-                          style: TextStyle(
+                      Text(ctx.l10n.translate('call_accept'),
+                          style: const TextStyle(
                               color: Color(0xFF00A884), fontSize: 12)),
                     ],
                   ),
@@ -718,7 +720,7 @@ class CallNotificationService {
   }
 
   /// Opens the call screen. A cold start from the native screen can get here
-  /// before the navigator exists, so the Accept waits for it for up to 15 seconds.
+  /// before the navigator exists, so the Accept waits for it for up to 30 seconds.
   void _openCall({
     required String callId,
     required String callerId,
@@ -760,12 +762,28 @@ class CallNotificationService {
           avatarUrl: avatarUrl,
           isVideo: isVideo,
         );
-      } else if (attempts >= 60) {
+      } else if (attempts >= 120) {
         // The app never came up. Decline so the caller is not left ringing.
         timer.cancel();
         unawaited(_declineCall(callId, callerId: callerId, isVideo: isVideo));
       }
     });
+  }
+
+  Future<void> _expireStaleCall(
+    String callId, {
+    required String callerId,
+    required bool isVideo,
+  }) async {
+    if (!_settled.claim('expire:$callId', DateTime.now())) return;
+    final calleeUid = FirebaseAuth.instance.currentUser?.uid;
+    if (calleeUid == null) return;
+    await CallSignalingService.expireStaleCall(
+      callId: callId,
+      calleeUid: calleeUid,
+      callerId: callerId,
+      isVideo: isVideo,
+    );
   }
 
   Future<void> _declineCall(
@@ -786,6 +804,14 @@ class CallNotificationService {
   }
 
   // ── Dismissing ─────────────────────────────────────────────────────────────
+
+  /// Stops the ring for [callId] on this phone: the native screen and the
+  /// in-app dialog. Used when the server says the call stopped ringing.
+  void dismissRingingCall(String callId) {
+    if (callId.isEmpty) return;
+    _dismissIncomingUI(callId: callId);
+    unawaited(endNativeIncomingCall(callId));
+  }
 
   /// Closes the call screen and native ring for the call on screen. When
   /// [callId] is given, only that call is closed.

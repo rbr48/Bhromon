@@ -19,6 +19,8 @@ class CallLinkSample {
     this.lossRatio,
     this.sentBytes,
     this.outboundKbps,
+    this.packetsLost,
+    this.packetsReceived,
   });
 
   /// Round trip to the other side, in milliseconds.
@@ -36,6 +38,11 @@ class CallLinkSample {
   /// Sending rate since the previous poll, in kilobits per second.
   final double? outboundKbps;
 
+  /// Incoming packets lost and received since the streams started. Running
+  /// totals, which [PacketLossMeter] turns into the loss of the last interval.
+  final int? packetsLost;
+  final int? packetsReceived;
+
   /// True when the poll had incoming media to judge the link by.
   bool get hasIncomingMedia =>
       roundTripMs != null || jitterMs != null || lossRatio != null;
@@ -46,6 +53,18 @@ class CallLinkSample {
         lossRatio: lossRatio,
         sentBytes: sentBytes,
         outboundKbps: kbps,
+        packetsLost: packetsLost,
+        packetsReceived: packetsReceived,
+      );
+
+  CallLinkSample withLossRatio(double? ratio) => CallLinkSample(
+        roundTripMs: roundTripMs,
+        jitterMs: jitterMs,
+        lossRatio: ratio,
+        sentBytes: sentBytes,
+        outboundKbps: outboundKbps,
+        packetsLost: packetsLost,
+        packetsReceived: packetsReceived,
       );
 }
 
@@ -99,7 +118,9 @@ CallLinkSample callLinkSampleFromStats(Iterable<Map<String, dynamic>> reports) {
               _asDouble(report['currentRoundTripTime']) ?? roundTripSeconds;
         }
       case 'inbound-rtp':
-        lost += _asInt(report['packetsLost']) ?? 0;
+        // WebRTC reports a negative count when duplicates outnumber losses.
+        final streamLost = _asInt(report['packetsLost']) ?? 0;
+        lost += streamLost < 0 ? 0 : streamLost;
         received += _asInt(report['packetsReceived']) ?? 0;
         final jitter = _asDouble(report['jitter']);
         if (jitter != null &&
@@ -117,7 +138,32 @@ CallLinkSample callLinkSampleFromStats(Iterable<Map<String, dynamic>> reports) {
     jitterMs: jitterSeconds == null ? null : jitterSeconds * 1000,
     lossRatio: total == 0 ? null : lost / total,
     sentBytes: sentBytes,
+    packetsLost: total == 0 ? null : lost,
+    packetsReceived: total == 0 ? null : received,
   );
+}
+
+/// Turns running packet totals into the loss of the last interval, so a bad
+/// stretch early in a call stops counting once the link recovers.
+class PacketLossMeter {
+  int? _lastLost;
+  int? _lastReceived;
+
+  /// Share of the packets since the previous reading that were lost. Null for
+  /// the first reading or when nothing arrived; a restarted stream starts over.
+  double? lossSince(int lost, int received) {
+    final previousLost = _lastLost;
+    final previousReceived = _lastReceived;
+    _lastLost = lost;
+    _lastReceived = received;
+    if (previousLost == null || previousReceived == null) return null;
+    final newLost = lost - previousLost;
+    final newReceived = received - previousReceived;
+    if (newLost < 0 || newReceived < 0) return null;
+    final total = newLost + newReceived;
+    if (total == 0) return null;
+    return newLost / total;
+  }
 }
 
 /// Turns a running byte count into a sending rate, one reading at a time.
@@ -154,6 +200,9 @@ class CallReconnectPolicy {
     _attempts++;
     return true;
   }
+
+  /// Gives the full budget back, once a rebuilt link has stayed up.
+  void reset() => _attempts = 0;
 }
 
 double? _asDouble(Object? value) => value is num ? value.toDouble() : null;

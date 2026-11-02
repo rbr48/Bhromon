@@ -338,3 +338,57 @@ def test_api_notify_endpoints(client):
         )
         assert res.status_code == 200
         assert res.json()["status"] == "success"
+
+
+def _call_change(call_id, data, kind="MODIFIED"):
+    doc = MagicMock()
+    doc.id = call_id
+    doc.to_dict.return_value = data
+    change = MagicMock()
+    change.type.name = kind
+    change.document = doc
+    return change
+
+
+def test_old_finished_calls_send_no_ring_stop_push():
+    # The first snapshot after a start lists earlier calls. Those stopped ringing
+    # long ago, so none of them may send a push.
+    from datetime import datetime, timedelta, timezone
+
+    engine = NotificationEngine()
+    engine.send_call_ended_push = MagicMock(return_value={"status": "success"})
+    watcher = FirestoreNotificationWatcher(engine)
+    old = datetime.now(timezone.utc) - timedelta(days=30)
+    changes = [
+        _call_change(f"old_{i}", {"status": status, "calleeId": "uid_bob", "createdAt": old}, "ADDED")
+        for i, status in enumerate(["ended", "declined", "missed", "answered"])
+    ]
+    watcher.on_call_snapshot(None, changes, None)
+    engine.send_call_ended_push.assert_not_called()
+
+
+def test_an_answered_call_stops_the_ring_on_the_callees_other_phones():
+    from datetime import datetime, timezone
+
+    engine = NotificationEngine()
+    engine.send_call_ended_push = MagicMock(return_value={"status": "success"})
+    watcher = FirestoreNotificationWatcher(engine)
+    data = {"status": "answered", "calleeId": "uid_bob", "createdAt": datetime.now(timezone.utc)}
+    watcher.on_call_snapshot(None, [_call_change("call_x", data)], None)
+    # Ending it later sends nothing more: the ring already stopped.
+    watcher.on_call_snapshot(None, [_call_change("call_x", {**data, "status": "ended"})], None)
+    engine.send_call_ended_push.assert_called_once_with("call_x", "uid_bob")
+
+
+def test_call_may_still_ring_only_while_it_is_young():
+    from datetime import datetime, timedelta, timezone
+
+    from notifications import call_may_still_ring
+
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    assert call_may_still_ring(now - timedelta(seconds=30), now)
+    assert not call_may_still_ring(now - timedelta(minutes=10), now)
+    # Without a creation time a call is treated as recent, so it is never left ringing.
+    assert call_may_still_ring(None, now)
+    # A naive time is read as UTC.
+    assert call_may_still_ring((now - timedelta(seconds=30)).replace(tzinfo=None), now)

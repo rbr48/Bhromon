@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bhromon/features/chat/data/call_notification_service.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -401,6 +402,13 @@ class FcmService {
     // A call is shown by CallNotificationService, from the relay and the call
     // document. A banner here would ring the same call twice.
     if (message.data['action'] == 'call') return;
+    // A call stopped ringing (answered elsewhere, declined or ended). It has no
+    // text of its own and only closes the ring.
+    if (message.data['action'] == 'end_call') {
+      CallNotificationService()
+          .dismissRingingCall((message.data['callId'] as String?) ?? '');
+      return;
+    }
 
     final n = message.notification;
     final title = n?.title ?? (message.data['title'] as String?) ?? 'Bhromon';

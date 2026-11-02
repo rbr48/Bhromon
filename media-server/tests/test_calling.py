@@ -379,3 +379,62 @@ def test_the_shared_upload_key_is_not_accepted_on_notify_routes(client):
         headers={"X-Upload-Key": "transition-key"},
     )
     assert res.status_code == 401
+
+
+def test_an_email_recipient_is_resolved_before_the_group_check(client, fake_firebase, monkeypatch):
+    # A recipient named by email used to be checked as an email, which never
+    # matches a member, so the call was always refused.
+    from firebase_admin import auth as fb_auth
+
+    checked = []
+
+    def shares(uid_a, uid_b):
+        checked.append((uid_a, uid_b))
+        return uid_b == "uid-bob"
+
+    monkeypatch.setattr(chat, "shares_group", shares)
+    monkeypatch.setattr(fb_auth, "get_user_by_email", lambda email: MagicMock(uid="uid-bob"))
+    push = MagicMock(return_value=1)
+    monkeypatch.setattr(chat.push_dispatcher, "send_call_push_to_uid", push)
+    with _signed_in(client, "tok-alice") as alice:
+        alice.receive_json()
+        alice.send_json({
+            "type": "call_signal",
+            "callId": "c1",
+            "recipientId": "Bob@Example.com",
+            "signalType": "offer",
+            "payload": {},
+        })
+        assert alice.receive_json()["type"] == "call_signal_ack"
+    assert checked == [("uid-alice", "uid-bob")]
+    assert push.call_args.kwargs["recipient_uid"] == "uid-bob"
+
+
+def test_an_email_that_resolves_to_the_caller_is_refused(client, fake_firebase, monkeypatch):
+    from firebase_admin import auth as fb_auth
+
+    monkeypatch.setattr(fb_auth, "get_user_by_email", lambda email: MagicMock(uid="uid-alice"))
+    with _signed_in(client, "tok-alice") as alice:
+        alice.receive_json()
+        alice.send_json({
+            "type": "call_signal",
+            "callId": "c1",
+            "recipientId": "alice@example.com",
+            "signalType": "offer",
+            "payload": {},
+        })
+        reply = alice.receive_json()
+    assert reply["type"] == "call_signal_error"
+    assert reply["reason"] == "invalid"
+
+
+def test_every_call_path_uses_the_same_rate_limit():
+    import re
+    from pathlib import Path
+
+    import notifications
+
+    function_source = (Path(__file__).resolve().parents[2] / "functions/src/lib/callPush.ts").read_text()
+    function_limit = int(re.search(r"CALLS_PER_WINDOW = (\d+)", function_source).group(1))
+    assert chat.CALL_OFFERS_PER_WINDOW == notifications.CALL_OFFERS_PER_WINDOW == function_limit
+    assert chat.CALL_OFFER_WINDOW_SECONDS == notifications.CALL_OFFER_WINDOW_SECONDS

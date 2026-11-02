@@ -10,7 +10,7 @@ import logging
 import threading
 import time
 from collections import deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger("bhromon.notifications")
@@ -54,6 +54,22 @@ def _preview_of(text: Optional[str], attachments: Optional[list] = None, kind: s
         return body[: PREVIEW_LIMIT - 1] + "…"
     return body
 
+
+
+# How long after it is created a call can still be ringing on some phone: the
+# ring time plus room for a slow push. Older calls need no ring or ring-stop push.
+CALL_PUSH_WINDOW_SECONDS = 120
+
+
+def call_may_still_ring(created_at: Any, now: Optional[datetime] = None) -> bool:
+    """Whether a call created at `created_at` could still be ringing. A call with
+    no readable creation time is treated as recent, so it is never left ringing."""
+    if not isinstance(created_at, datetime):
+        return True
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    now = now or datetime.now(timezone.utc)
+    return (now - created_at).total_seconds() <= CALL_PUSH_WINDOW_SECONDS
 
 class NotificationEngine:
     """Core push notification and maintenance worker backed by Firebase Admin SDK."""
@@ -675,7 +691,13 @@ class FirestoreNotificationWatcher:
                         is_video=is_video,
                         caller_name=caller_name,
                     )
-                elif status in {"ended", "declined", "missed"}:
+                elif status in {"answered", "ended", "declined", "missed"}:
+                    # A call that stopped ringing: answered on one of the callee's
+                    # phones, declined, missed or ended. The other phones stop
+                    # ringing. Only a call young enough to still ring needs it, so
+                    # the call history read at start-up sends nothing.
+                    if not call_may_still_ring(data.get("createdAt")):
+                        continue
                     if self.is_seen(f"call_end_{call_id}"):
                         continue
                     callee_id = str(data.get("calleeId", "")).strip()
@@ -692,7 +714,14 @@ class FirestoreNotificationWatcher:
             logger.info("Starting FirestoreNotificationWatcher listeners...")
             sos_watch = db.collection_group("sos").on_snapshot(self.on_sos_snapshot)
             self.active_listeners.append(sos_watch)
-            calls_watch = db.collection("calls").on_snapshot(self.on_call_snapshot)
+            # Only calls from around the start onwards: older ones can no longer
+            # ring, and reading the whole history on every start costs reads.
+            calls_since = self.started_at - timedelta(seconds=CALL_PUSH_WINDOW_SECONDS)
+            calls_watch = (
+                db.collection("calls")
+                .where("createdAt", ">=", calls_since)
+                .on_snapshot(self.on_call_snapshot)
+            )
             self.active_listeners.append(calls_watch)
         except Exception as e:
             logger.warning("Could not attach real-time Firestore listener: %s", e)

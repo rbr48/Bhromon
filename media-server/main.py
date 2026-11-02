@@ -40,6 +40,7 @@ from ack_reminders import AckReminderScheduler, run_ack_reminders
 from family_dates import FamilyDateReminderScheduler
 from news import router as news_router
 from story_cleanup import StoryCleanupScheduler, run_story_cleanup
+from call_cleanup import run_call_cleanup
 from notifications import FirestoreNotificationWatcher, NotificationEngine
 from quiz import quiz_router
 
@@ -101,16 +102,26 @@ ack_reminder_scheduler = AckReminderScheduler(
         backend._client(), notification_engine, datetime.now(timezone.utc)
     )
 )
-story_cleanup_scheduler = StoryCleanupScheduler(
-    lambda now: run_story_cleanup(
-        backend._client(),
+def run_daily_cleanup(now: datetime) -> Dict[str, Any]:
+    """The 04:00 run: expired stories and their files, then old call records."""
+    db = backend._client()
+    stories = run_story_cleanup(
+        db,
         MEDIA_ROOT,
         META_ROOT,
         now,
         base_url=BASE_URL,
         purge=purge_cdn_quietly,
     )
-)
+    try:
+        calls = run_call_cleanup(db, now)
+    except Exception as error:
+        logger.error("Call cleanup failed: %s", error)
+        calls = {"deleted": 0, "errors": 1}
+    return {**stories, "calls_deleted": calls["deleted"], "call_errors": calls["errors"]}
+
+
+story_cleanup_scheduler = StoryCleanupScheduler(run_daily_cleanup)
 
 
 def init_firebase_admin() -> None:

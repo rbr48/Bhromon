@@ -18,6 +18,26 @@ class CallAudioSession {
   static const MethodChannel _channel =
       MethodChannel('com.bhromon.app/call_audio');
 
+  /// Keeps the microphone, and the camera when [camera] is set, running while
+  /// the app is in the background during a call. Android only.
+  static Future<void> startOngoing({required bool camera}) =>
+      _invoke('startOngoing', {'camera': camera});
+
+  /// Stops what [startOngoing] started. Safe to call when nothing is running.
+  static Future<void> stopOngoing() => _invoke('stopOngoing');
+
+  static Future<void> _invoke(String method,
+      [Map<String, Object?>? arguments]) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      await _channel.invokeMethod<void>(method, arguments);
+    } on MissingPluginException catch (e) {
+      logDebug('CallAudioSession: no native handler: $e');
+    } on PlatformException catch (e) {
+      logWarning('CallAudioSession: $method failed: ${e.message}');
+    }
+  }
+
   static Future<void> release() async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     try {

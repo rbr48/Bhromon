@@ -35,6 +35,7 @@ import 'core/security/device_integrity_service.dart';
 import 'core/database/app_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'features/chat/data/call_notification_service.dart';
+import 'features/chat/data/call_signaling_service.dart';
 import 'features/chat/data/vps_chat_service.dart';
 import 'features/game_zone/data/game_analytics_service.dart';
 import 'features/notifications/data/fcm_service.dart';
@@ -45,6 +46,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // A call push is data-only, so this is what rings the phone while the app is
   // closed. The name in it is only a placeholder until the app loads the profile.
   if (message.data['action'] == 'call') {
+    final callId = (message.data['callId'] as String?) ?? '';
+    // A call is pushed more than once, and a late copy must not ring a call
+    // that was already answered, declined or ended.
+    if (!await CallSignalingService.isStillRinging(callId)) return;
     await CallNotificationService.showNativeIncomingCall(
       callId: (message.data['callId'] as String?) ?? '',
       callerId: (message.data['callerId'] as String?) ?? '',
