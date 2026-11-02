@@ -12,6 +12,7 @@ jobs:
   deploy_firebase:
     name: Deploy Firebase
     runs-on: ubuntu-latest
+    if: ${{ secrets.FIREBASE_TOKEN != '' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
