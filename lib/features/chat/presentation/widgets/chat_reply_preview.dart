@@ -1,4 +1,5 @@
 import 'package:bhromon/core/media/media_access.dart';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -63,7 +64,7 @@ class ChatReplyInputBanner extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(10, 0, 10, 4),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2C34),
+        color: context.chat.bar,
         borderRadius: BorderRadius.circular(12),
         border: const Border(
           left: BorderSide(color: Color(0xFF00A884), width: 4),
@@ -71,7 +72,7 @@ class ChatReplyInputBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.reply_rounded, color: Color(0xFF00A884), size: 18),
+          Icon(Icons.reply_rounded, color: context.chat.accentText, size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -80,8 +81,8 @@ class ChatReplyInputBanner extends StatelessWidget {
               children: [
                 Text(
                   reply.senderName,
-                  style: const TextStyle(
-                    color: Color(0xFF00A884),
+                  style: TextStyle(
+                    color: context.chat.accentText,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -113,7 +114,7 @@ class ChatReplyInputBanner extends StatelessWidget {
                       height: 40,
                       fit: BoxFit.cover,
                       placeholder: (context, _) =>
-                          Container(color: Colors.white10),
+                          Container(color: context.chat.divider10),
                       errorWidget: (context, _, __) => Image.network(
                         signedMediaUrl(reply.mediaUrl!),
                         width: 40,
@@ -125,7 +126,7 @@ class ChatReplyInputBanner extends StatelessWidget {
                     ),
             ),
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.white60, size: 18),
+            icon: Icon(Icons.close, color: context.chat.text60, size: 18),
             onPressed: onCancel,
             tooltip: context.l10n.translate('chat_reply_cancel'),
             padding: EdgeInsets.zero,
@@ -174,13 +175,13 @@ class ChatReplyInputBanner extends StatelessWidget {
     return Row(
       children: [
         if (icon != null) ...[
-          Icon(icon, size: 13, color: Colors.white70),
+          Icon(icon, size: 13, color: context.chat.text70),
           const SizedBox(width: 4),
         ],
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(color: Colors.white70, fontSize: 11.5),
+            style: TextStyle(color: context.chat.text70, fontSize: 11.5),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -212,10 +213,10 @@ class ChatQuotedBubble extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
         decoration: BoxDecoration(
           color: isMe
-              ? const Color(
-                  0xFF024638) // slightly darker shade of sender bubble
-              : const Color(
-                  0xFF182229), // slightly darker shade of receiver bubble
+              ? context.chat
+                  .outgoingRecessed // slightly darker shade of sender bubble
+              : context.chat
+                  .recessedDeep, // slightly darker shade of receiver bubble
           borderRadius: BorderRadius.circular(8),
           border: const Border(
             left: BorderSide(
@@ -234,8 +235,8 @@ class ChatQuotedBubble extends StatelessWidget {
                 children: [
                   Text(
                     reply.senderName,
-                    style: const TextStyle(
-                      color: Color(0xFF00A884),
+                    style: TextStyle(
+                      color: context.chat.accentText,
                       fontSize: 11.5,
                       fontWeight: FontWeight.bold,
                     ),
@@ -268,7 +269,7 @@ class ChatQuotedBubble extends StatelessWidget {
                         height: 32,
                         fit: BoxFit.cover,
                         placeholder: (context, _) =>
-                            Container(color: Colors.white10),
+                            Container(color: context.chat.divider10),
                         errorWidget: (context, _, __) => Image.network(
                           signedMediaUrl(reply.mediaUrl!),
                           width: 32,
@@ -325,13 +326,13 @@ class ChatQuotedBubble extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (icon != null) ...[
-          Icon(icon, size: 11, color: Colors.white60),
+          Icon(icon, size: 11, color: context.chat.text60),
           const SizedBox(width: 3),
         ],
         Flexible(
           child: Text(
             label,
-            style: const TextStyle(color: Colors.white60, fontSize: 11),
+            style: TextStyle(color: context.chat.text60, fontSize: 11),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -29,12 +30,12 @@ class StarredMessagesScreen extends StatelessWidget {
         context.go('/chats');
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF0B141A),
+        backgroundColor: context.chat.wallpaper,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1F2C34),
+          backgroundColor: context.chat.bar,
           elevation: 1,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(Icons.arrow_back, color: context.chat.text),
             onPressed: () {
               if (context.canPop()) {
                 context.pop();
@@ -45,8 +46,8 @@ class StarredMessagesScreen extends StatelessWidget {
           ),
           title: Text(
             context.l10n.translate('chats_menu_starred'),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: context.chat.text,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -56,7 +57,7 @@ class StarredMessagesScreen extends StatelessWidget {
             ? Center(
                 child: Text(
                   context.l10n.translate('starred_sign_in'),
-                  style: const TextStyle(color: Colors.white54),
+                  style: TextStyle(color: context.chat.text54),
                 ),
               )
             : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -123,7 +124,7 @@ class StarredMessagesScreen extends StatelessWidget {
                                   height: 100,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: const Color(0xFF1F2C34),
+                                    color: context.chat.bar,
                                     border: Border.all(
                                       color:
                                           Colors.amber.withValues(alpha: 0.3),
@@ -139,8 +140,8 @@ class StarredMessagesScreen extends StatelessWidget {
                                 const SizedBox(height: 24),
                                 Text(
                                   context.l10n.translate('starred_empty_title'),
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: context.chat.text,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -149,8 +150,8 @@ class StarredMessagesScreen extends StatelessWidget {
                                 Text(
                                   context.l10n.translate('starred_empty_hint'),
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: Colors.white60,
+                                  style: TextStyle(
+                                    color: context.chat.text60,
                                     fontSize: 14,
                                     height: 1.4,
                                   ),
@@ -164,8 +165,8 @@ class StarredMessagesScreen extends StatelessWidget {
                       return ListView.separated(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         itemCount: userStarredDocs.length,
-                        separatorBuilder: (_, __) => const Divider(
-                          color: Colors.white10,
+                        separatorBuilder: (_, __) => Divider(
+                          color: context.chat.divider10,
                           height: 1,
                         ),
                         itemBuilder: (context, index) {
@@ -208,12 +209,12 @@ class StarredMessagesScreen extends StatelessWidget {
                                     width: 40,
                                     height: 40,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF1F2C34),
+                                      color: context.chat.bar,
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Icon(
                                       _typeIcon(type),
-                                      color: const Color(0xFF00A884),
+                                      color: context.chat.accentText,
                                       size: 20,
                                     ),
                                   ),
@@ -233,16 +234,16 @@ class StarredMessagesScreen extends StatelessWidget {
                                                       .translate('chat_you')
                                                   : context.l10n.translate(
                                                       'chats_member'),
-                                              style: const TextStyle(
-                                                color: Color(0xFF00A884),
+                                              style: TextStyle(
+                                                color: context.chat.accentText,
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
                                             Text(
                                               timeStr,
-                                              style: const TextStyle(
-                                                color: Colors.white38,
+                                              style: TextStyle(
+                                                color: context.chat.text38,
                                                 fontSize: 11,
                                               ),
                                             ),
@@ -254,8 +255,8 @@ class StarredMessagesScreen extends StatelessWidget {
                                               context, type, text, data),
                                           maxLines: 3,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: Colors.white,
+                                          style: TextStyle(
+                                            color: context.chat.text,
                                             fontSize: 13,
                                             height: 1.3,
                                           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -133,7 +134,7 @@ class ChatAttachmentSheet extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2C34),
+        color: context.chat.bar,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -216,13 +217,13 @@ class ChatAttachmentSheet extends StatelessWidget {
             CircleAvatar(
               radius: 28,
               backgroundColor: color,
-              child: Icon(icon, color: Colors.white, size: 26),
+              child: Icon(icon, color: context.chat.text, size: 26),
             ),
             const SizedBox(height: 8),
             Text(
               label,
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: context.chat.text70,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),

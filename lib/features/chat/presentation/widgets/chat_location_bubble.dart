@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:bhromon/features/chat/presentation/chat_palette.dart';
 import 'package:bhromon/core/localization/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/utils/logger.dart';
@@ -43,7 +44,7 @@ class ChatLocationBubble extends StatelessWidget {
     return Container(
       width: 250,
       decoration: BoxDecoration(
-        color: isMe ? const Color(0xFF005C4B) : const Color(0xFF202C33),
+        color: isMe ? context.chat.outgoing : context.chat.panel,
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(6),
@@ -70,7 +71,7 @@ class ChatLocationBubble extends StatelessWidget {
                       ),
                     ),
                     child: CustomPaint(
-                      painter: _MapGridPainter(),
+                      painter: _MapGridPainter(roadColor: Colors.white),
                     ),
                   ),
                   // Animated Pin Icon
@@ -129,8 +130,8 @@ class ChatLocationBubble extends StatelessWidget {
                   title.isNotEmpty
                       ? title
                       : context.l10n.translate('chat_location_title'),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: context.chat.text,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
@@ -141,8 +142,8 @@ class ChatLocationBubble extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     address,
-                    style: const TextStyle(
-                      color: Colors.white70,
+                    style: TextStyle(
+                      color: context.chat.text70,
                       fontSize: 11,
                     ),
                     maxLines: 2,
@@ -155,14 +156,19 @@ class ChatLocationBubble extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.directions,
-                          color: Color(0xFF00A884), size: 14),
+                      Icon(Icons.directions,
+                          color: isMe
+                              ? context.chat.text
+                              : context.chat.accentText,
+                          size: 14),
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
                           context.l10n.translate('chat_location_directions'),
-                          style: const TextStyle(
-                            color: Color(0xFF00A884),
+                          style: TextStyle(
+                            color: isMe
+                                ? context.chat.text
+                                : context.chat.accentText,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -184,7 +190,7 @@ class ChatLocationBubble extends StatelessWidget {
               children: [
                 Text(
                   timeStr,
-                  style: const TextStyle(color: Colors.white54, fontSize: 9.5),
+                  style: TextStyle(color: context.chat.text54, fontSize: 9.5),
                 ),
                 if (isMe && deliveryIcon != null) ...[
                   const SizedBox(width: 4),
@@ -200,10 +206,14 @@ class ChatLocationBubble extends StatelessWidget {
 }
 
 class _MapGridPainter extends CustomPainter {
+  _MapGridPainter({required this.roadColor});
+
+  final Color roadColor;
+
   @override
   void paint(Canvas canvas, Size size) {
     final roadPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.12)
+      ..color = roadColor.withValues(alpha: 0.12)
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
@@ -229,5 +239,6 @@ class _MapGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _MapGridPainter oldDelegate) =>
+      oldDelegate.roadColor != roadColor;
 }
