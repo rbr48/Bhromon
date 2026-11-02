@@ -103,6 +103,9 @@ class AppRouter {
           ExplorerProfileScreen(
             uid: state.pathParameters['uid']!,
             tourId: state.uri.queryParameters['tourId'],
+            emailHint: state.extra is Map
+                ? (state.extra as Map)['email'] as String?
+                : null,
           ),
           key: pageKeyFor(state),
         ),

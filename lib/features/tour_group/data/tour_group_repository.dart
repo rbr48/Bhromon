@@ -1207,6 +1207,46 @@ class TourGroupRepository {
     return [for (final row in rows.docs) TourMember.fromMap(row.data())];
   }
 
+  /// Which of [tourIds] (groups the signed-in person is in) the person with
+  /// [uid] is also an active member of, and that person's email from their
+  /// membership row. [email] is a hint, such as the address a chat knows; it
+  /// finds rows that have no uid yet. Each group is read with its own query,
+  /// because the rules let a member list only their own group's roster.
+  Future<({Set<String> tourIds, String? email})> sharedGroupsWith({
+    required String uid,
+    String? email,
+    required Iterable<String> tourIds,
+  }) async {
+    final shared = <String>{};
+    String? knownEmail =
+        (email == null || email.trim().isEmpty) ? null : normalizeEmail(email);
+    for (final tourId in tourIds) {
+      try {
+        final rows = await _memberships
+            .where('tourId', isEqualTo: tourId)
+            .where('status', isEqualTo: 'active')
+            .where('uid', isEqualTo: uid)
+            .limit(1)
+            .get();
+        if (rows.docs.isNotEmpty) {
+          shared.add(tourId);
+          final rowEmail = rows.docs.first.data()['email'] as String? ?? '';
+          if (rowEmail.isNotEmpty) knownEmail ??= normalizeEmail(rowEmail);
+          continue;
+        }
+        if (knownEmail != null) {
+          final row = await _memberships.doc('${tourId}__$knownEmail').get();
+          if (row.exists && row.data()?['status'] == 'active') {
+            shared.add(tourId);
+          }
+        }
+      } catch (error, stackTrace) {
+        logWarning('Could not check shared group $tourId', error, stackTrace);
+      }
+    }
+    return (tourIds: shared, email: knownEmail);
+  }
+
   /// Whether the signed-in person and [partnerUid] (at [partnerEmail]) can call each
   /// other inside [tourId], as the call rules judge it. Reads the server, never the
   /// cache. When the signed-in person's own row has no uid, it is filled in first,

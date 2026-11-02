@@ -2304,7 +2304,12 @@ class _ChatScreenState extends State<ChatScreen> {
     // Opens the other person's profile from the header's name and avatar.
     final VoidCallback? openOtherProfile = resolvedOtherUid == 'guest'
         ? null
-        : () => context.push('/profile/$resolvedOtherUid');
+        : () => context.push(
+              _sharedTourId == null
+                  ? '/profile/$resolvedOtherUid'
+                  : '/profile/$resolvedOtherUid?tourId=$_sharedTourId',
+              extra: {'email': _otherEmail},
+            );
 
     // ── Stream: Retrieve profile of the other explorer ──
     final profileStream = _otherProfileStream(resolvedOtherUid);

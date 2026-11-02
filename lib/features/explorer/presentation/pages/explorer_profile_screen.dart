@@ -28,6 +28,7 @@ import '../../../tour_group/domain/models/tour_group.dart';
 import '../../../tour_group/domain/services/tour_choice.dart';
 import '../../../tour_group/presentation/tour_routes.dart';
 import '../../../tour_group/presentation/widgets/bhromon_bottom_nav.dart';
+import '../../domain/profile_view.dart';
 import '../../domain/usecases/get_explorer_profile_usecase.dart';
 import '../../../game_zone/presentation/widgets/game_analytics_view.dart';
 import '../widgets/server_patron_card.dart';
@@ -42,7 +43,17 @@ class ExplorerProfileScreen extends StatefulWidget {
   /// when the profile is opened outside a tour.
   final String? tourId;
 
-  const ExplorerProfileScreen({super.key, required this.uid, this.tourId});
+  /// The person's email when the caller knows it, such as the chat with them.
+  /// It only helps find their groups; it is never shown unless a shared
+  /// group's membership confirms it.
+  final String? emailHint;
+
+  const ExplorerProfileScreen({
+    super.key,
+    required this.uid,
+    this.tourId,
+    this.emailHint,
+  });
 
   @override
   State<ExplorerProfileScreen> createState() => _ExplorerProfileScreenState();
@@ -62,6 +73,12 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   // Active tab: 'tours' | 'vault' | 'settings'
   String _activeTab = 'tours';
+
+  // On someone else's profile: the groups you share with them, null until
+  // known, and their email as their membership row in a shared group gives it.
+  Set<String>? _sharedTourIds;
+  String? _subjectEmail;
+  String _sharedKey = '';
   bool _isGuest = false;
 
   // The tour the tabs and cards open. Creating or joining a tour changes it.
@@ -87,6 +104,30 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   bool get _isBn => LocaleController.instance.locale.languageCode == 'bn';
+
+  /// The email of the person this profile belongs to: yours on your own
+  /// profile, and on someone else's the one their shared membership confirms.
+  String _emailFor(bool isOwnProfile) =>
+      isOwnProfile ? _tourRepo.currentEmail : (_subjectEmail ?? '');
+
+  /// Works out which of [myGroups] the profile's person is also in, once per
+  /// set of groups.
+  void _ensureSharedGroups(List<TourGroup> myGroups) {
+    final uid = _profile?.uid ?? widget.uid;
+    final ids = [for (final g in myGroups) g.id]..sort();
+    final key = '$uid|${ids.join(',')}';
+    if (key == _sharedKey) return;
+    _sharedKey = key;
+    _tourRepo
+        .sharedGroupsWith(uid: uid, email: widget.emailHint, tourIds: ids)
+        .then((result) {
+      if (!mounted || key != _sharedKey) return;
+      setState(() {
+        _sharedTourIds = result.tourIds;
+        _subjectEmail = result.tourIds.isEmpty ? null : result.email;
+      });
+    });
+  }
 
   Future<void> _loadProfile() async {
     final authState = context.read<AuthCubit>().state;
@@ -354,12 +395,10 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final isOwnProfile =
         currentUid.isNotEmpty && (_profile?.uid ?? widget.uid) == currentUid;
 
-    final email = _tourRepo.currentEmail;
-    final rawHandle = email.isNotEmpty
-        ? email.split('@').first
-        : (_profile?.displayName.toLowerCase().replaceAll(' ', '_') ??
-            'explorer');
-    final handle = rawHandle.replaceAll(RegExp(r'[^a-zA-Z0-9_.]'), '');
+    final handle = profileHandle(
+      email: _emailFor(isOwnProfile),
+      displayName: _profile?.displayName ?? '',
+    );
 
     return PopScope(
       canPop: context.canPop(),
@@ -502,7 +541,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     return StreamBuilder<List<TourGroup>>(
       stream: _tourRepo.watchMyGroups(),
       builder: (context, groupsSnap) {
-        final groups = groupsSnap.data ?? [];
+        final myGroups = groupsSnap.data ?? [];
+        if (!isOwnProfile && groupsSnap.hasData) _ensureSharedGroups(myGroups);
+        // Someone else's profile lists only the groups you share with them.
+        final groups = profileGroups(
+          isOwnProfile: isOwnProfile,
+          myGroups: myGroups,
+          sharedIds: _sharedTourIds,
+          idOf: (g) => g.id,
+        );
         return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(bottom: bottomInset + 32),
@@ -518,7 +565,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const SizedBox(height: 16),
 
               // 3. Tour Group Metrics Summary Bar
-              _buildTourMetricsBar(groups),
+              _buildTourMetricsBar(groups, isOwnProfile),
               const SizedBox(height: 18),
 
               // 4. Tour Action Buttons (Create Tour, Join Tour, Share, Settings)
@@ -532,12 +579,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const SizedBox(height: 20),
 
               // 6. Achievements Showcase (অর্জনের শোকেস)
-              _buildAchievementsShowcase(groups),
+              _buildAchievementsShowcase(groups, isOwnProfile),
               const SizedBox(height: 20),
 
-              // 7. Segmented Navigation Tabs
-              _buildSegmentedTabs(),
-              const SizedBox(height: 16),
+              // 7. Segmented Navigation Tabs: games, vault and settings are
+              // your own, so someone else's profile shows only shared groups.
+              if (isOwnProfile) ...[
+                _buildSegmentedTabs(),
+                const SizedBox(height: 16),
+              ],
 
               // 6. Active Tab Content
               Padding(
@@ -735,46 +785,51 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   Widget _buildUserInfo(ExplorerProfile profile, bool isOwnProfile) {
     final bio = _getDisplayBio(profile);
-    final email = _tourRepo.currentEmail;
+    final email = _emailFor(isOwnProfile);
+    final hasNote = _statusNote != null && _statusNote!.isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
-          // Status Note bubble above name
-          GestureDetector(
-            onTap: () => _editStatusNote(context, isOwnProfile),
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: context.forest.text.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: AppColors.mintGreen.withValues(alpha: 0.35)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isOwnProfile &&
-                      (_statusNote == null || _statusNote!.isEmpty))
-                    Icon(Icons.add, size: 12, color: context.forest.accentText),
-                  Text(
-                    (_statusNote != null && _statusNote!.isNotEmpty)
-                        ? _statusNote!
-                        : (isOwnProfile
-                            ? (_isBn ? '+ নোট যুক্ত করুন' : '+ Add Note')
-                            : (_isBn ? 'সদস্য নোট' : 'Member note')),
-                    style: TextStyle(
-                      color: context.forest.accentText,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+          // Status Note bubble above name: on someone else's profile only
+          // when they wrote one.
+          if (isOwnProfile || hasNote)
+            GestureDetector(
+              onTap: () => _editStatusNote(context, isOwnProfile),
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: context.forest.text.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: AppColors.mintGreen.withValues(alpha: 0.35)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isOwnProfile &&
+                        (_statusNote == null || _statusNote!.isEmpty))
+                      Icon(Icons.add,
+                          size: 12, color: context.forest.accentText),
+                    Text(
+                      (_statusNote != null && _statusNote!.isNotEmpty)
+                          ? _statusNote!
+                          : (isOwnProfile
+                              ? (_isBn ? '+ নোট যুক্ত করুন' : '+ Add Note')
+                              : (_isBn ? 'সদস্য নোট' : 'Member note')),
+                      style: TextStyle(
+                        color: context.forest.accentText,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
 
           // Display Name
           Text(
@@ -825,30 +880,20 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _buildDetailChip(
-                icon: Icons.hotel_rounded,
-                text: _isBn ? 'রিসোর্ট অতিথি' : 'Resort Guest',
-                color: Colors.amberAccent,
-              ),
-              _buildDetailChip(
-                icon: Icons.directions_bus_rounded,
-                text: _isBn ? 'এক্সপ্রেস সিট' : 'Express Seat',
-                color: Colors.cyanAccent,
-              ),
-              GestureDetector(
-                onTap: isOwnProfile
-                    ? () => _editBloodGroup(context, isOwnProfile)
-                    : null,
-                child: _buildDetailChip(
-                  icon: Icons.bloodtype_rounded,
-                  text: _bloodGroup != null && _bloodGroup!.isNotEmpty
-                      ? '🩸 $_bloodGroup'
-                      : (isOwnProfile
-                          ? (_isBn ? '🩸 + রক্তের গ্রুপ' : '🩸 + Blood Group')
-                          : '🩸 O+'),
-                  color: Colors.redAccent,
+              if (isOwnProfile ||
+                  (_bloodGroup != null && _bloodGroup!.isNotEmpty))
+                GestureDetector(
+                  onTap: isOwnProfile
+                      ? () => _editBloodGroup(context, isOwnProfile)
+                      : null,
+                  child: _buildDetailChip(
+                    icon: Icons.bloodtype_rounded,
+                    text: _bloodGroup != null && _bloodGroup!.isNotEmpty
+                        ? '🩸 $_bloodGroup'
+                        : (_isBn ? '🩸 + রক্তের গ্রুপ' : '🩸 + Blood Group'),
+                    color: Colors.redAccent,
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -894,8 +939,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // Tour Metrics Summary Bar (4-metric Stats)
   // ---------------------------------------------------------------------------
 
-  Widget _buildTourMetricsBar(List<TourGroup> groups) {
-    final email = _tourRepo.currentEmail;
+  Widget _buildTourMetricsBar(List<TourGroup> groups, bool isOwnProfile) {
+    final email = _emailFor(isOwnProfile);
     final ownedCount = groups.where((g) => g.ownerEmail == email).length;
     final totalDays = groups.fold<int>(0, (acc, g) {
       final days = g.endDate.difference(g.startDate).inDays + 1;
@@ -1200,42 +1245,26 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // Achievements Showcase (অর্জনের শোকেস)
   // ---------------------------------------------------------------------------
 
-  Widget _buildAchievementsShowcase(List<TourGroup> groups) {
+  Widget _buildAchievementsShowcase(List<TourGroup> groups, bool isOwnProfile) {
+    // Only what the data shows: a blood group on file, and owning a group.
+    final email = _emailFor(isOwnProfile);
+    final ownsGroup =
+        email.isNotEmpty && groups.any((g) => g.ownerEmail == email);
     final achievements = <({String title, IconData icon, Color color})>[
-      (
-        title: _isBn ? 'ফটোগ্রাফার' : 'Photographer',
-        icon: Icons.camera_alt_rounded,
-        color: Colors.blueAccent,
-      ),
-      (
-        title: _isBn ? 'রিলস ডিরেক্টর' : 'Reels Director',
-        icon: Icons.movie_creation_rounded,
-        color: Colors.purpleAccent,
-      ),
-      (
-        title: _isBn ? 'স্টার সদস্য' : 'Star member',
-        icon: Icons.star_rounded,
-        color: AppColors.gold,
-      ),
       if (_bloodGroup != null && _bloodGroup!.isNotEmpty)
         (
           title: _isBn ? 'লাইফ সেভার' : 'Life Saver',
           icon: Icons.favorite_rounded,
           color: Colors.redAccent,
         ),
-      (
-        title: _isBn ? 'স্পট এক্সপ্লোরার' : 'Spot Explorer',
-        icon: Icons.hotel_rounded,
-        color: AppColors.mintGreen,
-      ),
-      if (groups.isNotEmpty)
+      if (ownsGroup)
         (
-          title: _isBn ? 'টপ কন্ট্রিবিউটর' : 'Top Contributor',
-          icon: Icons.account_balance_wallet_rounded,
-          color: Colors.amber,
+          title: _isBn ? 'আয়োজক' : 'Organiser',
+          icon: Icons.workspace_premium_rounded,
+          color: AppColors.gold,
         ),
     ];
-
+    if (achievements.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -1382,6 +1411,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     List<TourGroup> groups,
     bool isOwnProfile,
   ) {
+    if (!isOwnProfile) return _buildMyToursTab(groups, false);
     switch (_activeTab) {
       case 'vault':
         return _buildKeepsakesTab(groups);
@@ -1400,6 +1430,22 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // ---------------------------------------------------------------------------
 
   Widget _buildMyToursTab(List<TourGroup> groups, bool isOwnProfile) {
+    if (groups.isEmpty && !isOwnProfile) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Text(
+          _sharedTourIds == null
+              ? (_isBn
+                  ? 'শেয়ার করা গ্রুপ খোঁজা হচ্ছে…'
+                  : 'Finding shared groups…')
+              : (_isBn
+                  ? 'আপনাদের কোনো শেয়ার করা গ্রুপ নেই।'
+                  : 'You have no groups in common.'),
+          textAlign: TextAlign.center,
+          style: TextStyle(color: context.forest.text54, fontSize: 13),
+        ),
+      );
+    }
     if (groups.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(28),
@@ -1467,7 +1513,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       );
     }
 
-    final email = _tourRepo.currentEmail;
+    final email = _emailFor(isOwnProfile);
     final filteredGroups = switch (_activeCategory) {
       'beach' => groups
           .where((g) =>
@@ -1500,26 +1546,32 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              _isBn
-                  ? 'সক্রিয় ও পূর্বের ট্যুর (${displayGroups.length})'
-                  : 'Active & Past Tours (${displayGroups.length})',
+              isOwnProfile
+                  ? (_isBn
+                      ? 'সক্রিয় ও পূর্বের ট্যুর (${displayGroups.length})'
+                      : 'Active & Past Tours (${displayGroups.length})')
+                  : (_isBn
+                      ? 'শেয়ার করা গ্রুপ (${displayGroups.length})'
+                      : 'Groups in common (${displayGroups.length})'),
               style: TextStyle(
                 color: context.forest.text,
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            TextButton.icon(
-              onPressed: () => _showJoinGroupDialog(context),
-              icon: Icon(Icons.add, size: 15, color: context.forest.accentText),
-              label: Text(
-                _isBn ? 'কোড দিয়ে যোগ' : 'Join by Code',
-                style: TextStyle(
-                    color: context.forest.accentText,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold),
+            if (isOwnProfile)
+              TextButton.icon(
+                onPressed: () => _showJoinGroupDialog(context),
+                icon:
+                    Icon(Icons.add, size: 15, color: context.forest.accentText),
+                label: Text(
+                  _isBn ? 'কোড দিয়ে যোগ' : 'Join by Code',
+                  style: TextStyle(
+                      color: context.forest.accentText,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 8),
