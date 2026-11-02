@@ -38,13 +38,13 @@ Bhromon is structured around modular, layered architecture principles separating
 - **State Management**: Scoped by feature. Foundation and explorer features utilize BLoC / Cubit. The `tour_group` operating system utilizes reactive `StatefulWidget`s listening directly to repository streams for high-velocity real-time Firestore collaboration.
 - **Pure-Dart Domain Engines**: Core rules (Game Zone engines: Card 29, Chess, Ludo, Teen Patti, Carrom; Group engines: Ledger Paisa Engine, Seat Layout Engine, Scrapbook Engine, Samity Ledger) are 100% pure Dart, decoupled from Flutter UI and independently unit-tested.
 
-For more architectural decisions, see the [ADRs](docs/adr/):
-- [ADR 001: Choice of BLoC](docs/adr/001_choice_of_bloc.md)
-- [ADR 002: Dual Database Strategy (Hive + Drift)](docs/adr/002_dual_database_strategy.md)
-- [ADR 003: Clean Architecture](docs/adr/003_clean_architecture.md)
-- [ADR 004: Firebase Region Gating](docs/adr/004_firebase_region_gating.md)
-- [ADR 005: Security Hardening](docs/adr/005_security_hardening.md)
-- [ADR 006: Offline Maps via MapLibre Regions](docs/adr/006_offline_maps_via_maplibre_regions.md)
+### Key Architectural Decisions:
+- **State Management**: Scoped by feature (BLoC/Cubit for foundation and explorer; reactive direct streams for high-velocity `tour_group` real-time collaboration).
+- **Dual Database Strategy**: Drift (SQLite) for offline relational queries; encrypted Hive boxes for fast key-value persistence.
+- **Clean Architecture**: Domain, Data, and Presentation layers with injectable dependency injection.
+- **Firebase Region Gating**: Enforces `asia-south1` routing for low-latency Firestore, Storage, and Cloud Functions.
+- **Security Hardening**: Strict Firestore Security Rules, zero broad storage permissions, sandboxed local stores.
+- **Offline Maps**: Public OSM tiles with client-side caching.
 
 ---
 
