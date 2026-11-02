@@ -213,3 +213,32 @@ members who have not answered yet. It runs inside the media server:
 
 The push opens the notice board, the same as a new notice's push. Tests:
 `cd media-server && pytest tests/test_ack_reminders.py`.
+
+## Calls: TURN over TLS and iPhone VoIP pushes
+
+Both are off until configured, and the server works without them.
+
+**TURN over TLS.** Some office, campus and hotel networks let only HTTPS out, so
+TURN on 3478 cannot connect there. coturn can also listen with TLS:
+
+1. Give coturn the certificate for `turn.bhromon.fun` (`cert=` and `pkey=` in
+   `turnserver.conf`) and a TLS port (`tls-listening-port=5349`).
+2. Port 443 on the VPS belongs to nginx. Either give coturn a second IP address
+   on 443, or let nginx pass TLS for `turn.bhromon.fun` through to coturn by
+   SNI (`stream { map $ssl_preread_server_name ... }` with `ssl_preread on;`).
+3. Set `TURN_TLS_URLS=turns:turn.bhromon.fun:443?transport=tcp` for the media
+   container and restart it. `/api/chat/ice_servers` then offers it with the
+   other TURN addresses, under the same short-lived credential.
+
+**iPhone VoIP pushes.** A closed iPhone shows the system call screen only for an
+Apple VoIP push. The app registers its PushKit token with the platform
+`ios-voip`; offers to that token go to Apple (`voip_push.py`), never to FCM.
+
+1. In the Apple developer account, create an APNs key (.p8) and note its key id
+   and the team id. Enable Push Notifications for the app id, and add the
+   capability (an `aps-environment` entitlement) to the Runner target.
+2. Put the key on the VPS outside the repository and set `APNS_KEY_PATH`,
+   `APNS_KEY_ID`, `APNS_TEAM_ID` and `APNS_BUNDLE_ID` (`com.bhromon.bhromon`
+   today). Set `APNS_SANDBOX=1` for development builds.
+3. Rebuild the media image: Apple accepts HTTP/2 only, which `httpx[http2]`
+   in `requirements.txt` provides.

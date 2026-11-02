@@ -16,3 +16,27 @@ double clampWithin(double value, double low, double high) {
   if (high < low) return low;
   return value.clamp(low, high).toDouble();
 }
+
+/// Where call audio can play.
+enum AudioOutputKind { speaker, earpiece, bluetooth, headset, other }
+
+/// The kind of an audio output from its device id and label, as the phone
+/// reports them ("speaker", "earpiece", "bluetooth", "wired-headset", or a
+/// headset's own name).
+AudioOutputKind audioOutputKind(String deviceId, String label) {
+  final text = '$deviceId $label'.toLowerCase();
+  if (text.contains('bluetooth') || text.contains('bt ')) {
+    return AudioOutputKind.bluetooth;
+  }
+  if (text.contains('headset') ||
+      text.contains('headphone') ||
+      text.contains('wired') ||
+      text.contains('usb')) {
+    return AudioOutputKind.headset;
+  }
+  if (text.contains('earpiece') || text.contains('receiver')) {
+    return AudioOutputKind.earpiece;
+  }
+  if (text.contains('speaker')) return AudioOutputKind.speaker;
+  return AudioOutputKind.other;
+}

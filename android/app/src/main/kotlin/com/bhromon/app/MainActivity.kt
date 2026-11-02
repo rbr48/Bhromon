@@ -1,9 +1,12 @@
 package com.bhromon.app
 
+import android.app.PictureInPictureParams
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import android.util.Rational
 import android.view.WindowManager
 import com.cloudwebrtc.webrtc.audio.AudioSwitchManager
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -16,6 +19,7 @@ class MainActivity: FlutterFragmentActivity() {
     private val CALL_AUDIO_CHANNEL = "com.bhromon.app/call_audio"
     private var callAudioChannel: MethodChannel? = null
     private var proximityLock: PowerManager.WakeLock? = null
+    private var pipAllowed = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -63,6 +67,10 @@ class MainActivity: FlutterFragmentActivity() {
                     showOverLockScreen(call.argument<Boolean>("enabled") ?: false)
                     result.success(null)
                 }
+                "setPipAllowed" -> {
+                    pipAllowed = call.argument<Boolean>("allowed") ?: false
+                    result.success(null)
+                }
                 "setProximityScreenOff" -> {
                     setProximityScreenOff(call.argument<Boolean>("enabled") ?: false)
                     result.success(null)
@@ -100,6 +108,24 @@ class MainActivity: FlutterFragmentActivity() {
             if (lock.isHeld) lock.release()
             proximityLock = null
         }
+    }
+
+    /** A video call shrinks into a small window when the user leaves the app. */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (!pipAllowed || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        try {
+            enterPictureInPictureMode(
+                PictureInPictureParams.Builder().setAspectRatio(Rational(9, 16)).build()
+            )
+        } catch (e: Exception) {
+            // Not supported on this device, or not allowed right now.
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        callAudioChannel?.invokeMethod("pipChanged", isInPictureInPictureMode)
     }
 
     override fun onDestroy() {

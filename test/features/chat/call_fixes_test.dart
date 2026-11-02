@@ -141,6 +141,22 @@ void main() {
     expect(sample.packetsReceived, 100);
   });
 
+  group('audioOutputKind', () {
+    test('reads the outputs Android reports', () {
+      expect(
+          audioOutputKind('speaker', 'Speakerphone'), AudioOutputKind.speaker);
+      expect(audioOutputKind('earpiece', 'Earpiece'), AudioOutputKind.earpiece);
+      expect(audioOutputKind('bluetooth', 'Galaxy Buds'),
+          AudioOutputKind.bluetooth);
+      expect(audioOutputKind('wired-headset', 'Wired headset'),
+          AudioOutputKind.headset);
+    });
+
+    test('an unknown output is other', () {
+      expect(audioOutputKind('42', 'Car'), AudioOutputKind.other);
+    });
+  });
+
   test('the rebuild budget comes back after a reset', () {
     final policy = CallReconnectPolicy(maxAttempts: 1);
     expect(policy.startAttempt(), isTrue);

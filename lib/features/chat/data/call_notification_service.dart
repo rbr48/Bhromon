@@ -17,6 +17,7 @@ import '../../../core/utils/image_sizing.dart';
 import '../../../firebase_options.dart';
 import '../domain/call_display.dart';
 import 'call_signaling_service.dart';
+import 'system_call_bridge.dart';
 import 'vps_chat_service.dart';
 
 /// A call older than this when it is seen is not rung.
@@ -193,6 +194,7 @@ class CallNotificationService {
 
     if (!kIsWeb) {
       _initCallkitEvents();
+      unawaited(_registerVoipToken());
       unawaited(ensureFullScreenIntentPermission());
       try {
         FlutterCallkitIncoming.onBackgroundMessage(callkitBackgroundCallback);
@@ -221,6 +223,20 @@ class CallNotificationService {
     }
   }
 
+  /// Registers this iPhone's PushKit token with the call server, which rings
+  /// the system call screen through Apple even when the app is closed.
+  Future<void> _registerVoipToken() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return;
+    try {
+      final token = await FlutterCallkitIncoming.getDevicePushTokenVoIP();
+      if (token is String && token.isNotEmpty) {
+        await VpsChatService().registerDeviceToken(token, platform: 'ios-voip');
+      }
+    } catch (e, st) {
+      logWarning('[CallNotificationService] VoIP token not registered', e, st);
+    }
+  }
+
   // ── Native call screen ─────────────────────────────────────────────────────
 
   static Future<void> endNativeIncomingCall(String callId) async {
@@ -242,45 +258,13 @@ class CallNotificationService {
     final active = await FlutterCallkitIncoming.activeCalls();
     if (active.any((call) => call.id == callId)) return;
 
-    await FlutterCallkitIncoming.showCallkitIncoming(
-      CallKitParams(
-        id: callId,
-        nameCaller: callerName,
-        appName: 'Bhromon',
-        avatar: callerAvatar,
-        handle: isVideo ? 'Bhromon Video Call' : 'Bhromon Voice Call',
-        type: isVideo ? 1 : 0,
-        duration: kCallRingSeconds * 1000,
-        extra: <String, dynamic>{
-          'callId': callId,
-          'callerId': callerId,
-          'callerName': callerName,
-          'avatarUrl': callerAvatar,
-          'isVideo': isVideo,
-        },
-        android: const AndroidParams(
-          isCustomNotification: true,
-          isShowLogo: false,
-          ringtonePath: 'ringtone_default',
-          backgroundColor: '#075E54',
-          actionColor: '#00A884',
-          textColor: '#FFFFFF',
-          incomingCallNotificationChannelName: 'Bhromon Incoming Calls',
-          missedCallNotificationChannelName: 'Bhromon Missed Calls',
-          isShowFullLockedScreen: true,
-          isImportant: true,
-          isFullScreen: false,
-        ),
-        ios: const IOSParams(
-          iconName: 'AppIcon',
-          handleType: 'generic',
-          supportsVideo: true,
-          maximumCallGroups: 1,
-          maximumCallsPerCallGroup: 1,
-          audioSessionMode: 'videoChat',
-        ),
-      ),
-    );
+    await FlutterCallkitIncoming.showCallkitIncoming(buildCallKitParams(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      callerAvatar: callerAvatar,
+      isVideo: isVideo,
+    ));
   }
 
   void _initCallkitEvents() {
@@ -299,6 +283,9 @@ class CallNotificationService {
                 (callKitParams.nameCaller ?? 'Member'),
             avatarUrl: extra['avatarUrl']?.toString() ?? callKitParams.avatar,
             isVideo: extra['isVideo'] == true || callKitParams.type == 1,
+            // Answered on the phone's own screen: the phone keeps the call,
+            // so it is treated as a real call until it ends.
+            fromSystem: true,
           );
           break;
 
@@ -314,11 +301,40 @@ class CallNotificationService {
           }
           break;
 
-        case CallEventActionCallEnded():
+        case CallEventActionCallEnded(:final callKitParams):
+          final id =
+              callKitParams.extra?['callId']?.toString() ?? callKitParams.id;
+          if (id.isNotEmpty && ActiveCallControls.callId == id) {
+            // Ended by the phone: its hang-up button, a headset or car button,
+            // or the phone's own call screen.
+            ActiveCallControls.hangUp?.call();
+          } else {
+            // A ringing call closed. The caller's own timer marks it missed, so
+            // nothing is written here.
+            _dismissIncomingUI();
+          }
+          break;
+
         case CallEventActionCallTimeout():
-          // The native screen timed out or closed. The caller's own timer marks
-          // the call missed, so nothing is written here.
           _dismissIncomingUI();
+          break;
+
+        case CallEventActionDidUpdateDevicePushTokenVoip():
+          await _registerVoipToken();
+          break;
+
+        case CallEventActionCallToggleMute(:final id, :final isMuted):
+          if (ActiveCallControls.callId == id) {
+            ActiveCallControls.setMuted?.call(isMuted);
+          }
+          break;
+
+        case CallEventActionCallToggleHold(:final id, :final isOnHold):
+          // An ordinary phone call took over: this one goes silent until the
+          // phone gives it back.
+          if (ActiveCallControls.callId == id) {
+            ActiveCallControls.setMuted?.call(isOnHold);
+          }
           break;
 
         default:
@@ -332,6 +348,8 @@ class CallNotificationService {
   void _startListening(String uid) {
     if (_currentListeningUid == uid) return;
     _currentListeningUid = uid;
+    // The PushKit token belongs to whoever is signed in now.
+    unawaited(_registerVoipToken());
     _callsSub?.cancel();
     _emailCallsSub?.cancel();
     _vpsCallSub?.cancel();
@@ -491,9 +509,10 @@ class CallNotificationService {
   }) async {
     if (!_shown.claim(callId, DateTime.now())) return;
 
-    if (CallSignalingService.isInCall &&
-        CallSignalingService.activeCallId != callId) {
-      // Already on a call: refuse this one so the caller is not left ringing.
+    final waiting = CallSignalingService.isInCall &&
+        CallSignalingService.activeCallId != callId;
+    if (waiting && kIsWeb && !_canShowInAppDialog()) {
+      // A browser has no native screen to ring a second call on.
       await CallSignalingService().declineCall(
         callId,
         callerId: callerId,
@@ -527,6 +546,7 @@ class CallNotificationService {
         callerName: callerName,
         avatarUrl: callerAvatar,
         isVideo: isVideo,
+        waiting: waiting,
       );
     }
   }
@@ -550,6 +570,7 @@ class CallNotificationService {
     required String callerName,
     required String? avatarUrl,
     required bool isVideo,
+    bool waiting = false,
   }) {
     _isCallDialogShowing = true;
     _inAppCall = (
@@ -559,7 +580,8 @@ class CallNotificationService {
       avatarUrl: avatarUrl,
       isVideo: isVideo,
     );
-    _startInAppRingtone();
+    // A second call during a call does not ring over the conversation.
+    if (!waiting) _startInAppRingtone();
     _dialogTimeout?.cancel();
     _dialogTimeout = Timer(const Duration(seconds: kCallRingSeconds), () {
       if (_activeIncomingCallId == callId) _dismissIncomingUI();
@@ -678,7 +700,9 @@ class CallNotificationService {
                             color: Colors.white, size: 26),
                       ),
                       const SizedBox(height: 6),
-                      Text(ctx.l10n.translate('call_accept'),
+                      Text(
+                          ctx.l10n.translate(
+                              waiting ? 'call_end_and_answer' : 'call_accept'),
                           style: const TextStyle(
                               color: Color(0xFF00A884), fontSize: 12)),
                     ],
@@ -702,14 +726,19 @@ class CallNotificationService {
     required String callerName,
     required String? avatarUrl,
     required bool isVideo,
+    bool fromSystem = false,
   }) async {
     // Native and in-app buttons can both report the same Accept.
     if (!_settled.claim('accept:$callId', DateTime.now())) return;
     _activeIncomingCallId = null;
     _closeInAppDialog();
-    if (!kIsWeb) {
+    // A call answered on the phone's own screen stays in its call system until
+    // it ends. One answered in the app was never there, so only a stray native
+    // ring is closed.
+    if (!kIsWeb && !fromSystem) {
       await FlutterCallkitIncoming.endCall(callId);
     }
+    await _endCallInProgressFor(callId);
     _openCall(
       callId: callId,
       callerId: callerId,
@@ -717,6 +746,17 @@ class CallNotificationService {
       avatarUrl: avatarUrl,
       isVideo: isVideo,
     );
+  }
+
+  /// Hangs up the call on screen before another is answered, and waits for its
+  /// screen to close.
+  Future<void> _endCallInProgressFor(String callId) async {
+    final current = CallSignalingService.activeCallId;
+    if (current == null || current == callId) return;
+    ActiveCallControls.hangUp?.call();
+    for (var i = 0; i < 30 && CallSignalingService.isInCall; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
   }
 
   /// Opens the call screen. A cold start from the native screen can get here

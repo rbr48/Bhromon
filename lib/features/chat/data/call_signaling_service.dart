@@ -336,6 +336,9 @@ class CallSignalingService {
   /// Fired once when the call has ended and its resources are released.
   void Function()? onCallEnded;
 
+  /// Fired when the other side turns its camera on or off.
+  void Function(bool on)? onRemoteCamera;
+
   // ── Firestore shorthand ────────────────────────────────────────────────────
 
   static DocumentReference<Map<String, dynamic>> _callDocRef(String callId) =>
@@ -405,7 +408,8 @@ class CallSignalingService {
       await _createPeerConnection();
       final offer = await _peerConnection!.createOffer({
         'offerToReceiveAudio': 1,
-        'offerToReceiveVideo': videoEnabled ? 1 : 0,
+        // Always: a voice call can become a video call without a new offer.
+        'offerToReceiveVideo': 1,
       });
 
       // The rules refuse a name over 80 characters or an avatar link over 512, so
@@ -501,11 +505,13 @@ class CallSignalingService {
         RTCSessionDescription(
             offerMap['sdp'] as String, offerMap['type'] as String),
       );
+      await _allowVideoUpgrade();
       await _drainPendingIceCandidates();
 
       final answer = await _peerConnection!.createAnswer({
         'offerToReceiveAudio': 1,
-        'offerToReceiveVideo': videoEnabled ? 1 : 0,
+        // Always: a voice call can become a video call without a new offer.
+        'offerToReceiveVideo': 1,
       });
       await _peerConnection!.setLocalDescription(answer);
 
@@ -597,6 +603,74 @@ class CallSignalingService {
     for (final track
         in _localStream?.getVideoTracks() ?? const <MediaStreamTrack>[]) {
       track.enabled = enabled;
+    }
+    _relay('camera', payload: {'on': enabled && _hasLocalVideo});
+  }
+
+  /// Turns the camera on in a call that has none yet, so a voice call becomes a
+  /// video call. Returns false when the camera cannot be opened or the other
+  /// side's app has no video section to send it on.
+  Future<bool> startCamera() async {
+    if (_hasLocalVideo) {
+      await toggleVideo(true);
+      return true;
+    }
+    final pc = _peerConnection;
+    final local = _localStream;
+    if (pc == null || local == null || _finished) return false;
+    MediaStream? camera;
+    try {
+      camera = await navigator.mediaDevices.getUserMedia(<String, dynamic>{
+        'audio': false,
+        'video': callMediaConstraints(video: true)['video'],
+      });
+      final tracks = camera.getVideoTracks();
+      final transceiver = await _videoTransceiver();
+      if (tracks.isEmpty || transceiver == null || _finished) {
+        for (final track in camera.getTracks()) {
+          await track.stop();
+        }
+        return false;
+      }
+      final track = tracks.first;
+      await transceiver.sender.replaceTrack(track);
+      await local.addTrack(track);
+      _hasLocalVideo = true;
+      _videoEnabled = true;
+      onLocalStream?.call(local);
+      _relay('camera', payload: {'on': true});
+      return true;
+    } catch (e, st) {
+      logWarning('CallSignalingService: camera could not be started', e, st);
+      for (final track in camera?.getTracks() ?? const <MediaStreamTrack>[]) {
+        await track.stop();
+      }
+      return false;
+    }
+  }
+
+  /// The connection's video section, or null when the other side sent none.
+  Future<RTCRtpTransceiver?> _videoTransceiver() async {
+    final pc = _peerConnection;
+    if (pc == null) return null;
+    for (final transceiver in await pc.getTransceivers()) {
+      if (transceiver.receiver.track?.kind == 'video' ||
+          transceiver.sender.track?.kind == 'video') {
+        return transceiver;
+      }
+    }
+    return null;
+  }
+
+  /// The callee's side of the video section in a voice call: two-way, so its
+  /// camera can be turned on later.
+  Future<void> _allowVideoUpgrade() async {
+    if (_hasLocalVideo) return;
+    try {
+      final transceiver = await _videoTransceiver();
+      await transceiver?.setDirection(TransceiverDirection.SendRecv);
+    } catch (e) {
+      logInfo('CallSignalingService: video section stays receive-only: $e');
     }
   }
 
@@ -781,6 +855,10 @@ class CallSignalingService {
     if (_rebuildOffer == null) _stopRebuildResend();
     // Candidates held during a rebuild stay held: they belong to the new
     // description, and the path that applies it drains them.
+    if (_connectedAt == null) {
+      // The other side shows video only while the camera is really on.
+      _relay('camera', payload: {'on': _hasLocalVideo && _videoEnabled});
+    }
     _connectedAt ??= DateTime.now();
     _stableTimer?.cancel();
     _stableTimer = Timer(_stableLinkPeriod, _reconnectPolicy.reset);
@@ -873,7 +951,7 @@ class CallSignalingService {
       final offer = await pc.createOffer({
         'iceRestart': true,
         'offerToReceiveAudio': 1,
-        'offerToReceiveVideo': _callIsVideo ? 1 : 0,
+        'offerToReceiveVideo': 1,
       });
       await pc.setLocalDescription(offer);
       // Sent even if the link has come back in the meantime, so the connection
@@ -941,7 +1019,7 @@ class CallSignalingService {
       await _drainPendingIceCandidates();
       final answer = await pc.createAnswer({
         'offerToReceiveAudio': 1,
-        'offerToReceiveVideo': _callIsVideo ? 1 : 0,
+        'offerToReceiveVideo': 1,
       });
       await pc.setLocalDescription(answer);
       _lastRebuildAnswer = {'type': answer.type, 'sdp': answer.sdp};
@@ -1016,6 +1094,8 @@ class CallSignalingService {
           }
         case 'renegotiate':
           if (_isCaller) _startRebuild();
+        case 'camera':
+          if (payload is Map) onRemoteCamera?.call(payload['on'] == true);
         case 'end':
           _endFromRemote('ended');
         case 'declined':
@@ -1184,6 +1264,15 @@ class CallSignalingService {
       for (final track in localStream.getTracks()) {
         await _peerConnection!.addTrack(track, localStream);
       }
+    }
+    // A voice call still negotiates a video section, so either side can turn
+    // its camera on later without a new offer. The caller adds it here; the
+    // callee gets it from the offer and opens it in [_allowVideoUpgrade].
+    if (_isCaller && !_hasLocalVideo) {
+      await _peerConnection!.addTransceiver(
+        kind: RTCRtpMediaType.RTCRtpMediaTypeVideo,
+        init: RTCRtpTransceiverInit(direction: TransceiverDirection.SendRecv),
+      );
     }
 
     // ICE candidates go over the relay for speed and into the call document

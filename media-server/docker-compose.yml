@@ -20,6 +20,14 @@ services:
       # environment, never from git. Without it /api/chat/ice_servers answers 503
       # and calls use STUN only.
       - SOTTO_TURN_SECRET=${SOTTO_TURN_SECRET:-}
+      # TURN over TLS once coturn has a certificate, e.g. turns:turn.bhromon.fun:443?transport=tcp
+      - TURN_TLS_URLS=${TURN_TLS_URLS:-}
+      # Apple VoIP pushes (iPhone call screen when the app is closed). Leave empty to skip.
+      - APNS_KEY_PATH=${APNS_KEY_PATH:-}
+      - APNS_KEY_ID=${APNS_KEY_ID:-}
+      - APNS_TEAM_ID=${APNS_TEAM_ID:-}
+      - APNS_BUNDLE_ID=${APNS_BUNDLE_ID:-com.bhromon.bhromon}
+      - APNS_SANDBOX=${APNS_SANDBOX:-}
       - PURGE_KEY=${PURGE_KEY:-}
       # Private media: the secret derives each person's link key. Set it on the host, never
       # in git. Keep MEDIA_ACCESS_ENFORCE at 0 until the app that signs links is released;

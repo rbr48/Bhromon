@@ -44,12 +44,28 @@ class CallAudioSession {
   static Future<void> setProximityScreenOff(bool enabled) =>
       _invoke('setProximityScreenOff', {'enabled': enabled});
 
+  /// Lets the call shrink into a picture-in-picture window when the user
+  /// leaves the app during a video call. Android only.
+  static Future<void> setPipAllowed(bool allowed) =>
+      _invoke('setPipAllowed', {'allowed': allowed});
+
   static void Function()? _onHangUp;
+  static void Function(bool inPip)? _onPipChanged;
   static bool _listening = false;
+
+  /// Told when the app goes into or out of picture-in-picture. Null clears it.
+  static void setPipListener(void Function(bool inPip)? listener) {
+    _onPipChanged = listener;
+    _listen();
+  }
 
   /// Sets what the notification's Hang up button does. Null clears it.
   static void setHangUpHandler(void Function()? handler) {
     _onHangUp = handler;
+    _listen();
+  }
+
+  static void _listen() {
     if (_listening ||
         kIsWeb ||
         defaultTargetPlatform != TargetPlatform.android) {
@@ -58,6 +74,9 @@ class CallAudioSession {
     _listening = true;
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'hangUp') _onHangUp?.call();
+      if (call.method == 'pipChanged') {
+        _onPipChanged?.call(call.arguments == true);
+      }
     });
   }
 

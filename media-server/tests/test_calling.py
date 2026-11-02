@@ -438,3 +438,68 @@ def test_every_call_path_uses_the_same_rate_limit():
     function_limit = int(re.search(r"CALLS_PER_WINDOW = (\d+)", function_source).group(1))
     assert chat.CALL_OFFERS_PER_WINDOW == notifications.CALL_OFFERS_PER_WINDOW == function_limit
     assert chat.CALL_OFFER_WINDOW_SECONDS == notifications.CALL_OFFER_WINDOW_SECONDS
+
+
+def test_the_camera_state_is_relayed_without_ringing(client, fake_firebase, monkeypatch):
+    # A voice call turns into a video call by telling the other side the camera is on.
+    push = MagicMock(return_value=1)
+    monkeypatch.setattr(chat.push_dispatcher, "send_call_push_to_uid", push)
+    with _signed_in(client, "tok-alice") as alice, _signed_in(client, "tok-bob") as bob:
+        alice.receive_json()
+        bob.receive_json()
+        alice.send_json({
+            "type": "call_signal",
+            "callId": "c1",
+            "recipientId": "uid-bob",
+            "signalType": "camera",
+            "payload": {"on": True},
+        })
+        relayed = bob.receive_json()
+        assert relayed["signalType"] == "camera"
+        assert relayed["payload"] == {"on": True}
+    push.assert_not_called()
+
+
+def test_an_iphone_pushkit_token_gets_a_voip_push_not_an_fcm_one(monkeypatch, tmp_path):
+    db = chat.ChatDatabase(tmp_path / "chat.db")
+    db.register_device_token("uid-bob", "voip-token", device_id="d1", platform="ios-voip")
+    db.register_device_token("uid-bob", "android-token", device_id="d2", platform="android")
+    fcm = []
+    monkeypatch.setattr("firebase_admin._apps", {"[DEFAULT]": object()})
+    monkeypatch.setattr("firebase_admin.messaging.send", lambda msg: fcm.append(msg))
+    voip = MagicMock(return_value="sent")
+    monkeypatch.setattr(chat.voip_sender, "send_call", voip)
+
+    count = chat.PushNotificationDispatcher(db).send_call_push_to_uid(
+        "uid-bob", call_id="c1", caller_id="uid-alice", caller_name="Alice", is_video=True
+    )
+
+    assert count == 2
+    assert [message.token for message in fcm] == ["android-token"]
+    voip.assert_called_once_with(
+        "voip-token", call_id="c1", caller_id="uid-alice", caller_name="Alice", is_video=True
+    )
+
+
+def test_a_dead_pushkit_token_is_removed(monkeypatch, tmp_path):
+    db = chat.ChatDatabase(tmp_path / "chat.db")
+    db.register_device_token("uid-bob", "voip-token", device_id="d1", platform="ios-voip")
+    monkeypatch.setattr("firebase_admin._apps", {"[DEFAULT]": object()})
+    monkeypatch.setattr(chat.voip_sender, "send_call", MagicMock(return_value="dead"))
+
+    chat.PushNotificationDispatcher(db).send_call_push_to_uid(
+        "uid-bob", call_id="c1", caller_id="uid-alice", caller_name="Alice", is_video=False
+    )
+
+    assert db.get_device_tokens("uid-bob") == []
+
+
+def test_turn_over_tls_is_offered_only_when_configured(monkeypatch):
+    monkeypatch.delenv("TURN_TLS_URLS", raising=False)
+    servers = build_ice_servers("uid-alice", TURN_SECRET)["iceServers"]
+    assert not any("turns:" in url for server in servers for url in server["urls"])
+
+    monkeypatch.setenv("TURN_TLS_URLS", "turns:turn.example.com:443?transport=tcp, http://not-turn")
+    turn = next(s for s in build_ice_servers("uid-alice", TURN_SECRET)["iceServers"] if "username" in s)
+    assert "turns:turn.example.com:443?transport=tcp" in turn["urls"]
+    assert "http://not-turn" not in turn["urls"]
