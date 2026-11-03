@@ -11,6 +11,7 @@ import '../../data/tour_media_uploader.dart';
 import '../../domain/models/tour_group.dart';
 import '../../domain/services/media_rules.dart';
 import 'group_avatar.dart';
+import 'group_type.dart';
 
 /// Opens the group's photo sheet. Everyone sees the photo there; the owner or an admin
 /// may choose a new one or remove it.
@@ -173,7 +174,7 @@ class _GroupPhotoSheetState extends State<_GroupPhotoSheet> {
             ),
             const SizedBox(height: 16),
             GroupAvatar(
-              isFamily: widget.group.isFamily,
+              typeIcon: groupTypeIcon(widget.group),
               photoUrl: _photoUrl,
               size: 128,
             ),

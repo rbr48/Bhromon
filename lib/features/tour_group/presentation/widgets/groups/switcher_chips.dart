@@ -4,8 +4,9 @@ import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:flutter/material.dart';
 
-/// The groups as chips, in two sections: family circles, then trips. The selected group
-/// is marked, as on the groups list (decision D-5).
+/// The groups as chips, in three sections: family circles, then groups (a housing
+/// society, a gym and so on), then trips. The selected group is marked, as on the groups
+/// list (decision D-5).
 class SwitcherChips extends StatelessWidget {
   const SwitcherChips({
     super.key,
@@ -21,7 +22,9 @@ class SwitcherChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final families = groups.where((g) => g.isFamily).toList();
+    // A housing society or a gym is a family-kind circle, but not a family circle.
+    final families = groups.where((g) => g.isHousehold).toList();
+    final circles = groups.where((g) => g.isFamily && !g.isHousehold).toList();
     final trips = groups.where((g) => !g.isFamily).toList();
 
     Widget section(String title, List<TourGroup> items) {
@@ -67,6 +70,8 @@ class SwitcherChips extends StatelessWidget {
       children: [
         if (families.isNotEmpty)
           section(l10n.translate('hub_section_family'), families),
+        if (circles.isNotEmpty)
+          section(l10n.translate('hub_section_groups'), circles),
         if (trips.isNotEmpty)
           section(l10n.translate('hub_section_trips'), trips),
       ],
