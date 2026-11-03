@@ -246,6 +246,10 @@ class TourGroup {
   final String? meetingPointTitle;
   final String? meetingPointNote;
   final String? meetingPointMapUrl;
+
+  /// The group's photo: a media-server URL in the group's own space (folder
+  /// `avatars`), or null for the default icon. Only an owner or admin changes it.
+  final String? photoUrl;
   final DateTime createdAt;
 
   /// The places the tour visits, in order. Empty for tours made before
@@ -295,6 +299,7 @@ class TourGroup {
     this.meetingPointTitle,
     this.meetingPointNote,
     this.meetingPointMapUrl,
+    this.photoUrl,
     required this.createdAt,
     this.stops = const [],
     this.legPlans = const {},
@@ -650,6 +655,7 @@ class TourGroup {
     Object? meetingPointTitle = _keep,
     Object? meetingPointNote = _keep,
     Object? meetingPointMapUrl = _keep,
+    Object? photoUrl = _keep,
     DateTime? createdAt,
     List<TourStop>? stops,
     Map<String, LegPlan>? legPlans,
@@ -685,6 +691,8 @@ class TourGroup {
       meetingPointMapUrl: identical(meetingPointMapUrl, _keep)
           ? this.meetingPointMapUrl
           : meetingPointMapUrl as String?,
+      photoUrl:
+          identical(photoUrl, _keep) ? this.photoUrl : photoUrl as String?,
       createdAt: createdAt ?? this.createdAt,
       stops: stops ?? this.stops,
       legPlans: legPlans ?? this.legPlans,
@@ -720,6 +728,7 @@ class TourGroup {
       'kind': kind.name,
       if (preset != null) 'preset': preset,
       if (!momentsEnabled) 'momentsEnabled': false,
+      if (photoUrl != null) 'photoUrl': photoUrl,
       'emergencyContacts': [for (final c in emergencyContacts) c.toMap()],
       if (samity.hasSettings) 'samity': samity.toMap(),
       if (!fundBudget.isEmpty) 'fundBudget': fundBudget.toMap(),
@@ -763,6 +772,10 @@ class TourGroup {
       kind: GroupKind.fromString(map['kind']?.toString()),
       preset: presetFrom(map['preset']),
       momentsEnabled: map['momentsEnabled'] != false,
+      photoUrl:
+          map['photoUrl'] is String && (map['photoUrl'] as String).isNotEmpty
+              ? map['photoUrl'] as String
+              : null,
       emergencyContacts: parseEmergencyContacts(map['emergencyContacts']),
       fundBudget: FundBudget.fromMap(map['fundBudget']),
       samity: SamityConfig.fromMap(map['samity']),

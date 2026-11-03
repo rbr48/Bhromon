@@ -14,6 +14,8 @@ import '../../data/tour_hub_preference.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/localization/localized_date.dart';
 import '../widgets/bhromon_bottom_nav.dart';
+import '../widgets/group_avatar.dart';
+import '../widgets/group_photo_sheet.dart';
 import '../widgets/family/family_home_card.dart';
 import '../widgets/member_profile/tour_member_profile_modal.dart';
 import '../tour_pdf_export.dart';
@@ -119,13 +121,8 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         Widget tile(TourGroup g) {
           final selected = g.id == current.id;
           return ListTile(
-            leading: Icon(
-                g.isFamily
-                    ? Icons.family_restroom_rounded
-                    : Icons.card_travel_rounded,
-                color: selected
-                    ? context.forest.accentText
-                    : context.forest.text54),
+            leading: GroupAvatar(
+                isFamily: g.isFamily, photoUrl: g.photoUrl, size: 40),
             title: Text(g.name,
                 style: TextStyle(
                     color: selected
@@ -528,6 +525,9 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
         }
         if (!context.mounted) return;
         await exportTourPdf(context, group: group, repository: _repository);
+      case 'photo':
+        await showGroupPhotoSheet(context,
+            group: group, repository: _repository);
       case 'add_member':
         _showAddMemberDialog(context, group.id);
       case 'moments':
@@ -1237,6 +1237,11 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                         child: _menuRow(context, Icons.picture_as_pdf_rounded,
                             context.l10n.translate('pdf_export_menu')),
                       ),
+                      PopupMenuItem(
+                        value: 'photo',
+                        child: _menuRow(context, Icons.photo_camera_rounded,
+                            context.l10n.translate('group_photo_title')),
+                      ),
                       if (group.isManaged)
                         PopupMenuItem(
                           value: 'moments',
@@ -1311,13 +1316,32 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            group.name,
-            style: TextStyle(
-              color: context.forest.text,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Tooltip(
+                message: context.l10n.translate('group_photo_title'),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => showGroupPhotoSheet(context,
+                      group: group, repository: _repository),
+                  child: GroupAvatar(
+                      isFamily: group.isFamily,
+                      photoUrl: group.photoUrl,
+                      size: 52),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  group.name,
+                  style: TextStyle(
+                    color: context.forest.text,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           if (!group.isFamily)

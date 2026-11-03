@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/utils/app_logger.dart';
@@ -29,6 +30,7 @@ import '../domain/models/vehicle_models.dart';
 import '../domain/services/call_partner.dart';
 import '../domain/services/emergency_numbers.dart';
 import '../domain/services/media_references.dart';
+import '../domain/services/media_rules.dart';
 import '../domain/services/family_telemetry_publisher.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
@@ -975,6 +977,61 @@ class TourGroupRepository {
   Future<void> setMomentsEnabled(String tourId, bool enabled) async {
     _requireEmail();
     await _tour(tourId).update({'momentsEnabled': enabled});
+  }
+
+  /// Uploads [file] as the group's photo and records it on the group, then removes the
+  /// photo it replaces. The file goes to the group's own media space, so only members
+  /// can read it. The owner or an admin may do this; the rules refuse anyone else.
+  /// [onProgress] reports the upload from 0 to 1. Returns the new photo's URL.
+  Future<String> changeGroupPhoto({
+    required String tourId,
+    required XFile file,
+    String? previousUrl,
+    void Function(double progress)? onProgress,
+  }) async {
+    _requireEmail();
+    final contentType = imageContentType(file.name);
+    if (contentType == null) {
+      throw ArgumentError.value(
+          file.name, 'file', 'not an image type the media server accepts');
+    }
+    final upload = await TourMediaUploader.start(
+      tourId: tourId,
+      folder: 'avatars',
+      file: file,
+      contentType: contentType,
+      extension: storedExtension(file.name, 'jpg'),
+      maxBytes: kMaxImageBytes,
+      journal: TourMediaJournal.untracked,
+    );
+    final progressSub =
+        onProgress == null ? null : upload.progress.listen(onProgress);
+    final String url;
+    try {
+      url = await upload.finish();
+      await _tour(tourId).update({'photoUrl': url});
+    } catch (_) {
+      // The group does not point at the new file, so it must not stay on the server.
+      await upload.discard();
+      rethrow;
+    } finally {
+      await progressSub?.cancel();
+    }
+    if (previousUrl != null && previousUrl != url) {
+      await TourMediaUploader.deleteMedia(previousUrl);
+    }
+    return url;
+  }
+
+  /// Removes the group's photo. The owner or an admin may do this. The file is deleted
+  /// once the group no longer points at it.
+  Future<void> removeGroupPhoto(
+      {required String tourId, String? previousUrl}) async {
+    _requireEmail();
+    await _tour(tourId).update({'photoUrl': null});
+    if (previousUrl != null) {
+      await TourMediaUploader.deleteMedia(previousUrl);
+    }
   }
 
   /// Admins save the itinerary. The summary fields older screens read are

@@ -2114,6 +2114,18 @@ class TourTranslationKeys {
       'meals_load_failed': 'Could not load the meals.',
       'hub_moments_turn_off': 'Turn Moments off',
       'hub_moments_turn_on': 'Turn Moments on',
+      'group_photo_title': 'Group photo',
+      'group_photo_change': 'Choose a new photo',
+      'group_photo_remove': 'Remove photo',
+      'group_photo_hint':
+          'Shown in the group list and at the top of the hub. Up to 10 MB.',
+      'group_photo_members_see':
+          'Only the owner and admins can change the group photo.',
+      'group_photo_uploading': 'Uploading the photo…',
+      'group_photo_done': 'The group photo has been updated.',
+      'group_photo_removed': 'The group photo has been removed.',
+      'group_photo_failed': 'The photo could not be updated. Try again.',
+      'group_photo_bad_type': 'Choose a JPG, PNG, WebP, GIF or HEIC picture.',
       'hub_moments_off_title': 'Turn Moments off?',
       'hub_moments_off_body':
           'Members will not be able to post or share stories until an owner or admin turns Moments back on.',
@@ -4397,6 +4409,18 @@ class TourTranslationKeys {
       'meals_load_failed': 'মিল লোড করা যায়নি।',
       'hub_moments_turn_off': 'মোমেন্টস বন্ধ করুন',
       'hub_moments_turn_on': 'মোমেন্টস চালু করুন',
+      'group_photo_title': 'গ্রুপের ছবি',
+      'group_photo_change': 'নতুন ছবি বাছাই করুন',
+      'group_photo_remove': 'ছবি সরান',
+      'group_photo_hint':
+          'গ্রুপ তালিকা ও হাবের উপরে এই ছবি দেখানো হয়। সর্বোচ্চ ১০ এমবি।',
+      'group_photo_members_see':
+          'শুধু মালিক ও অ্যাডমিন গ্রুপের ছবি বদলাতে পারেন।',
+      'group_photo_uploading': 'ছবি আপলোড হচ্ছে…',
+      'group_photo_done': 'গ্রুপের ছবি বদলানো হয়েছে।',
+      'group_photo_removed': 'গ্রুপের ছবি সরানো হয়েছে।',
+      'group_photo_failed': 'ছবিটি বদলানো যায়নি। আবার চেষ্টা করুন।',
+      'group_photo_bad_type': 'JPG, PNG, WebP, GIF বা HEIC ছবি বাছাই করুন।',
       'hub_moments_off_title': 'মোমেন্টস বন্ধ করবেন?',
       'hub_moments_off_body':
           'মালিক বা অ্যাডমিন মোমেন্টস আবার চালু না করা পর্যন্ত সদস্যরা পোস্ট বা স্টোরি দিতে পারবেন না।',

@@ -42,6 +42,38 @@ void main() {
       expect(deserialized.durationText, '৫ দিন ৪ রাত');
     });
 
+    test('the group photo round-trips; empty or non-text values read as none',
+        () {
+      final now = DateTime(2026, 10, 25);
+      const url =
+          'https://bhromon.fun/media/tour_123/avatars/0123456789abcdef0123456789abcdef.jpg';
+      final group = TourGroup(
+        id: 'tour_123',
+        name: 'Office',
+        ownerEmail: 'owner@example.com',
+        inviteCode: 'A1B2C3',
+        startDate: now,
+        endDate: now,
+        createdAt: now,
+        photoUrl: url,
+      );
+
+      expect(group.toMap()['photoUrl'], url);
+      expect(TourGroup.fromMap('tour_123', group.toMap()).photoUrl, url);
+      expect(group.copyWith(name: 'Renamed').photoUrl, url);
+      expect(group.copyWith(photoUrl: null).photoUrl, isNull);
+      expect(group.copyWith(photoUrl: null).toMap().containsKey('photoUrl'),
+          isFalse);
+      expect(
+          TourGroup.fromMap('tour_123', {...group.toMap(), 'photoUrl': ''})
+              .photoUrl,
+          isNull);
+      expect(
+          TourGroup.fromMap('tour_123', {...group.toMap(), 'photoUrl': 42})
+              .photoUrl,
+          isNull);
+    });
+
     test('Universal Tour calculates 1-day day-tour accurately', () {
       final day = DateTime(2026, 11, 10);
       final group = TourGroup(

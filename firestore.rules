@@ -669,7 +669,12 @@ service cloud.firestore {
                      (isSamityTour(tourId) && validSamityConfig(request.resource.data.samity))) &&
                     (!('emergencyContacts' in request.resource.data) ||
                      (request.resource.data.emergencyContacts is list &&
-                      request.resource.data.emergencyContacts.size() <= 10));
+                      request.resource.data.emergencyContacts.size() <= 10)) &&
+                    // The group photo is a file in this group's own media space, so members
+                    // never load an outside address from the group record.
+                    (!('photoUrl' in request.resource.data) || request.resource.data.photoUrl == null ||
+                     (request.resource.data.photoUrl is string &&
+                      request.resource.data.photoUrl.matches('https://bhromon\\.fun/media/' + tourId + '/avatars/[0-9a-f]{32}\\.(jpg|jpeg|png|webp|gif|heic|heif)')));
       allow delete: if isOwnerOfTour(tourId);
 
       match /private/{docId} {
