@@ -7,6 +7,8 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/colors.dart';
+import '../../../../core/utils/relistenable_stream.dart';
+import '../../../../core/widgets/swipe_pager.dart';
 import '../../data/tour_group_repository.dart';
 import '../../domain/models/date_codec.dart';
 import '../../domain/models/logistics_models.dart';
@@ -48,8 +50,9 @@ class _TransportScreenState extends State<TransportScreen> {
   TourRole? _myRole;
 
   String? _selected;
-  Stream<List<BusSeat>>? _seatStream;
-  String? _seatStreamFor;
+  // One seat stream per vehicle, so a page that is shown again needs no new query.
+  final Map<String, Stream<List<BusSeat>>> _seatStreams = {};
+  final PageController _vehiclePager = PageController();
   bool _busy = false;
 
   bool get _isAdmin => _myRole?.isAdminOrOwner ?? false;
@@ -85,6 +88,7 @@ class _TransportScreenState extends State<TransportScreen> {
     for (final s in _subs) {
       unawaited(s.cancel());
     }
+    _vehiclePager.dispose();
     super.dispose();
   }
 
@@ -101,10 +105,11 @@ class _TransportScreenState extends State<TransportScreen> {
     return tabs.isEmpty ? _coachId : tabs.first;
   }
 
-  TourVehicle? get _vehicle {
-    final id = _current;
+  TourVehicle? get _vehicle => _vehicleById(_current);
+
+  TourVehicle? _vehicleById(String tabId) {
     for (final v in _vehicles) {
-      if (v.id == id) return v;
+      if (v.id == tabId) return v;
     }
     return null;
   }
@@ -112,13 +117,14 @@ class _TransportScreenState extends State<TransportScreen> {
   /// The vehicle id stored on seats: null for the original coach.
   String? get _vehicleId => _current == _coachId ? null : _current;
 
-  Stream<List<BusSeat>> _seatsFor(String id) {
-    if (_seatStreamFor != id || _seatStream == null) {
-      _seatStreamFor = id;
-      _seatStream =
-          _repository.watchSeatsOf(widget.tourId, id == _coachId ? null : id);
-    }
-    return _seatStream!;
+  Stream<List<BusSeat>> _seatsFor(String tabId) {
+    return _seatStreams.putIfAbsent(
+      tabId,
+      () => relistenableStream(
+        () => _repository.watchSeatsOf(
+            widget.tourId, tabId == _coachId ? null : tabId),
+      ),
+    );
   }
 
   bool _canEditSeats(TourVehicle? v) => _isAdmin || !(v?.locked ?? false);
@@ -441,7 +447,7 @@ class _TransportScreenState extends State<TransportScreen> {
         : Column(
             children: [
               _vehicleTabs(l10n),
-              Expanded(child: _vehicleBody(l10n)),
+              Expanded(child: _vehiclePages(l10n)),
             ],
           );
     if (widget.embedded) return body;
@@ -457,6 +463,27 @@ class _TransportScreenState extends State<TransportScreen> {
                 fontSize: 18)),
       ),
       body: body,
+    );
+  }
+
+  /// The seat map of the selected vehicle. With two or more vehicles, a swipe
+  /// moves to the next or previous one. Only the selected page takes taps.
+  Widget _vehiclePages(AppLocalizations l10n) {
+    final tabs = _tabs;
+    if (tabs.length < 2) return _vehicleBody(l10n, _current);
+    final index = tabs.indexOf(_current);
+    return SwipePager(
+      controller: _vehiclePager,
+      count: tabs.length,
+      selectedIndex: index,
+      onSettled: (i) => setState(() => _selected = tabs[i]),
+      itemBuilder: (context, i) {
+        if (!isWithinPageWindow(i, index)) return const SizedBox.shrink();
+        return IgnorePointer(
+          ignoring: i != index,
+          child: _vehicleBody(l10n, tabs[i]),
+        );
+      },
     );
   }
 
@@ -513,12 +540,11 @@ class _TransportScreenState extends State<TransportScreen> {
     );
   }
 
-  Widget _vehicleBody(AppLocalizations l10n) {
-    final current = _current;
-    final v = _vehicle;
+  Widget _vehicleBody(AppLocalizations l10n, String tabId) {
+    final v = _vehicleById(tabId);
     final layout = v == null ? legacyCoachLayout() : buildLayout(v);
     return StreamBuilder<List<BusSeat>>(
-      stream: _seatsFor(current),
+      stream: _seatsFor(tabId),
       builder: (context, snapshot) {
         if (snapshot.hasError && !snapshot.hasData) {
           return Center(

@@ -280,4 +280,13 @@ void main() {
 
     handle.dispose();
   });
+
+  test('a page window keeps the selected page and one page either side', () {
+    expect(isWithinPageWindow(2, 2), isTrue);
+    expect(isWithinPageWindow(1, 2), isTrue);
+    expect(isWithinPageWindow(3, 2), isTrue);
+    expect(isWithinPageWindow(0, 2), isFalse);
+    expect(isWithinPageWindow(4, 2), isFalse);
+    expect(isWithinPageWindow(0, 2, radius: 2), isTrue);
+  });
 }

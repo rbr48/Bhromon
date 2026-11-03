@@ -165,3 +165,9 @@ class _SwipePagerState extends State<SwipePager> {
     );
   }
 }
+
+/// Whether page [index] is the selected page or one of the [radius] pages either
+/// side of it. A pager that builds its pages only lets these load data, so a
+/// long list of pages costs no more than the neighbours of the one on screen.
+bool isWithinPageWindow(int index, int selectedIndex, {int radius = 1}) =>
+    (index - selectedIndex).abs() <= radius;
