@@ -240,4 +240,74 @@ void main() {
     expect(readDate(null), isNull);
     expect(readDate('later'), isNull);
   });
+
+  group('built-in channels', () {
+    test('a built-in title is its name, and empty means the standard title',
+        () {
+      expect(const TourChannel(id: 'food', name: 'Dinner plans').titleOverride,
+          'Dinner plans');
+      expect(const TourChannel(id: 'food').titleOverride, '');
+    });
+
+    test('the voice lounge and custom channels have no title override', () {
+      expect(
+          const TourChannel(id: kBuiltInVoiceChannelId, name: 'Lounge')
+              .titleOverride,
+          '');
+      expect(const TourChannel(id: 'c1', name: 'Kitchen').titleOverride, '');
+    });
+
+    test('the hidden flag is read and written', () {
+      final hidden = TourChannel.fromMap('food', {'name': '', 'hidden': true});
+      expect(hidden.hidden, isTrue);
+      expect(TourChannel.fromMap('food', {'name': ''}).hidden, isFalse);
+      expect(hidden.toMap()['hidden'], isTrue);
+    });
+
+    test('hiding writes the name, topic and posting rule the rules need', () {
+      const channel = TourChannel(
+          id: 'food', name: 'Dinner', topic: 'Menu', adminOnly: true);
+      expect(builtInChannelFields(channel, hidden: true), {
+        'name': 'Dinner',
+        'topic': 'Menu',
+        'adminOnly': true,
+        'hidden': true,
+      });
+      expect(builtInChannelFields(channel, hidden: false)['hidden'], isFalse);
+    });
+
+    test('only hidden built-in channels other than the voice lounge are hidden',
+        () {
+      final docs = [
+        const TourChannel(id: 'food', hidden: true),
+        const TourChannel(id: 'general'),
+        const TourChannel(id: kBuiltInVoiceChannelId, hidden: true),
+        const TourChannel(id: 'c1', name: 'Kitchen', hidden: true),
+      ];
+      expect(hiddenBuiltInChannelIds(docs), {'food'});
+    });
+
+    test(
+        'the list leaves out hidden built-in channels, but never the voice lounge',
+        () {
+      final list = channelsForList(
+        builtInIds: const ['general', 'food', kBuiltInVoiceChannelId],
+        docs: const [
+          TourChannel(id: 'food', hidden: true),
+          TourChannel(id: kBuiltInVoiceChannelId, hidden: true),
+          TourChannel(id: 'c2', name: 'Zoo'),
+          TourChannel(id: 'c1', name: 'apples'),
+        ],
+      );
+      expect(list.map((c) => c.id).toList(),
+          ['general', kBuiltInVoiceChannelId, 'c1', 'c2']);
+    });
+
+    test('a built-in channel with no document is listed with the defaults', () {
+      final list =
+          channelsForList(builtInIds: const ['sightseeing'], docs: const []);
+      expect(list.single.id, 'sightseeing');
+      expect(list.single.titleOverride, '');
+    });
+  });
 }

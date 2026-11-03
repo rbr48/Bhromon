@@ -7,9 +7,81 @@ import 'package:bhromon/features/tour_group/data/tour_channel_repository.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
 import 'package:bhromon/features/tour_group/data/tour_media_journal.dart';
 import 'package:bhromon/features/tour_group/data/tour_media_uploader.dart';
+import 'package:bhromon/features/tour_group/domain/models/channel_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_post_models.dart';
 import '../../../../../core/theme/colors.dart';
 import '../../../../../core/localization/app_localizations.dart';
+
+/// The standard channels a post can be shared into. A channel an admin has hidden is not
+/// offered, and a channel an admin has titled shows that title.
+class _ShareChannelTargets extends StatefulWidget {
+  const _ShareChannelTargets({
+    required this.repository,
+    required this.tourId,
+    required this.channels,
+    required this.titleOf,
+    required this.onPick,
+  });
+
+  final TourGroupRepository repository;
+  final String tourId;
+  final List<Map<String, dynamic>> channels;
+  final String Function(BuildContext context, String channelId) titleOf;
+  final void Function(String channelId, String title) onPick;
+
+  @override
+  State<_ShareChannelTargets> createState() => _ShareChannelTargetsState();
+}
+
+class _ShareChannelTargetsState extends State<_ShareChannelTargets> {
+  // Opened once, so rebuilding the sheet does not start another listener.
+  late final Stream<List<TourChannel>> _docs =
+      TourChannelRepository(groups: widget.repository)
+          .watchChannels(widget.tourId);
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<TourChannel>>(
+      stream: _docs,
+      builder: (context, snapshot) {
+        final docs = snapshot.data ?? const <TourChannel>[];
+        final hidden = hiddenBuiltInChannelIds(docs);
+        final byId = {for (final c in docs) c.id: c};
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final ch in widget.channels)
+              if (!hidden.contains(ch['id'] as String))
+                _tile(context, ch, byId[ch['id'] as String]),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _tile(
+      BuildContext context, Map<String, dynamic> ch, TourChannel? doc) {
+    final id = ch['id'] as String;
+    final override = doc?.titleOverride ?? '';
+    final title = override.isNotEmpty ? override : widget.titleOf(context, id);
+    final color = ch['color'] as Color;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      leading: CircleAvatar(
+        radius: 16,
+        backgroundColor: color.withValues(alpha: 0.2),
+        child: Icon(ch['icon'] as IconData,
+            size: 16, color: context.forest.readable(color)),
+      ),
+      title: Text(title,
+          style: TextStyle(color: context.forest.text, fontSize: 14)),
+      trailing:
+          Icon(Icons.send_rounded, size: 16, color: context.forest.text54),
+      onTap: () => widget.onPick(id, title),
+    );
+  }
+}
 
 /// In-app quick send bottom sheet allowing travelers to share a post directly
 /// into Tour Channels (#general, #food, #sightseeing, #emergency), reshare to
@@ -239,26 +311,14 @@ class InstafeedShareSheet extends StatelessWidget {
                     fontWeight: FontWeight.w600),
               ),
             ),
-            ..._channels.map((ch) {
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                leading: CircleAvatar(
-                  radius: 16,
-                  backgroundColor:
-                      (ch['color'] as Color).withValues(alpha: 0.2),
-                  child: Icon(ch['icon'] as IconData,
-                      size: 16,
-                      color: context.forest.readable(ch['color'] as Color)),
-                ),
-                title: Text(_channelTitle(context, ch['id'] as String),
-                    style: TextStyle(color: context.forest.text, fontSize: 14)),
-                trailing: Icon(Icons.send_rounded,
-                    size: 16, color: context.forest.text54),
-                onTap: () => _sendToChannel(context, ch['id'] as String,
-                    _channelTitle(context, ch['id'] as String)),
-              );
-            }),
+            _ShareChannelTargets(
+              repository: repository,
+              tourId: tourId,
+              channels: _channels,
+              titleOf: _channelTitle,
+              onPick: (channelId, title) =>
+                  _sendToChannel(context, channelId, title),
+            ),
 
             Divider(color: context.forest.divider10),
 
@@ -464,26 +524,14 @@ class InstafeedStoryShareSheet extends StatelessWidget {
                     fontWeight: FontWeight.w600),
               ),
             ),
-            ..._channels.map((ch) {
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                leading: CircleAvatar(
-                  radius: 16,
-                  backgroundColor:
-                      (ch['color'] as Color).withValues(alpha: 0.2),
-                  child: Icon(ch['icon'] as IconData,
-                      size: 16,
-                      color: context.forest.readable(ch['color'] as Color)),
-                ),
-                title: Text(_channelTitle(context, ch['id'] as String),
-                    style: TextStyle(color: context.forest.text, fontSize: 14)),
-                trailing: Icon(Icons.send_rounded,
-                    size: 16, color: context.forest.text54),
-                onTap: () => _sendToChannel(context, ch['id'] as String,
-                    _channelTitle(context, ch['id'] as String)),
-              );
-            }),
+            _ShareChannelTargets(
+              repository: repository,
+              tourId: tourId,
+              channels: _channels,
+              titleOf: _channelTitle,
+              onPick: (channelId, title) =>
+                  _sendToChannel(context, channelId, title),
+            ),
 
             Divider(color: context.forest.divider10),
 

@@ -1815,6 +1815,7 @@ class ChatTile extends StatelessWidget {
   }
 }
 
+/// Keeps a tab's state while the user swipes between the chats and calls pages.
 class _KeepAlivePage extends StatefulWidget {
   final Widget child;
   const _KeepAlivePage({required this.child});

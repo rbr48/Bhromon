@@ -201,8 +201,9 @@ class ChannelDraft {
   });
 }
 
-/// Asks for a channel's details. The name is only asked for when
-/// [nameEditable] is true, which is never the case for a built-in channel.
+/// Asks for a channel's details. The name is asked for when [nameEditable] is true. For
+/// a built-in channel the name is an optional title: an empty one means the standard
+/// title, and the channel kind is not asked.
 Future<ChannelDraft?> showChannelEditor(
   BuildContext context, {
   required String title,
@@ -250,9 +251,12 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
     super.dispose();
   }
 
+  /// A built-in channel's name is optional: empty means its standard title.
+  bool get _isBuiltIn => widget.existing?.isBuiltIn ?? false;
+
   void _save() {
     final name = _name.text.trim();
-    if (widget.nameEditable && name.isEmpty) {
+    if (widget.nameEditable && name.isEmpty && !_isBuiltIn) {
       setState(() => _nameMissing = true);
       return;
     }
@@ -286,29 +290,34 @@ class _ChannelEditorDialogState extends State<_ChannelEditorDialog> {
                 decoration: InputDecoration(
                   labelText: l10n.translate('chan_name_label'),
                   labelStyle: TextStyle(color: context.forest.text60),
+                  helperText: _isBuiltIn
+                      ? l10n.translate('chan_title_default_hint')
+                      : null,
                   errorText: _nameMissing
                       ? l10n.translate('chan_name_required')
                       : null,
                 ),
               ),
               const SizedBox(height: 8),
-              SegmentedButton<ChannelKind>(
-                segments: [
-                  ButtonSegment<ChannelKind>(
-                    value: ChannelKind.text,
-                    label: Text(l10n.translate('chan_kind_text')),
-                    icon: const Icon(Icons.tag, size: 16),
-                  ),
-                  ButtonSegment<ChannelKind>(
-                    value: ChannelKind.voice,
-                    label: Text(l10n.translate('chan_kind_voice')),
-                    icon: const Icon(Icons.volume_up, size: 16),
-                  ),
-                ],
-                selected: {_kind},
-                onSelectionChanged: (s) => setState(() => _kind = s.first),
-              ),
-              const SizedBox(height: 8),
+              if (!_isBuiltIn) ...[
+                SegmentedButton<ChannelKind>(
+                  segments: [
+                    ButtonSegment<ChannelKind>(
+                      value: ChannelKind.text,
+                      label: Text(l10n.translate('chan_kind_text')),
+                      icon: const Icon(Icons.tag, size: 16),
+                    ),
+                    ButtonSegment<ChannelKind>(
+                      value: ChannelKind.voice,
+                      label: Text(l10n.translate('chan_kind_voice')),
+                      icon: const Icon(Icons.volume_up, size: 16),
+                    ),
+                  ],
+                  selected: {_kind},
+                  onSelectionChanged: (s) => setState(() => _kind = s.first),
+                ),
+                const SizedBox(height: 8),
+              ],
             ],
             TextField(
               controller: _topic,
