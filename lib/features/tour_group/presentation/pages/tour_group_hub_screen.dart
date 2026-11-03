@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:bhromon/core/media/media_access.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -3739,23 +3740,10 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                     child: Stack(
                       alignment: Alignment.bottomRight,
                       children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: AppColors.midGreen,
-                          backgroundImage: member.photoUrl != null
-                              ? NetworkImage(signedMediaUrl(member.photoUrl!))
-                              : null,
-                          child: member.photoUrl == null
-                              ? Text(
-                                  member.displayName.isNotEmpty
-                                      ? member.displayName[0].toUpperCase()
-                                      : 'M',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18),
-                                )
-                              : null,
+                        MemberAvatar(
+                          name: member.displayName,
+                          photoUrl: member.photoUrl,
+                          size: 48,
                         ),
                         Container(
                           padding: const EdgeInsets.all(2),
@@ -4103,22 +4091,42 @@ class _TourGroupHubScreenState extends State<TourGroupHubScreen> {
                           maxWidth: MediaQuery.sizeOf(ctx).width * 0.85,
                           maxHeight: MediaQuery.sizeOf(ctx).height * 0.6,
                         ),
-                        child: CachedNetworkImage(
-                          imageUrl: signedMediaUrl(photoUrl),
-                          fit: BoxFit.contain,
-                          placeholder: (_, __) => const SizedBox(
-                            width: 140,
-                            height: 140,
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                  color: AppColors.mintGreen),
-                            ),
-                          ),
-                          errorWidget: (_, __, ___) => MemberAvatar(
-                            name: name,
-                            size: 160,
-                          ),
-                        ),
+                        child: kIsWeb
+                            ? Image.network(
+                                signedMediaUrl(photoUrl),
+                                fit: BoxFit.contain,
+                                loadingBuilder: (context, child, progress) =>
+                                    progress == null
+                                        ? child
+                                        : const SizedBox(
+                                            width: 140,
+                                            height: 140,
+                                            child: Center(
+                                              child: CircularProgressIndicator(
+                                                  color: AppColors.mintGreen),
+                                            ),
+                                          ),
+                                errorBuilder: (_, __, ___) => MemberAvatar(
+                                  name: name,
+                                  size: 160,
+                                ),
+                              )
+                            : CachedNetworkImage(
+                                imageUrl: signedMediaUrl(photoUrl),
+                                fit: BoxFit.contain,
+                                placeholder: (_, __) => const SizedBox(
+                                  width: 140,
+                                  height: 140,
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                        color: AppColors.mintGreen),
+                                  ),
+                                ),
+                                errorWidget: (_, __, ___) => MemberAvatar(
+                                  name: name,
+                                  size: 160,
+                                ),
+                              ),
                       ),
                     )
                   : MemberAvatar(

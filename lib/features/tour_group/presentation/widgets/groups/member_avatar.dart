@@ -1,6 +1,7 @@
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:bhromon/core/theme/colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 /// A member's picture: their photo, or their initial on mint. Text on mint is dark green.
@@ -54,6 +55,22 @@ class MemberAvatar extends StatelessWidget {
     );
     final url = photoUrl;
     if (url == null || url.isEmpty) return placeholder;
+    if (kIsWeb) {
+      return ClipOval(
+        child: SizedBox.square(
+          dimension: size,
+          child: Image.network(
+            signedMediaUrl(url),
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, progress) =>
+                progress == null ? child : placeholder,
+            errorBuilder: (_, __, ___) => placeholder,
+          ),
+        ),
+      );
+    }
     return ClipOval(
       child: SizedBox.square(
         dimension: size,

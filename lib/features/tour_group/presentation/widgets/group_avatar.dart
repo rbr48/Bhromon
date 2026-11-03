@@ -1,6 +1,7 @@
 import 'package:bhromon/core/media/media_access.dart';
 import 'package:bhromon/core/theme/forest_palette.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 /// A group's picture: its photo when it has one, otherwise the icon its type uses (a
@@ -39,6 +40,22 @@ class GroupAvatar extends StatelessWidget {
     );
     final url = photoUrl;
     if (url == null || url.isEmpty) return icon;
+    if (kIsWeb) {
+      return ClipOval(
+        child: SizedBox.square(
+          dimension: size,
+          child: Image.network(
+            signedMediaUrl(url),
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, progress) =>
+                progress == null ? child : icon,
+            errorBuilder: (_, __, ___) => icon,
+          ),
+        ),
+      );
+    }
     return ClipOval(
       child: SizedBox.square(
         dimension: size,
