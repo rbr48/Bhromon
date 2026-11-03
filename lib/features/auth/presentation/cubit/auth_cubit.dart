@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:bhromon/core/utils/app_logger.dart';
 import 'package:bhromon/features/tour_group/data/tour_group_repository.dart';
@@ -25,6 +26,12 @@ class AuthCubit extends Cubit<AuthState> {
   final SignInGoogleUseCase _signInGoogle;
   final SignOutUseCase _signOut;
   final UpdateProfileUseCase _updateProfile;
+
+  /// The group repository that the cubit syncs member rows with and resets at sign-out.
+  /// A field rather than a constructor parameter, so injection is unchanged. Tests
+  /// replace it.
+  @visibleForTesting
+  TourGroupRepository Function() groupRepository = () => TourGroupRepository();
 
   AuthCubit(
     this._getCurrentProfile,
@@ -63,7 +70,7 @@ class AuthCubit extends Cubit<AuthState> {
   /// Keeps the signed-in person's group member rows in step with their profile. A
   /// failure is logged; it never blocks sign-in or the profile save.
   void _syncGroupMembership() {
-    unawaited(TourGroupRepository()
+    unawaited(groupRepository()
         .syncMyMemberProfile()
         .catchError((Object e, StackTrace st) {
       logWarning('[AuthCubit] group member sync failed', e, st);
@@ -110,7 +117,7 @@ class AuthCubit extends Cubit<AuthState> {
     result.fold(
       (failure) => emit(_failedState(failure)),
       (_) {
-        unawaited(TourGroupRepository().resetSessionCaches().catchError(
+        unawaited(groupRepository().resetSessionCaches().catchError(
             (Object e, StackTrace st) =>
                 logWarning('[AuthCubit] group cache reset failed', e, st)));
         emit(const Unauthenticated());
