@@ -183,6 +183,18 @@ void main() {
   });
 
   testWidgets(
+      'a group with no members yet shows the strip with a zero count, and See all',
+      (tester) async {
+    await _pump(
+      tester,
+      hub: _hub(_Repo(groups: [_trip('t1')], members: const []), routeId: 't1'),
+    );
+    expect(find.byType(MembersStrip), findsOneWidget);
+    expect(find.text('See all'), findsOneWidget);
+    expect(find.textContaining('+'), findsNothing);
+  });
+
+  testWidgets(
       'the members strip shows at most eight faces and a count for the rest',
       (tester) async {
     final many = [
