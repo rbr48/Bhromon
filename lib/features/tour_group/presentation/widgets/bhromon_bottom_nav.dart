@@ -67,8 +67,10 @@ class BhromonBottomNav extends StatelessWidget {
     if (currentIndex != null && index == currentIndex) return;
 
     final openTourId = (tourId != null && tourId.isNotEmpty) ? tourId : null;
-    // Channels and Moments use the group on screen, or else the active group (P3.4).
-    final activeTourId = openTourId ?? ActiveGroup.instance.current;
+    // With kGroupsV2, Channels and Moments use the group on screen, or else the active
+    // group (P3.4). Without it they never borrow a remembered group.
+    final activeTourId =
+        openTourId ?? (kGroupsV2 ? ActiveGroup.instance.current : null);
 
     switch (index) {
       case 0:

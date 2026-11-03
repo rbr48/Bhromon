@@ -258,6 +258,41 @@ void main() {
   });
 
   testWidgets(
+      'the groups list and the group page fit every width and text size in the matrix',
+      (tester) async {
+    final groups = [
+      _family('f1'),
+      _trip('t1', start: DateTime.now().add(const Duration(days: 3)))
+    ];
+    final members = [
+      owner,
+      _member('t1', 'রহিম উদ্দিন আহমেদ দীর্ঘ নাম', 'r@bhromon.fun',
+          TourRole.member),
+    ];
+    for (final width in const [320.0, 360.0, 390.0, 412.0]) {
+      for (final scale in const [1.0, 1.5, 2.0]) {
+        await _pump(
+          tester,
+          hub: _hub(_Repo(groups: groups, members: members)),
+          textScale: scale,
+          size: Size(width, 900),
+        );
+        expect(tester.takeException(), isNull,
+            reason: 'list at $width px, text $scale');
+
+        await _pump(
+          tester,
+          hub: _hub(_Repo(groups: groups, members: members), routeId: 't1'),
+          textScale: scale,
+          size: Size(width, 900),
+        );
+        expect(tester.takeException(), isNull,
+            reason: 'group page at $width px, text $scale');
+      }
+    }
+  });
+
+  testWidgets(
       'a group the viewer cannot see says so, with a way back to the list',
       (tester) async {
     await _pump(

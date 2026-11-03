@@ -19,18 +19,10 @@ class ActiveGroup {
   final TourHubPreference _preference;
   final StreamController<String?> _changes =
       StreamController<String?>.broadcast();
-  String? _current;
-  bool _loaded = false;
 
-  /// The active group's id, or null when none is selected. Read from the saved value
-  /// the first time it is asked for.
-  String? get current {
-    if (!_loaded) {
-      _current = _preference.read();
-      _loaded = true;
-    }
-    return _current;
-  }
+  /// The active group's id, or null when none is selected. It is read from the saved
+  /// value each time, so a group the user leaves is never still active here.
+  String? get current => _preference.read();
 
   /// Every change: the new id, or null when the active group was cleared.
   Stream<String?> get changes => _changes.stream;
@@ -38,10 +30,8 @@ class ActiveGroup {
   /// Makes [tourId] the active group and saves it. An empty id is ignored.
   Future<void> select(String tourId) async {
     if (tourId.isEmpty) return;
-    _current = tourId;
-    _loaded = true;
-    _changes.add(tourId);
     await _preference.remember(tourId);
+    _changes.add(tourId);
   }
 
   /// Clears the active group when it is [tourId]: the user left that group or was
@@ -54,9 +44,7 @@ class ActiveGroup {
   /// Clears the active group, such as at sign-out.
   Future<void> clear() async {
     final previous = current;
-    _current = null;
-    _loaded = true;
-    _changes.add(null);
     if (previous != null) await _preference.forget(previous);
+    _changes.add(null);
   }
 }

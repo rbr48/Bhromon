@@ -42,7 +42,6 @@ import '../domain/services/seat_layout_engine.dart';
 import '../domain/services/seat_planner.dart';
 import 'channel_message_cache.dart';
 import 'channel_read_store.dart';
-import 'tour_hub_preference.dart';
 import 'tour_media_journal.dart';
 import 'tour_media_uploader.dart';
 import 'vps_notification_service.dart';
@@ -278,7 +277,7 @@ class TourGroupRepository {
     }
     await ChannelReadStore().clearTour(tourId);
     await TourMediaJournal.instance.dropTour(tourId);
-    await TourHubPreference().forget(tourId);
+    await ActiveGroup.instance.clearIf(tourId);
     await ChannelMessageCache().clearTour(tourId);
     try {
       // Photos and videos the tour loaded sit in the image cache, which cannot
