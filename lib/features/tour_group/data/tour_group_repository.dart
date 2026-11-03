@@ -8,7 +8,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
-import 'package:bhromon/core/utils/shared_latest_stream.dart';
+import 'package:bhromon/core/utils/session_shared_stream.dart';
 import 'package:bhromon/core/utils/shared_stream_registry.dart';
 
 import '../../../../core/utils/app_logger.dart';
@@ -36,6 +36,7 @@ import '../domain/services/media_references.dart';
 import '../domain/services/media_rules.dart';
 import '../domain/services/member_profile_sync.dart';
 import 'active_group.dart';
+import 'group_stream_budget.dart';
 import '../domain/services/family_telemetry_publisher.dart';
 import '../domain/services/invite_code.dart';
 import '../domain/services/seat_layout_engine.dart';
@@ -411,26 +412,40 @@ class TourGroupRepository {
   // Groups
   // ---------------------------------------------------------------------------
 
-  /// Tours the signed-in user is an active member of, live.
-  ///
-  /// Membership decides the list. Cached tours show only until the first
-  /// membership answer arrives, so tours the user left or was removed from
-  /// stop appearing.
   /// One groups list for the whole app. Screens each build their own repository, so the
   /// sharing lives in static state: one upstream however many screens listen.
-  static SharedLatestStream<List<TourGroup>>? _sharedMyGroups;
+  static SessionSharedStream<List<TourGroup>>? _sharedMyGroups;
 
   /// One members stream per tour, shared by every screen that shows that tour's members.
+  /// Its upstreams are counted by [GroupStreamBudget].
   static final SharedStreamRegistry<String, List<TourMember>> _sharedMembers =
-      SharedStreamRegistry<String, List<TourMember>>();
+      SharedStreamRegistry<String, List<TourMember>>(
+    onUpstreamStart: (tourId) =>
+        GroupStreamBudget.open(GroupStreamBudget.membersKey(tourId)),
+    onUpstreamEnd: (tourId) =>
+        GroupStreamBudget.close(GroupStreamBudget.membersKey(tourId)),
+  );
 
   /// The tours as they were last seen this session. A new listen starts from these, so
   /// the eager fetch runs once per session, not once per listen.
   static final Map<String, TourGroup> _sessionTourDocs = {};
 
+  /// True while the groups list is answered from this device's cache rather than the
+  /// server. The groups list shows an offline banner when this stays true.
+  static final ValueNotifier<bool> groupsServedFromCache =
+      ValueNotifier<bool>(false);
+
+  /// Tours the signed-in user is an active member of, live.
+  ///
+  /// Membership decides the list. Cached tours show only until the first
+  /// membership answer arrives, so tours the user left or was removed from
+  /// stop appearing. Every caller shares one upstream (see [_sharedMyGroups]).
   Stream<List<TourGroup>> watchMyGroups() {
-    final shared = _sharedMyGroups ??=
-        SharedLatestStream<List<TourGroup>>(_openMyGroups());
+    final shared = _sharedMyGroups ??= SessionSharedStream<List<TourGroup>>(
+      _openMyGroups,
+      onUpstreamStart: () => GroupStreamBudget.open(GroupStreamBudget.myGroups),
+      onUpstreamEnd: () => GroupStreamBudget.close(GroupStreamBudget.myGroups),
+    );
     return shared.stream;
   }
 
@@ -439,7 +454,7 @@ class TourGroupRepository {
   Stream<List<TourGroup>> restartMyGroups() {
     final old = _sharedMyGroups;
     _sharedMyGroups = null;
-    unawaited(old?.close());
+    unawaited(old?.reset());
     return watchMyGroups();
   }
 
@@ -593,6 +608,7 @@ class TourGroupRepository {
           _memberships.where('email', isEqualTo: email).snapshots().listen(
         (snapshot) {
           heardFromServer = true;
+          groupsServedFromCache.value = snapshot.metadata.isFromCache;
           rolesByTour.clear();
           for (final d in snapshot.docs) {
             final data = d.data();
@@ -649,6 +665,7 @@ class TourGroupRepository {
       onCancel: () async {
         await authSub?.cancel();
         clearUserTours();
+        groupsServedFromCache.value = false;
       },
     );
 
@@ -1178,9 +1195,13 @@ class TourGroupRepository {
 
   /// Ends every shared stream and cached value. Called at sign-out.
   Future<void> resetSessionCaches() async {
+    groupsServedFromCache.value = false;
     _sessionTourDocs.clear();
     await _sharedMembers.clear();
-    await _sharedMyGroups?.close();
+    // Drop the holder as well, so the next sign-in opens a new groups upstream.
+    final old = _sharedMyGroups;
+    _sharedMyGroups = null;
+    await old?.reset();
     await ActiveGroup.instance.clear();
   }
 
@@ -1213,23 +1234,20 @@ class TourGroupRepository {
     final name = currentDisplayName;
     final photo = currentPhotoUrl;
     final snapshot = await _memberships.where('email', isEqualTo: email).get();
-    var written = 0;
-    for (final doc in snapshot.docs) {
-      final updates = memberRowUpdates(
+    return applyMemberRowSync<QueryDocumentSnapshot<Map<String, dynamic>>>(
+      snapshot.docs,
+      updatesFor: (doc) => memberRowUpdates(
         row: doc.data(),
         uid: uid,
         displayName: name,
         photoUrl: photo,
-      );
-      if (updates.isEmpty) continue;
-      try {
-        await doc.reference.update(updates);
-        written++;
-      } catch (e, st) {
-        logWarning('[TourGroupRepository] member profile sync failed', e, st);
-      }
-    }
-    return written;
+      ),
+      write: (doc, updates) => doc.reference.update(updates),
+      onFailure: (error, stackTrace) => logWarning(
+          '[TourGroupRepository] member profile sync failed',
+          error,
+          stackTrace),
+    );
   }
 
   /// The tours the signed-in person is an active member of, read from the server.

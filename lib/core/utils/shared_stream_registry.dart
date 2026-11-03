@@ -8,11 +8,27 @@ import 'shared_latest_stream.dart';
 /// gets the latest value at once. [remove] and [clear] end a key's upstream and
 /// forget its cached value, so the next listen starts fresh.
 class SharedStreamRegistry<K, T> {
+  /// [onUpstreamStart] and [onUpstreamEnd] run with the key when its upstream
+  /// opens and when it ends. They are for the debug budget counters.
+  SharedStreamRegistry({this.onUpstreamStart, this.onUpstreamEnd});
+
+  final void Function(K key)? onUpstreamStart;
+  final void Function(K key)? onUpstreamEnd;
+
   final Map<K, SharedLatestStream<T>> _byKey = {};
 
   /// The shared stream for [key]. [open] is called once per key, when the key is new.
   Stream<T> stream(K key, Stream<T> Function() open) {
-    return _byKey.putIfAbsent(key, () => SharedLatestStream<T>(open())).stream;
+    return _byKey
+        .putIfAbsent(
+          key,
+          () => SharedLatestStream<T>(
+            open(),
+            onUpstreamStart: () => onUpstreamStart?.call(key),
+            onUpstreamEnd: () => onUpstreamEnd?.call(key),
+          ),
+        )
+        .stream;
   }
 
   /// Keys that have a stream, whether or not anyone is listening. For tests.

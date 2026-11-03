@@ -26,3 +26,26 @@ Map<String, Object> memberRowUpdates({
   }
   return updates;
 }
+
+/// Writes the [updatesFor] of each row through [write], and returns how many rows were
+/// written. A row that needs nothing is not written. A row whose write fails goes to
+/// [onFailure] and is skipped, so the other rows are still written.
+Future<int> applyMemberRowSync<R>(
+  Iterable<R> rows, {
+  required Map<String, Object> Function(R row) updatesFor,
+  required Future<void> Function(R row, Map<String, Object> updates) write,
+  required void Function(Object error, StackTrace stackTrace) onFailure,
+}) async {
+  var written = 0;
+  for (final row in rows) {
+    final updates = updatesFor(row);
+    if (updates.isEmpty) continue;
+    try {
+      await write(row, updates);
+      written++;
+    } catch (error, stackTrace) {
+      onFailure(error, stackTrace);
+    }
+  }
+  return written;
+}
