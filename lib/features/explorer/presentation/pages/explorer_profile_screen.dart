@@ -54,11 +54,20 @@ class ExplorerProfileScreen extends StatefulWidget {
   /// group's membership confirms it.
   final String? emailHint;
 
+  /// The group repository. The app leaves this null; tests pass a fake.
+  final TourGroupRepository? repository;
+
+  /// Reads the raw profile fields (blood group, status note, bios). The app leaves this
+  /// null and reads Firestore; tests pass a fake.
+  final Future<Map<String, dynamic>?> Function(String uid)? readProfileData;
+
   const ExplorerProfileScreen({
     super.key,
     required this.uid,
     this.tourId,
     this.emailHint,
+    this.repository,
+    this.readProfileData,
   });
 
   @override
@@ -67,7 +76,7 @@ class ExplorerProfileScreen extends StatefulWidget {
 
 class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   late final GetExplorerProfileUseCase _getExplorerProfile;
-  final TourGroupRepository _tourRepo = TourGroupRepository();
+  late final TourGroupRepository _tourRepo;
 
   /// The signed-in person's groups, created once in [initState] (BUG-1).
   late final Stream<List<TourGroup>> _myGroupsStream;
@@ -75,7 +84,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   ExplorerProfile? _profile;
   bool _isLoading = false;
   String? _error;
-  DocumentSnapshot? _rawProfileDoc;
+  Map<String, dynamic>? _rawProfileData;
   String? _bloodGroup;
   String? _statusNote;
   String _activeCategory = 'all';
@@ -96,6 +105,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _tourRepo = widget.repository ?? TourGroupRepository();
     _myGroupsStream = _tourRepo.watchMyGroups();
     LocaleController.instance.addListener(_onLocaleChanged);
     _getExplorerProfile = getIt<GetExplorerProfileUseCase>();
@@ -139,6 +149,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     });
   }
 
+  /// The raw profile document's fields, read from Firestore. Null when there is none.
+  Future<Map<String, dynamic>?> _readProfileData(String uid) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('explorer_profiles')
+        .doc(uid)
+        .get();
+    return doc.data();
+  }
+
   Future<void> _loadProfile() async {
     final authState = context.read<AuthCubit>().state;
     final currentUid = authState is Authenticated ? authState.profile.uid : '';
@@ -178,16 +197,13 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         (p) => p,
       );
 
-      final rawDoc = await FirebaseFirestore.instance
-          .collection('explorer_profiles')
-          .doc(profile.uid)
-          .get();
+      final data =
+          await (widget.readProfileData ?? _readProfileData)(profile.uid);
 
       if (mounted) {
-        final data = rawDoc.data();
         setState(() {
           _profile = profile;
-          _rawProfileDoc = rawDoc;
+          _rawProfileData = data;
           _bloodGroup = data?['bloodGroup'] as String?;
           _statusNote =
               data?['statusNote'] as String? ?? data?['note'] as String?;
@@ -205,7 +221,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   }
 
   String _getDisplayBio(ExplorerProfile profile) {
-    final rawData = _rawProfileDoc?.data() as Map<String, dynamic>?;
+    final rawData = _rawProfileData;
     if (_isBn) {
       final bn = rawData?['bioBangla'] as String?;
       if (bn != null && bn.trim().isNotEmpty) return bn.trim();
@@ -1437,6 +1453,15 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
   // Tab Content
   // ---------------------------------------------------------------------------
 
+  /// The game analytics at a height of its own. The view fills the height it is given,
+  /// and the profile scrolls, so without a height its layout has no bounds to fill.
+  Widget _gameAnalyticsSection() {
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.75,
+      child: const GameAnalyticsView(),
+    );
+  }
+
   Widget _buildActiveTabContent(
     ExplorerProfile profile,
     List<TourGroup> groups,
@@ -1447,7 +1472,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       case 'vault':
         return _buildKeepsakesTab(groups);
       case 'games':
-        return kGroupsV2 ? _buildGamesTabV2() : const GameAnalyticsView();
+        return kGroupsV2 ? _buildGamesTabV2() : _gameAnalyticsSection();
       case 'settings':
         return _buildPreferencesTab(profile);
       case 'tours':
@@ -1483,7 +1508,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           onTap: () => context.push('/newspaper-hub'),
         ),
         const SizedBox(height: 16),
-        const GameAnalyticsView(),
+        _gameAnalyticsSection(),
       ],
     );
   }
@@ -2676,7 +2701,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
 
   void _showEditProfileBottomSheet(ExplorerProfile profile) {
     final nameController = TextEditingController(text: profile.displayName);
-    final rawData = _rawProfileDoc?.data() as Map<String, dynamic>?;
+    final rawData = _rawProfileData;
     final rawBn = rawData?['bioBangla'] as String? ?? '';
     final rawEn = rawData?['bioEnglish'] as String? ?? '';
     final bioBanglaController = TextEditingController(text: rawBn);
