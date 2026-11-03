@@ -25,6 +25,7 @@ import '../../domain/models/date_codec.dart';
 import '../../domain/models/logistics_models.dart';
 import '../../domain/models/tour_activity_models.dart';
 import '../../domain/models/tour_group.dart';
+import '../../domain/services/channel_draft_rules.dart';
 import '../../domain/services/chat_commands.dart';
 import '../../domain/services/chat_mentions.dart';
 import '../../domain/services/fund_analytics.dart';
@@ -261,6 +262,13 @@ class _GroupChannelsScreenState extends State<GroupChannelsScreen> {
   }
 
   void _selectChannel(String channelId) {
+    if (shouldClearEditDraftOnSwitch(
+      isEditing: _editing != null,
+      fromChannelId: _selectedId,
+      toChannelId: channelId,
+    )) {
+      _draftFor(_selectedId).clear();
+    }
     _update(() {
       _selectedId = channelId;
       _divider[channelId] = _lastRead[channelId];
