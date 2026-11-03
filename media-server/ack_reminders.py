@@ -24,6 +24,8 @@ import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
 
+from push_strings import localized_number, push_text
+
 logger = logging.getLogger("bhromon.ack_reminders")
 
 # The first reminder waits this long after the notice was posted.
@@ -91,14 +93,28 @@ def ack_reminder_due(record: Dict[str, Any], now: datetime, waiting: List[str]) 
     return last is None or now - last >= GAP
 
 
-def ack_reminder_text(record: Dict[str, Any], waiting_count: int) -> Tuple[str, str]:
-    """The title and the body a member sees for a notice that still needs their answer."""
+def ack_reminder_text(
+    record: Dict[str, Any], waiting_count: int, language: Optional[str] = None
+) -> Tuple[str, str]:
+    """The title and the body a member sees for a notice that still needs their answer.
+
+    The text is in the member's language. An unknown language gets English.
+    """
     raw_title = record.get("title")
     title = raw_title.strip() if isinstance(raw_title, str) else ""
-    head = f"Please answer: {title}" if title else "Please answer a notice"
+    if title:
+        head = push_text(language, "ack.title", title=title)
+    else:
+        head = push_text(language, "ack.untitled")
     if waiting_count == 1:
-        return head, "1 member has not answered yet. Tap to answer."
-    return head, f"{waiting_count} members have not answered yet. Tap to answer."
+        return head, push_text(language, "ack.waiting_one")
+    count = localized_number(language, waiting_count)
+    return head, push_text(language, "ack.waiting_many", count=count)
+
+
+def _ack_reminder_for(record: Dict[str, Any], waiting_count: int) -> Callable[[Optional[str]], Tuple[str, str]]:
+    """The text for one reminder, as a function of the recipient's language."""
+    return lambda language: ack_reminder_text(record, waiting_count, language)
 
 
 def claim_ack_reminder(
@@ -174,12 +190,10 @@ def run_ack_reminders(
                 continue
             record, waiting = claimed
             stats["reminded"] += 1
-            title, body = ack_reminder_text(record, len(waiting))
             targets = engine.get_push_targets_for_uids(engine.get_uids_for_emails(waiting))
-            stats["pushes"] += engine.send_multicast(
+            stats["pushes"] += engine.send_localized(
                 targets,
-                title,
-                body,
+                _ack_reminder_for(record, len(waiting)),
                 {"action": PUSH_ACTION, "tourId": tour_id, "noticeId": doc.id},
                 high_priority=True,
             )

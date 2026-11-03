@@ -7,7 +7,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/localization/locale_controller.dart';
 import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/theme_context.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/theme/theme_controller.dart';
+import '../../../tour_group/data/channel_swipe_controller.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -92,6 +94,8 @@ class _NotificationSettingsScreenState
                     ),
                     const SizedBox(height: 12),
                     _buildThemePicker(),
+                    const SizedBox(height: 16),
+                    _buildChannelSwipeToggle(),
                     const SizedBox(height: 16),
                     Divider(color: context.forest.divider10),
                     const SizedBox(height: 16),
@@ -268,6 +272,19 @@ class _NotificationSettingsScreenState
           ),
         );
       },
+    );
+  }
+
+  Widget _buildChannelSwipeToggle() {
+    final l10n = context.l10n;
+    return ListenableBuilder(
+      listenable: ChannelSwipeController.instance,
+      builder: (context, _) => _buildToggle(
+        l10n.translate('chan_swipe_setting_title'),
+        l10n.translate('chan_swipe_setting_body'),
+        ChannelSwipeController.instance.enabled,
+        (v) => unawaited(ChannelSwipeController.instance.setEnabled(v)),
+      ),
     );
   }
 

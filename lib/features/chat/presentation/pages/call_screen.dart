@@ -11,6 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/audio/call_audio_session.dart';
+import '../../../../core/services/battery_guidance.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/image_sizing.dart';
 import '../../../../core/utils/logger.dart';
@@ -259,6 +260,7 @@ class _CallScreenState extends State<CallScreen> {
           case 'connected':
             _stopRingback();
             _isConnected = true;
+            unawaited(BatteryGuidance.markCallAnswered());
             _statusKey = 'chat_connected';
             _applyAudioRouting();
             _startDurationTimer();

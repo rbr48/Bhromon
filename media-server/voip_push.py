@@ -25,6 +25,8 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
+from push_strings import push_text
+
 logger = logging.getLogger("bhromon.voip_push")
 
 VOIP_PLATFORM = "ios-voip"
@@ -92,15 +94,17 @@ class VoipPushSender:
         caller_id: str,
         caller_name: str,
         is_video: bool,
+        language: Optional[str] = None,
     ) -> str:
         """Rings one iPhone. Returns "sent", "dead" (the token is no longer
-        valid and should be removed), "skipped" or "failed"."""
+        valid and should be removed), "skipped" or "failed". The call screen's
+        handle is shown in the phone's language."""
         if not self.configured or not device_token:
             return "skipped"
         payload = {
             "id": call_id,
             "nameCaller": caller_name,
-            "handle": "Bhromon Video Call" if is_video else "Bhromon Voice Call",
+            "handle": push_text(language, "call.handle.video" if is_video else "call.handle.voice"),
             "isVideo": is_video,
             "extra": {
                 "callId": call_id,
