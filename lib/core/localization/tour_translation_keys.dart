@@ -330,6 +330,11 @@ class TourTranslationKeys {
       'chan_role_owner': 'Owner',
       'chan_saved': 'Channel saved.',
       'chan_search_hint': 'Search this channel',
+      'chan_swipe_next': 'Next channel',
+      'chan_swipe_previous': 'Previous channel',
+      'chan_swipe_setting_title': 'Swipe between channels',
+      'chan_swipe_setting_body':
+          'Swipe the messages to move to the next or previous channel. Turn off if you swipe by accident.',
       'chan_search_tooltip': 'Search',
       'chan_split_done': 'Expense added: {title} · {amount}',
       'chan_stop_clear': 'Clear the stop',
@@ -2620,6 +2625,11 @@ class TourTranslationKeys {
       'chan_role_owner': 'মালিক',
       'chan_saved': 'চ্যানেল সংরক্ষিত হয়েছে।',
       'chan_search_hint': 'এই চ্যানেলে খুঁজুন',
+      'chan_swipe_next': 'পরের চ্যানেল',
+      'chan_swipe_previous': 'আগের চ্যানেল',
+      'chan_swipe_setting_title': 'চ্যানেলের মধ্যে সোয়াইপ',
+      'chan_swipe_setting_body':
+          'বার্তার উপর সোয়াইপ করে পরের বা আগের চ্যানেলে যান। ভুল করে সোয়াইপ হলে বন্ধ করুন।',
       'chan_search_tooltip': 'খুঁজুন',
       'chan_split_done': 'খরচ যোগ হয়েছে: {title} · {amount}',
       'chan_stop_clear': 'স্টপ মুছুন',
