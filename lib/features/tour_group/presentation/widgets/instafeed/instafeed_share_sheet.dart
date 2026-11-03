@@ -65,7 +65,7 @@ class InstafeedShareSheet extends StatelessWidget {
       BuildContext context, String channelId, String channelName) async {
     try {
       final msg =
-          '📸 [ট্যুর পোস্ট]\n${post.authorName}: ${post.caption.isNotEmpty ? post.caption : context.l10n.translate('ig_chat_photo_fallback')}\n${post.images.isNotEmpty ? post.images.first : post.videoUrl ?? ""}';
+          '📸 [গ্রুপ পোস্ট]\n${post.authorName}: ${post.caption.isNotEmpty ? post.caption : context.l10n.translate('ig_chat_photo_fallback')}\n${post.images.isNotEmpty ? post.images.first : post.videoUrl ?? ""}';
 
       final channelRepo = TourChannelRepository(groups: repository);
       await channelRepo.sendMessage(
@@ -367,7 +367,7 @@ class InstafeedStoryShareSheet extends StatelessWidget {
       BuildContext context, String channelId, String channelName) async {
     try {
       final msg =
-          '📖 [ট্যুর স্টোরি]\n${story.authorName}: ${story.caption ?? context.l10n.translate('ig_chat_story_fallback')}\n${story.videoUrl ?? story.mediaUrl}';
+          '📖 [গ্রুপ স্টোরি]\n${story.authorName}: ${story.caption ?? context.l10n.translate('ig_chat_story_fallback')}\n${story.videoUrl ?? story.mediaUrl}';
 
       final channelRepo = TourChannelRepository(groups: repository);
       await channelRepo.sendMessage(

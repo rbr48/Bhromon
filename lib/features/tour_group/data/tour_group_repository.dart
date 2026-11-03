@@ -835,7 +835,7 @@ class TourGroupRepository {
       } on FirebaseException catch (e, st) {
         logWarning('[TourGroupRepository] join membership set failed', e, st);
         throw const TourAccessException(
-            'এই ট্যুরে যোগ দেওয়ার অনুমতি নেই। কোড ঠিক আছে কি না দেখুন, অথবা অ্যাডমিনের সাথে যোগাযোগ করুন।');
+            'এই গ্রুপে যোগ দেওয়ার অনুমতি নেই। কোড ঠিক আছে কি না দেখুন, অথবা অ্যাডমিনের সাথে যোগাযোগ করুন।');
       }
     } else {
       // If already a member but inactive, reactivate membership so security rules permit reading
@@ -859,7 +859,7 @@ class TourGroupRepository {
     }
 
     if (group == null) {
-      throw const TourAccessException('ট্যুরটি এখন আর পাওয়া যাচ্ছে না।');
+      throw const TourAccessException('গ্রুপটি এখন আর পাওয়া যাচ্ছে না।');
     }
     await _cacheLocalGroup(group);
 
@@ -888,9 +888,9 @@ class TourGroupRepository {
 
     final tourDoc = await _tour(tourId).get();
     if (!tourDoc.exists) {
-      throw StateError('ট্যুরটি খুঁজে পাওয়া যায়নি।');
+      throw StateError('গ্রুপটি খুঁজে পাওয়া যায়নি।');
     }
-    final tourName = tourDoc.data()?['name'] as String? ?? 'Tour';
+    final tourName = tourDoc.data()?['name'] as String? ?? 'Group';
 
     final membershipRef = _memberships.doc(_membershipId(tourId, cleanEmail));
     try {
@@ -1388,7 +1388,7 @@ class TourGroupRepository {
     final target = normalizeEmail(email);
     if (target == actor) {
       throw const TourAccessException(
-          'নিজেকে সরাতে "ট্যুর ছেড়ে যান" ব্যবহার করুন।');
+          'নিজেকে সরাতে "গ্রুপ ছেড়ে যান" ব্যবহার করুন।');
     }
     final batch = _firestore.batch();
     batch.set(_tour(tourId).collection('bans').doc(target), {
@@ -1406,13 +1406,13 @@ class TourGroupRepository {
     final actor = _requireEmail();
     final target = normalizeEmail(newOwnerEmail);
     if (target == actor) {
-      throw const TourAccessException('আপনি ইতিমধ্যে এই ট্যুরের মালিক।');
+      throw const TourAccessException('আপনি ইতিমধ্যে এই গ্রুপের মালিক।');
     }
     final targetRow =
         await _memberships.doc(_membershipId(tourId, target)).get();
     if (!targetRow.exists || targetRow.data()?['status'] != 'active') {
       throw const TourAccessException(
-          'মালিকানা শুধু এই ট্যুরের সক্রিয় সদস্যকে দেওয়া যাবে।');
+          'মালিকানা শুধু এই গ্রুপের সক্রিয় সদস্যকে দেওয়া যাবে।');
     }
 
     final batch = _firestore.batch();

@@ -510,7 +510,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 const SizedBox(height: 16),
                 Text(
                   _isBn
-                      ? 'প্রোফাইল লোড করা সম্ভব হয়নি: $_error'
+                      ? 'প্রোফাইল লোড করা সম্ভব হয়নি: $_error'
                       : 'Failed to load profile: $_error',
                   style: TextStyle(color: context.forest.text70, fontSize: 13),
                   textAlign: TextAlign.center,
@@ -931,8 +931,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               onTap: () => _showEditProfileBottomSheet(profile),
               child: Text(
                 bio.isEmpty
-                    ? (_isBn ? '+ বায়ো যুক্ত করুন' : '+ Add Bio')
-                    : (_isBn ? 'বায়ো পরিবর্তন করুন' : 'Edit Bio'),
+                    ? (_isBn ? '+ বায়ো যুক্ত করুন' : '+ Add Bio')
+                    : (_isBn ? 'বায়ো পরিবর্তন করুন' : 'Edit Bio'),
                 style: TextStyle(
                   color: context.forest.accentText,
                   fontSize: 12,
@@ -999,7 +999,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             color: context.forest.text.withValues(alpha: 0.1),
           ),
           _buildMetricItem(
-            _isBn ? 'সক্রিয়' : 'Active',
+            _isBn ? 'সক্রিয়' : 'Active',
             _isBn ? 'লেজার' : 'Ledger',
             Icons.account_balance_wallet_rounded,
           ),
@@ -1061,7 +1061,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               ),
               icon: const Icon(Icons.add_circle, size: 18),
               label: Text(
-                _isBn ? 'নতুন ট্যুর' : 'Create Tour',
+                _isBn ? 'নতুন গ্রুপ' : 'Create Group',
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
@@ -1084,7 +1084,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               ),
               icon: const Icon(Icons.key_rounded, size: 18),
               label: Text(
-                _isBn ? 'কোডে যোগ' : 'Join Tour',
+                _isBn ? 'কোডে যোগ' : 'Join Group',
                 style:
                     const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
@@ -1106,7 +1106,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                     '${profile.displayName} — on Bhromon\nhttps://app.bhromon.fun';
                 SharePlus.instance.share(ShareParams(text: text));
               },
-              tooltip: _isBn ? 'শেয়ার' : 'Share',
+              tooltip: _isBn ? 'শেয়ার' : 'Share',
               icon: Icon(Icons.share_outlined,
                   color: context.forest.text70, size: 20),
             ),
@@ -1141,7 +1141,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
     final categories = [
       (
         id: 'all',
-        label: _isBn ? 'সব ট্যুর' : 'All Tours',
+        label: _isBn ? 'সব গ্রুপ' : 'All Groups',
         icon: Icons.wb_sunny_rounded,
         color: AppColors.gold,
       ),
@@ -1153,7 +1153,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       ),
       (
         id: 'hills',
-        label: _isBn ? 'পাহাড় ও ঝর্ণা' : 'Hills & Treks',
+        label: _isBn ? 'পাহাড় ও ঝর্ণা' : 'Hills & Treks',
         icon: Icons.terrain_rounded,
         color: AppColors.mintGreen,
       ),
@@ -1369,7 +1369,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           _buildTabItem(
             'tours',
             Icons.explore_rounded,
-            _isBn ? 'ট্যুরসমূহ' : 'My Tours',
+            _isBn ? 'গ্রুপসমূহ' : 'My Groups',
           ),
           _buildTabItem(
             'games',
@@ -1496,8 +1496,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             const SizedBox(height: 6),
             Text(
               _isBn
-                  ? 'নতুন ট্যুর তৈরি করুন অথবা কোড দিয়ে বন্ধুর ট্যুরে যোগ দিন।'
-                  : 'Create a new tour or join with an invite code.',
+                  ? 'নতুন গ্রুপ তৈরি করুন অথবা কোড দিয়ে বন্ধুর গ্রুপে যোগ দিন।'
+                  : 'Create a new group or join with an invite code.',
               style: TextStyle(color: context.forest.text54, fontSize: 12),
               textAlign: TextAlign.center,
             ),
@@ -1508,7 +1508,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 ElevatedButton.icon(
                   onPressed: () => _showCreateGroupDialog(context),
                   icon: const Icon(Icons.add, size: 16),
-                  label: Text(_isBn ? 'ট্যুর তৈরি' : 'Create'),
+                  label: Text(_isBn ? 'গ্রুপ তৈরি' : 'Create'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.midGreen,
                     foregroundColor: Colors.white,
@@ -1572,8 +1572,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
             Text(
               isOwnProfile
                   ? (_isBn
-                      ? 'সক্রিয় ও পূর্বের ট্যুর (${displayGroups.length})'
-                      : 'Active & Past Tours (${displayGroups.length})')
+                      ? 'সক্রিয় ও পূর্বের গ্রুপ (${displayGroups.length})'
+                      : 'Active & Past Groups (${displayGroups.length})')
                   : (_isBn
                       ? 'শেয়ার করা গ্রুপ (${displayGroups.length})'
                       : 'Groups in common (${displayGroups.length})'),
@@ -1589,7 +1589,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 icon:
                     Icon(Icons.add, size: 15, color: context.forest.accentText),
                 label: Text(
-                  _isBn ? 'কোড দিয়ে যোগ' : 'Join by Code',
+                  _isBn ? 'কোড দিয়ে যোগ' : 'Join by Code',
                   style: TextStyle(
                       color: context.forest.accentText,
                       fontSize: 12,
@@ -1739,7 +1739,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                             SnackBar(
                               content: Text(
                                 _isBn
-                                    ? 'ইনভাইট কোড কপি হয়েছে: ${group.inviteCode}'
+                                    ? 'ইনভাইট কোড কপি হয়েছে: ${group.inviteCode}'
                                     : 'Invite code copied: ${group.inviteCode}',
                               ),
                               backgroundColor: AppColors.midGreen,
@@ -1870,7 +1870,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
           title:
               _isBn ? 'ফ্যামিলি সেফটি হাব ও এসওএস' : 'Family Safety Hub & SOS',
           subtitle: _isBn
-              ? 'জরুরি সাইরেন, কোস্টাল জোয়ার-ভাটার সতর্কতা ও ট্যুর সদস্যদের লোকেশন নোটিশ।'
+              ? 'জরুরি সাইরেন, কোস্টাল জোয়ার-ভাটার সতর্কতা ও গ্রুপ সদস্যদের লোকেশন নোটিশ।'
               : 'Emergency siren alerts, coastal tide advisories, and member safety.',
           icon: Icons.shield_rounded,
           color: Colors.redAccent,
@@ -1889,7 +1889,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         _buildKeepsakeCard(
           title: _isBn ? 'গেম জোন' : 'Game Zone',
           subtitle: _isBn
-              ? 'লুডো, ক্যারাম, কার্ড ২৯, দাবা এবং তিন পাত্তি মাল্টিপ্লেয়ার।'
+              ? 'লুডো, ক্যারাম, কার্ড ২৯, দাবা এবং তিন পাত্তি মাল্টিপ্লেয়ার।'
               : 'Play Card 29, Carrom, Chess AI, Ludo, and Teen Patti on the bus or train.',
           icon: Icons.sports_esports_rounded,
           color: Colors.lightBlueAccent,
@@ -2251,7 +2251,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
       (label: "সাজেক ভ্যালি", dest: 'Sajek Valley', type: TourType.hill),
       (label: "শ্রীমঙ্গল / সিলেট", dest: 'Sylhet', type: TourType.nature),
       (label: "বান্দরবান", dest: 'Bandarban', type: TourType.hill),
-      (label: "কুয়াকাটা", dest: 'Kuakata', type: TourType.beach),
+      (label: "কুয়াকাটা", dest: 'Kuakata', type: TourType.beach),
       (label: "সুন্দরবন", dest: 'Sundarbans', type: TourType.nature),
     ];
 
@@ -2290,8 +2290,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                         style: TextStyle(color: context.forest.text),
                         decoration: InputDecoration(
                           labelText: _isBn
-                              ? 'ট্যুরের নাম (যেমন: সাজেক ট্যুর ২০২৬)'
-                              : 'Tour Name',
+                              ? 'গ্রুপের নাম (যেমন: সাজেক ট্যুর ২০২৬)'
+                              : 'Group Name',
                           labelStyle: TextStyle(
                               color: context.forest.text70, fontSize: 13),
                           filled: true,
@@ -2305,7 +2305,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                       // Presets
                       Text(
                         _isBn
-                            ? 'জনপ্রিয় গন্তব্যসমূহ (Quick Select):'
+                            ? 'জনপ্রিয় গন্তব্যসমূহ (Quick Select):'
                             : 'Popular Destinations:',
                         style: TextStyle(
                           color: context.forest.text70,
@@ -2459,8 +2459,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 SnackBar(
                                   content: Text(
                                     _isBn
-                                        ? 'গ্রুপ তৈরি হয়েছে: ${newGroup.name}'
-                                        : 'Created tour: ${newGroup.name}',
+                                        ? 'গ্রুপ তৈরি হয়েছে: ${newGroup.name}'
+                                        : 'Created group: ${newGroup.name}',
                                   ),
                                   backgroundColor: AppColors.midGreen,
                                   behavior: SnackBarBehavior.floating,
@@ -2491,7 +2491,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               color: context.forest.text, strokeWidth: 2),
                         )
                       : Text(
-                          _isBn ? 'ট্যুর তৈরি করুন' : 'Create Tour',
+                          _isBn ? 'গ্রুপ তৈরি করুন' : 'Create Group',
                           style: TextStyle(color: context.forest.text),
                         ),
                 ),
@@ -2529,8 +2529,8 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                 children: [
                   Text(
                     _isBn
-                        ? 'ট্যুরের ৮ অক্ষরের আমন্ত্রণ কোড লিখুন:'
-                        : 'Enter the 8-character tour invite code:',
+                        ? 'গ্রুপের ৮ অক্ষরের আমন্ত্রণ কোড লিখুন:'
+                        : 'Enter the 8-character group invite code:',
                     style:
                         TextStyle(color: context.forest.text70, fontSize: 13),
                   ),
@@ -2589,7 +2589,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                                 SnackBar(
                                   content: Text(
                                     _isBn
-                                        ? '${joinedGroup.name} ট্যুরে যুক্ত হয়েছেন!'
+                                        ? '${joinedGroup.name} গ্রুপে যুক্ত হয়েছেন!'
                                         : 'Joined ${joinedGroup.name}!',
                                   ),
                                   backgroundColor: AppColors.midGreen,
@@ -2962,7 +2962,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           const SizedBox(height: 16),
 
                           // Bio Bangla
-                          Text(_isBn ? 'বায়ো (বাংলা)' : 'BIO (BANGLA)',
+                          Text(_isBn ? 'বায়ো (বাংলা)' : 'BIO (BANGLA)',
                               style: TextStyle(
                                   color: context.forest.text54,
                                   fontSize: 10,
@@ -2978,7 +2978,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                               fillColor:
                                   context.forest.text.withValues(alpha: 0.04),
                               filled: true,
-                              hintText: 'আপনার ভ্রমণ নিয়ে কিছু বলুন...',
+                              hintText: 'আপনার ভ্রমণ নিয়ে কিছু বলুন...',
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 14),
                               border: OutlineInputBorder(
@@ -2989,7 +2989,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
                           const SizedBox(height: 16),
 
                           // Bio English
-                          Text(_isBn ? 'বায়ো (ইংরেজি)' : 'BIO (ENGLISH)',
+                          Text(_isBn ? 'বায়ো (ইংরেজি)' : 'BIO (ENGLISH)',
                               style: TextStyle(
                                   color: context.forest.text54,
                                   fontSize: 10,
@@ -3345,7 +3345,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
               const SizedBox(height: 10),
               Text(
                 _isBn
-                    ? 'গ্রুপ পরিচালনা, ফটো শেয়ার ও খরচ ভাগাভাগি করতে সাইন-ইন করুন।'
+                    ? 'গ্রুপ পরিচালনা, ফটো শেয়ার ও খরচ ভাগাভাগি করতে সাইন-ইন করুন।'
                     : 'Sign in to manage your groups, split expenses, and share moments.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.forest.text70, fontSize: 13),
@@ -3414,7 +3414,7 @@ class _ExplorerProfileScreenState extends State<ExplorerProfileScreen> {
         ),
         content: Text(
           _isBn
-              ? 'আপনার অফলাইন ম্যাপ ও ট্যুর ড্রাফট এই ডিভাইসেই থাকবে। আপনি যেকোনো সময় আবার সাইন-ইন করতে পারবেন।'
+              ? 'আপনার অফলাইন ম্যাপ ও ট্যুর ড্রাফট এই ডিভাইসেই থাকবে। আপনি যেকোনো সময় আবার সাইন-ইন করতে পারবেন।'
               : 'Your offline data stays safely on this device. You can sign back in anytime.',
           style: TextStyle(color: context.forest.text70, fontSize: 13),
         ),

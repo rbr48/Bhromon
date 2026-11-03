@@ -1995,7 +1995,7 @@ class _ExpenseLedgerScreenState extends State<ExpenseLedgerScreen>
         buffer.writeln(values.map(cell).join(','));
     String taka(int paisa) => (paisa / 100).toStringAsFixed(2);
 
-    line([group?.name ?? 'Tour fund', 'Audit statement']);
+    line([group?.name ?? 'Group fund', 'Audit statement']);
     line(['Route', group == null ? '' : group.destinationSummary]);
     line([
       'Generated',

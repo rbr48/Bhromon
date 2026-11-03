@@ -93,7 +93,7 @@ class DesktopTourSidebar extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                'Universal Tour Engine',
+                                'Universal Group Engine',
                                 style: TextStyle(
                                     color: context.forest.text54, fontSize: 10),
                               ),
@@ -220,7 +220,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     _buildNavItem(
                       context,
-                      title: 'ডিসকর্ড চ্যাট ও ভয়েস',
+                      title: 'ডিসকর্ড চ্যাট ও ভয়েস',
                       icon: Icons.forum_outlined,
                       activeIcon: Icons.forum_rounded,
                       route: '/group/$tourId/channels',
@@ -268,7 +268,7 @@ class DesktopTourSidebar extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     _buildSectionHeader(
-                        context, 'ট্যুর সুপারপাওয়ার ও বিশেষ টুলস'),
+                        context, 'গ্রুপ সুপারপাওয়ার ও বিশেষ টুলস'),
                     _buildToolItem(
                       context,
                       title: 'সুরক্ষা ও বিচ কম্পাস',
@@ -552,7 +552,7 @@ class DesktopTourSidebar extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'ফায়ারবেস লাইভ সিঙ্ক সক্রিয়',
+                  'ফায়ারবেস লাইভ সিঙ্ক সক্রিয়',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: context.forest.text54, fontSize: 9.5),
                 ),

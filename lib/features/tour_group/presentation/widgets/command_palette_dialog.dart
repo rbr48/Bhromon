@@ -63,7 +63,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
       ),
       CommandPaletteItem(
         title: 'ইন্সটাফিড (Moments & Reels)',
-        subtitle: 'ট্যুর স্মৃতি, ছবি ও ভিডিও রিলস',
+        subtitle: 'গ্রুপের স্মৃতি, ছবি ও ভিডিও রিলস',
         icon: Icons.photo_library_rounded,
         route: '/group/$tourId/feed',
         category: 'নেভিগেশন',
@@ -71,7 +71,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
       ),
       CommandPaletteItem(
         title: 'ডিসকর্ড চ্যাট (Channels)',
-        subtitle: 'গ্রুপ ভয়েস ও টেক্সট চ্যানেল',
+        subtitle: 'গ্রুপ ভয়েস ও টেক্সট চ্যানেল',
         icon: Icons.forum_rounded,
         route: '/group/$tourId/channels',
         category: 'নেভিগেশন',
@@ -95,7 +95,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
       ),
       CommandPaletteItem(
         title: 'হিসাব ও স্প্লিট (Expense Ledger)',
-        subtitle: 'ট্যুর ফান্ড, জমা, খরচ ও সেটেল-আপ',
+        subtitle: 'গ্রুপ ফান্ড, জমা, খরচ ও সেটেল-আপ',
         icon: Icons.account_balance_wallet_rounded,
         route: '/group/$tourId/ledger',
         category: 'নেভিগেশন',
@@ -142,8 +142,8 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
         color: Colors.redAccent,
       ),
       CommandPaletteItem(
-        title: 'হাইওয়ে ট্র্যাকার (Highway Tracker)',
-        subtitle: 'হাইওয়ে রুট, লাইভ চেকপয়েন্ট ও দূরত্ব',
+        title: 'হাইওয়ে ট্র্যাকার (Highway Tracker)',
+        subtitle: 'হাইওয়ে রুট, লাইভ চেকপয়েন্ট ও দূরত্ব',
         icon: Icons.alt_route_rounded,
         route: '/group/$tourId/journey',
         category: 'বিশেষ টুলস',
@@ -151,7 +151,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
       ),
       CommandPaletteItem(
         title: 'সৈকত ও খাবার গাইড (Beach & Tide)',
-        subtitle: 'জোয়ার-ভাটা সময়সূচি ও স্থানীয় খাবার তালিকা',
+        subtitle: 'জোয়ার-ভাটা সময়সূচি ও স্থানীয় খাবার তালিকা',
         icon: Icons.tsunami_rounded,
         route: '/group/$tourId/tide',
         category: 'বিশেষ টুলস',
@@ -265,7 +265,7 @@ class _CommandPaletteDialogState extends State<CommandPaletteDialog> {
                 child: filtered.isEmpty
                     ? Center(
                         child: Text(
-                          'কোনো কমান্ড খুঁজে পাওয়া যায়নি',
+                          'কোনো কমান্ড খুঁজে পাওয়া যায়নি',
                           style: TextStyle(
                               color: context.forest.text38, fontSize: 13),
                         ),

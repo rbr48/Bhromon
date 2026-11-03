@@ -121,7 +121,7 @@ class LedgerSummary {
 /// Eliminates floating-point rounding errors and keeps the books balanced to
 /// the paisa: every expense share and every deposit lands somewhere.
 class TripLedgerEngine {
-  static const String fundLabel = 'ট্যুর ফান্ড';
+  static const String fundLabel = 'গ্রুপ ফান্ড';
   static const int maxSafeAmountTaka = 10000000;
 
   /// Converts taka to paisa. Throws [ArgumentError] for negative, non-finite
