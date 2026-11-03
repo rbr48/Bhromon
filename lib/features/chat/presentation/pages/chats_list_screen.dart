@@ -326,278 +326,284 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                 }
               },
               children: [
-                Column(
-                  children: [
-                    // WhatsApp styled Search Bar
-                    Container(
-                      color: context.chat.bar,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: context.chat.field,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: TextField(
-                          style:
-                              TextStyle(color: context.chat.text, fontSize: 13),
-                          decoration: InputDecoration(
-                            hintText:
-                                context.l10n.translate('chats_search_hint'),
-                            hintStyle: TextStyle(
-                                color: context.chat.text54, fontSize: 13),
-                            prefixIcon: Icon(Icons.search,
-                                color: context.chat.text54, size: 18),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: Icon(Icons.clear,
-                                        color: context.chat.text54, size: 16),
-                                    onPressed: () =>
-                                        setState(() => _searchQuery = ''),
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding:
-                                const EdgeInsets.symmetric(vertical: 10),
+                _KeepAlivePage(
+                  child: Column(
+                    children: [
+                      // WhatsApp styled Search Bar
+                      Container(
+                        color: context.chat.bar,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: context.chat.field,
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          onChanged: (val) {
-                            setState(() {
-                              _searchQuery = val.trim().toLowerCase();
-                            });
-                          },
+                          child: TextField(
+                            style: TextStyle(
+                                color: context.chat.text, fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText:
+                                  context.l10n.translate('chats_search_hint'),
+                              hintStyle: TextStyle(
+                                  color: context.chat.text54, fontSize: 13),
+                              prefixIcon: Icon(Icons.search,
+                                  color: context.chat.text54, size: 18),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: Icon(Icons.clear,
+                                          color: context.chat.text54, size: 16),
+                                      onPressed: () =>
+                                          setState(() => _searchQuery = ''),
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            onChanged: (val) {
+                              setState(() {
+                                _searchQuery = val.trim().toLowerCase();
+                              });
+                            },
+                          ),
                         ),
                       ),
-                    ),
 
-                    // WhatsApp tabs (All, Unread, Favourites, Groups)
-                    Container(
-                      color: context.chat.wallpaper,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _buildTabButton('All'),
-                            const SizedBox(width: 8),
-                            _buildTabButton('Unread'),
-                            const SizedBox(width: 8),
-                            _buildTabButton('Favourites'),
-                            const SizedBox(width: 8),
-                            _buildTabButton('Groups'),
-                          ],
+                      // WhatsApp tabs (All, Unread, Favourites, Groups)
+                      Container(
+                        color: context.chat.wallpaper,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildTabButton('All'),
+                              const SizedBox(width: 8),
+                              _buildTabButton('Unread'),
+                              const SizedBox(width: 8),
+                              _buildTabButton('Favourites'),
+                              const SizedBox(width: 8),
+                              _buildTabButton('Groups'),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
 
-                    // Conversations List
-                    Expanded(
-                      child: StreamBuilder<QuerySnapshot>(
-                        stream: _blockedStream,
-                        builder: (context, blockSnapshot) {
-                          final blockedUids = blockSnapshot.hasData
-                              ? blockSnapshot.data!.docs
-                                  .map((d) => d.id)
-                                  .toSet()
-                              : <String>{};
+                      // Conversations List
+                      Expanded(
+                        child: StreamBuilder<QuerySnapshot>(
+                          stream: _blockedStream,
+                          builder: (context, blockSnapshot) {
+                            final blockedUids = blockSnapshot.hasData
+                                ? blockSnapshot.data!.docs
+                                    .map((d) => d.id)
+                                    .toSet()
+                                : <String>{};
 
-                          return StreamBuilder<QuerySnapshot>(
-                            stream: _chatsStream,
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                if (_offlineConversations.isNotEmpty) {
-                                  return _buildOfflineConversationsList(
-                                      blockedUids, currentUid);
-                                }
-                                return const Center(
-                                    child: CircularProgressIndicator(
-                                        color: Color(0xFF00A884)));
-                              }
-                              if (snapshot.hasError) {
-                                if (_offlineConversations.isNotEmpty) {
-                                  return _buildOfflineConversationsList(
-                                      blockedUids, currentUid);
-                                }
-                                return Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(24.0),
-                                    child: Text(
-                                      context.l10n
-                                          .translate('chats_connecting'),
-                                      style: TextStyle(
-                                          color: context.chat.text54,
-                                          fontSize: 13),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                );
-                              }
-
-                              final allDocs = (snapshot.data?.docs ?? [])
-                                  .where((doc) => isInMyTours(
-                                      doc.data() as Map<String, dynamic>?,
-                                      _myTourIds))
-                                  .toList();
-                              _chatDataById = {
-                                for (final doc in allDocs)
-                                  doc.id: doc.data() as Map<String, dynamic>,
-                              };
-                              for (final doc in allDocs) {
-                                final d = doc.data() as Map<String, dynamic>;
-                                ChatLocalCache().cacheConversation(
-                                    doc.id, {'id': doc.id, ...d});
-                              }
-
-                              final chatListItems = allDocs.where((doc) {
-                                final data = doc.data() as Map<String, dynamic>;
-                                final participants = List<String>.from(
-                                    data['participants'] as Iterable? ??
-                                        <dynamic>[]);
-                                final otherUser = participants.firstWhere(
-                                    (p) => p != currentUid,
-                                    orElse: () => '');
-
-                                if (blockedUids.contains(otherUser)) {
-                                  return false;
-                                }
-                                if (_lockedChatIds.contains(doc.id)) {
-                                  return false;
-                                }
-                                // A chat this person deleted stays hidden until a newer message arrives.
-                                if (isChatHiddenByCutoff(
-                                  clearedAt: ChatDeletionService.clearedAtOf(
-                                      data, currentUid),
-                                  lastMessageAt:
-                                      ChatDeletionService.timestampOf(
-                                          data['lastMessageTime']),
-                                )) {
-                                  return false;
-                                }
-
-                                // Match Search Query against UID or last message text
-                                if (_searchQuery.isNotEmpty) {
-                                  final lastMsg =
-                                      (data['lastMessage'] as String? ?? '')
-                                          .toLowerCase();
-                                  final otherUserLower =
-                                      otherUser.toLowerCase();
-                                  if (!lastMsg.contains(_searchQuery) &&
-                                      !otherUserLower.contains(_searchQuery)) {
-                                    return false;
+                            return StreamBuilder<QuerySnapshot>(
+                              stream: _chatsStream,
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
+                                  if (_offlineConversations.isNotEmpty) {
+                                    return _buildOfflineConversationsList(
+                                        blockedUids, currentUid);
                                   }
+                                  return const Center(
+                                      child: CircularProgressIndicator(
+                                          color: Color(0xFF00A884)));
                                 }
-
-                                return true;
-                              }).toList();
-
-                              if (chatListItems.isEmpty) {
-                                return Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.chat_bubble_outline,
-                                          size: 64,
-                                          color: context.chat.text
-                                              .withValues(alpha: 0.08)),
-                                      const SizedBox(height: 16),
-                                      Text(
+                                if (snapshot.hasError) {
+                                  if (_offlineConversations.isNotEmpty) {
+                                    return _buildOfflineConversationsList(
+                                        blockedUids, currentUid);
+                                  }
+                                  return Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24.0),
+                                      child: Text(
                                         context.l10n
-                                            .translate('chats_empty_title'),
+                                            .translate('chats_connecting'),
                                         style: TextStyle(
                                             color: context.chat.text54,
                                             fontSize: 13),
+                                        textAlign: TextAlign.center,
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        context.l10n
-                                            .translate('chats_empty_hint'),
-                                        style: TextStyle(
-                                            color: context.chat.accentText,
-                                            fontSize: 11),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
+                                    ),
+                                  );
+                                }
 
-                              return ListView.separated(
-                                key: const PageStorageKey<String>(
-                                    'chats_list_scroll'),
-                                separatorBuilder: (context, index) => Divider(
-                                  color: context.chat.bar,
-                                  height: 1,
-                                  indent: 72,
-                                  endIndent: 16,
-                                ),
-                                padding: const EdgeInsets.fromLTRB(0, 8, 0, 80),
-                                itemCount: chatListItems.length,
-                                itemBuilder: (context, index) {
-                                  final doc = chatListItems[index];
+                                final allDocs = (snapshot.data?.docs ?? [])
+                                    .where((doc) => isInMyTours(
+                                        doc.data() as Map<String, dynamic>?,
+                                        _myTourIds))
+                                    .toList();
+                                _chatDataById = {
+                                  for (final doc in allDocs)
+                                    doc.id: doc.data() as Map<String, dynamic>,
+                                };
+                                for (final doc in allDocs) {
+                                  final d = doc.data() as Map<String, dynamic>;
+                                  ChatLocalCache().cacheConversation(
+                                      doc.id, {'id': doc.id, ...d});
+                                }
+
+                                final chatListItems = allDocs.where((doc) {
                                   final data =
                                       doc.data() as Map<String, dynamic>;
-                                  final chatId = doc.id;
                                   final participants = List<String>.from(
                                       data['participants'] as Iterable? ??
                                           <dynamic>[]);
-                                  final otherUserUid = participants.firstWhere(
+                                  final otherUser = participants.firstWhere(
                                       (p) => p != currentUid,
-                                      orElse: () => 'Guest');
+                                      orElse: () => '');
 
-                                  final String lastMsgMeta =
-                                      (data['lastMessage'] as String?) ?? '';
-                                  final String lastMsgType =
-                                      (data['lastMessageType'] as String?) ??
-                                          'text';
-                                  final lastTimeMeta =
-                                      data['lastMessageTime'] as Timestamp?;
-                                  final lastSenderId =
-                                      data['lastMessageSenderId'] as String?;
-                                  final unreadCounts = data['unreadCounts']
-                                          as Map<String, dynamic>? ??
-                                      {};
-                                  final unreadCount =
-                                      (unreadCounts[currentUid] as num?)
-                                              ?.toInt() ??
-                                          0;
-                                  final participantProfiles =
-                                      data['participantProfiles']
-                                          as Map<String, dynamic>?;
-                                  final cachedProfile =
-                                      participantProfiles?[otherUserUid]
-                                          as Map<String, dynamic>?;
+                                  if (blockedUids.contains(otherUser)) {
+                                    return false;
+                                  }
+                                  if (_lockedChatIds.contains(doc.id)) {
+                                    return false;
+                                  }
+                                  // A chat this person deleted stays hidden until a newer message arrives.
+                                  if (isChatHiddenByCutoff(
+                                    clearedAt: ChatDeletionService.clearedAtOf(
+                                        data, currentUid),
+                                    lastMessageAt:
+                                        ChatDeletionService.timestampOf(
+                                            data['lastMessageTime']),
+                                  )) {
+                                    return false;
+                                  }
 
-                                  return ChatTile(
-                                    chatId: chatId,
-                                    otherUserUid: otherUserUid,
-                                    currentUid: currentUid,
-                                    lastMessage: lastMsgMeta,
-                                    lastMessageType: lastMsgType,
-                                    lastTime: lastTimeMeta,
-                                    lastMessageSenderId: lastSenderId,
-                                    unreadCount: unreadCount,
-                                    cachedOtherProfile: cachedProfile,
-                                    activeTabFilter: _activeTab,
-                                    onTap: () =>
-                                        context.push('/chat/$chatId', extra: {
-                                      'otherUid': otherUserUid,
-                                      'sharedTourId': data['sharedTourId'],
-                                      'otherEmail': (data['memberEmails']
-                                          as Map?)?[otherUserUid]
-                                    }),
-                                    onLongPress: () => _showChatTileOptions(
-                                        context, chatId, otherUserUid),
+                                  // Match Search Query against UID or last message text
+                                  if (_searchQuery.isNotEmpty) {
+                                    final lastMsg =
+                                        (data['lastMessage'] as String? ?? '')
+                                            .toLowerCase();
+                                    final otherUserLower =
+                                        otherUser.toLowerCase();
+                                    if (!lastMsg.contains(_searchQuery) &&
+                                        !otherUserLower
+                                            .contains(_searchQuery)) {
+                                      return false;
+                                    }
+                                  }
+
+                                  return true;
+                                }).toList();
+
+                                if (chatListItems.isEmpty) {
+                                  return Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.chat_bubble_outline,
+                                            size: 64,
+                                            color: context.chat.text
+                                                .withValues(alpha: 0.08)),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          context.l10n
+                                              .translate('chats_empty_title'),
+                                          style: TextStyle(
+                                              color: context.chat.text54,
+                                              fontSize: 13),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          context.l10n
+                                              .translate('chats_empty_hint'),
+                                          style: TextStyle(
+                                              color: context.chat.accentText,
+                                              fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
                                   );
-                                },
-                              );
-                            },
-                          );
-                        },
+                                }
+
+                                return ListView.separated(
+                                  key: const PageStorageKey<String>(
+                                      'chats_list_scroll'),
+                                  separatorBuilder: (context, index) => Divider(
+                                    color: context.chat.bar,
+                                    height: 1,
+                                    indent: 72,
+                                    endIndent: 16,
+                                  ),
+                                  padding:
+                                      const EdgeInsets.fromLTRB(0, 8, 0, 80),
+                                  itemCount: chatListItems.length,
+                                  itemBuilder: (context, index) {
+                                    final doc = chatListItems[index];
+                                    final data =
+                                        doc.data() as Map<String, dynamic>;
+                                    final chatId = doc.id;
+                                    final participants = List<String>.from(
+                                        data['participants'] as Iterable? ??
+                                            <dynamic>[]);
+                                    final otherUserUid = participants
+                                        .firstWhere((p) => p != currentUid,
+                                            orElse: () => 'Guest');
+
+                                    final String lastMsgMeta =
+                                        (data['lastMessage'] as String?) ?? '';
+                                    final String lastMsgType =
+                                        (data['lastMessageType'] as String?) ??
+                                            'text';
+                                    final lastTimeMeta =
+                                        data['lastMessageTime'] as Timestamp?;
+                                    final lastSenderId =
+                                        data['lastMessageSenderId'] as String?;
+                                    final unreadCounts = data['unreadCounts']
+                                            as Map<String, dynamic>? ??
+                                        {};
+                                    final unreadCount =
+                                        (unreadCounts[currentUid] as num?)
+                                                ?.toInt() ??
+                                            0;
+                                    final participantProfiles =
+                                        data['participantProfiles']
+                                            as Map<String, dynamic>?;
+                                    final cachedProfile =
+                                        participantProfiles?[otherUserUid]
+                                            as Map<String, dynamic>?;
+
+                                    return ChatTile(
+                                      chatId: chatId,
+                                      otherUserUid: otherUserUid,
+                                      currentUid: currentUid,
+                                      lastMessage: lastMsgMeta,
+                                      lastMessageType: lastMsgType,
+                                      lastTime: lastTimeMeta,
+                                      lastMessageSenderId: lastSenderId,
+                                      unreadCount: unreadCount,
+                                      cachedOtherProfile: cachedProfile,
+                                      activeTabFilter: _activeTab,
+                                      onTap: () =>
+                                          context.push('/chat/$chatId', extra: {
+                                        'otherUid': otherUserUid,
+                                        'sharedTourId': data['sharedTourId'],
+                                        'otherEmail': (data['memberEmails']
+                                            as Map?)?[otherUserUid]
+                                      }),
+                                      onLongPress: () => _showChatTileOptions(
+                                          context, chatId, otherUserUid),
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                _buildCallsView(currentUid),
+                _KeepAlivePage(child: _buildCallsView(currentUid)),
               ],
             ),
           ),
@@ -1806,5 +1812,26 @@ class ChatTile extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
     );
+  }
+}
+
+/// Keeps a tab's state while the user swipes between the chats and calls pages.
+class _KeepAlivePage extends StatefulWidget {
+  final Widget child;
+  const _KeepAlivePage({required this.child});
+
+  @override
+  State<_KeepAlivePage> createState() => _KeepAlivePageState();
+}
+
+class _KeepAlivePageState extends State<_KeepAlivePage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

@@ -25,9 +25,11 @@ class ChatLocalCache {
 
   /// Every box holds the chat history, so it is opened encrypted. A box left
   /// over from an older version without encryption is re-encrypted on the way.
+  /// A cache box that cannot be opened is recreated by the service, and never
+  /// falls back to an unencrypted file.
   Future<Box<T>> _openBox<T>(String name) {
     final service = _encryption ?? getIt<HiveEncryptionService>();
-    return service.openEncryptedBox<T>(name);
+    return service.openEncryptedBox<T>(name, rebuildable: true);
   }
 
   static const String _kMessagesBoxPrefix = 'chat_cache_msgs_';

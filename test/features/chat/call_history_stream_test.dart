@@ -88,5 +88,72 @@ void main() {
       expect(first.hasListener, isFalse);
       expect(second.hasListener, isFalse);
     });
+
+    test(
+        'permits multiple listeners and replays the latest list to new listener',
+        () async {
+      final mergedStream = mergeLatestLists<_Item>(
+        [first.stream, second.stream],
+        idOf: (item) => item.id,
+      );
+      final sub1 = mergedStream.listen(sent.add);
+      first.add([(id: 'a', what: 'made')]);
+      second.add([(id: 'b', what: 'received')]);
+      await Future<void>.delayed(Duration.zero);
+      expect(sent, hasLength(1));
+
+      // Second listener attaches after initial emission
+      final secondSent = <List<_Item>>[];
+      final sub2 = mergedStream.listen(secondSent.add);
+      await Future<void>.delayed(Duration.zero);
+      expect(secondSent, hasLength(1));
+      expect(secondSent.single.map((i) => i.id).toSet(), {'a', 'b'});
+
+      await sub1.cancel();
+      await sub2.cancel();
+    });
+  });
+
+  // Own group: the group above closes its controllers in tearDown, and these
+  // controllers were never listened to, so closing them would never finish.
+  group('mergeLatestLists restart', () {
+    test('after the last listener left, only fresh lists are merged', () async {
+      // Broadcast sources, as Firestore snapshot streams are, so they can be
+      // listened to again after a cancel.
+      final a = StreamController<List<_Item>>.broadcast();
+      final b = StreamController<List<_Item>>.broadcast();
+      final merged = mergeLatestLists<_Item>(
+        [a.stream, b.stream],
+        idOf: (item) => item.id,
+      );
+
+      final firstSent = <List<_Item>>[];
+      final firstSub = merged.listen(firstSent.add);
+      a.add([(id: 'a', what: 'made')]);
+      b.add([(id: 'b', what: 'received')]);
+      await Future<void>.delayed(Duration.zero);
+      expect(firstSent, hasLength(1));
+      await firstSub.cancel();
+
+      // Nothing from before the cancel is replayed to the new listener.
+      final secondSent = <List<_Item>>[];
+      final secondSub = merged.listen(secondSent.add);
+      await Future<void>.delayed(Duration.zero);
+      expect(secondSent, isEmpty);
+
+      // One source alone is not a merged list: the other has to send again.
+      a.add([(id: 'c', what: 'made')]);
+      await Future<void>.delayed(Duration.zero);
+      expect(secondSent, isEmpty);
+
+      b.add([(id: 'd', what: 'received')]);
+      await Future<void>.delayed(Duration.zero);
+      expect(secondSent, hasLength(1));
+      expect(secondSent.single.map((i) => i.id).toSet(), {'c', 'd'});
+
+      await secondSub.cancel();
+      await a.close();
+      await b.close();
+    });
   });
 }
