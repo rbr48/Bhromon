@@ -15,6 +15,10 @@ import '../../../chat/presentation/widgets/chat_document_bubble.dart';
 import '../../../chat/presentation/widgets/voice_message_bubble.dart';
 import '../../../../core/localization/localized_date.dart';
 
+/// The time and other metadata on an own bubble. White at 87% gives 5.3:1 on
+/// the dark green bubble, which meets AA for small text.
+const Color kOwnBubbleMetaColor = Color(0xDDFFFFFF);
+
 /// One message in a channel: its sender, quote, media, poll or expense card,
 /// formatted text, reactions and time.
 class ChannelMessageBubble extends StatefulWidget {
@@ -67,90 +71,97 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
     final isExpense = m.kind == ChannelMessageKind.expense;
     final loc = _findLocation(m, l10n);
 
-    return Align(
-      alignment: own ? Alignment.centerRight : Alignment.centerLeft,
-      child: GestureDetector(
-        onLongPress: widget.onLongPress,
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          constraints:
-              BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-          decoration: BoxDecoration(
-            color: own
-                ? AppColors.midGreen
-                : context.forest.surfaceFor(const Color(0xFF1E3326)),
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(14),
-              topRight: const Radius.circular(14),
-              bottomLeft: Radius.circular(own ? 14 : 2),
-              bottomRight: Radius.circular(own ? 2 : 14),
+    // An own bubble is always the dark green surface, so what sits on it uses
+    // the dark palette in both themes.
+    return Theme(
+      data: own
+          ? Theme.of(context).copyWith(brightness: Brightness.dark)
+          : Theme.of(context),
+      child: Align(
+        alignment: own ? Alignment.centerRight : Alignment.centerLeft,
+        child: GestureDetector(
+          onLongPress: widget.onLongPress,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.8),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+            decoration: BoxDecoration(
+              color: own
+                  ? AppColors.midGreen
+                  : context.forest.surfaceFor(const Color(0xFF1E3326)),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(14),
+                topRight: const Radius.circular(14),
+                bottomLeft: Radius.circular(own ? 14 : 2),
+                bottomRight: Radius.circular(own ? 2 : 14),
+              ),
+              border: widget.mentionsMe
+                  ? Border.all(color: AppColors.gold, width: 1.5)
+                  : null,
             ),
-            border: widget.mentionsMe
-                ? Border.all(color: AppColors.gold, width: 1.5)
-                : null,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!own) _header(),
-              if (m.replyTo != null) _ReplyQuote(reply: m.replyTo!),
-              if (m.visualAttachments.isNotEmpty) ...[
-                _AttachmentGrid(
-                  attachments: m.visualAttachments,
-                  onTap: widget.onOpenMedia,
-                ),
-                const SizedBox(height: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!own) _header(),
+                if (m.replyTo != null) _ReplyQuote(reply: m.replyTo!),
+                if (m.visualAttachments.isNotEmpty) ...[
+                  _AttachmentGrid(
+                    attachments: m.visualAttachments,
+                    onTap: widget.onOpenMedia,
+                  ),
+                  const SizedBox(height: 6),
+                ],
+                for (final doc in m.fileAttachments) ...[
+                  ChatDocumentBubble(
+                    documentUrl: doc.url,
+                    fileName: doc.fileName ?? 'Document',
+                    fileSizeBytes: doc.fileSizeBytes ?? 0,
+                    isMe: own,
+                    timeStr: '',
+                    deliveryIcon: null,
+                  ),
+                  const SizedBox(height: 6),
+                ],
+                for (final voice in m.voiceAttachments) ...[
+                  VoiceMessageBubble(
+                    audioUrl: voice.url,
+                    durationSeconds: voice.durationSeconds,
+                    isMe: own,
+                  ),
+                  const SizedBox(height: 6),
+                ],
+                if (isExpense)
+                  _ExpenseCard(message: m, onOpen: widget.onOpenLedger)
+                else if (m.text.isNotEmpty)
+                  ChannelRichText(
+                    text: m.text,
+                    revealed: _revealed,
+                    onSpoiler: _toggleSpoiler,
+                  ),
+                if (loc != null) ...[
+                  const SizedBox(height: 6),
+                  _LocationCard(location: loc),
+                ],
+                if (m.kind == ChannelMessageKind.poll) ...[
+                  const SizedBox(height: 8),
+                  _PollBlock(
+                    message: m,
+                    myEmail: widget.myEmail,
+                    onVote: widget.onVote,
+                  ),
+                ],
+                const SizedBox(height: 4),
+                _footer(l10n),
+                if (m.reactions.isNotEmpty)
+                  _ReactionRow(
+                    message: m,
+                    myEmail: widget.myEmail,
+                    onReact: widget.onReact,
+                  ),
               ],
-              for (final doc in m.fileAttachments) ...[
-                ChatDocumentBubble(
-                  documentUrl: doc.url,
-                  fileName: doc.fileName ?? 'Document',
-                  fileSizeBytes: doc.fileSizeBytes ?? 0,
-                  isMe: own,
-                  timeStr: '',
-                  deliveryIcon: null,
-                ),
-                const SizedBox(height: 6),
-              ],
-              for (final voice in m.voiceAttachments) ...[
-                VoiceMessageBubble(
-                  audioUrl: voice.url,
-                  durationSeconds: voice.durationSeconds,
-                  isMe: own,
-                ),
-                const SizedBox(height: 6),
-              ],
-              if (isExpense)
-                _ExpenseCard(message: m, onOpen: widget.onOpenLedger)
-              else if (m.text.isNotEmpty)
-                ChannelRichText(
-                  text: m.text,
-                  revealed: _revealed,
-                  onSpoiler: _toggleSpoiler,
-                ),
-              if (loc != null) ...[
-                const SizedBox(height: 6),
-                _LocationCard(location: loc),
-              ],
-              if (m.kind == ChannelMessageKind.poll) ...[
-                const SizedBox(height: 8),
-                _PollBlock(
-                  message: m,
-                  myEmail: widget.myEmail,
-                  onVote: widget.onVote,
-                ),
-              ],
-              const SizedBox(height: 4),
-              _footer(l10n),
-              if (m.reactions.isNotEmpty)
-                _ReactionRow(
-                  message: m,
-                  myEmail: widget.myEmail,
-                  onReact: widget.onReact,
-                ),
-            ],
+            ),
           ),
         ),
       ),
@@ -191,11 +202,12 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
 
   Widget _footer(AppLocalizations l10n) {
     final m = widget.message;
+    final meta = widget.isMine ? kOwnBubbleMetaColor : context.forest.text54;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (m.isPending) ...[
-          Icon(Icons.schedule, size: 11, color: context.forest.text54),
+          Icon(Icons.schedule, size: 11, color: meta),
           const SizedBox(width: 4),
         ],
         if (m.isPinned) ...[
@@ -206,13 +218,13 @@ class _ChannelMessageBubbleState extends State<ChannelMessageBubble> {
         if (m.editedAt != null) ...[
           Text(
             l10n.translate('chan_edited'),
-            style: TextStyle(color: context.forest.text54, fontSize: 10),
+            style: TextStyle(color: meta, fontSize: 10),
           ),
           const SizedBox(width: 4),
         ],
         Text(
           localizedDateFormat('hh:mm a').format(m.timestamp),
-          style: TextStyle(color: context.forest.text54, fontSize: 10),
+          style: TextStyle(color: meta, fontSize: 10),
         ),
       ],
     );

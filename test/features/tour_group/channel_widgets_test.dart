@@ -1,4 +1,5 @@
 import 'package:bhromon/core/localization/app_localizations.dart';
+import 'package:bhromon/core/theme/colors.dart';
 import 'package:bhromon/features/tour_group/domain/models/channel_models.dart';
 import 'package:bhromon/features/tour_group/domain/models/tour_group.dart';
 import 'package:bhromon/features/tour_group/presentation/widgets/channel_composer.dart';
@@ -514,4 +515,54 @@ void main() {
       expect(result?.kind, ChannelKind.voice);
     });
   });
+
+  group('light theme readability', () {
+    testWidgets('the time on an own bubble stays readable on the green',
+        (tester) async {
+      await _pump(tester, _bubble(_message(text: 'hello'), isMine: true));
+      final time = find
+          .byWidgetPredicate((w) => w is Text && (w.data ?? '').contains(':'));
+      expect(time, findsOneWidget);
+      final color = tester.widget<Text>(time).style?.color;
+      expect(color, kOwnBubbleMetaColor);
+      expect(_contrast(color!, AppColors.midGreen), greaterThanOrEqualTo(4.5));
+    });
+
+    testWidgets('the message text on an own bubble is white in light theme',
+        (tester) async {
+      await _pump(tester, _bubble(_message(text: 'hello'), isMine: true));
+      final body = find.byWidgetPredicate((w) =>
+          w is Text &&
+          (w.textSpan?.toPlainText() ?? w.data ?? '').contains('hello'));
+      expect(body, findsOneWidget);
+      final text = tester.widget<Text>(body);
+      final root =
+          text.textSpan ?? TextSpan(text: text.data, style: text.style);
+      final color = _colorOfText(root, 'hello', text.style?.color);
+      expect(color, Colors.white);
+      expect(_contrast(color!, AppColors.midGreen), greaterThanOrEqualTo(4.5));
+    });
+  });
+}
+
+/// WCAG contrast ratio between two colours.
+double _contrast(Color a, Color b) {
+  final la = a.computeLuminance();
+  final lb = b.computeLuminance();
+  final hi = la > lb ? la : lb;
+  final lo = la > lb ? lb : la;
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/// The colour the text containing [needle] is painted with, following the span
+/// tree and inheriting colours from the spans above it.
+Color? _colorOfText(InlineSpan span, String needle, Color? inherited) {
+  final color = (span is TextSpan ? span.style?.color : null) ?? inherited;
+  if (span is TextSpan && (span.text ?? '').contains(needle)) return color;
+  Color? found;
+  span.visitChildren((child) {
+    found ??= _colorOfText(child, needle, color);
+    return found == null;
+  });
+  return found;
 }
