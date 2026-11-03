@@ -25,19 +25,11 @@ class ChatLocalCache {
 
   /// Every box holds the chat history, so it is opened encrypted. A box left
   /// over from an older version without encryption is re-encrypted on the way.
-  Future<Box<T>> _openBox<T>(String name) async {
+  /// A cache box that cannot be opened is recreated by the service, and never
+  /// falls back to an unencrypted file.
+  Future<Box<T>> _openBox<T>(String name) {
     final service = _encryption ?? getIt<HiveEncryptionService>();
-    try {
-      return await service.openEncryptedBox<T>(name);
-    } catch (e, st) {
-      logWarning('Error opening encrypted box $name, recovering', e, st);
-      try {
-        await Hive.deleteBoxFromDisk(name);
-        return await service.openEncryptedBox<T>(name);
-      } catch (_) {
-        return await Hive.openBox<T>(name);
-      }
-    }
+    return service.openEncryptedBox<T>(name, rebuildable: true);
   }
 
   static const String _kMessagesBoxPrefix = 'chat_cache_msgs_';

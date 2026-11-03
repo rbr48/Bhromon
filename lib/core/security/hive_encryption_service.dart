@@ -117,21 +117,59 @@ class HiveEncryptionService {
     }
   }
 
-  /// Opens an encrypted Hive box safely
-  Future<Box<T>> openEncryptedBox<T>(String boxName) async {
+  /// Opens an encrypted Hive box safely.
+  ///
+  /// A [rebuildable] box is a cache, fetched again when it is missing. If it cannot
+  /// be opened it is deleted and created afresh, and if that fails too it is kept
+  /// in memory for the session. Any other box is never deleted here: a failure
+  /// reaches the caller and the data stays on disk.
+  Future<Box<T>> openEncryptedBox<T>(
+    String boxName, {
+    bool rebuildable = false,
+  }) async {
     final cached = _boxes[boxName];
     if (cached != null) {
       final box = await cached;
       if (box.isOpen) return box as Box<T>;
       _boxes.remove(boxName);
     }
-    final opening = _open<T>(boxName);
+    final opening =
+        rebuildable ? _openRebuildable<T>(boxName) : _open<T>(boxName);
     _boxes[boxName] = opening;
     try {
       return await opening;
     } catch (_) {
       _boxes.remove(boxName);
       rethrow;
+    }
+  }
+
+  /// Opens a cache box. If the first open fails, the box is deleted and opened
+  /// again; if that fails too, it is kept in memory. The file is never replaced
+  /// with an unencrypted one.
+  Future<Box<T>> _openRebuildable<T>(String boxName) async {
+    try {
+      return await _open<T>(boxName);
+    } catch (error, stackTrace) {
+      logWarning(
+          '[HiveEncryption] Cache $boxName could not be opened, recreating it',
+          error,
+          stackTrace);
+    }
+    try {
+      await Hive.deleteBoxFromDisk(boxName);
+    } catch (error, stackTrace) {
+      logWarning('[HiveEncryption] Could not delete cache $boxName', error,
+          stackTrace);
+    }
+    try {
+      return await _open<T>(boxName);
+    } catch (error, stackTrace) {
+      logWarning(
+          '[HiveEncryption] Cache $boxName still cannot be opened; keeping it in memory this session',
+          error,
+          stackTrace);
+      return _openInMemory<T>(boxName);
     }
   }
 
@@ -142,22 +180,7 @@ class HiveEncryptionService {
     if (kIsWeb) {
       final key = await _deviceKey();
       if (key == null) return _openInMemory<T>(boxName);
-      try {
-        return await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
-      } catch (e, st) {
-        logWarning(
-            '[HiveEncryption] Corrupted or unreadable box on web ($boxName), recreating',
-            e,
-            st);
-        try {
-          await Hive.deleteBoxFromDisk(boxName);
-        } catch (_) {}
-        try {
-          return await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
-        } catch (_) {
-          return _openInMemory<T>(boxName);
-        }
-      }
+      return await Hive.openBox<T>(boxName, encryptionCipher: key.cipher);
     }
 
     final key = await _deviceKey();
@@ -294,7 +317,8 @@ class HiveEncryptionService {
     logWarning(
         '[HiveEncryption] No device key; keeping $boxName in memory this session');
     if (kIsWeb) {
-      final box = await Hive.openBox<T>(boxName);
+      // Without bytes, Hive keeps this box in IndexedDB as plain text.
+      final box = await Hive.openBox<T>(boxName, bytes: Uint8List(0));
       _inMemoryBoxes.add(boxName);
       return box;
     }
