@@ -9,13 +9,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Pumps [child] once the localizations have loaded, which takes a few frames.
-Future<void> _pump(WidgetTester tester, Widget child) async {
-  await tester.pumpWidget(_app(child));
+Future<void> _pump(WidgetTester tester, Widget child,
+    {ThemeData? theme}) async {
+  await tester.pumpWidget(_app(child, theme: theme));
   await tester.pumpAndSettle();
 }
 
-Widget _app(Widget child) {
+Widget _app(Widget child, {ThemeData? theme}) {
   return MaterialApp(
+    theme: theme,
     locale: const Locale('en'),
     supportedLocales: const [Locale('en'), Locale('bn')],
     localizationsDelegates: const [
@@ -516,31 +518,52 @@ void main() {
     });
   });
 
-  group('light theme readability', () {
-    testWidgets('the time on an own bubble stays readable on the green',
-        (tester) async {
-      await _pump(tester, _bubble(_message(text: 'hello'), isMine: true));
-      final time = find
-          .byWidgetPredicate((w) => w is Text && (w.data ?? '').contains(':'));
-      expect(time, findsOneWidget);
-      final color = tester.widget<Text>(time).style?.color;
-      expect(color, kOwnBubbleMetaColor);
-      expect(_contrast(color!, AppColors.midGreen), greaterThanOrEqualTo(4.5));
-    });
+  group('readability of own bubbles', () {
+    Finder timeFinder() => find
+        .byWidgetPredicate((w) => w is Text && (w.data ?? '').contains(':'));
 
-    testWidgets('the message text on an own bubble is white in light theme',
-        (tester) async {
-      await _pump(tester, _bubble(_message(text: 'hello'), isMine: true));
-      final body = find.byWidgetPredicate((w) =>
-          w is Text &&
-          (w.textSpan?.toPlainText() ?? w.data ?? '').contains('hello'));
-      expect(body, findsOneWidget);
-      final text = tester.widget<Text>(body);
+    Finder bodyFinder() => find.byWidgetPredicate((w) =>
+        w is Text &&
+        (w.textSpan?.toPlainText() ?? w.data ?? '').contains('hello'));
+
+    Color? bodyColor(WidgetTester tester) {
+      final text = tester.widget<Text>(bodyFinder());
       final root =
           text.textSpan ?? TextSpan(text: text.data, style: text.style);
-      final color = _colorOfText(root, 'hello', text.style?.color);
-      expect(color, Colors.white);
-      expect(_contrast(color!, AppColors.midGreen), greaterThanOrEqualTo(4.5));
+      return _colorOfText(root, 'hello', text.style?.color);
+    }
+
+    testWidgets(
+        'the time on a light-theme own bubble is readable on pale green',
+        (tester) async {
+      await _pump(tester, _bubble(_message(text: 'hello'), isMine: true));
+      expect(timeFinder(), findsOneWidget);
+      final color = tester.widget<Text>(timeFinder()).style?.color;
+      expect(color, AppColors.grayText);
+      expect(_contrast(color!, kOwnBubbleLight), greaterThanOrEqualTo(4.5));
+    });
+
+    testWidgets('the message text on a light-theme own bubble is dark',
+        (tester) async {
+      await _pump(tester, _bubble(_message(text: 'hello'), isMine: true));
+      expect(bodyFinder(), findsOneWidget);
+      final color = bodyColor(tester);
+      expect(color, AppColors.darkText);
+      expect(_contrast(color!, kOwnBubbleLight), greaterThanOrEqualTo(4.5));
+    });
+
+    testWidgets('a dark-theme own bubble has white text and a readable time',
+        (tester) async {
+      await _pump(tester, _bubble(_message(text: 'hello'), isMine: true),
+          theme: ThemeData.dark());
+      expect(bodyFinder(), findsOneWidget);
+      final body = bodyColor(tester);
+      expect(body, Colors.white);
+      expect(_contrast(body!, AppColors.midGreen), greaterThanOrEqualTo(4.5));
+
+      final time = tester.widget<Text>(timeFinder()).style?.color;
+      expect(time, kOwnBubbleMetaColor);
+      expect(_contrast(time!, AppColors.midGreen), greaterThanOrEqualTo(4.5));
     });
   });
 }
